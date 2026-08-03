@@ -9,9 +9,16 @@ import {
   type DimensionAnnotation,
   type LineSegment,
 } from "./dimensions";
+import {
+  CAD_VIEWPORT_CAMERA,
+  CAD_VIEWPORT_GRID_ROTATION,
+} from "./coordinates";
 import styles from "./CadViewport.module.scss";
 
-const ANNOTATION_COLOR = "#253b65";
+const ANNOTATION_COLOR = "#8d98a3";
+const ANNOTATION_LINE_WIDTH = 1;
+const ANNOTATION_LABEL_CLASS =
+  "pointer-events-none whitespace-nowrap px-1 text-[0.68rem] font-medium text-[#7f8a95]";
 
 function ModelMesh({ mesh }: { mesh: MeshSnapshot }) {
   const geometry = useMemo(() => {
@@ -39,13 +46,13 @@ type CadViewportProps = {
   stale: boolean;
 };
 
-function AnnotationLine({ points, opacity = 1 }: { points: LineSegment; opacity?: number }) {
+function AnnotationLine({ points, opacity = 0.58 }: { points: LineSegment; opacity?: number }) {
   return (
     <Line
       points={points}
       color={ANNOTATION_COLOR}
       depthTest={false}
-      lineWidth={1.5}
+      lineWidth={ANNOTATION_LINE_WIDTH}
       opacity={opacity}
       renderOrder={2}
       transparent={opacity < 1}
@@ -65,16 +72,16 @@ function DimensionAnnotationView({ annotation }: { annotation: DimensionAnnotati
   return (
     <group>
       {annotation.extensionLines.map((points, index) => (
-        <AnnotationLine key={`${annotation.key}-extension-${index}`} points={points} opacity={0.72} />
+        <AnnotationLine key={`${annotation.key}-extension-${index}`} points={points} opacity={0.34} />
       ))}
       <AnnotationLine points={annotation.dimensionLine} />
       {annotation.endTicks.map((points, index) => (
-        <AnnotationLine key={`${annotation.key}-tick-${index}`} points={points} />
+        <AnnotationLine key={`${annotation.key}-tick-${index}`} points={points} opacity={0.46} />
       ))}
       <Html center pointerEvents="none" position={annotation.labelPosition} zIndexRange={[2, 1]}>
         <span
           aria-label={annotation.ariaLabel}
-          className="pointer-events-none whitespace-nowrap rounded border border-border-card bg-panel px-1.5 py-0.5 text-xs font-semibold text-ink shadow-card"
+          className={ANNOTATION_LABEL_CLASS}
         >
           {annotation.valueLabel}
         </span>
@@ -125,12 +132,15 @@ function ViewportContent({
           無法建立 3D 預覽，請確認瀏覽器支援 WebGL。
         </div>
       }
-      camera={{ position: [100, 100, 100], fov: 45 }}
+      camera={CAD_VIEWPORT_CAMERA}
     >
       <color attach="background" args={["#eef2f8"]} />
       <ambientLight intensity={1.6} />
       <directionalLight position={[100, 120, 80]} intensity={2.2} />
-      <gridHelper args={[1000, 20, "#b9c4d7", "#d8deea"]} />
+      <gridHelper
+        args={[1000, 20, "#b9c4d7", "#d8deea"]}
+        rotation={CAD_VIEWPORT_GRID_ROTATION}
+      />
       <Bounds fit clip observe margin={1.25}>
         <ModelMesh mesh={mesh} />
         <DimensionAnnotations mesh={mesh} parameters={parameters} />

@@ -1,5 +1,5 @@
 import { makeBox, type Solid } from "replicad";
-import type { BoxParameters } from "../../cad-contract/units";
+import { boundsForBox, type BoxParameters } from "../../cad-contract/units";
 
 export type KernelModelDefinition = {
   id: "box";
@@ -7,10 +7,8 @@ export type KernelModelDefinition = {
 };
 
 export function buildBoxBRep(parameters: BoxParameters): Solid {
-  return makeBox(
-    [-parameters.width / 2, -parameters.depth / 2, -parameters.height / 2],
-    [parameters.width / 2, parameters.depth / 2, parameters.height / 2]
-  );
+  const bounds = boundsForBox(parameters);
+  return makeBox(bounds.min, bounds.max);
 }
 
 export const boxKernelDefinition: KernelModelDefinition = {

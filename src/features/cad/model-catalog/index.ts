@@ -15,7 +15,7 @@ export type ModelDefinition = {
     max: number;
     step: number;
   }>;
-  previewMetadata: { centeredAtOrigin: true };
+  previewMetadata: { centeredOnXY: true; baseAtZ: 0 };
   exportFileName: (parameters: BoxParameters) => string;
 };
 
@@ -55,6 +55,6 @@ export const boxDefinition: ModelDefinition = {
       step: PROTOTYPE_CONFIGURATION.inputStep,
     },
   ],
-  previewMetadata: { centeredAtOrigin: true },
+  previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   exportFileName: boxFileName,
 };

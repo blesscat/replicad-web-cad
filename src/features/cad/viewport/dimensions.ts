@@ -58,8 +58,8 @@ function createWidthAnnotation(
   offset: number,
   tickSize: number
 ): DimensionAnnotation {
-  const lineStart = point(bounds.min[0], bounds.min[1] - offset, bounds.max[2]);
-  const lineEnd = point(bounds.max[0], bounds.min[1] - offset, bounds.max[2]);
+  const lineStart = point(bounds.min[0], bounds.min[1] - offset, bounds.min[2]);
+  const lineEnd = point(bounds.max[0], bounds.min[1] - offset, bounds.min[2]);
 
   return createAnnotation({
     key: "width",
@@ -68,8 +68,8 @@ function createWidthAnnotation(
     value: parameters.width,
     dimensionLine: segment(lineStart, lineEnd),
     extensionLines: [
-      segment(point(bounds.min[0], bounds.min[1], bounds.max[2]), lineStart),
-      segment(point(bounds.max[0], bounds.min[1], bounds.max[2]), lineEnd),
+      segment(point(bounds.min[0], bounds.min[1], bounds.min[2]), lineStart),
+      segment(point(bounds.max[0], bounds.min[1], bounds.min[2]), lineEnd),
     ],
     endTicks: [
       segment(point(lineStart[0], lineStart[1] - tickSize / 2, lineStart[2]), point(lineStart[0], lineStart[1] + tickSize / 2, lineStart[2])),
@@ -78,7 +78,7 @@ function createWidthAnnotation(
     labelPosition: point(
       (bounds.min[0] + bounds.max[0]) / 2,
       bounds.min[1] - offset,
-      bounds.max[2]
+      bounds.min[2]
     ),
   });
 }
@@ -89,8 +89,8 @@ function createDepthAnnotation(
   offset: number,
   tickSize: number
 ): DimensionAnnotation {
-  const lineStart = point(bounds.max[0] + offset, bounds.min[1], bounds.max[2]);
-  const lineEnd = point(bounds.max[0] + offset, bounds.max[1], bounds.max[2]);
+  const lineStart = point(bounds.max[0] + offset, bounds.min[1], bounds.min[2]);
+  const lineEnd = point(bounds.max[0] + offset, bounds.max[1], bounds.min[2]);
 
   return createAnnotation({
     key: "depth",
@@ -99,8 +99,8 @@ function createDepthAnnotation(
     value: parameters.depth,
     dimensionLine: segment(lineStart, lineEnd),
     extensionLines: [
-      segment(point(bounds.max[0], bounds.min[1], bounds.max[2]), lineStart),
-      segment(point(bounds.max[0], bounds.max[1], bounds.max[2]), lineEnd),
+      segment(point(bounds.max[0], bounds.min[1], bounds.min[2]), lineStart),
+      segment(point(bounds.max[0], bounds.max[1], bounds.min[2]), lineEnd),
     ],
     endTicks: [
       segment(point(lineStart[0] - tickSize / 2, lineStart[1], lineStart[2]), point(lineStart[0] + tickSize / 2, lineStart[1], lineStart[2])),
@@ -109,7 +109,7 @@ function createDepthAnnotation(
     labelPosition: point(
       bounds.max[0] + offset,
       (bounds.min[1] + bounds.max[1]) / 2,
-      bounds.max[2]
+      bounds.min[2]
     ),
   });
 }
@@ -120,8 +120,8 @@ function createHeightAnnotation(
   offset: number,
   tickSize: number
 ): DimensionAnnotation {
-  const lineStart = point(bounds.max[0] + offset, bounds.min[1] - offset, bounds.min[2]);
-  const lineEnd = point(bounds.max[0] + offset, bounds.min[1] - offset, bounds.max[2]);
+  const lineStart = point(bounds.max[0] + offset, bounds.max[1] + offset, bounds.min[2]);
+  const lineEnd = point(bounds.max[0] + offset, bounds.max[1] + offset, bounds.max[2]);
 
   return createAnnotation({
     key: "height",
@@ -130,8 +130,8 @@ function createHeightAnnotation(
     value: parameters.height,
     dimensionLine: segment(lineStart, lineEnd),
     extensionLines: [
-      segment(point(bounds.max[0], bounds.min[1], bounds.min[2]), lineStart),
-      segment(point(bounds.max[0], bounds.min[1], bounds.max[2]), lineEnd),
+      segment(point(bounds.max[0], bounds.max[1], bounds.min[2]), lineStart),
+      segment(point(bounds.max[0], bounds.max[1], bounds.max[2]), lineEnd),
     ],
     endTicks: [
       segment(point(lineStart[0] - tickSize / 2, lineStart[1], lineStart[2]), point(lineStart[0] + tickSize / 2, lineStart[1], lineStart[2])),
@@ -139,7 +139,7 @@ function createHeightAnnotation(
     ],
     labelPosition: point(
       bounds.max[0] + offset,
-      bounds.min[1] - offset,
+      bounds.max[1] + offset,
       (bounds.min[2] + bounds.max[2]) / 2
     ),
   });

@@ -2,7 +2,6 @@
 
 本文件定義瀏覽器端 CAD 雛形的可觀察行為、驗收情境與執行邊界，讓使用者能以明確規格驗證方塊建模、3D 預覽及 STEP 匯出流程。
 
-
 ## 目的與範圍
 
 本文件定義瀏覽器端 CAD 雛形的可觀察行為與驗收情境。
@@ -51,11 +50,9 @@ Prototype 只包含：
 | STEP 副檔名 | .step |
 | STEP MIME | model/step |
 | 預設檔名 | box-{width}x{depth}x{height}.step |
-| 方塊位置 | 永遠置中於世界原點 |
+| 方塊位置 | X/Y 置中於世界原點，底面位於 Z=0 |
 | Prototype 瀏覽器 | 桌面版 Chrome、桌面版 Firefox；版本於驗收時記錄 |
-
 ## Requirements
-
 ### Requirement: 瀏覽器端執行邊界
 The system MUST satisfy the following behavior:
 
@@ -100,7 +97,7 @@ Prototype 必須直接載入唯一的內建方塊模型，不需要模型選擇�
 - **And** Worker 必須回傳 candidate-ready，且不得先修改 current model
 - **And** 主執行緒驗證 candidate mesh 後必須送出 model.commit
 - **And** Worker 必須回傳非空 mesh、bounds、generation 與 model revision
-- **And** Prototype 驗收 fixture 必須使用 20 × 30 × 40 mm 方塊，且方塊中心位於世界原點
+- **And** Prototype 驗收 fixture 必須使用 20 × 30 × 40 mm 方塊，且 X/Y 中心位於世界原點、底面位於 Z=0
 - **And** viewport 必須顯示方塊，UI 進入 ready
 
 #### Scenario: 初始化不重複建模
@@ -130,7 +127,7 @@ The system MUST satisfy the following behavior:
 - **Then** UI 必須送出大於目前 generation 的建模要求
 - **And** Worker 必須依新的 mm 參數建立方塊 B-Rep 與 mesh
 - **And** commit 後 viewport bounds 必須符合新參數的尺寸 tolerance
-- **And** 方塊中心必須維持在世界原點
+- **And** 方塊的 X/Y 中心必須維持在世界原點，且最低 Z 必須維持為 0
 
 #### Scenario: Debounce 最新 snapshot
 
@@ -281,7 +278,7 @@ Worker 建模成功只代表 candidate 建立成功，不代表 current model �
 ### Requirement: Mesh viewport
 The system MUST satisfy the following behavior:
 
-viewport 必須使用 React Three Fiber 顯示最新 committed model 的 mesh，不得執行 B-Rep 建模或 STEP 匯出。
+viewport 必須使用 React Three Fiber 顯示最新 committed model 的 mesh，不得執行 B-Rep 建模或 STEP 匯出。對於 Prototype 的 committed box，viewport 也必須顯示貼附於方塊邊緣的寬度、深度與高度 3D 尺寸標註；標註內容必須與畫面中的同一個 committed model revision 一致。
 
 #### Scenario: 有效 mesh
 
@@ -290,6 +287,41 @@ viewport 必須使用 React Three Fiber 顯示最新 committed model 的 mesh，
 - **Then** viewport 必須顯示可辨識的方塊
 - **And** 相機 framing 必須使模型可見
 - **And** 替換模型後必須釋放舊 geometry、material 與 GPU resource
+- **And** viewport 必須同時顯示對應方塊邊緣的寬度 X、深度 Y、高度 Z 尺寸標註
+- **And** 每組尺寸標註必須顯示以 mm 為單位的尺寸數值
+
+#### Scenario: 尺寸標註對應 committed model
+
+- **Given** workspace 已有一個成功 committed 的 box model
+- **When** 使用者查看 3D viewport
+- **Then** 寬度標註必須對應 X 軸方向的方塊邊緣
+- **And** 深度標註必須對應 Y 軸方向的方塊邊緣
+- **And** 高度標註必須對應 Z 軸方向的方塊邊緣
+- **And** 標註必須包含連接模型邊緣的延伸線、尺寸線與可讀的數值標籤
+- **And** 標註數值必須等於該 committed model 的 width、depth、height 參數
+
+#### Scenario: 相機互動中的尺寸標註
+
+- **Given** viewport 已顯示方塊與三組尺寸標註
+- **When** 使用者旋轉、縮放或改變 viewport 尺寸
+- **Then** 尺寸線與延伸線必須繼續錨定在對應方塊邊緣
+- **And** 尺寸標籤必須跟隨標註的 3D 位置更新
+- **And** viewport framing 必須使方塊與必要的尺寸標註保持可見
+
+#### Scenario: 建模期間保留舊 preview
+
+- **Given** 使用者已修改尺寸，新的 generation 尚未 committed，且上一個 committed model 仍保留在 viewport
+- **When** 使用者查看 viewport
+- **Then** 方塊尺寸標註必須仍對應畫面上保留的上一個 committed model
+- **And** 尺寸標註不得提前顯示尚未 committed 的新輸入
+- **And** viewport 必須維持既有 stale 狀態提示
+
+#### Scenario: 沒有可用模型
+
+- **Given** workspace 尚未有 committed model，或目前沒有可供預覽的 mesh
+- **When** 使用者查看 viewport
+- **Then** viewport 不得顯示尺寸線或尺寸標籤
+- **And** viewport 必須顯示既有的無模型或 WebGL fallback 訊息
 
 #### Scenario: 損壞 mesh
 
@@ -299,6 +331,7 @@ viewport 必須使用 React Three Fiber 顯示最新 committed model 的 mesh，
 - **And** UI 必須顯示 mesh validation error
 - **And** 主執行緒必須送出對應 candidate 的 model.discard
 - **And** viewport 不得 crash
+- **And** viewport 不得為該損壞 mesh 顯示尺寸標註
 
 ### Requirement: STEP 匯出
 The system MUST satisfy the following behavior:
@@ -420,4 +453,3 @@ The system MUST satisfy the following behavior:
 - 變更動機、Prototype 範圍與後續演進：../../proposal.md
 - 架構、contract、lifetime 與測試策略：../../design.md
 - 實作順序與 quality gates：../../tasks.md
-

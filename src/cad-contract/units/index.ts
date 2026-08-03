@@ -88,8 +88,8 @@ export function validateBoxParameters(value: unknown): BoxValidation {
 
 export function boundsForBox(parameters: BoxParameters): BoxBounds {
   return {
-    min: [-parameters.width / 2, -parameters.depth / 2, -parameters.height / 2],
-    max: [parameters.width / 2, parameters.depth / 2, parameters.height / 2],
+    min: [-parameters.width / 2, -parameters.depth / 2, 0],
+    max: [parameters.width / 2, parameters.depth / 2, parameters.height],
   };
 }
 

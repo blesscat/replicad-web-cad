@@ -91,7 +91,7 @@ Astro pages
 
 ## Prototype 範圍
 
-- 唯一內建模型：置中於世界原點的 box。
+- 唯一內建模型：X/Y 置中於世界原點、底面位於 Z=0 的 box。
 - 參數：`width`、`depth`、`height`，單位為 mm。
 - 預覽：由 Worker 產生的 B-Rep mesh。
 - 匯出：由 Worker 目前 committed B-Rep 產生 STEP。

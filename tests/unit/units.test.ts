@@ -7,13 +7,13 @@ import {
 } from "../../src/cad-contract/units";
 
 describe("box units and validation", () => {
-  it("accepts the prototype fixture and calculates centered bounds", () => {
+  it("accepts the prototype fixture and places its base on Z=0", () => {
     const parameters = { width: 20, depth: 30, height: 40 };
     const result = validateBoxParameters(parameters);
     expect(result).toEqual({ valid: true, value: parameters });
     expect(boundsForBox(parameters)).toEqual({
-      min: [-10, -15, -20],
-      max: [10, 15, 20],
+      min: [-10, -15, 0],
+      max: [10, 15, 40],
     });
     expect(boxFileName(parameters)).toBe("box-20x30x40.step");
   });

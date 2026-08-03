@@ -48,8 +48,8 @@ describe("CAD dimension annotation geometry", () => {
   it("keeps each dimension line aligned to its axis and outside the box", () => {
     const parameters: BoxParameters = { width: 7, depth: 13, height: 29 };
     const bounds: BoxBounds = {
-      min: [-3.75, -7, -15],
-      max: [3.75, 7, 15],
+      min: [-3.75, -7, 0],
+      max: [3.75, 7, 29],
     };
     const annotations = createDimensionAnnotations(bounds, parameters);
     const byKey = annotationMap(annotations);
@@ -66,7 +66,13 @@ describe("CAD dimension annotation geometry", () => {
     expect(height?.valueLabel).toBe("29 mm");
     expect(distanceAlong(width!.dimensionLine[0], width!.dimensionLine[1], 0)).toBe(7.5);
     expect(distanceAlong(depth!.dimensionLine[0], depth!.dimensionLine[1], 1)).toBe(14);
-    expect(distanceAlong(height!.dimensionLine[0], height!.dimensionLine[1], 2)).toBe(30);
+    expect(distanceAlong(height!.dimensionLine[0], height!.dimensionLine[1], 2)).toBe(29);
+    expect(width!.dimensionLine[0][2]).toBe(0);
+    expect(width!.dimensionLine[1][2]).toBe(0);
+    expect(depth!.dimensionLine[0][2]).toBe(0);
+    expect(depth!.dimensionLine[1][2]).toBe(0);
+    expect(height!.dimensionLine[0][2]).toBe(0);
+    expect(height!.dimensionLine[1][2]).toBe(29);
 
     for (const annotation of annotations) {
       expect(isOutsideBounds(annotation.dimensionLine[0], bounds)).toBe(true);
