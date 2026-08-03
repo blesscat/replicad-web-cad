@@ -1,9 +1,17 @@
-import { Bounds, OrbitControls } from "@react-three/drei";
+import { Bounds, Html, Line, OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import type { MeshSnapshot } from "../../../cad-contract/messages";
+import type { BoxParameters } from "../../../cad-contract/units";
+import {
+  createDimensionAnnotations,
+  type DimensionAnnotation,
+  type LineSegment,
+} from "./dimensions";
 import styles from "./CadViewport.module.scss";
+
+const ANNOTATION_COLOR = "#253b65";
 
 function ModelMesh({ mesh }: { mesh: MeshSnapshot }) {
   const geometry = useMemo(() => {
@@ -27,10 +35,84 @@ function ModelMesh({ mesh }: { mesh: MeshSnapshot }) {
 
 type CadViewportProps = {
   mesh: MeshSnapshot | null;
+  parameters: BoxParameters | null;
   stale: boolean;
 };
 
-function ViewportContent({ mesh }: { mesh: MeshSnapshot | null }) {
+function AnnotationLine({ points, opacity = 1 }: { points: LineSegment; opacity?: number }) {
+  return (
+    <Line
+      points={points}
+      color={ANNOTATION_COLOR}
+      depthTest={false}
+      lineWidth={1.5}
+      opacity={opacity}
+      renderOrder={2}
+      transparent={opacity < 1}
+    />
+  );
+}
+
+function dimensionAnnotationsFor(
+  mesh: MeshSnapshot,
+  parameters: BoxParameters | null
+): DimensionAnnotation[] {
+  if (!parameters) return [];
+  return createDimensionAnnotations(mesh.bounds, parameters);
+}
+
+function DimensionAnnotationView({ annotation }: { annotation: DimensionAnnotation }) {
+  return (
+    <group>
+      {annotation.extensionLines.map((points, index) => (
+        <AnnotationLine key={`${annotation.key}-extension-${index}`} points={points} opacity={0.72} />
+      ))}
+      <AnnotationLine points={annotation.dimensionLine} />
+      {annotation.endTicks.map((points, index) => (
+        <AnnotationLine key={`${annotation.key}-tick-${index}`} points={points} />
+      ))}
+      <Html center pointerEvents="none" position={annotation.labelPosition} zIndexRange={[2, 1]}>
+        <span
+          aria-label={annotation.ariaLabel}
+          className="pointer-events-none whitespace-nowrap rounded border border-border-card bg-panel px-1.5 py-0.5 text-xs font-semibold text-ink shadow-card"
+        >
+          {annotation.valueLabel}
+        </span>
+      </Html>
+    </group>
+  );
+}
+
+function DimensionAnnotations({
+  mesh,
+  parameters,
+}: {
+  mesh: MeshSnapshot;
+  parameters: BoxParameters | null;
+}) {
+  const annotations = useMemo(
+    () => dimensionAnnotationsFor(mesh, parameters),
+    [mesh, parameters]
+  );
+
+  if (annotations.length === 0) return null;
+
+  return (
+    <group>
+      {annotations.map((annotation) => (
+        <DimensionAnnotationView key={annotation.key} annotation={annotation} />
+      ))}
+    </group>
+  );
+}
+
+function ViewportContent({
+  mesh,
+  parameters,
+}: {
+  mesh: MeshSnapshot | null;
+  parameters: BoxParameters | null;
+}) {
   if (!mesh) {
     return <div className="flex h-[520px] items-center justify-center text-muted">尚未有可預覽的模型。</div>;
   }
@@ -51,13 +133,14 @@ function ViewportContent({ mesh }: { mesh: MeshSnapshot | null }) {
       <gridHelper args={[1000, 20, "#b9c4d7", "#d8deea"]} />
       <Bounds fit clip observe margin={1.25}>
         <ModelMesh mesh={mesh} />
+        <DimensionAnnotations mesh={mesh} parameters={parameters} />
       </Bounds>
       <OrbitControls makeDefault />
     </Canvas>
   );
 }
 
-export function CadViewport({ mesh, stale }: CadViewportProps) {
+export function CadViewport({ mesh, parameters, stale }: CadViewportProps) {
   const viewportBorderClassName = stale ? "border-stale" : "border-border-card";
 
   return (
@@ -67,7 +150,7 @@ export function CadViewport({ mesh, stale }: CadViewportProps) {
       role="img"
       aria-label="3D CAD 預覽"
     >
-      <ViewportContent mesh={mesh} />
+      <ViewportContent mesh={mesh} parameters={parameters} />
       {stale && (
         <span className="absolute bottom-4 left-4 rounded-full border border-stale bg-stale-background px-[0.7rem] py-[0.35rem] text-[0.85rem] text-stale-text">
           預覽與目前輸入不同步

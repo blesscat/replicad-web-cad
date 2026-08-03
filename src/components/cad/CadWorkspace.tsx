@@ -688,7 +688,11 @@ export default function CadWorkspace() {
           {state.error && <div className="text-sm text-error" role="alert">錯誤代碼：{state.error.code}</div>}
         </div>
       </div>
-      <CadViewport mesh={state.committed?.mesh ?? null} stale={state.stale} />
+      <CadViewport
+        mesh={state.committed?.mesh ?? null}
+        parameters={state.committed?.parameters ?? null}
+        stale={state.stale}
+      />
     </div>
   );
 }
