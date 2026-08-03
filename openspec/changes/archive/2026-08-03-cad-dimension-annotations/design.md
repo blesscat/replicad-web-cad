@@ -25,7 +25,7 @@
 
 `CadWorkspace` 會把 `state.committed?.parameters` 以獨立的 `parameters` prop 傳給 `CadViewport`；viewport 同時使用已驗證的 `mesh`。這避免 viewport 依賴整個 state module，也避免直接讀取尚未 committed 的 `state.input`。
 
-尺寸線的端點與延伸線錨點由 `mesh.bounds.min/max` 計算，文字則使用同一 committed model 的 width/depth/height parameters。對目前置中於原點的 box，三個軸向定義固定為 X=width、Y=depth、Z=height。
+尺寸線的端點與延伸線錨點由 `mesh.bounds.min/max` 計算，文字則使用同一 committed model 的 width/depth/height parameters。對目前 X/Y 置中於原點且底面位於 Z=0 的 box，三個軸向定義固定為 X=width、Y=depth、Z=height。
 
 替代方案是把完整 `CommittedModel` 傳給 viewport，或在 Worker response 新增尺寸欄位；前者擴大 viewport 對 state module 的耦合，後者重複既有資料並改動跨執行緒 contract，因此不採用。
 
