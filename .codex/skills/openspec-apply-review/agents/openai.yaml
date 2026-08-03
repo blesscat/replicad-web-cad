@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenSpec Apply Review"
+  short_description: "Apply an OpenSpec change, then review compliance"
+  default_prompt: "Use $openspec-apply-review to implement the OpenSpec change and have a read-only subagent review whether the completed behavior matches the artifacts."
