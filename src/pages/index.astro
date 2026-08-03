@@ -1,31 +1,12 @@
 ---
-import "../styles.css";
+import SiteLayout from "../layouts/SiteLayout.astro";
 ---
 
-<html lang="zh-Hant">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <title>replicad-web-cad</title>
-    <meta name="description" content="Browser-based parametric CAD prototype." />
-  </head>
-  <body>
-    <div class="site-shell">
-      <nav class="site-nav" aria-label="主要導覽">
-        <a href="/">replicad-web-cad</a>
-        <div class="site-nav__links">
-          <a href="/docs/">文件</a>
-          <a href="/cad/">CAD workspace</a>
-        </div>
-      </nav>
-      <main class="page-content">
-        <section class="info-card">
-          <p class="muted">Browser-only CAD prototype</p>
-          <h1>用瀏覽器建立並匯出方塊模型</h1>
-          <p>調整方塊的寬、深、高，立即查看 3D 預覽，並下載由精確 B-Rep 產生的 STEP。</p>
-          <p><a href="/cad/">開啟 CAD workspace →</a></p>
-        </section>
-      </main>
-    </div>
-  </body>
-</html>
+<SiteLayout title="replicad-web-cad" description="Browser-based parametric CAD prototype.">
+  <section class="rounded-2xl border border-border-card bg-panel p-5 shadow-card">
+    <p class="mb-4 text-muted">Browser-only CAD prototype</p>
+    <h1 class="mb-4 text-4xl font-semibold leading-tight">用瀏覽器建立並匯出方塊模型</h1>
+    <p class="mb-4 leading-normal">調整方塊的寬、深、高，立即查看 3D 預覽，並下載由精確 B-Rep 產生的 STEP。</p>
+    <p class="mb-0"><a class="text-ink underline underline-offset-4" href="/cad/">開啟 CAD workspace →</a></p>
+  </section>
+</SiteLayout>

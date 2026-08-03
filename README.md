@@ -10,7 +10,7 @@ Astro 負責網站 shell 與路由，React workspace 負責瀏覽器端 UI，專
 
 ```text
 Astro site shell
-└─ Astro pages / 首頁 / 文件 / CAD route
+└─ SiteLayout.astro + Astro pages / 首頁 / 文件 / CAD route
    └─ React workspace（主執行緒）
       ├─ 參數表單與 state machine
       ├─ Worker client / runtime validation
@@ -34,6 +34,10 @@ src/
 │  ├─ index.astro
 │  ├─ docs/
 │  └─ cad.astro
+├─ layouts/
+│  └─ SiteLayout.astro
+├─ styles/
+│  └─ global.css
 ├─ components/cad/CadWorkspace.tsx
 ├─ features/cad/
 │  ├─ model-catalog/
@@ -41,6 +45,8 @@ src/
 │  ├─ parameters/
 │  ├─ state/
 │  ├─ viewport/
+│  │  ├─ CadViewport.tsx
+│  │  └─ CadViewport.module.scss
 │  ├─ worker-client/
 │  └─ download/
 ├─ cad-contract/
@@ -58,7 +64,10 @@ src/
 
 資料夾名稱可以隨實作調整，但責任邊界必須維持：
 
-- `pages/` 只提供 Astro shell、靜態內容、fallback 與 React 掛載點。
+- `pages/` 只提供頁面內容、fallback 與 React 掛載點；共用 Astro shell、導覽與 head metadata 由 `layouts/SiteLayout.astro` 負責。
+- `styles/global.css` 是唯一全域 CSS 入口，只放 Tailwind import、`@theme` tokens、reset 與必要的 base rules，不放頁面或功能元件 selector。
+- 頁面與元件預設使用 Tailwind utility classes；utility class 必須以完整、可靜態掃描的字串呈現，不拼接部分 class token。
+- `*.module.scss` 只用於 utility 不易表達的複雜 selector 或 descendant rule，並放在實際擁有該樣式的功能資料夾。現在的例外是 `features/cad/viewport/CadViewport.module.scss`，只負責 canvas descendant 尺寸；viewport overlay/state 仍使用 Tailwind。
 - `components/cad/` 組裝 React workspace；`CadWorkspace` 不直接 import CAD kernel。
 - `features/cad/model-catalog/` 描述模型 id、參數 schema、建模入口與 metadata，不持有 UI 或 Worker lifecycle。
 - `features/cad/parameters/`、`state/`、`viewport/`、`worker-client/` 與 `download/` 分別處理輸入、狀態、預覽、Worker 通訊與瀏覽器下載。
@@ -146,7 +155,7 @@ Prototype 驗收使用的自動化瀏覽器 binary 為 Chromium `151.0.7922.34` 
 
 ## OpenSpec 文件
 
-- [變更提案](openspec/changes/2026-08-02-replicad-web-cad/proposal.md)：目標、範圍與非目標。
-- [詳細設計](openspec/changes/2026-08-02-replicad-web-cad/design.md)：架構、Worker contract、revision lifetime 與測試策略。
-- [能力規格](openspec/changes/2026-08-02-replicad-web-cad/specs/cad-workspace/spec.md)：可觀察行為與驗收情境。
-- [實作任務](openspec/changes/2026-08-02-replicad-web-cad/tasks.md)：實作順序與 quality gates。
+- [變更提案](openspec/changes/archive/2026-08-02-replicad-web-cad/proposal.md)：目標、範圍與非目標。
+- [詳細設計](openspec/changes/archive/2026-08-02-replicad-web-cad/design.md)：架構、Worker contract、revision lifetime 與測試策略。
+- [能力規格](openspec/specs/cad-workspace/spec.md)：可觀察行為與驗收情境。
+- [實作任務](openspec/changes/archive/2026-08-02-replicad-web-cad/tasks.md)：實作順序與 quality gates。

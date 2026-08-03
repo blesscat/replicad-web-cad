@@ -3,11 +3,11 @@ import { expect, test } from "@playwright/test";
 test("home and docs are static Astro pages", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "用瀏覽器建立並匯出方塊模型" })).toBeVisible();
-  await expect(page.locator(".cad-workspace")).toHaveCount(0);
+  await expect(page.getByTestId("cad-workspace")).toHaveCount(0);
 
   await page.goto("/docs/");
   await expect(page.getByRole("heading", { name: "Prototype 文件" })).toBeVisible();
-  await expect(page.locator(".cad-workspace")).toHaveCount(0);
+  await expect(page.getByTestId("cad-workspace")).toHaveCount(0);
 });
 
 test("CAD route exposes fallback and parameter controls", async ({ page }) => {
@@ -29,6 +29,28 @@ test("CAD route keeps a readable static fallback when JavaScript is unavailable"
   await context.close();
 });
 
+test("CAD workspace preserves the responsive column boundary", async ({ page }) => {
+  const runtimeErrors: string[] = [];
+  page.on("pageerror", (error) => runtimeErrors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") runtimeErrors.push(message.text());
+  });
+
+  await page.setViewportSize({ width: 760, height: 720 });
+  await page.goto("/cad/");
+  const workspace = page.getByTestId("cad-workspace");
+  await expect(workspace).toBeVisible();
+
+  const columnCount = () =>
+    workspace.evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length);
+
+  await expect.poll(columnCount).toBe(1);
+
+  await page.setViewportSize({ width: 761, height: 720 });
+  await expect.poll(columnCount).toBe(2);
+  expect(runtimeErrors).toEqual([]);
+});
+
 test("CAD Worker builds the default box in a WebGL-enabled browser", async ({ page, browserName }) => {
   test.skip(
     browserName === "firefox" && process.env.PW_HEADFUL !== "1",
@@ -37,7 +59,7 @@ test("CAD Worker builds the default box in a WebGL-enabled browser", async ({ pa
   await page.goto("/cad/");
   await expect(page.getByRole("status")).toContainText("模型已就緒，可以下載 STEP。", { timeout: 30_000 });
   await expect(page.getByRole("button", { name: "下載 STEP" })).toBeEnabled();
-  await expect(page.locator(".cad-viewport canvas")).toHaveCount(1);
+  await expect(page.getByTestId("cad-viewport").locator("canvas")).toHaveCount(1);
 });
 
 test("CAD Worker exports one non-empty STEP download for the committed revision", async ({ page, browserName }) => {
