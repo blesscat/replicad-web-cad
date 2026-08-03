@@ -1,0 +1,36 @@
+---
+import "../styles.css";
+import CadWorkspace from "../components/cad/CadWorkspace";
+---
+
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>CAD workspace | replicad-web-cad</title>
+    <meta name="description" content="Browser-based parametric CAD workspace." />
+  </head>
+  <body>
+    <div class="site-shell">
+      <nav class="site-nav" aria-label="主要導覽">
+        <a href="/">replicad-web-cad</a>
+        <div class="site-nav__links">
+          <a href="/docs/">文件</a>
+          <a href="/cad/" aria-current="page">CAD workspace</a>
+        </div>
+      </nav>
+      <main class="page-content">
+        <section aria-labelledby="cad-title">
+          <p class="muted">Browser CAD Prototype</p>
+          <h1 id="cad-title">CAD workspace</h1>
+          <p class="muted">方塊參數以 mm 解讀。建模與 STEP 匯出在專用 Worker 內執行。</p>
+          <div class="fallback-card" id="cad-fallback">
+            <h2>正在載入 CAD workspace</h2>
+            <p>需要 JavaScript、WebAssembly、Web Worker 與 WebGL 才能顯示互動式預覽。</p>
+          </div>
+          <CadWorkspace client:only="react" />
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
