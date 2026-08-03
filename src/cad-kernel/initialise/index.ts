@@ -1,5 +1,5 @@
-import opencascade from "replicad-opencascadejs"
-import { setOC } from "replicad"
+import opencascade from 'replicad-opencascadejs'
+import { setOC } from 'replicad'
 
 type OpenCascadeOptions = {
   locateFile?: (fileName: string) => string

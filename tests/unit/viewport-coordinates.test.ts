@@ -1,12 +1,12 @@
-import { describe, expect, it } from "vitest"
-import * as THREE from "three"
+import { describe, expect, it } from 'vitest'
+import * as THREE from 'three'
 import {
   CAD_VIEWPORT_CAMERA,
   CAD_VIEWPORT_GRID_ROTATION,
-} from "../../src/features/cad/viewport/coordinates"
+} from '../../src/features/cad/viewport/coordinates'
 
-describe("CAD viewport coordinate system", () => {
-  it("uses Z as screen-up and keeps the ground grid on the XY plane", () => {
+describe('CAD viewport coordinate system', () => {
+  it('uses Z as screen-up and keeps the ground grid on the XY plane', () => {
     const camera = new THREE.PerspectiveCamera(
       CAD_VIEWPORT_CAMERA.fov,
       1,

@@ -1,32 +1,32 @@
 export type CadErrorCode =
-  | "PROTOCOL_UNSUPPORTED"
-  | "PROTOCOL_INVALID"
-  | "ENGINE_INIT_FAILED"
-  | "ENGINE_TIMEOUT"
-  | "WORKER_TIMEOUT"
-  | "WORKER_RESTARTED"
-  | "WORKER_TERMINATED"
-  | "BROWSER_UNSUPPORTED"
-  | "INVALID_INPUT"
-  | "MODEL_BUILD_FAILED"
-  | "MESH_INVALID"
-  | "MODEL_REVISION_MISSING"
-  | "STALE_GENERATION"
-  | "CANDIDATE_CAPACITY"
-  | "CANDIDATE_EXPIRED"
-  | "CANDIDATE_ORPHANED"
-  | "STEP_EXPORT_FAILED"
-  | "STEP_METADATA_INVALID"
-  | "UNKNOWN_ERROR"
+  | 'PROTOCOL_UNSUPPORTED'
+  | 'PROTOCOL_INVALID'
+  | 'ENGINE_INIT_FAILED'
+  | 'ENGINE_TIMEOUT'
+  | 'WORKER_TIMEOUT'
+  | 'WORKER_RESTARTED'
+  | 'WORKER_TERMINATED'
+  | 'BROWSER_UNSUPPORTED'
+  | 'INVALID_INPUT'
+  | 'MODEL_BUILD_FAILED'
+  | 'MESH_INVALID'
+  | 'MODEL_REVISION_MISSING'
+  | 'STALE_GENERATION'
+  | 'CANDIDATE_CAPACITY'
+  | 'CANDIDATE_EXPIRED'
+  | 'CANDIDATE_ORPHANED'
+  | 'STEP_EXPORT_FAILED'
+  | 'STEP_METADATA_INVALID'
+  | 'UNKNOWN_ERROR'
 
 export type CadErrorStage =
-  | "protocol"
-  | "initializing"
-  | "building"
-  | "meshing"
-  | "exporting"
-  | "worker"
-  | "validation"
+  | 'protocol'
+  | 'initializing'
+  | 'building'
+  | 'meshing'
+  | 'exporting'
+  | 'worker'
+  | 'validation'
 
 export type CadError = {
   stage: CadErrorStage
@@ -45,8 +45,8 @@ export function normalizeError(
 ): CadError {
   const message = error instanceof Error ? error.message : String(error)
   return {
-    stage: fallback.stage ?? "worker",
-    code: fallback.code ?? "UNKNOWN_ERROR",
+    stage: fallback.stage ?? 'worker',
+    code: fallback.code ?? 'UNKNOWN_ERROR',
     userMessage: fallback.userMessage ?? message,
     recoverable: fallback.recoverable ?? true,
     generation: fallback.generation,

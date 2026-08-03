@@ -1,8 +1,8 @@
-import { makeBox, type Solid } from "replicad"
-import { boundsForBox, type BoxParameters } from "../../cad-contract/units"
+import { makeBox, type Solid } from 'replicad'
+import { boundsForBox, type BoxParameters } from '../../cad-contract/units'
 
 export type KernelModelDefinition = {
-  id: "box"
+  id: 'box'
   build: (parameters: BoxParameters) => Solid
 }
 
@@ -12,12 +12,12 @@ export function buildBoxBRep(parameters: BoxParameters): Solid {
 }
 
 export const boxKernelDefinition: KernelModelDefinition = {
-  id: "box",
+  id: 'box',
   build: buildBoxBRep,
 }
 
 export function buildModelBRep(
-  modelId: "box",
+  modelId: 'box',
   parameters: BoxParameters,
 ): Solid {
   if (modelId === boxKernelDefinition.id)

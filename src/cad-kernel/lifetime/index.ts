@@ -1,6 +1,6 @@
-import type { Solid } from "replicad"
-import type { MeshData } from "../mesh"
-import type { BoxParameters } from "../../cad-contract/units"
+import type { Solid } from 'replicad'
+import type { MeshData } from '../mesh'
+import type { BoxParameters } from '../../cad-contract/units'
 
 export type CandidateRecord = {
   candidateId: string
@@ -83,7 +83,7 @@ export class RevisionLifetime {
     ) {
       this.candidates.delete(candidate.candidateId)
       deleteShape(candidate.shape)
-      throw new Error("CANDIDATE_CAPACITY")
+      throw new Error('CANDIDATE_CAPACITY')
     }
     return evicted
   }
@@ -105,7 +105,7 @@ export class RevisionLifetime {
 
   commitCandidate(candidateId: string): RevisionRecord {
     const candidate = this.candidates.get(candidateId)
-    if (!candidate) throw new Error("CANDIDATE_MISSING")
+    if (!candidate) throw new Error('CANDIDATE_MISSING')
 
     this.candidates.delete(candidateId)
     const revision: RevisionRecord = {
@@ -163,7 +163,7 @@ export class RevisionLifetime {
 
   pin(modelRevision: string): RevisionRecord {
     const revision = this.revisions.get(modelRevision)
-    if (!revision) throw new Error("MODEL_REVISION_MISSING")
+    if (!revision) throw new Error('MODEL_REVISION_MISSING')
     revision.exportPins += 1
     return revision
   }

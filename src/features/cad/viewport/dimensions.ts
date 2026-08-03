@@ -2,14 +2,14 @@ import type {
   BoxBounds,
   BoxParameters,
   DimensionKey,
-} from "../../../cad-contract/units"
+} from '../../../cad-contract/units'
 
 export type Point3 = [number, number, number]
 export type LineSegment = readonly [Point3, Point3]
 
 export type DimensionAnnotation = {
   key: DimensionKey
-  axis: "X" | "Y" | "Z"
+  axis: 'X' | 'Y' | 'Z'
   label: string
   value: number
   valueLabel: string
@@ -40,7 +40,7 @@ function createAnnotation({
   extensionLines,
   endTicks,
   labelPosition,
-}: Omit<DimensionAnnotation, "valueLabel" | "ariaLabel">): DimensionAnnotation {
+}: Omit<DimensionAnnotation, 'valueLabel' | 'ariaLabel'>): DimensionAnnotation {
   const valueLabel = `${value} mm`
   return {
     key,
@@ -66,9 +66,9 @@ function createWidthAnnotation(
   const lineEnd = point(bounds.max[0], bounds.min[1] - offset, bounds.min[2])
 
   return createAnnotation({
-    key: "width",
-    axis: "X",
-    label: "寬度",
+    key: 'width',
+    axis: 'X',
+    label: '寬度',
     value: parameters.width,
     dimensionLine: segment(lineStart, lineEnd),
     extensionLines: [
@@ -103,9 +103,9 @@ function createDepthAnnotation(
   const lineEnd = point(bounds.max[0] + offset, bounds.max[1], bounds.min[2])
 
   return createAnnotation({
-    key: "depth",
-    axis: "Y",
-    label: "深度",
+    key: 'depth',
+    axis: 'Y',
+    label: '深度',
     value: parameters.depth,
     dimensionLine: segment(lineStart, lineEnd),
     extensionLines: [
@@ -148,9 +148,9 @@ function createHeightAnnotation(
   )
 
   return createAnnotation({
-    key: "height",
-    axis: "Z",
-    label: "高度",
+    key: 'height',
+    axis: 'Z',
+    label: '高度',
     value: parameters.height,
     dimensionLine: segment(lineStart, lineEnd),
     extensionLines: [

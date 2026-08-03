@@ -1,34 +1,34 @@
-import { exportStepBytes } from "../cad-kernel/export"
-import { initialiseCadKernel } from "../cad-kernel/initialise"
+import { exportStepBytes } from '../cad-kernel/export'
+import { initialiseCadKernel } from '../cad-kernel/initialise'
 import {
   RevisionLifetime,
   type CandidateRecord,
   type RevisionRecord,
-} from "../cad-kernel/lifetime"
-import { buildModelBRep } from "../cad-kernel/model"
-import { meshBRep, serializeMesh, type MeshData } from "../cad-kernel/mesh"
+} from '../cad-kernel/lifetime'
+import { buildModelBRep } from '../cad-kernel/model'
+import { meshBRep, serializeMesh, type MeshData } from '../cad-kernel/mesh'
 import {
   errorEvent,
   isWorkerCommand,
   PROTOCOL_VERSION,
   type WorkerCommand,
   type WorkerEvent,
-} from "../cad-contract/messages"
+} from '../cad-contract/messages'
 import type {
   CadError,
   CadErrorCode,
   CadErrorStage,
-} from "../cad-contract/errors"
-import { PROTOTYPE_CONFIGURATION } from "../cad-contract/units"
-import { cadErrorCodeFor, cadErrorStageFor } from "./error-mapping"
+} from '../cad-contract/errors'
+import { PROTOTYPE_CONFIGURATION } from '../cad-contract/units'
+import { cadErrorCodeFor, cadErrorStageFor } from './error-mapping'
 
 type EventSink = (event: WorkerEvent, transfer?: Transferable[]) => void
 
 type SupersededReason =
-  | "STALE_GENERATION"
-  | "CANDIDATE_CAPACITY"
-  | "CANDIDATE_EXPIRED"
-  | "CANDIDATE_ORPHANED"
+  | 'STALE_GENERATION'
+  | 'CANDIDATE_CAPACITY'
+  | 'CANDIDATE_EXPIRED'
+  | 'CANDIDATE_ORPHANED'
 
 type CandidateTerminal = {
   operationId: string
@@ -80,26 +80,26 @@ export class CadWorkerRuntime {
     if (!isWorkerCommand(value)) {
       this.emit({
         version: PROTOCOL_VERSION,
-        kind: "operation.error",
+        kind: 'operation.error',
         requestId: id(),
-        operationId: "protocol",
-        terminalForRequestId: "protocol",
-        stage: "protocol",
-        code: "PROTOCOL_INVALID",
-        userMessage: "Worker 收到無法辨識的訊息。",
+        operationId: 'protocol',
+        terminalForRequestId: 'protocol',
+        stage: 'protocol',
+        code: 'PROTOCOL_INVALID',
+        userMessage: 'Worker 收到無法辨識的訊息。',
         recoverable: false,
       })
       return
     }
 
-    if (this.disposed && value.kind !== "worker.dispose") {
+    if (this.disposed && value.kind !== 'worker.dispose') {
       this.emit(
         errorEvent(
           value,
           makeError(
-            "worker",
-            "WORKER_TERMINATED",
-            "CAD Worker 已釋放，請重試。",
+            'worker',
+            'WORKER_TERMINATED',
+            'CAD Worker 已釋放，請重試。',
             false,
           ),
         ),
@@ -109,25 +109,25 @@ export class CadWorkerRuntime {
 
     try {
       switch (value.kind) {
-        case "engine.init":
+        case 'engine.init':
           await this.initialize(value)
           return
-        case "model.generate":
+        case 'model.generate':
           await this.generate(value)
           return
-        case "model.invalidate":
+        case 'model.invalidate':
           this.invalidate(value)
           return
-        case "model.commit":
+        case 'model.commit':
           this.commit(value)
           return
-        case "model.discard":
+        case 'model.discard':
           this.discard(value)
           return
-        case "export.step":
+        case 'export.step':
           await this.exportStep(value)
           return
-        case "worker.dispose":
+        case 'worker.dispose':
           if (this.disposed) return
           this.clearCandidateTimers()
           this.candidateTerminals.clear()
@@ -144,14 +144,14 @@ export class CadWorkerRuntime {
   }
 
   private async initialize(
-    command: Extract<WorkerCommand, { kind: "engine.init" }>,
+    command: Extract<WorkerCommand, { kind: 'engine.init' }>,
   ): Promise<void> {
     if (this.initialized) {
       this.ready(command)
       return
     }
     if (!this.initializing) {
-      this.emitProgress(command, "loading")
+      this.emitProgress(command, 'loading')
       this.initializing = initialiseCadKernel(command.asset.wasmUrl)
         .then(() => {
           if (!this.disposed) this.initialized = true
@@ -161,39 +161,39 @@ export class CadWorkerRuntime {
         })
     }
     await this.initializing
-    if (this.disposed) throw new Error("WORKER_TERMINATED")
+    if (this.disposed) throw new Error('WORKER_TERMINATED')
     this.ready(command)
   }
 
   private ready(
-    command: Extract<WorkerCommand, { kind: "engine.init" }>,
+    command: Extract<WorkerCommand, { kind: 'engine.init' }>,
   ): void {
     this.emit({
       version: PROTOCOL_VERSION,
-      kind: "engine.ready",
+      kind: 'engine.ready',
       requestId: command.requestId,
       operationId: command.operationId,
       workerEpoch: this.epoch,
-      engine: { name: "replicad", wasm: true },
+      engine: { name: 'replicad', wasm: true },
     })
   }
 
   private async generate(
-    command: Extract<WorkerCommand, { kind: "model.generate" }>,
+    command: Extract<WorkerCommand, { kind: 'model.generate' }>,
   ): Promise<void> {
-    if (!this.initialized) throw new Error("ENGINE_NOT_READY")
+    if (!this.initialized) throw new Error('ENGINE_NOT_READY')
     if (command.generation <= this.latestInputGeneration) {
-      this.superseded(command, "STALE_GENERATION")
+      this.superseded(command, 'STALE_GENERATION')
       return
     }
     this.latestInputGeneration = command.generation
     this.invalidatedGeneration = 0
     this.lifetime.pruneCommitsBeforeGeneration(this.latestInputGeneration)
-    this.emitProgress(command, "building")
+    this.emitProgress(command, 'building')
     const shape = buildModelBRep(command.modelId, command.parameters)
     let mesh: MeshData
     try {
-      this.emitProgress(command, "meshing")
+      this.emitProgress(command, 'meshing')
       mesh = meshBRep(shape, command.previewConfig)
     } catch (error) {
       try {
@@ -216,14 +216,14 @@ export class CadWorkerRuntime {
     }
 
     const evicted = this.lifetime.addCandidate(candidate)
-    for (const old of evicted) this.finalizeCandidate(old, "CANDIDATE_CAPACITY")
+    for (const old of evicted) this.finalizeCandidate(old, 'CANDIDATE_CAPACITY')
     const expired = this.lifetime.cleanupExpired(this.latestInputGeneration)
     for (const old of expired) {
       this.finalizeCandidate(
         old,
         old.generation < this.latestInputGeneration
-          ? "STALE_GENERATION"
-          : "CANDIDATE_EXPIRED",
+          ? 'STALE_GENERATION'
+          : 'CANDIDATE_EXPIRED',
       )
     }
 
@@ -239,7 +239,7 @@ export class CadWorkerRuntime {
     this.emit(
       {
         version: PROTOCOL_VERSION,
-        kind: "model.candidate-ready",
+        kind: 'model.candidate-ready',
         requestId: id(),
         operationId: command.operationId,
         generation: command.generation,
@@ -252,16 +252,16 @@ export class CadWorkerRuntime {
   }
 
   private invalidate(
-    command: Extract<WorkerCommand, { kind: "model.invalidate" }>,
+    command: Extract<WorkerCommand, { kind: 'model.invalidate' }>,
   ): void {
     if (command.workerEpoch !== this.epoch) {
-      this.superseded(command, "STALE_GENERATION")
+      this.superseded(command, 'STALE_GENERATION')
       return
     }
     if (command.generation < this.latestInputGeneration) {
       this.emit({
         version: PROTOCOL_VERSION,
-        kind: "model.invalidated",
+        kind: 'model.invalidated',
         requestId: id(),
         operationId: command.operationId,
         generation: command.generation,
@@ -279,13 +279,13 @@ export class CadWorkerRuntime {
       this.finalizeCandidate(
         old,
         old.generation <= command.generation
-          ? "STALE_GENERATION"
-          : "CANDIDATE_EXPIRED",
+          ? 'STALE_GENERATION'
+          : 'CANDIDATE_EXPIRED',
       )
     }
     this.emit({
       version: PROTOCOL_VERSION,
-      kind: "model.invalidated",
+      kind: 'model.invalidated',
       requestId: id(),
       operationId: command.operationId,
       generation: command.generation,
@@ -294,10 +294,10 @@ export class CadWorkerRuntime {
   }
 
   private commit(
-    command: Extract<WorkerCommand, { kind: "model.commit" }>,
+    command: Extract<WorkerCommand, { kind: 'model.commit' }>,
   ): void {
     if (command.workerEpoch !== this.epoch) {
-      this.superseded(command, "STALE_GENERATION")
+      this.superseded(command, 'STALE_GENERATION')
       return
     }
     const terminal = this.candidateTerminals.get(command.candidateId)
@@ -309,14 +309,14 @@ export class CadWorkerRuntime {
         this.invalidatedGeneration === candidate.generation)
     ) {
       const removed = this.lifetime.discardCandidate(command.candidateId)
-      if (removed) this.finalizeCandidate(removed, "STALE_GENERATION")
+      if (removed) this.finalizeCandidate(removed, 'STALE_GENERATION')
       return
     }
     if (
       command.generation !== this.latestInputGeneration ||
       this.invalidatedGeneration === command.generation
     ) {
-      this.superseded(command, "STALE_GENERATION")
+      this.superseded(command, 'STALE_GENERATION')
       return
     }
     const previousCommit = this.lifetime.getCommit(command.operationId)
@@ -329,7 +329,7 @@ export class CadWorkerRuntime {
       candidate.workerEpoch !== this.epoch ||
       candidate.generation !== this.latestInputGeneration
     ) {
-      this.superseded(command, "STALE_GENERATION")
+      this.superseded(command, 'STALE_GENERATION')
       return
     }
     const revision = this.lifetime.commitCandidate(command.candidateId)
@@ -338,14 +338,14 @@ export class CadWorkerRuntime {
   }
 
   private readyFromRevision(
-    command: Extract<WorkerCommand, { kind: "model.commit" }>,
+    command: Extract<WorkerCommand, { kind: 'model.commit' }>,
     revision: RevisionRecord,
   ): void {
     const mesh = serializeMesh(revision.mesh)
     this.emit(
       {
         version: PROTOCOL_VERSION,
-        kind: "model.ready",
+        kind: 'model.ready',
         requestId: id(),
         operationId: command.operationId,
         generation: revision.generation,
@@ -359,47 +359,47 @@ export class CadWorkerRuntime {
   }
 
   private discard(
-    command: Extract<WorkerCommand, { kind: "model.discard" }>,
+    command: Extract<WorkerCommand, { kind: 'model.discard' }>,
   ): void {
     if (command.workerEpoch !== this.epoch) {
-      this.superseded(command, "STALE_GENERATION")
+      this.superseded(command, 'STALE_GENERATION')
       return
     }
     const terminal = this.candidateTerminals.get(command.candidateId)
     if (terminal) return
     const candidate = this.lifetime.discardCandidate(command.candidateId)
     if (!candidate) return
-    this.finalizeCandidate(candidate, "CANDIDATE_ORPHANED")
+    this.finalizeCandidate(candidate, 'CANDIDATE_ORPHANED')
   }
 
   private async exportStep(
-    command: Extract<WorkerCommand, { kind: "export.step" }>,
+    command: Extract<WorkerCommand, { kind: 'export.step' }>,
   ): Promise<void> {
-    if (command.workerEpoch !== this.epoch) throw new Error("WORKER_RESTARTED")
+    if (command.workerEpoch !== this.epoch) throw new Error('WORKER_RESTARTED')
     const revision = this.lifetime.pin(command.modelRevision)
     try {
       this.emit({
         version: PROTOCOL_VERSION,
-        kind: "export.accepted",
+        kind: 'export.accepted',
         requestId: id(),
         operationId: command.operationId,
         modelRevision: revision.modelRevision,
         workerEpoch: this.epoch,
       })
-      this.emitProgress(command, "exporting", revision.modelRevision)
+      this.emitProgress(command, 'exporting', revision.modelRevision)
       const bytes = await exportStepBytes(revision.shape)
-      if (bytes.byteLength === 0) throw new Error("STEP_EMPTY")
+      if (bytes.byteLength === 0) throw new Error('STEP_EMPTY')
       this.emit(
         {
           version: PROTOCOL_VERSION,
-          kind: "export.ready",
+          kind: 'export.ready',
           requestId: id(),
           operationId: command.operationId,
           modelRevision: revision.modelRevision,
           workerEpoch: this.epoch,
-          format: "step",
+          format: 'step',
           bytes,
-          mime: "model/step",
+          mime: 'model/step',
           fileName: command.file.name,
         },
         [bytes],
@@ -411,12 +411,12 @@ export class CadWorkerRuntime {
 
   private emitProgress(
     command: { operationId: string; requestId: string; generation?: number },
-    stage: "loading" | "building" | "meshing" | "exporting",
+    stage: 'loading' | 'building' | 'meshing' | 'exporting',
     modelRevision?: string,
   ): void {
     this.emit({
       version: PROTOCOL_VERSION,
-      kind: "operation.progress",
+      kind: 'operation.progress',
       requestId: id(),
       operationId: command.operationId,
       stage,
@@ -431,7 +431,7 @@ export class CadWorkerRuntime {
   ): void {
     this.emit({
       version: PROTOCOL_VERSION,
-      kind: "operation.superseded",
+      kind: 'operation.superseded',
       requestId: id(),
       operationId: command.operationId,
       terminalForRequestId: command.requestId,
@@ -454,7 +454,7 @@ export class CadWorkerRuntime {
     this.candidateTerminals.set(candidate.candidateId, terminal)
     this.emit({
       version: PROTOCOL_VERSION,
-      kind: "operation.superseded",
+      kind: 'operation.superseded',
       requestId: id(),
       operationId: terminal.operationId,
       terminalForRequestId: terminal.requestId,
@@ -483,8 +483,8 @@ export class CadWorkerRuntime {
         this.finalizeCandidate(
           old,
           old.generation < this.latestInputGeneration
-            ? "STALE_GENERATION"
-            : "CANDIDATE_EXPIRED",
+            ? 'STALE_GENERATION'
+            : 'CANDIDATE_EXPIRED',
         )
       }
     }, delay)
@@ -510,7 +510,7 @@ export class CadWorkerRuntime {
   }
 }
 
-if (typeof self !== "undefined") {
+if (typeof self !== 'undefined') {
   const workerGlobal = globalThis as unknown as {
     postMessage: (event: WorkerEvent, transfer?: Transferable[]) => void
   }
@@ -520,7 +520,7 @@ if (typeof self !== "undefined") {
   })
 
   let queue = Promise.resolve()
-  self.addEventListener("message", (event: MessageEvent<unknown>) => {
+  self.addEventListener('message', (event: MessageEvent<unknown>) => {
     queue = queue.then(() => runtime.handle(event.data)).catch(() => undefined)
   })
 }

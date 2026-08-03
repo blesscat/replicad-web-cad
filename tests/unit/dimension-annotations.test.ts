@@ -1,14 +1,14 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from 'vitest'
 import {
   boundsForBox,
   type BoxBounds,
   type BoxParameters,
-} from "../../src/cad-contract/units"
+} from '../../src/cad-contract/units'
 import {
   createDimensionAnnotations,
   type DimensionAnnotation,
   type Point3,
-} from "../../src/features/cad/viewport/dimensions"
+} from '../../src/features/cad/viewport/dimensions'
 
 function distanceAlong(first: Point3, second: Point3, axis: number): number {
   return Math.abs(second[axis] - first[axis])
@@ -27,42 +27,42 @@ function isOutsideBounds(point: Point3, bounds: BoxBounds): boolean {
 
 function annotationMap(
   annotations: DimensionAnnotation[],
-): Map<DimensionAnnotation["key"], DimensionAnnotation> {
+): Map<DimensionAnnotation['key'], DimensionAnnotation> {
   return new Map(annotations.map((annotation) => [annotation.key, annotation]))
 }
 
-describe("CAD dimension annotation geometry", () => {
-  it("creates readable X, Y and Z annotations for the prototype box", () => {
+describe('CAD dimension annotation geometry', () => {
+  it('creates readable X, Y and Z annotations for the prototype box', () => {
     const parameters: BoxParameters = { width: 20, depth: 30, height: 40 }
     const bounds = boundsForBox(parameters)
     const annotations = createDimensionAnnotations(bounds, parameters)
     const byKey = annotationMap(annotations)
-    const width = byKey.get("width")
-    const depth = byKey.get("depth")
-    const height = byKey.get("height")
+    const width = byKey.get('width')
+    const depth = byKey.get('depth')
+    const height = byKey.get('height')
 
     expect(annotations.map((annotation) => annotation.key)).toEqual([
-      "width",
-      "depth",
-      "height",
+      'width',
+      'depth',
+      'height',
     ])
     expect(width).toMatchObject({
-      axis: "X",
+      axis: 'X',
       value: 20,
-      valueLabel: "20 mm",
-      ariaLabel: "寬度 X 20 mm",
+      valueLabel: '20 mm',
+      ariaLabel: '寬度 X 20 mm',
     })
     expect(depth).toMatchObject({
-      axis: "Y",
+      axis: 'Y',
       value: 30,
-      valueLabel: "30 mm",
-      ariaLabel: "深度 Y 30 mm",
+      valueLabel: '30 mm',
+      ariaLabel: '深度 Y 30 mm',
     })
     expect(height).toMatchObject({
-      axis: "Z",
+      axis: 'Z',
       value: 40,
-      valueLabel: "40 mm",
-      ariaLabel: "高度 Z 40 mm",
+      valueLabel: '40 mm',
+      ariaLabel: '高度 Z 40 mm',
     })
     expect(width?.extensionLines).toHaveLength(2)
     expect(width?.endTicks).toHaveLength(2)
@@ -70,7 +70,7 @@ describe("CAD dimension annotation geometry", () => {
     expect(height?.endTicks).toHaveLength(2)
   })
 
-  it("keeps each dimension line aligned to its axis and outside the box", () => {
+  it('keeps each dimension line aligned to its axis and outside the box', () => {
     const parameters: BoxParameters = { width: 7, depth: 13, height: 29 }
     const bounds: BoxBounds = {
       min: [-3.75, -7, 0],
@@ -79,16 +79,16 @@ describe("CAD dimension annotation geometry", () => {
     const annotations = createDimensionAnnotations(bounds, parameters)
     const byKey = annotationMap(annotations)
 
-    const width = byKey.get("width")
-    const depth = byKey.get("depth")
-    const height = byKey.get("height")
+    const width = byKey.get('width')
+    const depth = byKey.get('depth')
+    const height = byKey.get('height')
 
     expect(width).toBeDefined()
     expect(depth).toBeDefined()
     expect(height).toBeDefined()
-    expect(width?.valueLabel).toBe("7 mm")
-    expect(depth?.valueLabel).toBe("13 mm")
-    expect(height?.valueLabel).toBe("29 mm")
+    expect(width?.valueLabel).toBe('7 mm')
+    expect(depth?.valueLabel).toBe('13 mm')
+    expect(height?.valueLabel).toBe('29 mm')
     expect(
       distanceAlong(width!.dimensionLine[0], width!.dimensionLine[1], 0),
     ).toBe(7.5)

@@ -9,15 +9,14 @@
 Astro 負責網站 shell 與路由，React workspace 負責瀏覽器端 UI，專用 CAD Worker 負責所有 CAD kernel 工作：
 
 ```text
-Astro site shell
-└─ SiteLayout.astro + Astro pages / 首頁 / 文件 / CAD route
-   └─ React workspace（主執行緒）
+Astro site shell（layouts/ + pages/）
+└─ React workspace（components/cad/，主執行緒）
       ├─ 參數表單與 state machine
       ├─ Worker client / runtime validation
       ├─ React Three Fiber viewport
       └─ download adapter
              ⇅ versioned messages + transferable buffers
-         CAD Worker
+         CAD Worker（workers/ + cad-kernel/）
          ├─ OpenCascade WASM / replicad initialization
          ├─ box B-Rep builder
          ├─ preview mesh generation
@@ -31,60 +30,46 @@ Astro site shell
 ```text
 src/
 ├─ pages/
-│  ├─ index.astro
-│  ├─ docs/
-│  └─ cad.astro
 ├─ layouts/
-│  └─ SiteLayout.astro
 ├─ styles/
-│  └─ global.css
-├─ components/cad/CadWorkspace.tsx
+├─ components/cad/
 ├─ features/cad/
 │  ├─ model-catalog/
-│  │  └─ box-definition
 │  ├─ parameters/
 │  ├─ state/
 │  ├─ viewport/
-│  │  ├─ CadViewport.tsx
-│  │  └─ CadViewport.module.scss
 │  ├─ worker-client/
 │  └─ download/
 ├─ cad-contract/
-│  ├─ messages
-│  ├─ errors
-│  └─ units
 ├─ cad-kernel/
-│  ├─ initialise
-│  ├─ model
-│  ├─ mesh
-│  ├─ export
-│  └─ lifetime
-└─ workers/cad.worker
+└─ workers/
 ```
 
 資料夾名稱可以隨實作調整，但責任邊界必須維持：
 
-- `pages/` 只提供頁面內容、fallback 與 React 掛載點；共用 Astro shell、導覽與 head metadata 由 `layouts/SiteLayout.astro` 負責。
-- `styles/global.css` 是唯一全域 CSS 入口，只放 Tailwind import、`@theme` tokens、reset 與必要的 base rules，不放頁面或功能元件 selector。
+- `pages/` 只提供頁面內容、fallback 與 React 掛載點；共用 Astro shell、導覽與 head metadata 由 `layouts/` 負責。
+- `layouts/` 負責共用 Astro shell、導覽與 head metadata。
+- `styles/` 是全域樣式入口，只放 Tailwind import、`@theme` tokens、reset 與必要的 base rules，不放頁面或功能元件 selector。
 - 頁面與元件預設使用 Tailwind utility classes；utility class 必須以完整、可靜態掃描的字串呈現，不拼接部分 class token。
-- `*.module.scss` 只用於 utility 不易表達的複雜 selector 或 descendant rule，並放在實際擁有該樣式的功能資料夾。現在的例外是 `features/cad/viewport/CadViewport.module.scss`，只負責 canvas descendant 尺寸；viewport overlay/state 仍使用 Tailwind。
-- `components/cad/` 組裝 React workspace；`CadWorkspace` 不直接 import CAD kernel。
+- `features/cad/viewport/` 與其他功能資料夾預設使用 Tailwind；只有 utility 不易表達的複雜 selector 或 descendant rule 才在實際擁有該樣式的資料夾放 scoped SCSS。
+- `components/cad/` 組裝 React workspace，負責 UI controller、輸入驗證、Worker lifecycle、控制面板與 viewport，不直接 import CAD kernel。
 - `features/cad/model-catalog/` 描述模型 id、參數 schema、建模入口與 metadata，不持有 UI 或 Worker lifecycle。
 - `features/cad/parameters/`、`state/`、`viewport/`、`worker-client/` 與 `download/` 分別處理輸入、狀態、預覽、Worker 通訊與瀏覽器下載。
 - `cad-contract/` 放跨主執行緒共用的 messages、errors 與 units；不得依賴 DOM、React、Three.js、replicad 或 OpenCascade。
-- `cad-kernel/` 放 WASM、B-Rep、mesh、STEP 與 resource lifetime 邏輯，只能由 `cad.worker` 使用。
-- `viewport/` 只接受已驗證的 mesh snapshot，不執行 B-Rep 建模或 STEP 匯出。
-- `download/` 只處理成功的 bytes 與 metadata，不重新建模。
+- `cad-kernel/` 放 WASM、B-Rep、mesh、STEP 與 resource lifetime 邏輯，只能由 `workers/` 使用。
+- `workers/` 是 CAD Worker 的執行入口，只能組合 `cad-contract/` 與 `cad-kernel/`。
+- `features/cad/viewport/` 只接受已驗證的 mesh snapshot，不執行 B-Rep 建模或 STEP 匯出。
+- `features/cad/download/` 只處理成功的 bytes 與 metadata，不重新建模。
 
 依賴方向應維持為：
 
 ```text
-Astro pages
-  → React CadWorkspace
-    → features/cad + worker-client + cad-contract
+pages/
+  → components/cad/
+    → features/cad/ + cad-contract/
       ⇅ versioned Worker messages
-    → cad.worker
-      → cad-kernel
+    → workers/
+      → cad-kernel/
 ```
 
 這樣分層是為了隔離 UI、跨執行緒 contract 與 CAD 原生資源，避免主執行緒被 WASM/CAD 運算阻塞，也讓未來增加模型時不必把 B-Rep 邏輯塞進 UI。

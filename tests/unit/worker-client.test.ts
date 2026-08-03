@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest"
-import { validateMeshSnapshot } from "../../src/features/cad/worker-client"
+import { describe, expect, it } from 'vitest'
+import { validateMeshSnapshot } from '../../src/features/cad/worker-client'
 
 function meshSnapshot() {
   return {
@@ -14,12 +14,12 @@ function meshSnapshot() {
   }
 }
 
-describe("Worker mesh boundary validation", () => {
-  it("accepts finite typed arrays with in-range triangle indices", () => {
+describe('Worker mesh boundary validation', () => {
+  it('accepts finite typed arrays with in-range triangle indices', () => {
     expect(validateMeshSnapshot(meshSnapshot())).toBe(true)
   })
 
-  it("rejects non-finite coordinates, out-of-range indices and invalid counts", () => {
+  it('rejects non-finite coordinates, out-of-range indices and invalid counts', () => {
     expect(
       validateMeshSnapshot({
         ...meshSnapshot(),

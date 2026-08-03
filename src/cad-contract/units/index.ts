@@ -10,11 +10,11 @@ export const PROTOTYPE_CONFIGURATION = {
   recoveryRetries: 1,
   pendingCandidateLimit: 2,
   candidateTtlMs: 30_000,
-  stepExtension: ".step",
-  stepMime: "model/step",
+  stepExtension: '.step',
+  stepMime: 'model/step',
 } as const
 
-export type DimensionKey = "width" | "depth" | "height"
+export type DimensionKey = 'width' | 'depth' | 'height'
 
 export type BoxParameters = Record<DimensionKey, number>
 
@@ -24,7 +24,7 @@ export type BoxBounds = {
 }
 
 export type ValidationIssue = {
-  field: DimensionKey | "parameters"
+  field: DimensionKey | 'parameters'
   message: string
 }
 
@@ -32,7 +32,7 @@ export type BoxValidation =
   | { valid: true; value: BoxParameters }
   | { valid: false; issues: ValidationIssue[] }
 
-const DIMENSIONS: DimensionKey[] = ["width", "depth", "height"]
+const DIMENSIONS: DimensionKey[] = ['width', 'depth', 'height']
 
 export function parseDimensionInput(raw: string): number | null {
   const value = raw.trim()
@@ -43,10 +43,10 @@ export function parseDimensionInput(raw: string): number | null {
 }
 
 export function validateBoxParameters(value: unknown): BoxValidation {
-  if (!value || typeof value !== "object") {
+  if (!value || typeof value !== 'object') {
     return {
       valid: false,
-      issues: [{ field: "parameters", message: "需要提供方塊尺寸。" }],
+      issues: [{ field: 'parameters', message: '需要提供方塊尺寸。' }],
     }
   }
 
@@ -55,12 +55,12 @@ export function validateBoxParameters(value: unknown): BoxValidation {
 
   for (const field of DIMENSIONS) {
     const dimension = candidate[field]
-    if (typeof dimension !== "number" || !Number.isFinite(dimension)) {
-      issues.push({ field, message: "必須是有限的整數。" })
+    if (typeof dimension !== 'number' || !Number.isFinite(dimension)) {
+      issues.push({ field, message: '必須是有限的整數。' })
       continue
     }
     if (!Number.isInteger(dimension)) {
-      issues.push({ field, message: "只接受整數 mm，不會自動四捨五入。" })
+      issues.push({ field, message: '只接受整數 mm，不會自動四捨五入。' })
       continue
     }
     if (

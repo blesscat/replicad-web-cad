@@ -1,6 +1,6 @@
-import { defineConfig } from "astro/config"
-import react from "@astrojs/react"
-import tailwindcss from "@tailwindcss/vite"
+import { defineConfig } from 'astro/config'
+import react from '@astrojs/react'
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   integrations: [react()],
@@ -15,15 +15,15 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
     server: {
-      allowedHosts: ["local.blesscat.dev"],
+      allowedHosts: ['local.blesscat.dev'],
       ws: {
-        host: "local.blesscat.dev",
-        protocol: "wss",
+        host: 'local.blesscat.dev',
+        protocol: 'wss',
         clientPort: 443,
       },
     },
     preview: {
-      allowedHosts: ["local.blesscat.dev"],
+      allowedHosts: ['local.blesscat.dev'],
     },
   },
 })

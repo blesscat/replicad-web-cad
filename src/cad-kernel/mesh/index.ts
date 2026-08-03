@@ -1,6 +1,6 @@
-import type { Shape3D } from "replicad"
-import type { MeshSnapshot } from "../../cad-contract/messages"
-import type { BoxBounds } from "../../cad-contract/units"
+import type { Shape3D } from 'replicad'
+import type { MeshSnapshot } from '../../cad-contract/messages'
+import type { BoxBounds } from '../../cad-contract/units'
 
 export type MeshData = {
   positions: Float32Array
@@ -36,10 +36,10 @@ export function meshBRep(
     indices.length === 0 ||
     indices.length % 3 !== 0
   ) {
-    throw new Error("B-Rep mesh did not contain triangles")
+    throw new Error('B-Rep mesh did not contain triangles')
   }
   if (normals.length !== positions.length) {
-    throw new Error("B-Rep mesh normals do not match positions")
+    throw new Error('B-Rep mesh normals do not match positions')
   }
 
   return {

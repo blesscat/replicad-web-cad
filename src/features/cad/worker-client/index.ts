@@ -4,13 +4,13 @@ import {
   type WorkerCommand,
   type WorkerCommandInput,
   type WorkerEvent,
-} from "../../../cad-contract/messages"
-import type { MeshSnapshot } from "../../../cad-contract/messages"
+} from '../../../cad-contract/messages'
+import type { MeshSnapshot } from '../../../cad-contract/messages'
 
 export type WorkerClientListener = (event: WorkerEvent) => void
 
 export type WorkerClientError = {
-  kind: "worker-error" | "worker-message-error" | "protocol-error"
+  kind: 'worker-error' | 'worker-message-error' | 'protocol-error'
   error: Error
 }
 
@@ -32,14 +32,14 @@ export class CadWorkerClient {
 
   constructor(
     workerFactory: () => Worker = () =>
-      new Worker(new URL("../../../workers/cad.worker.ts", import.meta.url), {
-        type: "module",
+      new Worker(new URL('../../../workers/cad.worker.ts', import.meta.url), {
+        type: 'module',
       }),
   ) {
     this.worker = workerFactory()
-    this.worker.addEventListener("message", this.handleMessage)
-    this.worker.addEventListener("error", this.handleWorkerError)
-    this.worker.addEventListener("messageerror", this.handleMessageError)
+    this.worker.addEventListener('message', this.handleMessage)
+    this.worker.addEventListener('error', this.handleWorkerError)
+    this.worker.addEventListener('messageerror', this.handleMessageError)
   }
 
   onEvent(listener: WorkerClientListener): () => void {
@@ -53,7 +53,7 @@ export class CadWorkerClient {
   }
 
   send(command: WorkerCommandInput): string {
-    if (this.disposed) throw new Error("Worker client has been disposed")
+    if (this.disposed) throw new Error('Worker client has been disposed')
     const message = {
       ...command,
       version: command.version ?? PROTOCOL_VERSION,
@@ -66,9 +66,9 @@ export class CadWorkerClient {
   terminate(): void {
     if (this.disposed) return
     this.disposed = true
-    this.worker.removeEventListener("message", this.handleMessage)
-    this.worker.removeEventListener("error", this.handleWorkerError)
-    this.worker.removeEventListener("messageerror", this.handleMessageError)
+    this.worker.removeEventListener('message', this.handleMessage)
+    this.worker.removeEventListener('error', this.handleWorkerError)
+    this.worker.removeEventListener('messageerror', this.handleMessageError)
     this.worker.terminate()
     this.listeners.clear()
     this.errorListeners.clear()
@@ -77,8 +77,8 @@ export class CadWorkerClient {
   private readonly handleMessage = (event: MessageEvent<unknown>): void => {
     if (!isWorkerEvent(event.data)) {
       this.emitError({
-        kind: "protocol-error",
-        error: new Error("Worker response failed runtime validation"),
+        kind: 'protocol-error',
+        error: new Error('Worker response failed runtime validation'),
       })
       return
     }
@@ -87,15 +87,15 @@ export class CadWorkerClient {
 
   private readonly handleWorkerError = (event: ErrorEvent): void => {
     this.emitError({
-      kind: "worker-error",
-      error: new Error(event.message || "CAD Worker terminated unexpectedly"),
+      kind: 'worker-error',
+      error: new Error(event.message || 'CAD Worker terminated unexpectedly'),
     })
   }
 
   private readonly handleMessageError = (): void => {
     this.emitError({
-      kind: "worker-message-error",
-      error: new Error("CAD Worker message could not be cloned"),
+      kind: 'worker-message-error',
+      error: new Error('CAD Worker message could not be cloned'),
     })
   }
 
