@@ -113,7 +113,7 @@ pnpm install
 pnpm dev
 ```
 
-開啟 <http://localhost:4321/cad/>。建置與 preview：
+開啟 <http://localhost:3456/cad/>。建置與 preview：
 
 ```bash
 pnpm build
