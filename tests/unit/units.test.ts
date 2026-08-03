@@ -1,0 +1,27 @@
+import { describe, expect, it } from "vitest";
+import {
+  boundsForBox,
+  boxFileName,
+  parseDimensionInput,
+  validateBoxParameters,
+} from "../../src/cad-contract/units";
+
+describe("box units and validation", () => {
+  it("accepts the prototype fixture and calculates centered bounds", () => {
+    const result = validateBoxParameters({ width: 20, depth: 30, height: 40 });
+    expect(result).toEqual({ valid: true, value: { width: 20, depth: 30, height: 40 } });
+    expect(boundsForBox(result.valid ? result.value : { width: 0, depth: 0, height: 0 })).toEqual({
+      min: [-10, -15, -20],
+      max: [10, 15, 20],
+    });
+    expect(boxFileName({ width: 20, depth: 30, height: 40 })).toBe("box-20x30x40.step");
+  });
+
+  it("rejects decimals, empty values and out-of-range dimensions", () => {
+    expect(parseDimensionInput("20.5")).toBeNull();
+    expect(parseDimensionInput("")).toBeNull();
+    expect(validateBoxParameters({ width: 0, depth: 30, height: 40 }).valid).toBe(false);
+    expect(validateBoxParameters({ width: 501, depth: 30, height: 40 }).valid).toBe(false);
+    expect(validateBoxParameters({ width: 20.5, depth: 30, height: 40 }).valid).toBe(false);
+  });
+});
