@@ -17,7 +17,7 @@ export type CadErrorCode =
   | "CANDIDATE_ORPHANED"
   | "STEP_EXPORT_FAILED"
   | "STEP_METADATA_INVALID"
-  | "UNKNOWN_ERROR";
+  | "UNKNOWN_ERROR"
 
 export type CadErrorStage =
   | "protocol"
@@ -26,24 +26,24 @@ export type CadErrorStage =
   | "meshing"
   | "exporting"
   | "worker"
-  | "validation";
+  | "validation"
 
 export type CadError = {
-  stage: CadErrorStage;
-  code: CadErrorCode;
-  userMessage: string;
-  recoverable: boolean;
-  generation?: number;
-  modelRevision?: string;
-  requestId?: string;
-  operationId?: string;
-};
+  stage: CadErrorStage
+  code: CadErrorCode
+  userMessage: string
+  recoverable: boolean
+  generation?: number
+  modelRevision?: string
+  requestId?: string
+  operationId?: string
+}
 
 export function normalizeError(
   error: unknown,
-  fallback: Partial<CadError> = {}
+  fallback: Partial<CadError> = {},
 ): CadError {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = error instanceof Error ? error.message : String(error)
   return {
     stage: fallback.stage ?? "worker",
     code: fallback.code ?? "UNKNOWN_ERROR",
@@ -53,5 +53,5 @@ export function normalizeError(
     modelRevision: fallback.modelRevision,
     requestId: fallback.requestId,
     operationId: fallback.operationId,
-  };
+  }
 }

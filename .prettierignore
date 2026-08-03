@@ -1,0 +1,10 @@
+node_modules/
+.pnpm-store/
+dist/
+.astro/
+coverage/
+playwright-report/
+test-results/
+openspec/
+pnpm-lock.yaml
+public/replicad_single.wasm

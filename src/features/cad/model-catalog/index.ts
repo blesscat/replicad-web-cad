@@ -1,23 +1,26 @@
-import type { BoxParameters, DimensionKey } from "../../../cad-contract/units";
-import { boxFileName, PROTOTYPE_CONFIGURATION } from "../../../cad-contract/units";
+import type { BoxParameters, DimensionKey } from "../../../cad-contract/units"
+import {
+  boxFileName,
+  PROTOTYPE_CONFIGURATION,
+} from "../../../cad-contract/units"
 
 export type ModelDefinition = {
-  id: "box";
-  buildKey: "box";
-  displayName: string;
+  id: "box"
+  buildKey: "box"
+  displayName: string
   parameterSchema: ReadonlyArray<{
-    key: DimensionKey;
-    label: string;
-    axis: string;
-    unit: "mm";
-    defaultValue: number;
-    min: number;
-    max: number;
-    step: number;
-  }>;
-  previewMetadata: { centeredOnXY: true; baseAtZ: 0 };
-  exportFileName: (parameters: BoxParameters) => string;
-};
+    key: DimensionKey
+    label: string
+    axis: string
+    unit: "mm"
+    defaultValue: number
+    min: number
+    max: number
+    step: number
+  }>
+  previewMetadata: { centeredOnXY: true; baseAtZ: 0 }
+  exportFileName: (parameters: BoxParameters) => string
+}
 
 export const boxDefinition: ModelDefinition = {
   id: "box",
@@ -57,4 +60,4 @@ export const boxDefinition: ModelDefinition = {
   ],
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   exportFileName: boxFileName,
-};
+}

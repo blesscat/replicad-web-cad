@@ -1,16 +1,30 @@
 ---
-import SiteLayout from "../layouts/SiteLayout.astro";
-import CadWorkspace from "../components/cad/CadWorkspace";
+import SiteLayout from "../layouts/SiteLayout.astro"
+import CadWorkspace from "../components/cad/CadWorkspace"
 ---
 
-<SiteLayout title="CAD workspace | replicad-web-cad" description="Browser-based parametric CAD workspace.">
+<SiteLayout
+  title="CAD workspace | replicad-web-cad"
+  description="Browser-based parametric CAD workspace."
+>
   <section aria-labelledby="cad-title">
     <p class="mb-4 text-muted">Browser CAD Prototype</p>
-    <h1 class="mb-4 text-4xl font-semibold leading-tight" id="cad-title">CAD workspace</h1>
-    <p class="mb-4 text-muted leading-normal">方塊參數以 mm 解讀。建模與 STEP 匯出在專用 Worker 內執行。</p>
-    <div class="rounded-2xl border border-border-card bg-panel p-5 shadow-card" id="cad-fallback">
-      <h2 class="mb-4 text-2xl font-semibold leading-tight">正在載入 CAD workspace</h2>
-      <p class="mb-0 leading-normal">需要 JavaScript、WebAssembly、Web Worker 與 WebGL 才能顯示互動式預覽。</p>
+    <h1 class="mb-4 text-4xl font-semibold leading-tight" id="cad-title">
+      CAD workspace
+    </h1>
+    <p class="mb-4 text-muted leading-normal">
+      方塊參數以 mm 解讀。建模與 STEP 匯出在專用 Worker 內執行。
+    </p>
+    <div
+      class="rounded-2xl border border-border-card bg-panel p-5 shadow-card"
+      id="cad-fallback"
+    >
+      <h2 class="mb-4 text-2xl font-semibold leading-tight">
+        正在載入 CAD workspace
+      </h2>
+      <p class="mb-0 leading-normal">
+        需要 JavaScript、WebAssembly、Web Worker 與 WebGL 才能顯示互動式預覽。
+      </p>
     </div>
     <CadWorkspace client:only="react" />
   </section>

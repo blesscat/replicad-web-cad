@@ -1,15 +1,15 @@
 ---
-import "../styles/global.css";
+import "../styles/global.css"
 
 interface Props {
-  title: string;
-  description?: string;
+  title: string
+  description?: string
 }
 
-const { title, description } = Astro.props;
-const currentPath = Astro.url.pathname;
-const isDocsPage = currentPath.startsWith("/docs");
-const isCadPage = currentPath.startsWith("/cad");
+const { title, description } = Astro.props
+const currentPath = Astro.url.pathname
+const isDocsPage = currentPath.startsWith("/docs")
+const isCadPage = currentPath.startsWith("/cad")
 ---
 
 <html lang="zh-Hant">
@@ -30,13 +30,13 @@ const isCadPage = currentPath.startsWith("/cad");
           <a
             class="no-underline"
             href="/docs/"
-            aria-current={isDocsPage ? "page" : undefined}
-          >文件</a>
+            aria-current={isDocsPage ? "page" : undefined}>文件</a
+          >
           <a
             class="no-underline"
             href="/cad/"
-            aria-current={isCadPage ? "page" : undefined}
-          >CAD workspace</a>
+            aria-current={isCadPage ? "page" : undefined}>CAD workspace</a
+          >
         </div>
       </nav>
       <main class="mx-auto max-w-[1200px] p-[clamp(1.5rem,4vw,4rem)]">

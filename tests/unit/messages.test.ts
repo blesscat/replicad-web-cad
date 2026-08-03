@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest"
 import {
   isWorkerCommand,
   isWorkerEvent,
   PROTOCOL_VERSION,
-} from "../../src/cad-contract/messages";
+} from "../../src/cad-contract/messages"
 
 describe("Worker contract runtime validation", () => {
   it("accepts versioned model commands and rejects incompatible messages", () => {
@@ -17,10 +17,17 @@ describe("Worker contract runtime validation", () => {
         modelId: "box",
         parameters: { width: 20, depth: 30, height: 40 },
         previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
-      })
-    ).toBe(true);
-    expect(isWorkerCommand({ version: 2, kind: "model.generate" })).toBe(false);
-    expect(isWorkerCommand({ version: PROTOCOL_VERSION, kind: "unknown", requestId: "x", operationId: "y" })).toBe(false);
+      }),
+    ).toBe(true)
+    expect(isWorkerCommand({ version: 2, kind: "model.generate" })).toBe(false)
+    expect(
+      isWorkerCommand({
+        version: PROTOCOL_VERSION,
+        kind: "unknown",
+        requestId: "x",
+        operationId: "y",
+      }),
+    ).toBe(false)
     expect(
       isWorkerCommand({
         version: PROTOCOL_VERSION,
@@ -31,9 +38,9 @@ describe("Worker contract runtime validation", () => {
         modelId: "box",
         parameters: { width: 20.5, depth: 30, height: 40 },
         previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
-      })
-    ).toBe(false);
-  });
+      }),
+    ).toBe(false)
+  })
 
   it("accepts transferable mesh responses only when buffers and counts are valid", () => {
     const event = {
@@ -52,8 +59,10 @@ describe("Worker contract runtime validation", () => {
         triangleCount: 1,
       },
       bounds: { min: [0, 0, 0], max: [1, 1, 0] },
-    };
-    expect(isWorkerEvent(event)).toBe(true);
-    expect(isWorkerEvent({ ...event, mesh: { ...event.mesh, triangleCount: 0 } })).toBe(false);
-  });
-});
+    }
+    expect(isWorkerEvent(event)).toBe(true)
+    expect(
+      isWorkerEvent({ ...event, mesh: { ...event.mesh, triangleCount: 0 } }),
+    ).toBe(false)
+  })
+})

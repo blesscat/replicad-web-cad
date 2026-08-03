@@ -1,6 +1,9 @@
-import type { CadError } from "../../../cad-contract/errors";
-import type { MeshSnapshot } from "../../../cad-contract/messages";
-import { PROTOTYPE_CONFIGURATION, type BoxParameters } from "../../../cad-contract/units";
+import type { CadError } from "../../../cad-contract/errors"
+import type { MeshSnapshot } from "../../../cad-contract/messages"
+import {
+  PROTOTYPE_CONFIGURATION,
+  type BoxParameters,
+} from "../../../cad-contract/units"
 
 export type CadStatus =
   | "booting"
@@ -9,30 +12,32 @@ export type CadStatus =
   | "ready"
   | "invalid-input"
   | "recoverable-error"
-  | "fatal-worker-error";
+  | "fatal-worker-error"
 
-export type ExportStatus = "disabled" | "idle" | "exporting";
+export type ExportStatus = "disabled" | "idle" | "exporting"
 
 export type CommittedModel = {
-  revision: string;
-  workerEpoch: string;
-  generation: number;
-  parameters: BoxParameters;
-  mesh: MeshSnapshot;
-};
+  revision: string
+  workerEpoch: string
+  generation: number
+  parameters: BoxParameters
+  mesh: MeshSnapshot
+}
 
 export type CadState = {
-  status: CadStatus;
-  exportStatus: ExportStatus;
-  generation: number;
-  input: BoxParameters;
-  workerEpoch: string | null;
-  committed: CommittedModel | null;
-  stale: boolean;
-  error: CadError | null;
-};
+  status: CadStatus
+  exportStatus: ExportStatus
+  generation: number
+  input: BoxParameters
+  workerEpoch: string | null
+  committed: CommittedModel | null
+  stale: boolean
+  error: CadError | null
+}
 
-export const INITIAL_PARAMETERS: BoxParameters = { ...PROTOTYPE_CONFIGURATION.defaultDimensions };
+export const INITIAL_PARAMETERS: BoxParameters = {
+  ...PROTOTYPE_CONFIGURATION.defaultDimensions,
+}
 
 export function initialCadState(): CadState {
   return {
@@ -44,14 +49,19 @@ export function initialCadState(): CadState {
     committed: null,
     stale: false,
     error: null,
-  };
+  }
 }
 
 export type CadAction =
   | { type: "engine-start" }
   | { type: "engine-ready"; workerEpoch: string }
   | { type: "input-valid"; input: BoxParameters; generation: number }
-  | { type: "input-invalid"; input: BoxParameters; generation: number; error: CadError }
+  | {
+      type: "input-invalid"
+      input: BoxParameters
+      generation: number
+      error: CadError
+    }
   | { type: "generation-start"; generation: number }
   | { type: "model-ready"; model: CommittedModel }
   | { type: "export-start" }
@@ -59,19 +69,19 @@ export type CadAction =
   | { type: "worker-restarted" }
   | { type: "recoverable-error"; error: CadError }
   | { type: "fatal-worker-error"; error: CadError }
-  | { type: "reset" };
+  | { type: "reset" }
 
 export function cadReducer(state: CadState, action: CadAction): CadState {
   switch (action.type) {
     case "engine-start":
-      return { ...state, status: "loading-engine", error: null };
+      return { ...state, status: "loading-engine", error: null }
     case "engine-ready":
       return {
         ...state,
         status: "generating",
         workerEpoch: action.workerEpoch,
         error: null,
-      };
+      }
     case "input-valid":
       return {
         ...state,
@@ -81,7 +91,7 @@ export function cadReducer(state: CadState, action: CadAction): CadState {
         exportStatus: "disabled",
         stale: Boolean(state.committed),
         error: null,
-      };
+      }
     case "input-invalid":
       return {
         ...state,
@@ -91,7 +101,7 @@ export function cadReducer(state: CadState, action: CadAction): CadState {
         exportStatus: "disabled",
         stale: Boolean(state.committed),
         error: action.error,
-      };
+      }
     case "generation-start":
       return {
         ...state,
@@ -99,7 +109,7 @@ export function cadReducer(state: CadState, action: CadAction): CadState {
         status: "generating",
         exportStatus: "disabled",
         stale: Boolean(state.committed),
-      };
+      }
     case "model-ready":
       return {
         ...state,
@@ -110,17 +120,17 @@ export function cadReducer(state: CadState, action: CadAction): CadState {
         committed: action.model,
         stale: false,
         error: null,
-      };
+      }
     case "export-start":
-      return { ...state, exportStatus: "exporting" };
+      return { ...state, exportStatus: "exporting" }
     case "export-end":
-      return { ...state, exportStatus: "idle" };
+      return { ...state, exportStatus: "idle" }
     case "worker-restarted":
       return {
         ...initialCadState(),
         input: state.input,
         status: "loading-engine",
-      };
+      }
     case "recoverable-error":
       return {
         ...state,
@@ -128,7 +138,7 @@ export function cadReducer(state: CadState, action: CadAction): CadState {
         exportStatus: "disabled",
         stale: Boolean(state.committed),
         error: action.error,
-      };
+      }
     case "fatal-worker-error":
       return {
         ...state,
@@ -136,8 +146,8 @@ export function cadReducer(state: CadState, action: CadAction): CadState {
         exportStatus: "disabled",
         stale: Boolean(state.committed),
         error: action.error,
-      };
+      }
     case "reset":
-      return initialCadState();
+      return initialCadState()
   }
 }
