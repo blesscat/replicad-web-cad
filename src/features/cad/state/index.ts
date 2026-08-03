@@ -1,6 +1,6 @@
 import type { CadError } from "../../../cad-contract/errors";
 import type { MeshSnapshot } from "../../../cad-contract/messages";
-import type { BoxParameters } from "../../../cad-contract/units";
+import { PROTOTYPE_CONFIGURATION, type BoxParameters } from "../../../cad-contract/units";
 
 export type CadStatus =
   | "booting"
@@ -32,14 +32,14 @@ export type CadState = {
   error: CadError | null;
 };
 
-export const INITIAL_PARAMETERS: BoxParameters = { width: 20, depth: 30, height: 40 };
+export const INITIAL_PARAMETERS: BoxParameters = { ...PROTOTYPE_CONFIGURATION.defaultDimensions };
 
 export function initialCadState(): CadState {
   return {
     status: "booting",
     exportStatus: "disabled",
     generation: 0,
-    input: INITIAL_PARAMETERS,
+    input: { ...INITIAL_PARAMETERS },
     workerEpoch: null,
     committed: null,
     stale: false,

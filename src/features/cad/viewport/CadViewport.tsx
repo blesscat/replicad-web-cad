@@ -30,6 +30,33 @@ type CadViewportProps = {
   stale: boolean;
 };
 
+function ViewportContent({ mesh }: { mesh: MeshSnapshot | null }) {
+  if (!mesh) {
+    return <div className="flex h-[520px] items-center justify-center text-muted">尚未有可預覽的模型。</div>;
+  }
+
+  return (
+    <Canvas
+      aria-label="3D CAD 預覽"
+      fallback={
+        <div className="flex h-[520px] items-center justify-center text-muted" role="alert">
+          無法建立 3D 預覽，請確認瀏覽器支援 WebGL。
+        </div>
+      }
+      camera={{ position: [100, 100, 100], fov: 45 }}
+    >
+      <color attach="background" args={["#eef2f8"]} />
+      <ambientLight intensity={1.6} />
+      <directionalLight position={[100, 120, 80]} intensity={2.2} />
+      <gridHelper args={[1000, 20, "#b9c4d7", "#d8deea"]} />
+      <Bounds fit clip observe margin={1.25}>
+        <ModelMesh mesh={mesh} />
+      </Bounds>
+      <OrbitControls makeDefault />
+    </Canvas>
+  );
+}
+
 export function CadViewport({ mesh, stale }: CadViewportProps) {
   const viewportBorderClassName = stale ? "border-stale" : "border-border-card";
 
@@ -40,24 +67,7 @@ export function CadViewport({ mesh, stale }: CadViewportProps) {
       role="img"
       aria-label="3D CAD 預覽"
     >
-      {mesh ? (
-        <Canvas
-          aria-label="3D CAD 預覽"
-          fallback={<div className="flex h-[520px] items-center justify-center text-muted" role="alert">無法建立 3D 預覽，請確認瀏覽器支援 WebGL。</div>}
-          camera={{ position: [100, 100, 100], fov: 45 }}
-        >
-          <color attach="background" args={["#eef2f8"]} />
-          <ambientLight intensity={1.6} />
-          <directionalLight position={[100, 120, 80]} intensity={2.2} />
-          <gridHelper args={[1000, 20, "#b9c4d7", "#d8deea"]} />
-          <Bounds fit clip observe margin={1.25}>
-            <ModelMesh mesh={mesh} />
-          </Bounds>
-          <OrbitControls makeDefault />
-        </Canvas>
-      ) : (
-        <div className="flex h-[520px] items-center justify-center text-muted">尚未有可預覽的模型。</div>
-      )}
+      <ViewportContent mesh={mesh} />
       {stale && (
         <span className="absolute bottom-4 left-4 rounded-full border border-stale bg-stale-background px-[0.7rem] py-[0.35rem] text-[0.85rem] text-stale-text">
           預覽與目前輸入不同步

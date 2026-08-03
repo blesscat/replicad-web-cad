@@ -12,6 +12,7 @@ import {
 } from "../cad-contract/messages";
 import type { CadError, CadErrorCode, CadErrorStage } from "../cad-contract/errors";
 import { PROTOTYPE_CONFIGURATION } from "../cad-contract/units";
+import { cadErrorCodeFor, cadErrorStageFor } from "./error-mapping";
 
 type EventSink = (event: WorkerEvent, transfer?: Transferable[]) => void;
 
@@ -451,30 +452,8 @@ export class CadWorkerRuntime {
 
   private toCadError(error: unknown, command: WorkerCommand): CadError {
     const message = error instanceof Error ? error.message : String(error);
-    const code: CadErrorCode =
-        message.includes("MODEL_REVISION_MISSING")
-        ? "MODEL_REVISION_MISSING"
-        : message.includes("WORKER_RESTARTED")
-          ? "WORKER_RESTARTED"
-          : message.includes("CANDIDATE_MISSING")
-            ? "CANDIDATE_ORPHANED"
-          : message.includes("CANDIDATE_CAPACITY")
-            ? "CANDIDATE_CAPACITY"
-            : message.includes("ENGINE_NOT_READY")
-              ? "ENGINE_INIT_FAILED"
-            : command.kind === "engine.init"
-              ? "ENGINE_INIT_FAILED"
-            : command.kind === "export.step"
-              ? "STEP_EXPORT_FAILED"
-              : "MODEL_BUILD_FAILED";
-    const stage: CadErrorStage =
-      command.kind === "engine.init"
-        ? "initializing"
-        : command.kind === "export.step"
-          ? "exporting"
-          : command.kind === "model.generate"
-            ? "building"
-            : "worker";
+    const code: CadErrorCode = cadErrorCodeFor(message, command.kind);
+    const stage: CadErrorStage = cadErrorStageFor(command.kind);
     return makeError(stage, code, `CAD 操作失敗：${message}`, true);
   }
 }

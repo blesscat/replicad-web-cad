@@ -8,13 +8,14 @@ import {
 
 describe("box units and validation", () => {
   it("accepts the prototype fixture and calculates centered bounds", () => {
-    const result = validateBoxParameters({ width: 20, depth: 30, height: 40 });
-    expect(result).toEqual({ valid: true, value: { width: 20, depth: 30, height: 40 } });
-    expect(boundsForBox(result.valid ? result.value : { width: 0, depth: 0, height: 0 })).toEqual({
+    const parameters = { width: 20, depth: 30, height: 40 };
+    const result = validateBoxParameters(parameters);
+    expect(result).toEqual({ valid: true, value: parameters });
+    expect(boundsForBox(parameters)).toEqual({
       min: [-10, -15, -20],
       max: [10, 15, 20],
     });
-    expect(boxFileName({ width: 20, depth: 30, height: 40 })).toBe("box-20x30x40.step");
+    expect(boxFileName(parameters)).toBe("box-20x30x40.step");
   });
 
   it("rejects decimals, empty values and out-of-range dimensions", () => {

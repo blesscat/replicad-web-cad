@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
 
+function skipHeadlessFirefoxWithoutWebGL(browserName: string): void {
+  test.skip(
+    browserName === "firefox" && process.env.PW_HEADFUL !== "1",
+    "The headless Firefox image used in this environment has no WebGL context; run with Xvfb and PW_HEADFUL=1 for the full Firefox gate."
+  );
+}
+
 test("home and docs are static Astro pages", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "用瀏覽器建立並匯出方塊模型" })).toBeVisible();
@@ -52,10 +59,7 @@ test("CAD workspace preserves the responsive column boundary", async ({ page }) 
 });
 
 test("CAD Worker builds the default box in a WebGL-enabled browser", async ({ page, browserName }) => {
-  test.skip(
-    browserName === "firefox" && process.env.PW_HEADFUL !== "1",
-    "The headless Firefox image used in this environment has no WebGL context; run with Xvfb and PW_HEADFUL=1 for the full Firefox gate."
-  );
+  skipHeadlessFirefoxWithoutWebGL(browserName);
   await page.goto("/cad/");
   await expect(page.getByRole("status")).toContainText("模型已就緒，可以下載 STEP。", { timeout: 30_000 });
   await expect(page.getByRole("button", { name: "下載 STEP" })).toBeEnabled();
@@ -63,10 +67,7 @@ test("CAD Worker builds the default box in a WebGL-enabled browser", async ({ pa
 });
 
 test("CAD Worker exports one non-empty STEP download for the committed revision", async ({ page, browserName }) => {
-  test.skip(
-    browserName === "firefox" && process.env.PW_HEADFUL !== "1",
-    "The headless Firefox image used in this environment has no WebGL context; run with Xvfb and PW_HEADFUL=1 for the full Firefox gate."
-  );
+  skipHeadlessFirefoxWithoutWebGL(browserName);
   await page.goto("/cad/");
   await expect(page.getByRole("status")).toContainText("模型已就緒，可以下載 STEP。", { timeout: 30_000 });
 
@@ -85,10 +86,7 @@ test("parameter updates use the latest valid generation and preserve stale previ
   page,
   browserName,
 }) => {
-  test.skip(
-    browserName === "firefox" && process.env.PW_HEADFUL !== "1",
-    "The headless Firefox image used in this environment has no WebGL context; run with Xvfb and PW_HEADFUL=1 for the full Firefox gate."
-  );
+  skipHeadlessFirefoxWithoutWebGL(browserName);
   await page.goto("/cad/");
   await expect(page.getByRole("status")).toContainText("模型已就緒，可以下載 STEP。", { timeout: 30_000 });
 

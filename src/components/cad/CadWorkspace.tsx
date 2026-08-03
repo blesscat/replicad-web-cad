@@ -13,6 +13,7 @@ import {
   type DimensionKey,
 } from "../../cad-contract/units";
 import { boxDefinition } from "../../features/cad/model-catalog";
+import { progressMessage } from "../../features/cad/progress";
 import {
   CadWorkerClient,
   newOperationId,
@@ -277,7 +278,11 @@ export default function CadWorkspace() {
             dispatch({ type: "generation-start", generation: initialGeneration });
             sendGenerate(parsed.value, initialGeneration, "initial-model");
           } else {
-            setFieldErrors(parsed.field ? { [parsed.field]: parsed.message } : {});
+            if (parsed.field) {
+              setFieldErrors({ [parsed.field]: parsed.message });
+            } else {
+              setFieldErrors({});
+            }
             dispatch({ type: "input-invalid", input: stateRef.current.input, generation: initialGeneration, error: errorForInput(parsed.message) });
             sendInvalidate(initialGeneration, "invalid-input");
           }
@@ -285,15 +290,7 @@ export default function CadWorkspace() {
         }
         case "operation.progress":
           if (event.generation !== undefined && event.generation !== latestGenerationRef.current) return;
-          setProgress(
-            event.stage === "loading"
-              ? "正在載入 CAD engine…"
-              : event.stage === "building"
-                ? "正在建立 B-Rep…"
-                : event.stage === "meshing"
-                  ? "正在產生預覽 mesh…"
-                  : "正在匯出 STEP…"
-          );
+          setProgress(progressMessage(event.stage));
           return;
         case "model.candidate-ready": {
           if (event.generation === latestGenerationRef.current) setProgress("");
