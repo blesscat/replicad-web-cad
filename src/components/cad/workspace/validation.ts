@@ -3,31 +3,46 @@ import type { WorkerClientError } from '../../../features/cad/worker-client'
 import type { CadState } from '../../../features/cad/state'
 import {
   parseDimensionInput,
-  validateBoxParameters,
-  type BoxParameters,
-  type DimensionKey,
+  validateModelParameters,
+  type ModelId,
+  type ModelParameterKey,
+  type ModelParameterValues,
 } from '../../../cad-contract/units'
 import type { RawParameters } from './types'
 
-export const DIMENSION_KEYS: DimensionKey[] = ['width', 'depth', 'height']
+export const DIMENSION_KEYS: ModelParameterKey[] = ['width', 'depth', 'height']
+export const GRID_PARAMETER_KEYS: ModelParameterKey[] = ['rows', 'columns']
 
-export function rawFromParameters(parameters: BoxParameters): RawParameters {
+export function rawFromParameters(
+  parameters: ModelParameterValues,
+): RawParameters {
+  if ('width' in parameters) {
+    return {
+      width: String(parameters.width),
+      depth: String(parameters.depth),
+      height: String(parameters.height),
+    }
+  }
+
   return {
-    width: String(parameters.width),
-    depth: String(parameters.depth),
-    height: String(parameters.height),
+    rows: String(parameters.rows),
+    columns: String(parameters.columns),
   }
 }
 
 export function parseRawParameters(
   raw: RawParameters,
+  modelId: ModelId = 'box',
 ):
-  | { valid: true; value: BoxParameters }
-  | { valid: false; message: string; field?: DimensionKey } {
-  const parsed = Object.fromEntries(
-    DIMENSION_KEYS.map((key) => [key, parseDimensionInput(raw[key])]),
-  ) as Partial<BoxParameters>
-  const validation = validateBoxParameters(parsed)
+  | { valid: true; value: ModelParameterValues }
+  | { valid: false; message: string; field?: ModelParameterKey } {
+  const keys = modelId === 'box' ? DIMENSION_KEYS : GRID_PARAMETER_KEYS
+  const parsed: Partial<Record<ModelParameterKey, number | null>> = {}
+  for (const key of keys) {
+    parsed[key] = parseDimensionInput(raw[key] ?? '')
+  }
+
+  const validation = validateModelParameters(modelId, parsed)
   if (!validation.valid) {
     const issue = validation.issues[0]
     const field = issue?.field
@@ -37,7 +52,7 @@ export function parseRawParameters(
       field: field === 'parameters' ? undefined : field,
     }
   }
-  return validation
+  return { valid: true, value: validation.value.parameters }
 }
 
 export function supportsCadBrowser():
@@ -98,11 +113,11 @@ export function statusMessage(state: CadState, progress: string): string {
     case 'loading-engine':
       return '正在載入 OpenCascade WASM…'
     case 'generating':
-      return '正在建立方塊模型…'
+      return '正在建立 CAD component…'
     case 'ready':
       return '模型已就緒，可以下載 STEP。'
     case 'invalid-input':
-      return '請修正尺寸後再建模。'
+      return '請修正參數後再建模。'
     case 'recoverable-error':
       return 'CAD 操作失敗，可以修改參數或重試。'
     case 'fatal-worker-error':

@@ -40,6 +40,45 @@ describe('Worker contract runtime validation', () => {
         previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
       }),
     ).toBe(false)
+    expect(
+      isWorkerCommand({
+        version: PROTOCOL_VERSION,
+        kind: 'model.generate',
+        requestId: 'request-3',
+        operationId: 'operation-3',
+        generation: 3,
+        modelId: 'box',
+        parameters: { width: 20, depth: 30, height: 40, rows: 1 },
+        previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
+      }),
+    ).toBe(false)
+  })
+
+  it('accepts a modular-grid-base command with its own parameter shape', () => {
+    expect(
+      isWorkerCommand({
+        version: PROTOCOL_VERSION,
+        kind: 'model.generate',
+        requestId: 'request-grid-1',
+        operationId: 'operation-grid-1',
+        generation: 1,
+        modelId: 'modular-grid-base',
+        parameters: { rows: 2, columns: 2 },
+        previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
+      }),
+    ).toBe(true)
+    expect(
+      isWorkerCommand({
+        version: PROTOCOL_VERSION,
+        kind: 'model.generate',
+        requestId: 'request-grid-2',
+        operationId: 'operation-grid-2',
+        generation: 2,
+        modelId: 'modular-grid-base',
+        parameters: { width: 20, depth: 20, height: 5 },
+        previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
+      }),
+    ).toBe(false)
   })
 
   it('accepts transferable mesh responses only when buffers and counts are valid', () => {
@@ -51,6 +90,8 @@ describe('Worker contract runtime validation', () => {
       generation: 1,
       modelRevision: 'rev-epoch-r1',
       workerEpoch: 'epoch-1',
+      modelId: 'box',
+      parameters: { width: 20, depth: 30, height: 40 },
       mesh: {
         positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]).buffer,
         normals: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]).buffer,

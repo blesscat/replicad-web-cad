@@ -1,7 +1,7 @@
 import type {
   BoxBounds,
-  BoxParameters,
   DimensionKey,
+  ModelParameterValues,
 } from '../../../cad-contract/units'
 
 export type Point3 = [number, number, number]
@@ -58,7 +58,7 @@ function createAnnotation({
 
 function createWidthAnnotation(
   bounds: BoxBounds,
-  parameters: BoxParameters,
+  value: number,
   offset: number,
   tickSize: number,
 ): DimensionAnnotation {
@@ -69,7 +69,7 @@ function createWidthAnnotation(
     key: 'width',
     axis: 'X',
     label: '寬度',
-    value: parameters.width,
+    value,
     dimensionLine: segment(lineStart, lineEnd),
     extensionLines: [
       segment(point(bounds.min[0], bounds.min[1], bounds.min[2]), lineStart),
@@ -95,7 +95,7 @@ function createWidthAnnotation(
 
 function createDepthAnnotation(
   bounds: BoxBounds,
-  parameters: BoxParameters,
+  value: number,
   offset: number,
   tickSize: number,
 ): DimensionAnnotation {
@@ -106,7 +106,7 @@ function createDepthAnnotation(
     key: 'depth',
     axis: 'Y',
     label: '深度',
-    value: parameters.depth,
+    value,
     dimensionLine: segment(lineStart, lineEnd),
     extensionLines: [
       segment(point(bounds.max[0], bounds.min[1], bounds.min[2]), lineStart),
@@ -132,7 +132,7 @@ function createDepthAnnotation(
 
 function createHeightAnnotation(
   bounds: BoxBounds,
-  parameters: BoxParameters,
+  value: number,
   offset: number,
   tickSize: number,
 ): DimensionAnnotation {
@@ -151,7 +151,7 @@ function createHeightAnnotation(
     key: 'height',
     axis: 'Z',
     label: '高度',
-    value: parameters.height,
+    value,
     dimensionLine: segment(lineStart, lineEnd),
     extensionLines: [
       segment(point(bounds.max[0], bounds.max[1], bounds.min[2]), lineStart),
@@ -177,17 +177,20 @@ function createHeightAnnotation(
 
 export function createDimensionAnnotations(
   bounds: BoxBounds,
-  parameters: BoxParameters,
+  _parameters?: ModelParameterValues,
 ): DimensionAnnotation[] {
   const sizeX = bounds.max[0] - bounds.min[0]
   const sizeY = bounds.max[1] - bounds.min[1]
   const sizeZ = bounds.max[2] - bounds.min[2]
+  const displayedSizeX = Math.round(sizeX * 100) / 100
+  const displayedSizeY = Math.round(sizeY * 100) / 100
+  const displayedSizeZ = Math.round(sizeZ * 100) / 100
   const offset = Math.max(sizeX, sizeY, sizeZ) * DIMENSION_OFFSET_RATIO
   const tickSize = offset * END_TICK_RATIO
 
   return [
-    createWidthAnnotation(bounds, parameters, offset, tickSize),
-    createDepthAnnotation(bounds, parameters, offset, tickSize),
-    createHeightAnnotation(bounds, parameters, offset, tickSize),
+    createWidthAnnotation(bounds, displayedSizeX, offset, tickSize),
+    createDepthAnnotation(bounds, displayedSizeY, offset, tickSize),
+    createHeightAnnotation(bounds, displayedSizeZ, offset, tickSize),
   ]
 }

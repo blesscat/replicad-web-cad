@@ -1,11 +1,16 @@
-import type { BoxParameters, DimensionKey } from '../../../cad-contract/units'
+import type {
+  ModelId,
+  ModelParameterKey,
+  ModelParameterValues,
+} from '../../../cad-contract/units'
 
-export type RawParameters = Record<DimensionKey, string>
+export type RawParameters = Partial<Record<ModelParameterKey, string>>
 
 export type OperationRecord = {
   kind: 'model' | 'export' | 'init'
   generation?: number
-  parameters?: BoxParameters
+  modelId?: ModelId
+  parameters?: ModelParameterValues
   modelRevision?: string
   requestId: string
 }

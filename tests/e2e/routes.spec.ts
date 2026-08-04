@@ -21,6 +21,16 @@ test('home and docs are static Astro pages', async ({ page }) => {
   await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
 })
 
+test('local development serves same-origin Vite HMR client', async ({
+  page,
+}) => {
+  await page.goto('/')
+
+  const response = await page.request.get('/@vite/client')
+  expect(response.ok()).toBeTruthy()
+  expect(await response.text()).not.toContain('local.blesscat.dev')
+})
+
 test('CAD route exposes fallback and parameter controls', async ({ page }) => {
   await page.goto('/cad/')
   await expect(
@@ -110,6 +120,48 @@ test('CAD Worker exports one non-empty STEP download for the committed revision'
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe('box-20x30x40.step')
+  const stream = await download.createReadStream()
+  expect(stream).not.toBeNull()
+  let byteLength = 0
+  for await (const chunk of stream ?? []) byteLength += chunk.length
+  expect(byteLength).toBeGreaterThan(0)
+})
+
+test('CAD workspace switches to the modular grid component and exports a 2x2 base', async ({
+  page,
+  browserName,
+}) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.goto('/cad/')
+  await expect(page.getByRole('status')).toContainText(
+    '模型已就緒，可以下載 STEP。',
+    { timeout: 30_000 },
+  )
+
+  await page
+    .getByRole('combobox', { name: 'CAD component' })
+    .selectOption('modular-grid-base')
+  const rows = page.getByRole('slider', { name: '行數（Y）' })
+  const columns = page.getByRole('slider', { name: '列數（X）' })
+  await expect(rows).toHaveValue('1')
+  await expect(columns).toHaveValue('1')
+  await rows.press('ArrowRight')
+  await columns.press('ArrowRight')
+  await expect(rows).toHaveValue('2')
+  await expect(columns).toHaveValue('2')
+
+  await expect(page.getByRole('status')).toContainText(
+    '模型已就緒，可以下載 STEP。',
+    { timeout: 30_000 },
+  )
+  await expect(page.getByLabel('寬度 X 40 mm')).toBeVisible()
+  await expect(page.getByLabel('深度 Y 40 mm')).toBeVisible()
+  await expect(page.getByLabel('高度 Z 5 mm')).toBeVisible()
+
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '下載 STEP' }).click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toBe('modular-grid-base-2x2.step')
   const stream = await download.createReadStream()
   expect(stream).not.toBeNull()
   let byteLength = 0

@@ -1,6 +1,6 @@
 # replicad-web-cad
 
-瀏覽器端 CAD Prototype：使用者調整方塊的寬、深、高，以即時 3D 預覽查看結果，並從精確的 B-Rep 下載 STEP 檔案。
+瀏覽器端 CAD Prototype：使用者調整 CAD component 的參數，以即時 3D 預覽查看結果，並從精確的 B-Rep 下載 STEP 檔案。
 
 > 目前專案仍在 Prototype 的設計與實作階段。本 README 是人類與 AI 了解專案結構的入口；詳細設計以 OpenSpec 的 `design.md` 為準。
 
@@ -12,13 +12,16 @@ Astro 負責網站 shell 與路由，React workspace 負責瀏覽器端 UI，專
 Astro site shell（layouts/ + pages/）
 └─ React workspace（components/cad/，主執行緒）
       ├─ 參數表單與 state machine
+      ├─ component-local control panels
       ├─ Worker client / runtime validation
       ├─ React Three Fiber viewport
       └─ download adapter
              ⇅ versioned messages + transferable buffers
          CAD Worker（workers/ + cad-kernel/）
          ├─ OpenCascade WASM / replicad initialization
+         ├─ component registry
          ├─ box B-Rep builder
+         ├─ modular-grid-base builder + STEP template
          ├─ preview mesh generation
          └─ STEP export
 ```
@@ -33,8 +36,11 @@ src/
 ├─ layouts/
 ├─ styles/
 ├─ components/cad/
+│  ├─ component-panels/
+│  └─ workspace/runtime/
 ├─ features/cad/
 │  ├─ model-catalog/
+│  │  └─ components/（每個 component 的 definition）
 │  ├─ parameters/
 │  ├─ state/
 │  ├─ viewport/
@@ -53,10 +59,13 @@ src/
 - 頁面與元件預設使用 Tailwind utility classes；utility class 必須以完整、可靜態掃描的字串呈現，不拼接部分 class token。
 - `features/cad/viewport/` 與其他功能資料夾預設使用 Tailwind；只有 utility 不易表達的複雜 selector 或 descendant rule 才在實際擁有該樣式的資料夾放 scoped SCSS。
 - `components/cad/` 組裝 React workspace，負責 UI controller、輸入驗證、Worker lifecycle、控制面板與 viewport，不直接 import CAD kernel。
-- `features/cad/model-catalog/` 描述模型 id、參數 schema、建模入口與 metadata，不持有 UI 或 Worker lifecycle。
+- `components/cad/component-panels/` 依 component 分開 React 調整頁面；共用 workspace 只負責選擇 component、狀態與匯出。
+- `components/cad/workspace/runtime/` 依生成排程、Worker event 與 STEP export 拆分主執行緒 runtime。
+- `features/cad/model-catalog/` 的 `index.ts` 只做 registry/lookup；每個 component 的 id、參數 schema、預設值與 export metadata 放在自己的 definition 檔案，不持有 UI 或 Worker lifecycle。
 - `features/cad/parameters/`、`state/`、`viewport/`、`worker-client/` 與 `download/` 分別處理輸入、狀態、預覽、Worker 通訊與瀏覽器下載。
 - `cad-contract/` 放跨主執行緒共用的 messages、errors 與 units；不得依賴 DOM、React、Three.js、replicad 或 OpenCascade。
 - `cad-kernel/` 放 WASM、B-Rep、mesh、STEP 與 resource lifetime 邏輯，只能由 `workers/` 使用。
+- `cad-kernel/components/<component>/` 同時放 component-local builder 與其 canonical CAD asset；例如 `modular-grid-base/builder.ts` 與 `cell-template.step`。
 - `workers/` 是 CAD Worker 的執行入口，只能組合 `cad-contract/` 與 `cad-kernel/`。
 - `features/cad/viewport/` 只接受已驗證的 mesh snapshot，不執行 B-Rep 建模或 STEP 匯出。
 - `features/cad/download/` 只處理成功的 bytes 與 metadata，不重新建模。
@@ -76,17 +85,24 @@ pages/
 
 ## Prototype 範圍
 
-- 唯一內建模型：X/Y 置中於世界原點、底面位於 Z=0 的 box。
-- 參數：`width`、`depth`、`height`，單位為 mm。
+- 內建 component：X/Y 置中於世界原點、底面位於 Z=0 的 `box`，以及 `modular-grid-base`。
+- `box` 參數：`width`、`depth`、`height`，單位為 mm。
+- `modular-grid-base` 參數：`rows`、`columns` 格數 slider；每格為 20 × 20 mm，高度固定 5 mm，最大寬/深為 500 mm。預切除 `cell-template.step` 會複製、平移、融合後，只對整體外側四角套用 R2.5 mm 圓角。
 - 預覽：由 Worker 產生的 B-Rep mesh。
 - 匯出：由 Worker 目前 committed B-Rep 產生 STEP。
 - 不包含模型匯入、STL/3MF/G-code、儲存、帳號、後端或多人協作。
 
 ## 使用 Prototype
 
-開啟 `/cad/` 後，workspace 會直接載入唯一的 `box` 模型。`width`、`depth`、`height` 都是整數 mm；預設值為 `20 × 30 × 40`，合法範圍為 `1–500 mm`，輸入停止 150 ms 後才會送出建模。小數、空值、零、負值與超出範圍的輸入會立即顯示欄位錯誤，不會送出 `model.generate` 或匯出 request。
+開啟 `/cad/` 後，workspace 預設載入 `box`，也可以從 CAD component 選擇器切換到 `modular-grid-base`。`box` 的 `width`、`depth`、`height` 是整數 mm；預設值為 `20 × 30 × 40`，合法範圍為 `1–500 mm`。底板則只調整 `rows` 與 `columns` 格數 slider；每格為 `20 × 20 mm`，高度固定 5 mm，最大寬/深為 500 mm。輸入停止 150 ms 後才會送出建模；無效輸入不會送出 `model.generate` 或匯出 request。
 
 建模期間可以保留上一個成功 revision 的預覽，但它會標示為 stale，且 STEP 下載會停用；只有新的 B-Rep candidate 完成 commit 並進入「模型已就緒」後，預覽與匯出才會重新同步。WASM 載入、建模、mesh 與匯出都有狀態提示；Worker 或操作失敗時可修改參數或按「重試」，Worker recovery 最多自動重建一次。
+
+## STEP template 與格式選擇
+
+目前 3D component 的 canonical asset 使用 STEP，而不是 STL 或 DXF：STEP 保留可供 clone、fuse、fillet 與 STEP export 使用的精確 B-Rep；STL 只有三角網格，DXF 則是 2D profile，兩者都不適合這個 3D boolean pipeline。
+
+`cell-template.step` 是已完成中央貫穿切除的 component-local 預處理檔案。Worker 每個 epoch 只 import/cache 一次，generation 時只 clone、平移與 fuse，最後才對整體外角做圓角；不會依賴 Downloads 路徑，也不會在每次生成重新建立 cutter。未來新增 component 時，builder 與它自己的預切除資產放在同一個 `cad-kernel/components/<component>/` 目錄。
 
 ## STEP 匯出
 
@@ -94,9 +110,10 @@ pages/
 
 ```text
 box-{width}x{depth}x{height}.step
+modular-grid-base-{columns}x{rows}.step
 ```
 
-獨立 STEP parser、round-trip、single-solid 與尺寸驗證工具/版本不屬於這個 Prototype，會在後續 change 另行定義，也不會因此加入產品 import 流程。
+這個 Prototype 不提供任意 STEP 的產品匯入或 round-trip parser；目前的 `cell-template.step` 是 repository 內受控的 canonical asset，並由 CAD kernel integration tests 驗證其 single-solid、尺寸與幾何條件。
 
 ## 本機啟動與驗收
 
@@ -136,7 +153,7 @@ Prototype 驗收使用的自動化瀏覽器 binary 為 Chromium `151.0.7922.34` 
 
 ## 未來模型 catalog 的擴充
 
-目前 catalog 只有 `box`。新增固定模型時，先在 `features/cad/model-catalog/` 增加新的 `ModelDefinition`、`buildKey` 與參數 schema，再在 Worker-only 的 `cad-kernel/model/` 增加對應 `KernelModelDefinition.build()` 入口；UI 只消費 schema，不應把 B-Rep 邏輯放進 `CadWorkspace`。新模型必須另開 OpenSpec change，明確驗收參數單位、bounds、mesh、revision lifetime、STEP filename 與錯誤流程，並維持既有 versioned Worker contract 與主執行緒/CAD Worker 邊界。
+目前 catalog 有 `box` 與 `modular-grid-base`。新增 component 時，在 `features/cad/model-catalog/components/` 建立獨立 `ModelDefinition`，在 `components/cad/component-panels/<component>/` 建立專屬調整頁面，再在 Worker-only 的 `cad-kernel/components/<component>/` 放 builder 與資產，最後由 catalog/kernel registry 掛入。UI 只消費 schema，不應把 B-Rep 邏輯放進 `CadWorkspace`。新模型必須另開 OpenSpec change，明確驗收參數單位、bounds、mesh、revision lifetime、STEP filename 與錯誤流程，並維持既有 versioned Worker contract 與主執行緒/CAD Worker 邊界。
 
 ## OpenSpec 文件
 

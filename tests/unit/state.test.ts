@@ -9,6 +9,7 @@ describe('CAD state machine', () => {
       revision: 'rev-1',
       workerEpoch: 'epoch-1',
       generation: 1,
+      modelId: 'box' as const,
       parameters: { width: 20, depth: 30, height: 40 },
       mesh: {
         positions: new Float32Array([0, 0, 0]).buffer,
@@ -24,6 +25,7 @@ describe('CAD state machine', () => {
     const ready = cadReducer(initial, { type: 'model-ready', model })
     const stale = cadReducer(ready, {
       type: 'input-valid',
+      modelId: 'box',
       input: { width: 21, depth: 30, height: 40 },
       generation: 2,
     })
@@ -37,6 +39,7 @@ describe('CAD state machine', () => {
   it('enters invalid-input without deleting the previous preview', () => {
     const state = cadReducer(initialCadState(), {
       type: 'input-invalid',
+      modelId: 'box',
       input: { width: 20, depth: 30, height: 40 },
       generation: 1,
       error: normalizeError(new Error('bad input'), {
@@ -53,6 +56,7 @@ describe('CAD state machine', () => {
     const state = cadReducer(
       cadReducer(initialCadState(), {
         type: 'input-valid',
+        modelId: 'box',
         input: { width: 21, depth: 30, height: 40 },
         generation: 2,
       }),
@@ -62,5 +66,18 @@ describe('CAD state machine', () => {
     expect(state.input).toEqual({ width: 21, depth: 30, height: 40 })
     expect(state.committed).toBeNull()
     expect(state.workerEpoch).toBeNull()
+  })
+
+  it('tracks the selected component and its component-specific input', () => {
+    const state = cadReducer(initialCadState(), {
+      type: 'input-valid',
+      modelId: 'modular-grid-base',
+      input: { rows: 2, columns: 2 },
+      generation: 1,
+    })
+
+    expect(state.modelId).toBe('modular-grid-base')
+    expect(state.input).toEqual({ rows: 2, columns: 2 })
+    expect(state.status).toBe('generating')
   })
 })

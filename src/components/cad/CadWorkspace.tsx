@@ -12,10 +12,12 @@ export default function CadWorkspace() {
     >
       <CadWorkspacePanel
         state={controller.state}
+        modelId={controller.modelId}
         rawParameters={controller.rawParameters}
         fieldErrors={controller.fieldErrors}
         status={controller.status}
         canExport={controller.canExport}
+        onModelChange={controller.onModelChange}
         onInputChange={controller.onInputChange}
         onExport={controller.onExport}
         onRetry={controller.onRetry}

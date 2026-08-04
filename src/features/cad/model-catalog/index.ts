@@ -1,63 +1,19 @@
-import type { BoxParameters, DimensionKey } from '../../../cad-contract/units'
-import {
-  boxFileName,
-  PROTOTYPE_CONFIGURATION,
-} from '../../../cad-contract/units'
+import type { ModelId } from '../../../cad-contract/units'
+import { boxDefinition } from './components/box'
+import { modularGridBaseDefinition } from './components/modular-grid-base'
+import type { ModelDefinition } from './types'
 
-export type ModelDefinition = {
-  id: 'box'
-  buildKey: 'box'
-  displayName: string
-  parameterSchema: ReadonlyArray<{
-    key: DimensionKey
-    label: string
-    axis: string
-    unit: 'mm'
-    defaultValue: number
-    min: number
-    max: number
-    step: number
-  }>
-  previewMetadata: { centeredOnXY: true; baseAtZ: 0 }
-  exportFileName: (parameters: BoxParameters) => string
-}
+export type { ModelDefinition, ParameterField } from './types'
+export { boxDefinition } from './components/box'
+export { modularGridBaseDefinition } from './components/modular-grid-base'
 
-export const boxDefinition: ModelDefinition = {
-  id: 'box',
-  buildKey: 'box',
-  displayName: '方塊',
-  parameterSchema: [
-    {
-      key: 'width',
-      label: '寬度',
-      axis: 'X',
-      unit: 'mm',
-      defaultValue: PROTOTYPE_CONFIGURATION.defaultDimensions.width,
-      min: PROTOTYPE_CONFIGURATION.minDimension,
-      max: PROTOTYPE_CONFIGURATION.maxDimension,
-      step: PROTOTYPE_CONFIGURATION.inputStep,
-    },
-    {
-      key: 'depth',
-      label: '深度',
-      axis: 'Y',
-      unit: 'mm',
-      defaultValue: PROTOTYPE_CONFIGURATION.defaultDimensions.depth,
-      min: PROTOTYPE_CONFIGURATION.minDimension,
-      max: PROTOTYPE_CONFIGURATION.maxDimension,
-      step: PROTOTYPE_CONFIGURATION.inputStep,
-    },
-    {
-      key: 'height',
-      label: '高度',
-      axis: 'Z',
-      unit: 'mm',
-      defaultValue: PROTOTYPE_CONFIGURATION.defaultDimensions.height,
-      min: PROTOTYPE_CONFIGURATION.minDimension,
-      max: PROTOTYPE_CONFIGURATION.maxDimension,
-      step: PROTOTYPE_CONFIGURATION.inputStep,
-    },
-  ],
-  previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
-  exportFileName: boxFileName,
+export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
+  boxDefinition,
+  modularGridBaseDefinition,
+]
+
+export function getModelDefinition(
+  modelId: ModelId,
+): ModelDefinition | undefined {
+  return modelDefinitions.find((definition) => definition.id === modelId)
 }

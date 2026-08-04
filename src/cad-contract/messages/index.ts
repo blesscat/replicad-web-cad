@@ -1,9 +1,11 @@
 import type { CadError, CadErrorCode, CadErrorStage } from '../errors'
 import {
   PROTOTYPE_CONFIGURATION,
-  validateBoxParameters,
+  validateModelParameters,
+  type ModelId,
+  type ModelParameterValues,
+  type ModelParameters,
   type BoxBounds,
-  type BoxParameters,
 } from '../units'
 
 export const PROTOCOL_VERSION = 1 as const
@@ -33,13 +35,12 @@ export type EngineInitCommand = Envelope<'engine.init'> & {
   asset: AssetMetadata
 }
 
-export type ModelGenerateCommand = Envelope<'model.generate'> & {
-  operationId: string
-  generation: number
-  modelId: 'box'
-  parameters: BoxParameters
-  previewConfig: { tolerance: number; angularTolerance: number }
-}
+export type ModelGenerateCommand = Envelope<'model.generate'> &
+  ModelParameters & {
+    operationId: string
+    generation: number
+    previewConfig: { tolerance: number; angularTolerance: number }
+  }
 
 export type ModelInvalidateCommand = Envelope<'model.invalidate'> & {
   operationId: string
@@ -122,6 +123,8 @@ export type ModelCandidateReadyEvent = Envelope<'model.candidate-ready'> & {
   generation: number
   candidateId: string
   workerEpoch: string
+  modelId: ModelId
+  parameters: ModelParameterValues
   mesh: MeshSnapshot
 }
 
@@ -130,6 +133,8 @@ export type ModelReadyEvent = Envelope<'model.ready'> & {
   generation: number
   modelRevision: string
   workerEpoch: string
+  modelId: ModelId
+  parameters: ModelParameterValues
   mesh: MeshSnapshot
   bounds: BoxBounds
 }
@@ -266,6 +271,7 @@ const CAD_ERROR_CODES: readonly CadErrorCode[] = [
   'BROWSER_UNSUPPORTED',
   'INVALID_INPUT',
   'MODEL_BUILD_FAILED',
+  'MODEL_ASSET_INVALID',
   'MESH_INVALID',
   'MODEL_REVISION_MISSING',
   'STALE_GENERATION',
@@ -310,8 +316,7 @@ export function isWorkerCommand(value: unknown): value is WorkerCommand {
     case 'model.generate':
       return (
         isPositiveInteger(value.generation) &&
-        value.modelId === 'box' &&
-        validateBoxParameters(value.parameters).valid &&
+        validateModelParameters(value.modelId, value.parameters).valid &&
         isRecord(value.previewConfig) &&
         isFiniteNumber(value.previewConfig.tolerance) &&
         value.previewConfig.tolerance >= 0 &&
@@ -386,6 +391,7 @@ export function isWorkerEvent(value: unknown): value is WorkerEvent {
         isPositiveInteger(value.generation) &&
         isNonEmptyString(value.candidateId) &&
         isNonEmptyString(value.workerEpoch) &&
+        validateModelParameters(value.modelId, value.parameters).valid &&
         isMesh(value.mesh)
       )
     case 'model.ready':
@@ -395,6 +401,7 @@ export function isWorkerEvent(value: unknown): value is WorkerEvent {
         isPositiveInteger(value.generation) &&
         isNonEmptyString(value.modelRevision) &&
         isNonEmptyString(value.workerEpoch) &&
+        validateModelParameters(value.modelId, value.parameters).valid &&
         isMesh(value.mesh) &&
         isBounds(value.bounds)
       )

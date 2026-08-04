@@ -1,74 +1,70 @@
-import { boxDefinition } from '../../features/cad/model-catalog'
+import {
+  getModelDefinition,
+  modelDefinitions,
+} from '../../features/cad/model-catalog'
 import type { CadState } from '../../features/cad/state'
-import type { DimensionKey } from '../../cad-contract/units'
+import type { ModelId, ModelParameterKey } from '../../cad-contract/units'
 import type { RawParameters } from './workspace/types'
+import { ComponentParameterPanel } from './component-panels'
 
 const ACTION_BUTTON_CLASS =
   'cursor-pointer rounded-lg border-0 bg-primary px-[0.8rem] py-[0.6rem] text-base text-white disabled:cursor-not-allowed disabled:bg-disabled'
 
 type CadWorkspacePanelProps = {
   state: CadState
+  modelId: ModelId
   rawParameters: RawParameters
-  fieldErrors: Partial<Record<DimensionKey, string>>
+  fieldErrors: Partial<Record<ModelParameterKey, string>>
   status: string
   canExport: boolean
-  onInputChange: (key: DimensionKey, value: string) => void
+  onModelChange: (modelId: ModelId) => void
+  onInputChange: (key: ModelParameterKey, value: string) => void
   onExport: () => void
   onRetry: () => void
 }
 
 export function CadWorkspacePanel({
   state,
+  modelId,
   rawParameters,
   fieldErrors,
   status,
   canExport,
+  onModelChange,
   onInputChange,
   onExport,
   onRetry,
 }: CadWorkspacePanelProps) {
+  const definition = getModelDefinition(modelId) ?? modelDefinitions[0]
+
   return (
     <div className="self-start grid gap-4 rounded-2xl border border-border-card bg-panel p-4">
       <div>
-        <h2 className="mb-2 text-2xl font-semibold leading-tight">方塊參數</h2>
-        <p className="text-muted">所有尺寸皆為整數 mm。</p>
+        <h2 className="mb-2 text-2xl font-semibold leading-tight">
+          {definition.displayName}參數
+        </h2>
+        <p className="text-muted">請先選擇 component，再調整其參數。</p>
       </div>
-      <fieldset className="m-0 grid gap-3 border-0 p-0">
-        <legend className="text-muted">尺寸</legend>
-        {boxDefinition.parameterSchema.map((field) => (
-          <label className="grid gap-[0.3rem]" key={field.key}>
-            <span className="flex justify-between font-[650]">
-              <span>
-                {field.label}（{field.axis}）
-              </span>
-              <span>{field.unit}</span>
-            </span>
-            <input
-              className="w-full rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
-              aria-invalid={Boolean(fieldErrors[field.key])}
-              aria-describedby={
-                fieldErrors[field.key] ? `${field.key}-error` : undefined
-              }
-              inputMode="numeric"
-              min={field.min}
-              max={field.max}
-              step={field.step}
-              type="text"
-              value={rawParameters[field.key]}
-              onChange={(event) => onInputChange(field.key, event.target.value)}
-            />
-            {fieldErrors[field.key] && (
-              <span
-                className="text-sm text-error"
-                id={`${field.key}-error`}
-                role="alert"
-              >
-                {fieldErrors[field.key]}
-              </span>
-            )}
-          </label>
-        ))}
-      </fieldset>
+      <label className="grid gap-[0.3rem]">
+        <span className="font-[650]">CAD component</span>
+        <select
+          className="w-full rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+          value={modelId}
+          onChange={(event) => onModelChange(event.target.value as ModelId)}
+        >
+          {modelDefinitions.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.displayName}
+            </option>
+          ))}
+        </select>
+      </label>
+      <ComponentParameterPanel
+        modelId={modelId}
+        rawParameters={rawParameters}
+        fieldErrors={fieldErrors}
+        onInputChange={onInputChange}
+      />
       <div className="flex flex-wrap gap-[0.6rem]">
         <button
           className={ACTION_BUTTON_CLASS}

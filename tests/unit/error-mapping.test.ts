@@ -10,6 +10,9 @@ describe('CAD Worker error mapping', () => {
     ['WORKER_RESTARTED', 'model.generate', 'WORKER_RESTARTED'],
     ['CANDIDATE_MISSING', 'model.commit', 'CANDIDATE_ORPHANED'],
     ['CANDIDATE_CAPACITY', 'model.generate', 'CANDIDATE_CAPACITY'],
+    ['GRID_TEMPLATE_INVALID_BOUNDS', 'model.generate', 'MODEL_ASSET_INVALID'],
+    ['MESH_INVALID: empty', 'model.generate', 'MESH_INVALID'],
+    ['STEP_METADATA_INVALID', 'export.step', 'STEP_METADATA_INVALID'],
     ['ENGINE_NOT_READY', 'model.generate', 'ENGINE_INIT_FAILED'],
     ['unknown', 'engine.init', 'ENGINE_INIT_FAILED'],
     ['unknown', 'export.step', 'STEP_EXPORT_FAILED'],
@@ -25,6 +28,7 @@ describe('CAD Worker error mapping', () => {
     expect(cadErrorStageFor('engine.init')).toBe('initializing')
     expect(cadErrorStageFor('export.step')).toBe('exporting')
     expect(cadErrorStageFor('model.generate')).toBe('building')
+    expect(cadErrorStageFor('model.generate', 'MESH_INVALID')).toBe('meshing')
     expect(cadErrorStageFor('model.commit')).toBe('worker')
   })
 })

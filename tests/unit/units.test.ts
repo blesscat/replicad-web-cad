@@ -30,5 +30,13 @@ describe('box units and validation', () => {
     expect(
       validateBoxParameters({ width: 20.5, depth: 30, height: 40 }).valid,
     ).toBe(false)
+    expect(
+      validateBoxParameters({
+        width: 20,
+        depth: 30,
+        height: 40,
+        rows: 1,
+      }).valid,
+    ).toBe(false)
   })
 })

@@ -86,8 +86,8 @@ describe('CAD dimension annotation geometry', () => {
     expect(width).toBeDefined()
     expect(depth).toBeDefined()
     expect(height).toBeDefined()
-    expect(width?.valueLabel).toBe('7 mm')
-    expect(depth?.valueLabel).toBe('13 mm')
+    expect(width?.valueLabel).toBe('7.5 mm')
+    expect(depth?.valueLabel).toBe('14 mm')
     expect(height?.valueLabel).toBe('29 mm')
     expect(
       distanceAlong(width!.dimensionLine[0], width!.dimensionLine[1], 0),

@@ -1,26 +1,81 @@
-import { makeBox, type Solid } from 'replicad'
-import { boundsForBox, type BoxParameters } from '../../cad-contract/units'
+import type { Shape3D } from 'replicad'
+import {
+  isBoxParameters,
+  isModularGridBaseParameters,
+  validateModelParameters,
+  type ModelId,
+  type ModelParameterValues,
+} from '../../cad-contract/units'
+import { buildBoxBRep } from '../components/box/builder'
+import { buildModularGridBase } from '../components/modular-grid-base/builder'
 
-export type KernelModelDefinition = {
-  id: 'box'
-  build: (parameters: BoxParameters) => Solid
+export type KernelBuildContext = {
+  getModularGridBaseTemplate: () => Promise<Shape3D>
+  isGenerationCurrent?: () => boolean
 }
 
-export function buildBoxBRep(parameters: BoxParameters): Solid {
-  const bounds = boundsForBox(parameters)
-  return makeBox(bounds.min, bounds.max)
+export type KernelModelDefinition = {
+  id: ModelId
+  build: (
+    parameters: ModelParameterValues,
+    context: KernelBuildContext,
+  ) => Shape3D | Promise<Shape3D>
+}
+
+function buildBoxModel(
+  parameters: ModelParameterValues,
+  _context: KernelBuildContext,
+): Shape3D {
+  if (!isBoxParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:box')
+  }
+  return buildBoxBRep(parameters)
+}
+
+async function buildModularGridBaseModel(
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Promise<Shape3D> {
+  if (!isModularGridBaseParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:modular-grid-base')
+  }
+  const template = await context.getModularGridBaseTemplate()
+  if (context.isGenerationCurrent && !context.isGenerationCurrent()) {
+    throw new Error('STALE_GENERATION')
+  }
+  return buildModularGridBase(parameters, template)
 }
 
 export const boxKernelDefinition: KernelModelDefinition = {
   id: 'box',
-  build: buildBoxBRep,
+  build: buildBoxModel,
 }
 
-export function buildModelBRep(
-  modelId: 'box',
-  parameters: BoxParameters,
-): Solid {
-  if (modelId === boxKernelDefinition.id)
-    return boxKernelDefinition.build(parameters)
-  throw new Error(`MODEL_DEFINITION_MISSING:${modelId}`)
+export const modularGridBaseKernelDefinition: KernelModelDefinition = {
+  id: 'modular-grid-base',
+  build: buildModularGridBaseModel,
+}
+
+export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
+  boxKernelDefinition,
+  modularGridBaseKernelDefinition,
+]
+
+export function getKernelModelDefinition(
+  modelId: ModelId,
+): KernelModelDefinition | undefined {
+  return kernelModelDefinitions.find((definition) => definition.id === modelId)
+}
+
+export async function buildModelBRep(
+  modelId: ModelId,
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Promise<Shape3D> {
+  const validation = validateModelParameters(modelId, parameters)
+  if (!validation.valid) throw new Error('MODEL_PARAMETERS_INVALID')
+
+  const definition = getKernelModelDefinition(modelId)
+  if (!definition) throw new Error(`MODEL_DEFINITION_MISSING:${modelId}`)
+  return definition.build(parameters, context)
 }

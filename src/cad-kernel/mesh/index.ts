@@ -14,40 +14,48 @@ export function meshBRep(
   shape: Shape3D,
   options: { tolerance: number; angularTolerance: number },
 ): MeshData {
-  const mesh = shape.mesh(options)
-  const boundingBox = shape.boundingBox
-  let bounds: BoxBounds
   try {
-    const [[minX, minY, minZ], [maxX, maxY, maxZ]] = boundingBox.bounds
-    bounds = {
-      min: [minX, minY, minZ],
-      max: [maxX, maxY, maxZ],
+    const mesh = shape.mesh(options)
+    const boundingBox = shape.boundingBox
+    let bounds: BoxBounds
+    try {
+      const [[minX, minY, minZ], [maxX, maxY, maxZ]] = boundingBox.bounds
+      bounds = {
+        min: [minX, minY, minZ],
+        max: [maxX, maxY, maxZ],
+      }
+    } finally {
+      boundingBox.delete()
     }
-  } finally {
-    boundingBox.delete()
-  }
 
-  const positions = new Float32Array(mesh.vertices)
-  const normals = new Float32Array(mesh.normals)
-  const indices = new Uint32Array(mesh.triangles)
+    const positions = new Float32Array(mesh.vertices)
+    const normals = new Float32Array(mesh.normals)
+    const indices = new Uint32Array(mesh.triangles)
 
-  if (
-    positions.length === 0 ||
-    indices.length === 0 ||
-    indices.length % 3 !== 0
-  ) {
-    throw new Error('B-Rep mesh did not contain triangles')
-  }
-  if (normals.length !== positions.length) {
-    throw new Error('B-Rep mesh normals do not match positions')
-  }
+    if (
+      positions.length === 0 ||
+      indices.length === 0 ||
+      indices.length % 3 !== 0
+    ) {
+      throw new Error('MESH_INVALID: B-Rep mesh did not contain triangles')
+    }
+    if (normals.length !== positions.length) {
+      throw new Error('MESH_INVALID: B-Rep mesh normals do not match positions')
+    }
 
-  return {
-    positions,
-    normals,
-    indices,
-    bounds,
-    triangleCount: indices.length / 3,
+    return {
+      positions,
+      normals,
+      indices,
+      bounds,
+      triangleCount: indices.length / 3,
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('MESH_INVALID:')) {
+      throw error
+    }
+    const message = error instanceof Error ? error.message : String(error)
+    throw new Error(`MESH_INVALID: ${message}`)
   }
 }
 

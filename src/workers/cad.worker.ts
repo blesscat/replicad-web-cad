@@ -1,10 +1,12 @@
 import { exportStepBytes } from '../cad-kernel/export'
 import { initialiseCadKernel } from '../cad-kernel/initialise'
+import type { Shape3D } from 'replicad'
 import {
   RevisionLifetime,
   type CandidateRecord,
   type RevisionRecord,
 } from '../cad-kernel/lifetime'
+import { loadModularGridBaseTemplate } from '../cad-kernel/components/modular-grid-base/builder'
 import { buildModelBRep } from '../cad-kernel/model'
 import { meshBRep, serializeMesh, type MeshData } from '../cad-kernel/mesh'
 import {
@@ -19,7 +21,11 @@ import type {
   CadErrorCode,
   CadErrorStage,
 } from '../cad-contract/errors'
-import { PROTOTYPE_CONFIGURATION } from '../cad-contract/units'
+import {
+  modelFileName,
+  PROTOTYPE_CONFIGURATION,
+  validateModelParameters,
+} from '../cad-contract/units'
 import { cadErrorCodeFor, cadErrorStageFor } from './error-mapping'
 
 type EventSink = (event: WorkerEvent, transfer?: Transferable[]) => void
@@ -56,6 +62,8 @@ export class CadWorkerRuntime {
   private latestInputGeneration = 0
   private invalidatedGeneration = 0
   private disposed = false
+  private modularGridBaseTemplate: Promise<import('replicad').Shape3D> | null =
+    null
   private readonly lifetime: RevisionLifetime
   private readonly candidateTimers = new Map<
     string,
@@ -132,10 +140,11 @@ export class CadWorkerRuntime {
           this.clearCandidateTimers()
           this.candidateTerminals.clear()
           this.lifetime.dispose()
+          this.disposed = true
+          this.disposeModularGridBaseTemplate()
           this.initialized = false
           this.initializing = null
           this.invalidatedGeneration = 0
-          this.disposed = true
           return
       }
     } catch (error) {
@@ -190,7 +199,27 @@ export class CadWorkerRuntime {
     this.invalidatedGeneration = 0
     this.lifetime.pruneCommitsBeforeGeneration(this.latestInputGeneration)
     this.emitProgress(command, 'building')
-    const shape = buildModelBRep(command.modelId, command.parameters)
+    let shape: Shape3D
+    try {
+      shape = await buildModelBRep(command.modelId, command.parameters, {
+        getModularGridBaseTemplate: () => this.getModularGridBaseTemplate(),
+        isGenerationCurrent: () => this.isGenerationCurrent(command.generation),
+      })
+    } catch (error) {
+      if (error instanceof Error && error.message === 'STALE_GENERATION') {
+        this.superseded(command, 'STALE_GENERATION')
+        return
+      }
+      throw error
+    }
+    if (
+      command.generation !== this.latestInputGeneration ||
+      this.invalidatedGeneration === command.generation
+    ) {
+      shape.delete()
+      this.superseded(command, 'STALE_GENERATION')
+      return
+    }
     let mesh: MeshData
     try {
       this.emitProgress(command, 'meshing')
@@ -209,6 +238,7 @@ export class CadWorkerRuntime {
       requestId: command.requestId,
       generation: command.generation,
       workerEpoch: this.epoch,
+      modelId: command.modelId,
       parameters: command.parameters,
       shape,
       mesh,
@@ -245,6 +275,8 @@ export class CadWorkerRuntime {
         generation: command.generation,
         candidateId: candidate.candidateId,
         workerEpoch: this.epoch,
+        modelId: candidate.modelId,
+        parameters: candidate.parameters,
         mesh: meshSnapshot,
       },
       [meshSnapshot.positions, meshSnapshot.normals, meshSnapshot.indices],
@@ -351,6 +383,8 @@ export class CadWorkerRuntime {
         generation: revision.generation,
         modelRevision: revision.modelRevision,
         workerEpoch: this.epoch,
+        modelId: revision.modelId,
+        parameters: revision.parameters,
         mesh,
         bounds: mesh.bounds,
       },
@@ -378,6 +412,14 @@ export class CadWorkerRuntime {
     if (command.workerEpoch !== this.epoch) throw new Error('WORKER_RESTARTED')
     const revision = this.lifetime.pin(command.modelRevision)
     try {
+      const validation = validateModelParameters(
+        revision.modelId,
+        revision.parameters,
+      )
+      if (!validation.valid) throw new Error('STEP_METADATA_INVALID')
+      if (command.file.name !== modelFileName(validation.value)) {
+        throw new Error('STEP_METADATA_INVALID')
+      }
       this.emit({
         version: PROTOCOL_VERSION,
         kind: 'export.accepted',
@@ -502,10 +544,42 @@ export class CadWorkerRuntime {
     this.candidateTimers.clear()
   }
 
+  private getModularGridBaseTemplate(): Promise<import('replicad').Shape3D> {
+    if (!this.modularGridBaseTemplate) {
+      this.modularGridBaseTemplate = loadModularGridBaseTemplate().then(
+        (template) => {
+          if (this.disposed) {
+            template.delete()
+            throw new Error('WORKER_TERMINATED')
+          }
+          return template
+        },
+      )
+    }
+    return this.modularGridBaseTemplate
+  }
+
+  private isGenerationCurrent(generation: number): boolean {
+    return (
+      !this.disposed &&
+      generation === this.latestInputGeneration &&
+      this.invalidatedGeneration !== generation
+    )
+  }
+
+  private disposeModularGridBaseTemplate(): void {
+    const templatePromise = this.modularGridBaseTemplate
+    this.modularGridBaseTemplate = null
+    if (!templatePromise) return
+    void templatePromise
+      .then((template) => template.delete())
+      .catch(() => undefined)
+  }
+
   private toCadError(error: unknown, command: WorkerCommand): CadError {
     const message = error instanceof Error ? error.message : String(error)
     const code: CadErrorCode = cadErrorCodeFor(message, command.kind)
-    const stage: CadErrorStage = cadErrorStageFor(command.kind)
+    const stage: CadErrorStage = cadErrorStageFor(command.kind, message)
     return makeError(stage, code, `CAD 操作失敗：${message}`, true)
   }
 }

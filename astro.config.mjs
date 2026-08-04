@@ -14,16 +14,14 @@ export default defineConfig({
   },
   vite: {
     plugins: [tailwindcss()],
+    optimizeDeps: {
+      include: ['@react-three/fiber', '@react-three/drei', 'three'],
+    },
     server: {
-      allowedHosts: ['local.blesscat.dev'],
-      ws: {
-        host: 'local.blesscat.dev',
-        protocol: 'wss',
-        clientPort: 443,
-      },
+      allowedHosts: ['localhost', '127.0.0.1', 'local.blesscat.dev'],
     },
     preview: {
-      allowedHosts: ['local.blesscat.dev'],
+      allowedHosts: ['localhost', '127.0.0.1', 'local.blesscat.dev'],
     },
   },
 })

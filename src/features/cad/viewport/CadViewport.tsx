@@ -3,12 +3,13 @@ import { Canvas } from '@react-three/fiber'
 import { useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 import type { MeshSnapshot } from '../../../cad-contract/messages'
-import type { BoxParameters } from '../../../cad-contract/units'
+import type { ModelParameterValues } from '../../../cad-contract/units'
 import {
   createDimensionAnnotations,
   type DimensionAnnotation,
   type LineSegment,
 } from './dimensions'
+import { CAD_VIEWPORT_CONFIG } from './config'
 import { CAD_VIEWPORT_CAMERA, CAD_VIEWPORT_GRID_ROTATION } from './coordinates'
 import styles from './CadViewport.module.scss'
 
@@ -37,7 +38,7 @@ function ModelMesh({ mesh }: { mesh: MeshSnapshot }) {
   const material = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: '#4e7cff',
+        color: CAD_VIEWPORT_CONFIG.modelColor,
         metalness: 0.18,
         roughness: 0.42,
       }),
@@ -52,7 +53,7 @@ function ModelMesh({ mesh }: { mesh: MeshSnapshot }) {
 
 type CadViewportProps = {
   mesh: MeshSnapshot | null
-  parameters: BoxParameters | null
+  parameters: ModelParameterValues | null
   stale: boolean
 }
 
@@ -78,7 +79,7 @@ function AnnotationLine({
 
 function dimensionAnnotationsFor(
   mesh: MeshSnapshot,
-  parameters: BoxParameters | null,
+  parameters: ModelParameterValues | null,
 ): DimensionAnnotation[] {
   if (!parameters) return []
   return createDimensionAnnotations(mesh.bounds, parameters)
@@ -128,7 +129,7 @@ function DimensionAnnotations({
   parameters,
 }: {
   mesh: MeshSnapshot
-  parameters: BoxParameters | null
+  parameters: ModelParameterValues | null
 }) {
   const annotations = useMemo(
     () => dimensionAnnotationsFor(mesh, parameters),
@@ -151,7 +152,7 @@ function ViewportContent({
   parameters,
 }: {
   mesh: MeshSnapshot | null
-  parameters: BoxParameters | null
+  parameters: ModelParameterValues | null
 }) {
   if (!mesh) {
     return (

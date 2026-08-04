@@ -1,6 +1,6 @@
-import type { Solid } from 'replicad'
+import type { Shape3D } from 'replicad'
 import type { MeshData } from '../mesh'
-import type { BoxParameters } from '../../cad-contract/units'
+import type { ModelId, ModelParameterValues } from '../../cad-contract/units'
 
 export type CandidateRecord = {
   candidateId: string
@@ -8,8 +8,9 @@ export type CandidateRecord = {
   requestId: string
   generation: number
   workerEpoch: string
-  parameters: BoxParameters
-  shape: Solid
+  modelId: ModelId
+  parameters: ModelParameterValues
+  shape: Shape3D
   mesh: MeshData
   createdAt: number
 }
@@ -19,8 +20,9 @@ export type RevisionRecord = {
   operationId: string
   generation: number
   workerEpoch: string
-  parameters: BoxParameters
-  shape: Solid
+  modelId: ModelId
+  parameters: ModelParameterValues
+  shape: Shape3D
   mesh: MeshData
   exportPins: number
 }
@@ -113,6 +115,7 @@ export class RevisionLifetime {
       operationId: candidate.operationId,
       generation: candidate.generation,
       workerEpoch: candidate.workerEpoch,
+      modelId: candidate.modelId,
       parameters: candidate.parameters,
       shape: candidate.shape,
       mesh: candidate.mesh,

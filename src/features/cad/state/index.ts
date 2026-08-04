@@ -3,6 +3,8 @@ import type { MeshSnapshot } from '../../../cad-contract/messages'
 import {
   PROTOTYPE_CONFIGURATION,
   type BoxParameters,
+  type ModelId,
+  type ModelParameterValues,
 } from '../../../cad-contract/units'
 
 export type CadStatus =
@@ -20,7 +22,8 @@ export type CommittedModel = {
   revision: string
   workerEpoch: string
   generation: number
-  parameters: BoxParameters
+  modelId: ModelId
+  parameters: ModelParameterValues
   mesh: MeshSnapshot
 }
 
@@ -28,7 +31,8 @@ export type CadState = {
   status: CadStatus
   exportStatus: ExportStatus
   generation: number
-  input: BoxParameters
+  modelId: ModelId
+  input: ModelParameterValues
   workerEpoch: string | null
   committed: CommittedModel | null
   stale: boolean
@@ -44,6 +48,7 @@ export function initialCadState(): CadState {
     status: 'booting',
     exportStatus: 'disabled',
     generation: 0,
+    modelId: 'box',
     input: { ...INITIAL_PARAMETERS },
     workerEpoch: null,
     committed: null,
@@ -55,10 +60,16 @@ export function initialCadState(): CadState {
 export type CadAction =
   | { type: 'engine-start' }
   | { type: 'engine-ready'; workerEpoch: string }
-  | { type: 'input-valid'; input: BoxParameters; generation: number }
+  | {
+      type: 'input-valid'
+      modelId: ModelId
+      input: ModelParameterValues
+      generation: number
+    }
   | {
       type: 'input-invalid'
-      input: BoxParameters
+      modelId: ModelId
+      input: ModelParameterValues
       generation: number
       error: CadError
     }
@@ -85,6 +96,7 @@ export function cadReducer(state: CadState, action: CadAction): CadState {
     case 'input-valid':
       return {
         ...state,
+        modelId: action.modelId,
         input: action.input,
         generation: action.generation,
         status: 'generating',
@@ -95,6 +107,7 @@ export function cadReducer(state: CadState, action: CadAction): CadState {
     case 'input-invalid':
       return {
         ...state,
+        modelId: action.modelId,
         input: action.input,
         generation: action.generation,
         status: 'invalid-input',
@@ -128,6 +141,7 @@ export function cadReducer(state: CadState, action: CadAction): CadState {
     case 'worker-restarted':
       return {
         ...initialCadState(),
+        modelId: state.modelId,
         input: state.input,
         status: 'loading-engine',
       }

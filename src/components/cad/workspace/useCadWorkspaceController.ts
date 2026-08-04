@@ -1,5 +1,5 @@
 import { useReducer, useState } from 'react'
-import type { DimensionKey } from '../../../cad-contract/units'
+import type { ModelId, ModelParameterKey } from '../../../cad-contract/units'
 import {
   cadReducer,
   initialCadState,
@@ -12,11 +12,13 @@ import type { RawParameters } from './types'
 
 export type CadWorkspaceController = {
   state: CadState
+  modelId: ModelId
   rawParameters: RawParameters
-  fieldErrors: Partial<Record<DimensionKey, string>>
+  fieldErrors: Partial<Record<ModelParameterKey, string>>
   status: string
   canExport: boolean
-  onInputChange: (key: DimensionKey, value: string) => void
+  onModelChange: (modelId: ModelId) => void
+  onInputChange: (key: ModelParameterKey, value: string) => void
   onExport: () => void
   onRetry: () => void
 }
@@ -27,27 +29,30 @@ export function useCadWorkspaceController(): CadWorkspaceController {
     rawFromParameters(INITIAL_PARAMETERS),
   )
   const [fieldErrors, setFieldErrors] = useState<
-    Partial<Record<DimensionKey, string>>
+    Partial<Record<ModelParameterKey, string>>
   >({})
   const [progress, setProgress] = useState('')
-  const { handleInputChange, handleExport, handleRetry } = useCadWorkerRuntime({
-    state,
-    rawParameters,
-    dispatch,
-    setRawParameters,
-    setFieldErrors,
-    setProgress,
-  })
+  const { handleModelChange, handleInputChange, handleExport, handleRetry } =
+    useCadWorkerRuntime({
+      state,
+      rawParameters,
+      dispatch,
+      setRawParameters,
+      setFieldErrors,
+      setProgress,
+    })
   const status = statusMessage(state, progress)
   const canExport =
     state.status === 'ready' && state.exportStatus === 'idle' && !state.stale
 
   return {
     state,
+    modelId: state.modelId,
     rawParameters,
     fieldErrors,
     status,
     canExport,
+    onModelChange: handleModelChange,
     onInputChange: handleInputChange,
     onExport: handleExport,
     onRetry: handleRetry,

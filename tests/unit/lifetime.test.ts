@@ -24,6 +24,7 @@ function candidate(
     requestId: `request-${id}`,
     generation,
     workerEpoch: 'epoch-1',
+    modelId: 'box',
     parameters: { width: 20, depth: 30, height: 40 },
     shape,
     mesh,
