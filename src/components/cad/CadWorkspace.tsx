@@ -1,9 +1,14 @@
 import { CadViewport } from '../../features/cad/viewport/CadViewport'
+import type { ModelId } from '../../cad-contract/units'
 import { CadWorkspacePanel } from './CadWorkspacePanel'
 import { useCadWorkspaceController } from './workspace/useCadWorkspaceController'
 
-export default function CadWorkspace() {
-  const controller = useCadWorkspaceController()
+type CadWorkspaceProps = {
+  modelId: ModelId
+}
+
+export default function CadWorkspace({ modelId }: CadWorkspaceProps) {
+  const controller = useCadWorkspaceController(modelId)
 
   return (
     <div
@@ -17,7 +22,6 @@ export default function CadWorkspace() {
         fieldErrors={controller.fieldErrors}
         status={controller.status}
         canExport={controller.canExport}
-        onModelChange={controller.onModelChange}
         onInputChange={controller.onInputChange}
         onExport={controller.onExport}
         onRetry={controller.onRetry}

@@ -43,13 +43,25 @@ export const INITIAL_PARAMETERS: BoxParameters = {
   ...PROTOTYPE_CONFIGURATION.defaultDimensions,
 }
 
-export function initialCadState(): CadState {
+function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
+  if (modelId === 'box') return { ...INITIAL_PARAMETERS }
+  return { rows: 1, columns: 1 }
+}
+
+export function initialCadState(
+  modelId: ModelId = 'box',
+  initialInput?: ModelParameterValues,
+): CadState {
+  const input = initialInput
+    ? { ...initialInput }
+    : defaultParametersForModel(modelId)
+
   return {
     status: 'booting',
     exportStatus: 'disabled',
     generation: 0,
-    modelId: 'box',
-    input: { ...INITIAL_PARAMETERS },
+    modelId,
+    input,
     workerEpoch: null,
     committed: null,
     stale: false,
@@ -140,9 +152,7 @@ export function cadReducer(state: CadState, action: CadAction): CadState {
       return { ...state, exportStatus: 'idle' }
     case 'worker-restarted':
       return {
-        ...initialCadState(),
-        modelId: state.modelId,
-        input: state.input,
+        ...initialCadState(state.modelId, state.input),
         status: 'loading-engine',
       }
     case 'recoverable-error':

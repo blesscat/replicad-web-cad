@@ -1,0 +1,59 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro'
+import CadWorkspace from '../../components/cad/CadWorkspace'
+import {
+  getModelDefinition,
+  modelDefinitions,
+} from '../../features/cad/model-catalog'
+import type { ModelId } from '../../cad-contract/units'
+
+interface Props {
+  modelId: ModelId
+}
+
+export function getStaticPaths() {
+  return modelDefinitions.map((definition) => ({
+    params: { modelId: definition.id },
+    props: { modelId: definition.id },
+  }))
+}
+
+const { modelId } = Astro.props
+const definition = getModelDefinition(modelId)
+
+if (!definition) {
+  throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
+}
+---
+
+<SiteLayout
+  title={`${definition.displayName} CAD workspace | replicad-web-cad`}
+  description={`Browser-based ${definition.displayName} CAD workspace.`}
+>
+  <section aria-labelledby="cad-title">
+    <p class="mb-4 text-muted">Browser CAD Prototype</p>
+    <h1 class="mb-4 text-4xl font-semibold leading-tight" id="cad-title">
+      CAD workspace
+    </h1>
+    <p class="mb-4 text-muted leading-normal">
+      目前編輯：{definition.displayName}。如要切換模型，請返回首頁重新選擇。
+    </p>
+    <div
+      class="rounded-2xl border border-border-card bg-panel p-5 shadow-card"
+      id="cad-fallback"
+    >
+      <h2 class="mb-4 text-2xl font-semibold leading-tight">
+        正在載入 {definition.displayName} CAD workspace
+      </h2>
+      <p class="mb-4 leading-normal">
+        需要 JavaScript、WebAssembly、Web Worker 與 WebGL 才能顯示互動式預覽。
+      </p>
+      <p class="mb-0">
+        <a class="text-ink underline underline-offset-4" href="/"
+          >返回首頁選擇其他模型 →</a
+        >
+      </p>
+    </div>
+    <CadWorkspace client:only="react" modelId={modelId} />
+  </section>
+</SiteLayout>

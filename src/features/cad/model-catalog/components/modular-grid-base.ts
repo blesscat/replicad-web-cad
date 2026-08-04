@@ -69,6 +69,7 @@ export const modularGridBaseDefinition: ModelDefinition = {
   id: 'modular-grid-base',
   buildKey: 'modular-grid-base',
   displayName: '模組化網格底板',
+  selectionDescription: '由 20 mm 網格單元組成的底板，可調整行數與列數。',
   parameterSchema: GRID_PARAMETER_SCHEMA,
   defaultParameters: { rows: 1, columns: 1 },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },

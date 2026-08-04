@@ -22,6 +22,7 @@ export type ModelDefinition = {
   id: ModelId
   buildKey: ModelId
   displayName: string
+  selectionDescription: string
   parameterSchema: ReadonlyArray<ParameterField>
   defaultParameters: ModelParameterValues
   previewMetadata: { centeredOnXY: true; baseAtZ: 0 }

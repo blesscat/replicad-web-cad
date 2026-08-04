@@ -5,13 +5,8 @@ import {
   type ModelParameterKey,
   type ModelParameterValues,
 } from '../../../../cad-contract/units'
-import { getModelDefinition } from '../../../../features/cad/model-catalog'
 import { newOperationId } from '../../../../features/cad/worker-client'
-import {
-  errorForInput,
-  parseRawParameters,
-  rawFromParameters,
-} from '../validation'
+import { errorForInput, parseRawParameters } from '../validation'
 import type { ModelGenerationHandlers, RuntimeContext } from './types'
 
 export function createModelGenerationHandlers(
@@ -92,27 +87,6 @@ export function createModelGenerationHandlers(
     }, PROTOTYPE_CONFIGURATION.inputDebounceMs)
   }
 
-  const handleModelChange = (modelId: ModelId) => {
-    const definition = getModelDefinition(modelId)
-    if (!definition || modelId === context.refs.state.current.modelId) return
-
-    const nextParameters = definition.defaultParameters
-    const nextRawParameters = rawFromParameters(nextParameters)
-    const generation = context.refs.latestGeneration.current + 1
-    context.refs.latestGeneration.current = generation
-    context.refs.rawParameters.current = nextRawParameters
-    context.setRawParameters(nextRawParameters)
-    context.setFieldErrors({})
-    context.dispatch({
-      type: 'input-valid',
-      modelId,
-      input: nextParameters,
-      generation,
-    })
-    sendInvalidate(generation, 'superseded')
-    queueModelGeneration(modelId, nextParameters, generation)
-  }
-
   const handleInputChange = (key: ModelParameterKey, value: string) => {
     const next = { ...context.refs.rawParameters.current, [key]: value }
     context.refs.rawParameters.current = next
@@ -149,7 +123,6 @@ export function createModelGenerationHandlers(
   return {
     sendGenerate,
     sendInvalidate,
-    handleModelChange,
     handleInputChange,
   }
 }

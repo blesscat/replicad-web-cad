@@ -3,9 +3,9 @@ import type { ModelId, ModelParameterKey } from '../../../cad-contract/units'
 import {
   cadReducer,
   initialCadState,
-  INITIAL_PARAMETERS,
   type CadState,
 } from '../../../features/cad/state'
+import { getModelDefinition } from '../../../features/cad/model-catalog'
 import { useCadWorkerRuntime } from './useCadWorkerRuntime'
 import { rawFromParameters, statusMessage } from './validation'
 import type { RawParameters } from './types'
@@ -17,30 +17,35 @@ export type CadWorkspaceController = {
   fieldErrors: Partial<Record<ModelParameterKey, string>>
   status: string
   canExport: boolean
-  onModelChange: (modelId: ModelId) => void
   onInputChange: (key: ModelParameterKey, value: string) => void
   onExport: () => void
   onRetry: () => void
 }
 
-export function useCadWorkspaceController(): CadWorkspaceController {
-  const [state, dispatch] = useReducer(cadReducer, undefined, initialCadState)
-  const [rawParameters, setRawParameters] = useState<RawParameters>(
-    rawFromParameters(INITIAL_PARAMETERS),
+export function useCadWorkspaceController(
+  modelId: ModelId,
+): CadWorkspaceController {
+  const definition = getModelDefinition(modelId)
+  if (!definition) throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
+
+  const [state, dispatch] = useReducer(cadReducer, undefined, () =>
+    initialCadState(modelId, definition.defaultParameters),
+  )
+  const [rawParameters, setRawParameters] = useState<RawParameters>(() =>
+    rawFromParameters(definition.defaultParameters),
   )
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<ModelParameterKey, string>>
   >({})
   const [progress, setProgress] = useState('')
-  const { handleModelChange, handleInputChange, handleExport, handleRetry } =
-    useCadWorkerRuntime({
-      state,
-      rawParameters,
-      dispatch,
-      setRawParameters,
-      setFieldErrors,
-      setProgress,
-    })
+  const { handleInputChange, handleExport, handleRetry } = useCadWorkerRuntime({
+    state,
+    rawParameters,
+    dispatch,
+    setRawParameters,
+    setFieldErrors,
+    setProgress,
+  })
   const status = statusMessage(state, progress)
   const canExport =
     state.status === 'ready' && state.exportStatus === 'idle' && !state.stale
@@ -52,7 +57,6 @@ export function useCadWorkspaceController(): CadWorkspaceController {
     fieldErrors,
     status,
     canExport,
-    onModelChange: handleModelChange,
     onInputChange: handleInputChange,
     onExport: handleExport,
     onRetry: handleRetry,

@@ -17,3 +17,20 @@ export function getModelDefinition(
 ): ModelDefinition | undefined {
   return modelDefinitions.find((definition) => definition.id === modelId)
 }
+
+export function cadPathForModel(modelId: ModelId): string {
+  const definition = getModelDefinition(modelId)
+  if (!definition) throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
+  return `/cad/${definition.id}`
+}
+
+export function modelIdForCadPath(pathname: string): ModelId | undefined {
+  const normalizedPath = pathname.replace(/\/+$/, '')
+  const prefix = '/cad/'
+  if (!normalizedPath.startsWith(prefix)) return undefined
+
+  const slug = normalizedPath.slice(prefix.length)
+  if (!slug || slug.includes('/')) return undefined
+
+  return modelDefinitions.find((definition) => definition.id === slug)?.id
+}

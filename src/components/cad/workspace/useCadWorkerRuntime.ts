@@ -2,7 +2,6 @@ import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react'
 import { normalizeError, type CadError } from '../../../cad-contract/errors'
 import {
   PROTOTYPE_CONFIGURATION,
-  type ModelId,
   type ModelParameterKey,
 } from '../../../cad-contract/units'
 import type { CadAction, CadState } from '../../../features/cad/state'
@@ -32,7 +31,6 @@ type CadWorkerRuntimeOptions = {
 }
 
 export type CadWorkerRuntime = {
-  handleModelChange: (modelId: ModelId) => void
   handleInputChange: (key: ModelParameterKey, value: string) => void
   handleExport: () => void
   handleRetry: () => void
@@ -248,7 +246,6 @@ export function useCadWorkerRuntime({
   }
 
   return {
-    handleModelChange: generation.handleModelChange,
     handleInputChange: generation.handleInputChange,
     handleExport: exportHandlers.handleExport,
     handleRetry,

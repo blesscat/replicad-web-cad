@@ -59,6 +59,5 @@ export type ModelGenerationHandlers = {
     generation: number,
     reason: 'invalid-input' | 'superseded',
   ) => void
-  handleModelChange: (modelId: ModelId) => void
   handleInputChange: (key: ModelParameterKey, value: string) => void
 }

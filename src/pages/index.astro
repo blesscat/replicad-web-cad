@@ -1,5 +1,17 @@
 ---
 import SiteLayout from '../layouts/SiteLayout.astro'
+import {
+  cadPathForModel,
+  modelDefinitions,
+} from '../features/cad/model-catalog'
+
+function parameterSummary(
+  definition: (typeof modelDefinitions)[number],
+): string {
+  return definition.parameterSchema
+    .map((field) => `${field.label}（${field.axis}）`)
+    .join('、')
+}
 ---
 
 <SiteLayout
@@ -8,18 +20,42 @@ import SiteLayout from '../layouts/SiteLayout.astro'
 >
   <section
     class="rounded-2xl border border-border-card bg-panel p-5 shadow-card"
+    aria-labelledby="home-title"
   >
     <p class="mb-4 text-muted">Browser-only CAD prototype</p>
-    <h1 class="mb-4 text-4xl font-semibold leading-tight">
-      用瀏覽器建立並匯出方塊模型
+    <h1 class="mb-4 text-4xl font-semibold leading-tight" id="home-title">
+      用瀏覽器建立、調整並匯出 CAD 模型
     </h1>
     <p class="mb-4 leading-normal">
-      調整方塊的寬、深、高，立即查看 3D 預覽，並下載由精確 B-Rep 產生的 STEP。
+      選擇一個 CAD component，調整參數、查看即時 3D 預覽，並下載由精確 B-Rep
+      產生的 STEP。
     </p>
-    <p class="mb-0">
-      <a class="text-ink underline underline-offset-4" href="/cad/"
-        >開啟 CAD workspace →</a
-      >
-    </p>
+    <div class="mt-6 grid gap-4 sm:grid-cols-2" aria-label="可用 CAD 模型">
+      {
+        modelDefinitions.map((definition) => (
+          <article
+            class="grid gap-3 rounded-xl border border-border-card bg-page p-4"
+            data-model-id={definition.id}
+          >
+            <h2 class="text-2xl font-semibold leading-tight">
+              {definition.displayName}
+            </h2>
+            <p class="m-0 text-muted">{definition.selectionDescription}</p>
+            <p class="m-0 text-sm text-muted">
+              <span class="font-[650] text-ink">可調整：</span>
+              {parameterSummary(definition)}
+            </p>
+            <p class="mb-0">
+              <a
+                class="text-ink underline underline-offset-4"
+                href={cadPathForModel(definition.id)}
+              >
+                使用{definition.displayName} →
+              </a>
+            </p>
+          </article>
+        ))
+      }
+    </div>
   </section>
 </SiteLayout>

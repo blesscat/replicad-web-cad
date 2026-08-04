@@ -59,7 +59,7 @@ src/
 - 頁面與元件預設使用 Tailwind utility classes；utility class 必須以完整、可靜態掃描的字串呈現，不拼接部分 class token。
 - `features/cad/viewport/` 與其他功能資料夾預設使用 Tailwind；只有 utility 不易表達的複雜 selector 或 descendant rule 才在實際擁有該樣式的資料夾放 scoped SCSS。
 - `components/cad/` 組裝 React workspace，負責 UI controller、輸入驗證、Worker lifecycle、控制面板與 viewport，不直接 import CAD kernel。
-- `components/cad/component-panels/` 依 component 分開 React 調整頁面；共用 workspace 只負責選擇 component、狀態與匯出。
+- `components/cad/component-panels/` 依 component 分開 React 調整頁面；共用 workspace 只負責目前 component 的狀態與匯出。
 - `components/cad/workspace/runtime/` 依生成排程、Worker event 與 STEP export 拆分主執行緒 runtime。
 - `features/cad/model-catalog/` 的 `index.ts` 只做 registry/lookup；每個 component 的 id、參數 schema、預設值與 export metadata 放在自己的 definition 檔案，不持有 UI 或 Worker lifecycle。
 - `features/cad/parameters/`、`state/`、`viewport/`、`worker-client/` 與 `download/` 分別處理輸入、狀態、預覽、Worker 通訊與瀏覽器下載。
@@ -94,7 +94,7 @@ pages/
 
 ## 使用 Prototype
 
-開啟 `/cad/` 後，workspace 預設載入 `box`，也可以從 CAD component 選擇器切換到 `modular-grid-base`。`box` 的 `width`、`depth`、`height` 是整數 mm；預設值為 `20 × 30 × 40`，合法範圍為 `1–500 mm`。底板則只調整 `rows` 與 `columns` 格數 slider；每格為 `20 × 20 mm`，高度固定 5 mm，最大寬/深為 500 mm。輸入停止 150 ms 後才會送出建模；無效輸入不會送出 `model.generate` 或匯出 request。
+先在首頁選擇模型，再進入對應的 CAD workspace：`box` 使用 `/cad/box`，`modular-grid-base` 使用 `/cad/modular-grid-base`。CAD workspace 只調整目前 route 的 component；要切換模型必須返回首頁重新選擇。`box` 的 `width`、`depth`、`height` 是整數 mm；預設值為 `20 × 30 × 40`，合法範圍為 `1–500 mm`。底板則只調整 `rows` 與 `columns` 格數 slider；每格為 `20 × 20 mm`，高度固定 5 mm，最大寬/深為 500 mm。輸入停止 150 ms 後才會送出建模；無效輸入不會送出 `model.generate` 或匯出 request。
 
 建模期間可以保留上一個成功 revision 的預覽，但它會標示為 stale，且 STEP 下載會停用；只有新的 B-Rep candidate 完成 commit 並進入「模型已就緒」後，預覽與匯出才會重新同步。WASM 載入、建模、mesh 與匯出都有狀態提示；Worker 或操作失敗時可修改參數或按「重試」，Worker recovery 最多自動重建一次。
 
@@ -124,7 +124,7 @@ pnpm install
 pnpm dev
 ```
 
-開啟 <http://localhost:3456/cad/>。建置與 preview：
+開啟 <http://localhost:3456/>，先選擇模型。建置與 preview：
 
 ```bash
 pnpm build

@@ -7,17 +7,37 @@ function skipHeadlessFirefoxWithoutWebGL(browserName: string): void {
   )
 }
 
+const astroOptimizeDepError =
+  'Failed to load resource: the server responded with a status of 504 (Outdated Optimize Dep)'
+const astroDevToolbarEntrypoint =
+  '/@id/astro/runtime/client/dev-toolbar/entrypoint.js'
+
+function isAstroDevToolbarError(message: string): boolean {
+  return (
+    message === astroOptimizeDepError ||
+    message.includes(astroDevToolbarEntrypoint)
+  )
+}
+
 test('home and docs are static Astro pages', async ({ page }) => {
   await page.goto('/')
   await expect(
-    page.getByRole('heading', { name: '用瀏覽器建立並匯出方塊模型' }),
+    page.getByRole('heading', { name: '用瀏覽器建立、調整並匯出 CAD 模型' }),
   ).toBeVisible()
+  await expect(page.getByRole('link', { name: '使用方塊' })).toHaveAttribute(
+    'href',
+    '/cad/box',
+  )
+  await expect(
+    page.getByRole('link', { name: '使用模組化網格底板' }),
+  ).toHaveAttribute('href', '/cad/modular-grid-base')
   await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
 
   await page.goto('/docs/')
   await expect(
     page.getByRole('heading', { name: 'Prototype 文件' }),
   ).toBeVisible()
+  await expect(page.getByText(/方塊與模組化網格底板/)).toBeVisible()
   await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
 })
 
@@ -31,14 +51,41 @@ test('local development serves same-origin Vite HMR client', async ({
   expect(await response.text()).not.toContain('local.blesscat.dev')
 })
 
-test('CAD route exposes fallback and parameter controls', async ({ page }) => {
+test('CAD root returns to the homepage model chooser', async ({ page }) => {
   await page.goto('/cad/')
+  await expect(page).toHaveURL('/')
+  await expect(
+    page.getByRole('heading', {
+      name: '用瀏覽器建立、調整並匯出 CAD 模型',
+    }),
+  ).toBeVisible()
+  await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
+})
+
+test('unknown CAD model routes do not initialize the workspace', async ({
+  page,
+}) => {
+  const response = await page.goto('/cad/unknown-model')
+  expect(response?.status()).toBe(404)
+  await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
+})
+
+test('box CAD route exposes fallback and locked parameter controls', async ({
+  page,
+}) => {
+  await page.goto('/cad/box')
   await expect(
     page.getByRole('heading', { name: 'CAD workspace', exact: true }),
   ).toBeVisible()
   await expect(page.getByRole('textbox', { name: /寬度/ })).toBeVisible()
   await expect(page.getByRole('textbox', { name: /深度/ })).toBeVisible()
   await expect(page.getByRole('textbox', { name: /高度/ })).toBeVisible()
+  await expect(
+    page.getByRole('combobox', { name: 'CAD component' }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole('link', { name: '返回首頁選擇其他模型' }),
+  ).toHaveAttribute('href', '/')
   await expect(page.locator('#cad-fallback')).toBeHidden()
 })
 
@@ -47,7 +94,7 @@ test('CAD route keeps a readable static fallback when JavaScript is unavailable'
 }) => {
   const context = await browser.newContext({ javaScriptEnabled: false })
   const page = await context.newPage()
-  await page.goto('/cad/')
+  await page.goto('/cad/box')
   await expect(
     page.getByRole('heading', { name: 'CAD workspace', exact: true }),
   ).toBeVisible()
@@ -63,13 +110,18 @@ test('CAD workspace preserves the responsive column boundary', async ({
   page,
 }) => {
   const runtimeErrors: string[] = []
-  page.on('pageerror', (error) => runtimeErrors.push(error.message))
+  page.on('pageerror', (error) => {
+    if (!isAstroDevToolbarError(error.message))
+      runtimeErrors.push(error.message)
+  })
   page.on('console', (message) => {
-    if (message.type() === 'error') runtimeErrors.push(message.text())
+    if (message.type() === 'error' && !isAstroDevToolbarError(message.text())) {
+      runtimeErrors.push(message.text())
+    }
   })
 
   await page.setViewportSize({ width: 760, height: 720 })
-  await page.goto('/cad/')
+  await page.goto('/cad/box')
   const workspace = page.getByTestId('cad-workspace')
   await expect(workspace).toBeVisible()
 
@@ -91,7 +143,7 @@ test('CAD Worker builds the default box in a WebGL-enabled browser', async ({
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/')
+  await page.goto('/cad/box')
   await expect(page.getByRole('status')).toContainText(
     '模型已就緒，可以下載 STEP。',
     { timeout: 30_000 },
@@ -110,7 +162,7 @@ test('CAD Worker exports one non-empty STEP download for the committed revision'
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/')
+  await page.goto('/cad/box')
   await expect(page.getByRole('status')).toContainText(
     '模型已就緒，可以下載 STEP。',
     { timeout: 30_000 },
@@ -132,15 +184,17 @@ test('CAD workspace switches to the modular grid component and exports a 2x2 bas
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/')
+  await page.goto('/')
+  await page.getByRole('link', { name: '使用模組化網格底板' }).click()
   await expect(page.getByRole('status')).toContainText(
     '模型已就緒，可以下載 STEP。',
     { timeout: 30_000 },
   )
 
-  await page
-    .getByRole('combobox', { name: 'CAD component' })
-    .selectOption('modular-grid-base')
+  await expect(page).toHaveURL('/cad/modular-grid-base')
+  await expect(
+    page.getByRole('combobox', { name: 'CAD component' }),
+  ).toHaveCount(0)
   const rows = page.getByRole('slider', { name: '行數（Y）' })
   const columns = page.getByRole('slider', { name: '列數（X）' })
   await expect(rows).toHaveValue('1')
@@ -167,6 +221,10 @@ test('CAD workspace switches to the modular grid component and exports a 2x2 bas
   let byteLength = 0
   for await (const chunk of stream ?? []) byteLength += chunk.length
   expect(byteLength).toBeGreaterThan(0)
+
+  await page.getByRole('link', { name: '返回首頁選擇其他模型' }).click()
+  await expect(page).toHaveURL('/')
+  await expect(page.getByRole('link', { name: '使用方塊' })).toBeVisible()
 })
 
 test('parameter updates use the latest valid generation and preserve stale preview on invalid input', async ({
@@ -174,7 +232,7 @@ test('parameter updates use the latest valid generation and preserve stale previ
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/')
+  await page.goto('/cad/box')
   await expect(page.getByRole('status')).toContainText(
     '模型已就緒，可以下載 STEP。',
     { timeout: 30_000 },
@@ -210,7 +268,7 @@ test('dimension annotations remain attached through viewport resize and orbit in
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/')
+  await page.goto('/cad/box')
   await expect(page.getByRole('status')).toContainText(
     '模型已就緒，可以下載 STEP。',
     { timeout: 30_000 },

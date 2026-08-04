@@ -1,7 +1,4 @@
-import {
-  getModelDefinition,
-  modelDefinitions,
-} from '../../features/cad/model-catalog'
+import { getModelDefinition } from '../../features/cad/model-catalog'
 import type { CadState } from '../../features/cad/state'
 import type { ModelId, ModelParameterKey } from '../../cad-contract/units'
 import type { RawParameters } from './workspace/types'
@@ -17,7 +14,6 @@ type CadWorkspacePanelProps = {
   fieldErrors: Partial<Record<ModelParameterKey, string>>
   status: string
   canExport: boolean
-  onModelChange: (modelId: ModelId) => void
   onInputChange: (key: ModelParameterKey, value: string) => void
   onExport: () => void
   onRetry: () => void
@@ -30,12 +26,12 @@ export function CadWorkspacePanel({
   fieldErrors,
   status,
   canExport,
-  onModelChange,
   onInputChange,
   onExport,
   onRetry,
 }: CadWorkspacePanelProps) {
-  const definition = getModelDefinition(modelId) ?? modelDefinitions[0]
+  const definition = getModelDefinition(modelId)
+  if (!definition) throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
 
   return (
     <div className="self-start grid gap-4 rounded-2xl border border-border-card bg-panel p-4">
@@ -43,22 +39,14 @@ export function CadWorkspacePanel({
         <h2 className="mb-2 text-2xl font-semibold leading-tight">
           {definition.displayName}參數
         </h2>
-        <p className="text-muted">請先選擇 component，再調整其參數。</p>
+        <p className="text-muted">
+          目前編輯此 component；如要切換模型，請
+          <a className="text-ink underline underline-offset-4" href="/">
+            返回首頁選擇其他模型
+          </a>
+          。
+        </p>
       </div>
-      <label className="grid gap-[0.3rem]">
-        <span className="font-[650]">CAD component</span>
-        <select
-          className="w-full rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-          value={modelId}
-          onChange={(event) => onModelChange(event.target.value as ModelId)}
-        >
-          {modelDefinitions.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.displayName}
-            </option>
-          ))}
-        </select>
-      </label>
       <ComponentParameterPanel
         modelId={modelId}
         rawParameters={rawParameters}

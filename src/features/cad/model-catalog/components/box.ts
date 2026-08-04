@@ -71,6 +71,7 @@ export const boxDefinition: ModelDefinition = {
   id: 'box',
   buildKey: 'box',
   displayName: '方塊',
+  selectionDescription: '以寬度、深度與高度定義基本方塊。',
   parameterSchema: BOX_PARAMETER_SCHEMA,
   defaultParameters: { ...PROTOTYPE_CONFIGURATION.defaultDimensions },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },

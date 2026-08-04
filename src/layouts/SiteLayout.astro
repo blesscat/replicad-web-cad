@@ -9,7 +9,7 @@ interface Props {
 const { title, description } = Astro.props
 const currentPath = Astro.url.pathname
 const isDocsPage = currentPath.startsWith('/docs')
-const isCadPage = currentPath.startsWith('/cad')
+const isHomePage = currentPath === '/'
 ---
 
 <html lang="zh-Hant">
@@ -34,8 +34,8 @@ const isCadPage = currentPath.startsWith('/cad')
           >
           <a
             class="no-underline"
-            href="/cad/"
-            aria-current={isCadPage ? 'page' : undefined}>CAD workspace</a
+            href="/"
+            aria-current={isHomePage ? 'page' : undefined}>選擇模型</a
           >
         </div>
       </nav>
