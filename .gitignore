@@ -7,3 +7,4 @@ coverage/
 *.local
 .pnpm-store/
 .worktree/
+openspec/changes/archive/
