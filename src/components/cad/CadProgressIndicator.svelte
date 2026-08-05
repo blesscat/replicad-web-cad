@@ -4,29 +4,53 @@
     progressCountLabel,
     progressDetails,
     type CadProgress,
+    type CadProgressDetails,
   } from '../../features/cad/progress'
 
   type Props = {
     progress: CadProgress
   }
 
+  function getValueMin(hasCounters: boolean): number {
+    if (hasCounters) return 0
+    return 1
+  }
+
+  function getValueMax(
+    progress: CadProgress,
+    current: CadProgressDetails,
+    hasCounters: boolean,
+  ): number {
+    if (!hasCounters) return current.totalSteps
+    return progress.total ?? 1
+  }
+
+  function getValueNow(
+    progress: CadProgress,
+    current: CadProgressDetails,
+    hasCounters: boolean,
+  ): number {
+    if (!hasCounters) return current.step
+    return progress.completed ?? 0
+  }
+
+  function getValueText(
+    current: CadProgressDetails,
+    countLabel: string | null,
+  ): string {
+    if (countLabel !== null) return `${current.label}，${countLabel}`
+    return `${current.label}，第 ${current.step} / ${current.totalSteps} 階段`
+  }
+
   let { progress }: Props = $props()
   let current = $derived(progressDetails(progress.stage))
   let countLabel = $derived(progressCountLabel(progress))
   let hasCounters = $derived(countLabel !== null)
-  let valueMin = $derived(hasCounters ? 0 : 1)
-  let valueMax = $derived(
-    hasCounters ? (progress.total ?? 1) : current.totalSteps,
-  )
-  let valueNow = $derived(
-    hasCounters ? (progress.completed ?? 0) : current.step,
-  )
+  let valueMin = $derived(getValueMin(hasCounters))
+  let valueMax = $derived(getValueMax(progress, current, hasCounters))
+  let valueNow = $derived(getValueNow(progress, current, hasCounters))
   let completion = $derived((valueNow / valueMax) * 100)
-  let valueText = $derived(
-    hasCounters
-      ? `${current.label}，${countLabel}`
-      : `${current.label}，第 ${current.step} / ${current.totalSteps} 階段`,
-  )
+  let valueText = $derived(getValueText(current, countLabel))
 
   function getMarkerClassName(
     progressStage: CadProgress['stage'],

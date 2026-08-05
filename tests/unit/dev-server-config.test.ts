@@ -8,9 +8,10 @@ describe('local Astro dev server', () => {
       return 'name' in value && typeof value.name === 'string'
     }
     const integrationNames = (astroConfig.integrations ?? [])
-      .flatMap((integration) =>
-        Array.isArray(integration) ? integration : [integration],
-      )
+      .flatMap((integration) => {
+        if (Array.isArray(integration)) return integration
+        return [integration]
+      })
       .map((integration) => {
         if (!isNamedIntegration(integration)) return ''
         return integration.name

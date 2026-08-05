@@ -13,10 +13,16 @@
     parameters: ModelParameterValues | null
   }
 
+  function getDimensionAnnotations(
+    mesh: MeshSnapshot,
+    parameters: ModelParameterValues | null,
+  ): DimensionAnnotation[] {
+    if (!parameters) return []
+    return createDimensionAnnotations(mesh.bounds, parameters)
+  }
+
   let { mesh, parameters }: Props = $props()
-  let annotations = $derived<DimensionAnnotation[]>(
-    parameters ? createDimensionAnnotations(mesh.bounds, parameters) : [],
-  )
+  let annotations = $derived(getDimensionAnnotations(mesh, parameters))
 </script>
 
 {#if annotations.length > 0}

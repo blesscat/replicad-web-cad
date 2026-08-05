@@ -40,6 +40,11 @@ type CadWorkerRuntimeOptions = {
   setProgress: StateSetter<CadProgress | null>
 }
 
+function getCadFallbackElement(): HTMLElement | null {
+  if (typeof document === 'undefined') return null
+  return document.getElementById('cad-fallback')
+}
+
 export type CadWorkerRuntime = {
   handleInputChange: (key: ModelParameterKey, value: string) => void
   handleExport: (format?: ExportFormat) => void
@@ -81,10 +86,7 @@ export function createCadWorkerRuntime(
     current: (_error: CadError, _client?: CadWorkerClient | null) => undefined,
   } as RuntimeRefs['recoverWorker']
   const disposedRef = { current: false } as RuntimeRefs['disposed']
-  const fallback =
-    typeof document === 'undefined'
-      ? null
-      : document.getElementById('cad-fallback')
+  const fallback = getCadFallbackElement()
 
   const refs: RuntimeRefs = {
     client: clientRef,
