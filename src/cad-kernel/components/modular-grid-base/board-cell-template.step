@@ -10,7 +10,7 @@ FILE_DESCRIPTION(
 
 FILE_NAME(
 /* name */ 'board-cell-template.step',
-/* time_stamp */ '2026-08-05T22:18:05+08:00',
+/* time_stamp */ '2026-08-05T23:05:06+08:00',
 /* author */ (''),
 /* organization */ (''),
 /* preprocessor_version */ 'ST-DEVELOPER v20.1',
@@ -1103,16 +1103,16 @@ SOLID_ANGLE_UNIT()
 #1050=SHAPE_REPRESENTATION('',(#628),#1042);
 #1051=PRODUCT_DEFINITION_CONTEXT('part definition',#1056,'design');
 #1052=PRODUCT_DEFINITION('board-cell-template',
-'board-cell-template v15',#1053,#1051);
+'board-cell-template v16',#1053,#1051);
 #1053=PRODUCT_DEFINITION_FORMATION('',$,#1058);
-#1054=PRODUCT_RELATED_PRODUCT_CATEGORY('board-cell-template v15',
-'board-cell-template v15',(#1058));
+#1054=PRODUCT_RELATED_PRODUCT_CATEGORY('board-cell-template v16',
+'board-cell-template v16',(#1058));
 #1055=APPLICATION_PROTOCOL_DEFINITION('international standard',
 'automotive_design',2009,#1056);
 #1056=APPLICATION_CONTEXT(
 'Core Data for Automotive Mechanical Design Process');
 #1057=PRODUCT_CONTEXT('part definition',#1056,'mechanical');
-#1058=PRODUCT('board-cell-template','board-cell-template v15',$,(#1057));
+#1058=PRODUCT('board-cell-template','board-cell-template v16',$,(#1057));
 #1059=PRESENTATION_STYLE_ASSIGNMENT((#1060));
 #1060=SURFACE_STYLE_USAGE(.BOTH.,#1061);
 #1061=SURFACE_SIDE_STYLE('',(#1062));
