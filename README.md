@@ -6,15 +6,15 @@
 
 ## 主要架構
 
-Astro 負責網站 shell 與路由，React workspace 負責瀏覽器端 UI，專用 CAD Worker 負責所有 CAD kernel 工作：
+Astro 負責網站 shell 與路由，Svelte workspace 負責瀏覽器端 UI，專用 CAD Worker 負責所有 CAD kernel 工作：
 
 ```text
 Astro site shell（layouts/ + pages/）
-└─ React workspace（components/cad/，主執行緒）
+└─ Svelte workspace（components/cad/，主執行緒）
       ├─ 參數表單與 state machine
       ├─ component-local control panels
       ├─ Worker client / runtime validation
-      ├─ React Three Fiber viewport
+      ├─ Threlte + Three.js viewport
       └─ download adapter
              ⇅ versioned messages + transferable buffers
          CAD Worker（workers/ + cad-kernel/）
@@ -53,17 +53,17 @@ src/
 
 資料夾名稱可以隨實作調整，但責任邊界必須維持：
 
-- `pages/` 只提供頁面內容、fallback 與 React 掛載點；共用 Astro shell、導覽與 head metadata 由 `layouts/` 負責。
+- `pages/` 只提供頁面內容、fallback 與 Svelte 掛載點；共用 Astro shell、導覽與 head metadata 由 `layouts/` 負責。
 - `layouts/` 負責共用 Astro shell、導覽與 head metadata。
 - `styles/` 是全域樣式入口，只放 Tailwind import、`@theme` tokens、reset 與必要的 base rules，不放頁面或功能元件 selector。
 - 頁面與元件預設使用 Tailwind utility classes；utility class 必須以完整、可靜態掃描的字串呈現，不拼接部分 class token。
 - `features/cad/viewport/` 與其他功能資料夾預設使用 Tailwind；只有 utility 不易表達的複雜 selector 或 descendant rule 才在實際擁有該樣式的資料夾放 scoped SCSS。
-- `components/cad/` 組裝 React workspace，負責 UI controller、輸入驗證、Worker lifecycle、控制面板與 viewport，不直接 import CAD kernel。
-- `components/cad/component-panels/` 依 component 分開 React 調整頁面；共用 workspace 只負責目前 component 的狀態與匯出。
+- `components/cad/` 組裝 Svelte workspace，負責 UI controller、輸入驗證、Worker lifecycle、控制面板與 viewport，不直接 import CAD kernel。
+- `components/cad/component-panels/` 依 component 分開 Svelte 調整頁面；共用 workspace 只負責目前 component 的狀態與匯出。
 - `components/cad/workspace/runtime/` 依生成排程、Worker event 與 STEP/STL export 拆分主執行緒 runtime。
 - `features/cad/model-catalog/` 的 `index.ts` 只做 registry/lookup；每個 component 的 id、參數 schema、預設值與 export metadata 放在自己的 definition 檔案，不持有 UI 或 Worker lifecycle。
 - `features/cad/parameters/`、`state/`、`viewport/`、`worker-client/` 與 `download/` 分別處理輸入、狀態、預覽、Worker 通訊與瀏覽器下載。
-- `cad-contract/` 放跨主執行緒共用的 messages、errors 與 units；不得依賴 DOM、React、Three.js、replicad 或 OpenCascade。
+- `cad-contract/` 放跨主執行緒共用的 messages、errors 與 units；不得依賴 DOM、UI framework、Three.js、replicad 或 OpenCascade。
 - `cad-kernel/` 放 WASM、B-Rep、mesh、STEP 與 resource lifetime 邏輯，只能由 `workers/` 使用。
 - `cad-kernel/components/<component>/` 同時放 component-local builder 與其 canonical CAD asset；例如 `modular-grid-base/builder.ts` 與 `board-cell-template.step`。
 - `workers/` 是 CAD Worker 的執行入口，只能組合 `cad-contract/` 與 `cad-kernel/`。

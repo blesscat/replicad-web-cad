@@ -13,7 +13,7 @@ The system MUST provide a static homepage model chooser driven by the registered
 - **WHEN** 使用者開啟首頁
 - **THEN** 首頁 MUST 顯示 `box` 與 `modular-grid-base` 的可理解名稱
 - **AND** 每個模型 MUST 顯示與其參數及用途相符的簡短說明
-- **AND** 首頁 MUST NOT 啟動 CAD Worker 或 React CAD workspace
+- **AND** 首頁 MUST NOT 啟動 CAD Worker 或 Svelte CAD workspace
 
 #### Scenario: 選擇方塊
 
