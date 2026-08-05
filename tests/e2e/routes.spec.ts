@@ -99,7 +99,7 @@ test('CAD route shows the current loading stage', async ({
     await route.continue()
   })
 
-  await page.goto('/cad/')
+  await page.goto('/cad/box')
 
   const progress = page.getByRole('progressbar', {
     name: '載入 CAD engine',
@@ -109,6 +109,31 @@ test('CAD route shows the current loading stage', async ({
   await expect(page.getByTestId('cad-progress')).toContainText(
     '載入 CAD engine',
   )
+
+  const viewport = page.getByTestId('cad-viewport')
+  const fallback = page.getByText('尚未有可預覽的模型。')
+  await expect(fallback).toBeVisible()
+  const viewportRect = () =>
+    viewport.evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+      return { height: rect.height, top: rect.top }
+    })
+  const loadingViewport = await viewportRect()
+  const viewportContentHeight = await viewport.evaluate(
+    (element) => element.clientHeight,
+  )
+  const fallbackHeight = await fallback.evaluate(
+    (element) => element.getBoundingClientRect().height,
+  )
+  expect(fallbackHeight).toBe(viewportContentHeight)
+
+  await expect(page.getByRole('status')).toContainText(
+    '模型已就緒，可以下載 STEP。',
+    { timeout: 30_000 },
+  )
+  const readyViewport = await viewportRect()
+
+  expect(readyViewport).toEqual(loadingViewport)
 })
 
 test('CAD route keeps a readable static fallback when JavaScript is unavailable', async ({
@@ -142,10 +167,19 @@ test('CAD workspace preserves the responsive column boundary', async ({
     }
   })
 
+  await page.route('**/replicad_single.wasm', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 600))
+    await route.continue()
+  })
+
   await page.setViewportSize({ width: 760, height: 720 })
   await page.goto('/cad/box')
   const workspace = page.getByTestId('cad-workspace')
+  const viewport = page.getByTestId('cad-viewport')
   await expect(workspace).toBeVisible()
+  await expect(
+    page.getByRole('progressbar', { name: '載入 CAD engine' }),
+  ).toBeVisible()
 
   const columnCount = () =>
     workspace.evaluate(
@@ -154,9 +188,26 @@ test('CAD workspace preserves the responsive column boundary', async ({
     )
 
   await expect.poll(columnCount).toBe(1)
+  const loadingViewportHeight = await viewport.evaluate(
+    (element) => element.getBoundingClientRect().height,
+  )
+  const hasHorizontalOverflow = () =>
+    page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    )
+  expect(await hasHorizontalOverflow()).toBeTruthy()
 
   await page.setViewportSize({ width: 761, height: 720 })
   await expect.poll(columnCount).toBe(2)
+  await expect(page.getByTestId('cad-progress')).toBeVisible()
+  await expect.poll(hasHorizontalOverflow).toBeTruthy()
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => element.getBoundingClientRect().height),
+    )
+    .toBe(loadingViewportHeight)
   expect(runtimeErrors).toEqual([])
 })
 
@@ -174,6 +225,15 @@ test('CAD Worker builds the default box in a WebGL-enabled browser', async ({
   await expect(page.getByTestId('cad-viewport').locator('canvas')).toHaveCount(
     1,
   )
+  const viewport = page.getByTestId('cad-viewport')
+  const viewportContentHeight = await viewport.evaluate(
+    (element) => element.clientHeight,
+  )
+  const canvasHeight = await page
+    .getByTestId('cad-viewport')
+    .locator('canvas')
+    .evaluate((element) => element.getBoundingClientRect().height)
+  expect(canvasHeight).toBe(viewportContentHeight)
   await expect(page.getByLabel('寬度 X 20 mm')).toBeVisible()
   await expect(page.getByLabel('深度 Y 30 mm')).toBeVisible()
   await expect(page.getByLabel('高度 Z 40 mm')).toBeVisible()
@@ -254,15 +314,8 @@ test('modular grid reports cell progress for a larger generation', async ({
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/')
-  await expect(page.getByRole('status')).toContainText(
-    '模型已就緒，可以下載 STEP。',
-    { timeout: 30_000 },
-  )
-
-  await page
-    .getByRole('combobox', { name: 'CAD component' })
-    .selectOption('modular-grid-base')
+  await page.goto('/')
+  await page.getByRole('link', { name: '使用模組化網格底板' }).click()
   await expect(page.getByRole('status')).toContainText(
     '模型已就緒，可以下載 STEP。',
     { timeout: 30_000 },
@@ -270,6 +323,13 @@ test('modular grid reports cell progress for a larger generation', async ({
 
   const rows = page.getByRole('slider', { name: '行數（Y）' })
   const columns = page.getByRole('slider', { name: '列數（X）' })
+  const viewport = page.getByTestId('cad-viewport')
+  const viewportRect = () =>
+    viewport.evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+      return { height: rect.height, top: rect.top }
+    })
+  const readyViewport = await viewportRect()
   for (let value = 1; value < 10; value += 1) {
     await rows.press('ArrowRight')
     await columns.press('ArrowRight')
@@ -279,6 +339,7 @@ test('modular grid reports cell progress for a larger generation', async ({
   await expect(progress).toBeVisible({ timeout: 30_000 })
   await expect(progress).toHaveAttribute('aria-valuemax', '100')
   await expect(progress).toHaveAttribute('aria-valuetext', /格/)
+  expect(await viewportRect()).toEqual(readyViewport)
   await expect(page.getByRole('status')).toContainText(
     '模型已就緒，可以下載 STEP。',
     { timeout: 60_000 },

@@ -12,7 +12,7 @@ export default function CadWorkspace({ modelId }: CadWorkspaceProps) {
 
   return (
     <div
-      className="mt-6 grid grid-cols-[minmax(220px,280px)_minmax(0,1fr)] gap-4 max-cad:grid-cols-1"
+      className="mt-6 grid items-start grid-cols-[minmax(220px,280px)_minmax(0,1fr)] gap-4 max-cad:grid-cols-1"
       data-testid="cad-workspace"
     >
       <CadWorkspacePanel

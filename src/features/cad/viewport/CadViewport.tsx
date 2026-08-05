@@ -156,7 +156,7 @@ function ViewportContent({
 }) {
   if (!mesh) {
     return (
-      <div className="flex h-[520px] items-center justify-center text-muted">
+      <div className="flex h-full items-center justify-center text-muted">
         尚未有可預覽的模型。
       </div>
     )
@@ -167,7 +167,7 @@ function ViewportContent({
       aria-label="3D CAD 預覽"
       fallback={
         <div
-          className="flex h-[520px] items-center justify-center text-muted"
+          className="flex h-full items-center justify-center text-muted"
           role="alert"
         >
           無法建立 3D 預覽，請確認瀏覽器支援 WebGL。
@@ -196,7 +196,7 @@ export function CadViewport({ mesh, parameters, stale }: CadViewportProps) {
 
   return (
     <div
-      className={`relative min-h-[520px] overflow-hidden rounded-2xl border ${viewportBorderClassName} bg-viewport ${styles.viewport}`}
+      className={`relative h-[520px] self-start overflow-hidden rounded-2xl border ${viewportBorderClassName} bg-viewport ${styles.viewport}`}
       data-testid="cad-viewport"
       role="img"
       aria-label="3D CAD 預覽"
