@@ -201,6 +201,7 @@ describe('CAD Worker progress lifecycle', () => {
     })
     refs.exportRequest.current = {
       operationId: 'export-current',
+      format: 'step',
       revision: 'revision-current',
       workerEpoch: 'epoch-test',
       fileName: 'current.step',

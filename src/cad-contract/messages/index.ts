@@ -70,6 +70,13 @@ export type ExportStepCommand = Envelope<'export.step'> & {
   file: { name: string; mime: 'model/step' }
 }
 
+export type ExportStlCommand = Envelope<'export.stl'> & {
+  operationId: string
+  modelRevision: string
+  workerEpoch: string
+  file: { name: string; mime: 'model/stl' }
+}
+
 export type WorkerDisposeCommand = Envelope<'worker.dispose'> & {
   operationId: string
 }
@@ -81,6 +88,7 @@ export type WorkerCommand =
   | ModelCommitCommand
   | ModelDiscardCommand
   | ExportStepCommand
+  | ExportStlCommand
   | WorkerDisposeCommand
 
 export type WorkerCommandInput =
@@ -96,6 +104,8 @@ export type WorkerCommandInput =
       Partial<Pick<ModelDiscardCommand, 'version' | 'requestId'>>)
   | (Omit<ExportStepCommand, 'version' | 'requestId'> &
       Partial<Pick<ExportStepCommand, 'version' | 'requestId'>>)
+  | (Omit<ExportStlCommand, 'version' | 'requestId'> &
+      Partial<Pick<ExportStlCommand, 'version' | 'requestId'>>)
   | (Omit<WorkerDisposeCommand, 'version' | 'requestId'> &
       Partial<Pick<WorkerDisposeCommand, 'version' | 'requestId'>>)
 
@@ -172,15 +182,25 @@ export type OperationErrorEvent = Envelope<'operation.error'> & {
   modelRevision?: string
 }
 
-export type ExportReadyEvent = Envelope<'export.ready'> & {
+type ExportReadyEventBase = Envelope<'export.ready'> & {
   operationId: string
   modelRevision: string
   workerEpoch: string
-  format: 'step'
   bytes: ArrayBuffer
-  mime: 'model/step'
   fileName: string
 }
+
+export type ExportStepReadyEvent = ExportReadyEventBase & {
+  format: 'step'
+  mime: 'model/step'
+}
+
+export type ExportStlReadyEvent = ExportReadyEventBase & {
+  format: 'stl'
+  mime: 'model/stl'
+}
+
+export type ExportReadyEvent = ExportStepReadyEvent | ExportStlReadyEvent
 
 export type WorkerEvent =
   | EngineReadyEvent
@@ -249,6 +269,49 @@ function isArrayBuffer(value: unknown): value is ArrayBuffer {
   return value instanceof ArrayBuffer
 }
 
+function isExportCommand(
+  value: Record<string, unknown>,
+  extension: string,
+  mime: string,
+): boolean {
+  return (
+    isNonEmptyString(value.modelRevision) &&
+    isNonEmptyString(value.workerEpoch) &&
+    isRecord(value.file) &&
+    isNonEmptyString(value.file.name) &&
+    value.file.name.endsWith(extension) &&
+    value.file.mime === mime
+  )
+}
+
+function isExportReadyEvent(value: Record<string, unknown>): boolean {
+  if (
+    !isEnvelope(value, 'export.ready') ||
+    !isNonEmptyString(value.operationId) ||
+    !isNonEmptyString(value.modelRevision) ||
+    !isNonEmptyString(value.workerEpoch) ||
+    !isArrayBuffer(value.bytes) ||
+    value.bytes.byteLength === 0 ||
+    !isNonEmptyString(value.fileName)
+  ) {
+    return false
+  }
+
+  if (value.format === 'step') {
+    return (
+      value.mime === PROTOTYPE_CONFIGURATION.stepMime &&
+      value.fileName.endsWith(PROTOTYPE_CONFIGURATION.stepExtension)
+    )
+  }
+  if (value.format === 'stl') {
+    return (
+      value.mime === PROTOTYPE_CONFIGURATION.stlMime &&
+      value.fileName.endsWith(PROTOTYPE_CONFIGURATION.stlExtension)
+    )
+  }
+  return false
+}
+
 function isBounds(value: unknown): boolean {
   if (!isRecord(value)) return false
   const min = value.min
@@ -305,6 +368,8 @@ const CAD_ERROR_CODES: readonly CadErrorCode[] = [
   'CANDIDATE_ORPHANED',
   'STEP_EXPORT_FAILED',
   'STEP_METADATA_INVALID',
+  'STL_EXPORT_FAILED',
+  'STL_METADATA_INVALID',
   'UNKNOWN_ERROR',
 ]
 
@@ -362,13 +427,16 @@ export function isWorkerCommand(value: unknown): value is WorkerCommand {
         isNonEmptyString(value.workerEpoch)
       )
     case 'export.step':
-      return (
-        isNonEmptyString(value.modelRevision) &&
-        isNonEmptyString(value.workerEpoch) &&
-        isRecord(value.file) &&
-        isNonEmptyString(value.file.name) &&
-        value.file.name.endsWith(PROTOTYPE_CONFIGURATION.stepExtension) &&
-        value.file.mime === 'model/step'
+      return isExportCommand(
+        value,
+        PROTOTYPE_CONFIGURATION.stepExtension,
+        PROTOTYPE_CONFIGURATION.stepMime,
+      )
+    case 'export.stl':
+      return isExportCommand(
+        value,
+        PROTOTYPE_CONFIGURATION.stlExtension,
+        PROTOTYPE_CONFIGURATION.stlMime,
       )
     case 'worker.dispose':
       return true
@@ -466,16 +534,7 @@ export function isWorkerEvent(value: unknown): value is WorkerEvent {
           isNonEmptyString(value.modelRevision))
       )
     case 'export.ready':
-      return (
-        isEnvelope(value, value.kind) &&
-        isNonEmptyString(value.operationId) &&
-        isNonEmptyString(value.modelRevision) &&
-        isNonEmptyString(value.workerEpoch) &&
-        value.format === 'step' &&
-        isArrayBuffer(value.bytes) &&
-        value.mime === 'model/step' &&
-        isNonEmptyString(value.fileName)
-      )
+      return isExportReadyEvent(value)
     default:
       return false
   }

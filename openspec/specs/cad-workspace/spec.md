@@ -128,12 +128,12 @@ The system MUST expose a runtime-validated component catalog. Each catalog entry
 - **Given** 使用者位於 `/cad/box` 或 `/cad/modular-grid-base`
 - **When** 使用者查看或修改參數
 - **Then** box MUST 提供 width、depth、height 欄位並明示 mm
-- **And** modular-grid-base MUST 提供 rows、columns 欄位，並明示每格 20 × 20 mm 及固定高度 5 mm
+- **And** modular-grid-base MUST 提供 rows、columns 欄位，並明示合法範圍 1–20 格、每格 20 × 20 mm 及固定高度 5 mm
 - **And** UI MUST NOT 顯示另一個 component 的參數欄位
 
 ### Requirement: 參數驗證與 generation
 
-The system MUST validate the selected `modelId` and its component-specific parameters before sending any model request to the Worker. Shared dimensional parameters MUST be finite, positive integer millimetres within the confirmed workspace range; modular-grid-base `rows` and `columns` MUST be positive integers whose derived width and depth do not exceed 500 mm. Decimal values MUST be rejected without rounding. Every parameter snapshot, including an invalid snapshot, MUST receive a new generation; a valid snapshot MUST send `model.generate` only after all fields stop changing for 150 ms.
+The system MUST validate the selected `modelId` and its component-specific parameters before sending any model request to the Worker. Shared dimensional parameters MUST be finite, positive integer millimetres within the confirmed workspace range; modular-grid-base `rows` and `columns` MUST be integers from 1 through 20 whose derived width and depth do not exceed 400 mm. Decimal values MUST be rejected without rounding. Every parameter snapshot, including an invalid snapshot, MUST receive a new generation; a valid snapshot MUST send `model.generate` only after all fields stop changing for 150 ms.
 
 #### Scenario: 合法方塊參數變更
 
@@ -459,14 +459,14 @@ replicad、OpenCascade、B-Rep 操作、mesh 產生與 STEP writer 不得在主�
 
 ### Requirement: 明確非目標
 
-The system MUST provide the existing box and the new modular-grid-base through the component catalog, but this change MUST NOT add arbitrary CAD file import, STL/3MF/G-code workflows, saving, authentication or collaboration features.
+The system MUST provide the existing box and the new modular-grid-base through the component catalog. This change MUST provide STEP and STL downloads, but MUST NOT add arbitrary CAD file import, 3MF/G-code workflows, saving, authentication, collaboration, automatic Bambu Studio launching, or native desktop-app integration.
 
 #### Scenario: Prototype 功能清單
 
 - **Given** 使用者查看 Prototype UI 與文件
 - **When** 檢查模型與輸出功能
-- **Then** 必須提供 component catalog、box、modular-grid-base、各自的 mm/數量參數、3D 預覽與 STEP 下載
-- **And** 不得出現 STL、3MF、G-code、arbitrary import、save、auth 或 collaboration 入口
+- **Then** 必須提供 component catalog、box、modular-grid-base、各自的 mm/數量參數、3D 預覽、STEP 下載與 STL 下載
+- **And** 不得出現 arbitrary import、3MF、G-code、save、auth、collaboration、自動啟動 Bambu Studio 或 native desktop bridge 入口
 
 ### Requirement: Fine-grained Worker progress
 

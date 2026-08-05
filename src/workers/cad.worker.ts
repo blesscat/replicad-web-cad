@@ -1,4 +1,4 @@
-import { exportStepBytes } from '../cad-kernel/export'
+import { exportStlBytes, exportStepBytes } from '../cad-kernel/export'
 import { initialiseCadKernel } from '../cad-kernel/initialise'
 import type { Shape3D } from 'replicad'
 import {
@@ -24,6 +24,7 @@ import type {
 } from '../cad-contract/errors'
 import {
   modelFileName,
+  modelStlFileName,
   PROTOTYPE_CONFIGURATION,
   validateModelParameters,
 } from '../cad-contract/units'
@@ -139,6 +140,9 @@ export class CadWorkerRuntime {
           return
         case 'export.step':
           await this.exportStep(value)
+          return
+        case 'export.stl':
+          await this.exportStl(value)
           return
         case 'worker.dispose':
           if (this.disposed) return
@@ -470,6 +474,54 @@ export class CadWorkerRuntime {
     }
   }
 
+  private async exportStl(
+    command: Extract<WorkerCommand, { kind: 'export.stl' }>,
+  ): Promise<void> {
+    if (command.workerEpoch !== this.epoch) throw new Error('WORKER_RESTARTED')
+    const revision = this.lifetime.pin(command.modelRevision)
+    try {
+      const validation = validateModelParameters(
+        revision.modelId,
+        revision.parameters,
+      )
+      if (!validation.valid) throw new Error('STL_METADATA_INVALID')
+      if (command.file.name !== modelStlFileName(validation.value)) {
+        throw new Error('STL_METADATA_INVALID')
+      }
+      this.emit({
+        version: PROTOCOL_VERSION,
+        kind: 'export.accepted',
+        requestId: id(),
+        operationId: command.operationId,
+        modelRevision: revision.modelRevision,
+        workerEpoch: this.epoch,
+      })
+      this.emitProgress(command, 'exporting', revision.modelRevision)
+      const bytes = await exportStlBytes(revision.shape, {
+        tolerance: PROTOTYPE_CONFIGURATION.stlTolerance,
+        angularTolerance: PROTOTYPE_CONFIGURATION.stlAngularTolerance,
+      })
+      if (bytes.byteLength === 0) throw new Error('STL_EMPTY')
+      this.emit(
+        {
+          version: PROTOCOL_VERSION,
+          kind: 'export.ready',
+          requestId: id(),
+          operationId: command.operationId,
+          modelRevision: revision.modelRevision,
+          workerEpoch: this.epoch,
+          format: 'stl',
+          bytes,
+          mime: PROTOTYPE_CONFIGURATION.stlMime,
+          fileName: command.file.name,
+        },
+        [bytes],
+      )
+    } finally {
+      this.lifetime.unpin(revision.modelRevision)
+    }
+  }
+
   private emitProgress(
     command: { operationId: string; requestId: string; generation?: number },
     stage: 'loading' | 'building' | 'meshing' | 'exporting',
@@ -605,6 +657,13 @@ export class CadWorkerRuntime {
     const message = error instanceof Error ? error.message : String(error)
     const code: CadErrorCode = cadErrorCodeFor(message, command.kind)
     const stage: CadErrorStage = cadErrorStageFor(command.kind, message)
+    if (command.kind === 'export.stl') {
+      const userMessage =
+        code === 'STL_METADATA_INVALID'
+          ? 'STL 匯出資料不正確，請重試。'
+          : 'STL 匯出失敗，請重試。'
+      return makeError(stage, code, userMessage, true)
+    }
     return makeError(stage, code, `CAD 操作失敗：${message}`, true)
   }
 }

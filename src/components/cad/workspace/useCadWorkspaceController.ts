@@ -10,6 +10,7 @@ import {
   progressMessage,
   type CadProgress,
 } from '../../../features/cad/progress'
+import type { ExportFormat } from '../../../features/cad/download'
 import { useCadWorkerRuntime } from './useCadWorkerRuntime'
 import { rawFromParameters, statusMessage } from './validation'
 import type { RawParameters } from './types'
@@ -23,7 +24,7 @@ export type CadWorkspaceController = {
   status: string
   canExport: boolean
   onInputChange: (key: ModelParameterKey, value: string) => void
-  onExport: () => void
+  onExport: (format?: ExportFormat) => void
   onRetry: () => void
 }
 

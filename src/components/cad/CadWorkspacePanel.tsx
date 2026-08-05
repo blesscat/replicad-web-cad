@@ -2,6 +2,7 @@ import { getModelDefinition } from '../../features/cad/model-catalog'
 import type { CadState } from '../../features/cad/state'
 import type { ModelId, ModelParameterKey } from '../../cad-contract/units'
 import type { CadProgress } from '../../features/cad/progress'
+import type { ExportFormat } from '../../features/cad/download'
 import type { RawParameters } from './workspace/types'
 import { ComponentParameterPanel } from './component-panels'
 import { CadProgressIndicator } from './CadProgressIndicator'
@@ -18,7 +19,7 @@ type CadWorkspacePanelProps = {
   status: string
   canExport: boolean
   onInputChange: (key: ModelParameterKey, value: string) => void
-  onExport: () => void
+  onExport: (format: ExportFormat) => void
   onRetry: () => void
 }
 
@@ -63,9 +64,17 @@ export function CadWorkspacePanel({
           className={ACTION_BUTTON_CLASS}
           type="button"
           disabled={!canExport}
-          onClick={onExport}
+          onClick={() => onExport('step')}
         >
           下載 STEP
+        </button>
+        <button
+          className={ACTION_BUTTON_CLASS}
+          type="button"
+          disabled={!canExport}
+          onClick={() => onExport('stl')}
+        >
+          下載 STL
         </button>
         {(state.status === 'recoverable-error' ||
           state.status === 'fatal-worker-error') && (
@@ -78,6 +87,9 @@ export function CadWorkspacePanel({
           </button>
         )}
       </div>
+      <p className="text-sm text-muted">
+        STL 下載後，可在 Bambu Studio 透過本機檔案流程匯入。
+      </p>
       <div
         aria-live="polite"
         className="rounded-2xl border border-border-card bg-panel p-4 text-[0.92rem] text-status"

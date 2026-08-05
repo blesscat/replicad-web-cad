@@ -2,7 +2,10 @@ import { normalizeError } from '../../../../cad-contract/errors'
 import type { ExportReadyEvent } from '../../../../cad-contract/messages'
 import { PROTOTYPE_CONFIGURATION } from '../../../../cad-contract/units'
 import {
+  type ExportFormat,
+  triggerStlDownload,
   triggerStepDownload,
+  validateStlResponse,
   validateStepResponse,
 } from '../../../../features/cad/download'
 import { getModelDefinition } from '../../../../features/cad/model-catalog'
@@ -12,7 +15,45 @@ import type { RuntimeContext } from './types'
 
 export type ExportHandlers = {
   handleExportReady: (event: ExportReadyEvent) => void
-  handleExport: () => void
+  handleExport: (format?: ExportFormat) => void
+}
+
+function validateExportResponse(
+  request: ExportRequest,
+  event: ExportReadyEvent,
+) {
+  if (request.format === 'stl') {
+    return validateStlResponse(
+      event,
+      request.revision,
+      request.workerEpoch,
+      request.fileName,
+    )
+  }
+  return validateStepResponse(
+    event,
+    request.revision,
+    request.workerEpoch,
+    request.fileName,
+  )
+}
+
+function triggerExportDownload(
+  format: ExportFormat,
+  event: ExportReadyEvent,
+): () => void {
+  if (format === 'stl') return triggerStlDownload(event)
+  return triggerStepDownload(event)
+}
+
+function metadataErrorCode(format: ExportFormat) {
+  if (format === 'stl') return 'STL_METADATA_INVALID' as const
+  return 'STEP_METADATA_INVALID' as const
+}
+
+function exportTimeoutMessage(format: ExportFormat): string {
+  if (format === 'stl') return 'STL 匯出超時，請重試。'
+  return 'STEP 匯出超時，請重試。'
 }
 
 export function createExportHandlers(context: RuntimeContext): ExportHandlers {
@@ -25,18 +66,13 @@ export function createExportHandlers(context: RuntimeContext): ExportHandlers {
     )
       return
 
-    const validation = validateStepResponse(
-      event,
-      request.revision,
-      request.workerEpoch,
-      request.fileName,
-    )
+    const validation = validateExportResponse(request, event)
     if (!validation.valid) {
       context.dispatch({
         type: 'recoverable-error',
         error: normalizeError(new Error(validation.message), {
           stage: 'exporting',
-          code: 'STEP_METADATA_INVALID',
+          code: metadataErrorCode(request.format),
           userMessage: validation.message,
           recoverable: true,
           modelRevision: request.revision,
@@ -52,7 +88,7 @@ export function createExportHandlers(context: RuntimeContext): ExportHandlers {
     }
 
     request.downloaded = true
-    const revoke = triggerStepDownload(event)
+    const revoke = triggerExportDownload(request.format, event)
     setTimeout(revoke, 1_000)
     context.clearTimer(request.operationId)
     context.clearOperationProgress(request.operationId)
@@ -61,7 +97,7 @@ export function createExportHandlers(context: RuntimeContext): ExportHandlers {
     context.dispatch({ type: 'export-end' })
   }
 
-  const handleExport = () => {
+  const handleExport = (format: ExportFormat = 'step') => {
     const client = context.refs.client.current
     const model = context.refs.state.current.committed
     const workerEpoch = context.refs.workerEpoch.current
@@ -77,17 +113,31 @@ export function createExportHandlers(context: RuntimeContext): ExportHandlers {
 
     const definition = getModelDefinition(model.modelId)
     if (!definition) return
-    const operationId = newOperationId('export-step')
-    const fileName = definition.exportFileName(model.parameters)
-    const requestId = client.send({
-      kind: 'export.step',
-      operationId,
-      modelRevision: model.revision,
-      workerEpoch,
-      file: { name: fileName, mime: 'model/step' },
-    })
+    const operationId = newOperationId(`export-${format}`)
+    let fileName: string
+    let requestId: string
+    if (format === 'stl') {
+      fileName = definition.stlFileName(model.parameters)
+      requestId = client.send({
+        kind: 'export.stl',
+        operationId,
+        modelRevision: model.revision,
+        workerEpoch,
+        file: { name: fileName, mime: PROTOTYPE_CONFIGURATION.stlMime },
+      })
+    } else {
+      fileName = definition.exportFileName(model.parameters)
+      requestId = client.send({
+        kind: 'export.step',
+        operationId,
+        modelRevision: model.revision,
+        workerEpoch,
+        file: { name: fileName, mime: PROTOTYPE_CONFIGURATION.stepMime },
+      })
+    }
     const request: ExportRequest = {
       operationId,
+      format,
       revision: model.revision,
       workerEpoch,
       fileName,
@@ -109,10 +159,10 @@ export function createExportHandlers(context: RuntimeContext): ExportHandlers {
         context.clearOperationProgress(operationId)
         context.dispatch({ type: 'export-end' })
         context.recoverWorker(
-          normalizeError(new Error('STEP export timeout'), {
+          normalizeError(new Error(`${format.toUpperCase()} export timeout`), {
             stage: 'exporting',
             code: 'WORKER_TIMEOUT',
-            userMessage: 'STEP 匯出超時，請重試。',
+            userMessage: exportTimeoutMessage(format),
             recoverable: true,
             modelRevision: model.revision,
             operationId,

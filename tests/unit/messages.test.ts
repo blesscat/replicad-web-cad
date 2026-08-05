@@ -81,6 +81,63 @@ describe('Worker contract runtime validation', () => {
     ).toBe(false)
   })
 
+  it('accepts a validated STL export command and response', () => {
+    const command = {
+      version: PROTOCOL_VERSION,
+      kind: 'export.stl',
+      requestId: 'stl-request-1',
+      operationId: 'stl-operation-1',
+      modelRevision: 'rev-1',
+      workerEpoch: 'epoch-1',
+      file: { name: 'box-20x30x40.stl', mime: 'model/stl' },
+    }
+    const event = {
+      version: PROTOCOL_VERSION,
+      kind: 'export.ready',
+      requestId: 'stl-response-1',
+      operationId: 'stl-operation-1',
+      modelRevision: 'rev-1',
+      workerEpoch: 'epoch-1',
+      format: 'stl',
+      bytes: new Uint8Array(84 + 50).buffer,
+      mime: 'model/stl',
+      fileName: 'box-20x30x40.stl',
+    }
+
+    expect(isWorkerCommand(command)).toBe(true)
+    expect(isWorkerEvent(event)).toBe(true)
+    expect(
+      isWorkerCommand({
+        ...command,
+        file: { name: 'box-20x30x40.step', mime: 'model/stl' },
+      }),
+    ).toBe(false)
+    expect(
+      isWorkerCommand({
+        ...command,
+        workerEpoch: '',
+      }),
+    ).toBe(false)
+    expect(
+      isWorkerEvent({
+        ...event,
+        bytes: new ArrayBuffer(0),
+      }),
+    ).toBe(false)
+    expect(
+      isWorkerEvent({
+        ...event,
+        mime: 'model/step',
+      }),
+    ).toBe(false)
+    expect(
+      isWorkerEvent({
+        ...event,
+        fileName: 'box-20x30x40.step',
+      }),
+    ).toBe(false)
+  })
+
   it('accepts transferable mesh responses only when buffers and counts are valid', () => {
     const event = {
       version: PROTOCOL_VERSION,

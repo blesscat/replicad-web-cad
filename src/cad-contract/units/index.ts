@@ -12,7 +12,12 @@ export const PROTOTYPE_CONFIGURATION = {
   candidateTtlMs: 30_000,
   stepExtension: '.step',
   stepMime: 'model/step',
+  stlExtension: '.stl',
+  stlMime: 'model/stl',
+  stlTolerance: 0.001,
+  stlAngularTolerance: 0.1,
   modularGridBase: {
+    maxGridCount: 20,
     cellWidth: 20,
     cellDepth: 20,
     height: 5,
@@ -146,6 +151,7 @@ export function validateModularGridBaseParameters(
   const candidate = value as Partial<Record<GridParameterKey, unknown>> &
     Record<string, unknown>
   const issues: ValidationIssue[] = []
+  const grid = PROTOTYPE_CONFIGURATION.modularGridBase
 
   if (!hasExactKeys(candidate, GRID_PARAMETERS)) {
     issues.push({ field: 'parameters', message: '包含不支援的參數欄位。' })
@@ -163,6 +169,13 @@ export function validateModularGridBaseParameters(
     }
     if (count < PROTOTYPE_CONFIGURATION.minDimension) {
       issues.push({ field, message: '格數必須是正整數。' })
+      continue
+    }
+    if (count > grid.maxGridCount) {
+      issues.push({
+        field,
+        message: `格數不得超過 ${grid.maxGridCount}。`,
+      })
     }
   }
 
@@ -172,7 +185,6 @@ export function validateModularGridBaseParameters(
     rows: candidate.rows as number,
     columns: candidate.columns as number,
   }
-  const grid = PROTOTYPE_CONFIGURATION.modularGridBase
   const width = parameters.columns * grid.cellWidth
   const depth = parameters.rows * grid.cellDepth
 
@@ -241,10 +253,20 @@ export function boxFileName(parameters: BoxParameters): string {
   return `box-${parameters.width}x${parameters.depth}x${parameters.height}${PROTOTYPE_CONFIGURATION.stepExtension}`
 }
 
+export function boxStlFileName(parameters: BoxParameters): string {
+  return `box-${parameters.width}x${parameters.depth}x${parameters.height}${PROTOTYPE_CONFIGURATION.stlExtension}`
+}
+
 export function modularGridBaseFileName(
   parameters: ModularGridBaseParameters,
 ): string {
   return `modular-grid-base-${parameters.columns}x${parameters.rows}${PROTOTYPE_CONFIGURATION.stepExtension}`
+}
+
+export function modularGridBaseStlFileName(
+  parameters: ModularGridBaseParameters,
+): string {
+  return `modular-grid-base-${parameters.columns}x${parameters.rows}${PROTOTYPE_CONFIGURATION.stlExtension}`
 }
 
 export function isBoxParameters(value: unknown): value is BoxParameters {
@@ -271,4 +293,9 @@ export function boundsForModel(model: ModelParameters): ModelBounds {
 export function modelFileName(model: ModelParameters): string {
   if (model.modelId === 'box') return boxFileName(model.parameters)
   return modularGridBaseFileName(model.parameters)
+}
+
+export function modelStlFileName(model: ModelParameters): string {
+  if (model.modelId === 'box') return boxStlFileName(model.parameters)
+  return modularGridBaseStlFileName(model.parameters)
 }

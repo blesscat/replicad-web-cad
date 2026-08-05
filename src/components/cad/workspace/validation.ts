@@ -115,7 +115,7 @@ export function statusMessage(state: CadState, progress: string): string {
     case 'generating':
       return '正在建立 CAD component…'
     case 'ready':
-      return '模型已就緒，可以下載 STEP。'
+      return '模型已就緒，可以下載 STEP 或 STL。'
     case 'invalid-input':
       return '請修正參數後再建模。'
     case 'recoverable-error':

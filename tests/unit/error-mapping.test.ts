@@ -13,9 +13,11 @@ describe('CAD Worker error mapping', () => {
     ['GRID_TEMPLATE_INVALID_BOUNDS', 'model.generate', 'MODEL_ASSET_INVALID'],
     ['MESH_INVALID: empty', 'model.generate', 'MESH_INVALID'],
     ['STEP_METADATA_INVALID', 'export.step', 'STEP_METADATA_INVALID'],
+    ['STL_METADATA_INVALID', 'export.stl', 'STL_METADATA_INVALID'],
     ['ENGINE_NOT_READY', 'model.generate', 'ENGINE_INIT_FAILED'],
     ['unknown', 'engine.init', 'ENGINE_INIT_FAILED'],
     ['unknown', 'export.step', 'STEP_EXPORT_FAILED'],
+    ['unknown', 'export.stl', 'STL_EXPORT_FAILED'],
     ['unknown', 'model.generate', 'MODEL_BUILD_FAILED'],
   ] as const)(
     'maps %s before applying the %s fallback',

@@ -2,6 +2,7 @@ import type { ModelParameterValues } from '../../../../cad-contract/units'
 import {
   boundsForBox,
   boxFileName,
+  boxStlFileName,
   isBoxParameters,
   PROTOTYPE_CONFIGURATION,
   validateBoxParameters,
@@ -78,4 +79,10 @@ export const boxDefinition: ModelDefinition = {
   validateParameters: validateBoxDefinitionParameters,
   boundsForParameters: boundsForBoxDefinition,
   exportFileName: exportBoxFileName,
+  stlFileName: (parameters) => {
+    if (!isBoxParameters(parameters)) {
+      throw new Error('MODEL_PARAMETERS_MISMATCH:box')
+    }
+    return boxStlFileName(parameters)
+  },
 }

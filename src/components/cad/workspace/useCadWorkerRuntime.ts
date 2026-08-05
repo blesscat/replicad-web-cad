@@ -16,6 +16,7 @@ import {
   supportsCadBrowser,
 } from './validation'
 import type { CadProgress } from '../../../features/cad/progress'
+import type { ExportFormat } from '../../../features/cad/download'
 import type { ExportRequest, OperationRecord, RawParameters } from './types'
 import { createExportHandlers } from './runtime/export'
 import { createWorkerEventHandler } from './runtime/events'
@@ -33,7 +34,7 @@ type CadWorkerRuntimeOptions = {
 
 export type CadWorkerRuntime = {
   handleInputChange: (key: ModelParameterKey, value: string) => void
-  handleExport: () => void
+  handleExport: (format?: ExportFormat) => void
   handleRetry: () => void
 }
 

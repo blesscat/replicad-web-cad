@@ -38,8 +38,17 @@ describe('modular-grid-base contract geometry metadata', () => {
       validateModularGridBaseParameters({ rows: 1, columns: 26 }).valid,
     ).toBe(false)
     expect(
+      validateModularGridBaseParameters({ rows: 1, columns: 21 }).valid,
+    ).toBe(false)
+    expect(
       validateModularGridBaseParameters({ rows: 1, columns: 1, width: 20 })
         .valid,
     ).toBe(false)
+  })
+
+  it('accepts the configured maximum of 20 rows and columns', () => {
+    expect(
+      validateModularGridBaseParameters({ rows: 20, columns: 20 }),
+    ).toEqual({ valid: true, value: { rows: 20, columns: 20 } })
   })
 })
