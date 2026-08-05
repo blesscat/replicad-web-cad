@@ -459,14 +459,14 @@ replicad、OpenCascade、B-Rep 操作、mesh 產生與 STEP writer 不得在主�
 
 ### Requirement: 明確非目標
 
-The system MUST provide the existing box and the new modular-grid-base through the component catalog, but this change MUST NOT add arbitrary CAD file import, STL/3MF/G-code workflows, saving, authentication or collaboration features.
+The system MUST provide the existing box and the new modular-grid-base through the component catalog. This change MUST provide STEP and STL downloads, but MUST NOT add arbitrary CAD file import, 3MF/G-code workflows, saving, authentication, collaboration, automatic Bambu Studio launching, or native desktop-app integration.
 
 #### Scenario: Prototype 功能清單
 
 - **Given** 使用者查看 Prototype UI 與文件
 - **When** 檢查模型與輸出功能
-- **Then** 必須提供 component catalog、box、modular-grid-base、各自的 mm/數量參數、3D 預覽與 STEP 下載
-- **And** 不得出現 STL、3MF、G-code、arbitrary import、save、auth 或 collaboration 入口
+- **Then** 必須提供 component catalog、box、modular-grid-base、各自的 mm/數量參數、3D 預覽、STEP 下載與 STL 下載
+- **And** 不得出現 arbitrary import、3MF、G-code、save、auth、collaboration、自動啟動 Bambu Studio 或 native desktop bridge 入口
 
 ### Requirement: Fine-grained Worker progress
 
