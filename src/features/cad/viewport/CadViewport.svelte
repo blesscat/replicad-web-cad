@@ -7,11 +7,12 @@
 
   type Props = {
     mesh: MeshSnapshot | null
+    modelRevision: string | null
     parameters: ModelParameterValues | null
     stale: boolean
   }
 
-  let { mesh, parameters, stale }: Props = $props()
+  let { mesh, modelRevision, parameters, stale }: Props = $props()
   let webglSupported = $state(true)
 
   function canCreateWebGLContext(): boolean {
@@ -41,10 +42,10 @@
       >
         無法建立 3D 預覽，請確認瀏覽器支援 WebGL。
       </div>
-    {:else if mesh}
+    {:else if mesh && modelRevision}
       <!-- Threlte owns the canvas lifecycle and Three.js render loop. -->
       <Canvas>
-        <CadViewportScene {mesh} {parameters} />
+        <CadViewportScene {mesh} {modelRevision} {parameters} />
       </Canvas>
     {:else}
       <div class="flex h-full items-center justify-center text-muted">
