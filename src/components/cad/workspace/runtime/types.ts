@@ -1,4 +1,3 @@
-import type { Dispatch, MutableRefObject, SetStateAction } from 'react'
 import type { CadError } from '../../../../cad-contract/errors'
 import type {
   ModelId,
@@ -12,22 +11,26 @@ import type { ExportRequest, OperationRecord, RawParameters } from '../types'
 
 export type FieldErrors = Partial<Record<ModelParameterKey, string>>
 
+export type MutableRef<T> = { current: T }
+
+export type StateSetter<T> = (value: T) => void
+
 export type RuntimeRefs = {
-  client: MutableRefObject<CadWorkerClient | null>
-  rawParameters: MutableRefObject<RawParameters>
-  state: MutableRefObject<CadState>
-  workerEpoch: MutableRefObject<string | null>
-  latestGeneration: MutableRefObject<number>
-  initialModelSent: MutableRefObject<boolean>
-  autoRecoveryAttempts: MutableRefObject<number>
-  operations: MutableRefObject<Map<string, OperationRecord>>
-  activeProgressOperationId: MutableRefObject<string | null>
-  exportRequest: MutableRefObject<ExportRequest | null>
-  debounce: MutableRefObject<ReturnType<typeof setTimeout> | null>
-  timers: MutableRefObject<Map<string, ReturnType<typeof setTimeout>>>
-  startWorker: MutableRefObject<(manual?: boolean) => void>
-  recoverWorker: MutableRefObject<RecoverWorker>
-  disposed: MutableRefObject<boolean>
+  client: MutableRef<CadWorkerClient | null>
+  rawParameters: MutableRef<RawParameters>
+  state: MutableRef<CadState>
+  workerEpoch: MutableRef<string | null>
+  latestGeneration: MutableRef<number>
+  initialModelSent: MutableRef<boolean>
+  autoRecoveryAttempts: MutableRef<number>
+  operations: MutableRef<Map<string, OperationRecord>>
+  activeProgressOperationId: MutableRef<string | null>
+  exportRequest: MutableRef<ExportRequest | null>
+  debounce: MutableRef<ReturnType<typeof setTimeout> | null>
+  timers: MutableRef<Map<string, ReturnType<typeof setTimeout>>>
+  startWorker: MutableRef<(manual?: boolean) => void>
+  recoverWorker: MutableRef<RecoverWorker>
+  disposed: MutableRef<boolean>
 }
 
 export type RecoverWorker = (
@@ -37,10 +40,10 @@ export type RecoverWorker = (
 
 export type RuntimeContext = {
   refs: RuntimeRefs
-  dispatch: Dispatch<CadAction>
-  setRawParameters: Dispatch<SetStateAction<RawParameters>>
-  setFieldErrors: Dispatch<SetStateAction<FieldErrors>>
-  setProgress: Dispatch<SetStateAction<CadProgress | null>>
+  dispatch: (action: CadAction) => void
+  setRawParameters: StateSetter<RawParameters>
+  setFieldErrors: StateSetter<FieldErrors>
+  setProgress: StateSetter<CadProgress | null>
   setOperationProgress: (operationId: string, progress: CadProgress) => void
   clearOperationProgress: (operationId: string) => void
   clearProgress: () => void

@@ -1,9 +1,9 @@
 import { defineConfig } from 'astro/config'
-import react from '@astrojs/react'
+import svelte from '@astrojs/svelte'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  integrations: [react()],
+  integrations: [svelte()],
   server: {
     host: true,
     port: 3456,
@@ -15,7 +15,7 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
     optimizeDeps: {
-      include: ['@react-three/fiber', '@react-three/drei', 'three'],
+      include: ['replicad', 'replicad-opencascadejs', 'three'],
     },
     server: {
       allowedHosts: ['localhost', '127.0.0.1', 'local.blesscat.dev'],
