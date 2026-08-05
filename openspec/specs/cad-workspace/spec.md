@@ -72,14 +72,14 @@ Prototype 的 CAD 頁面、Worker、WASM、建模、預覽與 STEP 匯出必須�
 - **Then** 頁面必須提供可閱讀的靜態內容
 - **And** 不得啟動 CAD Worker 或載入 OpenCascade WASM
 
-### Requirement: Astro 與 React workspace
+### Requirement: Astro 與 Svelte workspace
 The system MUST satisfy the following behavior:
 
-CAD workspace 必須是 React + React Three Fiber 的瀏覽器端 island，預設使用 client:only="react"。Astro build/SSR 不得執行 React workspace、WebGL、Worker 或 OpenCascade 初始化。
+CAD workspace 必須是 Svelte 5 + Threlte/Three.js 的瀏覽器端 island，預設使用 client:only="svelte"。Astro build/SSR 不得執行 Svelte workspace、WebGL、Worker 或 OpenCascade 初始化。
 
 #### Scenario: 載入 fallback
 
-- **Given** CAD route 的頁面 shell 已顯示，但 React workspace 尚未 ready
+- **Given** CAD route 的頁面 shell 已顯示，但 Svelte workspace 尚未 ready
 - **When** 使用者查看 CAD 區域
 - **Then** 必須看到載入 fallback、JavaScript/WASM/WebGL 必要條件或狀態提示
 - **And** 不得只有空白畫面或沒有說明的永久 spinner
@@ -119,7 +119,7 @@ The system MUST expose a runtime-validated component catalog. Each catalog entry
 #### Scenario: 初始化不重複建模
 
 - **Given** Worker 已回傳 engine.ready，但尚未收到目前 route model 的 generation 1 model.ready
-- **When** React lifecycle 或重試流程再次觸發初始化
+- **When** Svelte lifecycle 或重試流程再次觸發初始化
 - **Then** 主執行緒不得重複送出目前 route model 的 generation 1 model.generate
 - **And** Worker 不得建立第二個初始 current model
 
@@ -307,7 +307,7 @@ Worker 建模成功只代表 candidate 建立成功，不代表 current model �
 
 ### Requirement: Mesh viewport
 
-The viewport MUST use React Three Fiber to display the latest committed model mesh, regardless of whether the selected catalog entry is a box or a component. It MUST NOT execute B-Rep modelling or STEP export. Dimension annotations MUST describe the selected committed model's actual X, Y and Z bounds and MUST remain associated with the same committed model revision.
+The viewport MUST use Threlte with Three.js to display the latest committed model mesh, regardless of whether the selected catalog entry is a box or a component. It MUST NOT execute B-Rep modelling or STEP export. Dimension annotations MUST describe the selected committed model's actual X, Y and Z bounds and MUST remain associated with the same committed model revision.
 
 #### Scenario: 有效 component mesh
 

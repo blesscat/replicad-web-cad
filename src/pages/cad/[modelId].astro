@@ -1,6 +1,6 @@
 ---
 import SiteLayout from '../../layouts/SiteLayout.astro'
-import CadWorkspace from '../../components/cad/CadWorkspace'
+import CadWorkspace from '../../components/cad/CadWorkspace.svelte'
 import {
   getModelDefinition,
   modelDefinitions,
@@ -54,6 +54,6 @@ if (!definition) {
         >
       </p>
     </div>
-    <CadWorkspace client:only="react" modelId={modelId} />
+    <CadWorkspace client:only="svelte" modelId={modelId} />
   </section>
 </SiteLayout>
