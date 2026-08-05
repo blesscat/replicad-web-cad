@@ -47,6 +47,60 @@ async function waitForCadReady(page: Page): Promise<void> {
   })
 }
 
+type DimensionAnnotationBox = {
+  label: string
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+async function readDimensionAnnotationBoxes(
+  page: Page,
+): Promise<DimensionAnnotationBox[]> {
+  return page
+    .getByTestId('cad-viewport')
+    .locator('[aria-label]')
+    .evaluateAll((elements) =>
+      elements
+        .map((element) => {
+          const rect = element.getBoundingClientRect()
+          return {
+            label: element.getAttribute('aria-label') ?? '',
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+          }
+        })
+        .filter((annotation) => /^(寬度|深度|高度)/.test(annotation.label))
+        .sort((left, right) => left.label.localeCompare(right.label)),
+    )
+}
+
+function expectDimensionAnnotationBoxesToStayStable(
+  expected: readonly DimensionAnnotationBox[],
+  actual: readonly DimensionAnnotationBox[],
+  tolerance = 1,
+): void {
+  expect(actual).toHaveLength(expected.length)
+
+  for (const [index, expectedBox] of expected.entries()) {
+    const actualBox = actual[index]
+    if (!actualBox) throw new Error(`Missing annotation at index ${index}`)
+
+    expect(actualBox.label).toBe(expectedBox.label)
+    expect(Math.abs(actualBox.x - expectedBox.x)).toBeLessThanOrEqual(tolerance)
+    expect(Math.abs(actualBox.y - expectedBox.y)).toBeLessThanOrEqual(tolerance)
+    expect(Math.abs(actualBox.width - expectedBox.width)).toBeLessThanOrEqual(
+      tolerance,
+    )
+    expect(Math.abs(actualBox.height - expectedBox.height)).toBeLessThanOrEqual(
+      tolerance,
+    )
+  }
+}
+
 test('home and docs are static Astro pages', async ({ page }) => {
   await page.goto('/')
   await expect(
@@ -391,6 +445,56 @@ test('CAD workspace switches to the modular grid component and exports a 2x2 bas
   await page.getByRole('link', { name: '返回首頁選擇其他模型' }).click()
   await expect(page).toHaveURL('/')
   await expect(page.getByRole('link', { name: '使用方塊' })).toBeVisible()
+})
+
+test('modular grid slider drag preserves committed viewport framing before replacement', async ({
+  page,
+  browserName,
+}) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.goto('/cad/modular-grid-base')
+  await waitForCadReady(page)
+
+  const rows = page.getByRole('slider', { name: '行數（Y）' })
+  const before = await readDimensionAnnotationBoxes(page)
+  const sliderBox = await rows.boundingBox()
+  expect(sliderBox).not.toBeNull()
+  if (!sliderBox) return
+
+  const y = sliderBox.y + sliderBox.height / 2
+  await page.mouse.move(sliderBox.x + sliderBox.width * 0.18, y)
+  await page.mouse.down()
+  await page.mouse.move(sliderBox.x + sliderBox.width * 0.3, y, { steps: 3 })
+  await page.waitForTimeout(100)
+
+  await expect(page.getByText('預覽與目前輸入不同步')).toBeVisible()
+  const duringInput = await readDimensionAnnotationBoxes(page)
+  expectDimensionAnnotationBoxesToStayStable(before, duringInput)
+
+  await page.mouse.up()
+  const committedRows = Number(await rows.inputValue())
+  await waitForCadReady(page)
+  await expect(page.getByLabel(`深度 Y ${committedRows * 20} mm`)).toBeVisible()
+})
+
+test('keyboard slider input preserves viewport framing until the new revision commits', async ({
+  page,
+  browserName,
+}) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.goto('/cad/modular-grid-base')
+  await waitForCadReady(page)
+
+  const rows = page.getByRole('slider', { name: '行數（Y）' })
+  const before = await readDimensionAnnotationBoxes(page)
+  await rows.press('ArrowRight')
+
+  await expect(page.getByText('預覽與目前輸入不同步')).toBeVisible()
+  const duringInput = await readDimensionAnnotationBoxes(page)
+  expectDimensionAnnotationBoxesToStayStable(before, duringInput)
+
+  await waitForCadReady(page)
+  await expect(page.getByLabel('深度 Y 40 mm')).toBeVisible()
 })
 
 test('modular grid reports cell progress for a larger generation', async ({

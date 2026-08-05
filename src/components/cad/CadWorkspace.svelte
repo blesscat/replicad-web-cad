@@ -60,6 +60,7 @@
     />
     <CadViewport
       mesh={snapshot.state.committed?.mesh ?? null}
+      modelRevision={snapshot.state.committed?.revision ?? null}
       parameters={snapshot.state.committed?.parameters ?? null}
       stale={snapshot.state.stale}
     />

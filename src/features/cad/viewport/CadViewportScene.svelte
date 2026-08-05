@@ -12,10 +12,11 @@
 
   type Props = {
     mesh: MeshSnapshot
+    modelRevision: string
     parameters: ModelParameterValues | null
   }
 
-  let { mesh, parameters }: Props = $props()
+  let { mesh, modelRevision, parameters }: Props = $props()
 </script>
 
 <T.Color attach="background" args={['#eef2f8']} />
@@ -33,7 +34,7 @@
 >
   <OrbitControls />
 </T.PerspectiveCamera>
-{#key mesh}
+{#key modelRevision}
   <Bounds margin={1.25} animate={false}>
     <ModelMesh {mesh} />
     <DimensionAnnotations {mesh} {parameters} />
