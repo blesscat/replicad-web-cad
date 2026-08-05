@@ -16,7 +16,7 @@ import {
 } from '../../../cad-contract/units'
 
 export const modularGridBaseTemplateUrl = new URL(
-  './cell-template.step',
+  './board-cell-template.step',
   import.meta.url,
 )
 const EDGE_TOLERANCE = 0.01

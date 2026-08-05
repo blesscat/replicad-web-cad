@@ -65,7 +65,7 @@ src/
 - `features/cad/parameters/`、`state/`、`viewport/`、`worker-client/` 與 `download/` 分別處理輸入、狀態、預覽、Worker 通訊與瀏覽器下載。
 - `cad-contract/` 放跨主執行緒共用的 messages、errors 與 units；不得依賴 DOM、React、Three.js、replicad 或 OpenCascade。
 - `cad-kernel/` 放 WASM、B-Rep、mesh、STEP 與 resource lifetime 邏輯，只能由 `workers/` 使用。
-- `cad-kernel/components/<component>/` 同時放 component-local builder 與其 canonical CAD asset；例如 `modular-grid-base/builder.ts` 與 `cell-template.step`。
+- `cad-kernel/components/<component>/` 同時放 component-local builder 與其 canonical CAD asset；例如 `modular-grid-base/builder.ts` 與 `board-cell-template.step`。
 - `workers/` 是 CAD Worker 的執行入口，只能組合 `cad-contract/` 與 `cad-kernel/`。
 - `features/cad/viewport/` 只接受已驗證的 mesh snapshot，不執行 B-Rep 建模或 STEP 匯出。
 - `features/cad/download/` 只處理成功的 bytes 與 metadata，不重新建模。
@@ -87,7 +87,7 @@ pages/
 
 - 內建 component：X/Y 置中於世界原點、底面位於 Z=0 的 `box`，以及 `modular-grid-base`。
 - `box` 參數：`width`、`depth`、`height`，單位為 mm。
-- `modular-grid-base` 參數：`rows`、`columns` 格數 slider；每格為 20 × 20 mm，高度固定 5 mm，最大寬/深為 500 mm。預切除 `cell-template.step` 會複製、平移、融合後，只對整體外側四角套用 R2.5 mm 圓角。
+- `modular-grid-base` 參數：`rows`、`columns` 格數 slider；每格為 20 × 20 mm，高度固定 5 mm，最大寬/深為 500 mm。預切除 `board-cell-template.step` 會複製、平移、融合後，只對整體外側四角套用 R2.5 mm 圓角。
 - 預覽：由 Worker 產生的 B-Rep mesh。
 - 匯出：由 Worker 目前 committed B-Rep 產生 STEP。
 - 不包含模型匯入、STL/3MF/G-code、儲存、帳號、後端或多人協作。
@@ -102,7 +102,7 @@ pages/
 
 目前 3D component 的 canonical asset 使用 STEP，而不是 STL 或 DXF：STEP 保留可供 clone、fuse、fillet 與 STEP export 使用的精確 B-Rep；STL 只有三角網格，DXF 則是 2D profile，兩者都不適合這個 3D boolean pipeline。
 
-`cell-template.step` 是已完成中央貫穿切除的 component-local 預處理檔案。Worker 每個 epoch 只 import/cache 一次，generation 時只 clone、平移與 fuse，最後才對整體外角做圓角；不會依賴 Downloads 路徑，也不會在每次生成重新建立 cutter。未來新增 component 時，builder 與它自己的預切除資產放在同一個 `cad-kernel/components/<component>/` 目錄。
+`board-cell-template.step` 是已完成中央貫穿切除的 component-local 預處理檔案。Worker 每個 epoch 只 import/cache 一次，generation 時只 clone、平移與 fuse，最後才對整體外角做圓角；不會依賴 Downloads 路徑，也不會在每次生成重新建立 cutter。未來新增 component 時，builder 與它自己的預切除資產放在同一個 `cad-kernel/components/<component>/` 目錄。
 
 ## STEP 匯出
 
@@ -113,7 +113,7 @@ box-{width}x{depth}x{height}.step
 modular-grid-base-{columns}x{rows}.step
 ```
 
-這個 Prototype 不提供任意 STEP 的產品匯入或 round-trip parser；目前的 `cell-template.step` 是 repository 內受控的 canonical asset，並由 CAD kernel integration tests 驗證其 single-solid、尺寸與幾何條件。
+這個 Prototype 不提供任意 STEP 的產品匯入或 round-trip parser；目前的 `board-cell-template.step` 是 repository 內受控的 canonical asset，並由 CAD kernel integration tests 驗證其 single-solid、尺寸與幾何條件。
 
 ## 本機啟動與驗收
 

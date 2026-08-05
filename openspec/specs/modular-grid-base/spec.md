@@ -29,12 +29,12 @@ The system MUST provide a `modular-grid-base` component with `rows` and `columns
 
 ### Requirement: 預切除單格 STEP template
 
-The component MUST use the colocated `cell-template.step` as its canonical runtime geometry asset. The asset MUST represent one sharp-corner 20 × 20 × 5 mm cell containing the centered 17 × 17 mm through-cut shape from the supplied profile, leaving 1.5 mm side margin on each side. Runtime generation MUST NOT boolean-cut the original source STEP for every request.
+The component MUST use the colocated `board-cell-template.step` as its canonical runtime geometry asset. The asset MUST represent one sharp-corner 20 × 20 × 5 mm cell containing the centered 17.5 × 17.5 mm through-cut shape from the supplied profile, leaving 1.25 mm side margin on each side. Runtime generation MUST NOT boolean-cut the original source STEP for every request.
 
 #### Scenario: 載入單格 template
 
 - **WHEN** the Worker initializes the `modular-grid-base` component builder
-- **THEN** it MUST load the component-local `cell-template.step` as a B-Rep asset
+- **THEN** it MUST load the component-local `board-cell-template.step` as a B-Rep asset
 - **AND** it MUST validate that the imported asset is non-empty and has the expected 20 × 20 × 5 mm bounds within tolerance
 - **AND** a failed or malformed asset load MUST produce a diagnosable component asset error
 
@@ -52,7 +52,7 @@ The system MUST place one translated template at every row/column cell position,
 #### Scenario: 每格切除形狀保持置中
 
 - **WHEN** a grid contains more than one cell
-- **THEN** every cell MUST have the same 17 × 17 mm cutout geometry and orientation
+- **THEN** every cell MUST have the same 17.5 × 17.5 mm cutout geometry and orientation
 - **AND** each cutout center MUST coincide with its 20 × 20 mm cell center
 - **AND** no cell may be shifted, mirrored, or rotated implicitly by replication
 

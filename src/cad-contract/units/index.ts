@@ -16,8 +16,8 @@ export const PROTOTYPE_CONFIGURATION = {
     cellWidth: 20,
     cellDepth: 20,
     height: 5,
-    cutoutWidth: 17,
-    cutoutDepth: 17,
+    cutoutWidth: 17.5,
+    cutoutDepth: 17.5,
     outerCornerRadius: 2.5,
   },
 } as const

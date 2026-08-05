@@ -5,7 +5,9 @@ import { modularGridBaseTemplateUrl } from '../../src/cad-kernel/components/modu
 
 describe('modular-grid-base runtime asset', () => {
   it('resolves a bundled STEP file that is a valid STEP exchange document', () => {
-    expect(modularGridBaseTemplateUrl.href).toContain('/cell-template.step')
+    expect(modularGridBaseTemplateUrl.href).toContain(
+      '/board-cell-template.step',
+    )
     expect(
       readFileSync(fileURLToPath(modularGridBaseTemplateUrl), 'utf8'),
     ).toMatch(/^ISO-10303-21;/)
