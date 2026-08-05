@@ -29,4 +29,5 @@ export type ModelDefinition = {
   validateParameters: (parameters: unknown) => ModelValidation
   boundsForParameters: (parameters: ModelParameterValues) => ModelBounds
   exportFileName: (parameters: ModelParameterValues) => string
+  stlFileName: (parameters: ModelParameterValues) => string
 }

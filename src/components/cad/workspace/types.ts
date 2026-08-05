@@ -3,6 +3,7 @@ import type {
   ModelParameterKey,
   ModelParameterValues,
 } from '../../../cad-contract/units'
+import type { ExportFormat } from '../../../features/cad/download'
 
 export type RawParameters = Partial<Record<ModelParameterKey, string>>
 
@@ -17,6 +18,7 @@ export type OperationRecord = {
 
 export type ExportRequest = {
   operationId: string
+  format: ExportFormat
   revision: string
   workerEpoch: string
   fileName: string

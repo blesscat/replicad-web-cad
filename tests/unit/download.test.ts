@@ -1,9 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   PROTOCOL_VERSION,
   type ExportReadyEvent,
 } from '../../src/cad-contract/messages'
-import { validateStepResponse } from '../../src/features/cad/download'
+import {
+  validateStepResponse,
+  validateStlResponse,
+  triggerStlDownload,
+} from '../../src/features/cad/download'
 
 function stepResponse(
   overrides: Record<string, unknown> = {},
@@ -54,5 +58,91 @@ describe('STEP response validation', () => {
         'box-20x30x40.step',
       ).valid,
     ).toBe(false)
+  })
+})
+
+function stlResponse(
+  overrides: Record<string, unknown> = {},
+): ExportReadyEvent {
+  const bytes = new ArrayBuffer(84 + 50)
+  new DataView(bytes).setUint32(80, 1, true)
+  return {
+    version: PROTOCOL_VERSION,
+    kind: 'export.ready',
+    requestId: 'response-stl-1',
+    operationId: 'export-stl-1',
+    modelRevision: 'rev-1',
+    workerEpoch: 'epoch-1',
+    format: 'stl',
+    bytes,
+    mime: 'model/stl',
+    fileName: 'box-20x30x40.stl',
+    ...overrides,
+  } as ExportReadyEvent
+}
+
+function mismatchedStlBytes(): ArrayBuffer {
+  const bytes = new ArrayBuffer(84 + 50)
+  new DataView(bytes).setUint32(80, 2, true)
+  return bytes
+}
+
+describe('STL response validation', () => {
+  it('accepts a valid binary STL response', () => {
+    expect(
+      validateStlResponse(
+        stlResponse(),
+        'rev-1',
+        'epoch-1',
+        'box-20x30x40.stl',
+      ),
+    ).toEqual({ valid: true })
+  })
+
+  const invalidCases: Array<[Record<string, unknown>, string]> = [
+    [{ modelRevision: 'rev-2' }, 'revision'],
+    [{ format: 'step' }, 'format'],
+    [{ mime: 'application/octet-stream' }, 'metadata'],
+    [{ fileName: 'box-20x30x40.step' }, 'extension'],
+    [{ workerEpoch: 'epoch-2' }, 'worker epoch'],
+    [{ bytes: new ArrayBuffer(84) }, 'truncated'],
+    [{ bytes: mismatchedStlBytes() }, 'triangle count'],
+  ]
+
+  it.each(invalidCases)('rejects %s', (overrides) => {
+    expect(
+      validateStlResponse(
+        stlResponse(overrides),
+        'rev-1',
+        'epoch-1',
+        'box-20x30x40.stl',
+      ).valid,
+    ).toBe(false)
+  })
+})
+
+describe('STL browser download adapter', () => {
+  it('triggers one download and returns Object URL cleanup', () => {
+    const click = vi.fn()
+    const anchor = { href: '', download: '', click }
+    const createObjectURL = vi.fn(() => 'blob:stl')
+    const revokeObjectURL = vi.fn()
+    vi.stubGlobal('document', {
+      createElement: vi.fn(() => anchor),
+    })
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL })
+
+    const cleanup = triggerStlDownload(stlResponse())
+
+    expect(createObjectURL).toHaveBeenCalledOnce()
+    expect(anchor).toMatchObject({
+      href: 'blob:stl',
+      download: 'box-20x30x40.stl',
+    })
+    expect(click).toHaveBeenCalledOnce()
+    cleanup()
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:stl')
+
+    vi.unstubAllGlobals()
   })
 })

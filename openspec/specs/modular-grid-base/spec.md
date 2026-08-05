@@ -5,7 +5,7 @@ TBD - created by archiving change add-modular-grid-base-component. Update Purpos
 ## Requirements
 ### Requirement: 模組化網格底板參數
 
-The system MUST provide a `modular-grid-base` component with `rows` and `columns` as positive integer parameters. Each cell MUST be 20 mm wide, 20 mm deep and 5 mm high; the generated plate width MUST equal `columns × 20 mm`, the depth MUST equal `rows × 20 mm`, and the height MUST remain 5 mm. The initial shared workspace limit MUST reject a generated width or depth greater than 500 mm.
+The system MUST provide a `modular-grid-base` component with `rows` and `columns` as positive integer parameters in the inclusive range 1–20. Each cell MUST be 20 mm wide, 20 mm deep and 5 mm high; the generated plate width MUST equal `columns × 20 mm`, the depth MUST equal `rows × 20 mm`, and the height MUST remain 5 mm. The generated width and depth MUST therefore be no greater than 400 mm.
 
 #### Scenario: 1x1 底板尺寸
 
@@ -23,7 +23,7 @@ The system MUST provide a `modular-grid-base` component with `rows` and `columns
 
 #### Scenario: 不合法網格數量
 
-- **WHEN** `rows` or `columns` is zero, negative, fractional, non-finite, non-integer, or causes width/depth to exceed 500 mm
+- **WHEN** `rows` or `columns` is zero, negative, fractional, non-finite, non-integer, greater than 20, or causes width/depth to exceed 400 mm
 - **THEN** generation MUST be rejected before CAD geometry is created
 - **AND** the caller MUST receive a stable validation error
 

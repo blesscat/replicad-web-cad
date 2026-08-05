@@ -20,8 +20,12 @@ describe('CAD component catalog', () => {
       'rows',
       'columns',
     ])
+    expect(grid?.parameterSchema.map((field) => field.max)).toEqual([20, 20])
     expect(grid?.exportFileName({ rows: 2, columns: 3 })).toBe(
       'modular-grid-base-3x2.step',
+    )
+    expect(grid?.stlFileName({ rows: 2, columns: 3 })).toBe(
+      'modular-grid-base-3x2.stl',
     )
     expect(grid?.validateParameters({ rows: 2, columns: 3 })).toEqual({
       valid: true,

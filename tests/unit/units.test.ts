@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   boundsForBox,
   boxFileName,
+  boxStlFileName,
   parseDimensionInput,
   validateBoxParameters,
 } from '../../src/cad-contract/units'
@@ -16,6 +17,7 @@ describe('box units and validation', () => {
       max: [10, 15, 40],
     })
     expect(boxFileName(parameters)).toBe('box-20x30x40.step')
+    expect(boxStlFileName(parameters)).toBe('box-20x30x40.stl')
   })
 
   it('rejects decimals, empty values and out-of-range dimensions', () => {

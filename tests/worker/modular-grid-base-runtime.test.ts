@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   buildModelBRep: vi.fn(),
   exportStepBytes: vi.fn(),
+  exportStlBytes: vi.fn(),
   initialiseCadKernel: vi.fn(),
   loadModularGridBaseTemplate: vi.fn(),
   meshBRep: vi.fn(),
@@ -29,6 +30,7 @@ vi.mock('../../src/cad-kernel/mesh', () => ({
 
 vi.mock('../../src/cad-kernel/export', () => ({
   exportStepBytes: mocks.exportStepBytes,
+  exportStlBytes: mocks.exportStlBytes,
 }))
 
 import {
@@ -66,6 +68,7 @@ function gridCommand(generation: number) {
 function configureMocks() {
   mocks.initialiseCadKernel.mockResolvedValue(undefined)
   mocks.exportStepBytes.mockResolvedValue(new Uint8Array([1]).buffer)
+  mocks.exportStlBytes.mockResolvedValue(new Uint8Array([2]).buffer)
   mocks.loadModularGridBaseTemplate.mockResolvedValue({ delete: vi.fn() })
   mocks.meshBRep.mockReturnValue({
     positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
@@ -356,5 +359,124 @@ describe('modular-grid-base Worker runtime', () => {
       code: 'STEP_METADATA_INVALID',
       stage: 'exporting',
     })
+  })
+
+  it('exports binary STL from the committed component revision', async () => {
+    const events: any[] = []
+    const runtime = new CadWorkerRuntime('epoch-grid-stl', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(gridCommand(1))
+    const candidate = events.find(
+      (event) => event.kind === 'model.candidate-ready',
+    )
+
+    await runtime.handle({
+      ...base,
+      kind: 'model.commit' as const,
+      requestId: 'grid-stl-commit-request',
+      operationId: candidate.operationId,
+      generation: candidate.generation,
+      candidateId: candidate.candidateId,
+      workerEpoch: 'epoch-grid-stl',
+    })
+    const revision = events.find((event) => event.kind === 'model.ready')
+
+    await runtime.handle({
+      ...base,
+      kind: 'export.stl' as const,
+      requestId: 'grid-stl-export-request',
+      operationId: 'grid-stl-export-operation',
+      modelRevision: revision.modelRevision,
+      workerEpoch: 'epoch-grid-stl',
+      file: {
+        name: 'modular-grid-base-2x2.stl',
+        mime: 'model/stl' as const,
+      },
+    })
+
+    expect(mocks.exportStlBytes).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tolerance: 0.001,
+        angularTolerance: 0.1,
+      }),
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'export.accepted',
+        operationId: 'grid-stl-export-operation',
+        modelRevision: revision.modelRevision,
+      }),
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'export.ready',
+        operationId: 'grid-stl-export-operation',
+        modelRevision: revision.modelRevision,
+        format: 'stl',
+        mime: 'model/stl',
+        fileName: 'modular-grid-base-2x2.stl',
+      }),
+    )
+  })
+
+  it('releases the STL export pin when the writer fails', async () => {
+    mocks.exportStlBytes.mockRejectedValueOnce(new Error('STL writer failed'))
+    const events: any[] = []
+    const runtime = new CadWorkerRuntime('epoch-grid-stl-failure', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(gridCommand(1))
+    const firstCandidate = events.find(
+      (event) => event.kind === 'model.candidate-ready',
+    )
+    await runtime.handle({
+      ...base,
+      kind: 'model.commit' as const,
+      requestId: 'grid-stl-failure-commit-1',
+      operationId: firstCandidate.operationId,
+      generation: firstCandidate.generation,
+      candidateId: firstCandidate.candidateId,
+      workerEpoch: 'epoch-grid-stl-failure',
+    })
+    const firstRevision = events.find((event) => event.kind === 'model.ready')
+
+    await runtime.handle({
+      ...base,
+      kind: 'export.stl' as const,
+      requestId: 'grid-stl-failure-export',
+      operationId: 'grid-stl-failure-operation',
+      modelRevision: firstRevision.modelRevision,
+      workerEpoch: 'epoch-grid-stl-failure',
+      file: {
+        name: 'modular-grid-base-2x2.stl',
+        mime: 'model/stl' as const,
+      },
+    })
+    expect(events.at(-1)).toMatchObject({
+      kind: 'operation.error',
+      code: 'STL_EXPORT_FAILED',
+      stage: 'exporting',
+    })
+
+    await runtime.handle(gridCommand(2))
+    const secondCandidate = events.find(
+      (event) =>
+        event.kind === 'model.candidate-ready' && event.generation === 2,
+    )
+    await runtime.handle({
+      ...base,
+      kind: 'model.commit' as const,
+      requestId: 'grid-stl-failure-commit-2',
+      operationId: secondCandidate.operationId,
+      generation: secondCandidate.generation,
+      candidateId: secondCandidate.candidateId,
+      workerEpoch: 'epoch-grid-stl-failure',
+    })
+
+    expect(mocks.generatedShapes[0]?.delete).toHaveBeenCalledOnce()
   })
 })

@@ -11,14 +11,17 @@ import {
   type Shape3D,
   type Wire,
 } from 'replicad'
-import { exportStepBytes } from '../../src/cad-kernel/export'
+import { exportStlBytes, exportStepBytes } from '../../src/cad-kernel/export'
+import { buildBoxBRep } from '../../src/cad-kernel/components/box/builder'
 import {
   buildModularGridBase,
   importModularGridBaseTemplate,
 } from '../../src/cad-kernel/components/modular-grid-base/builder'
 import { meshBRep } from '../../src/cad-kernel/mesh'
 import {
+  boundsForBox,
   boundsForModularGridBase,
+  PROTOTYPE_CONFIGURATION,
   type ModularGridBaseParameters,
 } from '../../src/cad-contract/units'
 
@@ -189,6 +192,31 @@ function runGeometryStage<T>(label: string, callback: () => T): T {
   }
 }
 
+function assertBinaryStl(bytes: ArrayBuffer): void {
+  expect(bytes.byteLength).toBeGreaterThan(84)
+  const triangleCount = new DataView(bytes).getUint32(80, true)
+  expect(triangleCount).toBeGreaterThan(0)
+  expect(bytes.byteLength).toBe(84 + triangleCount * 50)
+}
+
+function reportStlMeasurement(
+  fixture: string,
+  startedAt: number,
+  bytes: ArrayBuffer,
+): void {
+  if (process.env.RUN_STL_MEASUREMENTS !== '1') return
+  console.log(
+    JSON.stringify({
+      fixture,
+      byteLength: bytes.byteLength,
+      triangleCount: new DataView(bytes).getUint32(80, true),
+      exportMs: Number((performance.now() - startedAt).toFixed(2)),
+      tolerance: PROTOTYPE_CONFIGURATION.stlTolerance,
+      angularTolerance: PROTOTYPE_CONFIGURATION.stlAngularTolerance,
+    }),
+  )
+}
+
 type BRepCheckAnalyzer = {
   IsValid_2: () => boolean
   delete: () => void
@@ -229,6 +257,30 @@ beforeAll(async () => {
 })
 
 describe('modular-grid-base CAD kernel integration', () => {
+  it('exports a binary STL for the prototype box with millimetre bounds', async () => {
+    const parameters = { width: 20, depth: 30, height: 40 }
+    const shape = buildBoxBRep(parameters)
+    try {
+      const [[minX, minY, minZ], [maxX, maxY, maxZ]] = shapeBounds(shape)
+      const expected = boundsForBox(parameters)
+      closeTo(minX, expected.min[0])
+      closeTo(minY, expected.min[1])
+      closeTo(minZ, expected.min[2])
+      closeTo(maxX, expected.max[0])
+      closeTo(maxY, expected.max[1])
+      closeTo(maxZ, expected.max[2])
+      const exportStartedAt = performance.now()
+      const bytes = await exportStlBytes(shape, {
+        tolerance: PROTOTYPE_CONFIGURATION.stlTolerance,
+        angularTolerance: PROTOTYPE_CONFIGURATION.stlAngularTolerance,
+      })
+      assertBinaryStl(bytes)
+      reportStlMeasurement('box-20x30x40', exportStartedAt, bytes)
+    } finally {
+      deleteShape(shape)
+    }
+  }, 180_000)
+
   it('observes stale generation after yielding between native boundaries', async () => {
     const template = await loadTemplate()
     let current = true
@@ -480,4 +532,40 @@ describe('modular-grid-base CAD kernel integration', () => {
       deleteShape(template)
     }
   })
+
+  it.each([
+    { rows: 1, columns: 1 },
+    { rows: 2, columns: 2 },
+    { rows: 5, columns: 5 },
+  ])(
+    'exports a structurally valid binary STL for a $rows x $columns plate',
+    async (parameters) => {
+      const { shape, template } = await buildGrid(parameters)
+      try {
+        const [[minX, minY, minZ], [maxX, maxY, maxZ]] = shapeBounds(shape)
+        const expected = boundsForModularGridBase(parameters)
+        closeTo(minX, expected.min[0])
+        closeTo(minY, expected.min[1])
+        closeTo(minZ, expected.min[2])
+        closeTo(maxX, expected.max[0])
+        closeTo(maxY, expected.max[1])
+        closeTo(maxZ, expected.max[2])
+        const exportStartedAt = performance.now()
+        const bytes = await exportStlBytes(shape, {
+          tolerance: PROTOTYPE_CONFIGURATION.stlTolerance,
+          angularTolerance: PROTOTYPE_CONFIGURATION.stlAngularTolerance,
+        })
+        assertBinaryStl(bytes)
+        reportStlMeasurement(
+          `${parameters.rows}x${parameters.columns}`,
+          exportStartedAt,
+          bytes,
+        )
+      } finally {
+        deleteShape(shape)
+        deleteShape(template)
+      }
+    },
+    180_000,
+  )
 })

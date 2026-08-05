@@ -3,6 +3,7 @@ import {
   boundsForModularGridBase,
   isModularGridBaseParameters,
   modularGridBaseFileName,
+  modularGridBaseStlFileName,
   PROTOTYPE_CONFIGURATION,
   validateModularGridBaseParameters,
 } from '../../../../cad-contract/units'
@@ -17,10 +18,7 @@ const GRID_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
     control: 'range',
     defaultValue: 1,
     min: 1,
-    max: Math.floor(
-      PROTOTYPE_CONFIGURATION.maxDimension /
-        PROTOTYPE_CONFIGURATION.modularGridBase.cellDepth,
-    ),
+    max: PROTOTYPE_CONFIGURATION.modularGridBase.maxGridCount,
     step: 1,
   },
   {
@@ -31,10 +29,7 @@ const GRID_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
     control: 'range',
     defaultValue: 1,
     min: 1,
-    max: Math.floor(
-      PROTOTYPE_CONFIGURATION.maxDimension /
-        PROTOTYPE_CONFIGURATION.modularGridBase.cellWidth,
-    ),
+    max: PROTOTYPE_CONFIGURATION.modularGridBase.maxGridCount,
     step: 1,
   },
 ]
@@ -76,4 +71,10 @@ export const modularGridBaseDefinition: ModelDefinition = {
   validateParameters: validateGridDefinitionParameters,
   boundsForParameters: boundsForGridDefinition,
   exportFileName: exportGridFileName,
+  stlFileName: (parameters) => {
+    if (!isModularGridBaseParameters(parameters)) {
+      throw new Error('MODEL_PARAMETERS_MISMATCH:modular-grid-base')
+    }
+    return modularGridBaseStlFileName(parameters)
+  },
 }

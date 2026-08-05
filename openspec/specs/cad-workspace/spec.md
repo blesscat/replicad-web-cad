@@ -128,12 +128,12 @@ The system MUST expose a runtime-validated component catalog. Each catalog entry
 - **Given** 使用者位於 `/cad/box` 或 `/cad/modular-grid-base`
 - **When** 使用者查看或修改參數
 - **Then** box MUST 提供 width、depth、height 欄位並明示 mm
-- **And** modular-grid-base MUST 提供 rows、columns 欄位，並明示每格 20 × 20 mm 及固定高度 5 mm
+- **And** modular-grid-base MUST 提供 rows、columns 欄位，並明示合法範圍 1–20 格、每格 20 × 20 mm 及固定高度 5 mm
 - **And** UI MUST NOT 顯示另一個 component 的參數欄位
 
 ### Requirement: 參數驗證與 generation
 
-The system MUST validate the selected `modelId` and its component-specific parameters before sending any model request to the Worker. Shared dimensional parameters MUST be finite, positive integer millimetres within the confirmed workspace range; modular-grid-base `rows` and `columns` MUST be positive integers whose derived width and depth do not exceed 500 mm. Decimal values MUST be rejected without rounding. Every parameter snapshot, including an invalid snapshot, MUST receive a new generation; a valid snapshot MUST send `model.generate` only after all fields stop changing for 150 ms.
+The system MUST validate the selected `modelId` and its component-specific parameters before sending any model request to the Worker. Shared dimensional parameters MUST be finite, positive integer millimetres within the confirmed workspace range; modular-grid-base `rows` and `columns` MUST be integers from 1 through 20 whose derived width and depth do not exceed 400 mm. Decimal values MUST be rejected without rounding. Every parameter snapshot, including an invalid snapshot, MUST receive a new generation; a valid snapshot MUST send `model.generate` only after all fields stop changing for 150 ms.
 
 #### Scenario: 合法方塊參數變更
 

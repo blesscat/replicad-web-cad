@@ -18,6 +18,8 @@ export type CadErrorCode =
   | 'CANDIDATE_ORPHANED'
   | 'STEP_EXPORT_FAILED'
   | 'STEP_METADATA_INVALID'
+  | 'STL_EXPORT_FAILED'
+  | 'STL_METADATA_INVALID'
   | 'UNKNOWN_ERROR'
 
 export type CadErrorStage =
