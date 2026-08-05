@@ -2,11 +2,9 @@
   import { getModelDefinition } from '../../features/cad/model-catalog'
   import type { CadState } from '../../features/cad/state'
   import type { ModelId, ModelParameterKey } from '../../cad-contract/units'
-  import type { CadProgress } from '../../features/cad/progress'
   import type { ExportFormat } from '../../features/cad/download'
   import type { RawParameters } from './workspace/types'
   import ComponentParameterPanel from './component-panels/index.svelte'
-  import CadProgressIndicator from './CadProgressIndicator.svelte'
 
   const ACTION_BUTTON_CLASS =
     'cursor-pointer rounded-lg border-0 bg-primary px-[0.8rem] py-[0.6rem] text-base text-white disabled:cursor-not-allowed disabled:bg-disabled'
@@ -16,7 +14,6 @@
     modelId: ModelId
     rawParameters: RawParameters
     fieldErrors: Partial<Record<ModelParameterKey, string>>
-    progress: CadProgress | null
     status: string
     canExport: boolean
     onInputChange: (key: ModelParameterKey, value: string) => void
@@ -29,7 +26,6 @@
     modelId,
     rawParameters,
     fieldErrors,
-    progress,
     status,
     canExport,
     onInputChange,
@@ -65,9 +61,6 @@
     {fieldErrors}
     {onInputChange}
   />
-  {#if progress}
-    <CadProgressIndicator {progress} />
-  {/if}
   <div class="flex flex-wrap gap-[0.6rem]">
     <button
       class={ACTION_BUTTON_CLASS}

@@ -65,7 +65,7 @@
 
 <section
   aria-label="CAD 載入進度"
-  class="grid gap-3 rounded-2xl border border-border-card bg-panel p-4"
+  class="fixed bottom-4 right-4 z-40 grid w-[min(24rem,calc(100vw-2rem))] gap-3 rounded-2xl border border-border-card bg-panel p-4 shadow-card"
   data-testid="cad-progress"
 >
   <div class="flex items-center justify-between gap-4 text-sm">

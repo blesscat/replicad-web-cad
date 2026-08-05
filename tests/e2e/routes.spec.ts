@@ -158,6 +158,35 @@ test('CAD route shows the current loading stage', async ({
   expect(readyViewport).toEqual(loadingViewport)
 })
 
+test('CAD progress floats above the workspace while loading', async ({
+  page,
+  browserName,
+}) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.context().route('**/replicad_single.wasm', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+    await route.continue()
+  })
+
+  await page.goto('/cad/box')
+
+  const progress = page.getByTestId('cad-progress')
+  await expect(progress).toBeVisible()
+
+  const layout = await progress.evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    return {
+      position: getComputedStyle(element).position,
+      right: window.innerWidth - rect.right,
+      bottom: window.innerHeight - rect.bottom,
+    }
+  })
+
+  expect(layout.position).toBe('fixed')
+  expect(layout.right).toBeGreaterThanOrEqual(0)
+  expect(layout.bottom).toBeGreaterThanOrEqual(0)
+})
+
 test('CAD route keeps a readable static fallback when JavaScript is unavailable', async ({
   browser,
 }) => {

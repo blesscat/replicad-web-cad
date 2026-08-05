@@ -3,6 +3,7 @@
   import type { ModelId, ModelParameterKey } from '../../cad-contract/units'
   import type { ExportFormat } from '../../features/cad/download'
   import CadViewport from '../../features/cad/viewport/CadViewport.svelte'
+  import CadProgressIndicator from './CadProgressIndicator.svelte'
   import CadWorkspacePanel from './CadWorkspacePanel.svelte'
   import {
     createCadWorkspaceController,
@@ -52,7 +53,6 @@
       modelId={snapshot.modelId}
       rawParameters={snapshot.rawParameters}
       fieldErrors={snapshot.fieldErrors}
-      progress={snapshot.progress}
       status={snapshot.status}
       canExport={snapshot.canExport}
       onInputChange={handleInputChange}
@@ -64,5 +64,8 @@
       parameters={snapshot.state.committed?.parameters ?? null}
       stale={snapshot.state.stale}
     />
+    {#if snapshot.progress}
+      <CadProgressIndicator progress={snapshot.progress} />
+    {/if}
   </div>
 {/if}
