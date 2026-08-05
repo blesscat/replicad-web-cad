@@ -94,8 +94,8 @@ test('CAD route shows the current loading stage', async ({
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.route('**/replicad_single.wasm', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 250))
+  await page.context().route('**/replicad_single.wasm', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1500))
     await route.continue()
   })
 
@@ -104,15 +104,15 @@ test('CAD route shows the current loading stage', async ({
   const progress = page.getByRole('progressbar', {
     name: '載入 CAD engine',
   })
-  await expect(progress).toBeVisible()
-  await expect(progress).toHaveAttribute('aria-valuenow', '1')
-  await expect(page.getByTestId('cad-progress')).toContainText(
-    '載入 CAD engine',
-  )
-
   const viewport = page.getByTestId('cad-viewport')
   const fallback = page.getByText('尚未有可預覽的模型。')
-  await expect(fallback).toBeVisible()
+  await Promise.all([
+    expect(progress).toBeVisible(),
+    expect(progress).toHaveAttribute('aria-valuenow', '1'),
+    expect(page.getByTestId('cad-progress')).toContainText('載入 CAD engine'),
+    expect(fallback).toBeVisible(),
+  ])
+
   const viewportRect = () =>
     viewport.evaluate((element) => {
       const rect = element.getBoundingClientRect()
@@ -155,7 +155,10 @@ test('CAD route keeps a readable static fallback when JavaScript is unavailable'
 
 test('CAD workspace preserves the responsive column boundary', async ({
   page,
+  browserName,
 }) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+
   const runtimeErrors: string[] = []
   page.on('pageerror', (error) => {
     if (!isAstroDevToolbarError(error.message))
@@ -167,7 +170,7 @@ test('CAD workspace preserves the responsive column boundary', async ({
     }
   })
 
-  await page.route('**/replicad_single.wasm', async (route) => {
+  await page.context().route('**/replicad_single.wasm', async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 600))
     await route.continue()
   })

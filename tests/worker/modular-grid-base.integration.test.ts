@@ -31,7 +31,7 @@ const require = createRequire(import.meta.url)
 const initialiseOpenCascade = require('replicad-opencascadejs')
   .default as (options: { locateFile: () => string }) => Promise<unknown>
 const TEMPLATE_PATH = new URL(
-  '../../src/cad-kernel/components/modular-grid-base/cell-template.step',
+  '../../src/cad-kernel/components/modular-grid-base/board-cell-template.step',
   import.meta.url,
 )
 const WASM_PATH =
@@ -335,7 +335,7 @@ describe('modular-grid-base CAD kernel integration', () => {
     180_000,
   )
 
-  it('builds a centered 1x1 plate with a 17 mm through-cut and 5 mm height', async () => {
+  it('builds a centered 1x1 plate with a 17.5 mm through-cut and 5 mm height', async () => {
     const parameters = { rows: 1, columns: 1 }
     const { shape, template } = await buildGrid(parameters)
 
@@ -369,12 +369,12 @@ describe('modular-grid-base CAD kernel integration', () => {
         const [[holeMinX, holeMinY], [holeMaxX, holeMaxY]] = wireBounds(
           innerWires[0],
         )
-        closeToStepGeometry(holeMaxX - holeMinX, 17)
-        closeToStepGeometry(holeMaxY - holeMinY, 17)
-        closeToStepGeometry(holeMinX - minX, 1.5)
-        closeToStepGeometry(holeMaxX - maxX, -1.5)
-        closeToStepGeometry(holeMinY - minY, 1.5)
-        closeToStepGeometry(holeMaxY - maxY, -1.5)
+        closeToStepGeometry(holeMaxX - holeMinX, 17.5)
+        closeToStepGeometry(holeMaxY - holeMinY, 17.5)
+        closeToStepGeometry(holeMinX - minX, 1.25)
+        closeToStepGeometry(holeMaxX - maxX, -1.25)
+        closeToStepGeometry(holeMinY - minY, 1.25)
+        closeToStepGeometry(holeMaxY - maxY, -1.25)
       } finally {
         deleteShapes(innerWires)
         deleteShapes(topFaces)
