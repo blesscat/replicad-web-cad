@@ -1,4 +1,4 @@
-import { expect, test, type Download } from '@playwright/test'
+import { expect, test, type Download, type Page } from '@playwright/test'
 
 function skipHeadlessFirefoxWithoutWebGL(browserName: string): void {
   test.skip(
@@ -39,6 +39,12 @@ async function readBinaryStlByteLength(download: Download): Promise<number> {
   expect(triangleCount).toBeGreaterThan(0)
   expect(byteLength).toBe(84 + triangleCount * 50)
   return byteLength
+}
+
+async function waitForCadReady(page: Page): Promise<void> {
+  await expect(page.getByRole('button', { name: '下載 STEP' })).toBeEnabled({
+    timeout: 30_000,
+  })
 }
 
 test('home and docs are static Astro pages', async ({ page }) => {
@@ -149,10 +155,7 @@ test('CAD route shows the current loading stage', async ({
   )
   expect(fallbackHeight).toBe(viewportContentHeight)
 
-  await expect(page.getByRole('status')).toContainText(
-    '模型已就緒，可以下載 STEP 或 STL。',
-    { timeout: 30_000 },
-  )
+  await waitForCadReady(page)
   const readyViewport = await viewportRect()
 
   expect(readyViewport).toEqual(loadingViewport)
@@ -185,6 +188,19 @@ test('CAD progress floats above the workspace while loading', async ({
   expect(layout.position).toBe('fixed')
   expect(layout.right).toBeGreaterThanOrEqual(0)
   expect(layout.bottom).toBeGreaterThanOrEqual(0)
+})
+
+test('CAD workspace does not show a redundant status panel after loading', async ({
+  page,
+  browserName,
+}) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.goto('/cad/box')
+
+  await expect(page.getByRole('button', { name: '下載 STEP' })).toBeEnabled({
+    timeout: 30_000,
+  })
+  await expect(page.getByRole('status')).toHaveCount(0)
 })
 
 test('CAD route keeps a readable static fallback when JavaScript is unavailable', async ({
@@ -271,10 +287,7 @@ test('CAD Worker builds the default box in a WebGL-enabled browser', async ({
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
   await page.goto('/cad/box')
-  await expect(page.getByRole('status')).toContainText(
-    '模型已就緒，可以下載 STEP 或 STL。',
-    { timeout: 30_000 },
-  )
+  await waitForCadReady(page)
   await expect(page.getByRole('button', { name: '下載 STEP' })).toBeEnabled()
   await expect(page.getByRole('button', { name: '下載 STL' })).toBeEnabled()
   await expect(page.getByTestId('cad-viewport').locator('canvas')).toHaveCount(
@@ -300,10 +313,7 @@ test('CAD Worker exports one non-empty STEP download for the committed revision'
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
   await page.goto('/cad/box')
-  await expect(page.getByRole('status')).toContainText(
-    '模型已就緒，可以下載 STEP 或 STL。',
-    { timeout: 30_000 },
-  )
+  await waitForCadReady(page)
 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: '下載 STEP' }).click()
@@ -322,10 +332,7 @@ test('CAD Worker exports one non-empty STL download for the committed revision',
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
   await page.goto('/cad/box')
-  await expect(page.getByRole('status')).toContainText(
-    '模型已就緒，可以下載 STEP 或 STL。',
-    { timeout: 30_000 },
-  )
+  await waitForCadReady(page)
 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: '下載 STL' }).click()
@@ -341,10 +348,7 @@ test('CAD workspace switches to the modular grid component and exports a 2x2 bas
   skipHeadlessFirefoxWithoutWebGL(browserName)
   await page.goto('/')
   await page.getByRole('link', { name: '使用模組化網格底板' }).click()
-  await expect(page.getByRole('status')).toContainText(
-    '模型已就緒，可以下載 STEP 或 STL。',
-    { timeout: 30_000 },
-  )
+  await waitForCadReady(page)
 
   await expect(page).toHaveURL('/cad/modular-grid-base')
   await expect(
@@ -363,10 +367,7 @@ test('CAD workspace switches to the modular grid component and exports a 2x2 bas
   await expect(rows).toHaveValue('2')
   await expect(columns).toHaveValue('2')
 
-  await expect(page.getByRole('status')).toContainText(
-    '模型已就緒，可以下載 STEP 或 STL。',
-    { timeout: 30_000 },
-  )
+  await waitForCadReady(page)
   await expect(page.getByLabel('寬度 X 40 mm')).toBeVisible()
   await expect(page.getByLabel('深度 Y 40 mm')).toBeVisible()
   await expect(page.getByLabel('高度 Z 5 mm')).toBeVisible()
@@ -399,10 +400,7 @@ test('modular grid reports cell progress for a larger generation', async ({
   skipHeadlessFirefoxWithoutWebGL(browserName)
   await page.goto('/')
   await page.getByRole('link', { name: '使用模組化網格底板' }).click()
-  await expect(page.getByRole('status')).toContainText(
-    '模型已就緒，可以下載 STEP 或 STL。',
-    { timeout: 30_000 },
-  )
+  await waitForCadReady(page)
 
   const rows = page.getByRole('slider', { name: '行數（Y）' })
   const columns = page.getByRole('slider', { name: '列數（X）' })
@@ -423,10 +421,7 @@ test('modular grid reports cell progress for a larger generation', async ({
   await expect(progress).toHaveAttribute('aria-valuemax', '100')
   await expect(progress).toHaveAttribute('aria-valuetext', /格/)
   expect(await viewportRect()).toEqual(readyViewport)
-  await expect(page.getByRole('status')).toContainText(
-    '模型已就緒，可以下載 STEP 或 STL。',
-    { timeout: 60_000 },
-  )
+  await waitForCadReady(page)
 })
 
 test('parameter updates use the latest valid generation and preserve stale preview on invalid input', async ({
@@ -435,34 +430,24 @@ test('parameter updates use the latest valid generation and preserve stale previ
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
   await page.goto('/cad/box')
-  await expect(page.getByRole('status')).toContainText(
-    '模型已就緒，可以下載 STEP 或 STL。',
-    { timeout: 30_000 },
-  )
+  await waitForCadReady(page)
 
   const width = page.getByRole('textbox', { name: /寬度/ })
   await width.fill('25')
-  await expect(page.getByRole('status')).toContainText(
-    '模型已就緒，可以下載 STEP 或 STL。',
-    { timeout: 30_000 },
-  )
+  await waitForCadReady(page)
   await expect(width).toHaveValue('25')
   await expect(page.getByLabel('寬度 X 25 mm')).toBeVisible()
 
   await width.fill('25.5')
   await expect(width).toHaveAttribute('aria-invalid', 'true')
-  await expect(page.getByRole('status')).toContainText('必須是有限的整數。')
+  await expect(page.getByRole('alert')).toContainText('必須是有限的整數。')
   await expect(page.getByRole('button', { name: '下載 STEP' })).toBeDisabled()
   await expect(page.getByRole('button', { name: '下載 STL' })).toBeDisabled()
-  await expect(page.getByText('目前預覽是上一個成功 revision。')).toBeVisible()
   await expect(page.getByLabel('寬度 X 25 mm')).toBeVisible()
   await expect(page.getByLabel('寬度 X 25.5 mm')).toHaveCount(0)
 
   await width.fill('26')
-  await expect(page.getByRole('status')).toContainText(
-    '模型已就緒，可以下載 STEP 或 STL。',
-    { timeout: 30_000 },
-  )
+  await waitForCadReady(page)
   await expect(page.getByLabel('寬度 X 26 mm')).toBeVisible()
 })
 
@@ -472,10 +457,7 @@ test('dimension annotations remain attached through viewport resize and orbit in
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
   await page.goto('/cad/box')
-  await expect(page.getByRole('status')).toContainText(
-    '模型已就緒，可以下載 STEP 或 STL。',
-    { timeout: 30_000 },
-  )
+  await waitForCadReady(page)
 
   const canvas = page.getByTestId('cad-viewport').locator('canvas')
   await expect(page.getByLabel('寬度 X 20 mm')).toBeVisible()

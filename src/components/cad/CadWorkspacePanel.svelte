@@ -14,7 +14,6 @@
     modelId: ModelId
     rawParameters: RawParameters
     fieldErrors: Partial<Record<ModelParameterKey, string>>
-    status: string
     canExport: boolean
     onInputChange: (key: ModelParameterKey, value: string) => void
     onExport: (format: ExportFormat) => void
@@ -26,7 +25,6 @@
     modelId,
     rawParameters,
     fieldErrors,
-    status,
     canExport,
     onInputChange,
     onExport,
@@ -87,20 +85,4 @@
   <p class="text-sm text-muted">
     STL 下載後，可在 Bambu Studio 透過本機檔案流程匯入。
   </p>
-  <div
-    aria-live="polite"
-    class="rounded-2xl border border-border-card bg-panel p-4 text-[0.92rem] text-status"
-    role="status"
-  >
-    <strong class="text-ink">狀態：</strong>
-    {status}
-    {#if state.stale}
-      <div class="text-muted">目前預覽是上一個成功 revision。</div>
-    {/if}
-    {#if state.error}
-      <div class="text-sm text-error" role="alert">
-        錯誤代碼：{state.error.code}
-      </div>
-    {/if}
-  </div>
 </div>

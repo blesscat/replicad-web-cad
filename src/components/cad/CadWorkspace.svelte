@@ -53,7 +53,6 @@
       modelId={snapshot.modelId}
       rawParameters={snapshot.rawParameters}
       fieldErrors={snapshot.fieldErrors}
-      status={snapshot.status}
       canExport={snapshot.canExport}
       onInputChange={handleInputChange}
       onExport={handleExport}

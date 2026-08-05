@@ -1,6 +1,5 @@
 import { normalizeError, type CadError } from '../../../cad-contract/errors'
 import type { WorkerClientError } from '../../../features/cad/worker-client'
-import type { CadState } from '../../../features/cad/state'
 import {
   parseDimensionInput,
   validateModelParameters,
@@ -102,25 +101,4 @@ export function errorForWorker(error: WorkerClientError): CadError {
         : 'WORKER_TERMINATED',
     recoverable: true,
   })
-}
-
-export function statusMessage(state: CadState, progress: string): string {
-  if (state.error) return state.error.userMessage
-  if (progress) return progress
-  switch (state.status) {
-    case 'booting':
-      return '準備啟動 CAD Worker…'
-    case 'loading-engine':
-      return '正在載入 OpenCascade WASM…'
-    case 'generating':
-      return '正在建立 CAD component…'
-    case 'ready':
-      return '模型已就緒，可以下載 STEP 或 STL。'
-    case 'invalid-input':
-      return '請修正參數後再建模。'
-    case 'recoverable-error':
-      return 'CAD 操作失敗，可以修改參數或重試。'
-    case 'fatal-worker-error':
-      return 'CAD Worker 已停止，請重試。'
-  }
 }

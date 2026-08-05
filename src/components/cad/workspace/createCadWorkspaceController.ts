@@ -1,16 +1,13 @@
 import type { ModelId, ModelParameterKey } from '../../../cad-contract/units'
 import { initialCadState, type CadState } from '../../../features/cad/state'
 import { getModelDefinition } from '../../../features/cad/model-catalog'
-import {
-  progressMessage,
-  type CadProgress,
-} from '../../../features/cad/progress'
+import type { CadProgress } from '../../../features/cad/progress'
 import type { ExportFormat } from '../../../features/cad/download'
 import {
   createCadWorkerRuntime,
   type CadWorkerRuntime,
 } from './createCadWorkerRuntime'
-import { rawFromParameters, statusMessage } from './validation'
+import { rawFromParameters } from './validation'
 import type { FieldErrors } from './runtime/types'
 import type { RawParameters } from './types'
 
@@ -20,7 +17,6 @@ export type CadWorkspaceControllerSnapshot = {
   rawParameters: RawParameters
   fieldErrors: FieldErrors
   progress: CadProgress | null
-  status: string
   canExport: boolean
 }
 
@@ -38,10 +34,6 @@ function createSnapshot(
   fieldErrors: FieldErrors,
   progress: CadProgress | null,
 ): CadWorkspaceControllerSnapshot {
-  const status = statusMessage(
-    state,
-    progress ? progressMessage(progress.stage) : '',
-  )
   const canExport =
     state.status === 'ready' && state.exportStatus === 'idle' && !state.stale
 
@@ -51,7 +43,6 @@ function createSnapshot(
     rawParameters,
     fieldErrors,
     progress,
-    status,
     canExport,
   }
 }
