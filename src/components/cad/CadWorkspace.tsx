@@ -20,6 +20,7 @@ export default function CadWorkspace({ modelId }: CadWorkspaceProps) {
         modelId={controller.modelId}
         rawParameters={controller.rawParameters}
         fieldErrors={controller.fieldErrors}
+        progress={controller.progress}
         status={controller.status}
         canExport={controller.canExport}
         onInputChange={controller.onInputChange}

@@ -110,7 +110,12 @@ export type ProgressEvent = Envelope<'operation.progress'> & {
   stage: 'loading' | 'building' | 'meshing' | 'exporting'
   generation?: number
   modelRevision?: string
+  completed?: number
+  total?: number
+  unit?: ProgressUnit
 }
+
+export type ProgressUnit = 'cells' | 'batches' | 'steps'
 
 export type ModelInvalidatedEvent = Envelope<'model.invalidated'> & {
   operationId: string
@@ -218,6 +223,26 @@ function isFiniteNumber(value: unknown): value is number {
 
 function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0
+}
+
+const PROGRESS_UNITS: readonly ProgressUnit[] = ['cells', 'batches', 'steps']
+
+function isProgressCounters(value: Record<string, unknown>): boolean {
+  const hasCompleted = value.completed !== undefined
+  const hasTotal = value.total !== undefined
+  const hasUnit = value.unit !== undefined
+  const hasCounters = hasCompleted || hasTotal || hasUnit
+
+  if (!hasCounters) return true
+  return (
+    hasCompleted &&
+    hasTotal &&
+    hasUnit &&
+    isNonNegativeInteger(value.completed) &&
+    isPositiveInteger(value.total) &&
+    value.completed <= value.total &&
+    PROGRESS_UNITS.includes(value.unit as ProgressUnit)
+  )
 }
 
 function isArrayBuffer(value: unknown): value is ArrayBuffer {
@@ -375,7 +400,8 @@ export function isWorkerEvent(value: unknown): value is WorkerEvent {
         (value.generation === undefined ||
           isPositiveInteger(value.generation)) &&
         (value.modelRevision === undefined ||
-          isNonEmptyString(value.modelRevision))
+          isNonEmptyString(value.modelRevision)) &&
+        isProgressCounters(value)
       )
     case 'model.invalidated':
       return (

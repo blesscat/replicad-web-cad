@@ -6,6 +6,7 @@ import type {
   ModelParameterValues,
 } from '../../../../cad-contract/units'
 import type { CadAction, CadState } from '../../../../features/cad/state'
+import type { CadProgress } from '../../../../features/cad/progress'
 import type { CadWorkerClient } from '../../../../features/cad/worker-client'
 import type { ExportRequest, OperationRecord, RawParameters } from '../types'
 
@@ -20,6 +21,7 @@ export type RuntimeRefs = {
   initialModelSent: MutableRefObject<boolean>
   autoRecoveryAttempts: MutableRefObject<number>
   operations: MutableRefObject<Map<string, OperationRecord>>
+  activeProgressOperationId: MutableRefObject<string | null>
   exportRequest: MutableRefObject<ExportRequest | null>
   debounce: MutableRefObject<ReturnType<typeof setTimeout> | null>
   timers: MutableRefObject<Map<string, ReturnType<typeof setTimeout>>>
@@ -38,7 +40,10 @@ export type RuntimeContext = {
   dispatch: Dispatch<CadAction>
   setRawParameters: Dispatch<SetStateAction<RawParameters>>
   setFieldErrors: Dispatch<SetStateAction<FieldErrors>>
-  setProgress: Dispatch<SetStateAction<string>>
+  setProgress: Dispatch<SetStateAction<CadProgress | null>>
+  setOperationProgress: (operationId: string, progress: CadProgress) => void
+  clearOperationProgress: (operationId: string) => void
+  clearProgress: () => void
   clearTimer: (operationId: string) => void
   setOperationTimeout: (
     operationId: string,

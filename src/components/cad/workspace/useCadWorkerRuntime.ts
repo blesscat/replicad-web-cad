@@ -15,6 +15,7 @@ import {
   errorForWorker,
   supportsCadBrowser,
 } from './validation'
+import type { CadProgress } from '../../../features/cad/progress'
 import type { ExportRequest, OperationRecord, RawParameters } from './types'
 import { createExportHandlers } from './runtime/export'
 import { createWorkerEventHandler } from './runtime/events'
@@ -27,7 +28,7 @@ type CadWorkerRuntimeOptions = {
   dispatch: Dispatch<CadAction>
   setRawParameters: Dispatch<SetStateAction<RawParameters>>
   setFieldErrors: Dispatch<SetStateAction<FieldErrors>>
-  setProgress: Dispatch<SetStateAction<string>>
+  setProgress: Dispatch<SetStateAction<CadProgress | null>>
 }
 
 export type CadWorkerRuntime = {
@@ -52,6 +53,7 @@ export function useCadWorkerRuntime({
   const initialModelSentRef = useRef(false)
   const autoRecoveryAttemptsRef = useRef(0)
   const operationsRef = useRef(new Map<string, OperationRecord>())
+  const activeProgressOperationIdRef = useRef<string | null>(null)
   const exportRef = useRef<ExportRequest | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const timersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>())
@@ -73,6 +75,7 @@ export function useCadWorkerRuntime({
     initialModelSent: initialModelSentRef,
     autoRecoveryAttempts: autoRecoveryAttemptsRef,
     operations: operationsRef,
+    activeProgressOperationId: activeProgressOperationIdRef,
     exportRequest: exportRef,
     debounce: debounceRef,
     timers: timersRef,
@@ -102,12 +105,31 @@ export function useCadWorkerRuntime({
     )
   }
 
+  const setOperationProgress = (operationId: string, progress: CadProgress) => {
+    activeProgressOperationIdRef.current = operationId
+    setProgress(progress)
+  }
+
+  const clearOperationProgress = (operationId: string) => {
+    if (activeProgressOperationIdRef.current !== operationId) return
+    activeProgressOperationIdRef.current = null
+    setProgress(null)
+  }
+
+  const clearProgress = () => {
+    activeProgressOperationIdRef.current = null
+    setProgress(null)
+  }
+
   const context: RuntimeContext = {
     refs,
     dispatch,
     setRawParameters,
     setFieldErrors,
     setProgress,
+    setOperationProgress,
+    clearOperationProgress,
+    clearProgress,
     clearTimer,
     setOperationTimeout,
     recoverWorker: (error, client) => recoverWorkerRef.current(error, client),
@@ -126,6 +148,7 @@ export function useCadWorkerRuntime({
     fallback?.setAttribute('hidden', 'true')
 
     const recoverWorker = (error: CadError, client = clientRef.current) => {
+      clearProgress()
       client?.terminate()
       if (
         autoRecoveryAttemptsRef.current <
@@ -153,7 +176,7 @@ export function useCadWorkerRuntime({
       }
       for (const timer of timersRef.current.values()) clearTimeout(timer)
       timersRef.current.clear()
-      setProgress('')
+      clearProgress()
       clientRef.current?.terminate()
       workerEpochRef.current = null
       latestGenerationRef.current = 0
@@ -166,6 +189,7 @@ export function useCadWorkerRuntime({
       try {
         client = new CadWorkerClient()
       } catch (error) {
+        clearProgress()
         dispatch({
           type: 'fatal-worker-error',
           error: normalizeError(error, {
@@ -191,6 +215,7 @@ export function useCadWorkerRuntime({
         },
       })
       operationsRef.current.set(operationId, { kind: 'init', requestId })
+      setOperationProgress(operationId, { stage: 'loading' })
       setOperationTimeout(
         operationId,
         PROTOTYPE_CONFIGURATION.engineInitializationTimeoutMs,
@@ -228,6 +253,7 @@ export function useCadWorkerRuntime({
       timersRef.current.clear()
       clientRef.current?.terminate()
       clientRef.current = null
+      clearProgress()
       recoverWorkerRef.current = () => undefined
       fallback?.removeAttribute('hidden')
     }

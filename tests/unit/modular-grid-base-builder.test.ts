@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import type { Shape3D } from 'replicad'
 import {
+  buildModularGridBaseSequential,
   cellOffsetsForGrid,
   externalCornerCoordinates,
 } from '../../src/cad-kernel/components/modular-grid-base/builder'
@@ -22,5 +24,51 @@ describe('modular-grid-base placement helpers', () => {
       [-30, 20],
       [30, 20],
     ])
+  })
+
+  it('disposes a translated cell when generation becomes stale at a safe boundary', async () => {
+    const translatedCell = { delete: vi.fn() }
+    const clonedCell = {
+      delete: vi.fn(),
+      translate: vi.fn(() => translatedCell),
+    }
+    const template = {
+      clone: vi.fn(() => clonedCell),
+    } as unknown as Shape3D
+    let checks = 0
+
+    await expect(
+      buildModularGridBaseSequential({ rows: 1, columns: 2 }, template, {
+        isGenerationCurrent: () => {
+          checks += 1
+          return checks < 3
+        },
+      }),
+    ).rejects.toThrow('STALE_GENERATION')
+    expect(clonedCell.delete).toHaveBeenCalledOnce()
+    expect(translatedCell.delete).toHaveBeenCalledOnce()
+  })
+
+  it('yields between native boundaries so a newer generation can cancel assembly', async () => {
+    const translatedCell = { delete: vi.fn() }
+    const clonedCell = {
+      delete: vi.fn(),
+      translate: vi.fn(() => translatedCell),
+    }
+    const template = {
+      clone: vi.fn(() => clonedCell),
+    } as unknown as Shape3D
+    let current = true
+
+    await expect(
+      buildModularGridBaseSequential({ rows: 1, columns: 2 }, template, {
+        isGenerationCurrent: () => current,
+        yieldToEventLoop: async () => {
+          current = false
+        },
+      }),
+    ).rejects.toThrow('STALE_GENERATION')
+    expect(clonedCell.delete).toHaveBeenCalledOnce()
+    expect(translatedCell.delete).toHaveBeenCalledOnce()
   })
 })

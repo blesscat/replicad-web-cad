@@ -54,6 +54,7 @@ export function createModelGenerationHandlers(
       parameters,
       requestId,
     })
+    context.setOperationProgress(operationId, { stage: 'building' })
     context.setOperationTimeout(
       operationId,
       PROTOTYPE_CONFIGURATION.operationTimeoutMs,
@@ -96,6 +97,7 @@ export function createModelGenerationHandlers(
     const modelId = context.refs.state.current.modelId
     const parsed = parseRawParameters(next, modelId)
     if (!parsed.valid) {
+      context.clearProgress()
       context.setFieldErrors({ [parsed.field ?? key]: parsed.message })
       context.dispatch({
         type: 'input-invalid',
@@ -117,6 +119,7 @@ export function createModelGenerationHandlers(
       input: parsed.value,
       generation,
     })
+    sendInvalidate(generation, 'superseded')
     queueModelGeneration(modelId, parsed.value, generation)
   }
 

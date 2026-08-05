@@ -94,7 +94,7 @@ pages/
 
 ## 使用 Prototype
 
-先在首頁選擇模型，再進入對應的 CAD workspace：`box` 使用 `/cad/box`，`modular-grid-base` 使用 `/cad/modular-grid-base`。CAD workspace 只調整目前 route 的 component；要切換模型必須返回首頁重新選擇。`box` 的 `width`、`depth`、`height` 是整數 mm；預設值為 `20 × 30 × 40`，合法範圍為 `1–500 mm`。底板則只調整 `rows` 與 `columns` 格數 slider；每格為 `20 × 20 mm`，高度固定 5 mm，最大寬/深為 500 mm。輸入停止 150 ms 後才會送出建模；無效輸入不會送出 `model.generate` 或匯出 request。
+先在首頁選擇模型，再進入對應的 CAD workspace：`box` 使用 `/cad/box`，`modular-grid-base` 使用 `/cad/modular-grid-base`。CAD workspace 只調整目前 route 的 component；要切換模型必須返回首頁重新選擇。`box` 的 `width`、`depth`、`height` 是整數 mm；預設值為 `20 × 30 × 40`，合法範圍為 `1–500 mm`。底板則只調整 `rows` 與 `columns` 格數 slider；每格為 `20 × 20 mm`，高度固定 5 mm，最大寬/深為 500 mm。輸入停止 500 ms 後才會送出建模；每個新 snapshot 會先使舊 generation 失效，連續 slider 變更只會對最後合法值送出建模；無效輸入不會送出 `model.generate` 或匯出 request。
 
 建模期間可以保留上一個成功 revision 的預覽，但它會標示為 stale，且 STEP 下載會停用；只有新的 B-Rep candidate 完成 commit 並進入「模型已就緒」後，預覽與匯出才會重新同步。WASM 載入、建模、mesh 與匯出都有狀態提示；Worker 或操作失敗時可修改參數或按「重試」，Worker recovery 最多自動重建一次。
 
@@ -146,6 +146,16 @@ pnpm test:e2e:firefox
 ```
 
 `test:e2e:firefox` 需要 Linux 的 Xvfb；沒有 Xvfb 時可用等價的 headed Firefox + 虛擬桌面指令執行。
+
+B-Rep 效能 benchmark 是 opt-in，會使用 canonical STEP、production preview 設定與 1×1、2×2、5×5、10×10、20×20、25×25 fixture，先 warm up 再量測五次，輸出各 phase 的 median/P95 與環境資訊：
+
+```bash
+RUN_CAD_BENCHMARK=1 pnpm exec vitest run tests/worker/modular-grid-base-benchmark.test.ts
+```
+
+可用 `RUN_CAD_BENCHMARK_FIXTURES=20x20` 與 `RUN_CAD_BENCHMARK_STRATEGIES=balanced` 限定範圍。optimized path 會先融合一條 canonical row，再 clone/translate 其餘列，並以 bounded block/row fuse 組裝；這仍是 CPU/OpenCascade B-Rep，WebGL 只負責 viewport rendering。每個 fixture/strategy 只在 warm-up 做一次 STEP non-empty quality check，generation total 不把重複 STEP writer 成本算入；STEP 檔案本身仍由 integration test 驗證。若 sequential 大型 baseline 在同一 native epoch 失敗，benchmark 會保留失敗的 sample/phase/error，並以 operation-timeout safety gate 驗證 optimized 路徑，同時在報告中標示無法進行相對 20% 比較。
+
+目前 model/mesh 與 STEP operation timeout 為 120 秒；engine initialization timeout 維持 60 秒。timeout 只是讓大型模型有較長的完成窗口，不代表 B-Rep 效能 gate 可以略過。
 
 WASM asset 位於 `public/replicad_single.wasm`，Worker 由目前 Astro 應用的 `/replicad_single.wasm` URL 載入。若頁面顯示 WASM 載入失敗，先確認 dev server 正在執行且該 asset 可由瀏覽器取得；若顯示不支援 WebGL，請改用支援 WebGL 的桌面瀏覽器或啟用圖形加速。輸入錯誤、Worker timeout 與 stale 預覽則依頁面狀態提示修正參數或重試。
 

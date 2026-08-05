@@ -31,7 +31,10 @@ vi.mock('../../src/cad-kernel/export', () => ({
   exportStepBytes: mocks.exportStepBytes,
 }))
 
-import { CadWorkerRuntime } from '../../src/workers/cad.worker'
+import {
+  CadWorkerRuntime,
+  createCadWorkerMessageHandler,
+} from '../../src/workers/cad.worker'
 
 const base = {
   version: 1 as const,
@@ -128,6 +131,173 @@ describe('modular-grid-base Worker runtime', () => {
       mocks.loadModularGridBaseTemplate.mock.results[0]?.value
     const template = await templatePromise
     expect(template.delete).toHaveBeenCalledOnce()
+  })
+
+  it('correlates kernel cell progress to the generating operation', async () => {
+    mocks.buildModelBRep.mockImplementation(
+      async (_modelId, _parameters, context) => {
+        context.reportProgress({
+          stage: 'building',
+          completed: 3,
+          total: 4,
+          unit: 'cells',
+        })
+        const shape = { delete: vi.fn() }
+        mocks.generatedShapes.push(shape)
+        return shape
+      },
+    )
+    const events: any[] = []
+    const runtime = new CadWorkerRuntime('epoch-grid-progress', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(gridCommand(1))
+
+    expect(
+      events.find(
+        (event) =>
+          event.kind === 'operation.progress' &&
+          event.operationId === 'grid-operation-1' &&
+          event.generation === 1 &&
+          event.completed === 3,
+      ),
+    ).toMatchObject({ total: 4, unit: 'cells', stage: 'building' })
+  })
+
+  it('accepts a queued generate after invalidating the same generation', async () => {
+    const events: any[] = []
+    const runtime = new CadWorkerRuntime('epoch-grid-invalidation', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle({
+      ...base,
+      kind: 'model.invalidate' as const,
+      requestId: 'grid-invalidate-request',
+      operationId: 'grid-invalidate-operation',
+      generation: 1,
+      workerEpoch: 'epoch-grid-invalidation',
+      reason: 'superseded' as const,
+    })
+    await runtime.handle(gridCommand(1))
+
+    expect(
+      events.some(
+        (event) =>
+          event.kind === 'model.candidate-ready' && event.generation === 1,
+      ),
+    ).toBe(true)
+    expect(
+      events.some(
+        (event) =>
+          event.kind === 'operation.superseded' &&
+          event.operationId === 'grid-operation-1',
+      ),
+    ).toBe(false)
+  })
+
+  it('drops a superseded candidate and keeps the Worker epoch usable', async () => {
+    let releaseFirstBuild: () => void = () => undefined
+    const firstBuildReleased = new Promise<void>((resolve) => {
+      releaseFirstBuild = resolve
+    })
+    let buildCount = 0
+    mocks.buildModelBRep.mockImplementation(
+      async (_modelId, _parameters, context) => {
+        buildCount += 1
+        const shape = { delete: vi.fn() }
+        mocks.generatedShapes.push(shape)
+        if (buildCount === 1) await firstBuildReleased
+        return shape
+      },
+    )
+    const events: any[] = []
+    const runtime = new CadWorkerRuntime('epoch-grid-cancel', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+
+    const first = runtime.handle(gridCommand(1))
+    await Promise.resolve()
+    const latest = runtime.handle(gridCommand(2))
+    await latest
+    releaseFirstBuild()
+    await first
+
+    expect(
+      events.some(
+        (event) =>
+          event.kind === 'operation.superseded' && event.generation === 1,
+      ),
+    ).toBe(true)
+    expect(
+      events.some(
+        (event) =>
+          event.kind === 'model.candidate-ready' && event.generation === 1,
+      ),
+    ).toBe(false)
+    expect(
+      events.some(
+        (event) =>
+          event.kind === 'model.candidate-ready' && event.generation === 2,
+      ),
+    ).toBe(true)
+    expect(mocks.generatedShapes[0]?.delete).toHaveBeenCalledOnce()
+  })
+
+  it('routes invalidation around the serial command queue during a build', async () => {
+    let releaseBuild: () => void = () => undefined
+    const buildReleased = new Promise<void>((resolve) => {
+      releaseBuild = resolve
+    })
+    let buildStarted: () => void = () => undefined
+    const buildStartedPromise = new Promise<void>((resolve) => {
+      buildStarted = resolve
+    })
+    mocks.buildModelBRep.mockImplementation(
+      async (_modelId, _parameters, _context) => {
+        buildStarted()
+        await buildReleased
+        const shape = { delete: vi.fn() }
+        mocks.generatedShapes.push(shape)
+        return shape
+      },
+    )
+    const events: any[] = []
+    const runtime = new CadWorkerRuntime('epoch-grid-queue-cancel', (event) =>
+      events.push(event),
+    )
+    const handle = createCadWorkerMessageHandler(runtime)
+    await handle(initCommand())
+
+    const generation = handle(gridCommand(1))
+    await buildStartedPromise
+    await handle({
+      ...base,
+      kind: 'model.invalidate' as const,
+      requestId: 'queue-invalidate-request',
+      operationId: 'queue-invalidate-operation',
+      generation: 2,
+      workerEpoch: 'epoch-grid-queue-cancel',
+      reason: 'superseded' as const,
+    })
+    releaseBuild()
+    await generation
+
+    expect(
+      events.some(
+        (event) =>
+          event.kind === 'operation.superseded' && event.generation === 1,
+      ),
+    ).toBe(true)
+    expect(
+      events.some(
+        (event) =>
+          event.kind === 'model.candidate-ready' && event.generation === 1,
+      ),
+    ).toBe(false)
+    expect(mocks.generatedShapes[0]?.delete).toHaveBeenCalledOnce()
   })
 
   it('maps template load failures to a diagnosable component asset error', async () => {
