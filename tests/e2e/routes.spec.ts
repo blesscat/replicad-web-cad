@@ -89,6 +89,28 @@ test('box CAD route exposes fallback and locked parameter controls', async ({
   await expect(page.locator('#cad-fallback')).toBeHidden()
 })
 
+test('CAD route shows the current loading stage', async ({
+  page,
+  browserName,
+}) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.route('**/replicad_single.wasm', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 250))
+    await route.continue()
+  })
+
+  await page.goto('/cad/')
+
+  const progress = page.getByRole('progressbar', {
+    name: '載入 CAD engine',
+  })
+  await expect(progress).toBeVisible()
+  await expect(progress).toHaveAttribute('aria-valuenow', '1')
+  await expect(page.getByTestId('cad-progress')).toContainText(
+    '載入 CAD engine',
+  )
+})
+
 test('CAD route keeps a readable static fallback when JavaScript is unavailable', async ({
   browser,
 }) => {
@@ -225,6 +247,42 @@ test('CAD workspace switches to the modular grid component and exports a 2x2 bas
   await page.getByRole('link', { name: '返回首頁選擇其他模型' }).click()
   await expect(page).toHaveURL('/')
   await expect(page.getByRole('link', { name: '使用方塊' })).toBeVisible()
+})
+
+test('modular grid reports cell progress for a larger generation', async ({
+  page,
+  browserName,
+}) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.goto('/cad/')
+  await expect(page.getByRole('status')).toContainText(
+    '模型已就緒，可以下載 STEP。',
+    { timeout: 30_000 },
+  )
+
+  await page
+    .getByRole('combobox', { name: 'CAD component' })
+    .selectOption('modular-grid-base')
+  await expect(page.getByRole('status')).toContainText(
+    '模型已就緒，可以下載 STEP。',
+    { timeout: 30_000 },
+  )
+
+  const rows = page.getByRole('slider', { name: '行數（Y）' })
+  const columns = page.getByRole('slider', { name: '列數（X）' })
+  for (let value = 1; value < 10; value += 1) {
+    await rows.press('ArrowRight')
+    await columns.press('ArrowRight')
+  }
+
+  const progress = page.getByRole('progressbar', { name: '建立 B-Rep' })
+  await expect(progress).toBeVisible({ timeout: 30_000 })
+  await expect(progress).toHaveAttribute('aria-valuemax', '100')
+  await expect(progress).toHaveAttribute('aria-valuetext', /格/)
+  await expect(page.getByRole('status')).toContainText(
+    '模型已就緒，可以下載 STEP。',
+    { timeout: 60_000 },
+  )
 })
 
 test('parameter updates use the latest valid generation and preserve stale preview on invalid input', async ({

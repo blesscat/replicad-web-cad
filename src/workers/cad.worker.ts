@@ -13,6 +13,7 @@ import {
   errorEvent,
   isWorkerCommand,
   PROTOCOL_VERSION,
+  type ProgressUnit,
   type WorkerCommand,
   type WorkerEvent,
 } from '../cad-contract/messages'
@@ -54,6 +55,10 @@ function makeError(
   recoverable = true,
 ): CadError {
   return { stage, code, userMessage, recoverable }
+}
+
+function yieldToWorkerEventLoop(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0))
 }
 
 export class CadWorkerRuntime {
@@ -191,7 +196,14 @@ export class CadWorkerRuntime {
     command: Extract<WorkerCommand, { kind: 'model.generate' }>,
   ): Promise<void> {
     if (!this.initialized) throw new Error('ENGINE_NOT_READY')
-    if (command.generation <= this.latestInputGeneration) {
+    const isRegenerationAfterInvalidation =
+      command.generation === this.latestInputGeneration &&
+      this.invalidatedGeneration === command.generation
+    if (
+      command.generation < this.latestInputGeneration ||
+      (command.generation === this.latestInputGeneration &&
+        !isRegenerationAfterInvalidation)
+    ) {
       this.superseded(command, 'STALE_GENERATION')
       return
     }
@@ -203,7 +215,14 @@ export class CadWorkerRuntime {
     try {
       shape = await buildModelBRep(command.modelId, command.parameters, {
         getModularGridBaseTemplate: () => this.getModularGridBaseTemplate(),
+        yieldToEventLoop: yieldToWorkerEventLoop,
         isGenerationCurrent: () => this.isGenerationCurrent(command.generation),
+        reportProgress: (progress) =>
+          this.emitProgress(command, progress.stage, undefined, {
+            completed: progress.completed,
+            total: progress.total,
+            unit: progress.unit,
+          }),
       })
     } catch (error) {
       if (error instanceof Error && error.message === 'STALE_GENERATION') {
@@ -455,6 +474,11 @@ export class CadWorkerRuntime {
     command: { operationId: string; requestId: string; generation?: number },
     stage: 'loading' | 'building' | 'meshing' | 'exporting',
     modelRevision?: string,
+    counters?: {
+      completed?: number
+      total?: number
+      unit?: ProgressUnit
+    },
   ): void {
     this.emit({
       version: PROTOCOL_VERSION,
@@ -464,6 +488,7 @@ export class CadWorkerRuntime {
       stage,
       generation: command.generation,
       modelRevision,
+      ...counters,
     })
   }
 
@@ -584,6 +609,25 @@ export class CadWorkerRuntime {
   }
 }
 
+export function createCadWorkerMessageHandler(
+  runtime: Pick<CadWorkerRuntime, 'handle'>,
+): (value: unknown) => Promise<void> {
+  let queue = Promise.resolve()
+
+  return (value: unknown) => {
+    // Invalidation is deliberately handled outside the long-running command
+    // queue so an in-flight kernel build can observe the newer generation at
+    // its next safe boundary. The atomic OpenCascade call itself remains
+    // synchronous and cannot be interrupted.
+    if (isWorkerCommand(value) && value.kind === 'model.invalidate') {
+      return runtime.handle(value)
+    }
+
+    queue = queue.then(() => runtime.handle(value)).catch(() => undefined)
+    return queue
+  }
+}
+
 if (typeof self !== 'undefined') {
   const workerGlobal = globalThis as unknown as {
     postMessage: (event: WorkerEvent, transfer?: Transferable[]) => void
@@ -593,8 +637,8 @@ if (typeof self !== 'undefined') {
     workerGlobal.postMessage(event, transfer ?? [])
   })
 
-  let queue = Promise.resolve()
+  const handleMessage = createCadWorkerMessageHandler(runtime)
   self.addEventListener('message', (event: MessageEvent<unknown>) => {
-    queue = queue.then(() => runtime.handle(event.data)).catch(() => undefined)
+    void handleMessage(event.data)
   })
 }

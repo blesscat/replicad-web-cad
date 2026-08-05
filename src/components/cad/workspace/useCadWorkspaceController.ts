@@ -6,6 +6,10 @@ import {
   type CadState,
 } from '../../../features/cad/state'
 import { getModelDefinition } from '../../../features/cad/model-catalog'
+import {
+  progressMessage,
+  type CadProgress,
+} from '../../../features/cad/progress'
 import { useCadWorkerRuntime } from './useCadWorkerRuntime'
 import { rawFromParameters, statusMessage } from './validation'
 import type { RawParameters } from './types'
@@ -15,6 +19,7 @@ export type CadWorkspaceController = {
   modelId: ModelId
   rawParameters: RawParameters
   fieldErrors: Partial<Record<ModelParameterKey, string>>
+  progress: CadProgress | null
   status: string
   canExport: boolean
   onInputChange: (key: ModelParameterKey, value: string) => void
@@ -37,7 +42,7 @@ export function useCadWorkspaceController(
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<ModelParameterKey, string>>
   >({})
-  const [progress, setProgress] = useState('')
+  const [progress, setProgress] = useState<CadProgress | null>(null)
   const { handleInputChange, handleExport, handleRetry } = useCadWorkerRuntime({
     state,
     rawParameters,
@@ -46,7 +51,10 @@ export function useCadWorkspaceController(
     setFieldErrors,
     setProgress,
   })
-  const status = statusMessage(state, progress)
+  const status = statusMessage(
+    state,
+    progress ? progressMessage(progress.stage) : '',
+  )
   const canExport =
     state.status === 'ready' && state.exportStatus === 'idle' && !state.stale
 
@@ -55,6 +63,7 @@ export function useCadWorkspaceController(
     modelId: state.modelId,
     rawParameters,
     fieldErrors,
+    progress,
     status,
     canExport,
     onInputChange: handleInputChange,

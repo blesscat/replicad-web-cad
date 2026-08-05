@@ -106,4 +106,33 @@ describe('Worker contract runtime validation', () => {
       isWorkerEvent({ ...event, mesh: { ...event.mesh, triangleCount: 0 } }),
     ).toBe(false)
   })
+
+  it('accepts valid progress counters and rejects incomplete or invalid counters', () => {
+    const progress = {
+      version: PROTOCOL_VERSION,
+      kind: 'operation.progress' as const,
+      requestId: 'progress-response-1',
+      operationId: 'operation-1',
+      stage: 'building' as const,
+      generation: 2,
+      completed: 4,
+      total: 10,
+      unit: 'cells' as const,
+    }
+
+    expect(isWorkerEvent(progress)).toBe(true)
+    expect(isWorkerEvent({ ...progress, completed: 11 })).toBe(false)
+    expect(isWorkerEvent({ ...progress, completed: -1 })).toBe(false)
+    expect(isWorkerEvent({ ...progress, total: 0 })).toBe(false)
+    expect(isWorkerEvent({ ...progress, unit: undefined })).toBe(false)
+    expect(isWorkerEvent({ ...progress, total: undefined })).toBe(false)
+    expect(
+      isWorkerEvent({
+        ...progress,
+        completed: undefined,
+        total: undefined,
+        unit: undefined,
+      }),
+    ).toBe(true)
+  })
 })

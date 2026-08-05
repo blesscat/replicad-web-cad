@@ -4,7 +4,6 @@ import {
   type WorkerEvent,
 } from '../../../../cad-contract/messages'
 import { PROTOTYPE_CONFIGURATION } from '../../../../cad-contract/units'
-import { progressMessage } from '../../../../features/cad/progress'
 import { errorForInput, parseRawParameters } from '../validation'
 import { validateMeshSnapshot } from '../../../../features/cad/worker-client'
 import type { ExportHandlers } from './export'
@@ -13,6 +12,29 @@ import type { ModelGenerationHandlers, RuntimeContext } from './types'
 type WorkerEventContext = RuntimeContext & {
   generation: ModelGenerationHandlers
   exportHandlers: ExportHandlers
+}
+
+function isCurrentModelOperation(
+  context: RuntimeContext,
+  operation: { kind: string; generation?: number } | undefined,
+  eventGeneration?: number,
+): boolean {
+  return (
+    operation?.kind === 'model' &&
+    operation.generation === context.refs.latestGeneration.current &&
+    (eventGeneration === undefined || eventGeneration === operation.generation)
+  )
+}
+
+function isCurrentExportOperation(
+  context: RuntimeContext,
+  operationId: string,
+  operation: { kind: string } | undefined,
+): boolean {
+  return (
+    operation?.kind === 'export' &&
+    context.refs.exportRequest.current?.operationId === operationId
+  )
 }
 
 export function createWorkerEventHandler(
@@ -74,17 +96,32 @@ export function createWorkerEventHandler(
         }
         return
       }
-      case 'operation.progress':
-        if (
+      case 'operation.progress': {
+        const operation = context.refs.operations.current.get(event.operationId)
+        if (!operation) return
+        const isModelProgress =
           event.generation !== undefined &&
-          event.generation !== context.refs.latestGeneration.current
+          isCurrentModelOperation(context, operation, event.generation)
+        const isExportProgress =
+          event.generation === undefined &&
+          isCurrentExportOperation(context, event.operationId, operation)
+        const isInitProgress =
+          operation.kind === 'init' && event.stage === 'loading'
+        if (!isModelProgress && !isExportProgress && !isInitProgress) return
+        if (
+          context.refs.activeProgressOperationId.current !== null &&
+          context.refs.activeProgressOperationId.current !== event.operationId
         )
           return
-        context.setProgress(progressMessage(event.stage))
+        context.setOperationProgress(event.operationId, {
+          stage: event.stage,
+          completed: event.completed,
+          total: event.total,
+          unit: event.unit,
+        })
         return
+      }
       case 'model.candidate-ready': {
-        if (event.generation === context.refs.latestGeneration.current)
-          context.setProgress('')
         const operation = context.refs.operations.current.get(event.operationId)
         const client = context.refs.client.current
         const workerEpoch = context.refs.workerEpoch.current
@@ -92,10 +129,13 @@ export function createWorkerEventHandler(
           return
 
         const validMesh = validateMeshSnapshot(event.mesh)
+        const currentOperation = isCurrentModelOperation(
+          context,
+          operation,
+          event.generation,
+        )
         const commitOrDiscard =
-          event.generation === context.refs.latestGeneration.current &&
-          event.workerEpoch === workerEpoch &&
-          validMesh
+          currentOperation && event.workerEpoch === workerEpoch && validMesh
         client.send({
           kind: commitOrDiscard ? 'model.commit' : 'model.discard',
           operationId: event.operationId,
@@ -103,6 +143,11 @@ export function createWorkerEventHandler(
           candidateId: event.candidateId,
           workerEpoch: event.workerEpoch,
         })
+        if (!currentOperation) {
+          context.clearTimer(event.operationId)
+          context.refs.operations.current.delete(event.operationId)
+          return
+        }
         context.setOperationTimeout(
           event.operationId,
           PROTOTYPE_CONFIGURATION.operationTimeoutMs,
@@ -121,6 +166,7 @@ export function createWorkerEventHandler(
           },
         )
         if (!validMesh) {
+          context.clearOperationProgress(event.operationId)
           context.dispatch({
             type: 'recoverable-error',
             error: normalizeError(new Error('mesh validation failed'), {
@@ -137,18 +183,18 @@ export function createWorkerEventHandler(
       }
       case 'model.ready': {
         context.clearTimer(event.operationId)
-        context.setProgress('')
         const operation = context.refs.operations.current.get(event.operationId)
         if (!operation || operation.kind !== 'model' || !operation.parameters)
           return
         if (
-          event.generation !== context.refs.latestGeneration.current ||
+          !isCurrentModelOperation(context, operation, event.generation) ||
           event.workerEpoch !== context.refs.workerEpoch.current
         ) {
           context.refs.operations.current.delete(event.operationId)
           return
         }
         if (!validateMeshSnapshot(event.mesh)) {
+          context.clearOperationProgress(event.operationId)
           context.refs.operations.current.delete(event.operationId)
           context.recoverWorker(
             normalizeError(new Error('model.ready mesh validation failed'), {
@@ -162,6 +208,7 @@ export function createWorkerEventHandler(
           )
           return
         }
+        context.clearOperationProgress(event.operationId)
         context.refs.operations.current.delete(event.operationId)
         if (event.operationId === 'initial-model')
           context.refs.autoRecoveryAttempts.current = 0
@@ -179,9 +226,11 @@ export function createWorkerEventHandler(
         return
       }
       case 'model.invalidated':
+        if (event.generation === context.refs.latestGeneration.current) {
+          context.clearProgress()
+        }
         return
       case 'export.accepted':
-        context.setProgress('')
         return
       case 'export.ready':
         context.exportHandlers.handleExportReady(event)
@@ -189,10 +238,8 @@ export function createWorkerEventHandler(
       case 'operation.superseded': {
         context.clearTimer(event.operationId)
         const operation = context.refs.operations.current.get(event.operationId)
-        if (
-          operation?.kind === 'model' &&
-          operation.generation === context.refs.latestGeneration.current
-        ) {
+        if (isCurrentModelOperation(context, operation, event.generation)) {
+          context.clearOperationProgress(event.operationId)
           context.dispatch({
             type: 'recoverable-error',
             error: normalizeError(new Error(event.reason), {
@@ -200,10 +247,14 @@ export function createWorkerEventHandler(
               code: 'STALE_GENERATION',
               userMessage: '這次建模已被較新的輸入取代。',
               recoverable: true,
-              generation: operation.generation,
+              generation: event.generation,
               operationId: event.operationId,
             }),
           })
+        } else if (
+          isCurrentExportOperation(context, event.operationId, operation)
+        ) {
+          context.clearOperationProgress(event.operationId)
         }
         context.refs.operations.current.delete(event.operationId)
         return
@@ -213,12 +264,26 @@ export function createWorkerEventHandler(
         const operation = context.refs.operations.current.get(event.operationId)
         if (
           operation?.kind === 'model' &&
-          event.generation !== undefined &&
-          event.generation !== context.refs.latestGeneration.current
+          !isCurrentModelOperation(context, operation, event.generation)
         ) {
           context.refs.operations.current.delete(event.operationId)
           return
         }
+        const currentExport = isCurrentExportOperation(
+          context,
+          event.operationId,
+          operation,
+        )
+        if (operation?.kind === 'export' && !currentExport) {
+          context.refs.operations.current.delete(event.operationId)
+          return
+        }
+        if (
+          operation?.kind === 'init' ||
+          operation?.kind === 'model' ||
+          currentExport
+        )
+          context.clearOperationProgress(event.operationId)
         context.refs.operations.current.delete(event.operationId)
         if (
           context.refs.exportRequest.current?.operationId === event.operationId

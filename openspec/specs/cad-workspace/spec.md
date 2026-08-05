@@ -42,7 +42,7 @@ Prototype 只包含：
 | B-Rep/mesh bounds tolerance | ±0.01 mm |
 | CAD dependency policy | 實作開始時使用 npm latest stable 的 replicad 與相容的 replicad-opencascadejs；安裝後以 lockfile 固定解析版本 |
 | engine initialization timeout | 60 s |
-| model/export operation timeout | 30 s |
+| model/export operation timeout | 120 s |
 | Worker 自動 recovery retry | 1 次；初次失敗後自動重建一次，再次失敗停止自動循環 |
 | 同時保留的 pending candidate 上限 | 2 |
 | candidate TTL | 30 s |

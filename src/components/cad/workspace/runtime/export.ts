@@ -43,6 +43,7 @@ export function createExportHandlers(context: RuntimeContext): ExportHandlers {
           operationId: request.operationId,
         }),
       })
+      context.clearOperationProgress(request.operationId)
       context.clearTimer(request.operationId)
       context.refs.operations.current.delete(request.operationId)
       context.refs.exportRequest.current = null
@@ -54,6 +55,7 @@ export function createExportHandlers(context: RuntimeContext): ExportHandlers {
     const revoke = triggerStepDownload(event)
     setTimeout(revoke, 1_000)
     context.clearTimer(request.operationId)
+    context.clearOperationProgress(request.operationId)
     context.refs.operations.current.delete(request.operationId)
     context.refs.exportRequest.current = null
     context.dispatch({ type: 'export-end' })
@@ -98,12 +100,13 @@ export function createExportHandlers(context: RuntimeContext): ExportHandlers {
       requestId,
     })
     context.dispatch({ type: 'export-start' })
-    context.setProgress('正在匯出 STEP…')
+    context.setOperationProgress(operationId, { stage: 'exporting' })
     context.setOperationTimeout(
       operationId,
       PROTOTYPE_CONFIGURATION.operationTimeoutMs,
       () => {
         context.refs.exportRequest.current = null
+        context.clearOperationProgress(operationId)
         context.dispatch({ type: 'export-end' })
         context.recoverWorker(
           normalizeError(new Error('STEP export timeout'), {

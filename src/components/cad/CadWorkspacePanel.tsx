@@ -1,8 +1,10 @@
 import { getModelDefinition } from '../../features/cad/model-catalog'
 import type { CadState } from '../../features/cad/state'
 import type { ModelId, ModelParameterKey } from '../../cad-contract/units'
+import type { CadProgress } from '../../features/cad/progress'
 import type { RawParameters } from './workspace/types'
 import { ComponentParameterPanel } from './component-panels'
+import { CadProgressIndicator } from './CadProgressIndicator'
 
 const ACTION_BUTTON_CLASS =
   'cursor-pointer rounded-lg border-0 bg-primary px-[0.8rem] py-[0.6rem] text-base text-white disabled:cursor-not-allowed disabled:bg-disabled'
@@ -12,6 +14,7 @@ type CadWorkspacePanelProps = {
   modelId: ModelId
   rawParameters: RawParameters
   fieldErrors: Partial<Record<ModelParameterKey, string>>
+  progress: CadProgress | null
   status: string
   canExport: boolean
   onInputChange: (key: ModelParameterKey, value: string) => void
@@ -24,6 +27,7 @@ export function CadWorkspacePanel({
   modelId,
   rawParameters,
   fieldErrors,
+  progress,
   status,
   canExport,
   onInputChange,
@@ -53,6 +57,7 @@ export function CadWorkspacePanel({
         fieldErrors={fieldErrors}
         onInputChange={onInputChange}
       />
+      {progress && <CadProgressIndicator progress={progress} />}
       <div className="flex flex-wrap gap-[0.6rem]">
         <button
           className={ACTION_BUTTON_CLASS}

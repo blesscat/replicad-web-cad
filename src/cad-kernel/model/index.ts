@@ -1,4 +1,5 @@
 import type { Shape3D } from 'replicad'
+import type { ProgressUnit } from '../../cad-contract/messages'
 import {
   isBoxParameters,
   isModularGridBaseParameters,
@@ -11,8 +12,18 @@ import { buildModularGridBase } from '../components/modular-grid-base/builder'
 
 export type KernelBuildContext = {
   getModularGridBaseTemplate: () => Promise<Shape3D>
+  yieldToEventLoop?: () => Promise<void>
   isGenerationCurrent?: () => boolean
+  reportProgress?: (progress: {
+    stage: 'building'
+    completed?: number
+    total?: number
+    unit?: ProgressUnit
+  }) => void
+  reportPhase?: (phase: KernelBuildPhase, durationMs: number) => void
 }
+
+export type KernelBuildPhase = 'clone-translate' | 'assembly-fuse' | 'fillet'
 
 export type KernelModelDefinition = {
   id: ModelId
@@ -43,7 +54,7 @@ async function buildModularGridBaseModel(
   if (context.isGenerationCurrent && !context.isGenerationCurrent()) {
     throw new Error('STALE_GENERATION')
   }
-  return buildModularGridBase(parameters, template)
+  return buildModularGridBase(parameters, template, context)
 }
 
 export const boxKernelDefinition: KernelModelDefinition = {

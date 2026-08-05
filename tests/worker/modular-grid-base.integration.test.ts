@@ -4,12 +4,14 @@ import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beforeAll, describe, expect, it } from 'vitest'
 import {
+  getOC,
   measureVolume,
   setOC,
   type Edge,
   type Shape3D,
   type Wire,
 } from 'replicad'
+import { exportStepBytes } from '../../src/cad-kernel/export'
 import {
   buildModularGridBase,
   importModularGridBaseTemplate,
@@ -114,20 +116,91 @@ function hasExternalVerticalCornerEdge(
   )
 }
 
+function hasInternalSharpVerticalEdge(
+  edge: Edge,
+  width: number,
+  depth: number,
+  height: number,
+): boolean {
+  if (edge.geomType !== 'LINE') return false
+  const [start, end] = readEdgePoints(edge)
+  return (
+    isClose(start[0], end[0]) &&
+    isClose(start[1], end[1]) &&
+    isClose(Math.abs(start[2] - end[2]), height) &&
+    Math.abs(start[0]) < width / 2 - 2.5 &&
+    Math.abs(start[1]) < depth / 2 - 2.5
+  )
+}
+
 function topPlanarFaces(shape: Shape3D) {
   return shape.faces.filter((face) => {
-    if (face.geomType !== 'PLANE') return false
+    if (face.geomType !== 'PLANE') {
+      deleteShape(face)
+      return false
+    }
     const center = face.center
     try {
-      return isClose(center.z, 5)
+      const isTopFace = isClose(center.z, 5)
+      if (!isTopFace) deleteShape(face)
+      return isTopFace
     } finally {
       center.delete()
     }
   })
 }
 
-function deleteShape(shape: Shape3D | null): void {
-  shape?.delete()
+function deleteShape(shape: { delete?: () => void } | null | undefined): void {
+  try {
+    shape?.delete?.()
+  } catch {
+    // Cleanup must not replace the primary assertion or geometry error.
+  }
+}
+
+function deleteShapes(
+  shapes: readonly ({ delete?: () => void } | null | undefined)[],
+): void {
+  for (const shape of shapes) deleteShape(shape)
+}
+
+function countTopHoles(shape: Shape3D): number {
+  const topFaces = topPlanarFaces(shape)
+  try {
+    return topFaces.reduce((count, face) => {
+      const wires = face.innerWires()
+      try {
+        return count + wires.length
+      } finally {
+        deleteShapes(wires)
+      }
+    }, 0)
+  } finally {
+    deleteShapes(topFaces)
+  }
+}
+
+function runGeometryStage<T>(label: string, callback: () => T): T {
+  try {
+    return callback()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    throw new Error(`GRID_GEOMETRY_STAGE:${label}:${message}`)
+  }
+}
+
+type BRepCheckAnalyzer = {
+  IsValid_2: () => boolean
+  delete: () => void
+}
+
+function createBRepCheckAnalyzer(shape: Shape3D): BRepCheckAnalyzer {
+  const Analyzer = getOC().BRepCheck_Analyzer as unknown as new (
+    shape: Shape3D['wrapped'],
+    geomControls: boolean,
+    isParallel: boolean,
+  ) => BRepCheckAnalyzer
+  return new Analyzer(shape.wrapped, true, false)
 }
 
 async function loadTemplate(): Promise<Shape3D> {
@@ -141,7 +214,7 @@ async function buildGrid(parameters: ModularGridBaseParameters): Promise<{
 }> {
   const template = await loadTemplate()
   try {
-    return { shape: buildModularGridBase(parameters, template), template }
+    return { shape: await buildModularGridBase(parameters, template), template }
   } catch (error) {
     template.delete()
     throw error
@@ -156,6 +229,112 @@ beforeAll(async () => {
 })
 
 describe('modular-grid-base CAD kernel integration', () => {
+  it('observes stale generation after yielding between native boundaries', async () => {
+    const template = await loadTemplate()
+    let current = true
+
+    try {
+      await expect(
+        buildModularGridBase({ rows: 2, columns: 2 }, template, {
+          isGenerationCurrent: () => current,
+          yieldToEventLoop: async () => {
+            current = false
+            await new Promise<void>((resolve) => setTimeout(resolve, 0))
+          },
+        }),
+      ).rejects.toThrow('STALE_GENERATION')
+    } finally {
+      template.delete()
+    }
+  })
+
+  it.each([
+    { rows: 1, columns: 1 },
+    { rows: 2, columns: 2 },
+    { rows: 5, columns: 5 },
+    { rows: 10, columns: 10 },
+    { rows: 20, columns: 20 },
+    { rows: 25, columns: 25 },
+  ])(
+    'preserves the geometry contract for $rows x $columns grids',
+    async (parameters) => {
+      const { shape, template } = await buildGrid(parameters)
+
+      try {
+        const [[minX, minY, minZ], [maxX, maxY, maxZ]] = runGeometryStage(
+          'bounds',
+          () => shapeBounds(shape),
+        )
+        const expected = boundsForModularGridBase(parameters)
+        closeTo(minX, expected.min[0])
+        closeTo(minY, expected.min[1])
+        closeTo(minZ, expected.min[2])
+        closeTo(maxX, expected.max[0])
+        closeTo(maxY, expected.max[1])
+        closeTo(maxZ, expected.max[2])
+        expect(shape.constructor.name).toBe('Solid')
+        runGeometryStage('validity', () => {
+          const analyzer = createBRepCheckAnalyzer(shape)
+          try {
+            expect(analyzer.IsValid_2()).toBe(true)
+          } finally {
+            analyzer.delete()
+          }
+        })
+        expect(
+          runGeometryStage('volume', () => measureVolume(shape)),
+        ).toBeGreaterThan(0)
+        expect(runGeometryStage('holes', () => countTopHoles(shape))).toBe(
+          parameters.rows * parameters.columns,
+        )
+
+        const edges = runGeometryStage('edges', () => shape.edges)
+        try {
+          const outerCornerArcs = runGeometryStage('external-fillets', () => ({
+            bottom: edges.filter((edge) =>
+              isOuterCornerArc(
+                edge,
+                expected.max[0] - expected.min[0],
+                expected.max[1] - expected.min[1],
+                0,
+                2.5,
+              ),
+            ),
+            top: edges.filter((edge) =>
+              isOuterCornerArc(
+                edge,
+                expected.max[0] - expected.min[0],
+                expected.max[1] - expected.min[1],
+                5,
+                2.5,
+              ),
+            ),
+          }))
+          expect(outerCornerArcs.bottom).toHaveLength(4)
+          expect(outerCornerArcs.top).toHaveLength(4)
+        } finally {
+          deleteShapes(edges)
+        }
+
+        const mesh = runGeometryStage('mesh', () =>
+          meshBRep(shape, {
+            tolerance: TOLERANCE,
+            angularTolerance: 0.1,
+          }),
+        )
+        expect(mesh.triangleCount).toBeGreaterThan(0)
+        expect(
+          (await runGeometryStage('step', () => exportStepBytes(shape)))
+            .byteLength,
+        ).toBeGreaterThan(0)
+      } finally {
+        deleteShape(shape)
+        deleteShape(template)
+      }
+    },
+    180_000,
+  )
+
   it('builds a centered 1x1 plate with a 17 mm through-cut and 5 mm height', async () => {
     const parameters = { rows: 1, columns: 1 }
     const { shape, template } = await buildGrid(parameters)
@@ -175,33 +354,49 @@ describe('modular-grid-base CAD kernel integration', () => {
         angularTolerance: 0.1,
       })
       expect(mesh.triangleCount).toBeGreaterThan(0)
-      expect(shape.faces.length).toBeGreaterThan(0)
+      const faces = shape.faces
+      try {
+        expect(faces.length).toBeGreaterThan(0)
+      } finally {
+        deleteShapes(faces)
+      }
       expect(shape.constructor.name).toBe('Solid')
       expect(measureVolume(shape)).toBeGreaterThan(0)
       const topFaces = topPlanarFaces(shape)
       const innerWires = topFaces.flatMap((face) => face.innerWires())
-      expect(innerWires).toHaveLength(1)
-      const [[holeMinX, holeMinY], [holeMaxX, holeMaxY]] = wireBounds(
-        innerWires[0],
-      )
-      closeToStepGeometry(holeMaxX - holeMinX, 17)
-      closeToStepGeometry(holeMaxY - holeMinY, 17)
-      closeToStepGeometry(holeMinX - minX, 1.5)
-      closeToStepGeometry(holeMaxX - maxX, -1.5)
-      closeToStepGeometry(holeMinY - minY, 1.5)
-      closeToStepGeometry(holeMaxY - maxY, -1.5)
+      try {
+        expect(innerWires).toHaveLength(1)
+        const [[holeMinX, holeMinY], [holeMaxX, holeMaxY]] = wireBounds(
+          innerWires[0],
+        )
+        closeToStepGeometry(holeMaxX - holeMinX, 17)
+        closeToStepGeometry(holeMaxY - holeMinY, 17)
+        closeToStepGeometry(holeMinX - minX, 1.5)
+        closeToStepGeometry(holeMaxX - maxX, -1.5)
+        closeToStepGeometry(holeMinY - minY, 1.5)
+        closeToStepGeometry(holeMaxY - maxY, -1.5)
+      } finally {
+        deleteShapes(innerWires)
+        deleteShapes(topFaces)
+      }
 
       const edges = shape.edges
-      const outerCornerArcs = edges.filter((edge) =>
-        isOuterCornerArc(edge, 20, 20, 0, 2.5),
-      )
-      outerCornerArcs.push(
-        ...edges.filter((edge) => isOuterCornerArc(edge, 20, 20, 5, 2.5)),
-      )
-      expect(outerCornerArcs).toHaveLength(8)
-      expect(
-        edges.filter((edge) => hasExternalVerticalCornerEdge(edge, 20, 20, 5)),
-      ).toHaveLength(0)
+      try {
+        const outerCornerArcs = edges.filter((edge) =>
+          isOuterCornerArc(edge, 20, 20, 0, 2.5),
+        )
+        outerCornerArcs.push(
+          ...edges.filter((edge) => isOuterCornerArc(edge, 20, 20, 5, 2.5)),
+        )
+        expect(outerCornerArcs).toHaveLength(8)
+        expect(
+          edges.filter((edge) =>
+            hasExternalVerticalCornerEdge(edge, 20, 20, 5),
+          ),
+        ).toHaveLength(0)
+      } finally {
+        deleteShapes(edges)
+      }
     } finally {
       deleteShape(shape)
       deleteShape(template)
@@ -222,22 +417,24 @@ describe('modular-grid-base CAD kernel integration', () => {
       closeTo((minY + maxY) / 2, 0)
       closeTo(minZ, 0)
       expect(shape.constructor.name).toBe('Solid')
-      const holeCount = topPlanarFaces(shape).reduce(
-        (count, face) => count + face.innerWires().length,
-        0,
-      )
-      expect(holeCount).toBe(4)
+      expect(countTopHoles(shape)).toBe(4)
 
       const edges = shape.edges
-      expect(
-        edges.filter((edge) => isOuterCornerArc(edge, 40, 40, 0, 2.5)),
-      ).toHaveLength(4)
-      expect(
-        edges.filter((edge) => isOuterCornerArc(edge, 40, 40, 5, 2.5)),
-      ).toHaveLength(4)
-      expect(
-        edges.filter((edge) => hasExternalVerticalCornerEdge(edge, 40, 40, 5)),
-      ).toHaveLength(0)
+      try {
+        expect(
+          edges.filter((edge) => isOuterCornerArc(edge, 40, 40, 0, 2.5)),
+        ).toHaveLength(4)
+        expect(
+          edges.filter((edge) => isOuterCornerArc(edge, 40, 40, 5, 2.5)),
+        ).toHaveLength(4)
+        expect(
+          edges.filter((edge) =>
+            hasExternalVerticalCornerEdge(edge, 40, 40, 5),
+          ),
+        ).toHaveLength(0)
+      } finally {
+        deleteShapes(edges)
+      }
     } finally {
       deleteShape(shape)
       deleteShape(template)
@@ -257,22 +454,27 @@ describe('modular-grid-base CAD kernel integration', () => {
       closeTo((minX + maxX) / 2, 0)
       closeTo((minY + maxY) / 2, 0)
       expect(shape.constructor.name).toBe('Solid')
-      const holeCount = topPlanarFaces(shape).reduce(
-        (count, face) => count + face.innerWires().length,
-        0,
-      )
-      expect(holeCount).toBe(2)
+      expect(countTopHoles(shape)).toBe(2)
 
       const edges = shape.edges
-      expect(
-        edges.filter((edge) => isOuterCornerArc(edge, 40, 20, 0, 2.5)),
-      ).toHaveLength(4)
-      expect(
-        edges.filter((edge) => isOuterCornerArc(edge, 40, 20, 5, 2.5)),
-      ).toHaveLength(4)
-      expect(
-        edges.filter((edge) => hasExternalVerticalCornerEdge(edge, 40, 20, 5)),
-      ).toHaveLength(0)
+      try {
+        expect(
+          edges.filter((edge) => isOuterCornerArc(edge, 40, 20, 0, 2.5)),
+        ).toHaveLength(4)
+        expect(
+          edges.filter((edge) => isOuterCornerArc(edge, 40, 20, 5, 2.5)),
+        ).toHaveLength(4)
+        expect(
+          edges.filter((edge) =>
+            hasExternalVerticalCornerEdge(edge, 40, 20, 5),
+          ),
+        ).toHaveLength(0)
+        expect(
+          edges.filter((edge) => hasInternalSharpVerticalEdge(edge, 40, 20, 5)),
+        ).not.toHaveLength(0)
+      } finally {
+        deleteShapes(edges)
+      }
     } finally {
       deleteShape(shape)
       deleteShape(template)
