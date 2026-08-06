@@ -92,18 +92,18 @@ The system MUST expose a runtime-validated component catalog. Each catalog entry
 
 - **Given** 使用者開啟 `/cad/box`，且使用 Prototype 支援的桌面版 Chrome 或 Firefox，WebAssembly、Worker 與 WebGL 可用
 - **When** Worker 回傳 engine.ready
-- **Then** 主執行緒 MUST 以預設參數送出 generation 1、modelId=box 的 model.generate
+- **Then** 主執行緒 MUST 以該 route 的有效保存參數送出 generation 1、modelId=box 的 model.generate；若沒有有效保存參數，MUST 使用 box definition 的預設參數
 - **And** Worker MUST 回傳 candidate-ready，且不得先修改 current model
 - **And** 主執行緒驗證 candidate mesh 後 MUST 送出 model.commit
 - **And** Worker MUST 回傳非空 mesh、bounds、generation 與 model revision
-- **And** Prototype 驗收 fixture MUST 使用 20 × 30 × 40 mm 方塊，且 X/Y 中心位於世界原點、底面位於 Z=0
+- **And** 沒有有效保存參數時，Prototype 驗收 fixture MUST 使用 20 × 30 × 40 mm 方塊，且 X/Y 中心位於世界原點、底面位於 Z=0
 - **And** viewport MUST 顯示方塊，UI 進入 ready
 
 #### Scenario: `/cad/modular-grid-base` 初始網格建模
 
 - **Given** 使用者開啟 `/cad/modular-grid-base`，且 WebAssembly、Worker 與 WebGL 可用
 - **When** Worker 回傳 engine.ready
-- **Then** 主執行緒 MUST 以該 component 的預設 rows 與 columns 送出 generation 1、modelId=modular-grid-base 的 model.generate
+- **Then** 主執行緒 MUST 以該 route 的有效保存 rows 與 columns 送出 generation 1、modelId=modular-grid-base 的 model.generate；若沒有有效保存參數，MUST 使用該 component 的預設 rows 與 columns
 - **And** Worker MUST 以 modular-grid-base component-local builder 建立 candidate
 - **And** commit 後 viewport、bounds 與可匯出的 model revision MUST 屬於 modular-grid-base
 
@@ -459,14 +459,15 @@ replicad、OpenCascade、B-Rep 操作、mesh 產生與 STEP writer 不得在主�
 
 ### Requirement: 明確非目標
 
-The system MUST provide the existing box and the new modular-grid-base through the component catalog. This change MUST provide STEP and STL downloads, but MUST NOT add arbitrary CAD file import, 3MF/G-code workflows, saving, authentication, collaboration, automatic Bambu Studio launching, or native desktop-app integration.
+The system MUST provide the existing box and the new modular-grid-base through the component catalog. This change MUST provide STEP and STL downloads, and MAY preserve validated component parameter preferences in browser-local persistence as defined by the component-parameter-persistence capability, but MUST NOT add arbitrary CAD file import, 3MF/G-code workflows, saving generated CAD files or models, authentication, collaboration, automatic Bambu Studio launching, or native desktop-app integration.
 
 #### Scenario: Prototype 功能清單
 
 - **Given** 使用者查看 Prototype UI 與文件
 - **When** 檢查模型與輸出功能
 - **Then** 必須提供 component catalog、box、modular-grid-base、各自的 mm/數量參數、3D 預覽、STEP 下載與 STL 下載
-- **And** 不得出現 arbitrary import、3MF、G-code、save、auth、collaboration、自動啟動 Bambu Studio 或 native desktop bridge 入口
+- **And** 可以存在 component 參數的 browser-local persistence
+- **And** 不得出現 arbitrary import、3MF、G-code、generated CAD file/model saving、auth、collaboration、自動啟動 Bambu Studio 或 native desktop bridge 入口
 
 ### Requirement: Fine-grained Worker progress
 
@@ -506,8 +507,6 @@ The UI MUST clear the active progress indicator when the associated operation re
 - **THEN** the UI MUST leave the active progress state
 - **AND** it MUST show the existing recoverable/error or stale status without an indefinitely running progress indicator
 
-## ADDED Requirements
-
 ### Requirement: HSW component catalog and route
 
 The runtime-validated component catalog MUST expose an independent `hsw-cell` definition with stable model id, display metadata, rows/columns parameter schema, default parameters `{ rows: 1, columns: 1 }`, bounds metadata, and export filename metadata. The model-specific route `/cad/hsw-cell` MUST bind only to this definition, and the CAD workspace MUST remain route-locked without an in-place model selector.
@@ -516,7 +515,7 @@ The runtime-validated component catalog MUST expose an independent `hsw-cell` de
 
 - **WHEN** a user opens `/cad/hsw-cell` and the CAD runtime is available
 - **THEN** the workspace MUST initialize with `modelId=hsw-cell`
-- **AND** generation 1 MUST use the HSW definition's default rows and columns
+- **AND** generation 1 MUST use valid saved HSW rows and columns when available, otherwise the HSW definition's default rows and columns
 - **AND** the Worker MUST route the request to the HSW component-local builder
 
 #### Scenario: HSW workspace shows only HSW controls

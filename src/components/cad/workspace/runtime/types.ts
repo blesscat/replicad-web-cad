@@ -42,6 +42,10 @@ export type RuntimeContext = {
   refs: RuntimeRefs
   dispatch: (action: CadAction) => void
   setRawParameters: StateSetter<RawParameters>
+  setPersistedParameters: (
+    modelId: ModelId,
+    parameters: ModelParameterValues,
+  ) => void
   setFieldErrors: StateSetter<FieldErrors>
   setProgress: StateSetter<CadProgress | null>
   setOperationProgress: (operationId: string, progress: CadProgress) => void

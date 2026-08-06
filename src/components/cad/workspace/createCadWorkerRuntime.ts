@@ -1,6 +1,7 @@
 import { normalizeError, type CadError } from '../../../cad-contract/errors'
 import {
   PROTOTYPE_CONFIGURATION,
+  type ModelId,
   type ModelParameterKey,
 } from '../../../cad-contract/units'
 import {
@@ -36,6 +37,10 @@ type CadWorkerRuntimeOptions = {
   initialRawParameters: RawParameters
   setState: StateSetter<CadState>
   setRawParameters: StateSetter<RawParameters>
+  setPersistedParameters: (
+    modelId: ModelId,
+    parameters: CadState['input'],
+  ) => void
   setFieldErrors: StateSetter<FieldErrors>
   setProgress: StateSetter<CadProgress | null>
 }
@@ -166,6 +171,7 @@ export function createCadWorkerRuntime(
     refs,
     dispatch,
     setRawParameters,
+    setPersistedParameters: options.setPersistedParameters,
     setFieldErrors,
     setProgress,
     setOperationProgress,

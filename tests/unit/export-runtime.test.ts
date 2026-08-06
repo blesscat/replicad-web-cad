@@ -57,6 +57,7 @@ function createContext(): {
     refs,
     dispatch,
     setRawParameters: vi.fn(),
+    setPersistedParameters: vi.fn(),
     setFieldErrors: vi.fn(),
     setProgress: vi.fn(),
     setOperationProgress: vi.fn(),

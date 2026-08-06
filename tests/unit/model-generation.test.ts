@@ -8,6 +8,7 @@ import type { CadWorkerClient } from '../../src/features/cad/worker-client'
 import { initialCadState } from '../../src/features/cad/state'
 import { rawFromParameters } from '../../src/components/cad/workspace/validation'
 import { createModelGenerationHandlers } from '../../src/components/cad/workspace/runtime/model-generation'
+import { createComponentParameterStore } from '../../src/features/cad/parameters'
 import type {
   RuntimeContext,
   RuntimeRefs,
@@ -56,6 +57,7 @@ function createRuntimeContext(
     refs,
     dispatch: vi.fn(),
     setRawParameters: vi.fn(),
+    setPersistedParameters: vi.fn(),
     setFieldErrors: vi.fn(),
     setProgress: vi.fn(),
     setOperationProgress: vi.fn(),
@@ -110,6 +112,19 @@ describe('CAD model generation debounce', () => {
     )
   })
 
+  it('passes typed valid parameters to persistence before the debounce', () => {
+    const { context } = createRuntimeContext()
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('width', '25')
+
+    expect(context.setPersistedParameters).toHaveBeenCalledWith('box', {
+      width: 25,
+      depth: 30,
+      height: 40,
+    })
+  })
+
   it('invalidates each rapid snapshot but generates only the final legal value', () => {
     const { client, send, context } = createRuntimeContext()
     const handlers = createModelGenerationHandlers(context)
@@ -147,6 +162,36 @@ describe('CAD model generation debounce', () => {
     expect(context.dispatch).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'input-invalid' }),
     )
+    expect(context.setPersistedParameters).not.toHaveBeenCalled()
+  })
+
+  it('keeps generation flow when persistence storage rejects a write', () => {
+    const parameterStore = createComponentParameterStore({
+      storage: {
+        getItem: () => null,
+        setItem: () => {
+          throw new Error('storage write failed')
+        },
+      },
+    })
+    const { context, send } = createRuntimeContext()
+    context.setPersistedParameters = (modelId, parameters) => {
+      parameterStore.set(modelId, parameters)
+    }
+    const handlers = createModelGenerationHandlers(context)
+
+    expect(() => handlers.handleInputChange('width', '25')).not.toThrow()
+    expect(parameterStore.get('box')).toEqual({
+      width: 25,
+      depth: 30,
+      height: 40,
+    })
+
+    vi.advanceTimersByTime(500)
+    expect(
+      send.mock.calls.some(([command]) => command.kind === 'model.generate'),
+    ).toBe(true)
+    parameterStore.dispose()
   })
 
   it('keeps an invalid settled snapshot from releasing a queued generate', () => {

@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+本文件定義目前 CAD component 的 STL 產生、驗證、命名、下載生命週期與 Bambu Studio 一般檔案匯入相容性。
+
+## Requirements
 
 ### Requirement: STL is generated from the committed B-Rep
 
