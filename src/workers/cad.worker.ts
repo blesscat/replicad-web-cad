@@ -6,6 +6,7 @@ import {
   type CandidateRecord,
   type RevisionRecord,
 } from '../cad-kernel/lifetime'
+import { loadHswCellTemplate } from '../cad-kernel/components/hsw-cell/builder'
 import { loadModularGridBaseTemplate } from '../cad-kernel/components/modular-grid-base/builder'
 import { buildModelBRep } from '../cad-kernel/model'
 import { meshBRep, serializeMesh, type MeshData } from '../cad-kernel/mesh'
@@ -25,6 +26,7 @@ import type {
 import {
   modelFileName,
   modelStlFileName,
+  isHswCellParameters,
   PROTOTYPE_CONFIGURATION,
   validateModelParameters,
 } from '../cad-contract/units'
@@ -70,6 +72,7 @@ export class CadWorkerRuntime {
   private disposed = false
   private modularGridBaseTemplate: Promise<import('replicad').Shape3D> | null =
     null
+  private hswCellTemplate: Promise<import('replicad').Shape3D> | null = null
   private readonly lifetime: RevisionLifetime
   private readonly candidateTimers = new Map<
     string,
@@ -151,6 +154,7 @@ export class CadWorkerRuntime {
           this.lifetime.dispose()
           this.disposed = true
           this.disposeModularGridBaseTemplate()
+          this.disposeHswCellTemplate()
           this.initialized = false
           this.initializing = null
           this.invalidatedGeneration = 0
@@ -214,11 +218,20 @@ export class CadWorkerRuntime {
     this.latestInputGeneration = command.generation
     this.invalidatedGeneration = 0
     this.lifetime.pruneCommitsBeforeGeneration(this.latestInputGeneration)
-    this.emitProgress(command, 'building')
+    const hswProgress =
+      command.modelId === 'hsw-cell' && isHswCellParameters(command.parameters)
+        ? {
+            completed: 0,
+            total: command.parameters.rows * command.parameters.columns,
+            unit: 'cells' as const,
+          }
+        : undefined
+    this.emitProgress(command, 'building', undefined, hswProgress)
     let shape: Shape3D
     try {
       shape = await buildModelBRep(command.modelId, command.parameters, {
         getModularGridBaseTemplate: () => this.getModularGridBaseTemplate(),
+        getHswCellTemplate: () => this.getHswCellTemplate(),
         yieldToEventLoop: yieldToWorkerEventLoop,
         isGenerationCurrent: () => this.isGenerationCurrent(command.generation),
         reportProgress: (progress) =>
@@ -636,6 +649,19 @@ export class CadWorkerRuntime {
     return this.modularGridBaseTemplate
   }
 
+  private getHswCellTemplate(): Promise<import('replicad').Shape3D> {
+    if (!this.hswCellTemplate) {
+      this.hswCellTemplate = loadHswCellTemplate().then((template) => {
+        if (this.disposed) {
+          template.delete()
+          throw new Error('WORKER_TERMINATED')
+        }
+        return template
+      })
+    }
+    return this.hswCellTemplate
+  }
+
   private isGenerationCurrent(generation: number): boolean {
     return (
       !this.disposed &&
@@ -647,6 +673,15 @@ export class CadWorkerRuntime {
   private disposeModularGridBaseTemplate(): void {
     const templatePromise = this.modularGridBaseTemplate
     this.modularGridBaseTemplate = null
+    if (!templatePromise) return
+    void templatePromise
+      .then((template) => template.delete())
+      .catch(() => undefined)
+  }
+
+  private disposeHswCellTemplate(): void {
+    const templatePromise = this.hswCellTemplate
+    this.hswCellTemplate = null
     if (!templatePromise) return
     void templatePromise
       .then((template) => template.delete())

@@ -2,16 +2,19 @@ import type { Shape3D } from 'replicad'
 import type { ProgressUnit } from '../../cad-contract/messages'
 import {
   isBoxParameters,
+  isHswCellParameters,
   isModularGridBaseParameters,
   validateModelParameters,
   type ModelId,
   type ModelParameterValues,
 } from '../../cad-contract/units'
 import { buildBoxBRep } from '../components/box/builder'
+import { buildHswCell } from '../components/hsw-cell/builder'
 import { buildModularGridBase } from '../components/modular-grid-base/builder'
 
 export type KernelBuildContext = {
   getModularGridBaseTemplate: () => Promise<Shape3D>
+  getHswCellTemplate: () => Promise<Shape3D>
   yieldToEventLoop?: () => Promise<void>
   isGenerationCurrent?: () => boolean
   reportProgress?: (progress: {
@@ -57,6 +60,20 @@ async function buildModularGridBaseModel(
   return buildModularGridBase(parameters, template, context)
 }
 
+async function buildHswCellModel(
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Promise<Shape3D> {
+  if (!isHswCellParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:hsw-cell')
+  }
+  const template = await context.getHswCellTemplate()
+  if (context.isGenerationCurrent && !context.isGenerationCurrent()) {
+    throw new Error('STALE_GENERATION')
+  }
+  return buildHswCell(parameters, template, context)
+}
+
 export const boxKernelDefinition: KernelModelDefinition = {
   id: 'box',
   build: buildBoxModel,
@@ -67,9 +84,15 @@ export const modularGridBaseKernelDefinition: KernelModelDefinition = {
   build: buildModularGridBaseModel,
 }
 
+export const hswCellKernelDefinition: KernelModelDefinition = {
+  id: 'hsw-cell',
+  build: buildHswCellModel,
+}
+
 export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   boxKernelDefinition,
   modularGridBaseKernelDefinition,
+  hswCellKernelDefinition,
 ]
 
 export function getKernelModelDefinition(

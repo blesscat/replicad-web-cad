@@ -8,3 +8,4 @@ coverage/
 .pnpm-store/
 .worktree/
 openspec/changes/archive/
+.DS_Store

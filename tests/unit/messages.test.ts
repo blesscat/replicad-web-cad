@@ -81,6 +81,33 @@ describe('Worker contract runtime validation', () => {
     ).toBe(false)
   })
 
+  it('accepts HSW commands only with the independent rows/columns contract', () => {
+    const command = {
+      version: PROTOCOL_VERSION,
+      kind: 'model.generate' as const,
+      requestId: 'request-hsw-1',
+      operationId: 'operation-hsw-1',
+      generation: 1,
+      modelId: 'hsw-cell' as const,
+      parameters: { rows: 2, columns: 3 },
+      previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
+    }
+
+    expect(isWorkerCommand(command)).toBe(true)
+    expect(
+      isWorkerCommand({
+        ...command,
+        parameters: { rows: 2, columns: 3, width: 20 },
+      }),
+    ).toBe(false)
+    expect(
+      isWorkerCommand({
+        ...command,
+        parameters: { rows: 2.5, columns: 3 },
+      }),
+    ).toBe(false)
+  })
+
   it('accepts a validated STL export command and response', () => {
     const command = {
       version: PROTOCOL_VERSION,

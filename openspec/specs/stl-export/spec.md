@@ -52,7 +52,7 @@ The Worker MUST request binary STL output with explicit STL tessellation toleran
 
 ### Requirement: STL filenames are defined by the model catalog
 
-Every supported model definition MUST provide a deterministic STL filename. The box filename MUST be `box-{width}x{depth}x{height}.stl`, and the modular-grid-base filename MUST be `modular-grid-base-{columns}x{rows}.stl`.
+Every supported model definition MUST provide a deterministic STL filename. The box filename MUST be `box-{width}x{depth}x{height}.stl`, the modular-grid-base filename MUST be `modular-grid-base-{columns}x{rows}.stl`, and the HSW filename MUST be `hsw-cell-{columns}x{rows}.stl`.
 
 #### Scenario: Box STL filename
 
@@ -63,6 +63,11 @@ Every supported model definition MUST provide a deterministic STL filename. The 
 
 - **WHEN** a 2-column × 2-row modular grid is exported
 - **THEN** the suggested filename MUST be `modular-grid-base-2x2.stl`
+
+#### Scenario: HSW STL filename
+
+- **WHEN** a 2-column × 2-row HSW grid is exported
+- **THEN** the suggested filename MUST be `hsw-cell-2x2.stl`
 
 ### Requirement: STL download follows existing model lifecycle gates
 

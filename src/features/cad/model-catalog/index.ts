@@ -1,15 +1,18 @@
 import type { ModelId } from '../../../cad-contract/units'
 import { boxDefinition } from './components/box'
+import { hswCellDefinition } from './components/hsw-cell'
 import { modularGridBaseDefinition } from './components/modular-grid-base'
 import type { ModelDefinition } from './types'
 
 export type { ModelDefinition, ParameterField } from './types'
 export { boxDefinition } from './components/box'
+export { hswCellDefinition } from './components/hsw-cell'
 export { modularGridBaseDefinition } from './components/modular-grid-base'
 
 export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   boxDefinition,
   modularGridBaseDefinition,
+  hswCellDefinition,
 ]
 
 export function getModelDefinition(
