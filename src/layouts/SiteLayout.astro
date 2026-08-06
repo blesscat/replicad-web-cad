@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css'
+import { portalySupportUrl } from '../features/support/config'
 
 interface Props {
   title: string
@@ -22,11 +23,11 @@ const isHomePage = currentPath === '/'
   <body>
     <div class="min-h-screen">
       <nav
-        class="flex items-center justify-between gap-4 bg-ink px-[clamp(1rem,4vw,4rem)] py-4 text-white"
+        class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 bg-ink px-[clamp(1rem,4vw,4rem)] py-4 text-white"
         aria-label="主要導覽"
       >
         <a class="no-underline" href="/">replicad-web-cad</a>
-        <div class="flex gap-4">
+        <div class="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
           <a
             class="no-underline"
             href="/docs/"
@@ -37,6 +38,18 @@ const isHomePage = currentPath === '/'
             href="/"
             aria-current={isHomePage ? 'page' : undefined}>選擇模型</a
           >
+          {
+            portalySupportUrl && (
+              <a
+                class="whitespace-nowrap rounded-full border border-white/60 px-3 py-1.5 text-sm font-semibold no-underline transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                href={portalySupportUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                支持這個專案
+              </a>
+            )
+          }
         </div>
       </nav>
       <main class="mx-auto max-w-[1200px] p-[clamp(1.5rem,4vw,4rem)]">
