@@ -18,26 +18,47 @@
     step: field.step,
   })
 
+  let rangeProps = $derived({
+    ...commonProps,
+    min: field.sliderMin ?? field.min,
+    max: field.sliderMax ?? field.max,
+  })
+
   function handleInput(event: Event): void {
     if (!(event.currentTarget instanceof HTMLInputElement)) return
     onChange(event.currentTarget.value)
   }
 </script>
 
-{#if field.control === 'range'}
+{#if field.control === 'range' || field.control === 'range-text'}
   <div class="grid gap-1">
     <input
-      {...commonProps}
+      {...rangeProps}
       aria-label={`${field.label}（${field.axis}）`}
       class="w-full accent-primary"
       type="range"
       {value}
       oninput={handleInput}
     />
-    <span aria-live="polite" class="text-right text-sm text-muted">
-      {value}
-      {field.unit}
-    </span>
+    {#if field.control === 'range'}
+      <span aria-live="polite" class="text-right text-sm text-muted">
+        {value}
+        {field.unit}
+      </span>
+    {:else}
+      <div class="flex items-center gap-2">
+        <input
+          {...commonProps}
+          aria-label={`${field.label}（${field.axis}）`}
+          class="w-full rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
+          inputmode="numeric"
+          type="text"
+          {value}
+          oninput={handleInput}
+        />
+        <span class="shrink-0 text-sm text-muted">{field.unit}</span>
+      </div>
+    {/if}
   </div>
 {:else}
   <input

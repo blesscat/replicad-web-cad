@@ -125,7 +125,7 @@ export type ProgressEvent = Envelope<'operation.progress'> & {
   unit?: ProgressUnit
 }
 
-export type ProgressUnit = 'cells' | 'batches' | 'steps'
+export type ProgressUnit = 'cells' | 'batches' | 'steps' | 'columns'
 
 export type ModelInvalidatedEvent = Envelope<'model.invalidated'> & {
   operationId: string
@@ -245,7 +245,12 @@ function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0
 }
 
-const PROGRESS_UNITS: readonly ProgressUnit[] = ['cells', 'batches', 'steps']
+const PROGRESS_UNITS: readonly ProgressUnit[] = [
+  'cells',
+  'batches',
+  'steps',
+  'columns',
+]
 
 function isProgressCounters(value: Record<string, unknown>): boolean {
   const hasCompleted = value.completed !== undefined

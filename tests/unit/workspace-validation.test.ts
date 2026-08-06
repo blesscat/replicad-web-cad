@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type {
   BoxParameters,
+  HexagonalColumnParameters,
   HswCellParameters,
 } from '../../src/cad-contract/units'
 import {
@@ -61,6 +62,46 @@ describe('CAD workspace validation helpers', () => {
     ).toEqual({
       valid: false,
       message: '包含不支援的參數欄位。',
+    })
+  })
+
+  it('parses the independent hexagonal-column inputs and defaults', () => {
+    const parameters: HexagonalColumnParameters = {
+      height: 8,
+      count: 1,
+      gap: 1,
+      orientation: 'lying',
+    }
+    const raw = rawFromParameters(parameters)
+
+    expect(raw).toEqual({
+      height: '8',
+      count: '1',
+      gap: '1',
+      orientation: 'lying',
+    })
+    expect(parseRawParameters(raw, 'hexagonal-column')).toEqual({
+      valid: true,
+      value: parameters,
+    })
+    expect(
+      parseRawParameters(
+        { height: '8', count: '1', gap: '1' },
+        'hexagonal-column',
+      ),
+    ).toEqual({
+      valid: true,
+      value: parameters,
+    })
+    expect(
+      parseRawParameters(
+        { height: '8.5', count: '1', gap: '1' },
+        'hexagonal-column',
+      ),
+    ).toEqual({
+      valid: false,
+      message: '必須是有限的整數。',
+      field: 'height',
     })
   })
 })

@@ -50,6 +50,7 @@ const PROGRESS_UNIT_LABELS: Record<ProgressUnit, string> = {
   cells: '格',
   batches: '批次',
   steps: '步驟',
+  columns: '支',
 }
 
 export function progressDetails(stage: CadProgressStage): CadProgressDetails {

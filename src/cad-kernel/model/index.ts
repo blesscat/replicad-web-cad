@@ -2,6 +2,7 @@ import type { Shape3D } from 'replicad'
 import type { ProgressUnit } from '../../cad-contract/messages'
 import {
   isBoxParameters,
+  isHexagonalColumnParameters,
   isHswCellParameters,
   isModularGridBaseParameters,
   validateModelParameters,
@@ -10,11 +11,13 @@ import {
 } from '../../cad-contract/units'
 import { buildBoxBRep } from '../components/box/builder'
 import { buildHswCell } from '../components/hsw-cell/builder'
+import { buildHexagonalColumn } from '../components/hexagonal-column/builder'
 import { buildModularGridBase } from '../components/modular-grid-base/builder'
 
 export type KernelBuildContext = {
   getModularGridBaseTemplate: () => Promise<Shape3D>
   getHswCellTemplate: () => Promise<Shape3D>
+  getHexagonalColumnReference?: () => Promise<Shape3D>
   yieldToEventLoop?: () => Promise<void>
   isGenerationCurrent?: () => boolean
   reportProgress?: (progress: {
@@ -26,7 +29,12 @@ export type KernelBuildContext = {
   reportPhase?: (phase: KernelBuildPhase, durationMs: number) => void
 }
 
-export type KernelBuildPhase = 'clone-translate' | 'assembly-fuse' | 'fillet'
+export type KernelBuildPhase =
+  | 'clone-translate'
+  | 'assembly-fuse'
+  | 'fillet'
+  | 'prototype-build'
+  | 'clone-translate-compound'
 
 export type KernelModelDefinition = {
   id: ModelId
@@ -74,6 +82,29 @@ async function buildHswCellModel(
   return buildHswCell(parameters, template, context)
 }
 
+async function buildHexagonalColumnModel(
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Promise<Shape3D> {
+  if (!isHexagonalColumnParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:hexagonal-column')
+  }
+  if (!context.getHexagonalColumnReference) {
+    throw new Error('MODEL_ASSET_INVALID:hexagonal-column-reference-missing')
+  }
+  const reference = await context.getHexagonalColumnReference()
+  if (context.isGenerationCurrent && !context.isGenerationCurrent()) {
+    throw new Error('STALE_GENERATION')
+  }
+  return buildHexagonalColumn(parameters, {
+    reference,
+    yieldToEventLoop: context.yieldToEventLoop,
+    isGenerationCurrent: context.isGenerationCurrent,
+    reportProgress: context.reportProgress,
+    reportPhase: context.reportPhase,
+  })
+}
+
 export const boxKernelDefinition: KernelModelDefinition = {
   id: 'box',
   build: buildBoxModel,
@@ -89,10 +120,16 @@ export const hswCellKernelDefinition: KernelModelDefinition = {
   build: buildHswCellModel,
 }
 
+export const hexagonalColumnKernelDefinition: KernelModelDefinition = {
+  id: 'hexagonal-column',
+  build: buildHexagonalColumnModel,
+}
+
 export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   boxKernelDefinition,
   modularGridBaseKernelDefinition,
   hswCellKernelDefinition,
+  hexagonalColumnKernelDefinition,
 ]
 
 export function getKernelModelDefinition(

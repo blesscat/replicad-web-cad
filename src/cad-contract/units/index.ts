@@ -8,6 +8,28 @@ export const HSW_CELL_CONFIGURATION = {
   staggerY: 11.80000024901162,
 } as const
 
+export type HexagonalColumnOrientation = 'lying' | 'standing'
+
+export const HEXAGONAL_COLUMN_CONFIGURATION = {
+  defaultHeight: 8,
+  minHeight: 1,
+  maxHeight: 999,
+  heightSliderMax: 200,
+  defaultCount: 1,
+  minCount: 1,
+  defaultGap: 1,
+  minGap: 1,
+  maxGap: 99,
+  gapSliderMax: 10,
+  maxCount: 20,
+  defaultOrientation: 'lying' as HexagonalColumnOrientation,
+  endTransitionLength: 0.2,
+  crossSectionRotationDegrees: 30,
+  referenceCrossSectionExtentY: 4.243524,
+  crossSectionExtentX: 4.243524,
+  crossSectionExtentY: 4.7,
+} as const
+
 export const PROTOTYPE_CONFIGURATION = {
   defaultDimensions: { width: 20, depth: 30, height: 40 },
   minDimension: 1,
@@ -40,12 +62,22 @@ export const PROTOTYPE_CONFIGURATION = {
 
 export type DimensionKey = 'width' | 'depth' | 'height'
 export type GridParameterKey = 'rows' | 'columns'
-export type ModelParameterKey = DimensionKey | GridParameterKey
-export type ModelId = 'box' | 'modular-grid-base' | 'hsw-cell'
+export type HexagonalColumnParameterKey =
+  'height' | 'count' | 'gap' | 'orientation'
+export type ModelParameterKey =
+  DimensionKey | GridParameterKey | HexagonalColumnParameterKey
+export type ModelId =
+  'box' | 'modular-grid-base' | 'hsw-cell' | 'hexagonal-column'
 
 export type BoxParameters = Record<DimensionKey, number>
 export type ModularGridBaseParameters = Record<GridParameterKey, number>
 export type HswCellParameters = Record<GridParameterKey, number>
+export type HexagonalColumnParameters = {
+  height: number
+  count: number
+  gap: number
+  orientation: HexagonalColumnOrientation
+}
 
 export type ModelParameters =
   | { modelId: 'box'; parameters: BoxParameters }
@@ -54,6 +86,10 @@ export type ModelParameters =
       parameters: ModularGridBaseParameters
     }
   | { modelId: 'hsw-cell'; parameters: HswCellParameters }
+  | {
+      modelId: 'hexagonal-column'
+      parameters: HexagonalColumnParameters
+    }
 
 export type ModelParameterValues = ModelParameters['parameters']
 
@@ -81,6 +117,10 @@ export type HswCellValidation =
   | { valid: true; value: HswCellParameters }
   | { valid: false; issues: ValidationIssue[] }
 
+export type HexagonalColumnValidation =
+  | { valid: true; value: HexagonalColumnParameters }
+  | { valid: false; issues: ValidationIssue[] }
+
 export type HswCellOffset = [number, number]
 
 export type ModelValidation =
@@ -89,6 +129,17 @@ export type ModelValidation =
 
 const DIMENSIONS: DimensionKey[] = ['width', 'depth', 'height']
 const GRID_PARAMETERS: GridParameterKey[] = ['rows', 'columns']
+const HEXAGONAL_COLUMN_PARAMETERS: HexagonalColumnParameterKey[] = [
+  'height',
+  'count',
+  'gap',
+  'orientation',
+]
+const HEXAGONAL_COLUMN_REQUIRED_PARAMETERS: HexagonalColumnParameterKey[] = [
+  'height',
+  'count',
+  'gap',
+]
 
 function hasExactKeys(
   value: Record<string, unknown>,
@@ -98,6 +149,13 @@ function hasExactKeys(
     Object.keys(value).length === keys.length &&
     keys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
   )
+}
+
+function hasOnlySupportedKeys(
+  value: Record<string, unknown>,
+  keys: readonly string[],
+): boolean {
+  return Object.keys(value).every((key) => keys.includes(key))
 }
 
 export function parseDimensionInput(raw: string): number | null {
@@ -292,6 +350,122 @@ export function validateHswCellParameters(value: unknown): HswCellValidation {
   return { valid: true, value: parameters }
 }
 
+export function validateHexagonalColumnParameters(
+  value: unknown,
+): HexagonalColumnValidation {
+  if (!value || typeof value !== 'object') {
+    return {
+      valid: false,
+      issues: [{ field: 'parameters', message: '需要提供六角柱參數。' }],
+    }
+  }
+
+  const candidate = value as Partial<
+    Record<HexagonalColumnParameterKey, unknown>
+  > &
+    Record<string, unknown>
+  const issues: ValidationIssue[] = []
+
+  if (
+    !hasOnlySupportedKeys(candidate, HEXAGONAL_COLUMN_PARAMETERS) ||
+    !HEXAGONAL_COLUMN_REQUIRED_PARAMETERS.every((key) =>
+      Object.prototype.hasOwnProperty.call(candidate, key),
+    )
+  ) {
+    issues.push({ field: 'parameters', message: '包含不支援的參數欄位。' })
+  }
+
+  const height = candidate.height
+  if (typeof height !== 'number' || !Number.isFinite(height)) {
+    issues.push({ field: 'height', message: '必須是有限的整數。' })
+  } else if (!Number.isSafeInteger(height)) {
+    issues.push({ field: 'height', message: '只接受安全範圍內的整數 mm。' })
+  } else if (
+    height < HEXAGONAL_COLUMN_CONFIGURATION.minHeight ||
+    height > HEXAGONAL_COLUMN_CONFIGURATION.maxHeight
+  ) {
+    issues.push({
+      field: 'height',
+      message: `必須介於 ${HEXAGONAL_COLUMN_CONFIGURATION.minHeight}–${HEXAGONAL_COLUMN_CONFIGURATION.maxHeight} mm。`,
+    })
+  }
+
+  const count = candidate.count
+  if (typeof count !== 'number' || !Number.isFinite(count)) {
+    issues.push({ field: 'count', message: '必須是有限的整數。' })
+  } else if (!Number.isSafeInteger(count)) {
+    issues.push({ field: 'count', message: '只接受安全範圍內的整數格數。' })
+  } else if (
+    count < HEXAGONAL_COLUMN_CONFIGURATION.minCount ||
+    count > HEXAGONAL_COLUMN_CONFIGURATION.maxCount
+  ) {
+    issues.push({
+      field: 'count',
+      message: `支數必須介於 ${HEXAGONAL_COLUMN_CONFIGURATION.minCount}–${HEXAGONAL_COLUMN_CONFIGURATION.maxCount}。`,
+    })
+  }
+
+  const gap = candidate.gap
+  if (typeof gap !== 'number' || !Number.isFinite(gap)) {
+    issues.push({ field: 'gap', message: '必須是有限的整數 mm。' })
+  } else if (!Number.isSafeInteger(gap)) {
+    issues.push({ field: 'gap', message: '只接受安全範圍內的整數 mm。' })
+  } else if (
+    gap < HEXAGONAL_COLUMN_CONFIGURATION.minGap ||
+    gap > HEXAGONAL_COLUMN_CONFIGURATION.maxGap
+  ) {
+    issues.push({
+      field: 'gap',
+      message: `間隙必須介於 ${HEXAGONAL_COLUMN_CONFIGURATION.minGap}–${HEXAGONAL_COLUMN_CONFIGURATION.maxGap} mm。`,
+    })
+  }
+
+  const orientation =
+    candidate.orientation ?? HEXAGONAL_COLUMN_CONFIGURATION.defaultOrientation
+  if (orientation !== 'lying' && orientation !== 'standing') {
+    issues.push({
+      field: 'orientation',
+      message: '擺放方向必須是 lying 或 standing。',
+    })
+  }
+
+  if (issues.length > 0) return { valid: false, issues }
+
+  const parameters: HexagonalColumnParameters = {
+    height: height as number,
+    count: count as number,
+    gap: gap as number,
+    orientation: orientation as HexagonalColumnOrientation,
+  }
+  const bounds = boundsForHexagonalColumn(parameters)
+  const rowExtent = bounds.max[1] - bounds.min[1]
+  let lengthExtent = bounds.max[2] - bounds.min[2]
+  if (parameters.orientation === 'lying') {
+    lengthExtent = bounds.max[0] - bounds.min[0]
+  }
+  const exceedsWorkspace =
+    rowExtent > PROTOTYPE_CONFIGURATION.maxDimension ||
+    lengthExtent > HEXAGONAL_COLUMN_CONFIGURATION.maxHeight
+
+  if (exceedsWorkspace) {
+    if (rowExtent > PROTOTYPE_CONFIGURATION.maxDimension) {
+      issues.push({
+        field: 'gap',
+        message: `排列寬度不得超過 ${PROTOTYPE_CONFIGURATION.maxDimension} mm。`,
+      })
+    }
+    if (lengthExtent > HEXAGONAL_COLUMN_CONFIGURATION.maxHeight) {
+      issues.push({
+        field: 'height',
+        message: `高度不得超過 ${HEXAGONAL_COLUMN_CONFIGURATION.maxHeight} mm。`,
+      })
+    }
+  }
+
+  if (issues.length > 0) return { valid: false, issues }
+  return { valid: true, value: parameters }
+}
+
 export function validateModelParameters(
   modelId: unknown,
   value: unknown,
@@ -313,6 +487,12 @@ export function validateModelParameters(
 
   if (modelId === 'hsw-cell') {
     const validation = validateHswCellParameters(value)
+    if (!validation.valid) return validation
+    return { valid: true, value: { modelId, parameters: validation.value } }
+  }
+
+  if (modelId === 'hexagonal-column') {
+    const validation = validateHexagonalColumnParameters(value)
     if (!validation.valid) return validation
     return { valid: true, value: { modelId, parameters: validation.value } }
   }
@@ -381,6 +561,37 @@ export function boundsForHswCell(parameters: HswCellParameters): ModelBounds {
   }
 }
 
+export function boundsForHexagonalColumn(
+  parameters: HexagonalColumnParameters,
+): ModelBounds {
+  const rowExtent =
+    HEXAGONAL_COLUMN_CONFIGURATION.crossSectionExtentY * parameters.count +
+    parameters.gap * (parameters.count - 1)
+  if (parameters.orientation === 'lying') {
+    return {
+      min: [-parameters.height / 2, -rowExtent / 2, 0],
+      max: [
+        parameters.height / 2,
+        rowExtent / 2,
+        HEXAGONAL_COLUMN_CONFIGURATION.crossSectionExtentX,
+      ],
+    }
+  }
+
+  return {
+    min: [
+      -HEXAGONAL_COLUMN_CONFIGURATION.crossSectionExtentX / 2,
+      -rowExtent / 2,
+      0,
+    ],
+    max: [
+      HEXAGONAL_COLUMN_CONFIGURATION.crossSectionExtentX / 2,
+      rowExtent / 2,
+      parameters.height,
+    ],
+  }
+}
+
 export function boxFileName(parameters: BoxParameters): string {
   return `box-${parameters.width}x${parameters.depth}x${parameters.height}${PROTOTYPE_CONFIGURATION.stepExtension}`
 }
@@ -409,6 +620,18 @@ export function hswCellStlFileName(parameters: HswCellParameters): string {
   return `hsw-cell-${parameters.columns}x${parameters.rows}${PROTOTYPE_CONFIGURATION.stlExtension}`
 }
 
+export function hexagonalColumnFileName(
+  parameters: HexagonalColumnParameters,
+): string {
+  return `hexagonal-column-${parameters.height}x${parameters.count}-g${parameters.gap}-${parameters.orientation}${PROTOTYPE_CONFIGURATION.stepExtension}`
+}
+
+export function hexagonalColumnStlFileName(
+  parameters: HexagonalColumnParameters,
+): string {
+  return `hexagonal-column-${parameters.height}x${parameters.count}-g${parameters.gap}-${parameters.orientation}${PROTOTYPE_CONFIGURATION.stlExtension}`
+}
+
 export function isBoxParameters(value: unknown): value is BoxParameters {
   return validateBoxParameters(value).valid
 }
@@ -425,6 +648,12 @@ export function isHswCellParameters(
   return validateHswCellParameters(value).valid
 }
 
+export function isHexagonalColumnParameters(
+  value: unknown,
+): value is HexagonalColumnParameters {
+  return validateHexagonalColumnParameters(value).valid
+}
+
 export function isModelParameters(value: unknown): value is ModelParameters {
   if (!value || typeof value !== 'object') return false
   const model = value as { modelId?: unknown; parameters?: unknown }
@@ -439,6 +668,8 @@ export function boundsForModel(model: ModelParameters): ModelBounds {
       return boundsForModularGridBase(model.parameters)
     case 'hsw-cell':
       return boundsForHswCell(model.parameters)
+    case 'hexagonal-column':
+      return boundsForHexagonalColumn(model.parameters)
   }
 }
 
@@ -450,6 +681,8 @@ export function modelFileName(model: ModelParameters): string {
       return modularGridBaseFileName(model.parameters)
     case 'hsw-cell':
       return hswCellFileName(model.parameters)
+    case 'hexagonal-column':
+      return hexagonalColumnFileName(model.parameters)
   }
 }
 
@@ -461,5 +694,7 @@ export function modelStlFileName(model: ModelParameters): string {
       return modularGridBaseStlFileName(model.parameters)
     case 'hsw-cell':
       return hswCellStlFileName(model.parameters)
+    case 'hexagonal-column':
+      return hexagonalColumnStlFileName(model.parameters)
   }
 }

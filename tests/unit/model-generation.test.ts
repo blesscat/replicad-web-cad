@@ -19,6 +19,9 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
   if (modelId === 'modular-grid-base' || modelId === 'hsw-cell') {
     return { rows: 1, columns: 1 }
   }
+  if (modelId === 'hexagonal-column') {
+    return { height: 8, count: 1, gap: 1, orientation: 'lying' }
+  }
   throw new Error(`Unknown model: ${modelId}`)
 }
 

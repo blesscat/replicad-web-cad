@@ -6,12 +6,12 @@
 
 ### Requirement: 首頁模型選擇
 
-The system MUST provide a static homepage model chooser driven by the registered model catalog. Every currently available model MUST have an understandable display name, a concise description, a summary of its adjustable parameters, and a link to its model-specific CAD route. The chooser MUST include `box` and `modular-grid-base`.
+The system MUST provide a static homepage model chooser driven by the registered model catalog. Every currently available model MUST have an understandable display name, a concise description, a summary of its adjustable parameters, and a link to its model-specific CAD route. The chooser MUST include `box`, `modular-grid-base`, `hsw-cell`, and `hexagonal-column`.
 
 #### Scenario: 首頁顯示目前模型
 
 - **WHEN** 使用者開啟首頁
-- **THEN** 首頁 MUST 顯示 `box` 與 `modular-grid-base` 的可理解名稱
+- **THEN** 首頁 MUST 顯示 `box`、`modular-grid-base`、`hsw-cell` 與 `hexagonal-column` 的可理解名稱
 - **AND** 每個模型 MUST 顯示與其參數及用途相符的簡短說明
 - **AND** 首頁 MUST NOT 啟動 CAD Worker 或 Svelte CAD workspace
 
@@ -27,9 +27,16 @@ The system MUST provide a static homepage model chooser driven by the registered
 - **THEN** 選擇入口 MUST 導向 `/cad/modular-grid-base`
 - **AND** CAD workspace MUST 以 `modelId=modular-grid-base` 初始化
 
+#### Scenario: 選擇可調高度六角柱
+
+- **WHEN** 使用者在首頁選擇 `hexagonal-column`
+- **THEN** 選擇入口 MUST 導向 `/cad/hexagonal-column`
+- **AND** CAD workspace MUST 以 `modelId=hexagonal-column` 初始化
+- **AND** 首頁描述 MUST 說明整體 height、支數 count、預設 1 mm gap 與預設躺下方向
+
 ### Requirement: 模型專屬 CAD 路由
 
-The system MUST expose one CAD route for each registered model id. The current routes MUST map `/cad/box` to `box` and `/cad/modular-grid-base` to `modular-grid-base`. The model path segment MUST be the source of truth for the selected component, and a route for an unknown model id MUST NOT initialize a CAD Worker for an unsupported component.
+The system MUST expose one CAD route for each registered model id. The current routes MUST map `/cad/box` to `box`, `/cad/modular-grid-base` to `modular-grid-base`, `/cad/hsw-cell` to `hsw-cell`, and `/cad/hexagonal-column` to `hexagonal-column`. The model path segment MUST be the source of truth for the selected component, and a route for an unknown model id MUST NOT initialize a CAD Worker for an unsupported component.
 
 #### Scenario: 直接開啟模型 route
 
@@ -37,6 +44,14 @@ The system MUST expose one CAD route for each registered model id. The current r
 - **WHEN** 頁面完成 route resolution
 - **THEN** 頁面 MUST 載入模組化網格底板 workspace
 - **AND** 初始 generation MUST 使用該 component 的有效保存 rows 與 columns；若沒有有效保存參數，MUST 使用該 component 的預設 rows 與 columns
+- **AND** 頁面 MUST NOT 要求使用者先在 CAD workspace 重新選擇 component
+
+#### Scenario: 直接開啟六角柱 route
+
+- **GIVEN** 使用者直接開啟 `/cad/hexagonal-column`
+- **WHEN** 頁面完成 route resolution
+- **THEN** 頁面 MUST 載入 hexagonal-column 專屬 CAD workspace
+- **AND** 初始 generation MUST 使用 `height=8`、`count=1`、`gap=1` 與 `orientation=lying` 的預設值
 - **AND** 頁面 MUST NOT 要求使用者先在 CAD workspace 重新選擇 component
 
 #### Scenario: 沒有 model id 的 CAD route

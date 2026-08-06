@@ -108,6 +108,40 @@ describe('Worker contract runtime validation', () => {
     ).toBe(false)
   })
 
+  it('accepts hexagonal-column commands with orientation', () => {
+    const command = {
+      version: PROTOCOL_VERSION,
+      kind: 'model.generate' as const,
+      requestId: 'request-hex-1',
+      operationId: 'operation-hex-1',
+      generation: 1,
+      modelId: 'hexagonal-column' as const,
+      parameters: {
+        height: 50,
+        count: 3,
+        gap: 1,
+        orientation: 'lying',
+      },
+      previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
+    }
+
+    expect(isWorkerCommand(command)).toBe(true)
+    expect(
+      isWorkerCommand({ ...command, parameters: { height: 50, count: 3 } }),
+    ).toBe(false)
+    expect(
+      isWorkerCommand({
+        ...command,
+        parameters: {
+          height: 50.5,
+          count: 3,
+          gap: 1,
+          orientation: 'lying',
+        },
+      }),
+    ).toBe(false)
+  })
+
   it('accepts a validated STL export command and response', () => {
     const command = {
       version: PROTOCOL_VERSION,

@@ -87,4 +87,16 @@ describe('CAD state machine', () => {
     expect(state.modelId).toBe('hsw-cell')
     expect(state.input).toEqual({ rows: 1, columns: 1 })
   })
+
+  it('initializes the independent hexagonal-column defaults', () => {
+    const state = initialCadState('hexagonal-column')
+
+    expect(state.modelId).toBe('hexagonal-column')
+    expect(state.input).toEqual({
+      height: 8,
+      count: 1,
+      gap: 1,
+      orientation: 'lying',
+    })
+  })
 })

@@ -13,10 +13,21 @@ export function cadErrorCodeFor(
   if (message.includes('CANDIDATE_MISSING')) return 'CANDIDATE_ORPHANED'
   if (message.includes('CANDIDATE_CAPACITY')) return 'CANDIDATE_CAPACITY'
   if (message.includes('ENGINE_NOT_READY')) return 'ENGINE_INIT_FAILED'
+  if (
+    message.includes('MODEL_PARAMETERS_INVALID') ||
+    message === 'INVALID_INPUT'
+  ) {
+    return 'INVALID_INPUT'
+  }
   if (message.includes('STEP_METADATA_INVALID')) return 'STEP_METADATA_INVALID'
   if (message.includes('STL_METADATA_INVALID')) return 'STL_METADATA_INVALID'
   if (message.includes('MESH_INVALID')) return 'MESH_INVALID'
-  if (message.includes('GRID_TEMPLATE') || message.includes('HSW_CELL_ASSET')) {
+  if (
+    message.includes('MODEL_ASSET_INVALID') ||
+    message.includes('GRID_TEMPLATE') ||
+    message.includes('HSW_CELL_ASSET') ||
+    message.includes('HEXAGONAL_COLUMN_ASSET')
+  ) {
     return 'MODEL_ASSET_INVALID'
   }
   if (commandKind === 'engine.init') return 'ENGINE_INIT_FAILED'
