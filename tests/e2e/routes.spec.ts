@@ -269,6 +269,109 @@ test('box CAD route exposes fallback and locked parameter controls', async ({
   await expect(page.locator('#cad-fallback')).toBeHidden()
 })
 
+test('grid dimension calculators apply counts and preserve manual controls', async ({
+  page,
+}) => {
+  const fixtures = [
+    {
+      path: '/cad/modular-grid-base',
+      targetX: '59',
+      targetY: '41',
+      expectedColumns: '2',
+      expectedRows: '2',
+      expectedDimensions: 'X 40 mm、Y 40 mm',
+      invalidX: '19',
+      invalidMessage: '20 mm',
+    },
+    {
+      path: '/cad/hsw-cell',
+      targetX: '47.7',
+      targetY: '59.1',
+      expectedColumns: '2',
+      expectedRows: '2',
+      expectedDimensions: 'X 47.69 mm、Y 59 mm',
+      invalidX: '20',
+      invalidMessage: 'HSW',
+    },
+  ]
+
+  for (const fixture of fixtures) {
+    await page.goto(fixture.path)
+    const calculator = page.getByTestId('grid-dimension-calculator')
+    const targetX = calculator.getByRole('textbox', {
+      name: '目標 X 尺寸（mm）',
+    })
+    const targetY = calculator.getByRole('textbox', {
+      name: '目標 Y 尺寸（mm）',
+    })
+    const calculateButton = calculator.getByRole('button', {
+      name: '計算格數',
+    })
+
+    await expect(targetX).toBeVisible()
+    await expect(targetY).toBeVisible()
+    await targetX.fill(fixture.targetX)
+    await targetY.fill(fixture.targetY)
+    await calculateButton.focus()
+    await page.keyboard.press('Enter')
+
+    await expect(page.getByRole('slider', { name: '列數（X）' })).toHaveValue(
+      fixture.expectedColumns,
+    )
+    await expect(page.getByRole('slider', { name: '行數（Y）' })).toHaveValue(
+      fixture.expectedRows,
+    )
+    await expect(page.getByTestId('grid-dimension-result')).toContainText(
+      fixture.expectedDimensions,
+    )
+
+    await targetX.fill(fixture.invalidX)
+    await calculateButton.click()
+    await expect(targetX).toHaveAttribute('aria-invalid', 'true')
+    await expect(targetX).toHaveAttribute(
+      'aria-describedby',
+      'grid-dimension-x-error',
+    )
+    await expect(calculator.getByRole('alert')).toContainText(
+      fixture.invalidMessage,
+    )
+    await expect(page.getByRole('slider', { name: '列數（X）' })).toHaveValue(
+      fixture.expectedColumns,
+    )
+    await expect(page.getByRole('slider', { name: '行數（Y）' })).toHaveValue(
+      fixture.expectedRows,
+    )
+  }
+})
+
+test('grid dimension calculators remain usable on narrow viewports', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 720 })
+
+  for (const path of ['/cad/modular-grid-base', '/cad/hsw-cell']) {
+    await page.goto(path)
+    const calculator = page.getByTestId('grid-dimension-calculator')
+    await expect(calculator).toBeVisible()
+    await expect(
+      calculator.getByRole('textbox', { name: '目標 X 尺寸（mm）' }),
+    ).toBeVisible()
+    await expect(
+      calculator.getByRole('textbox', { name: '目標 Y 尺寸（mm）' }),
+    ).toBeVisible()
+    await expect(
+      calculator.getByRole('button', { name: '計算格數' }),
+    ).toBeVisible()
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
+      ),
+    ).toBeTruthy()
+  }
+})
+
 test('CAD route shows the current loading stage', async ({
   page,
   browserName,
