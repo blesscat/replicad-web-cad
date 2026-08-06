@@ -16,7 +16,9 @@ export function cadErrorCodeFor(
   if (message.includes('STEP_METADATA_INVALID')) return 'STEP_METADATA_INVALID'
   if (message.includes('STL_METADATA_INVALID')) return 'STL_METADATA_INVALID'
   if (message.includes('MESH_INVALID')) return 'MESH_INVALID'
-  if (message.includes('GRID_TEMPLATE')) return 'MODEL_ASSET_INVALID'
+  if (message.includes('GRID_TEMPLATE') || message.includes('HSW_CELL_ASSET')) {
+    return 'MODEL_ASSET_INVALID'
+  }
   if (commandKind === 'engine.init') return 'ENGINE_INIT_FAILED'
   if (commandKind === 'export.step') return 'STEP_EXPORT_FAILED'
   if (commandKind === 'export.stl') return 'STL_EXPORT_FAILED'

@@ -45,7 +45,9 @@ export const INITIAL_PARAMETERS: BoxParameters = {
 
 function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
   if (modelId === 'box') return { ...INITIAL_PARAMETERS }
-  return { rows: 1, columns: 1 }
+  if (modelId === 'modular-grid-base') return { rows: 1, columns: 1 }
+  if (modelId === 'hsw-cell') return { rows: 1, columns: 1 }
+  throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
 }
 
 export function initialCadState(

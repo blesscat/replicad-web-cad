@@ -87,3 +87,27 @@ The system MUST describe the product and its entry flow as supporting multiple C
 - **WHEN** 使用者從全域導覽或文件頁尋找 CAD 入口
 - **THEN** 入口 MUST 指向首頁模型選擇流程或明確的模型專屬 route
 - **AND** 說明 MUST 與目前 catalog 的模型數量及名稱一致
+
+## ADDED Requirements
+
+### Requirement: HSW model selection entry
+
+The homepage model chooser MUST include `hsw-cell` as a currently available CAD component with an understandable display name, a description of its adjustable rows/columns honeycomb grid, and a link to `/cad/hsw-cell`. The homepage MUST remain a static chooser and MUST NOT initialize the CAD Worker merely to display the HSW entry.
+
+#### Scenario: Homepage lists HSW cell
+
+- **WHEN** a user opens the homepage
+- **THEN** the model chooser MUST display the HSW component
+- **AND** its description MUST identify rows/columns and hexagonal honeycomb placement
+- **AND** the chooser MUST provide a link to `/cad/hsw-cell`
+
+### Requirement: HSW model-specific route
+
+The registered model catalog MUST resolve `/cad/hsw-cell` to `modelId=hsw-cell`, and direct navigation to that route MUST initialize the HSW workspace with its default rows and columns after route resolution.
+
+#### Scenario: Direct HSW navigation
+
+- **WHEN** a user opens `/cad/hsw-cell`
+- **THEN** the page MUST load the HSW-specific CAD workspace
+- **AND** it MUST NOT silently substitute `box` or `modular-grid-base`
+- **AND** the initial generation MUST use the HSW defaults

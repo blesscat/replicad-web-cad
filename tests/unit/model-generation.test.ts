@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { WorkerCommandInput } from '../../src/cad-contract/messages'
+import type {
+  ModelId,
+  ModelParameterValues,
+} from '../../src/cad-contract/units'
 import type { CadWorkerClient } from '../../src/features/cad/worker-client'
 import { initialCadState } from '../../src/features/cad/state'
 import { rawFromParameters } from '../../src/components/cad/workspace/validation'
@@ -9,8 +13,19 @@ import type {
   RuntimeRefs,
 } from '../../src/components/cad/workspace/runtime/types'
 
-function createRuntimeContext() {
-  const state = initialCadState()
+function defaultInputForModel(modelId: ModelId): ModelParameterValues {
+  if (modelId === 'box') return { width: 20, depth: 30, height: 40 }
+  if (modelId === 'modular-grid-base' || modelId === 'hsw-cell') {
+    return { rows: 1, columns: 1 }
+  }
+  throw new Error(`Unknown model: ${modelId}`)
+}
+
+function createRuntimeContext(
+  modelId: ModelId = 'box',
+  initialInput: ModelParameterValues = defaultInputForModel(modelId),
+) {
+  const state = initialCadState(modelId, initialInput)
   let requestNumber = 0
   const send = vi.fn((command: WorkerCommandInput) => {
     void command
@@ -152,5 +167,62 @@ describe('CAD model generation debounce', () => {
         reason: 'invalid-input',
       }),
     )
+  })
+
+  it('sends an HSW slider snapshot through the same settled-input debounce', () => {
+    const { client, send, context } = createRuntimeContext('hsw-cell')
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('rows', '2')
+    vi.advanceTimersByTime(500)
+
+    expect(client.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.generate',
+        modelId: 'hsw-cell',
+        parameters: { rows: 2, columns: 1 },
+      }),
+    )
+    expect(
+      send.mock.calls.filter(([command]) => command.kind === 'model.generate'),
+    ).toHaveLength(1)
+  })
+
+  it('keeps defensive validation for an out-of-range HSW snapshot', () => {
+    const { client, context } = createRuntimeContext('hsw-cell')
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('rows', '21')
+
+    expect(context.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'input-invalid' }),
+    )
+    expect(client.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.invalidate',
+        reason: 'invalid-input',
+      }),
+    )
+  })
+
+  it('rejects a programmatic HSW update for a non-HSW parameter key', () => {
+    const { client, context, send } = createRuntimeContext('hsw-cell')
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('width', '20')
+    vi.advanceTimersByTime(500)
+
+    expect(context.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'input-invalid' }),
+    )
+    expect(client.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.invalidate',
+        reason: 'invalid-input',
+      }),
+    )
+    expect(
+      send.mock.calls.some(([command]) => command.kind === 'model.generate'),
+    ).toBe(false)
   })
 })

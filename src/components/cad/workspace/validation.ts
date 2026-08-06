@@ -12,6 +12,13 @@ import type { RawParameters } from './types'
 export const DIMENSION_KEYS: ModelParameterKey[] = ['width', 'depth', 'height']
 export const GRID_PARAMETER_KEYS: ModelParameterKey[] = ['rows', 'columns']
 
+function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
+  if (modelId === 'box') return DIMENSION_KEYS
+  if (modelId === 'modular-grid-base') return GRID_PARAMETER_KEYS
+  if (modelId === 'hsw-cell') return GRID_PARAMETER_KEYS
+  throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
+}
+
 export function rawFromParameters(
   parameters: ModelParameterValues,
 ): RawParameters {
@@ -35,7 +42,14 @@ export function parseRawParameters(
 ):
   | { valid: true; value: ModelParameterValues }
   | { valid: false; message: string; field?: ModelParameterKey } {
-  const keys = modelId === 'box' ? DIMENSION_KEYS : GRID_PARAMETER_KEYS
+  const keys = parameterKeysForModel(modelId)
+  const unexpectedKey = Object.keys(raw).find(
+    (key) => !keys.includes(key as ModelParameterKey),
+  )
+  if (unexpectedKey) {
+    return { valid: false, message: '包含不支援的參數欄位。' }
+  }
+
   const parsed: Partial<Record<ModelParameterKey, number | null>> = {}
   for (const key of keys) {
     parsed[key] = parseDimensionInput(raw[key] ?? '')

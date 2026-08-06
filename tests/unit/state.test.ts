@@ -80,4 +80,11 @@ describe('CAD state machine', () => {
     expect(state.input).toEqual({ rows: 2, columns: 2 })
     expect(state.status).toBe('generating')
   })
+
+  it('initializes the independent HSW component with slider counts', () => {
+    const state = initialCadState('hsw-cell')
+
+    expect(state.modelId).toBe('hsw-cell')
+    expect(state.input).toEqual({ rows: 1, columns: 1 })
+  })
 })

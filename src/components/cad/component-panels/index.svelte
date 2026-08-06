@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ModelId } from '../../../cad-contract/units'
   import BoxComponentPanel from './box/BoxComponentPanel.svelte'
+  import HswCellComponentPanel from './hsw-cell/HswCellComponentPanel.svelte'
   import ModularGridBaseComponentPanel from './modular-grid-base/ModularGridBaseComponentPanel.svelte'
   import type { ComponentPanelProps } from './types'
 
@@ -13,10 +14,12 @@
 
 {#if modelId === 'box'}
   <BoxComponentPanel {rawParameters} {fieldErrors} {onInputChange} />
-{:else}
+{:else if modelId === 'modular-grid-base'}
   <ModularGridBaseComponentPanel
     {rawParameters}
     {fieldErrors}
     {onInputChange}
   />
+{:else if modelId === 'hsw-cell'}
+  <HswCellComponentPanel {rawParameters} {fieldErrors} {onInputChange} />
 {/if}
