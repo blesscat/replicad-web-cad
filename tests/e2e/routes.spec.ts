@@ -892,6 +892,7 @@ test('modular grid slider drag preserves committed viewport framing before repla
   await waitForCadReady(page)
 
   const rows = page.getByRole('slider', { name: '行數（Y）' })
+  await rows.scrollIntoViewIfNeeded()
   const before = await readDimensionAnnotationBoxes(page)
   const sliderBox = await rows.boundingBox()
   expect(sliderBox).not.toBeNull()
@@ -922,6 +923,7 @@ test('keyboard slider input preserves viewport framing until the new revision co
   await waitForCadReady(page)
 
   const rows = page.getByRole('slider', { name: '行數（Y）' })
+  await rows.scrollIntoViewIfNeeded()
   const before = await readDimensionAnnotationBoxes(page)
   await rows.press('ArrowRight')
 
@@ -944,6 +946,8 @@ test('modular grid reports cell progress for a larger generation', async ({
 
   const rows = page.getByRole('slider', { name: '行數（Y）' })
   const columns = page.getByRole('slider', { name: '列數（X）' })
+  await rows.scrollIntoViewIfNeeded()
+  await columns.scrollIntoViewIfNeeded()
   const viewport = page.getByTestId('cad-viewport')
   const viewportRect = () =>
     viewport.evaluate((element) => {
