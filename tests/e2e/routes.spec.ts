@@ -1,4 +1,5 @@
 import { expect, test, type Download, type Page } from '@playwright/test'
+import { getValidPortalySupportUrl } from '../../src/features/support/portaly'
 
 function skipHeadlessFirefoxWithoutWebGL(browserName: string): void {
   test.skip(
@@ -17,6 +18,17 @@ function isAstroDevToolbarError(message: string): boolean {
     message === astroOptimizeDepError ||
     message.includes(astroDevToolbarEntrypoint)
   )
+}
+
+const configuredPortalySupportUrl = getValidPortalySupportUrl(
+  process.env.PUBLIC_PORTALY_SUPPORT_URL,
+)
+
+function supportLink(page: Page) {
+  return page.getByRole('link', {
+    name: '支持這個專案',
+    exact: true,
+  })
 }
 
 async function readBinaryStlByteLength(download: Download): Promise<number> {
@@ -129,6 +141,84 @@ test('home and docs are static Astro pages', async ({ page }) => {
     page.getByText(/方塊、模組化網格底板、獨立的 HSW 六角蜂巢，以及可調/),
   ).toBeVisible()
   await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
+})
+
+test('shared navigation exposes the configured support link contract', async ({
+  page,
+}) => {
+  test.skip(
+    !configuredPortalySupportUrl,
+    'Set PUBLIC_PORTALY_SUPPORT_URL to run the configured-support route checks.',
+  )
+
+  for (const path of ['/', '/docs/', '/cad/box']) {
+    await page.goto(path)
+    const link = supportLink(page)
+
+    await expect(link).toBeVisible()
+    await expect(link).toHaveAttribute(
+      'href',
+      configuredPortalySupportUrl ?? '',
+    )
+    await expect(link).toHaveAttribute('target', '_blank')
+    await expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+  }
+
+  await page.setViewportSize({ width: 320, height: 720 })
+  await page.goto('/')
+  await expect(supportLink(page)).toBeVisible()
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBeTruthy()
+
+  for (let index = 0; index < 4; index += 1) {
+    await page.keyboard.press('Tab')
+  }
+  await expect(supportLink(page)).toBeFocused()
+  const focusStyle = await supportLink(page).evaluate((element) => {
+    const style = getComputedStyle(element)
+    return {
+      outlineStyle: style.outlineStyle,
+      outlineWidth: style.outlineWidth,
+    }
+  })
+  expect(focusStyle.outlineStyle).not.toBe('none')
+  expect(Number.parseFloat(focusStyle.outlineWidth)).toBeGreaterThan(0)
+
+  await page.goto('/cad/box')
+  const currentCadUrl = page.url()
+  const supportOrigin = new URL(configuredPortalySupportUrl ?? '').origin
+  await page.context().route(`${supportOrigin}/**`, async (route) => {
+    await route.fulfill({
+      contentType: 'text/html',
+      body: '<title>Support fixture</title>',
+    })
+  })
+  const popupPromise = page.waitForEvent('popup')
+  await supportLink(page).click()
+  const popup = await popupPromise
+  await popup.waitForLoadState('domcontentloaded')
+  await expect(popup).toHaveURL(configuredPortalySupportUrl ?? '')
+  await expect(page).toHaveURL(currentCadUrl)
+  await popup.close()
+})
+
+test('missing support configuration leaves primary routes usable', async ({
+  page,
+}) => {
+  test.skip(
+    Boolean(configuredPortalySupportUrl),
+    'Run without PUBLIC_PORTALY_SUPPORT_URL to verify the missing-configuration fallback.',
+  )
+
+  for (const path of ['/', '/docs/', '/cad/box']) {
+    await page.goto(path)
+    await expect(supportLink(page)).toHaveCount(0)
+  }
 })
 
 test('local development serves same-origin Vite HMR client', async ({
