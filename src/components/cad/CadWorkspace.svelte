@@ -2,6 +2,10 @@
   import { onMount } from 'svelte'
   import type { ModelId, ModelParameterKey } from '../../cad-contract/units'
   import type { ExportFormat } from '../../features/cad/download'
+  import {
+    createComponentParameterStore,
+    type ComponentParameterStore,
+  } from '../../features/cad/parameters'
   import CadViewport from '../../features/cad/viewport/CadViewport.svelte'
   import CadProgressIndicator from './CadProgressIndicator.svelte'
   import CadWorkspacePanel from './CadWorkspacePanel.svelte'
@@ -18,15 +22,23 @@
   let { modelId }: Props = $props()
   let snapshot = $state<CadWorkspaceControllerSnapshot | null>(null)
   let controller: CadWorkspaceController | null = null
+  let parameterStore: ComponentParameterStore | null = null
 
   onMount(() => {
-    controller = createCadWorkspaceController(modelId, (nextSnapshot) => {
-      snapshot = nextSnapshot
-    })
+    parameterStore = createComponentParameterStore()
+    controller = createCadWorkspaceController(
+      modelId,
+      (nextSnapshot) => {
+        snapshot = nextSnapshot
+      },
+      { parameterStore },
+    )
 
     return () => {
       controller?.dispose()
       controller = null
+      parameterStore?.dispose()
+      parameterStore = null
     }
   })
 

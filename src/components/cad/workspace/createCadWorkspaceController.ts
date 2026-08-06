@@ -1,6 +1,7 @@
 import type { ModelId, ModelParameterKey } from '../../../cad-contract/units'
 import { initialCadState, type CadState } from '../../../features/cad/state'
 import { getModelDefinition } from '../../../features/cad/model-catalog'
+import type { ComponentParameterStore } from '../../../features/cad/parameters'
 import type { CadProgress } from '../../../features/cad/progress'
 import type { ExportFormat } from '../../../features/cad/download'
 import {
@@ -28,6 +29,10 @@ export type CadWorkspaceController = {
   dispose: () => void
 }
 
+export type CadWorkspaceControllerOptions = {
+  parameterStore: ComponentParameterStore
+}
+
 function createSnapshot(
   state: CadState,
   rawParameters: RawParameters,
@@ -50,12 +55,14 @@ function createSnapshot(
 export function createCadWorkspaceController(
   modelId: ModelId,
   onChange: (snapshot: CadWorkspaceControllerSnapshot) => void,
+  options: CadWorkspaceControllerOptions,
 ): CadWorkspaceController {
   const definition = getModelDefinition(modelId)
   if (!definition) throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
 
-  let state = initialCadState(modelId, definition.defaultParameters)
-  let rawParameters = rawFromParameters(definition.defaultParameters)
+  const initialParameters = options.parameterStore.get(modelId)
+  let state = initialCadState(modelId, initialParameters)
+  let rawParameters = rawFromParameters(initialParameters)
   let fieldErrors: FieldErrors = {}
   let progress: CadProgress | null = null
 
@@ -73,6 +80,9 @@ export function createCadWorkspaceController(
     setRawParameters: (nextParameters) => {
       rawParameters = nextParameters
       emit()
+    },
+    setPersistedParameters: (selectedModelId, parameters) => {
+      options.parameterStore.set(selectedModelId, parameters)
     },
     setFieldErrors: (nextErrors) => {
       fieldErrors = nextErrors

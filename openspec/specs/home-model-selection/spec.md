@@ -36,7 +36,7 @@ The system MUST expose one CAD route for each registered model id. The current r
 - **GIVEN** 使用者直接開啟 `/cad/modular-grid-base`
 - **WHEN** 頁面完成 route resolution
 - **THEN** 頁面 MUST 載入模組化網格底板 workspace
-- **AND** 初始 generation MUST 使用該 component 的預設 rows 與 columns
+- **AND** 初始 generation MUST 使用該 component 的有效保存 rows 與 columns；若沒有有效保存參數，MUST 使用該 component 的預設 rows 與 columns
 - **AND** 頁面 MUST NOT 要求使用者先在 CAD workspace 重新選擇 component
 
 #### Scenario: 沒有 model id 的 CAD route
@@ -88,8 +88,6 @@ The system MUST describe the product and its entry flow as supporting multiple C
 - **THEN** 入口 MUST 指向首頁模型選擇流程或明確的模型專屬 route
 - **AND** 說明 MUST 與目前 catalog 的模型數量及名稱一致
 
-## ADDED Requirements
-
 ### Requirement: HSW model selection entry
 
 The homepage model chooser MUST include `hsw-cell` as a currently available CAD component with an understandable display name, a description of its adjustable rows/columns honeycomb grid, and a link to `/cad/hsw-cell`. The homepage MUST remain a static chooser and MUST NOT initialize the CAD Worker merely to display the HSW entry.
@@ -103,11 +101,11 @@ The homepage model chooser MUST include `hsw-cell` as a currently available CAD 
 
 ### Requirement: HSW model-specific route
 
-The registered model catalog MUST resolve `/cad/hsw-cell` to `modelId=hsw-cell`, and direct navigation to that route MUST initialize the HSW workspace with its default rows and columns after route resolution.
+The registered model catalog MUST resolve `/cad/hsw-cell` to `modelId=hsw-cell`, and direct navigation to that route MUST initialize the HSW workspace with valid saved rows and columns when available, otherwise with its default rows and columns after route resolution.
 
 #### Scenario: Direct HSW navigation
 
 - **WHEN** a user opens `/cad/hsw-cell`
 - **THEN** the page MUST load the HSW-specific CAD workspace
 - **AND** it MUST NOT silently substitute `box` or `modular-grid-base`
-- **AND** the initial generation MUST use the HSW defaults
+- **AND** the initial generation MUST use valid saved HSW rows and columns when available, otherwise the HSW defaults

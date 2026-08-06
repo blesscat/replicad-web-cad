@@ -112,6 +112,7 @@ export function createModelGenerationHandlers(
       return
     }
 
+    context.setPersistedParameters(modelId, parsed.value)
     context.setFieldErrors({})
     context.dispatch({
       type: 'input-valid',
