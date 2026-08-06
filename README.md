@@ -21,8 +21,10 @@ Astro site shell（layouts/ + pages/）
          ├─ OpenCascade WASM / replicad initialization
          ├─ component registry
          ├─ box B-Rep builder
+         ├─ box-normal builder + STEP template
          ├─ modular-grid-base builder + STEP template
          ├─ hsw-cell builder + STEP template
+         ├─ hexagonal-column builder + STEP template
          ├─ preview mesh generation
          └─ STEP / binary STL export
 ```
@@ -86,17 +88,19 @@ pages/
 
 ## Prototype 範圍
 
-- 內建 component：X/Y 置中於世界原點、底面位於 Z=0 的 `box`、`modular-grid-base`，以及獨立的 `hsw-cell`。
+- 內建 component：X/Y 置中於世界原點、底面位於 Z=0 的 `box`、獨立的 `box-normal`、`modular-grid-base`、`hsw-cell` 與 `hexagonal-column`。
 - `box` 參數：`width`、`depth`、`height`，單位為 mm。
+- `box-normal` 參數：`x`=2–40、`y`=2–35 格，`height`=10–500 mm，以及預設勾選的四角定位柱。X/Y 每軸總共內縮 0.15 mm；定位柱使用平頂/底六角截面，外露高度為 7 mm，盒底接合端不做端部斜角。路由為 `/cad/box-normal`，輸出檔名為 `box-normal-{x}x{y}-h{height}-{posts|plain}.step` 與對應的 `.stl`。
 - `modular-grid-base` 參數：`rows`、`columns` 格數 slider，範圍為 1–20 格；每格為 20 × 20 mm，高度固定 5 mm，最大寬/深為 400 mm。預切除 `cell-template.step` 會複製、平移、融合後，只對整體外側四角套用 R2.5 mm 圓角。
 - `hsw-cell` 參數：`rows`、`columns` 格數 slider，範圍為 1–20 格；使用固定約 27.25 × 23.60 × 8 mm 的平頂六角 canonical `hsw-cell.step`，columns 沿 X 方向交錯排列成蜂巢，整體不套用額外圓角。路由為 `/cad/hsw-cell`，輸出檔名為 `hsw-cell-{columns}x{rows}.step` 與 `hsw-cell-{columns}x{rows}.stl`。
+- `hexagonal-column` 參數：`height`、`count`、`gap` 與 `orientation`，路由為 `/cad/hexagonal-column`；它與 `box-normal` 共用低階六角柱 profile helper，但保持獨立 component contract。
 - 預覽：由 Worker 產生的 B-Rep mesh。
 - 匯出：由 Worker 目前 committed B-Rep 產生 STEP 或 binary STL。
 - 不包含模型匯入、3MF/G-code、儲存、帳號、後端、多人協作或自動啟動 Bambu Studio。
 
 ## 使用 Prototype
 
-先在首頁選擇模型，再進入對應的 CAD workspace：`box` 使用 `/cad/box`、`modular-grid-base` 使用 `/cad/modular-grid-base`、`hsw-cell` 使用 `/cad/hsw-cell`。CAD workspace 只調整目前 route 的 component；要切換模型必須返回首頁重新選擇。`box` 的 `width`、`depth`、`height` 是整數 mm；預設值為 `20 × 30 × 40`，合法範圍為 `1–500 mm`。兩種格狀 component 都只調整 `rows` 與 `columns` 格數 slider，範圍為 `1–20`；HSW 的平頂六角單元固定約 `27.25 × 23.60 × 8 mm`，不做額外圓角。輸入停止 500 ms 後才會送出建模；每個新 snapshot 會先使舊 generation 失效，連續 slider 變更只會對最後合法值送出建模；無效外部 snapshot 不會送出 `model.generate` 或匯出 request。
+先在首頁選擇模型，再進入對應的 CAD workspace：`box` 使用 `/cad/box`、`box-normal` 使用 `/cad/box-normal`、`modular-grid-base` 使用 `/cad/modular-grid-base`、`hsw-cell` 使用 `/cad/hsw-cell`、`hexagonal-column` 使用 `/cad/hexagonal-column`。CAD workspace 只調整目前 route 的 component；要切換模型必須返回首頁重新選擇。`box-normal` 的 `x`、`y`、`height` 是整數，合法範圍為 `2–40`、`2–35` 格與 `10–500 mm`；預設為 `2 × 2 × 10` 且啟用四角定位柱。輸入停止 500 ms 後才會送出建模；每個新 snapshot 會先使舊 generation 失效，連續 slider 變更只會對最後合法值送出建模；無效外部 snapshot 不會送出 `model.generate` 或匯出 request。
 
 建模期間可以保留上一個成功 revision 的預覽，但它會標示為 stale，且 STEP/STL 下載會停用；只有新的 B-Rep candidate 完成 commit 並進入「模型已就緒」後，預覽與匯出才會重新同步。WASM 載入、建模、mesh 與匯出都有狀態提示；Worker 或操作失敗時可修改參數或按「重試」，Worker recovery 最多自動重建一次。
 
@@ -104,7 +108,7 @@ pages/
 
 目前 3D component 的 canonical asset 使用 STEP，而不是 STL 或 DXF：STEP 保留可供 clone、fuse、fillet 與 STEP export 使用的精確 B-Rep；STL 只有三角網格，DXF 則是 2D profile，兩者都不適合這個 3D boolean pipeline。
 
-`board-cell-template.step` 是已完成中央貫穿切除的 `modular-grid-base` component-local 預處理檔案；`hsw-cell.step` 則是獨立 HSW component 的 canonical 平頂六角環。各 Worker epoch 都只 import/cache 各自的 asset 一次，generation 時只 clone、平移與 fuse；modular-grid-base 才會對整體外角做圓角，HSW 不執行額外 fillet。不會依賴 Downloads 路徑，也不會在每次生成重新建立 cutter。未來新增 component 時，builder 與它自己的預切除資產放在同一個 `cad-kernel/components/<component>/` 目錄。
+`board-cell-template.step` 是已完成中央貫穿切除的 `modular-grid-base` component-local 預處理檔案；`box-normal.step`、`hsw-cell.step` 與 `hexagonal.step` 則分別是各自 component 的 canonical asset。各 Worker epoch 都只 import/cache 各自的 asset 一次；`box-normal` 會依 canonical profile 建立 rounded body、底部 chamfer、開口 cavity，再以固定數量的柱體 clone/平移/fuse 組裝，其他模板型 component 則依各自 builder 產生。`modular-grid-base` 才會對整體外角做圓角，`hsw-cell` 不執行額外 fillet，`box-normal` 只保留其 canonical profile 的圓角與斜角。不會依賴 Downloads 路徑，也不會在每次生成重新建立 cutter。未來新增 component 時，builder 與它自己的預切除資產放在同一個 `cad-kernel/components/<component>/` 目錄。
 
 ## STEP 匯出
 
@@ -112,8 +116,10 @@ pages/
 
 ```text
 box-{width}x{depth}x{height}.step
+box-normal-{x}x{y}-h{height}-{posts|plain}.step
 modular-grid-base-{columns}x{rows}.step
 hsw-cell-{columns}x{rows}.step
+hexagonal-column-{height}x{count}-g{gap}-{standing|lying}.step
 ```
 
 這個 Prototype 不提供任意 STEP 的產品匯入或 round-trip parser；目前的 `board-cell-template.step` 是 repository 內受控的 canonical asset，並由 CAD kernel integration tests 驗證其 single-solid、尺寸與幾何條件。
@@ -126,8 +132,10 @@ STL 使用專案的 mm 座標 convention，檔名為：
 
 ```text
 box-{width}x{depth}x{height}.stl
+box-normal-{x}x{y}-h{height}-{posts|plain}.stl
 modular-grid-base-{columns}x{rows}.stl
 hsw-cell-{columns}x{rows}.stl
+hexagonal-column-{height}x{count}-g{gap}-{standing|lying}.stl
 ```
 
 下載完成後，使用者可在 Bambu Studio 透過一般的本機檔案開啟/匯入流程載入 STL。瀏覽器不會直接啟動或控制 Bambu Studio，也不會產生 3MF、G-code 或印表機設定檔。初始 STL tessellation 設定為 `tolerance = 0.001 mm`、`angularTolerance = 0.1`；這些設定與 viewport preview mesh 分開管理。
@@ -182,7 +190,7 @@ Prototype 驗收使用的自動化瀏覽器 binary 為 Chromium `151.0.7922.34` 
 
 ## 未來模型 catalog 的擴充
 
-目前 catalog 有 `box`、`modular-grid-base` 與獨立的 `hsw-cell`。新增 component 時，在 `features/cad/model-catalog/components/` 建立獨立 `ModelDefinition`，在 `components/cad/component-panels/<component>/` 建立專屬調整頁面，再在 Worker-only 的 `cad-kernel/components/<component>/` 放 builder 與資產，最後由 catalog/kernel registry 掛入。UI 只消費 schema，不應把 B-Rep 邏輯放進 `CadWorkspace`。新模型必須另開 OpenSpec change，明確驗收參數單位、bounds、mesh、revision lifetime、STEP/STL filename 與錯誤流程，並維持既有 versioned Worker contract 與主執行緒/CAD Worker 邊界。
+目前 catalog 有 `box`、`box-normal`、`modular-grid-base`、`hsw-cell` 與 `hexagonal-column`。新增 component 時，在 `features/cad/model-catalog/components/` 建立獨立 `ModelDefinition`，在 `components/cad/component-panels/<component>/` 建立專屬調整頁面，再在 Worker-only 的 `cad-kernel/components/<component>/` 放 builder 與資產，最後由 catalog/kernel registry 掛入。UI 只消費 schema，不應把 B-Rep 邏輯放進 `CadWorkspace`。新模型必須另開 OpenSpec change，明確驗收參數單位、bounds、mesh、revision lifetime、STEP/STL filename 與錯誤流程，並維持既有 versioned Worker contract 與主執行緒/CAD Worker 邊界。
 
 ## OpenSpec 文件
 

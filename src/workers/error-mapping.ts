@@ -26,6 +26,7 @@ export function cadErrorCodeFor(
     message.includes('MODEL_ASSET_INVALID') ||
     message.includes('GRID_TEMPLATE') ||
     message.includes('HSW_CELL_ASSET') ||
+    message.includes('BOX_NORMAL_ASSET') ||
     message.includes('HEXAGONAL_COLUMN_ASSET')
   ) {
     return 'MODEL_ASSET_INVALID'

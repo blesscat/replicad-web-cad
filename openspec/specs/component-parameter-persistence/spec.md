@@ -10,10 +10,35 @@ The system MUST maintain a runtime parameter state entry keyed by the selected c
 
 #### Scenario: Component parameter entries are isolated
 
-- **WHEN** a user changes parameters for `box`, `modular-grid-base`, or `hsw-cell`
+- **WHEN** a user changes parameters for `box`, `box-normal`, `modular-grid-base`, `hsw-cell`, or `hexagonal-column`
 - **THEN** the runtime parameter state MUST update only the entry for that component's `modelId`
 - **AND** navigating to another component MUST expose that component's own parameters
 - **AND** the two grid components MUST remain independent even though both use `rows` and `columns`
+
+### Requirement: box-normal parameters are persisted independently
+
+The existing versioned browser persistence MUST store valid `box-normal` parameters under the stable `box-normal` model id. The persisted entry MUST contain typed integer `x`, `y`, and `height` values plus typed boolean `cornerPosts`; it MUST NOT merge with the entries for `box`, `modular-grid-base`, `hsw-cell`, or `hexagonal-column`.
+
+#### Scenario: Restore saved box-normal parameters
+
+- **GIVEN** browser localStorage contains a valid `box-normal` entry
+- **WHEN** the user opens `/cad/box-normal`
+- **THEN** the controls MUST display the saved X/Y/height values and checkbox state
+- **AND** the first generation MUST use those typed values
+
+#### Scenario: Persist a valid box-normal update
+
+- **GIVEN** a box-normal parameter snapshot passes component validation
+- **WHEN** the workspace accepts the update
+- **THEN** localStorage MUST update only the `box-normal` entry
+- **AND** the stored values MUST be typed values rather than raw input strings
+
+#### Scenario: Invalid box-normal input does not overwrite persistence
+
+- **GIVEN** a previously accepted box-normal snapshot exists in localStorage
+- **WHEN** the user enters an invalid or incomplete box-normal value
+- **THEN** the previous accepted `box-normal` entry MUST remain unchanged
+- **AND** the invalid value MUST NOT be sent to the Worker
 
 ### Requirement: Restore valid saved parameters
 

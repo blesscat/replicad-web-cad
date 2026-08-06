@@ -7,6 +7,10 @@ import {
   type RevisionRecord,
 } from '../cad-kernel/lifetime'
 import { loadHswCellTemplate } from '../cad-kernel/components/hsw-cell/builder'
+import {
+  loadBoxNormalReference,
+  type BoxNormalOperationCounts,
+} from '../cad-kernel/components/box-normal/builder'
 import { loadHexagonalColumnReference } from '../cad-kernel/components/hexagonal-column/builder'
 import { loadModularGridBaseTemplate } from '../cad-kernel/components/modular-grid-base/builder'
 import { buildModelBRep } from '../cad-kernel/model'
@@ -74,6 +78,8 @@ export class CadWorkerRuntime {
   private modularGridBaseTemplate: Promise<import('replicad').Shape3D> | null =
     null
   private hswCellTemplate: Promise<import('replicad').Shape3D> | null = null
+  private boxNormalReference: Promise<import('replicad').Shape3D> | null = null
+  private lastBoxNormalOperationCounts: BoxNormalOperationCounts | null = null
   private hexagonalColumnReference: Promise<import('replicad').Shape3D> | null =
     null
   private readonly lifetime: RevisionLifetime
@@ -158,7 +164,9 @@ export class CadWorkerRuntime {
           this.disposed = true
           this.disposeModularGridBaseTemplate()
           this.disposeHswCellTemplate()
+          this.disposeBoxNormalReference()
           this.disposeHexagonalColumnReference()
+          this.lastBoxNormalOperationCounts = null
           this.initialized = false
           this.initializing = null
           this.invalidatedGeneration = 0
@@ -236,6 +244,7 @@ export class CadWorkerRuntime {
       shape = await buildModelBRep(command.modelId, command.parameters, {
         getModularGridBaseTemplate: () => this.getModularGridBaseTemplate(),
         getHswCellTemplate: () => this.getHswCellTemplate(),
+        getBoxNormalReference: () => this.getBoxNormalReference(),
         getHexagonalColumnReference: () => this.getHexagonalColumnReference(),
         yieldToEventLoop: yieldToWorkerEventLoop,
         isGenerationCurrent: () => this.isGenerationCurrent(command.generation),
@@ -245,6 +254,12 @@ export class CadWorkerRuntime {
             total: progress.total,
             unit: progress.unit,
           }),
+        reportOperationCounts:
+          command.modelId === 'box-normal'
+            ? (counts) => {
+                this.lastBoxNormalOperationCounts = { ...counts }
+              }
+            : undefined,
       })
     } catch (error) {
       if (error instanceof Error && error.message === 'STALE_GENERATION') {
@@ -322,6 +337,12 @@ export class CadWorkerRuntime {
       },
       [meshSnapshot.positions, meshSnapshot.normals, meshSnapshot.indices],
     )
+  }
+
+  getBoxNormalOperationCounts(): BoxNormalOperationCounts | null {
+    return this.lastBoxNormalOperationCounts
+      ? { ...this.lastBoxNormalOperationCounts }
+      : null
   }
 
   private invalidate(
@@ -682,6 +703,27 @@ export class CadWorkerRuntime {
     return this.hexagonalColumnReference
   }
 
+  private getBoxNormalReference(): Promise<import('replicad').Shape3D> {
+    if (!this.boxNormalReference) {
+      const referencePromise = loadBoxNormalReference()
+        .then((reference) => {
+          if (this.disposed) {
+            reference.delete()
+            throw new Error('WORKER_TERMINATED')
+          }
+          return reference
+        })
+        .catch((error) => {
+          if (this.boxNormalReference === referencePromise) {
+            this.boxNormalReference = null
+          }
+          throw error
+        })
+      this.boxNormalReference = referencePromise
+    }
+    return this.boxNormalReference
+  }
+
   private isGenerationCurrent(generation: number): boolean {
     return (
       !this.disposed &&
@@ -711,6 +753,15 @@ export class CadWorkerRuntime {
   private disposeHexagonalColumnReference(): void {
     const referencePromise = this.hexagonalColumnReference
     this.hexagonalColumnReference = null
+    if (!referencePromise) return
+    void referencePromise
+      .then((reference) => reference.delete())
+      .catch(() => undefined)
+  }
+
+  private disposeBoxNormalReference(): void {
+    const referencePromise = this.boxNormalReference
+    this.boxNormalReference = null
     if (!referencePromise) return
     void referencePromise
       .then((reference) => reference.delete())

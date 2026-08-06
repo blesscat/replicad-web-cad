@@ -3,6 +3,10 @@ import type { KernelBuildContext } from '../../src/cad-kernel/model'
 
 const mocks = vi.hoisted(() => ({
   buildBoxBRep: vi.fn(() => ({ model: 'box', delete: vi.fn() })),
+  buildBoxNormal: vi.fn(async () => ({
+    model: 'box-normal',
+    delete: vi.fn(),
+  })),
   buildHswCell: vi.fn(async () => ({ model: 'hsw-cell', delete: vi.fn() })),
   buildHexagonalColumn: vi.fn(async () => ({
     model: 'hexagonal-column',
@@ -16,6 +20,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../../src/cad-kernel/components/box/builder', () => ({
   buildBoxBRep: mocks.buildBoxBRep,
+}))
+
+vi.mock('../../src/cad-kernel/components/box-normal/builder', () => ({
+  buildBoxNormal: mocks.buildBoxNormal,
 }))
 
 vi.mock('../../src/cad-kernel/components/hsw-cell/builder', () => ({
@@ -39,6 +47,7 @@ import {
 const context = {
   getModularGridBaseTemplate: vi.fn(async () => ({ delete: vi.fn() })),
   getHswCellTemplate: vi.fn(async () => ({ delete: vi.fn() })),
+  getBoxNormalReference: vi.fn(async () => ({ delete: vi.fn() })),
   getHexagonalColumnReference: vi.fn(async () => ({ delete: vi.fn() })),
 } as unknown as KernelBuildContext
 
@@ -50,6 +59,7 @@ describe('HSW kernel model registration', () => {
   it('registers each component as an independent kernel definition', () => {
     expect(kernelModelDefinitions.map((definition) => definition.id)).toEqual([
       'box',
+      'box-normal',
       'modular-grid-base',
       'hsw-cell',
       'hexagonal-column',
@@ -76,6 +86,26 @@ describe('HSW kernel model registration', () => {
     )
     expect(mocks.buildModularGridBase).not.toHaveBeenCalled()
     expect(context.getModularGridBaseTemplate).not.toHaveBeenCalled()
+  })
+
+  it('routes box-normal only to its own reference and builder', async () => {
+    const shape = await buildModelBRep(
+      'box-normal',
+      { x: 2, y: 2, height: 10, cornerPosts: true },
+      context,
+    )
+
+    expect(shape).toMatchObject({ model: 'box-normal' })
+    expect(context.getBoxNormalReference).toHaveBeenCalledOnce()
+    expect(mocks.buildBoxNormal).toHaveBeenCalledWith(
+      { x: 2, y: 2, height: 10, cornerPosts: true },
+      expect.anything(),
+      expect.objectContaining({
+        isGenerationCurrent: undefined,
+      }),
+    )
+    expect(mocks.buildHswCell).not.toHaveBeenCalled()
+    expect(mocks.buildModularGridBase).not.toHaveBeenCalled()
   })
 
   it('preserves existing builder routes after HSW registration', async () => {

@@ -48,6 +48,12 @@ describe('component parameter store', () => {
     const store = createComponentParameterStore({ storage })
 
     expect(store.get('box')).toEqual({ width: 20, depth: 30, height: 40 })
+    expect(store.get('box-normal')).toEqual({
+      x: 2,
+      y: 2,
+      height: 10,
+      cornerPosts: true,
+    })
     expect(store.get('modular-grid-base')).toEqual({ rows: 1, columns: 1 })
     expect(store.get('hsw-cell')).toEqual({ rows: 1, columns: 1 })
 
@@ -58,6 +64,7 @@ describe('component parameter store', () => {
     const storage = createMemoryStorage(
       createPayload({
         box: { width: 25, depth: 30, height: 40 },
+        'box-normal': { x: 3, y: 4, height: 25, cornerPosts: false },
         'modular-grid-base': { rows: 2, columns: 3 },
         'hsw-cell': { rows: 4, columns: 2 },
       }),
@@ -65,6 +72,12 @@ describe('component parameter store', () => {
     const store = createComponentParameterStore({ storage })
 
     expect(store.get('box')).toEqual({ width: 25, depth: 30, height: 40 })
+    expect(store.get('box-normal')).toEqual({
+      x: 3,
+      y: 4,
+      height: 25,
+      cornerPosts: false,
+    })
     expect(store.get('modular-grid-base')).toEqual({ rows: 2, columns: 3 })
     expect(store.get('hsw-cell')).toEqual({ rows: 4, columns: 2 })
 
@@ -75,6 +88,7 @@ describe('component parameter store', () => {
     const storage = createMemoryStorage(
       createPayload({
         box: { width: 25, depth: 30, height: 40 },
+        'box-normal': { x: 3, y: 4, height: 25, cornerPosts: false },
         'modular-grid-base': { rows: 0, columns: 3 },
         'hsw-cell': { rows: 4, columns: 2 },
         unknown: { rows: 9, columns: 9 },
@@ -91,6 +105,7 @@ describe('component parameter store', () => {
       version: 1,
       values: {
         box: { width: 25, depth: 30, height: 40 },
+        'box-normal': { x: 3, y: 4, height: 25, cornerPosts: false },
         'modular-grid-base': { rows: 2, columns: 3 },
         'hsw-cell': { rows: 4, columns: 2 },
       },
