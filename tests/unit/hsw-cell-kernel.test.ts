@@ -4,6 +4,10 @@ import type { KernelBuildContext } from '../../src/cad-kernel/model'
 const mocks = vi.hoisted(() => ({
   buildBoxBRep: vi.fn(() => ({ model: 'box', delete: vi.fn() })),
   buildHswCell: vi.fn(async () => ({ model: 'hsw-cell', delete: vi.fn() })),
+  buildHexagonalColumn: vi.fn(async () => ({
+    model: 'hexagonal-column',
+    delete: vi.fn(),
+  })),
   buildModularGridBase: vi.fn(async () => ({
     model: 'modular-grid-base',
     delete: vi.fn(),
@@ -16,6 +20,10 @@ vi.mock('../../src/cad-kernel/components/box/builder', () => ({
 
 vi.mock('../../src/cad-kernel/components/hsw-cell/builder', () => ({
   buildHswCell: mocks.buildHswCell,
+}))
+
+vi.mock('../../src/cad-kernel/components/hexagonal-column/builder', () => ({
+  buildHexagonalColumn: mocks.buildHexagonalColumn,
 }))
 
 vi.mock('../../src/cad-kernel/components/modular-grid-base/builder', () => ({
@@ -31,6 +39,7 @@ import {
 const context = {
   getModularGridBaseTemplate: vi.fn(async () => ({ delete: vi.fn() })),
   getHswCellTemplate: vi.fn(async () => ({ delete: vi.fn() })),
+  getHexagonalColumnReference: vi.fn(async () => ({ delete: vi.fn() })),
 } as unknown as KernelBuildContext
 
 describe('HSW kernel model registration', () => {
@@ -38,13 +47,17 @@ describe('HSW kernel model registration', () => {
     vi.clearAllMocks()
   })
 
-  it('registers HSW beside the existing independent kernel definitions', () => {
+  it('registers each component as an independent kernel definition', () => {
     expect(kernelModelDefinitions.map((definition) => definition.id)).toEqual([
       'box',
       'modular-grid-base',
       'hsw-cell',
+      'hexagonal-column',
     ])
     expect(getKernelModelDefinition('hsw-cell')?.id).toBe('hsw-cell')
+    expect(getKernelModelDefinition('hexagonal-column')?.id).toBe(
+      'hexagonal-column',
+    )
   })
 
   it('routes HSW to its own template getter and builder', async () => {
@@ -72,5 +85,22 @@ describe('HSW kernel model registration', () => {
     expect(mocks.buildBoxBRep).toHaveBeenCalledOnce()
     expect(mocks.buildModularGridBase).toHaveBeenCalledOnce()
     expect(context.getModularGridBaseTemplate).toHaveBeenCalledOnce()
+  })
+
+  it('routes hexagonal-column only to its own reference and builder', async () => {
+    const shape = await buildModelBRep(
+      'hexagonal-column',
+      { height: 50, count: 3, gap: 1, orientation: 'lying' },
+      context,
+    )
+
+    expect(shape).toMatchObject({ model: 'hexagonal-column' })
+    expect(context.getHexagonalColumnReference).toHaveBeenCalledOnce()
+    expect(mocks.buildHexagonalColumn).toHaveBeenCalledWith(
+      { height: 50, count: 3, gap: 1, orientation: 'lying' },
+      expect.objectContaining({ reference: expect.anything() }),
+    )
+    expect(mocks.buildHswCell).not.toHaveBeenCalled()
+    expect(mocks.buildModularGridBase).not.toHaveBeenCalled()
   })
 })

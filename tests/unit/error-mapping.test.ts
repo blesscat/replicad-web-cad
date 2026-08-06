@@ -12,6 +12,17 @@ describe('CAD Worker error mapping', () => {
     ['CANDIDATE_CAPACITY', 'model.generate', 'CANDIDATE_CAPACITY'],
     ['GRID_TEMPLATE_INVALID_BOUNDS', 'model.generate', 'MODEL_ASSET_INVALID'],
     ['HSW_CELL_ASSET_INVALID_BOUNDS', 'model.generate', 'MODEL_ASSET_INVALID'],
+    [
+      'HEXAGONAL_COLUMN_ASSET_INVALID_BOUNDS',
+      'model.generate',
+      'MODEL_ASSET_INVALID',
+    ],
+    [
+      'MODEL_ASSET_INVALID:hexagonal-column-reference-missing',
+      'model.generate',
+      'MODEL_ASSET_INVALID',
+    ],
+    ['MODEL_PARAMETERS_INVALID', 'model.generate', 'INVALID_INPUT'],
     ['MESH_INVALID: empty', 'model.generate', 'MESH_INVALID'],
     ['STEP_METADATA_INVALID', 'export.step', 'STEP_METADATA_INVALID'],
     ['STL_METADATA_INVALID', 'export.stl', 'STL_METADATA_INVALID'],

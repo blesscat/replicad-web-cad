@@ -1,6 +1,7 @@
 import { normalizeError, type CadError } from '../../../cad-contract/errors'
 import type { WorkerClientError } from '../../../features/cad/worker-client'
 import {
+  HEXAGONAL_COLUMN_CONFIGURATION,
   parseDimensionInput,
   validateModelParameters,
   type ModelId,
@@ -11,11 +12,18 @@ import type { RawParameters } from './types'
 
 export const DIMENSION_KEYS: ModelParameterKey[] = ['width', 'depth', 'height']
 export const GRID_PARAMETER_KEYS: ModelParameterKey[] = ['rows', 'columns']
+export const HEXAGONAL_COLUMN_PARAMETER_KEYS: ModelParameterKey[] = [
+  'height',
+  'count',
+  'gap',
+  'orientation',
+]
 
 function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'box') return DIMENSION_KEYS
   if (modelId === 'modular-grid-base') return GRID_PARAMETER_KEYS
   if (modelId === 'hsw-cell') return GRID_PARAMETER_KEYS
+  if (modelId === 'hexagonal-column') return HEXAGONAL_COLUMN_PARAMETER_KEYS
   throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
 }
 
@@ -27,6 +35,15 @@ export function rawFromParameters(
       width: String(parameters.width),
       depth: String(parameters.depth),
       height: String(parameters.height),
+    }
+  }
+
+  if ('orientation' in parameters) {
+    return {
+      height: String(parameters.height),
+      count: String(parameters.count),
+      gap: String(parameters.gap),
+      orientation: parameters.orientation,
     }
   }
 
@@ -50,8 +67,13 @@ export function parseRawParameters(
     return { valid: false, message: '包含不支援的參數欄位。' }
   }
 
-  const parsed: Partial<Record<ModelParameterKey, number | null>> = {}
+  const parsed: Partial<Record<ModelParameterKey, number | string | null>> = {}
   for (const key of keys) {
+    if (key === 'orientation') {
+      parsed[key] =
+        raw[key] ?? HEXAGONAL_COLUMN_CONFIGURATION.defaultOrientation
+      continue
+    }
     parsed[key] = parseDimensionInput(raw[key] ?? '')
   }
 

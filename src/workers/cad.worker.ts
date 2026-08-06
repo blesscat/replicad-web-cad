@@ -7,6 +7,7 @@ import {
   type RevisionRecord,
 } from '../cad-kernel/lifetime'
 import { loadHswCellTemplate } from '../cad-kernel/components/hsw-cell/builder'
+import { loadHexagonalColumnReference } from '../cad-kernel/components/hexagonal-column/builder'
 import { loadModularGridBaseTemplate } from '../cad-kernel/components/modular-grid-base/builder'
 import { buildModelBRep } from '../cad-kernel/model'
 import { meshBRep, serializeMesh, type MeshData } from '../cad-kernel/mesh'
@@ -73,6 +74,8 @@ export class CadWorkerRuntime {
   private modularGridBaseTemplate: Promise<import('replicad').Shape3D> | null =
     null
   private hswCellTemplate: Promise<import('replicad').Shape3D> | null = null
+  private hexagonalColumnReference: Promise<import('replicad').Shape3D> | null =
+    null
   private readonly lifetime: RevisionLifetime
   private readonly candidateTimers = new Map<
     string,
@@ -155,6 +158,7 @@ export class CadWorkerRuntime {
           this.disposed = true
           this.disposeModularGridBaseTemplate()
           this.disposeHswCellTemplate()
+          this.disposeHexagonalColumnReference()
           this.initialized = false
           this.initializing = null
           this.invalidatedGeneration = 0
@@ -232,6 +236,7 @@ export class CadWorkerRuntime {
       shape = await buildModelBRep(command.modelId, command.parameters, {
         getModularGridBaseTemplate: () => this.getModularGridBaseTemplate(),
         getHswCellTemplate: () => this.getHswCellTemplate(),
+        getHexagonalColumnReference: () => this.getHexagonalColumnReference(),
         yieldToEventLoop: yieldToWorkerEventLoop,
         isGenerationCurrent: () => this.isGenerationCurrent(command.generation),
         reportProgress: (progress) =>
@@ -662,6 +667,21 @@ export class CadWorkerRuntime {
     return this.hswCellTemplate
   }
 
+  private getHexagonalColumnReference(): Promise<import('replicad').Shape3D> {
+    if (!this.hexagonalColumnReference) {
+      this.hexagonalColumnReference = loadHexagonalColumnReference().then(
+        (reference) => {
+          if (this.disposed) {
+            reference.delete()
+            throw new Error('WORKER_TERMINATED')
+          }
+          return reference
+        },
+      )
+    }
+    return this.hexagonalColumnReference
+  }
+
   private isGenerationCurrent(generation: number): boolean {
     return (
       !this.disposed &&
@@ -685,6 +705,15 @@ export class CadWorkerRuntime {
     if (!templatePromise) return
     void templatePromise
       .then((template) => template.delete())
+      .catch(() => undefined)
+  }
+
+  private disposeHexagonalColumnReference(): void {
+    const referencePromise = this.hexagonalColumnReference
+    this.hexagonalColumnReference = null
+    if (!referencePromise) return
+    void referencePromise
+      .then((reference) => reference.delete())
       .catch(() => undefined)
   }
 

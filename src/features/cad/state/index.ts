@@ -1,6 +1,7 @@
 import type { CadError } from '../../../cad-contract/errors'
 import type { MeshSnapshot } from '../../../cad-contract/messages'
 import {
+  HEXAGONAL_COLUMN_CONFIGURATION,
   PROTOTYPE_CONFIGURATION,
   type BoxParameters,
   type ModelId,
@@ -47,6 +48,14 @@ function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
   if (modelId === 'box') return { ...INITIAL_PARAMETERS }
   if (modelId === 'modular-grid-base') return { rows: 1, columns: 1 }
   if (modelId === 'hsw-cell') return { rows: 1, columns: 1 }
+  if (modelId === 'hexagonal-column') {
+    return {
+      height: HEXAGONAL_COLUMN_CONFIGURATION.defaultHeight,
+      count: HEXAGONAL_COLUMN_CONFIGURATION.defaultCount,
+      gap: HEXAGONAL_COLUMN_CONFIGURATION.defaultGap,
+      orientation: HEXAGONAL_COLUMN_CONFIGURATION.defaultOrientation,
+    }
+  }
   throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
 }
 

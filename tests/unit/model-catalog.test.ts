@@ -7,11 +7,12 @@ import {
 } from '../../src/features/cad/model-catalog'
 
 describe('CAD component catalog', () => {
-  it('exposes independent box, modular-grid-base, and HSW definitions', () => {
+  it('exposes independent box, grid, HSW, and hexagonal-column definitions', () => {
     expect(modelDefinitions.map((definition) => definition.id)).toEqual([
       'box',
       'modular-grid-base',
       'hsw-cell',
+      'hexagonal-column',
     ])
 
     const grid = getModelDefinition('modular-grid-base')
@@ -71,17 +72,93 @@ describe('CAD component catalog', () => {
       min: [-23.84456659364325, -29.500000622529047, 0],
       max: [23.84456659364325, 29.500000622529047, 8],
     })
+
+    const hexagonalColumn = getModelDefinition('hexagonal-column')
+    expect(hexagonalColumn?.displayName).toBe('可調六角柱')
+    expect(hexagonalColumn?.parameterSchema).toEqual([
+      expect.objectContaining({
+        key: 'height',
+        control: 'range-text',
+        defaultValue: 8,
+        min: 1,
+        max: 999,
+        sliderMin: 1,
+        sliderMax: 200,
+        step: 1,
+      }),
+      expect.objectContaining({
+        key: 'count',
+        control: 'range',
+        defaultValue: 1,
+        min: 1,
+        max: 20,
+        step: 1,
+      }),
+      expect.objectContaining({
+        key: 'gap',
+        control: 'range-text',
+        defaultValue: 1,
+        min: 1,
+        max: 99,
+        sliderMin: 1,
+        sliderMax: 10,
+        step: 1,
+      }),
+    ])
+    expect(hexagonalColumn?.defaultParameters).toEqual({
+      height: 8,
+      count: 1,
+      gap: 1,
+      orientation: 'lying',
+    })
+    expect(
+      hexagonalColumn?.exportFileName({
+        height: 50,
+        count: 3,
+        gap: 1,
+        orientation: 'lying',
+      }),
+    ).toBe('hexagonal-column-50x3-g1-lying.step')
+    expect(
+      hexagonalColumn?.stlFileName({
+        height: 50,
+        count: 3,
+        gap: 1,
+        orientation: 'lying',
+      }),
+    ).toBe('hexagonal-column-50x3-g1-lying.stl')
+    expect(
+      hexagonalColumn?.validateParameters({
+        height: 50,
+        count: 3,
+        gap: 1,
+        orientation: 'lying',
+      }),
+    ).toEqual({
+      valid: true,
+      value: {
+        modelId: 'hexagonal-column',
+        parameters: {
+          height: 50,
+          count: 3,
+          gap: 1,
+          orientation: 'lying',
+        },
+      },
+    })
   })
 
   it('maps registered models to dedicated CAD routes and rejects unknown paths', () => {
     expect(cadPathForModel('box')).toBe('/cad/box')
     expect(cadPathForModel('modular-grid-base')).toBe('/cad/modular-grid-base')
     expect(cadPathForModel('hsw-cell')).toBe('/cad/hsw-cell')
+    expect(cadPathForModel('hexagonal-column')).toBe('/cad/hexagonal-column')
     expect(modelIdForCadPath('/cad/box')).toBe('box')
     expect(modelIdForCadPath('/cad/modular-grid-base/')).toBe(
       'modular-grid-base',
     )
     expect(modelIdForCadPath('/cad/hsw-cell/')).toBe('hsw-cell')
+    expect(modelIdForCadPath('/cad/hexagonal-column/')).toBe('hexagonal-column')
     expect(modelIdForCadPath('/cad/unknown')).toBeUndefined()
     expect(modelIdForCadPath('/docs/box')).toBeUndefined()
   })
