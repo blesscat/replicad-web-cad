@@ -123,6 +123,9 @@ test('home and docs are static Astro pages', async ({ page }) => {
     '/cad/box',
   )
   await expect(
+    page.getByRole('link', { name: '使用標準開口盒' }),
+  ).toHaveAttribute('href', '/cad/box-normal')
+  await expect(
     page.getByRole('link', { name: '使用模組化網格底板' }),
   ).toHaveAttribute('href', '/cad/modular-grid-base')
   await expect(
@@ -138,7 +141,7 @@ test('home and docs are static Astro pages', async ({ page }) => {
     page.getByRole('heading', { name: 'Prototype 文件' }),
   ).toBeVisible()
   await expect(
-    page.getByText(/方塊、模組化網格底板、獨立的 HSW 六角蜂巢，以及可調/),
+    page.getByText(/方塊、獨立的 box-normal 開口盒、模組化網格底板/),
   ).toBeVisible()
   await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
 })
@@ -370,6 +373,55 @@ test('grid dimension calculators remain usable on narrow viewports', async ({
       ),
     ).toBeTruthy()
   }
+})
+
+test('box-normal exposes grid controls, optional posts, persistence, and export metadata', async ({
+  page,
+  browserName,
+}) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.goto('/')
+  await page.getByRole('link', { name: '使用標準開口盒' }).click()
+  await waitForCadReady(page)
+
+  await expect(page).toHaveURL('/cad/box-normal')
+  const x = page.getByRole('slider', { name: 'X 格數（X）' })
+  const y = page.getByRole('slider', { name: 'Y 格數（Y）' })
+  const height = page.getByRole('textbox', { name: '盒體高度（Z）' })
+  const heightSlider = page.getByRole('slider', { name: '盒體高度（Z）' })
+  const posts = page.getByRole('checkbox', { name: '四角六角定位柱' })
+
+  await expect(x).toHaveAttribute('min', '2')
+  await expect(x).toHaveAttribute('max', '40')
+  await expect(y).toHaveAttribute('min', '2')
+  await expect(y).toHaveAttribute('max', '35')
+  await expect(height).toHaveAttribute('min', '10')
+  await expect(height).toHaveAttribute('max', '500')
+  await expect(heightSlider).toHaveAttribute('min', '10')
+  await expect(heightSlider).toHaveAttribute('max', '500')
+  await expect(x).toHaveValue('2')
+  await expect(y).toHaveValue('2')
+  await expect(height).toHaveValue('10')
+  await expect(posts).toBeChecked()
+
+  await x.press('ArrowRight')
+  await y.press('ArrowRight')
+  await height.fill('20')
+  await posts.uncheck()
+  await waitForCadReady(page)
+
+  const stepDownloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '下載 STEP' }).click()
+  const stepDownload = await stepDownloadPromise
+  expect(stepDownload.suggestedFilename()).toBe('box-normal-3x3-h20-plain.step')
+  expect((await stepDownload.createReadStream())?.readable).toBeTruthy()
+
+  await page.reload()
+  await waitForCadReady(page)
+  await expect(x).toHaveValue('3')
+  await expect(y).toHaveValue('3')
+  await expect(height).toHaveValue('20')
+  await expect(posts).not.toBeChecked()
 })
 
 test('CAD route shows the current loading stage', async ({

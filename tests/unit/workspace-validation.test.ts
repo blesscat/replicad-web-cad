@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type {
+  BoxNormalParameters,
   BoxParameters,
   HexagonalColumnParameters,
   HswCellParameters,
@@ -102,6 +103,44 @@ describe('CAD workspace validation helpers', () => {
       valid: false,
       message: '必須是有限的整數。',
       field: 'height',
+    })
+  })
+
+  it('round-trips box-normal grid values and its typed checkbox', () => {
+    const parameters: BoxNormalParameters = {
+      x: 2,
+      y: 2,
+      height: 10,
+      cornerPosts: true,
+    }
+    const raw = rawFromParameters(parameters)
+
+    expect(raw).toEqual({
+      x: '2',
+      y: '2',
+      height: '10',
+      cornerPosts: 'true',
+    })
+    expect(parseRawParameters(raw, 'box-normal')).toEqual({
+      valid: true,
+      value: parameters,
+    })
+    expect(
+      parseRawParameters(
+        { x: '2', y: '2', height: '10', cornerPosts: 'yes' },
+        'box-normal',
+      ),
+    ).toEqual({
+      valid: false,
+      message: '必須是 true 或 false。',
+      field: 'cornerPosts',
+    })
+    expect(
+      parseRawParameters({ x: '2', y: '2', height: '10' }, 'box-normal'),
+    ).toEqual({
+      valid: false,
+      message: '必須是 true 或 false。',
+      field: 'cornerPosts',
     })
   })
 })

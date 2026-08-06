@@ -56,12 +56,22 @@ The Worker MUST request binary STL output with explicit STL tessellation toleran
 
 ### Requirement: STL filenames are defined by the model catalog
 
-Every supported model definition MUST provide a deterministic STL filename. The box filename MUST be `box-{width}x{depth}x{height}.stl`, the modular-grid-base filename MUST be `modular-grid-base-{columns}x{rows}.stl`, and the HSW filename MUST be `hsw-cell-{columns}x{rows}.stl`.
+Every supported model definition MUST provide a deterministic STL filename. The box filename MUST be `box-{width}x{depth}x{height}.stl`, the box-normal filename MUST be `box-normal-{x}x{y}-h{height}-{posts|plain}.stl`, the modular-grid-base filename MUST be `modular-grid-base-{columns}x{rows}.stl`, the HSW filename MUST be `hsw-cell-{columns}x{rows}.stl`, and the hexagonal-column filename MUST retain its existing deterministic format.
 
 #### Scenario: Box STL filename
 
 - **WHEN** a 20 × 30 × 40 mm box is exported
 - **THEN** the suggested filename MUST be `box-20x30x40.stl`
+
+#### Scenario: Box-normal STL filename with posts
+
+- **WHEN** a box-normal with `x=2`, `y=2`, `height=10`, and `cornerPosts=true` is exported
+- **THEN** the suggested filename MUST be `box-normal-2x2-h10-posts.stl`
+
+#### Scenario: Box-normal STL filename without posts
+
+- **WHEN** a box-normal with `x=2`, `y=2`, `height=10`, and `cornerPosts=false` is exported
+- **THEN** the suggested filename MUST be `box-normal-2x2-h10-plain.stl`
 
 #### Scenario: Modular grid STL filename
 

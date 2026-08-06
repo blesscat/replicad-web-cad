@@ -1,5 +1,6 @@
 import type { ModelId } from '../../../cad-contract/units'
 import { boxDefinition } from './components/box'
+import { boxNormalDefinition } from './components/box-normal'
 import { hexagonalColumnDefinition } from './components/hexagonal-column'
 import { hswCellDefinition } from './components/hsw-cell'
 import { modularGridBaseDefinition } from './components/modular-grid-base'
@@ -7,12 +8,14 @@ import type { ModelDefinition } from './types'
 
 export type { ModelDefinition, ParameterField } from './types'
 export { boxDefinition } from './components/box'
+export { boxNormalDefinition } from './components/box-normal'
 export { hexagonalColumnDefinition } from './components/hexagonal-column'
 export { hswCellDefinition } from './components/hsw-cell'
 export { modularGridBaseDefinition } from './components/modular-grid-base'
 
 export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   boxDefinition,
+  boxNormalDefinition,
   modularGridBaseDefinition,
   hswCellDefinition,
   hexagonalColumnDefinition,

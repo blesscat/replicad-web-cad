@@ -6,20 +6,21 @@
 
 本文件定義瀏覽器端 CAD 雛形的可觀察行為與驗收情境。
 
-Prototype 只包含：
+Prototype 目前包含下列內建 component：
 
-- 一個內建方塊模型。
-- 寬、深、高三個 mm 參數。
+- `box` 實心方塊模型，提供寬、深、高三個 mm 參數。
+- `box-normal` 網格開口盒模型，提供 X/Y 格數、盒體高度與四角定位柱選項。
+- `modular-grid-base`、`hsw-cell` 與 `hexagonal-column` 的獨立模型與各自參數。
 - 瀏覽器內的 B-Rep 建模與 3D 預覽。
 - 從目前成功模型下載 STEP。
 
-固定模型選擇清單、其他模型、STL、3MF、G-code、匯入、儲存與後端服務不屬於本 Prototype。
+3MF、G-code、任意 CAD 匯入與後端服務不屬於本 Prototype；各 component 的 STL、參數保存與模型選擇行為由其 capability 規格定義。
 
 本文中的「必須」為規範性要求；「可以」表示允許但非必要。
 
 ## 名詞
 
-- **方塊模型**：Prototype 唯一的內建單一 solid 模型。
+- **方塊模型**：`box` 的內建單一 solid 模型。
 - **參數**：方塊的 width、depth、height，皆以 mm 解讀。
 - **generation**：一次參數 snapshot 的單調遞增識別；合法與非法 snapshot 都會取得 generation，只有合法 snapshot 才能送出 model.generate。
 - **candidate**：Worker 建立但尚未 commit 的候選 B-Rep。
@@ -86,7 +87,7 @@ CAD workspace 必須是 Svelte 5 + Threlte/Three.js 的瀏覽器端 island，預
 
 ### Requirement: Prototype 方塊模型
 
-The system MUST expose a runtime-validated component catalog. Each catalog entry MUST have an independent definition with a stable `modelId`, display metadata, parameter schema and builder boundary. The existing `box` entry and `modular-grid-base` entry MUST remain available. Each model-specific CAD route MUST bind to exactly one catalog definition: `/cad/box` to `box` and `/cad/modular-grid-base` to `modular-grid-base`. The CAD workspace MUST NOT provide a model selector; changing the selected model MUST require navigation back to the homepage and entry through another model-specific route.
+The system MUST expose a runtime-validated component catalog. Each catalog entry MUST have an independent definition with a stable `modelId`, display metadata, parameter schema and builder boundary. The existing `box`, `modular-grid-base`, `hsw-cell`, and `hexagonal-column` entries MUST remain available, and `box-normal` MUST be registered as an additional independent entry. Each model-specific CAD route MUST bind to exactly one catalog definition: `/cad/box` to `box`, `/cad/box-normal` to `box-normal`, `/cad/modular-grid-base` to `modular-grid-base`, `/cad/hsw-cell` to `hsw-cell`, and `/cad/hexagonal-column` to `hexagonal-column`. The CAD workspace MUST NOT provide an in-place model selector; changing the selected model MUST require navigation back to the homepage and entry through another model-specific route.
 
 #### Scenario: `/cad/box` 初始方塊建模
 
@@ -107,6 +108,14 @@ The system MUST expose a runtime-validated component catalog. Each catalog entry
 - **And** Worker MUST 以 modular-grid-base component-local builder 建立 candidate
 - **And** commit 後 viewport、bounds 與可匯出的 model revision MUST 屬於 modular-grid-base
 
+#### Scenario: `/cad/box-normal` 初始開口盒建模
+
+- **Given** 使用者開啟 `/cad/box-normal`，且 WebAssembly、Worker 與 WebGL 可用
+- **When** Worker 回傳 engine.ready
+- **Then** 主執行緒 MUST 以該 route 的有效保存 `x`、`y`、`height` 與 `cornerPosts` 送出 generation 1、modelId=box-normal 的 model.generate；若沒有有效保存參數，MUST 使用 box-normal definition 的預設參數
+- **And** Worker MUST 以 box-normal component-local builder 建立 candidate
+- **And** commit 後 viewport、bounds 與可匯出的 model revision MUST 屬於 box-normal
+
 #### Scenario: CAD workspace 鎖定 route model
 
 - **Given** 使用者已進入任一合法的 model-specific CAD route
@@ -125,11 +134,89 @@ The system MUST expose a runtime-validated component catalog. Each catalog entry
 
 #### Scenario: Component 參數欄位
 
-- **Given** 使用者位於 `/cad/box` 或 `/cad/modular-grid-base`
+- **Given** 使用者位於 `/cad/box`、`/cad/box-normal` 或 `/cad/modular-grid-base`
 - **When** 使用者查看或修改參數
 - **Then** box MUST 提供 width、depth、height 欄位並明示 mm
+- **And** box-normal MUST 提供 X=2–40、Y=2–35 格數、height=10–500 mm 欄位，以及預設勾選的 cornerPosts checkbox
 - **And** modular-grid-base MUST 提供 rows、columns 欄位，並明示合法範圍 1–20 格、每格 20 × 20 mm 及固定高度 5 mm
 - **And** UI MUST NOT 顯示另一個 component 的參數欄位
+
+### Requirement: box-normal workspace integration
+
+The system MUST register `box-normal` as an independent runtime-validated model definition and MUST route `/cad/box-normal` to that definition. The definition MUST expose `x`, `y`, and `height` through numeric parameter fields plus `cornerPosts` through an independent custom checkbox control, centered X/Y preview metadata, deterministic STEP/STL metadata, and the bounds contract defined by the `box-normal` capability. The Worker MUST dispatch `modelId=box-normal` to a box-normal-specific builder and MUST NOT fall through to `box`, `modular-grid-base`, `hsw-cell`, or `hexagonal-column`.
+
+#### Scenario: box-normal initial generation
+
+- **GIVEN** a user opens `/cad/box-normal` in a supported browser
+- **WHEN** the Worker emits `engine.ready`
+- **THEN** the main thread MUST send generation 1 using valid saved box-normal parameters or the definition defaults
+- **AND** the Worker MUST route the request to the independent box-normal builder
+- **AND** the committed model MUST expose box-normal bounds, mesh and model metadata
+
+#### Scenario: box-normal parameter controls
+
+- **GIVEN** a user views the `/cad/box-normal` workspace
+- **WHEN** the parameter panel is rendered
+- **THEN** it MUST expose X slider values 2–40, Y slider values 2–35, integer height values 10–500 mm, and a checked-by-default corner-post checkbox
+- **AND** it MUST NOT expose parameters belonging to another component
+- **AND** the checkbox MUST expose an accessible label, checked state, and field-specific validation error when its raw value is not `true` or `false`
+
+#### Scenario: box-normal route isolation
+
+- **GIVEN** a `model.generate` request carries `modelId=box-normal`
+- **WHEN** the Worker validates and builds the request
+- **THEN** it MUST reject mismatched or unknown parameter shapes
+- **AND** it MUST NOT resolve the request through another component's builder or template cache
+
+### Requirement: box-normal parameter validation and generation lifecycle
+
+The workspace MUST parse X/Y/height as safe integers, parse `cornerPosts` as a boolean, and validate the complete box-normal snapshot before sending `model.generate`. Invalid or incomplete snapshots MUST follow the existing invalid-input and model-invalidate lifecycle. Valid snapshots MUST preserve the existing debounce, latest-wins, stale candidate, commit, mesh, and export gates.
+
+#### Scenario: Invalid box-normal input
+
+- **WHEN** a user enters a fractional, empty, non-finite, or out-of-range X, Y, or height value, or an invalid checkbox value
+- **THEN** the workspace MUST show a diagnosable validation error
+- **AND** it MUST send `model.invalidate` rather than `model.generate` for that snapshot
+- **AND** export MUST remain disabled while the input is invalid or stale
+
+#### Scenario: Valid box-normal input commit
+
+- **WHEN** a complete box-normal snapshot passes validation and the input debounce settles
+- **THEN** the workspace MUST send a generation request with typed `x`, `y`, `height`, and `cornerPosts`
+- **AND** only the latest valid candidate MUST be eligible for commit
+- **AND** the committed mesh bounds MUST match the box-normal contract within tolerance
+
+### Requirement: box-normal reference cache and disposal
+
+The Worker MUST load and validate the component-local `box-normal.step` reference at most once per Worker epoch, cache it independently from every other component reference/template, reuse it for later `box-normal` generations, and release it during Worker disposal. The box-normal builder MUST NOT delete or own the cached reference. A failed or missing reference MUST invalidate the cache and return a diagnosable asset error; pending cache cleanup MUST remain safe if disposal races asset loading.
+
+#### Scenario: Reference cache reuse
+
+- **WHEN** multiple `box-normal` generations run within one Worker epoch
+- **THEN** the Worker MUST load and validate `box-normal.step` only once
+- **AND** later generations MUST reuse the validated reference without using another component's cache
+
+#### Scenario: Reference disposal
+
+- **WHEN** the Worker is disposed while the reference is loaded or still pending
+- **THEN** the reference MUST be released once it becomes available
+- **AND** no later generation MUST reuse that disposed or failed reference
+
+#### Scenario: Reference load failure can be retried
+
+- **WHEN** loading or validating `box-normal.step` fails for one generation and a later generation is requested in the same Worker epoch
+- **THEN** the rejected reference promise MUST have been removed from the cache
+- **AND** the later generation MUST be allowed to retry the asset load
+
+### Requirement: box-normal documentation
+
+The Prototype documentation page MUST list `box-normal` as an available component and describe its X/Y grid ranges, 10–500 mm body height, total 0.15 mm X/Y clearance, default four 7 mm corner posts, localStorage persistence, and STEP/STL export behavior.
+
+#### Scenario: Documentation describes box-normal
+
+- **WHEN** a user opens the Prototype documentation page
+- **THEN** the page MUST mention `box-normal` and its confirmed controls and geometry behavior
+- **AND** the page MUST NOT describe `box` as the only available solid model
 
 ### Requirement: 參數驗證與 generation
 
@@ -476,13 +563,13 @@ replicad、OpenCascade、B-Rep 操作、mesh 產生與 STEP writer 不得在主�
 
 ### Requirement: 明確非目標
 
-The system MUST provide the existing box and the new modular-grid-base through the component catalog. This change MUST provide STEP and STL downloads, and MAY preserve validated component parameter preferences in browser-local persistence as defined by the component-parameter-persistence capability, but MUST NOT add arbitrary CAD file import, 3MF/G-code workflows, saving generated CAD files or models, authentication, collaboration, automatic Bambu Studio launching, or native desktop-app integration.
+The system MUST provide the registered `box`, `box-normal`, `modular-grid-base`, `hsw-cell`, and `hexagonal-column` through the component catalog. This change MUST provide STEP and STL downloads, and MAY preserve validated component parameter preferences in browser-local persistence as defined by the component-parameter-persistence capability, but MUST NOT add arbitrary CAD file import, 3MF/G-code workflows, saving generated CAD files or models, authentication, collaboration, automatic Bambu Studio launching, or native desktop-app integration.
 
 #### Scenario: Prototype 功能清單
 
 - **Given** 使用者查看 Prototype UI 與文件
 - **When** 檢查模型與輸出功能
-- **Then** 必須提供 component catalog、box、modular-grid-base、各自的 mm/數量參數、3D 預覽、STEP 下載與 STL 下載
+- **Then** 必須提供 component catalog、box、box-normal、modular-grid-base、hsw-cell、hexagonal-column、各自的 mm/數量參數、3D 預覽、STEP 下載與 STL 下載
 - **And** 可以存在 component 參數的 browser-local persistence
 - **And** 不得出現 arbitrary import、3MF、G-code、generated CAD file/model saving、auth、collaboration、自動啟動 Bambu Studio 或 native desktop bridge 入口
 

@@ -1,6 +1,7 @@
 import type { Shape3D } from 'replicad'
 import type { ProgressUnit } from '../../cad-contract/messages'
 import {
+  isBoxNormalParameters,
   isBoxParameters,
   isHexagonalColumnParameters,
   isHswCellParameters,
@@ -10,6 +11,10 @@ import {
   type ModelParameterValues,
 } from '../../cad-contract/units'
 import { buildBoxBRep } from '../components/box/builder'
+import {
+  buildBoxNormal,
+  type BoxNormalOperationCounts,
+} from '../components/box-normal/builder'
 import { buildHswCell } from '../components/hsw-cell/builder'
 import { buildHexagonalColumn } from '../components/hexagonal-column/builder'
 import { buildModularGridBase } from '../components/modular-grid-base/builder'
@@ -17,6 +22,7 @@ import { buildModularGridBase } from '../components/modular-grid-base/builder'
 export type KernelBuildContext = {
   getModularGridBaseTemplate: () => Promise<Shape3D>
   getHswCellTemplate: () => Promise<Shape3D>
+  getBoxNormalReference?: () => Promise<Shape3D>
   getHexagonalColumnReference?: () => Promise<Shape3D>
   yieldToEventLoop?: () => Promise<void>
   isGenerationCurrent?: () => boolean
@@ -27,6 +33,7 @@ export type KernelBuildContext = {
     unit?: ProgressUnit
   }) => void
   reportPhase?: (phase: KernelBuildPhase, durationMs: number) => void
+  reportOperationCounts?: (counts: BoxNormalOperationCounts) => void
 }
 
 export type KernelBuildPhase =
@@ -52,6 +59,29 @@ function buildBoxModel(
     throw new Error('MODEL_PARAMETERS_MISMATCH:box')
   }
   return buildBoxBRep(parameters)
+}
+
+async function buildBoxNormalModel(
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Promise<Shape3D> {
+  if (!isBoxNormalParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:box-normal')
+  }
+  if (!context.getBoxNormalReference) {
+    throw new Error('MODEL_ASSET_INVALID:box-normal-reference-missing')
+  }
+  const reference = await context.getBoxNormalReference()
+  if (context.isGenerationCurrent && !context.isGenerationCurrent()) {
+    throw new Error('STALE_GENERATION')
+  }
+  return buildBoxNormal(parameters, reference, {
+    yieldToEventLoop: context.yieldToEventLoop,
+    isGenerationCurrent: context.isGenerationCurrent,
+    reportProgress: context.reportProgress,
+    reportPhase: context.reportPhase,
+    reportOperationCounts: context.reportOperationCounts,
+  })
 }
 
 async function buildModularGridBaseModel(
@@ -110,6 +140,11 @@ export const boxKernelDefinition: KernelModelDefinition = {
   build: buildBoxModel,
 }
 
+export const boxNormalKernelDefinition: KernelModelDefinition = {
+  id: 'box-normal',
+  build: buildBoxNormalModel,
+}
+
 export const modularGridBaseKernelDefinition: KernelModelDefinition = {
   id: 'modular-grid-base',
   build: buildModularGridBaseModel,
@@ -127,6 +162,7 @@ export const hexagonalColumnKernelDefinition: KernelModelDefinition = {
 
 export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   boxKernelDefinition,
+  boxNormalKernelDefinition,
   modularGridBaseKernelDefinition,
   hswCellKernelDefinition,
   hexagonalColumnKernelDefinition,

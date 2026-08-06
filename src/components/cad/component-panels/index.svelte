@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ModelId } from '../../../cad-contract/units'
   import BoxComponentPanel from './box/BoxComponentPanel.svelte'
+  import BoxNormalComponentPanel from './box-normal/BoxNormalComponentPanel.svelte'
   import HexagonalColumnComponentPanel from './hexagonal-column/HexagonalColumnComponentPanel.svelte'
   import HswCellComponentPanel from './hsw-cell/HswCellComponentPanel.svelte'
   import ModularGridBaseComponentPanel from './modular-grid-base/ModularGridBaseComponentPanel.svelte'
@@ -21,6 +22,8 @@
     {fieldErrors}
     {onInputChange}
   />
+{:else if modelId === 'box-normal'}
+  <BoxNormalComponentPanel {rawParameters} {fieldErrors} {onInputChange} />
 {:else if modelId === 'hsw-cell'}
   <HswCellComponentPanel {rawParameters} {fieldErrors} {onInputChange} />
 {:else if modelId === 'hexagonal-column'}

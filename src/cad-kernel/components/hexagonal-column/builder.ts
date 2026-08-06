@@ -73,6 +73,12 @@ export type HexagonalColumnBuildContext = {
   compoundBuilder?: (shapes: Shape3D[]) => Shape3D
 }
 
+export type HexagonalColumnPrototypeOptions = {
+  crossSectionRotationDegrees?: number
+  startTransitionLength?: number
+  endTransitionLength?: number
+}
+
 function deleteShape(shape: { delete?: () => void } | null | undefined): void {
   try {
     shape?.delete?.()
@@ -294,16 +300,28 @@ function orientPrototype(
 function buildLocalPrototype(
   height: number,
   orientation: HexagonalColumnOrientation,
+  options: HexagonalColumnPrototypeOptions = {},
 ): Shape3D {
-  const transition = HEXAGONAL_COLUMN_CONFIGURATION.endTransitionLength
+  const {
+    crossSectionRotationDegrees = HEXAGONAL_COLUMN_CONFIGURATION.crossSectionRotationDegrees,
+    startTransitionLength = HEXAGONAL_COLUMN_CONFIGURATION.endTransitionLength,
+    endTransitionLength = HEXAGONAL_COLUMN_CONFIGURATION.endTransitionLength,
+  } = options
+  if (
+    startTransitionLength < 0 ||
+    endTransitionLength < 0 ||
+    startTransitionLength + endTransitionLength >= height
+  ) {
+    throw new Error('HEXAGONAL_COLUMN_INVALID_TRANSITION')
+  }
   const endStart = HEXAGONAL_COLUMN_PROFILES.end.map((point) =>
     asPoint(0, point),
   )
   const bodyStart = HEXAGONAL_COLUMN_PROFILES.body.map((point) =>
-    asPoint(transition, point),
+    asPoint(startTransitionLength, point),
   )
   const bodyEnd = HEXAGONAL_COLUMN_PROFILES.body.map((point) =>
-    asPoint(height - transition, point),
+    asPoint(height - endTransitionLength, point),
   )
   const endEnd = HEXAGONAL_COLUMN_PROFILES.end.map((point) =>
     asPoint(height, point),
@@ -337,10 +355,19 @@ function buildLocalPrototype(
     }
   }
 
-  addFace([...endStart].reverse())
-  addFace(endEnd)
-  addSixToTwelveTransition(endStart, bodyStart)
-  addSixToTwelveTransition(endEnd, bodyEnd)
+  if (startTransitionLength > 0) {
+    addFace([...endStart].reverse())
+    addSixToTwelveTransition(endStart, bodyStart)
+  } else {
+    addFace([...bodyStart].reverse())
+  }
+
+  if (endTransitionLength > 0) {
+    addSixToTwelveTransition(endEnd, bodyEnd)
+    addFace(endEnd)
+  } else {
+    addFace(bodyEnd)
+  }
 
   for (let index = 0; index < bodyStart.length; index += 1) {
     const next = (index + 1) % bodyStart.length
@@ -356,7 +383,7 @@ function buildLocalPrototype(
     localShape = built
     localShape = localShape.rotate(-90, [0, 0, 0], [0, 1, 0])
     localShape = localShape.rotate(
-      HEXAGONAL_COLUMN_CONFIGURATION.crossSectionRotationDegrees,
+      crossSectionRotationDegrees,
       [0, 0, 0],
       [0, 0, 1],
     )
@@ -368,6 +395,14 @@ function buildLocalPrototype(
   } finally {
     for (const face of faces) deleteShape(face)
   }
+}
+
+export function buildHexagonalColumnPrototype(
+  height: number,
+  orientation: HexagonalColumnOrientation = 'standing',
+  options: HexagonalColumnPrototypeOptions = {},
+): Shape3D {
+  return buildLocalPrototype(height, orientation, options)
 }
 
 function assembleCompound(
