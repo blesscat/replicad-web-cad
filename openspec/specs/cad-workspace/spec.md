@@ -307,7 +307,7 @@ Worker 建模成功只代表 candidate 建立成功，不代表 current model �
 
 ### Requirement: Mesh viewport
 
-The viewport MUST use Threlte with Three.js to display the latest committed model mesh, regardless of whether the selected catalog entry is a box or a component. It MUST NOT execute B-Rep modelling or STEP export. Dimension annotations MUST describe the selected committed model's actual X, Y and Z bounds and MUST remain associated with the same committed model revision.
+The viewport MUST use Threlte with Three.js to display the latest committed model mesh, regardless of whether the selected catalog entry is a box or a component. It MUST NOT execute B-Rep modelling or STEP export. Dimension annotations MUST describe the selected committed model's actual X, Y and Z bounds and MUST remain associated with the same committed model revision. While the committed model revision is unchanged, parameter input and stale-state changes MUST NOT change the viewport camera pose or framing; camera fitting MAY occur when the viewport size changes or when a new committed model revision replaces the current one.
 
 #### Scenario: 有效 component mesh
 
@@ -335,6 +335,23 @@ The viewport MUST use Threlte with Three.js to display the latest committed mode
 - **Then** 尺寸標註必須仍對應畫面上保留的上一個 committed model
 - **And** 尺寸標註不得提前顯示尚未 committed 的新輸入
 - **And** viewport 必須維持既有 stale 狀態提示
+- **And** viewport camera pose、model framing 與尺寸標註的畫面位置必須維持不變
+
+#### Scenario: 參數輸入不觸發 viewport camera 旋轉
+
+- **Given** viewport 已顯示 committed model，且使用者未在 3D viewport 內進行 orbit 操作
+- **When** 使用者拖曳 slider、使用鍵盤調整 slider，或修改其他參數，而新 model revision 尚未 committed
+- **Then** viewport 必須繼續顯示原本的 committed mesh
+- **And** camera 的方向、target、zoom/framing 不得因輸入事件而改變
+- **And** 輸入事件不得使既有模型被重新 fit 而產生旋轉或跳動
+
+#### Scenario: 新 committed revision 更新 framing
+
+- **Given** 使用者已修改參數，且新的 model revision 已成功 committed
+- **When** viewport 替換成新的 committed mesh
+- **Then** viewport 必須顯示新 revision 對應的模型與尺寸標註
+- **And** camera framing 必須使新模型可見
+- **And** 既有 Orbit 操作必須仍可使用
 
 #### Scenario: 沒有可用模型
 
