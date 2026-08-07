@@ -9,7 +9,9 @@ import {
 import { loadHswCellTemplate } from '../cad-kernel/components/hsw-cell/builder'
 import { loadHexagonalColumnReference } from '../cad-kernel/components/hexagonal-column/builder'
 import { loadModularGridBaseTemplate } from '../cad-kernel/components/modular-grid-base/builder'
+import { loadOpenGridPrototypeTemplate } from '../cad-kernel/components/opengrid/builder'
 import { buildModelBRep } from '../cad-kernel/model'
+import { assertOpenGridShapeQuality } from '../cad-kernel/components/opengrid/quality'
 import { meshBRep, serializeMesh, type MeshData } from '../cad-kernel/mesh'
 import {
   errorEvent,
@@ -28,7 +30,12 @@ import {
   modelFileName,
   modelStlFileName,
   isHswCellParameters,
+  isOpenGridParameters,
+  normalizeOpenGridParameters,
   PROTOTYPE_CONFIGURATION,
+  type ModelParameterValues,
+  type OpenGridVariant,
+  validateOpenGridGenerationSupport,
   validateModelParameters,
 } from '../cad-contract/units'
 import { cadErrorCodeFor, cadErrorStageFor } from './error-mapping'
@@ -76,6 +83,10 @@ export class CadWorkerRuntime {
   private hswCellTemplate: Promise<import('replicad').Shape3D> | null = null
   private hexagonalColumnReference: Promise<import('replicad').Shape3D> | null =
     null
+  private readonly openGridPrototypes = new Map<
+    OpenGridVariant,
+    Promise<import('replicad').Shape3D>
+  >()
   private readonly lifetime: RevisionLifetime
   private readonly candidateTimers = new Map<
     string,
@@ -159,6 +170,7 @@ export class CadWorkerRuntime {
           this.disposeModularGridBaseTemplate()
           this.disposeHswCellTemplate()
           this.disposeHexagonalColumnReference()
+          this.disposeOpenGridPrototypes()
           this.initialized = false
           this.initializing = null
           this.invalidatedGeneration = 0
@@ -222,6 +234,15 @@ export class CadWorkerRuntime {
     this.latestInputGeneration = command.generation
     this.invalidatedGeneration = 0
     this.lifetime.pruneCommitsBeforeGeneration(this.latestInputGeneration)
+    let generationParameters: ModelParameterValues = command.parameters
+    if (command.modelId === 'opengrid') {
+      const normalizedParameters = normalizeOpenGridParameters(
+        command.parameters,
+      )
+      generationParameters = normalizedParameters
+      const support = validateOpenGridGenerationSupport(normalizedParameters)
+      if (!support.valid) throw new Error('OPENGRID_UNSUPPORTED_CONFIGURATION')
+    }
     const hswProgress =
       command.modelId === 'hsw-cell' && isHswCellParameters(command.parameters)
         ? {
@@ -233,10 +254,11 @@ export class CadWorkerRuntime {
     this.emitProgress(command, 'building', undefined, hswProgress)
     let shape: Shape3D
     try {
-      shape = await buildModelBRep(command.modelId, command.parameters, {
+      shape = await buildModelBRep(command.modelId, generationParameters, {
         getModularGridBaseTemplate: () => this.getModularGridBaseTemplate(),
         getHswCellTemplate: () => this.getHswCellTemplate(),
         getHexagonalColumnReference: () => this.getHexagonalColumnReference(),
+        getOpenGridPrototype: (variant) => this.getOpenGridPrototype(variant),
         yieldToEventLoop: yieldToWorkerEventLoop,
         isGenerationCurrent: () => this.isGenerationCurrent(command.generation),
         reportProgress: (progress) =>
@@ -265,6 +287,12 @@ export class CadWorkerRuntime {
     try {
       this.emitProgress(command, 'meshing')
       mesh = meshBRep(shape, command.previewConfig)
+      if (command.modelId === 'opengrid') {
+        if (!isOpenGridParameters(generationParameters)) {
+          throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid')
+        }
+        assertOpenGridShapeQuality(shape, generationParameters, mesh)
+      }
     } catch (error) {
       try {
         shape.delete()
@@ -280,7 +308,7 @@ export class CadWorkerRuntime {
       generation: command.generation,
       workerEpoch: this.epoch,
       modelId: command.modelId,
-      parameters: command.parameters,
+      parameters: generationParameters,
       shape,
       mesh,
       createdAt: Date.now(),
@@ -682,6 +710,27 @@ export class CadWorkerRuntime {
     return this.hexagonalColumnReference
   }
 
+  private getOpenGridPrototype(
+    variant: OpenGridVariant,
+  ): Promise<import('replicad').Shape3D> {
+    const cached = this.openGridPrototypes.get(variant)
+    if (cached) return cached
+
+    const prototype = loadOpenGridPrototypeTemplate(variant).then((shape) => {
+      if (this.disposed) {
+        shape.delete()
+        throw new Error('WORKER_TERMINATED')
+      }
+      return shape
+    })
+    const recoverable = prototype.catch((error) => {
+      this.openGridPrototypes.delete(variant)
+      throw error
+    })
+    this.openGridPrototypes.set(variant, recoverable)
+    return recoverable
+  }
+
   private isGenerationCurrent(generation: number): boolean {
     return (
       !this.disposed &&
@@ -717,6 +766,14 @@ export class CadWorkerRuntime {
       .catch(() => undefined)
   }
 
+  private disposeOpenGridPrototypes(): void {
+    const prototypes = [...this.openGridPrototypes.values()]
+    this.openGridPrototypes.clear()
+    for (const prototype of prototypes) {
+      void prototype.then((shape) => shape.delete()).catch(() => undefined)
+    }
+  }
+
   private toCadError(error: unknown, command: WorkerCommand): CadError {
     const message = error instanceof Error ? error.message : String(error)
     const code: CadErrorCode = cadErrorCodeFor(message, command.kind)
@@ -727,6 +784,22 @@ export class CadWorkerRuntime {
           ? 'STL 匯出資料不正確，請重試。'
           : 'STL 匯出失敗，請重試。'
       return makeError(stage, code, userMessage, true)
+    }
+    if (code === 'OPENGRID_UNSUPPORTED_CONFIGURATION') {
+      return makeError(
+        'validation',
+        code,
+        'OpenGrid 參數與官方 SCAD 規格不相容，請檢查板型、格數、螺絲孔與接頭孔設定。',
+        true,
+      )
+    }
+    if (code === 'OPENGRID_QUALITY_INVALID') {
+      return makeError(
+        'meshing',
+        code,
+        'OpenGrid 幾何未通過品質檢查，請調整參數後重試。',
+        true,
+      )
     }
     return makeError(stage, code, `CAD 操作失敗：${message}`, true)
   }

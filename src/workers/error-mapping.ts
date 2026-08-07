@@ -19,6 +19,15 @@ export function cadErrorCodeFor(
   ) {
     return 'INVALID_INPUT'
   }
+  if (message.includes('OPENGRID_UNSUPPORTED_CONFIGURATION')) {
+    return 'OPENGRID_UNSUPPORTED_CONFIGURATION'
+  }
+  if (
+    message.includes('OPENGRID_QUALITY_INVALID') ||
+    message.includes('OPENGRID_BREP_INVALID')
+  ) {
+    return 'OPENGRID_QUALITY_INVALID'
+  }
   if (message.includes('STEP_METADATA_INVALID')) return 'STEP_METADATA_INVALID'
   if (message.includes('STL_METADATA_INVALID')) return 'STL_METADATA_INVALID'
   if (message.includes('MESH_INVALID')) return 'MESH_INVALID'
@@ -40,6 +49,10 @@ export function cadErrorStageFor(
   commandKind: WorkerCommandKind,
   message = '',
 ): CadErrorStage {
+  if (message.includes('OPENGRID_UNSUPPORTED_CONFIGURATION')) {
+    return 'validation'
+  }
+  if (message.includes('OPENGRID_QUALITY_INVALID')) return 'meshing'
   if (message.includes('MESH_INVALID')) return 'meshing'
   switch (commandKind) {
     case 'engine.init':

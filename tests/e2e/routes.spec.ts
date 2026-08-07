@@ -119,6 +119,9 @@ test('home and docs are static Astro pages', async ({ page }) => {
   await expect(
     page.getByRole('link', { name: '使用可調六角柱' }),
   ).toHaveAttribute('href', '/cad/hexagonal-column')
+  await expect(
+    page.getByRole('link', { name: '使用OpenGrid 底板' }),
+  ).toHaveAttribute('href', '/cad/opengrid')
   await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
 
   await page.goto('/docs/')
@@ -177,6 +180,107 @@ test('box CAD route exposes fallback and locked parameter controls', async ({
     page.getByRole('link', { name: '返回首頁選擇其他模型' }),
   ).toHaveAttribute('href', '/')
   await expect(page.locator('#cad-fallback')).toBeHidden()
+})
+
+test('OpenGrid CAD route exposes typed controls and the custom matrix', async ({
+  page,
+}) => {
+  await page.goto('/cad/opengrid')
+  await expect(page.getByTestId('opengrid-panel')).toBeVisible()
+  await expect(
+    page.getByRole('combobox', { name: 'OpenGrid 板型' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('spinbutton', { name: 'OpenGrid 行數' }),
+  ).toHaveValue('2')
+  await expect(page.getByText('尺寸：56 × 56 × 4 mm')).toBeVisible()
+  await page
+    .getByRole('combobox', { name: 'OpenGrid 螺絲孔模式' })
+    .selectOption('custom')
+  await expect(page.getByTestId('opengrid-custom-matrix')).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '內部交界第 1 行第 1 列' }),
+  ).toBeVisible()
+})
+
+test('OpenGrid workspace edits typed parameters and keeps export tied to the committed revision', async ({
+  page,
+  browserName,
+}) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.goto('/cad/opengrid')
+  await waitForCadReady(page)
+
+  await expect(
+    page.getByRole('combobox', { name: 'CAD component' }),
+  ).toHaveCount(0)
+  await expect(page.getByLabel('寬度 X 56 mm')).toBeVisible()
+  await expect(page.getByLabel('深度 Y 56 mm')).toBeVisible()
+  await expect(page.getByLabel('高度 Z 4 mm')).toBeVisible()
+
+  await page
+    .getByRole('combobox', { name: 'OpenGrid 板型' })
+    .selectOption('Lite')
+  await page.getByRole('spinbutton', { name: 'OpenGrid 行數' }).fill('2')
+  await page.getByRole('spinbutton', { name: 'OpenGrid 列數' }).fill('3')
+  await page
+    .getByRole('combobox', { name: 'OpenGrid 螺絲尺寸來源' })
+    .selectOption('custom')
+  const screwMode = page.getByRole('combobox', { name: 'OpenGrid 螺絲孔模式' })
+  await screwMode.selectOption('corners')
+  await expect(screwMode).toHaveValue('corners')
+  await screwMode.selectOption('everywhere')
+  await expect(screwMode).toHaveValue('everywhere')
+  await screwMode.selectOption('custom')
+  await expect(page.getByTestId('opengrid-custom-matrix')).toBeVisible()
+
+  const northEast = page.getByRole('button', {
+    name: '內部交界第 1 行第 1 列',
+  })
+  await northEast.click()
+  await expect(northEast).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByText('已選 1 孔')).toBeVisible()
+
+  await page
+    .getByRole('combobox', { name: 'OpenGrid 連接孔' })
+    .selectOption('enabled')
+  await waitForCadReady(page)
+  await expect(page.getByLabel('寬度 X 84 mm')).toBeVisible()
+  await expect(page.getByLabel('深度 Y 56 mm')).toBeVisible()
+  await expect(page.getByLabel('高度 Z 4 mm')).toBeVisible()
+
+  const rows = page.getByRole('spinbutton', { name: 'OpenGrid 行數' })
+  await rows.fill('18')
+  await expect(rows).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByRole('alert')).toContainText('格數必須介於 1–17')
+  await expect(page.getByRole('button', { name: '下載 STEP' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: '下載 STL' })).toBeDisabled()
+  await expect(page.getByLabel('深度 Y 56 mm')).toBeVisible()
+
+  await rows.fill('2')
+  await waitForCadReady(page)
+  await expect(page.getByRole('button', { name: '下載 STEP' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: '下載 STL' })).toBeEnabled()
+
+  const stepDownloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '下載 STEP' }).click()
+  const stepDownload = await stepDownloadPromise
+  expect(stepDownload.suggestedFilename()).toMatch(
+    /^opengrid-lite-3x2-custom-custom-corners-enabled-[0-9a-f]{8}\.step$/,
+  )
+  const stepStream = await stepDownload.createReadStream()
+  expect(stepStream).not.toBeNull()
+  let stepByteLength = 0
+  for await (const chunk of stepStream ?? []) stepByteLength += chunk.length
+  expect(stepByteLength).toBeGreaterThan(0)
+
+  const stlDownloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '下載 STL' }).click()
+  const stlDownload = await stlDownloadPromise
+  expect(stlDownload.suggestedFilename()).toMatch(
+    /^opengrid-lite-3x2-custom-custom-corners-enabled-[0-9a-f]{8}\.stl$/,
+  )
+  expect(await readBinaryStlByteLength(stlDownload)).toBeGreaterThan(84)
 })
 
 test('grid dimension calculators apply counts and preserve manual controls', async ({

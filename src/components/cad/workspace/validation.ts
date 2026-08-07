@@ -7,19 +7,29 @@ import {
   type ModelId,
   type ModelParameterKey,
   type ModelParameterValues,
+  type ScalarModelParameterKey,
 } from '../../../cad-contract/units'
 import type { RawParameters } from './types'
 
-export const DIMENSION_KEYS: ModelParameterKey[] = ['width', 'depth', 'height']
-export const GRID_PARAMETER_KEYS: ModelParameterKey[] = ['rows', 'columns']
-export const HEXAGONAL_COLUMN_PARAMETER_KEYS: ModelParameterKey[] = [
+export const DIMENSION_KEYS: ScalarModelParameterKey[] = [
+  'width',
+  'depth',
+  'height',
+]
+export const GRID_PARAMETER_KEYS: ScalarModelParameterKey[] = [
+  'rows',
+  'columns',
+]
+export const HEXAGONAL_COLUMN_PARAMETER_KEYS: ScalarModelParameterKey[] = [
   'height',
   'count',
   'gap',
   'orientation',
 ]
 
-function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
+function parameterKeysForModel(
+  modelId: ModelId,
+): readonly ScalarModelParameterKey[] {
   if (modelId === 'box') return DIMENSION_KEYS
   if (modelId === 'modular-grid-base') return GRID_PARAMETER_KEYS
   if (modelId === 'hsw-cell') return GRID_PARAMETER_KEYS
@@ -61,7 +71,7 @@ export function parseRawParameters(
   | { valid: false; message: string; field?: ModelParameterKey } {
   const keys = parameterKeysForModel(modelId)
   const unexpectedKey = Object.keys(raw).find(
-    (key) => !keys.includes(key as ModelParameterKey),
+    (key) => !keys.includes(key as ScalarModelParameterKey),
   )
   if (unexpectedKey) {
     return { valid: false, message: '包含不支援的參數欄位。' }

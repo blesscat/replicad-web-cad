@@ -1,7 +1,12 @@
 <script lang="ts">
   import { getModelDefinition } from '../../features/cad/model-catalog'
   import type { CadState } from '../../features/cad/state'
-  import type { ModelId, ModelParameterKey } from '../../cad-contract/units'
+  import type {
+    ModelId,
+    ModelParameterKey,
+    ModelParameterValues,
+    OpenGridParameters,
+  } from '../../cad-contract/units'
   import type { ExportFormat } from '../../features/cad/download'
   import type { RawParameters } from './workspace/types'
   import ComponentParameterPanel from './component-panels/index.svelte'
@@ -12,10 +17,12 @@
   type Props = {
     state: CadState
     modelId: ModelId
+    parameters: ModelParameterValues
     rawParameters: RawParameters
-    fieldErrors: Partial<Record<ModelParameterKey, string>>
+    fieldErrors: Partial<Record<ModelParameterKey | 'parameters', string>>
     canExport: boolean
     onInputChange: (key: ModelParameterKey, value: string) => void
+    onOpenGridParametersChange: (parameters: OpenGridParameters) => void
     onExport: (format: ExportFormat) => void
     onRetry: () => void
   }
@@ -23,10 +30,12 @@
   let {
     state,
     modelId,
+    parameters,
     rawParameters,
     fieldErrors,
     canExport,
     onInputChange,
+    onOpenGridParametersChange,
     onExport,
     onRetry,
   }: Props = $props()
@@ -55,9 +64,11 @@
   </div>
   <ComponentParameterPanel
     {modelId}
+    {parameters}
     {rawParameters}
     {fieldErrors}
     {onInputChange}
+    {onOpenGridParametersChange}
   />
   <div class="flex flex-wrap gap-[0.6rem]">
     <button

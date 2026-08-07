@@ -1,6 +1,26 @@
 import { describe, expect, it } from 'vitest'
 import { normalizeError } from '../../src/cad-contract/errors'
+import {
+  OPENGRID_CONFIGURATION,
+  type OpenGridParameters,
+} from '../../src/cad-contract/units'
 import { cadReducer, initialCadState } from '../../src/features/cad/state'
+
+function opengridParameters(
+  overrides: Partial<OpenGridParameters> = {},
+): OpenGridParameters {
+  return {
+    ...OPENGRID_CONFIGURATION.defaultParameters,
+    chamferCorners: {
+      ...OPENGRID_CONFIGURATION.defaultParameters.chamferCorners,
+    },
+    connectorSides: {
+      ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
+    },
+    customScrewPositions: [],
+    ...overrides,
+  }
+}
 
 describe('CAD state machine', () => {
   it('keeps a committed model stale while a newer generation is being built', () => {
@@ -98,5 +118,51 @@ describe('CAD state machine', () => {
       gap: 1,
       orientation: 'lying',
     })
+  })
+
+  it('retains OpenGrid committed metadata while marking a newer input stale', () => {
+    const parameters = opengridParameters({
+      variant: 'Full',
+      rows: 1,
+      columns: 1,
+      chamfers: 'none',
+      connectorHoles: 'none',
+      screwMode: 'none',
+    })
+    const ready = cadReducer(initialCadState('opengrid', parameters), {
+      type: 'model-ready',
+      model: {
+        revision: 'opengrid-revision-1',
+        workerEpoch: 'epoch-opengrid',
+        generation: 1,
+        modelId: 'opengrid',
+        parameters,
+        mesh: {
+          positions: new Float32Array([0, 0, 0]).buffer,
+          normals: new Float32Array([0, 0, 1]).buffer,
+          indices: new Uint32Array([0, 0, 0]).buffer,
+          bounds: {
+            min: [-14, -14, 0],
+            max: [14, 14, 6.8],
+          },
+          triangleCount: 1,
+        },
+      },
+    })
+    const stale = cadReducer(ready, {
+      type: 'input-valid',
+      modelId: 'opengrid',
+      input: { ...parameters, variant: 'Lite' },
+      generation: 2,
+    })
+
+    expect(ready.committed).toMatchObject({
+      modelId: 'opengrid',
+      revision: 'opengrid-revision-1',
+      parameters,
+    })
+    expect(stale.committed?.revision).toBe('opengrid-revision-1')
+    expect(stale.stale).toBe(true)
+    expect(stale.exportStatus).toBe('disabled')
   })
 })

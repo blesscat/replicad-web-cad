@@ -3,6 +3,7 @@ import {
   PROTOTYPE_CONFIGURATION,
   type ModelId,
   type ModelParameterKey,
+  type OpenGridParameters,
 } from '../../../cad-contract/units'
 import {
   cadReducer,
@@ -52,6 +53,7 @@ function getCadFallbackElement(): HTMLElement | null {
 
 export type CadWorkerRuntime = {
   handleInputChange: (key: ModelParameterKey, value: string) => void
+  handleOpenGridParametersChange: (parameters: OpenGridParameters) => void
   handleExport: (format?: ExportFormat) => void
   handleRetry: () => void
   dispose: () => void
@@ -313,6 +315,7 @@ export function createCadWorkerRuntime(
 
   return {
     handleInputChange: generation.handleInputChange,
+    handleOpenGridParametersChange: generation.handleOpenGridParametersChange,
     handleExport: exportHandlers.handleExport,
     handleRetry,
     dispose,

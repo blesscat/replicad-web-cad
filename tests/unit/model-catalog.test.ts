@@ -5,14 +5,35 @@ import {
   modelIdForCadPath,
   modelDefinitions,
 } from '../../src/features/cad/model-catalog'
+import {
+  OPENGRID_CONFIGURATION,
+  type OpenGridParameters,
+} from '../../src/cad-contract/units'
+
+function opengridParameters(
+  overrides: Partial<OpenGridParameters> = {},
+): OpenGridParameters {
+  return {
+    ...OPENGRID_CONFIGURATION.defaultParameters,
+    chamferCorners: {
+      ...OPENGRID_CONFIGURATION.defaultParameters.chamferCorners,
+    },
+    connectorSides: {
+      ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
+    },
+    customScrewPositions: [],
+    ...overrides,
+  }
+}
 
 describe('CAD component catalog', () => {
-  it('exposes independent box, grid, HSW, and hexagonal-column definitions', () => {
+  it('exposes independent model definitions including OpenGrid', () => {
     expect(modelDefinitions.map((definition) => definition.id)).toEqual([
       'box',
       'modular-grid-base',
       'hsw-cell',
       'hexagonal-column',
+      'opengrid',
     ])
 
     const grid = getModelDefinition('modular-grid-base')
@@ -159,7 +180,45 @@ describe('CAD component catalog', () => {
     )
     expect(modelIdForCadPath('/cad/hsw-cell/')).toBe('hsw-cell')
     expect(modelIdForCadPath('/cad/hexagonal-column/')).toBe('hexagonal-column')
+    expect(cadPathForModel('opengrid')).toBe('/cad/opengrid')
+    expect(modelIdForCadPath('/cad/opengrid/')).toBe('opengrid')
     expect(modelIdForCadPath('/cad/unknown')).toBeUndefined()
     expect(modelIdForCadPath('/docs/box')).toBeUndefined()
+  })
+
+  it('keeps OpenGrid parameters isolated from other model definitions', () => {
+    const opengrid = getModelDefinition('opengrid')
+    expect(opengrid?.displayName).toContain('OpenGrid')
+    expect(opengrid?.defaultParameters).toEqual(opengridParameters())
+    const parameters = opengridParameters({
+      variant: 'Lite' as const,
+      rows: 2,
+      columns: 3,
+      screwKind: 'custom' as const,
+      screwMode: 'custom' as const,
+      customScrewPositions: [{ row: 0, column: 1 }],
+      connectorHoles: 'enabled' as const,
+    })
+    expect(opengrid?.validateParameters(parameters)).toEqual({
+      valid: true,
+      value: { modelId: 'opengrid', parameters },
+    })
+    expect(opengrid?.boundsForParameters(parameters)).toEqual({
+      min: [-42, -28, 0],
+      max: [42, 28, 4],
+    })
+    expect(opengrid?.exportFileName(parameters)).toMatch(
+      /^opengrid-lite-3x2-custom-custom-corners-enabled-[0-9a-f]{8}\.step$/,
+    )
+    expect(opengrid?.stlFileName(parameters)).toMatch(
+      /^opengrid-lite-3x2-custom-custom-corners-enabled-[0-9a-f]{8}\.stl$/,
+    )
+    expect(
+      getModelDefinition('modular-grid-base')?.validateParameters(parameters),
+    ).toEqual({ valid: false, issues: expect.any(Array) })
+    expect(getModelDefinition('box')?.validateParameters(parameters)).toEqual({
+      valid: false,
+      issues: expect.any(Array),
+    })
   })
 })

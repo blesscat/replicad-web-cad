@@ -1,16 +1,30 @@
 <script lang="ts">
-  import type { ModelId } from '../../../cad-contract/units'
+  import type {
+    ModelId,
+    ModelParameterValues,
+    OpenGridParameters,
+  } from '../../../cad-contract/units'
   import BoxComponentPanel from './box/BoxComponentPanel.svelte'
   import HexagonalColumnComponentPanel from './hexagonal-column/HexagonalColumnComponentPanel.svelte'
   import HswCellComponentPanel from './hsw-cell/HswCellComponentPanel.svelte'
   import ModularGridBaseComponentPanel from './modular-grid-base/ModularGridBaseComponentPanel.svelte'
+  import OpenGridComponentPanel from './opengrid/OpenGridComponentPanel.svelte'
   import type { ComponentPanelProps } from './types'
 
   type Props = ComponentPanelProps & {
     modelId: ModelId
+    parameters: ModelParameterValues
+    onOpenGridParametersChange: (parameters: OpenGridParameters) => void
   }
 
-  let { modelId, rawParameters, fieldErrors, onInputChange }: Props = $props()
+  let {
+    modelId,
+    parameters,
+    rawParameters,
+    fieldErrors,
+    onInputChange,
+    onOpenGridParametersChange,
+  }: Props = $props()
 </script>
 
 {#if modelId === 'box'}
@@ -28,5 +42,11 @@
     {rawParameters}
     {fieldErrors}
     {onInputChange}
+  />
+{:else if modelId === 'opengrid'}
+  <OpenGridComponentPanel
+    parameters={parameters as OpenGridParameters}
+    {fieldErrors}
+    onParametersChange={onOpenGridParametersChange}
   />
 {/if}

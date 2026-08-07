@@ -43,10 +43,14 @@ const selectedStrategies = process.env.RUN_OPENGRID_BENCHMARK_STRATEGIES?.split(
 )
   .map((value) => value.trim())
   .filter(
-    (value): value is 'whole-profile' | 'row-block' | 'cell-balanced' =>
+    (
+      value,
+    ): value is
+      'whole-profile' | 'row-block' | 'cell-balanced' | 'prototype-template' =>
       value === 'whole-profile' ||
       value === 'row-block' ||
-      value === 'cell-balanced',
+      value === 'cell-balanced' ||
+      value === 'prototype-template',
   )
 
 describe.skipIf(!runBenchmark)('OpenGrid geometry Worker benchmark', () => {

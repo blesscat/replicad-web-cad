@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Shape3D } from 'replicad'
 import {
   createOpenGridBenchmarkFixtures,
+  OPENGRID_BENCHMARK_STRATEGIES,
   OPENGRID_BENCHMARK_FIXTURES,
   OPENGRID_BENCHMARK_RUNS,
   renderOpenGridBenchmarkMarkdown,
@@ -94,7 +95,7 @@ describe('OpenGrid geometry benchmark contract', () => {
     ).toBeGreaterThan(OPENGRID_BENCHMARK_CONFIGURATION.workspaceMaxDimension)
   })
 
-  it('keeps screw matrices deterministic for none, corners, all, and custom loads', () => {
+  it('keeps official screw lattices deterministic for none, corners, everywhere, and custom loads', () => {
     const fixtures = createOpenGridBenchmarkFixtures()
     const none = fixtures.find((fixture) => fixture.scaleId === '1x1')!
     const corners = fixtures.find((fixture) => fixture.scaleId === '2x2')!
@@ -102,14 +103,16 @@ describe('OpenGrid geometry benchmark contract', () => {
     const custom = fixtures.find((fixture) => fixture.scaleId === '5x5')!
 
     expect(screwPositionsForRequest(none.request)).toHaveLength(0)
-    expect(screwPositionsForRequest(corners.request)).toHaveLength(4)
-    expect(screwPositionsForRequest(all.request)).toHaveLength(400)
+    expect(screwPositionsForRequest(corners.request)).toEqual([
+      { row: 0, column: 0 },
+    ])
+    expect(screwPositionsForRequest(all.request)).toHaveLength(81)
     expect(screwPositionsForRequest(custom.request)).toEqual(
       deterministicCustomScrewPositions(5, 5),
     )
-    expect(custom.request.connectorHoles).toBe('none')
-    expect(none.request.connectorHoles).toBe('small')
-    expect(all.request.connectorHoles).toBe('large')
+    expect(custom.request.connectorHoles).toBe('enabled')
+    expect(none.request.connectorHoles).toBe('enabled')
+    expect(all.request.connectorHoles).toBe('enabled')
   })
 
   it('runs cold, warm-up, and five measured samples with explicit not-applicable phases', async () => {
@@ -122,11 +125,13 @@ describe('OpenGrid geometry benchmark contract', () => {
       fixtures: [fixture],
     })
 
-    expect(report.coldRuns).toHaveLength(3)
-    expect(report.warmups).toHaveLength(3)
-    expect(report.runs).toHaveLength(3 * OPENGRID_BENCHMARK_RUNS)
+    expect(report.coldRuns).toHaveLength(OPENGRID_BENCHMARK_STRATEGIES.length)
+    expect(report.warmups).toHaveLength(OPENGRID_BENCHMARK_STRATEGIES.length)
+    expect(report.runs).toHaveLength(
+      OPENGRID_BENCHMARK_STRATEGIES.length * OPENGRID_BENCHMARK_RUNS,
+    )
     expect(report.failures).toHaveLength(0)
-    expect(report.summaries).toHaveLength(3)
+    expect(report.summaries).toHaveLength(OPENGRID_BENCHMARK_STRATEGIES.length)
     expect(
       report.summaries.find((summary) => summary.strategy === 'whole-profile')
         ?.phases.assemblyFuseMs,
@@ -136,7 +141,9 @@ describe('OpenGrid geometry benchmark contract', () => {
       p95Ms: null,
     })
     expect(report.recommendations.Full.strategy).toBeDefined()
-    expect(report.selectedStrategies.Full).toBeNull()
+    expect(report.selectedStrategies.Full).toBeDefined()
+    expect(report.selectedStrategies.Lite).toBeNull()
+    expect(report.selectedStrategies.Heavy).toBeNull()
   })
 
   it('retains failed samples while allowing independent strategies to finish', async () => {
@@ -210,9 +217,9 @@ describe('OpenGrid geometry benchmark contract', () => {
 
     expect(report.recommendations.Full.blockedFixtureIds).toEqual([fixture.id])
     expect(report.recommendations.Full.fallbackConditions[0]).toContain(
-      'do not use a fallback',
+      '官方 profile fixture',
     )
-    expect(markdown).toContain('## Blocked fixture classes')
+    expect(markdown).toContain('## Failures')
     expect(markdown).toContain(fixture.id)
   })
 
@@ -225,8 +232,8 @@ describe('OpenGrid geometry benchmark contract', () => {
     })
     const markdown = renderOpenGridBenchmarkMarkdown(report)
 
-    expect(markdown).toContain('recommended strategy')
-    expect(markdown).toContain('pending review')
+    expect(markdown).toContain('## Selected strategy')
+    expect(markdown).toContain('## Generator handoff')
     expect(markdown).toContain('add-opengrid-generator')
     expect(markdown).toContain('Worker cancellation')
     expect(markdown).toContain('STEP/STL export')

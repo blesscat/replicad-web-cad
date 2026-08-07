@@ -1,4 +1,8 @@
-import type { ModelId, ModelParameterKey } from '../../../cad-contract/units'
+import type {
+  ModelId,
+  ModelParameterKey,
+  OpenGridParameters,
+} from '../../../cad-contract/units'
 import { initialCadState, type CadState } from '../../../features/cad/state'
 import { getModelDefinition } from '../../../features/cad/model-catalog'
 import type { ComponentParameterStore } from '../../../features/cad/parameters'
@@ -24,6 +28,7 @@ export type CadWorkspaceControllerSnapshot = {
 export type CadWorkspaceController = {
   getSnapshot: () => CadWorkspaceControllerSnapshot
   onInputChange: (key: ModelParameterKey, value: string) => void
+  onOpenGridParametersChange: (parameters: OpenGridParameters) => void
   onExport: (format?: ExportFormat) => void
   onRetry: () => void
   dispose: () => void
@@ -100,6 +105,7 @@ export function createCadWorkspaceController(
     getSnapshot: () =>
       createSnapshot(state, rawParameters, fieldErrors, progress),
     onInputChange: runtime.handleInputChange,
+    onOpenGridParametersChange: runtime.handleOpenGridParametersChange,
     onExport: runtime.handleExport,
     onRetry: runtime.handleRetry,
     dispose: runtime.dispose,

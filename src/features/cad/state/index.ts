@@ -2,6 +2,7 @@ import type { CadError } from '../../../cad-contract/errors'
 import type { MeshSnapshot } from '../../../cad-contract/messages'
 import {
   HEXAGONAL_COLUMN_CONFIGURATION,
+  OPENGRID_CONFIGURATION,
   PROTOTYPE_CONFIGURATION,
   type BoxParameters,
   type ModelId,
@@ -54,6 +55,12 @@ function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
       count: HEXAGONAL_COLUMN_CONFIGURATION.defaultCount,
       gap: HEXAGONAL_COLUMN_CONFIGURATION.defaultGap,
       orientation: HEXAGONAL_COLUMN_CONFIGURATION.defaultOrientation,
+    }
+  }
+  if (modelId === 'opengrid') {
+    return {
+      ...OPENGRID_CONFIGURATION.defaultParameters,
+      customScrewPositions: [],
     }
   }
   throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)

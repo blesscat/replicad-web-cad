@@ -1,19 +1,19 @@
 ## Purpose
 
-本文件定義瀏覽器端 CAD 雛形的可觀察行為、驗收情境與執行邊界，讓使用者能以明確規格驗證方塊建模、3D 預覽及 STEP 匯出流程。
+本文件定義瀏覽器端 CAD 雛形的可觀察行為、驗收情境與執行邊界，讓使用者能以明確規格驗證多模型建模、3D 預覽及 STEP/STL 匯出流程。
 
 ## 目的與範圍
 
 本文件定義瀏覽器端 CAD 雛形的可觀察行為與驗收情境。
 
-Prototype 只包含：
+Prototype 目前包含：
 
-- 一個內建方塊模型。
-- 寬、深、高三個 mm 參數。
+- 由 model catalog 管理的內建 CAD models，包括 box、modular-grid-base、hsw-cell、hexagonal-column 與 OpenGrid。
+- 各模型自己的有效參數與 browser-local 參數保存。
 - 瀏覽器內的 B-Rep 建模與 3D 預覽。
-- 從目前成功模型下載 STEP。
+- 從目前成功模型下載 STEP 與 STL。
 
-固定模型選擇清單、其他模型、STL、3MF、G-code、匯入、儲存與後端服務不屬於本 Prototype。
+未註冊的模型、3MF、G-code、任意 CAD 匯入、生成檔案/模型的專案儲存、auth、collaboration 與後端 CAD 服務不屬於本 Prototype；目前可用模型以 model catalog 與其 capability specs 為準。
 
 本文中的「必須」為規範性要求；「可以」表示允許但非必要。
 
@@ -190,7 +190,7 @@ OpenCascade WASM、replicad、B-Rep 建模、mesh 產生與 STEP writer 必須�
 
 ### Requirement: 版本化 Worker contract
 
-The main thread and Worker MUST use a runtime-validated discriminated component-generation message contract. All messages MUST contain `version=1`, `kind` and `requestId`; model generation, invalidation and export operations MUST carry `operationId`; model messages MUST carry `modelId` and generation; candidate, committed model and export messages MUST carry `workerEpoch` or `modelRevision` as appropriate. The contract MUST validate component-specific parameters against the selected model definition and MUST reject unknown model IDs or mismatched parameter shapes. `model.invalidate` remains a control message that creates no B-Rep but records the generation as the latest input generation.
+The main thread and Worker MUST use a runtime-validated discriminated component-generation message contract. All messages MUST contain `version=1`, `kind` and `requestId`; model generation and export operations MUST carry `operationId`; model-generation, candidate, and committed-model messages MUST carry `modelId` and generation where applicable; `model.invalidate` is the explicit exception because it is a generic control message and carries generation, operationId, worker epoch, and reason but no modelId or parameters. Candidate, committed model and export messages MUST carry `workerEpoch` or `modelRevision` as appropriate. The contract MUST validate component-specific parameters against the selected model definition and MUST reject unknown model IDs or mismatched parameter shapes. `model.invalidate` creates no B-Rep but records the generation as the latest input generation.
 
 #### Scenario: 不相容訊息
 

@@ -9,34 +9,38 @@ import {
   OPENGRID_BENCHMARK_CONFIGURATION,
   type OpenGridBenchmarkBuildContext,
   type OpenGridBenchmarkRequest,
-  type OpenGridConnectorHoles,
   type OpenGridGeometryStrategy,
   type OpenGridPreviewConfig,
-  type OpenGridScrewKind,
-  type OpenGridScrewMode,
-  type OpenGridVariant,
 } from '../../cad-kernel/components/opengrid-benchmark/builder'
+import { buildOpenGridPrototype } from '../../cad-kernel/components/opengrid/builder'
+import { inspectOpenGridShapeQuality } from '../../cad-kernel/components/opengrid/quality'
+import { OPENGRID_CONFIGURATION } from '../../cad-kernel/components/opengrid/profile'
 import { meshBRep, type MeshData } from '../../cad-kernel/mesh'
-import type { BoxBounds } from '../../cad-contract/units'
+import type {
+  BoxBounds,
+  OpenGridParameters,
+  OpenGridVariant,
+} from '../../cad-contract/units'
 
 export const OPENGRID_BENCHMARK_RUNS = 5
 export const OPENGRID_BENCHMARK_WARMUP_RUNS = 1
 export const OPENGRID_BENCHMARK_SAMPLE_TIMEOUT_MS = 120_000
 export const OPENGRID_BENCHMARK_STRATEGIES: readonly OpenGridGeometryStrategy[] =
-  ['whole-profile', 'row-block', 'cell-balanced']
-
+  ['whole-profile', 'row-block', 'cell-balanced', 'prototype-template']
 export const OPENGRID_BENCHMARK_PREVIEW_CONFIG: OpenGridPreviewConfig = {
   tolerance: 0.05,
   angularTolerance: 0.1,
 }
 
+const SOURCE_COMMIT = '61231295ea08c302eff32051769113c48cbda255'
+const SOURCE_URL = `https://github.com/AndyLevesque/QuackWorks/blob/${SOURCE_COMMIT}/openGrid/openGrid.scad`
+
 type FixtureScale = {
   id: string
   rows: number
   columns: number
-  screwMode: OpenGridScrewMode
-  screwKind: OpenGridScrewKind
-  connectorHoles: OpenGridConnectorHoles
+  screwMode: OpenGridParameters['screwMode']
+  connectorHoles: OpenGridParameters['connectorHoles']
 }
 
 const FIXTURE_SCALES: readonly FixtureScale[] = [
@@ -45,15 +49,13 @@ const FIXTURE_SCALES: readonly FixtureScale[] = [
     rows: 1,
     columns: 1,
     screwMode: 'none',
-    screwKind: 'm3-through',
-    connectorHoles: 'small',
+    connectorHoles: 'enabled',
   },
   {
     id: '2x2',
     rows: 2,
     columns: 2,
     screwMode: 'corners',
-    screwKind: 'm4-counterbore',
     connectorHoles: 'none',
   },
   {
@@ -61,24 +63,21 @@ const FIXTURE_SCALES: readonly FixtureScale[] = [
     rows: 5,
     columns: 5,
     screwMode: 'custom',
-    screwKind: 'm4-counterbore',
-    connectorHoles: 'none',
+    connectorHoles: 'enabled',
   },
   {
     id: '10x10',
     rows: 10,
     columns: 10,
-    screwMode: 'all',
-    screwKind: 'm5-counterbore',
-    connectorHoles: 'large',
+    screwMode: 'everywhere',
+    connectorHoles: 'enabled',
   },
   {
     id: '17x17-max-500mm',
     rows: OPENGRID_BENCHMARK_CONFIGURATION.maxGridCount,
     columns: OPENGRID_BENCHMARK_CONFIGURATION.maxGridCount,
     screwMode: 'custom',
-    screwKind: 'm3-through',
-    connectorHoles: 'large',
+    connectorHoles: 'enabled',
   },
 ]
 
@@ -96,15 +95,28 @@ function createFixture(
   const customScrewPositions =
     scale.screwMode === 'custom'
       ? deterministicCustomScrewPositions(scale.rows, scale.columns)
-      : undefined
+      : []
   const request = normalizeOpenGridBenchmarkRequest({
+    ...OPENGRID_CONFIGURATION.defaultParameters,
     variant,
     rows: scale.rows,
     columns: scale.columns,
-    screwMode: scale.screwMode,
-    screwKind: scale.screwKind,
-    customScrewPositions,
+    chamfers: scale.id === '1x1' ? 'corners' : 'everywhere',
     connectorHoles: scale.connectorHoles,
+    connectorSides: {
+      top: true,
+      right: scale.id !== '2x2',
+      bottom: true,
+      left: scale.id === '17x17-max-500mm',
+    },
+    screwKind: scale.id === '5x5' ? 'custom' : 'official-default',
+    screwMode: scale.screwMode,
+    screwDiameter: scale.id === '5x5' ? 4.2 : 4.1,
+    screwHeadDiameter: scale.id === '5x5' ? 7.4 : 7.2,
+    screwHeadInset: scale.id === '5x5' ? 1.2 : 1,
+    screwHeadIsCountersunk: scale.id !== '5x5',
+    screwHeadCountersunkDegree: 90,
+    customScrewPositions,
     previewConfig: { ...OPENGRID_BENCHMARK_PREVIEW_CONFIG },
   })
   return {
@@ -118,9 +130,8 @@ function createFixture(
 export function createOpenGridBenchmarkFixtures(): OpenGridBenchmarkFixture[] {
   const fixtures: OpenGridBenchmarkFixture[] = []
   for (const variant of ['Full', 'Lite', 'Heavy'] as const) {
-    for (const scale of FIXTURE_SCALES) {
+    for (const scale of FIXTURE_SCALES)
       fixtures.push(createFixture(variant, scale))
-    }
   }
   return fixtures
 }
@@ -131,6 +142,7 @@ export const OPENGRID_BENCHMARK_FIXTURES: readonly OpenGridBenchmarkFixture[] =
 export type OpenGridBenchmarkPhase =
   | 'profileMs'
   | 'extrudeMs'
+  | 'prototypeBuildMs'
   | 'assemblyFuseMs'
   | 'booleanCutMs'
   | 'meshMs'
@@ -141,7 +153,6 @@ export type OpenGridBenchmarkTiming = Record<
   OpenGridBenchmarkPhase,
   number | null
 >
-
 export type OpenGridBenchmarkRunKind = 'cold' | 'warmup' | 'measured'
 
 export type OpenGridBenchmarkQuality = {
@@ -257,22 +268,6 @@ export type RunOpenGridBenchmarkOptions = {
   sampleTimeoutMs?: number
 }
 
-function fixtureKey(fixture: OpenGridBenchmarkFixture): string {
-  return fixture.id
-}
-
-function emptyTiming(): OpenGridBenchmarkTiming {
-  return {
-    profileMs: null,
-    extrudeMs: null,
-    assemblyFuseMs: null,
-    booleanCutMs: null,
-    meshMs: null,
-    exportMs: null,
-    totalMs: null,
-  }
-}
-
 function deleteShape(shape: { delete?: () => void } | null | undefined): void {
   try {
     shape?.delete?.()
@@ -281,9 +276,17 @@ function deleteShape(shape: { delete?: () => void } | null | undefined): void {
   }
 }
 
-function collectOptionalGarbage(): void {
-  const candidate = globalThis as typeof globalThis & { gc?: () => void }
-  candidate.gc?.()
+function emptyTiming(): OpenGridBenchmarkTiming {
+  return {
+    profileMs: null,
+    extrudeMs: null,
+    prototypeBuildMs: null,
+    assemblyFuseMs: null,
+    booleanCutMs: null,
+    meshMs: null,
+    exportMs: null,
+    totalMs: null,
+  }
 }
 
 function readBounds(shape: Shape3D): BoxBounds {
@@ -297,21 +300,6 @@ function readBounds(shape: Shape3D): BoxBounds {
   } finally {
     boundingBox.delete()
   }
-}
-
-function isClose(first: number, second: number, tolerance = 0.01): boolean {
-  return Math.abs(first - second) <= tolerance
-}
-
-function boundsMatch(actual: BoxBounds, expected: BoxBounds): boolean {
-  return [
-    [actual.min[0], expected.min[0]],
-    [actual.min[1], expected.min[1]],
-    [actual.min[2], expected.min[2]],
-    [actual.max[0], expected.max[0]],
-    [actual.max[1], expected.max[1]],
-    [actual.max[2], expected.max[2]],
-  ].every(([actualValue, expectedValue]) => isClose(actualValue, expectedValue))
 }
 
 function countSolids(shape: Shape3D): number {
@@ -347,8 +335,7 @@ export function parseBinaryStlTriangleCount(bytes: ArrayBuffer): number {
   if (bytes.byteLength < 84) throw new Error('OPENGRID_STL_INVALID_HEADER')
   const view = new DataView(bytes)
   const triangleCount = view.getUint32(80, true)
-  const expectedLength = 84 + triangleCount * 50
-  if (triangleCount === 0 || expectedLength !== bytes.byteLength) {
+  if (triangleCount === 0 || 84 + triangleCount * 50 !== bytes.byteLength) {
     throw new Error('OPENGRID_STL_INVALID_STRUCTURE')
   }
   return triangleCount
@@ -383,28 +370,21 @@ export function inspectOpenGridShape(
   const expectedBounds = expectedOpenGridBounds(fixture.request)
   const quality = emptyQuality(expectedBounds)
   const failures = quality.failures
-
   try {
     quality.bounds = readBounds(shape)
+    quality.centeredXY =
+      Math.abs(quality.bounds.min[0] - expectedBounds.min[0]) <= 0.01 &&
+      Math.abs(quality.bounds.max[0] - expectedBounds.max[0]) <= 0.01 &&
+      Math.abs(quality.bounds.min[1] - expectedBounds.min[1]) <= 0.01 &&
+      Math.abs(quality.bounds.max[1] - expectedBounds.max[1]) <= 0.01
+    quality.baseZAtZero = Math.abs(quality.bounds.min[2]) <= 0.01
+    if (!quality.centeredXY) failures.push('bounds:centered-xy-or-envelope')
+    if (!quality.baseZAtZero) failures.push('bounds:base-z')
   } catch (error) {
     failures.push(
       `bounds:${error instanceof Error ? error.message : String(error)}`,
     )
   }
-  if (quality.bounds) {
-    quality.centeredXY =
-      isClose(quality.bounds.min[0], expectedBounds.min[0]) &&
-      isClose(quality.bounds.min[1], expectedBounds.min[1]) &&
-      isClose(quality.bounds.max[0], expectedBounds.max[0]) &&
-      isClose(quality.bounds.max[1], expectedBounds.max[1])
-    if (!quality.centeredXY) failures.push('bounds:centered-xy-or-envelope')
-    quality.baseZAtZero = isClose(quality.bounds.min[2], expectedBounds.min[2])
-    if (!quality.baseZAtZero) failures.push('bounds:base-z')
-    if (!boundsMatch(quality.bounds, expectedBounds)) {
-      failures.push('bounds:expected-envelope')
-    }
-  }
-
   try {
     quality.volume = measureVolume(shape)
     if (!(quality.volume > 0)) failures.push('volume:non-positive')
@@ -413,18 +393,10 @@ export function inspectOpenGridShape(
       `volume:${error instanceof Error ? error.message : String(error)}`,
     )
   }
-
   try {
     quality.solidCount = countSolids(shape)
     quality.singleSolid = quality.solidCount === 1
     if (!quality.singleSolid) failures.push('topology:not-single-solid')
-  } catch (error) {
-    failures.push(
-      `topology:${error instanceof Error ? error.message : String(error)}`,
-    )
-  }
-
-  try {
     quality.brepValid = checkBrepValidity(shape)
     if (!quality.brepValid) failures.push('topology:brep-invalid')
   } catch (error) {
@@ -433,13 +405,13 @@ export function inspectOpenGridShape(
     )
   }
 
+  const profile = inspectOpenGridShapeQuality(shape, fixture.request, mesh)
+  failures.push(...profile.failures)
   quality.meshTriangleCount = mesh.triangleCount
   if (mesh.triangleCount <= 0) failures.push('mesh:empty')
-
   quality.stepByteLength = stepBytes.byteLength
-  if (quality.stepByteLength <= 0) failures.push('export:step-empty')
-
   quality.stlByteLength = stlBytes.byteLength
+  if (quality.stepByteLength <= 0) failures.push('export:step-empty')
   if (quality.stlByteLength <= 0) failures.push('export:stl-empty')
   try {
     quality.stlTriangleCount = parseBinaryStlTriangleCount(stlBytes)
@@ -448,7 +420,6 @@ export function inspectOpenGridShape(
       `export:stl:${error instanceof Error ? error.message : String(error)}`,
     )
   }
-
   quality.passed = failures.length === 0
   return quality
 }
@@ -465,11 +436,10 @@ class BenchmarkSampleFailure extends Error {
     super(
       `OPENGRID_BENCHMARK_FAILED:${fixture.id}:${strategy}:${kind}:${sample}:${phase}:${message}`,
     )
-    this.name = 'BenchmarkSampleFailure'
   }
 }
 
-function benchmarkFailure(
+function recordFailure(
   fixture: OpenGridBenchmarkFixture,
   strategy: OpenGridGeometryStrategy,
   kind: OpenGridBenchmarkRunKind,
@@ -477,14 +447,13 @@ function benchmarkFailure(
   phase: string,
   error: unknown,
 ): BenchmarkSampleFailure {
-  const message = error instanceof Error ? error.message : String(error)
   return new BenchmarkSampleFailure(
     fixture,
     strategy,
     kind,
     sample,
     phase,
-    message,
+    error instanceof Error ? error.message : String(error),
   )
 }
 
@@ -517,22 +486,8 @@ function failureRecord(
   }
 }
 
-function timeoutFailure(
-  fixture: OpenGridBenchmarkFixture,
-  strategy: OpenGridGeometryStrategy,
-  kind: OpenGridBenchmarkRunKind,
-  sample: number,
-  phase: string,
-  timeoutMs: number,
-): BenchmarkSampleFailure {
-  return benchmarkFailure(
-    fixture,
-    strategy,
-    kind,
-    sample,
-    phase,
-    new Error(`OPENGRID_BENCHMARK_TIMEOUT_${timeoutMs}MS`),
-  )
+function timeoutError(timeoutMs: number): Error {
+  return new Error(`OPENGRID_BENCHMARK_TIMEOUT_${timeoutMs}MS`)
 }
 
 async function runSample(
@@ -545,127 +500,101 @@ async function runSample(
   sampleTimeoutMs: number,
 ): Promise<OpenGridBenchmarkRun> {
   const timing = emptyTiming()
-  const totalStartedAt = performance.now()
-  const deadlineAt = totalStartedAt + sampleTimeoutMs
-  const deadline = { expired: false }
+  const startedAt = performance.now()
+  let shape: Shape3D | null = null
+  let phase = 'build'
+  let timedOut = false
   const timeoutHandle = setTimeout(() => {
-    deadline.expired = true
+    timedOut = true
   }, sampleTimeoutMs)
-  const hasExpired = (): boolean => {
-    if (performance.now() >= deadlineAt) deadline.expired = true
-    return deadline.expired
+  const assertDeadline = () => {
+    if (timedOut || performance.now() - startedAt >= sampleTimeoutMs) {
+      throw timeoutError(sampleTimeoutMs)
+    }
   }
-  const assertWithinDeadline = (phase: string): void => {
-    if (hasExpired()) {
-      throw timeoutFailure(
+
+  try {
+    const phaseTimings: Partial<
+      Record<
+        | 'profile'
+        | 'extrude'
+        | 'prototype-build'
+        | 'assembly-fuse'
+        | 'boolean-cut',
+        number
+      >
+    > = {}
+    try {
+      const built = adapter.build(fixture, strategy, {
+        isGenerationCurrent: () => !timedOut,
+        reportPhaseStart: (nextPhase) => {
+          phase = nextPhase
+        },
+        reportPhase: (nextPhase, durationMs) => {
+          phase = nextPhase
+          phaseTimings[nextPhase] = durationMs
+        },
+      })
+      shape = await Promise.race([
+        Promise.resolve(built),
+        new Promise<Shape3D>((_, reject) =>
+          setTimeout(
+            () => reject(timeoutError(sampleTimeoutMs)),
+            sampleTimeoutMs,
+          ),
+        ),
+      ])
+    } catch (error) {
+      throw recordFailure(fixture, strategy, kind, sample, phase, error)
+    }
+    assertDeadline()
+    timing.profileMs = phaseTimings.profile ?? null
+    timing.extrudeMs = phaseTimings.extrude ?? null
+    timing.prototypeBuildMs = phaseTimings['prototype-build'] ?? null
+    timing.assemblyFuseMs = phaseTimings['assembly-fuse'] ?? null
+    timing.booleanCutMs = phaseTimings['boolean-cut'] ?? null
+
+    phase = 'mesh'
+    const meshStartedAt = performance.now()
+    let mesh: MeshData
+    try {
+      mesh = adapter.mesh(shape, previewConfig)
+    } catch (error) {
+      throw recordFailure(fixture, strategy, kind, sample, phase, error)
+    }
+    timing.meshMs = performance.now() - meshStartedAt
+    assertDeadline()
+
+    phase = 'export'
+    const exportStartedAt = performance.now()
+    let stepBytes: ArrayBuffer
+    let stlBytes: ArrayBuffer
+    try {
+      ;[stepBytes, stlBytes] = await Promise.all([
+        adapter.exportStep(shape),
+        adapter.exportStl(shape),
+      ])
+    } catch (error) {
+      throw recordFailure(fixture, strategy, kind, sample, phase, error)
+    }
+    timing.exportMs = performance.now() - exportStartedAt
+    assertDeadline()
+
+    phase = 'quality'
+    const quality = adapter.inspect
+      ? adapter.inspect(shape, fixture, mesh, stepBytes, stlBytes)
+      : inspectOpenGridShape(shape, fixture, mesh, stepBytes, stlBytes)
+    if (!quality.passed) {
+      throw recordFailure(
         fixture,
         strategy,
         kind,
         sample,
         phase,
-        sampleTimeoutMs,
-      )
-    }
-  }
-  let shape: Shape3D | null = null
-  let lastPhase = 'build'
-
-  try {
-    const phaseTimings: Partial<
-      Record<'profile' | 'extrude' | 'assembly-fuse' | 'boolean-cut', number>
-    > = {}
-    try {
-      assertWithinDeadline(lastPhase)
-      shape = await adapter.build(fixture, strategy, {
-        isGenerationCurrent: () => !hasExpired(),
-        reportPhaseStart: (phase) => {
-          lastPhase = phase
-        },
-        reportPhase: (phase, durationMs) => {
-          lastPhase = phase
-          phaseTimings[phase] = durationMs
-        },
-      })
-    } catch (error) {
-      if (hasExpired()) {
-        throw timeoutFailure(
-          fixture,
-          strategy,
-          kind,
-          sample,
-          lastPhase,
-          sampleTimeoutMs,
-        )
-      }
-      throw benchmarkFailure(fixture, strategy, kind, sample, lastPhase, error)
-    }
-    assertWithinDeadline(lastPhase)
-    timing.profileMs = phaseTimings.profile ?? null
-    timing.extrudeMs = phaseTimings.extrude ?? null
-    timing.assemblyFuseMs = phaseTimings['assembly-fuse'] ?? null
-    timing.booleanCutMs = phaseTimings['boolean-cut'] ?? null
-
-    const meshStartedAt = performance.now()
-    let mesh: MeshData
-    try {
-      assertWithinDeadline('mesh')
-      mesh = adapter.mesh(shape, previewConfig)
-    } catch (error) {
-      if (hasExpired()) {
-        throw timeoutFailure(
-          fixture,
-          strategy,
-          kind,
-          sample,
-          'mesh',
-          sampleTimeoutMs,
-        )
-      }
-      throw benchmarkFailure(fixture, strategy, kind, sample, 'mesh', error)
-    }
-    assertWithinDeadline('mesh')
-    timing.meshMs = performance.now() - meshStartedAt
-
-    const exportStartedAt = performance.now()
-    let stepBytes: ArrayBuffer
-    let stlBytes: ArrayBuffer
-    try {
-      assertWithinDeadline('export')
-      stepBytes = await adapter.exportStep(shape)
-      stlBytes = await adapter.exportStl(shape)
-    } catch (error) {
-      if (hasExpired()) {
-        throw timeoutFailure(
-          fixture,
-          strategy,
-          kind,
-          sample,
-          'export',
-          sampleTimeoutMs,
-        )
-      }
-      throw benchmarkFailure(fixture, strategy, kind, sample, 'export', error)
-    }
-    assertWithinDeadline('export')
-    timing.exportMs = performance.now() - exportStartedAt
-    timing.totalMs = performance.now() - totalStartedAt
-
-    assertWithinDeadline('quality')
-    const quality = adapter.inspect
-      ? adapter.inspect(shape, fixture, mesh, stepBytes, stlBytes)
-      : inspectOpenGridShape(shape, fixture, mesh, stepBytes, stlBytes)
-    assertWithinDeadline('quality')
-    if (!quality.passed) {
-      throw benchmarkFailure(
-        fixture,
-        strategy,
-        kind,
-        sample,
-        'quality',
         quality.failures.join('; '),
       )
     }
-
+    timing.totalMs = performance.now() - startedAt
     return {
       fixtureId: fixture.id,
       variant: fixture.variant,
@@ -690,8 +619,9 @@ export function median(values: readonly number[]): number {
 export function percentile95(values: readonly number[]): number {
   if (values.length === 0) throw new Error('OPENGRID_BENCHMARK_SAMPLES_EMPTY')
   const sorted = [...values].sort((a, b) => a - b)
-  const index = Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)
-  return sorted[index]
+  return sorted[
+    Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)
+  ]
 }
 
 function summarizePhase(
@@ -701,14 +631,13 @@ function summarizePhase(
   const values = runs
     .map((run) => run.timing[phase])
     .filter((value): value is number => value !== null)
-  if (values.length === 0) {
-    return { applicable: false, medianMs: null, p95Ms: null }
-  }
-  return {
-    applicable: true,
-    medianMs: median(values),
-    p95Ms: percentile95(values),
-  }
+  return values.length === 0
+    ? { applicable: false, medianMs: null, p95Ms: null }
+    : {
+        applicable: true,
+        medianMs: median(values),
+        p95Ms: percentile95(values),
+      }
 }
 
 function summarizeRuns(
@@ -716,7 +645,6 @@ function summarizeRuns(
   strategy: OpenGridGeometryStrategy,
   runs: readonly OpenGridBenchmarkRun[],
 ): OpenGridBenchmarkSummary {
-  if (runs.length === 0) throw new Error('OPENGRID_BENCHMARK_SAMPLES_EMPTY')
   const phases = {} as Record<
     OpenGridBenchmarkPhase,
     OpenGridBenchmarkPhaseSummary
@@ -724,6 +652,7 @@ function summarizeRuns(
   for (const phase of [
     'profileMs',
     'extrudeMs',
+    'prototypeBuildMs',
     'assemblyFuseMs',
     'booleanCutMs',
     'meshMs',
@@ -732,22 +661,22 @@ function summarizeRuns(
   ] as const) {
     phases[phase] = summarizePhase(runs, phase)
   }
-  const totalValues = runs.map((run) => run.timing.totalMs)
-  if (totalValues.some((value) => value === null)) {
-    throw new Error('OPENGRID_TOTAL_TIMING_MISSING')
-  }
+  const totals = runs
+    .map((run) => run.timing.totalMs)
+    .filter((value): value is number => value !== null)
+  if (totals.length === 0) throw new Error('OPENGRID_TOTAL_TIMING_MISSING')
   return {
     fixtureId: fixture.id,
     variant: fixture.variant,
     strategy,
     samples: runs.length,
-    medianMs: median(totalValues as number[]),
-    p95Ms: percentile95(totalValues as number[]),
+    medianMs: median(totals),
+    p95Ms: percentile95(totals),
     phases,
   }
 }
 
-function recommendationForVariant(
+function recommendationsFor(
   variant: OpenGridVariant,
   fixtures: readonly OpenGridBenchmarkFixture[],
   summaries: readonly OpenGridBenchmarkSummary[],
@@ -756,54 +685,45 @@ function recommendationForVariant(
   const variantFixtures = fixtures.filter(
     (fixture) => fixture.variant === variant,
   )
+  if (variantFixtures.length === 0) {
+    return {
+      strategy: null,
+      consideredStrategies: [],
+      fallbackStrategies: [],
+      blockedFixtureIds: [],
+      fallbackConditions: [],
+      evidence: `${variant} 沒有可評估的官方 profile fixture。`,
+    }
+  }
   const candidates = strategies
     .map((strategy) => {
       const matching = summaries.filter(
         (summary) =>
           summary.variant === variant && summary.strategy === strategy,
       )
-      if (matching.length === 0) return null
-      const medianTotal =
-        matching.reduce((total, summary) => total + summary.medianMs, 0) /
-        matching.length
-      const p95Total =
-        matching.reduce((total, summary) => total + summary.p95Ms, 0) /
-        matching.length
-      return { strategy, medianTotal, p95Total, fixtureCount: matching.length }
+      if (matching.length !== variantFixtures.length) return null
+      return {
+        strategy,
+        median:
+          matching.reduce((sum, item) => sum + item.medianMs, 0) /
+          matching.length,
+        p95:
+          matching.reduce((sum, item) => sum + item.p95Ms, 0) / matching.length,
+      }
     })
     .filter(
       (
         candidate,
       ): candidate is {
         strategy: OpenGridGeometryStrategy
-        medianTotal: number
-        p95Total: number
-        fixtureCount: number
+        median: number
+        p95: number
       } => candidate !== null,
     )
-    .sort((first, second) => {
-      if (first.medianTotal !== second.medianTotal) {
-        return first.medianTotal - second.medianTotal
-      }
-      return first.p95Total - second.p95Total
-    })
+    .sort(
+      (first, second) => first.median - second.median || first.p95 - second.p95,
+    )
   const selected = candidates[0]
-  if (!selected) {
-    const blockedFixtureIds = variantFixtures.map((fixture) => fixture.id)
-    return {
-      strategy: null,
-      consideredStrategies: [],
-      fallbackStrategies: [],
-      blockedFixtureIds,
-      fallbackConditions:
-        blockedFixtureIds.length > 0
-          ? [
-              `No strategy passed the quality gate for ${blockedFixtureIds.join(', ')}; do not use a fallback without geometry redesign and revalidation.`,
-            ]
-          : [],
-      evidence: `No complete measured result is available for ${variant} across ${variantFixtures.length} required fixtures.`,
-    }
-  }
   const blockedFixtureIds = variantFixtures
     .filter(
       (fixture) =>
@@ -814,19 +734,19 @@ function recommendationForVariant(
     )
     .map((fixture) => fixture.id)
   return {
-    strategy: selected.strategy,
+    strategy: selected?.strategy ?? null,
     consideredStrategies: candidates.map((candidate) => candidate.strategy),
     fallbackStrategies: candidates
       .slice(1)
       .map((candidate) => candidate.strategy),
     blockedFixtureIds,
     fallbackConditions:
-      blockedFixtureIds.length > 0
-        ? [
-            `No strategy passed the quality gate for ${blockedFixtureIds.join(', ')}; do not use a fallback without geometry redesign and revalidation.`,
-          ]
-        : [],
-    evidence: `Selected by lowest average warm median total across ${selected.fixtureCount} successful fixture summaries for ${variant}; review P95 and quality failures before final adoption.`,
+      blockedFixtureIds.length === 0
+        ? []
+        : ['所有官方 profile fixture 必須通過品質與匯出 gate。'],
+    evidence: selected
+      ? `以 ${variant} 全部 ${variantFixtures.length} 個官方 fixture 的平均 median/P95 選出。`
+      : `${variant} 尚無完整的官方 profile measured 結果。`,
   }
 }
 
@@ -836,9 +756,9 @@ function deriveRecommendations(
   strategies: readonly OpenGridGeometryStrategy[],
 ): Record<OpenGridVariant, OpenGridStrategyRecommendation> {
   return {
-    Full: recommendationForVariant('Full', fixtures, summaries, strategies),
-    Lite: recommendationForVariant('Lite', fixtures, summaries, strategies),
-    Heavy: recommendationForVariant('Heavy', fixtures, summaries, strategies),
+    Full: recommendationsFor('Full', fixtures, summaries, strategies),
+    Lite: recommendationsFor('Lite', fixtures, summaries, strategies),
+    Heavy: recommendationsFor('Heavy', fixtures, summaries, strategies),
   }
 }
 
@@ -856,12 +776,11 @@ export async function runOpenGridBenchmark(
   if (!Number.isFinite(sampleTimeoutMs) || sampleTimeoutMs <= 0) {
     throw new Error('OPENGRID_BENCHMARK_INVALID_SAMPLE_TIMEOUT')
   }
-
   const strategies = options.strategies ?? OPENGRID_BENCHMARK_STRATEGIES
   const previewConfig =
     options.previewConfig ?? OPENGRID_BENCHMARK_PREVIEW_CONFIG
   const fixtures = (options.fixtures ?? OPENGRID_BENCHMARK_FIXTURES).map(
-    (fixture): OpenGridBenchmarkFixture => ({
+    (fixture) => ({
       ...fixture,
       request: normalizeOpenGridBenchmarkRequest({
         ...fixture.request,
@@ -882,28 +801,27 @@ export async function runOpenGridBenchmark(
     target: OpenGridBenchmarkRun[],
   ): Promise<void> {
     try {
-      const run = await runSample(
-        options.adapter,
-        fixture,
-        strategy,
-        kind,
-        sample,
-        previewConfig,
-        sampleTimeoutMs,
+      target.push(
+        await runSample(
+          options.adapter,
+          fixture,
+          strategy,
+          kind,
+          sample,
+          previewConfig,
+          sampleTimeoutMs,
+        ),
       )
-      target.push(run)
     } catch (error) {
       failures.push(failureRecord(fixture, strategy, kind, sample, error))
-    } finally {
-      collectOptionalGarbage()
     }
   }
 
   for (const fixture of fixtures) {
     for (const strategy of strategies) {
       await attempt(fixture, strategy, 'cold', 0, coldRuns)
-      for (let warmup = 1; warmup <= warmupRuns; warmup += 1) {
-        await attempt(fixture, strategy, 'warmup', warmup, warmups)
+      for (let sample = 1; sample <= warmupRuns; sample += 1) {
+        await attempt(fixture, strategy, 'warmup', sample, warmups)
       }
       for (let sample = 1; sample <= measuredRuns; sample += 1) {
         await attempt(fixture, strategy, 'measured', sample, runs)
@@ -914,29 +832,17 @@ export async function runOpenGridBenchmark(
   const summaries: OpenGridBenchmarkSummary[] = []
   for (const fixture of fixtures) {
     for (const strategy of strategies) {
-      const matchingRuns = runs.filter(
-        (run) =>
-          run.fixtureId === fixtureKey(fixture) && run.strategy === strategy,
+      const matching = runs.filter(
+        (run) => run.fixtureId === fixture.id && run.strategy === strategy,
       )
-      if (matchingRuns.length === 0) continue
-      summaries.push(summarizeRuns(fixture, strategy, matchingRuns))
+      if (matching.length > 0)
+        summaries.push(summarizeRuns(fixture, strategy, matching))
     }
   }
-
-  const selectedStrategies: Record<
-    OpenGridVariant,
-    OpenGridGeometryStrategy | null
-  > = {
-    Full: null,
-    Lite: null,
-    Heavy: null,
-  }
+  const recommendations = deriveRecommendations(fixtures, summaries, strategies)
   return {
     environment: options.environment,
-    fixtures: fixtures.map((fixture) => ({
-      ...fixture,
-      request: { ...fixture.request },
-    })),
+    fixtures,
     measuredRuns,
     warmupRuns,
     sampleTimeoutMs,
@@ -945,8 +851,12 @@ export async function runOpenGridBenchmark(
     runs,
     failures,
     summaries,
-    recommendations: deriveRecommendations(fixtures, summaries, strategies),
-    selectedStrategies,
+    recommendations,
+    selectedStrategies: {
+      Full: recommendations.Full.strategy,
+      Lite: recommendations.Lite.strategy,
+      Heavy: recommendations.Heavy.strategy,
+    },
   }
 }
 
@@ -956,9 +866,9 @@ export function mergeOpenGridBenchmarkReports(
 ): OpenGridBenchmarkReport {
   const first = reports[0]
   if (!first) throw new Error('OPENGRID_BENCHMARK_REPORTS_EMPTY')
-  const strategySet = strategies ?? OPENGRID_BENCHMARK_STRATEGIES
   const fixtures = reports.flatMap((report) => report.fixtures)
   const summaries = reports.flatMap((report) => report.summaries)
+  const strategySet = strategies ?? OPENGRID_BENCHMARK_STRATEGIES
   const recommendations = deriveRecommendations(
     fixtures,
     summaries,
@@ -982,72 +892,106 @@ export function mergeOpenGridBenchmarkReports(
     summaries,
     recommendations,
     selectedStrategies: {
-      Full: null,
-      Lite: null,
-      Heavy: null,
+      Full: recommendations.Full.strategy,
+      Lite: recommendations.Lite.strategy,
+      Heavy: recommendations.Heavy.strategy,
     },
   }
 }
 
 export function createDefaultOpenGridBenchmarkAdapter(): OpenGridBenchmarkAdapter {
+  const prototypeCache = new Map<OpenGridVariant, Promise<Shape3D>>()
+
+  function getPrototype(
+    variant: OpenGridVariant,
+    context: OpenGridBenchmarkBuildContext,
+  ): Promise<Shape3D> {
+    const cached = prototypeCache.get(variant)
+    if (cached) return cached
+
+    const prototype = buildOpenGridPrototype(variant, {
+      yieldToEventLoop: context.yieldToEventLoop,
+      reportPhase: context.reportPhase,
+    }).catch((error) => {
+      prototypeCache.delete(variant)
+      throw error
+    })
+    prototypeCache.set(variant, prototype)
+    return prototype
+  }
+
   return {
     build: (fixture, strategy, context) =>
-      buildOpenGridBenchmarkShape(fixture.request, strategy, context),
+      buildOpenGridBenchmarkShape(fixture.request, strategy, {
+        ...context,
+        getOpenGridPrototype: (variant) => getPrototype(variant, context),
+      }),
     mesh: (shape, previewConfig) => meshBRep(shape, previewConfig),
     exportStep: exportStepBytes,
-    exportStl: exportStlBytes,
+    exportStl: (shape) => exportStlBytes(shape),
     inspect: inspectOpenGridShape,
   }
 }
 
 function renderPhaseSummary(summary: OpenGridBenchmarkPhaseSummary): string {
-  if (!summary.applicable) return 'n/a'
-  return `${summary.medianMs?.toFixed(2)} ms / ${summary.p95Ms?.toFixed(2)} ms`
+  return summary.applicable
+    ? `${summary.medianMs?.toFixed(2)} / ${summary.p95Ms?.toFixed(2)} ms`
+    : 'n/a'
 }
 
 function renderFixtureLine(fixture: OpenGridBenchmarkFixture): string {
   const { request } = fixture
-  const customCount = request.customScrewPositions?.length ?? 0
-  return `| ${fixture.id} | ${fixture.variant} | ${request.rows}×${request.columns} | ${request.screwMode} (${request.screwKind}) | ${request.connectorHoles} | ${customCount} |`
+  return `| ${fixture.id} | ${fixture.variant} | ${request.rows}×${request.columns} | ${request.screwMode} | ${request.connectorHoles} | ${request.customScrewPositions.length} |`
 }
 
 export function renderOpenGridBenchmarkMarkdown(
   report: OpenGridBenchmarkReport,
 ): string {
-  const reportFixtures = report.fixtures
   const lines = [
-    '# OpenGrid Geometry Benchmark Handoff',
+    '# OpenGrid Official-Profile Benchmark Handoff',
     '',
-    '> Generated by the internal benchmark. `selected strategy` remains pending review; `recommended strategy` is derived from successful warm samples.',
+    `- Source: ${SOURCE_URL}`,
+    `- Source commit: ${SOURCE_COMMIT}`,
+    '- Profile boundary: the old 16 mm opening, four-slot cell, and cylindrical connector benchmark is obsolete.',
+    `- Measured runs: ${report.measuredRuns}; warm-up runs: ${report.warmupRuns}; timeout: ${report.sampleTimeoutMs} ms.`,
     '',
-    '## Environment',
+    '## Fixtures',
     '',
-    `- Browser/build mode: ${report.environment.browserBuildMode}`,
-    `- Dependency lockfile: ${report.environment.dependencyLockfileVersion}`,
-    `- Reference environment: ${report.environment.referenceEnvironment}`,
-    `- Native execution epoch: ${report.environment.nativeExecutionEpoch}`,
-    `- Measured runs per strategy/fixture: ${report.measuredRuns}`,
-    `- Warm-up runs per strategy/fixture: ${report.warmupRuns}`,
-    `- Sample timeout: ${report.sampleTimeoutMs} ms (cooperative at safe phase boundaries)`,
-    '',
-    '## Required fixture matrix',
-    '',
-    '| Fixture | Variant | Grid | Screw load | Connector holes | Custom positions |',
+    '| Fixture | Variant | Grid | Screw mode | Connector | Custom intersections |',
     '| --- | --- | ---: | --- | --- | ---: |',
-    ...reportFixtures.map(renderFixtureLine),
+    ...report.fixtures.map(renderFixtureLine),
     '',
-    '## Measured results',
+    '## Results',
     '',
-    '| Fixture | Strategy | Samples | Total median/P95 ms | Profile | Extrude | Assembly/fuse | Boolean cuts | Mesh | Export |',
-    '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
-    ...report.summaries.map((summary) => {
-      const phase = summary.phases
-      return `| ${summary.fixtureId} | ${summary.strategy} | ${summary.samples} | ${summary.medianMs.toFixed(2)} / ${summary.p95Ms.toFixed(2)} | ${renderPhaseSummary(phase.profileMs)} | ${renderPhaseSummary(phase.extrudeMs)} | ${renderPhaseSummary(phase.assemblyFuseMs)} | ${renderPhaseSummary(phase.booleanCutMs)} | ${renderPhaseSummary(phase.meshMs)} | ${renderPhaseSummary(phase.exportMs)} |`
-    }),
+    '| Fixture | Strategy | Samples | Total median/P95 | Profile | Prototype | Assembly/fuse | Mesh | Export |',
+    '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+    ...report.summaries.map(
+      (summary) =>
+        `| ${summary.fixtureId} | ${summary.strategy} | ${summary.samples} | ${summary.medianMs.toFixed(2)} / ${summary.p95Ms.toFixed(2)} | ${renderPhaseSummary(summary.phases.profileMs)} | ${renderPhaseSummary(summary.phases.prototypeBuildMs)} | ${renderPhaseSummary(summary.phases.assemblyFuseMs)} | ${renderPhaseSummary(summary.phases.meshMs)} | ${renderPhaseSummary(summary.phases.exportMs)} |`,
+    ),
     '',
-    '## Retained failures',
+    '## Selected strategy',
     '',
+    '| Variant | Selected | Fallbacks | Evidence |',
+    '| --- | --- | --- | --- |',
   ]
+  for (const variant of ['Full', 'Lite', 'Heavy'] as const) {
+    const recommendation = report.recommendations[variant]
+    lines.push(
+      `| ${variant} | ${report.selectedStrategies[variant] ?? 'pending'} | ${recommendation.fallbackStrategies.join(' → ') || 'none'} | ${recommendation.evidence} |`,
+    )
+  }
+  lines.push(
+    '',
+    '## Generator handoff',
+    '',
+    'The selected official-profile strategy is ready to wire into add-opengrid-generator only after the quality-approved fixture set is complete.',
+    'The Worker integration must preserve Worker cancellation, latest-wins semantics, and stale-generation cleanup.',
+    'The export gate covers STEP/STL export from the same quality-approved B-Rep.',
+    '',
+    '## Failures',
+    '',
+  )
   if (report.failures.length === 0) {
     lines.push('No failed samples were recorded.')
   } else {
@@ -1059,43 +1003,5 @@ export function renderOpenGridBenchmarkMarkdown(
       )
     }
   }
-  lines.push('', '## Automatically derived recommendations', '')
-  lines.push(
-    '| Variant | Recommended strategy | Fallback order | Final selected strategy | Evidence |',
-  )
-  lines.push('| --- | --- | --- | --- | --- |')
-  for (const variant of ['Full', 'Lite', 'Heavy'] as const) {
-    const recommendation = report.recommendations[variant]
-    lines.push(
-      `| ${variant} | ${recommendation.strategy ?? 'none'} | ${recommendation.fallbackStrategies.join(' → ') || 'none'} | ${report.selectedStrategies[variant] ?? 'pending review'} | ${recommendation.evidence.replaceAll('|', '\\|')} |`,
-    )
-  }
-  lines.push('', '## Blocked fixture classes', '')
-  for (const variant of ['Full', 'Lite', 'Heavy'] as const) {
-    const recommendation = report.recommendations[variant]
-    if (recommendation.blockedFixtureIds.length === 0) {
-      lines.push(`- ${variant}: none.`)
-      continue
-    }
-    lines.push(
-      `- ${variant}: ${recommendation.blockedFixtureIds.join(', ')} — ${recommendation.fallbackConditions.join(' ')}`,
-    )
-  }
-  lines.push(
-    '',
-    '## Generator handoff',
-    '',
-    '- The subsequent `add-opengrid-generator` change must read this handoff and use the final selected strategy or the recorded per-variant dispatch before implementation.',
-    '- Carry forward Full, Lite, and Heavy variants, 28 mm grid pitch, rows/columns, screw kind, screw-position matrix, batched through/counterbore cutters, connector holes, Worker cancellation, preview, and STEP/STL export.',
-    `- The current workspace limit implies a maximum benchmark grid count of ${OPENGRID_BENCHMARK_CONFIGURATION.maxGridCount} per axis (${OPENGRID_BENCHMARK_CONFIGURATION.maxGridCount * OPENGRID_BENCHMARK_CONFIGURATION.gridPitch} mm).`,
-    '- This benchmark uses repository-owned geometry prototypes; external OpenGrid source or assets still require a separate attribution/license review.',
-    '',
-    '## Known limitations',
-    '',
-    '- Benchmark timings are environment-specific and should be repeated on the release target before locking a production strategy.',
-    '- The benchmark prototype validates strategy cost and geometry gates; the formal generator must rerun representative quality gates after adopting the selected strategy.',
-    '- A per-variant recommendation is allowed when one geometry strategy does not satisfy every board type or scale.',
-    '',
-  )
-  return lines.join('\n')
+  return `${lines.join('\n')}\n`
 }

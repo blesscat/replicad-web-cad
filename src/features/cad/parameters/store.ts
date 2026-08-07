@@ -36,6 +36,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function cloneParameters(
   parameters: ModelParameterValues,
 ): ModelParameterValues {
+  if ('customScrewPositions' in parameters && 'chamferCorners' in parameters) {
+    return {
+      ...parameters,
+      chamferCorners: { ...parameters.chamferCorners },
+      connectorSides: { ...parameters.connectorSides },
+      customScrewPositions: parameters.customScrewPositions.map((position) => ({
+        ...position,
+      })),
+    }
+  }
   return { ...parameters }
 }
 
