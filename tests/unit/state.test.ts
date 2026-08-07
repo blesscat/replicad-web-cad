@@ -108,6 +108,18 @@ describe('CAD state machine', () => {
     expect(state.input).toEqual({ rows: 1, columns: 1 })
   })
 
+  it('initializes the independent box-normal component with its defaults', () => {
+    const state = initialCadState('box-normal')
+
+    expect(state.modelId).toBe('box-normal')
+    expect(state.input).toEqual({
+      x: 2,
+      y: 2,
+      height: 10,
+      cornerPosts: true,
+    })
+  })
+
   it('initializes the independent hexagonal-column defaults', () => {
     const state = initialCadState('hexagonal-column')
 

@@ -18,6 +18,9 @@ import type {
 
 function defaultInputForModel(modelId: ModelId): ModelParameterValues {
   if (modelId === 'box') return { width: 20, depth: 30, height: 40 }
+  if (modelId === 'box-normal') {
+    return { x: 2, y: 2, height: 10, cornerPosts: true }
+  }
   if (modelId === 'modular-grid-base' || modelId === 'hsw-cell') {
     return { rows: 1, columns: 1 }
   }

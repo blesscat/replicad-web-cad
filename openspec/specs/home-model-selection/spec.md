@@ -6,12 +6,12 @@
 
 ### Requirement: 首頁模型選擇
 
-The system MUST provide a static homepage model chooser driven by the registered model catalog. Every currently available model MUST have an understandable display name, a concise description, a summary of its adjustable parameters, and a link to its model-specific CAD route. The chooser MUST include `box`, `modular-grid-base`, `hsw-cell`, and `hexagonal-column`.
+The system MUST provide a static homepage model chooser driven by the registered model catalog. Every currently available model MUST have an understandable display name, a concise description, a summary of its adjustable parameters, and a link to its model-specific CAD route. The chooser MUST include `box`, `box-normal`, `modular-grid-base`, `hsw-cell`, and `hexagonal-column`.
 
 #### Scenario: 首頁顯示目前模型
 
 - **WHEN** 使用者開啟首頁
-- **THEN** 首頁 MUST 顯示 `box`、`modular-grid-base`、`hsw-cell` 與 `hexagonal-column` 的可理解名稱
+- **THEN** 首頁 MUST 顯示 `box`、`box-normal`、`modular-grid-base`、`hsw-cell` 與 `hexagonal-column` 的可理解名稱
 - **AND** 每個模型 MUST 顯示與其參數及用途相符的簡短說明
 - **AND** 首頁 MUST NOT 啟動 CAD Worker 或 Svelte CAD workspace
 
@@ -20,6 +20,13 @@ The system MUST provide a static homepage model chooser driven by the registered
 - **WHEN** 使用者在首頁選擇 `box`
 - **THEN** 選擇入口 MUST 導向 `/cad/box`
 - **AND** CAD workspace MUST 以 `modelId=box` 初始化
+
+#### Scenario: 選擇 box-normal
+
+- **WHEN** 使用者在首頁選擇 `box-normal`
+- **THEN** 選擇入口 MUST 導向 `/cad/box-normal`
+- **AND** CAD workspace MUST 以 `modelId=box-normal` 初始化
+- **AND** 首頁描述 MUST 說明 X/Y 格數、盒體 height 與可選四角六角定位柱
 
 #### Scenario: 選擇模組化網格底板
 
@@ -36,7 +43,15 @@ The system MUST provide a static homepage model chooser driven by the registered
 
 ### Requirement: 模型專屬 CAD 路由
 
-The system MUST expose one CAD route for each registered model id. The current routes MUST map `/cad/box` to `box`, `/cad/modular-grid-base` to `modular-grid-base`, `/cad/hsw-cell` to `hsw-cell`, and `/cad/hexagonal-column` to `hexagonal-column`. The model path segment MUST be the source of truth for the selected component, and a route for an unknown model id MUST NOT initialize a CAD Worker for an unsupported component.
+The system MUST expose one CAD route for each registered model id. The current routes MUST map `/cad/box` to `box`, `/cad/box-normal` to `box-normal`, `/cad/modular-grid-base` to `modular-grid-base`, `/cad/hsw-cell` to `hsw-cell`, and `/cad/hexagonal-column` to `hexagonal-column`. The model path segment MUST be the source of truth for the selected component, and a route for an unknown model id MUST NOT initialize a CAD Worker for an unsupported component.
+
+#### Scenario: 直接開啟 box-normal route
+
+- **GIVEN** 使用者直接開啟 `/cad/box-normal`
+- **WHEN** 頁面完成 route resolution
+- **THEN** 頁面 MUST 載入 box-normal workspace
+- **AND** 初始 generation MUST 使用有效保存的 `x`、`y`、`height` 與 `cornerPosts`；若沒有有效保存參數，MUST 使用 `box-normal` 的預設值
+- **AND** 頁面 MUST NOT 要求使用者先在 CAD workspace 重新選擇 component
 
 #### Scenario: 直接開啟模型 route
 

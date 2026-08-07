@@ -27,14 +27,50 @@ function opengridParameters(
 }
 
 describe('CAD component catalog', () => {
-  it('exposes independent model definitions including OpenGrid', () => {
+  it('exposes independent model definitions including box-normal and OpenGrid', () => {
     expect(modelDefinitions.map((definition) => definition.id)).toEqual([
       'box',
+      'box-normal',
       'modular-grid-base',
       'hsw-cell',
       'hexagonal-column',
       'opengrid',
     ])
+
+    const boxNormal = getModelDefinition('box-normal')
+    expect(boxNormal?.displayName).toBe('標準開口盒')
+    expect(boxNormal?.parameterSchema.map((field) => field.key)).toEqual([
+      'x',
+      'y',
+      'height',
+    ])
+    expect(boxNormal?.parameterSchema.map((field) => field.max)).toEqual([
+      40, 35, 500,
+    ])
+    expect(boxNormal?.defaultParameters).toEqual({
+      x: 2,
+      y: 2,
+      height: 10,
+      cornerPosts: true,
+    })
+    expect(
+      boxNormal?.exportFileName({ x: 2, y: 2, height: 10, cornerPosts: true }),
+    ).toBe('box-normal-2x2-h10-posts.step')
+    expect(
+      boxNormal?.stlFileName({ x: 2, y: 2, height: 10, cornerPosts: false }),
+    ).toBe('box-normal-2x2-h10-plain.stl')
+    const bounds = boxNormal?.boundsForParameters({
+      x: 2,
+      y: 2,
+      height: 10,
+      cornerPosts: true,
+    })
+    expect(bounds?.min[0]).toBeCloseTo(-10.144, 10)
+    expect(bounds?.min[1]).toBeCloseTo(-11.725, 10)
+    expect(bounds?.min[2]).toBe(0)
+    expect(bounds?.max[0]).toBeCloseTo(10.144, 10)
+    expect(bounds?.max[1]).toBeCloseTo(11.725, 10)
+    expect(bounds?.max[2]).toBe(17)
 
     const grid = getModelDefinition('modular-grid-base')
     expect(grid?.displayName).toBe('模組化網格底板')
@@ -171,10 +207,12 @@ describe('CAD component catalog', () => {
 
   it('maps registered models to dedicated CAD routes and rejects unknown paths', () => {
     expect(cadPathForModel('box')).toBe('/cad/box')
+    expect(cadPathForModel('box-normal')).toBe('/cad/box-normal')
     expect(cadPathForModel('modular-grid-base')).toBe('/cad/modular-grid-base')
     expect(cadPathForModel('hsw-cell')).toBe('/cad/hsw-cell')
     expect(cadPathForModel('hexagonal-column')).toBe('/cad/hexagonal-column')
     expect(modelIdForCadPath('/cad/box')).toBe('box')
+    expect(modelIdForCadPath('/cad/box-normal/')).toBe('box-normal')
     expect(modelIdForCadPath('/cad/modular-grid-base/')).toBe(
       'modular-grid-base',
     )

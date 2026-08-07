@@ -20,6 +20,12 @@ export const GRID_PARAMETER_KEYS: ScalarModelParameterKey[] = [
   'rows',
   'columns',
 ]
+export const BOX_NORMAL_PARAMETER_KEYS: ModelParameterKey[] = [
+  'x',
+  'y',
+  'height',
+  'cornerPosts',
+]
 export const HEXAGONAL_COLUMN_PARAMETER_KEYS: ScalarModelParameterKey[] = [
   'height',
   'count',
@@ -27,10 +33,9 @@ export const HEXAGONAL_COLUMN_PARAMETER_KEYS: ScalarModelParameterKey[] = [
   'orientation',
 ]
 
-function parameterKeysForModel(
-  modelId: ModelId,
-): readonly ScalarModelParameterKey[] {
+function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'box') return DIMENSION_KEYS
+  if (modelId === 'box-normal') return BOX_NORMAL_PARAMETER_KEYS
   if (modelId === 'modular-grid-base') return GRID_PARAMETER_KEYS
   if (modelId === 'hsw-cell') return GRID_PARAMETER_KEYS
   if (modelId === 'hexagonal-column') return HEXAGONAL_COLUMN_PARAMETER_KEYS
@@ -45,6 +50,15 @@ export function rawFromParameters(
       width: String(parameters.width),
       depth: String(parameters.depth),
       height: String(parameters.height),
+    }
+  }
+
+  if ('cornerPosts' in parameters) {
+    return {
+      x: String(parameters.x),
+      y: String(parameters.y),
+      height: String(parameters.height),
+      cornerPosts: String(parameters.cornerPosts),
     }
   }
 
@@ -71,14 +85,28 @@ export function parseRawParameters(
   | { valid: false; message: string; field?: ModelParameterKey } {
   const keys = parameterKeysForModel(modelId)
   const unexpectedKey = Object.keys(raw).find(
-    (key) => !keys.includes(key as ScalarModelParameterKey),
+    (key) => !keys.includes(key as ModelParameterKey),
   )
   if (unexpectedKey) {
     return { valid: false, message: '包含不支援的參數欄位。' }
   }
 
-  const parsed: Partial<Record<ModelParameterKey, number | string | null>> = {}
+  const parsed: Partial<
+    Record<ModelParameterKey, number | string | boolean | null>
+  > = {}
   for (const key of keys) {
+    if (key === 'cornerPosts') {
+      const rawValue = raw[key]
+      if (rawValue !== 'true' && rawValue !== 'false') {
+        return {
+          valid: false,
+          message: '必須是 true 或 false。',
+          field: 'cornerPosts',
+        }
+      }
+      parsed[key] = rawValue === 'true'
+      continue
+    }
     if (key === 'orientation') {
       parsed[key] =
         raw[key] ?? HEXAGONAL_COLUMN_CONFIGURATION.defaultOrientation

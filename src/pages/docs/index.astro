@@ -9,12 +9,14 @@ import SiteLayout from '../../layouts/SiteLayout.astro'
     <p class="mb-4 text-muted">Documentation</p>
     <h1 class="mb-4 text-4xl font-semibold leading-tight">Prototype 文件</h1>
     <p class="mb-4 leading-normal">
-      這個 Prototype 目前提供方塊、模組化網格底板、獨立的 HSW 六角蜂巢，以及可調
-      height、count 與預設 1 mm gap
-      的六角柱；六角柱截面採尖對尖方向，預設躺下且長軸沿 X，也可切換為站立沿
-      Z。height 支援 1–200 mm slider／1–999 mm 輸入，gap 支援 1–10 mm
+      這個 Prototype 目前提供方塊、獨立的 box-normal
+      開口盒、模組化網格底板、獨立的 HSW 六角蜂巢，以及可調 height、count 與預設
+      1 mm gap 的六角柱；box-normal 使用 X=2–40、Y=2–35 格與 10–500 mm
+      盒體高度，X/Y footprint 各內縮 0.15 mm，預設勾選四角 7 mm
+      六角定位柱。六角柱截面採尖對尖方向，預設躺下且長軸沿 X，也可切換為站立沿
+      Z。六角柱 height 支援 1–200 mm slider／1–999 mm 輸入，gap 支援 1–10 mm
       slider／1–99 mm 輸入。所有模型支援 component-specific 參數、瀏覽器端 3D
-      預覽，以及 STEP/STL 下載；STL 可再透過 Bambu Studio 的本機檔案流程匯入。
+      預覽，以及 STEP/STL 下載；參數會依 component 分別保存到 localStorage。
     </p>
     <p class="mb-4 leading-normal">
       完整架構與驗收規則請參考專案根目錄的 README 及 OpenSpec change 文件。

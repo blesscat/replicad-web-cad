@@ -2,11 +2,10 @@ import type {
   ModelId,
   ModelParameterKey,
   ModelParameterValues,
-  ScalarModelParameterKey,
 } from '../../../cad-contract/units'
 import type { ExportFormat } from '../../../features/cad/download'
 
-export type RawParameters = Partial<Record<ScalarModelParameterKey, string>>
+export type RawParameters = Partial<Record<ModelParameterKey, string>>
 
 export type OperationRecord = {
   kind: 'model' | 'export' | 'init'
