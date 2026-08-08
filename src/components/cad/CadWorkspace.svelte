@@ -1,6 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import type { ModelId, ModelParameterKey } from '../../cad-contract/units'
+  import type {
+    ModelId,
+    ModelParameterKey,
+    OpenGridParameters,
+  } from '../../cad-contract/units'
   import type { ExportFormat } from '../../features/cad/download'
   import {
     createComponentParameterStore,
@@ -46,6 +50,12 @@
     controller?.onInputChange(key, value)
   }
 
+  function handleOpenGridParametersChange(
+    parameters: OpenGridParameters,
+  ): void {
+    controller?.onOpenGridParametersChange(parameters)
+  }
+
   function handleExport(format: ExportFormat): void {
     controller?.onExport(format)
   }
@@ -63,10 +73,12 @@
     <CadWorkspacePanel
       state={snapshot.state}
       modelId={snapshot.modelId}
+      parameters={snapshot.state.input}
       rawParameters={snapshot.rawParameters}
       fieldErrors={snapshot.fieldErrors}
       canExport={snapshot.canExport}
       onInputChange={handleInputChange}
+      onOpenGridParametersChange={handleOpenGridParametersChange}
       onExport={handleExport}
       onRetry={handleRetry}
     />

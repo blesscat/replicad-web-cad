@@ -1,0 +1,1624 @@
+import {
+  importSTEP,
+  makeBox,
+  makeCylinder,
+  Sketcher,
+  type Shape3D,
+} from 'replicad'
+import type {
+  OpenGridConnectorLocation,
+  OpenGridParameters,
+  OpenGridPoint2D,
+  OpenGridScrewPosition,
+  OpenGridVariant,
+} from '../../../cad-contract/units'
+import {
+  OPENGRID_CONFIGURATION,
+  boundsForOpenGrid,
+  cellCenterForOpenGrid,
+  openGridBoardConfiguration,
+  openGridConnectorLocationsFor,
+  openGridScrewCentersFor,
+  openGridScrewPositionsFor,
+} from './profile'
+import {
+  openGridCornerProfile,
+  openGridLiteCornerProfile,
+  openGridLiteTileProfile,
+  openGridTileProfile,
+  openGridProfileConstants,
+} from './profile'
+
+export type OpenGridBuildContext = {
+  getOpenGridPrototype?: (variant: OpenGridVariant) => Promise<Shape3D>
+  yieldToEventLoop?: () => Promise<void>
+  isGenerationCurrent?: () => boolean
+  reportProgress?: (progress: {
+    stage: 'building'
+    completed?: number
+    total?: number
+    unit?: 'cells' | 'batches'
+  }) => void
+  reportPhase?: (
+    phase: 'assembly-fuse' | 'prototype-build',
+    durationMs: number,
+  ) => void
+}
+
+export type OpenGridAssemblyStrategy =
+  'whole-profile' | 'row-block' | 'cell-balanced' | 'prototype-template'
+
+export type OpenGridProductStrategy = 'cell-balanced'
+
+export const OPENGRID_PRODUCT_STRATEGIES: Readonly<
+  Record<OpenGridParameters['variant'], OpenGridProductStrategy>
+> = {
+  Full: 'cell-balanced',
+  Lite: 'cell-balanced',
+  Heavy: 'cell-balanced',
+}
+
+export const OPENGRID_PROTOTYPE_TEMPLATE_URLS: Readonly<
+  Record<OpenGridVariant, URL>
+> = {
+  Full: new URL('./opengrid-full-cell.step', import.meta.url),
+  Lite: new URL('./opengrid-lite-cell.step', import.meta.url),
+  Heavy: new URL('./opengrid-heavy-cell.step', import.meta.url),
+}
+
+function deleteShape(shape: { delete?: () => void } | null | undefined): void {
+  try {
+    shape?.delete?.()
+  } catch {
+    // Cleanup must not replace the original geometry error.
+  }
+}
+
+function assertGenerationCurrent(context: OpenGridBuildContext): void {
+  if (context.isGenerationCurrent && !context.isGenerationCurrent()) {
+    throw new Error('STALE_GENERATION')
+  }
+}
+
+async function yieldAtSafeBoundary(
+  context: OpenGridBuildContext,
+): Promise<void> {
+  assertGenerationCurrent(context)
+  await context.yieldToEventLoop?.()
+  assertGenerationCurrent(context)
+}
+
+function reportProgress(
+  context: OpenGridBuildContext,
+  completed: number,
+  total: number,
+): void {
+  context.reportProgress?.({
+    stage: 'building',
+    completed,
+    total,
+    unit: 'cells',
+  })
+}
+
+function extrudeProfile(
+  plane: 'YZ' | 'XZ',
+  origin: [number, number, number],
+  profile: readonly [number, number][],
+  distance: number,
+  direction: [number, number, number],
+): Shape3D {
+  const sketcher = new Sketcher(plane, origin)
+  let sketch: ReturnType<Sketcher['close']> | null = null
+  try {
+    const first = profile[0]
+    if (!first) throw new Error('OPENGRID_PROFILE_EMPTY')
+    sketcher.movePointerTo(first)
+    for (const point of profile.slice(1)) sketcher.lineTo(point)
+    sketch = sketcher.close()
+    return sketch.extrude(distance, { extrusionDirection: direction })
+  } finally {
+    deleteShape(sketch)
+    sketcher.delete()
+  }
+}
+
+function buildRail(
+  variant: 'Full' | 'Lite' | 'Heavy',
+  thickness: number,
+): Shape3D {
+  const tileSize = OPENGRID_CONFIGURATION.gridPitch
+  const halfTile = tileSize / 2
+  const profile =
+    variant === 'Lite'
+      ? openGridLiteTileProfile()
+      : openGridTileProfile(variant, thickness)
+  return extrudeProfile(
+    'YZ',
+    [-halfTile, -halfTile, 0],
+    profile,
+    tileSize,
+    [1, 0, 0],
+  )
+}
+
+function buildCornerNode(
+  variant: 'Full' | 'Lite' | 'Heavy',
+  thickness: number,
+): Shape3D {
+  const constants = openGridProfileConstants(
+    OPENGRID_CONFIGURATION.gridPitch,
+    thickness,
+  )
+  const profile =
+    variant === 'Lite'
+      ? openGridLiteCornerProfile()
+      : openGridCornerProfile(thickness)
+  const shape = extrudeProfile(
+    'XZ',
+    [0, -constants.cornerOffset, 0],
+    profile,
+    constants.cornerOffset * 2,
+    [0, 1, 0],
+  )
+  const rotated = shape.rotate(45, [0, 0, 0], [0, 0, 1])
+  if (rotated !== shape) deleteShape(shape)
+  const translated = rotated.translate(
+    -OPENGRID_CONFIGURATION.gridPitch / 2,
+    -OPENGRID_CONFIGURATION.gridPitch / 2,
+    0,
+  )
+  if (translated !== rotated) deleteShape(rotated)
+  return translated
+}
+
+function cloneRotated(
+  shape: Shape3D,
+  quarterTurns: number,
+  center: [number, number, number] = [0, 0, 0],
+): Shape3D {
+  const clone = shape.clone()
+  if (quarterTurns !== 0) {
+    const rotated = clone.rotate(quarterTurns * 90, center, [0, 0, 1])
+    if (rotated !== clone) deleteShape(clone)
+    return rotated
+  }
+  return clone
+}
+
+async function fuseBalanced(
+  input: Shape3D[],
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  if (input.length === 0) throw new Error('OPENGRID_SHAPE_EMPTY')
+  const owned = new Set(input)
+  let current = input
+  try {
+    while (current.length > 1) {
+      assertGenerationCurrent(context)
+      const next: Shape3D[] = []
+      for (
+        let index = 0;
+        index < current.length;
+        index += OPENGRID_CONFIGURATION.balancedFuseBatchSize
+      ) {
+        const batch = current.slice(
+          index,
+          index + OPENGRID_CONFIGURATION.balancedFuseBatchSize,
+        )
+        let combined = batch[0]
+        if (!combined) throw new Error('OPENGRID_SHAPE_EMPTY')
+        for (const shape of batch.slice(1)) {
+          assertGenerationCurrent(context)
+          const startedAt = performance.now()
+          const fused = combined.fuse(shape)
+          context.reportPhase?.('assembly-fuse', performance.now() - startedAt)
+          if (fused !== combined) {
+            owned.delete(combined)
+            deleteShape(combined)
+          }
+          if (fused !== shape) {
+            owned.delete(shape)
+            deleteShape(shape)
+          }
+          owned.add(fused)
+          combined = fused
+          await yieldAtSafeBoundary(context)
+        }
+        next.push(combined)
+      }
+      current = next
+    }
+    const result = current[0]
+    if (!result) throw new Error('OPENGRID_SHAPE_EMPTY')
+    owned.delete(result)
+    return result
+  } catch (error) {
+    for (const shape of owned) deleteShape(shape)
+    throw error
+  }
+}
+
+async function fuseSequential(
+  input: Shape3D[],
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  if (input.length === 0) throw new Error('OPENGRID_SHAPE_EMPTY')
+  const owned = new Set(input)
+  let combined = input[0]
+  if (!combined) throw new Error('OPENGRID_SHAPE_EMPTY')
+  try {
+    for (const shape of input.slice(1)) {
+      assertGenerationCurrent(context)
+      const startedAt = performance.now()
+      const fused = combined.fuse(shape)
+      context.reportPhase?.('assembly-fuse', performance.now() - startedAt)
+      if (fused !== combined) {
+        owned.delete(combined)
+        deleteShape(combined)
+      }
+      if (fused !== shape) {
+        owned.delete(shape)
+        deleteShape(shape)
+      }
+      owned.add(fused)
+      combined = fused
+      await yieldAtSafeBoundary(context)
+    }
+    owned.delete(combined)
+    return combined
+  } catch (error) {
+    for (const shape of owned) deleteShape(shape)
+    throw error
+  }
+}
+
+async function fuseByStrategy(
+  rows: Shape3D[][],
+  strategy: OpenGridAssemblyStrategy,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  if (strategy === 'cell-balanced') {
+    return fuseBalanced(rows.flat(), context)
+  }
+  if (strategy === 'whole-profile') {
+    return fuseSequential(rows.flat(), context)
+  }
+  if (strategy === 'prototype-template') {
+    return fuseBalanced(rows.flat(), context)
+  }
+
+  const rowShapes: Shape3D[] = []
+  try {
+    for (const row of rows) {
+      rowShapes.push(await fuseSequential(row, context))
+    }
+    return await fuseSequential(rowShapes, context)
+  } catch (error) {
+    for (const row of rowShapes) deleteShape(row)
+    for (const row of rows) {
+      for (const piece of row) deleteShape(piece)
+    }
+    throw error
+  }
+}
+
+async function buildCanonicalTile(
+  parameters: OpenGridParameters,
+  variant: 'Full' | 'Lite' | 'Heavy',
+  thickness: number,
+  screwCenters: readonly OpenGridPoint2D[],
+  connectorLocations: readonly OpenGridConnectorLocation[],
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  const rail = buildRail(variant, thickness)
+  const parts: Shape3D[] = [rail]
+  for (let quarterTurns = 1; quarterTurns < 4; quarterTurns += 1) {
+    parts.push(cloneRotated(rail, quarterTurns))
+  }
+  const clip = makeBox(
+    [
+      -OPENGRID_CONFIGURATION.gridPitch / 2,
+      -OPENGRID_CONFIGURATION.gridPitch / 2,
+      -0.01,
+    ],
+    [
+      OPENGRID_CONFIGURATION.gridPitch / 2,
+      OPENGRID_CONFIGURATION.gridPitch / 2,
+      thickness + 0.01,
+    ],
+  )
+  try {
+    const corner = buildCornerNode(variant, thickness)
+    for (let quarterTurns = 0; quarterTurns < 4; quarterTurns += 1) {
+      const rotated = cloneRotated(corner, quarterTurns)
+      const clipped = rotated.intersect(clip)
+      if (clipped !== rotated) deleteShape(rotated)
+      parts.push(clipped)
+    }
+    deleteShape(corner)
+  } finally {
+    deleteShape(clip)
+  }
+  const canonical = await fuseBalanced(parts, context)
+  let result = canonical
+  try {
+    if (screwCenters.length > 0) {
+      result = await applyCutterGroups(
+        result,
+        createScrewCutterGroupsForLayer(
+          parameters,
+          screwCenters,
+          thickness,
+          'top',
+        ),
+        context,
+      )
+    }
+    if (connectorLocations.length > 0) {
+      result = await applyCutterGroups(
+        result,
+        createConnectorCutterGroupsForLocations(
+          parameters,
+          connectorLocations,
+          thickness,
+        ),
+        context,
+      )
+    }
+    return result
+  } catch (error) {
+    deleteShape(result)
+    throw error
+  }
+}
+
+function mirrorSurfaceWithinLayer(shape: Shape3D, thickness: number): Shape3D {
+  return shape.mirror([0, 0, 1], [0, 0, thickness / 2])
+}
+
+async function buildGridSurface(
+  parameters: OpenGridParameters,
+  variant: 'Full' | 'Lite' | 'Heavy',
+  thickness: number,
+  zOffset: number,
+  mirrorWithinLayer: boolean,
+  strategy: OpenGridAssemblyStrategy,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  if (
+    strategy === 'row-block' &&
+    (openGridScrewCentersFor(parameters).length > 0 ||
+      openGridConnectorLocationsFor(parameters).length > 0)
+  ) {
+    return buildGridSurfaceByRows(
+      parameters,
+      variant,
+      thickness,
+      zOffset,
+      mirrorWithinLayer,
+      context,
+    )
+  }
+  const screwCenters = openGridScrewCentersFor(parameters)
+  const connectorLocations = openGridConnectorLocationsFor(parameters)
+  const screwCenterKeys = new Set(screwCenters.map(([x, y]) => `${x}:${y}`))
+  const canonicalByPattern = new Map<string, Shape3D>()
+  const rows: Shape3D[][] = []
+  const totalCells = parameters.rows * parameters.columns
+  let completed = 0
+  try {
+    reportProgress(context, 0, totalCells)
+    for (let row = 0; row < parameters.rows; row += 1) {
+      const rowPieces: Shape3D[] = []
+      rows.push(rowPieces)
+      for (let column = 0; column < parameters.columns; column += 1) {
+        assertGenerationCurrent(context)
+        const [centerX, centerY] = cellCenterForOpenGrid(
+          parameters,
+          row,
+          column,
+        )
+        const localScrews = localScrewCentersForCell(
+          centerX,
+          centerY,
+          screwCenterKeys,
+        )
+        const localConnectors = localConnectorLocationsForCell(
+          parameters,
+          row,
+          column,
+          connectorLocations,
+        )
+        const patternKey = localTilePatternKey(localScrews, localConnectors)
+        let canonical = canonicalByPattern.get(patternKey)
+        if (!canonical) {
+          canonical = await buildCanonicalTile(
+            parameters,
+            variant,
+            thickness,
+            localScrews,
+            localConnectors,
+            context,
+          )
+          canonicalByPattern.set(patternKey, canonical)
+        }
+        let piece = canonical.clone()
+        if (mirrorWithinLayer) {
+          const mirrored = mirrorSurfaceWithinLayer(piece, thickness)
+          if (mirrored !== piece) deleteShape(piece)
+          piece = mirrored
+        }
+        const translated = piece.translate(centerX, centerY, zOffset)
+        if (translated !== piece) deleteShape(piece)
+        rowPieces.push(translated)
+        completed += 1
+        reportProgress(context, completed, totalCells)
+        await yieldAtSafeBoundary(context)
+      }
+    }
+    const result = await fuseByStrategy(rows, strategy, context)
+    for (const canonical of canonicalByPattern.values()) deleteShape(canonical)
+    return result
+  } catch (error) {
+    for (const row of rows) {
+      for (const piece of row) deleteShape(piece)
+    }
+    for (const canonical of canonicalByPattern.values()) deleteShape(canonical)
+    throw error
+  }
+}
+
+async function buildGridSurfaceByRows(
+  parameters: OpenGridParameters,
+  variant: 'Full' | 'Lite' | 'Heavy',
+  thickness: number,
+  zOffset: number,
+  mirrorWithinLayer: boolean,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  const screwCenterKeys = new Set(
+    openGridScrewCentersFor(parameters).map(([x, y]) => `${x}:${y}`),
+  )
+  const connectorLocations = openGridConnectorLocationsFor(parameters)
+  const canonicalByPattern = new Map<string, Shape3D>()
+  const rowShapes: Shape3D[] = []
+  const totalCells = parameters.rows * parameters.columns
+  let completed = 0
+
+  try {
+    reportProgress(context, 0, totalCells)
+    for (let row = 0; row < parameters.rows; row += 1) {
+      const rowPieces: Shape3D[] = []
+      try {
+        for (let column = 0; column < parameters.columns; column += 1) {
+          assertGenerationCurrent(context)
+          const [centerX, centerY] = cellCenterForOpenGrid(
+            parameters,
+            row,
+            column,
+          )
+          const localScrews = localScrewCentersForCell(
+            centerX,
+            centerY,
+            screwCenterKeys,
+          )
+          const localConnectors = localConnectorLocationsForCell(
+            parameters,
+            row,
+            column,
+            connectorLocations,
+          )
+          const patternKey = localTilePatternKey(localScrews, localConnectors)
+          let canonical = canonicalByPattern.get(patternKey)
+          if (!canonical) {
+            canonical = await buildCanonicalTile(
+              parameters,
+              variant,
+              thickness,
+              localScrews,
+              localConnectors,
+              context,
+            )
+            canonicalByPattern.set(patternKey, canonical)
+          }
+          let piece = canonical.clone()
+          const translated = piece.translate(centerX, centerY, zOffset)
+          if (translated !== piece) deleteShape(piece)
+          rowPieces.push(translated)
+          completed += 1
+          reportProgress(context, completed, totalCells)
+          await yieldAtSafeBoundary(context)
+        }
+
+        let rowShape = await fuseSequential(rowPieces, context)
+        if (mirrorWithinLayer) {
+          const mirrored = mirrorSurfaceWithinLayer(rowShape, thickness)
+          if (mirrored !== rowShape) deleteShape(rowShape)
+          rowShape = mirrored
+        }
+        rowShapes.push(rowShape)
+      } catch (error) {
+        for (const piece of rowPieces) deleteShape(piece)
+        throw error
+      }
+    }
+    const result = await fuseSequential(rowShapes, context)
+    for (const canonical of canonicalByPattern.values()) deleteShape(canonical)
+    return result
+  } catch (error) {
+    for (const rowShape of rowShapes) deleteShape(rowShape)
+    for (const canonical of canonicalByPattern.values()) deleteShape(canonical)
+    throw error
+  }
+}
+
+async function buildOpenGridPrototypeShape(
+  variant: OpenGridVariant,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  const parameters: OpenGridParameters = {
+    ...OPENGRID_CONFIGURATION.defaultParameters,
+    variant,
+    rows: 1,
+    columns: 1,
+    chamfers: 'none',
+    connectorHoles: 'none',
+    screwMode: 'none',
+    customScrewPositions: [],
+  }
+  const startedAt = performance.now()
+
+  if (variant !== 'Heavy') {
+    const thickness = OPENGRID_CONFIGURATION.variants[variant].thickness
+    const prototype = await buildCanonicalTile(
+      parameters,
+      variant,
+      thickness,
+      [],
+      [],
+      context,
+    )
+    context.reportPhase?.('prototype-build', performance.now() - startedAt)
+    return prototype
+  }
+
+  const layerThickness = OPENGRID_CONFIGURATION.variants.Full.thickness
+  let lower: Shape3D | null = null
+  let upper: Shape3D | null = null
+  let bridge: Shape3D | null = null
+  try {
+    lower = await buildCanonicalTile(
+      parameters,
+      'Heavy',
+      layerThickness,
+      [],
+      [],
+      context,
+    )
+    const mirroredLower = mirrorSurfaceWithinLayer(lower, layerThickness)
+    if (mirroredLower !== lower) deleteShape(lower)
+    lower = mirroredLower
+
+    upper = await buildCanonicalTile(
+      parameters,
+      'Heavy',
+      layerThickness,
+      [],
+      [],
+      context,
+    )
+    const translatedUpper = upper.translate(
+      0,
+      0,
+      layerThickness + OPENGRID_CONFIGURATION.heavyGap,
+    )
+    if (translatedUpper !== upper) deleteShape(upper)
+    upper = translatedUpper
+
+    bridge = await fuseBalanced(
+      buildFlatBridgeTile(0, 0, layerThickness),
+      context,
+    )
+    const prototype = await fuseBalanced([lower, bridge, upper], context)
+    lower = null
+    bridge = null
+    upper = null
+    context.reportPhase?.('prototype-build', performance.now() - startedAt)
+    return prototype
+  } catch (error) {
+    deleteShape(lower)
+    deleteShape(bridge)
+    deleteShape(upper)
+    throw error
+  }
+}
+
+export function buildOpenGridPrototype(
+  variant: OpenGridVariant,
+  context: OpenGridBuildContext = {},
+): Promise<Shape3D> {
+  return buildOpenGridPrototypeShape(variant, context)
+}
+
+function assertPrototypeTemplateBounds(
+  shape: Shape3D,
+  variant: OpenGridVariant,
+): void {
+  const actual = shape.boundingBox
+  try {
+    const [actualMin, actualMax] = actual.bounds as [
+      [number, number, number],
+      [number, number, number],
+    ]
+    const expected = boundsForOpenGrid({ variant, rows: 1, columns: 1 })
+    const matches = [...actualMin, ...actualMax].every((value, index) => {
+      const expectedValue = [...expected.min, ...expected.max][index]
+      return Math.abs(value - expectedValue) <= 0.05
+    })
+    if (!matches) throw new Error('OPENGRID_TEMPLATE_INVALID_BOUNDS')
+  } finally {
+    actual.delete()
+  }
+}
+
+export async function importOpenGridPrototypeTemplate(
+  blob: Blob,
+  variant: OpenGridVariant,
+): Promise<Shape3D> {
+  let imported: Shape3D
+  try {
+    imported = (await importSTEP(blob)).asShape3D()
+  } catch {
+    throw new Error('OPENGRID_TEMPLATE_INVALID')
+  }
+
+  try {
+    assertPrototypeTemplateBounds(imported, variant)
+    return imported
+  } catch (error) {
+    deleteShape(imported)
+    throw error
+  }
+}
+
+export async function loadOpenGridPrototypeTemplate(
+  variant: OpenGridVariant,
+  fetcher: typeof fetch = fetch,
+): Promise<Shape3D> {
+  const response = await fetcher(OPENGRID_PROTOTYPE_TEMPLATE_URLS[variant])
+  if (!response.ok) throw new Error('OPENGRID_TEMPLATE_LOAD_FAILED')
+  return importOpenGridPrototypeTemplate(await response.blob(), variant)
+}
+
+async function buildPrototypeTemplateAssembly(
+  parameters: OpenGridParameters,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  let prototype: Shape3D | null = null
+  let ownsPrototype = false
+  const rows: Shape3D[][] = []
+  const totalCells = parameters.rows * parameters.columns
+  let completed = 0
+
+  try {
+    if (context.getOpenGridPrototype) {
+      prototype = await context.getOpenGridPrototype(parameters.variant)
+    } else {
+      prototype = await buildOpenGridPrototypeShape(parameters.variant, context)
+      ownsPrototype = true
+    }
+
+    reportProgress(context, 0, totalCells)
+    for (let row = 0; row < parameters.rows; row += 1) {
+      const rowPieces: Shape3D[] = []
+      rows.push(rowPieces)
+      for (let column = 0; column < parameters.columns; column += 1) {
+        assertGenerationCurrent(context)
+        const [centerX, centerY] = cellCenterForOpenGrid(
+          parameters,
+          row,
+          column,
+        )
+        const cloned = prototype.clone()
+        const translated = cloned.translate(centerX, centerY, 0)
+        if (translated !== cloned) deleteShape(cloned)
+        rowPieces.push(translated)
+        completed += 1
+        reportProgress(context, completed, totalCells)
+        await yieldAtSafeBoundary(context)
+      }
+    }
+
+    const result = await fuseByStrategy(rows, 'prototype-template', context)
+    rows.length = 0
+    return result
+  } catch (error) {
+    for (const row of rows) {
+      for (const piece of row) deleteShape(piece)
+    }
+    throw error
+  } finally {
+    if (ownsPrototype) deleteShape(prototype)
+  }
+}
+
+const OPEN_GRID_TILE_CORNER_SCREWS: readonly OpenGridPoint2D[] = [
+  [-OPENGRID_CONFIGURATION.gridPitch / 2, OPENGRID_CONFIGURATION.gridPitch / 2],
+  [OPENGRID_CONFIGURATION.gridPitch / 2, OPENGRID_CONFIGURATION.gridPitch / 2],
+  [
+    -OPENGRID_CONFIGURATION.gridPitch / 2,
+    -OPENGRID_CONFIGURATION.gridPitch / 2,
+  ],
+  [OPENGRID_CONFIGURATION.gridPitch / 2, -OPENGRID_CONFIGURATION.gridPitch / 2],
+]
+
+function localScrewCentersForCell(
+  centerX: number,
+  centerY: number,
+  screwCenterKeys: ReadonlySet<string>,
+): OpenGridPoint2D[] {
+  return OPEN_GRID_TILE_CORNER_SCREWS.filter(([localX, localY]) =>
+    screwCenterKeys.has(`${centerX + localX}:${centerY + localY}`),
+  ).map(([localX, localY]) => [localX, localY])
+}
+
+function localScrewPatternKey(centers: readonly OpenGridPoint2D[]): string {
+  return centers.map(([x, y]) => `${x}:${y}`).join('|') || 'none'
+}
+
+function localConnectorLocationsForCell(
+  parameters: OpenGridParameters,
+  row: number,
+  column: number,
+  locations: readonly OpenGridConnectorLocation[],
+): OpenGridConnectorLocation[] {
+  const [centerX, centerY] = cellCenterForOpenGrid(parameters, row, column)
+  const halfTile = OPENGRID_CONFIGURATION.gridPitch / 2
+  return locations
+    .filter((location) => {
+      const [x, y] = location.center
+      const onCellEdge =
+        (location.side === 'top' && y === centerY + halfTile) ||
+        (location.side === 'bottom' && y === centerY - halfTile) ||
+        (location.side === 'right' && x === centerX + halfTile) ||
+        (location.side === 'left' && x === centerX - halfTile)
+      if (!onCellEdge) return false
+      const alongCoordinate =
+        location.side === 'top' || location.side === 'bottom' ? x : y
+      const cellAlongCenter =
+        location.side === 'top' || location.side === 'bottom'
+          ? centerX
+          : centerY
+      return Math.abs(alongCoordinate - cellAlongCenter) <= halfTile
+    })
+    .map((location) => ({
+      ...location,
+      center: [
+        location.center[0] - centerX,
+        location.center[1] - centerY,
+      ] as OpenGridPoint2D,
+    }))
+}
+
+function localConnectorPatternKey(
+  locations: readonly OpenGridConnectorLocation[],
+): string {
+  return (
+    locations
+      .map(
+        (location) =>
+          `${location.side}:${location.center[0]}:${location.center[1]}`,
+      )
+      .sort()
+      .join('|') || 'none'
+  )
+}
+
+function localTilePatternKey(
+  screwCenters: readonly OpenGridPoint2D[],
+  connectorLocations: readonly OpenGridConnectorLocation[],
+): string {
+  return `screw=${localScrewPatternKey(screwCenters)};connector=${localConnectorPatternKey(connectorLocations)}`
+}
+
+function buildFlatBridgeTile(
+  centerX: number,
+  centerY: number,
+  zOffset: number,
+): Shape3D[] {
+  const tileSize = OPENGRID_CONFIGURATION.gridPitch
+  const halfTile = tileSize / 2
+  // The official Heavy middle layer uses projection(cut=true) at the
+  // Full-profile mid-plane. At that section the rail reaches only the
+  // outside extrusion; projecting the complete top capture would make the
+  // bridge wider than the official OpenSCAD result.
+  const railWidth = OPENGRID_CONFIGURATION.outsideExtrusion
+  const height = OPENGRID_CONFIGURATION.heavyGap
+  const parts: Shape3D[] = [
+    makeBox(
+      [centerX - halfTile, centerY - halfTile, zOffset],
+      [centerX + halfTile, centerY - halfTile + railWidth, zOffset + height],
+    ),
+    makeBox(
+      [centerX - halfTile, centerY + halfTile - railWidth, zOffset],
+      [centerX + halfTile, centerY + halfTile, zOffset + height],
+    ),
+    makeBox(
+      [centerX - halfTile, centerY - halfTile, zOffset],
+      [centerX - halfTile + railWidth, centerY + halfTile, zOffset + height],
+    ),
+    makeBox(
+      [centerX + halfTile - railWidth, centerY - halfTile, zOffset],
+      [centerX + halfTile, centerY + halfTile, zOffset + height],
+    ),
+  ]
+
+  const { cornerOffset, cornerChamfer } = openGridProfileConstants(
+    tileSize,
+    OPENGRID_CONFIGURATION.variants.Full.thickness,
+  )
+  const cornerWidth = cornerOffset - cornerChamfer
+  const corner = makeBox(
+    [0, -cornerOffset, zOffset],
+    [cornerWidth, cornerOffset, zOffset + height],
+  )
+  const rotatedCorner = corner.rotate(45, [0, 0, 0], [0, 0, 1])
+  if (rotatedCorner !== corner) deleteShape(corner)
+  const localCorner = rotatedCorner.translate(-halfTile, -halfTile, 0)
+  if (localCorner !== rotatedCorner) deleteShape(rotatedCorner)
+  const tileClip = makeBox(
+    [centerX - halfTile, centerY - halfTile, zOffset - 0.01],
+    [centerX + halfTile, centerY + halfTile, zOffset + height + 0.01],
+  )
+  try {
+    for (let quarterTurns = 0; quarterTurns < 4; quarterTurns += 1) {
+      const rotated = cloneRotated(localCorner, quarterTurns)
+      const translated = rotated.translate(centerX, centerY, 0)
+      if (translated !== rotated) deleteShape(rotated)
+      const clipped = translated.intersect(tileClip)
+      if (clipped !== translated) deleteShape(translated)
+      parts.push(clipped)
+    }
+  } finally {
+    deleteShape(localCorner)
+    deleteShape(tileClip)
+  }
+
+  return parts
+}
+
+async function buildHeavyBridge(
+  parameters: OpenGridParameters,
+  zOffset: number,
+  strategy: OpenGridAssemblyStrategy,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  const rows: Shape3D[][] = []
+  try {
+    for (let row = 0; row < parameters.rows; row += 1) {
+      const rowParts: Shape3D[] = []
+      rows.push(rowParts)
+      for (let column = 0; column < parameters.columns; column += 1) {
+        const [centerX, centerY] = cellCenterForOpenGrid(
+          parameters,
+          row,
+          column,
+        )
+        rowParts.push(...buildFlatBridgeTile(centerX, centerY, zOffset))
+        await yieldAtSafeBoundary(context)
+      }
+    }
+    return fuseByStrategy(rows, strategy, context)
+  } catch (error) {
+    for (const row of rows) {
+      for (const part of row) deleteShape(part)
+    }
+    throw error
+  }
+}
+
+async function buildProductBase(
+  parameters: OpenGridParameters,
+  strategy: OpenGridAssemblyStrategy,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  if (strategy === 'prototype-template') {
+    return buildPrototypeTemplateAssembly(parameters, context)
+  }
+
+  if (parameters.variant !== 'Heavy') {
+    return buildGridSurface(
+      parameters,
+      parameters.variant,
+      parameters.variant === 'Lite'
+        ? OPENGRID_CONFIGURATION.variants.Lite.thickness
+        : OPENGRID_CONFIGURATION.variants.Full.thickness,
+      0,
+      false,
+      strategy,
+      context,
+    )
+  }
+
+  const layerThickness = OPENGRID_CONFIGURATION.variants.Full.thickness
+  let lower = await buildGridSurface(
+    parameters,
+    'Heavy',
+    layerThickness,
+    0,
+    true,
+    strategy,
+    context,
+  )
+  let upper = await buildGridSurface(
+    parameters,
+    'Heavy',
+    layerThickness,
+    layerThickness + OPENGRID_CONFIGURATION.heavyGap,
+    false,
+    strategy,
+    context,
+  )
+  const bridge = await buildHeavyBridge(
+    parameters,
+    layerThickness,
+    strategy,
+    context,
+  )
+  let cutBridge: Shape3D | null = null
+  try {
+    cutBridge = await applyHeavyBridgeFeatures(
+      bridge,
+      parameters,
+      layerThickness,
+      context,
+    )
+    const cutLower = await applyBatchedCuts(lower, parameters, context)
+    lower = cutLower
+    const cutUpper = await applyBatchedCuts(upper, parameters, context)
+    upper = cutUpper
+    return await fuseBalanced([lower, cutBridge, upper], context)
+  } catch (error) {
+    deleteShape(lower)
+    deleteShape(cutBridge ?? bridge)
+    deleteShape(upper)
+    throw error
+  }
+}
+
+type CutterGroup = {
+  shape: Shape3D
+  parts: readonly Shape3D[]
+}
+
+function disposeCutter(group: CutterGroup | null): void {
+  if (!group) return
+  deleteShape(group.shape)
+  for (const part of group.parts) {
+    if (part !== group.shape) deleteShape(part)
+  }
+}
+
+function chamferCenters(parameters: OpenGridParameters): OpenGridPoint2D[] {
+  if (parameters.chamfers === 'none') return []
+  const board = openGridBoardConfiguration(parameters)
+  const screwSuppressesInternalChamfers =
+    parameters.screwMode === 'corners' || parameters.screwMode === 'everywhere'
+  const useEverywhere =
+    parameters.chamfers === 'everywhere' && !screwSuppressesInternalChamfers
+  if (useEverywhere) {
+    const centers: OpenGridPoint2D[] = []
+    for (let row = 0; row <= parameters.rows; row += 1) {
+      for (let column = 0; column <= parameters.columns; column += 1) {
+        centers.push([
+          -board.width / 2 + column * OPENGRID_CONFIGURATION.gridPitch,
+          board.depth / 2 - row * OPENGRID_CONFIGURATION.gridPitch,
+        ])
+      }
+    }
+    return centers
+  }
+
+  const corners = parameters.chamferCorners
+  const centers: OpenGridPoint2D[] = []
+  if (corners.topLeft) centers.push([-board.width / 2, board.depth / 2])
+  if (corners.topRight) centers.push([board.width / 2, board.depth / 2])
+  if (corners.bottomLeft) centers.push([-board.width / 2, -board.depth / 2])
+  if (corners.bottomRight) centers.push([board.width / 2, -board.depth / 2])
+  return centers
+}
+
+function createChamferCutters(
+  parameters: OpenGridParameters,
+  zOffset = 0,
+  layerHeight = openGridBoardConfiguration(parameters).height,
+): CutterGroup[] {
+  const side = Math.sqrt(OPENGRID_CONFIGURATION.intersectionDistance ** 2 * 2)
+  const groups: CutterGroup[] = []
+  for (const [x, y] of chamferCenters(parameters)) {
+    const cutter = makeBox(
+      [-side / 2, -side / 2, zOffset - 0.01],
+      [side / 2, side / 2, zOffset + layerHeight + 0.01],
+    )
+    const rotated = cutter.rotate(45, [0, 0, 0], [0, 0, 1])
+    if (rotated !== cutter) deleteShape(cutter)
+    const translated = rotated.translate(x, y, 0)
+    if (translated !== rotated) deleteShape(rotated)
+    groups.push({ shape: translated, parts: [translated] })
+  }
+  return groups
+}
+
+const OPENGRID_SCREW_SIDES = 30
+const OPENGRID_CONNECTOR_SIDES = 50
+
+function makePolygonalFrustum(
+  startDiameter: number,
+  endDiameter: number,
+  height: number,
+  center: [number, number, number],
+  sides: number,
+): Shape3D {
+  const sketcher = new Sketcher('XY', center)
+  let sketch: ReturnType<Sketcher['close']> | null = null
+  try {
+    const radius = startDiameter / 2
+    sketcher.movePointerTo([radius, 0])
+    for (let side = 1; side < sides; side += 1) {
+      const angle = (side * 2 * Math.PI) / sides
+      sketcher.lineTo([radius * Math.cos(angle), radius * Math.sin(angle)])
+    }
+    sketch = sketcher.close()
+    return sketch.extrude(height, {
+      extrusionProfile: {
+        profile: 'linear',
+        endFactor: endDiameter / startDiameter,
+      },
+    })
+  } finally {
+    deleteShape(sketch)
+    sketcher.delete()
+  }
+}
+
+function makePolygonalCylinder(
+  diameter: number,
+  height: number,
+  center: [number, number, number],
+  sides: number,
+): Shape3D {
+  return makePolygonalFrustum(diameter, diameter, height, center, sides)
+}
+
+function screwHeadCutters(
+  x: number,
+  y: number,
+  layerHeight: number,
+  dimensions: OpenGridParameters,
+  outward: 'top' | 'bottom',
+  zOffset = 0,
+): Shape3D[] {
+  const headDiameter = dimensions.screwHeadDiameter
+  const screwDiameter = dimensions.screwDiameter
+  const angle = dimensions.screwHeadCountersunkDegree
+  const coneHeight = dimensions.screwHeadIsCountersunk
+    ? Math.max(
+        0.01,
+        Math.tan(((180 - angle) * Math.PI) / 360) *
+          (headDiameter / 2 - screwDiameter / 2) -
+          0.01,
+      )
+    : 0.01
+  const inset = Math.max(dimensions.screwHeadInset, 0.01)
+  if (outward === 'top') {
+    // openGrid.scad places the head cylinder at the top surface and attaches
+    // the countersink below its bottom face. The through-hole therefore
+    // reaches the small end of the cone before the top capture begins.
+    const headBase = zOffset + layerHeight + 0.01 - inset
+    return [
+      makePolygonalFrustum(
+        screwDiameter,
+        headDiameter,
+        coneHeight,
+        [x, y, headBase - coneHeight],
+        OPENGRID_SCREW_SIDES,
+      ),
+      makePolygonalCylinder(
+        headDiameter,
+        inset,
+        [x, y, headBase],
+        OPENGRID_SCREW_SIDES,
+      ),
+    ]
+  }
+  const headTop = zOffset + inset - 0.01
+  return [
+    makePolygonalFrustum(
+      headDiameter,
+      screwDiameter,
+      coneHeight,
+      [x, y, headTop],
+      OPENGRID_SCREW_SIDES,
+    ),
+    makePolygonalCylinder(
+      headDiameter,
+      inset,
+      [x, y, zOffset],
+      OPENGRID_SCREW_SIDES,
+    ),
+  ]
+}
+
+function fuseCutterParts(parts: Shape3D[]): Shape3D {
+  const first = parts[0]
+  if (!first) throw new Error('OPENGRID_CUTTER_EMPTY')
+  const owned = new Set(parts)
+  let combined = first
+  try {
+    for (const part of parts.slice(1)) {
+      const fused = combined.fuse(part)
+      if (fused !== combined) {
+        owned.delete(combined)
+        deleteShape(combined)
+      }
+      if (fused !== part) {
+        owned.delete(part)
+        deleteShape(part)
+      }
+      owned.add(fused)
+      combined = fused
+    }
+    owned.delete(combined)
+    return combined
+  } catch (error) {
+    for (const part of owned) deleteShape(part)
+    throw error
+  }
+}
+
+function createScrewCutterGroupsForLayer(
+  parameters: OpenGridParameters,
+  centers: readonly OpenGridPoint2D[],
+  layerHeight: number,
+  outward: 'top' | 'bottom',
+  zOffset = 0,
+): CutterGroup[] {
+  if (centers.length === 0) return []
+  const groups: CutterGroup[] = []
+  try {
+    for (const [x, y] of centers) {
+      const parts = [
+        makePolygonalCylinder(
+          parameters.screwDiameter,
+          layerHeight + 0.02,
+          [x, y, zOffset - 0.01],
+          OPENGRID_SCREW_SIDES,
+        ),
+        ...screwHeadCutters(x, y, layerHeight, parameters, outward, zOffset),
+      ]
+      const cutter = fuseCutterParts(parts)
+      groups.push({ shape: cutter, parts: [cutter] })
+    }
+    return groups
+  } catch (error) {
+    for (const group of groups) disposeCutter(group)
+    throw error
+  }
+}
+
+function connectorLevelForSurface(
+  parameters: OpenGridParameters,
+  layerHeight: number,
+): number {
+  if (parameters.variant === 'Lite') {
+    const placementHeight = OPENGRID_CONFIGURATION.connector.cutoutHeight + 0.01
+    return (
+      layerHeight -
+      placementHeight / 2 -
+      OPENGRID_CONFIGURATION.connector.liteCutoutDistanceFromTop
+    )
+  }
+  return layerHeight / 2
+}
+
+function connectorAxes(location: OpenGridConnectorLocation): {
+  along: OpenGridPoint2D
+  inward: OpenGridPoint2D
+} {
+  if (location.side === 'top' || location.side === 'bottom') {
+    return {
+      along: [1, 0],
+      inward: [location.direction[0], location.direction[1]],
+    }
+  }
+  return {
+    along: [0, 1],
+    inward: [location.direction[0], location.direction[1]],
+  }
+}
+
+function connectorLocalPoint(
+  location: OpenGridConnectorLocation,
+  inwardDistance: number,
+  alongDistance: number,
+  z: number,
+): [number, number, number] {
+  const { along, inward } = connectorAxes(location)
+  const [centerX, centerY] = location.center
+  return [
+    centerX + inward[0] * inwardDistance + along[0] * alongDistance,
+    centerY + inward[1] * inwardDistance + along[1] * alongDistance,
+    z,
+  ]
+}
+
+function makeConnectorLocalBox(
+  location: OpenGridConnectorLocation,
+  inwardMin: number,
+  inwardMax: number,
+  alongMin: number,
+  alongMax: number,
+  zMin: number,
+  zMax: number,
+): Shape3D {
+  const first = connectorLocalPoint(location, inwardMin, alongMin, zMin)
+  const second = connectorLocalPoint(location, inwardMax, alongMax, zMax)
+  return makeBox(
+    [Math.min(first[0], second[0]), Math.min(first[1], second[1]), zMin],
+    [Math.max(first[0], second[0]), Math.max(first[1], second[1]), zMax],
+  )
+}
+
+function createConnectorCutterShape(
+  location: OpenGridConnectorLocation,
+  zCenter: number,
+): Shape3D {
+  const primaryRadius = OPENGRID_CONFIGURATION.connector.primaryRadius
+  const dimpleRadius = OPENGRID_CONFIGURATION.connector.dimpleRadius
+  const separation = OPENGRID_CONFIGURATION.connector.separation
+  const height = OPENGRID_CONFIGURATION.connector.cutoutHeight
+  const lowerZ = zCenter - height / 2
+  let capsule: Shape3D | null = null
+  try {
+    // The official tool creates a hull of two X-copies, shifts it left by
+    // 0.1 mm, then keeps the RIGHT half. X is therefore the inward axis;
+    // Y runs along the board edge.
+    const firstCenter = -primaryRadius - 0.1
+    const secondCenter = primaryRadius - 0.1
+    const box = makeConnectorLocalBox(
+      location,
+      firstCenter,
+      secondCenter,
+      -primaryRadius,
+      primaryRadius,
+      lowerZ,
+      lowerZ + height,
+    )
+    const firstEnd = makePolygonalCylinder(
+      primaryRadius * 2,
+      height,
+      connectorLocalPoint(location, firstCenter, 0, lowerZ),
+      OPENGRID_CONNECTOR_SIDES,
+    )
+    capsule = box.fuse(firstEnd)
+    if (capsule !== box) deleteShape(box)
+    if (capsule !== firstEnd) deleteShape(firstEnd)
+    const secondEnd = makePolygonalCylinder(
+      primaryRadius * 2,
+      height,
+      connectorLocalPoint(location, secondCenter, 0, lowerZ),
+      OPENGRID_CONNECTOR_SIDES,
+    )
+    const expandedCapsule = capsule.fuse(secondEnd)
+    if (expandedCapsule !== capsule) deleteShape(capsule)
+    if (expandedCapsule !== secondEnd) deleteShape(secondEnd)
+    capsule = expandedCapsule
+
+    const dimpleOffset = primaryRadius + separation
+    for (const sign of [-1, 1]) {
+      const dimple = makePolygonalCylinder(
+        dimpleRadius * 2,
+        height + 0.02,
+        connectorLocalPoint(location, 0, sign * dimpleOffset, lowerZ - 0.01),
+        OPENGRID_CONNECTOR_SIDES,
+      )
+      const currentCapsule: Shape3D | null = capsule
+      if (!currentCapsule) throw new Error('OPENGRID_CONNECTOR_CAPSULE_EMPTY')
+      const cut: Shape3D = currentCapsule.cut(dimple)
+      if (cut !== currentCapsule) deleteShape(currentCapsule)
+      deleteShape(dimple)
+      capsule = cut
+    }
+
+    // The source's small outward-flare rectangle is part of the union
+    // after the half-space operation. A box preserves its functional
+    // 1 × 4.8 mm opening envelope while keeping the cutter native.
+    const flare = makeConnectorLocalBox(
+      location,
+      -0.01,
+      1,
+      -(separation * 2 - (dimpleRadius - separation)) / 2,
+      (separation * 2 - (dimpleRadius - separation)) / 2,
+      lowerZ,
+      lowerZ + height,
+    )
+    const currentCapsule = capsule
+    if (!currentCapsule) throw new Error('OPENGRID_CONNECTOR_CAPSULE_EMPTY')
+    const withFlare = currentCapsule.fuse(flare)
+    if (withFlare !== currentCapsule) deleteShape(currentCapsule)
+    if (withFlare !== flare) deleteShape(flare)
+    capsule = withFlare
+
+    const halfSpace = makeConnectorLocalBox(
+      location,
+      -0.01,
+      primaryRadius * 4,
+      -primaryRadius * 4,
+      primaryRadius * 4,
+      lowerZ - 0.01,
+      lowerZ + height + 0.01,
+    )
+    const clipped = capsule.intersect(halfSpace)
+    if (clipped !== capsule) deleteShape(capsule)
+    deleteShape(halfSpace)
+    capsule = clipped
+    return clipped
+  } catch (error) {
+    deleteShape(capsule)
+    throw error
+  }
+}
+
+function createConnectorCutterGroupsForLocations(
+  parameters: OpenGridParameters,
+  locations: readonly OpenGridConnectorLocation[],
+  layerHeight: number,
+  zOffset = 0,
+): CutterGroup[] {
+  if (locations.length === 0) return []
+  const zCenter = connectorLevelForSurface(parameters, layerHeight)
+  const groups: CutterGroup[] = []
+  try {
+    for (const location of locations) {
+      const shape = createConnectorCutterShape(location, zCenter + zOffset)
+      groups.push({ shape, parts: [shape] })
+    }
+    return groups
+  } catch (error) {
+    for (const group of groups) disposeCutter(group)
+    throw error
+  }
+}
+
+function createBoardScrewCutterGroups(
+  parameters: OpenGridParameters,
+): CutterGroup[] {
+  const centers = openGridScrewCentersFor(parameters)
+  if (centers.length === 0) return []
+
+  if (parameters.variant !== 'Heavy') {
+    const layerHeight =
+      parameters.variant === 'Lite'
+        ? OPENGRID_CONFIGURATION.variants.Lite.thickness
+        : OPENGRID_CONFIGURATION.variants.Full.thickness
+    return createScrewCutterGroupsForLayer(
+      parameters,
+      centers,
+      layerHeight,
+      'top',
+    )
+  }
+
+  const board = openGridBoardConfiguration(parameters)
+  const groups: CutterGroup[] = []
+  try {
+    for (const [x, y] of centers) {
+      const parts = [
+        makePolygonalCylinder(
+          parameters.screwDiameter,
+          board.height + 0.02,
+          [x, y, -0.01],
+          OPENGRID_SCREW_SIDES,
+        ),
+        ...screwHeadCutters(x, y, board.height, parameters, 'top'),
+        ...screwHeadCutters(x, y, board.height, parameters, 'bottom'),
+      ]
+      const cutter = fuseCutterParts(parts)
+      groups.push({ shape: cutter, parts: [cutter] })
+    }
+    return groups
+  } catch (error) {
+    for (const group of groups) disposeCutter(group)
+    throw error
+  }
+}
+
+function createHeavyBridgeScrewCutterGroups(
+  parameters: OpenGridParameters,
+  zOffset: number,
+): CutterGroup[] {
+  const centers = openGridScrewCentersFor(parameters)
+  if (centers.length === 0) return []
+  const height = OPENGRID_CONFIGURATION.heavyGap
+  const groups: CutterGroup[] = []
+  try {
+    for (const [x, y] of centers) {
+      const cutter = makePolygonalCylinder(
+        parameters.screwDiameter,
+        height + 0.04,
+        [x, y, zOffset - 0.02],
+        OPENGRID_SCREW_SIDES,
+      )
+      groups.push({ shape: cutter, parts: [cutter] })
+    }
+    return groups
+  } catch (error) {
+    for (const group of groups) disposeCutter(group)
+    throw error
+  }
+}
+
+function createBoardConnectorCutterGroups(
+  parameters: OpenGridParameters,
+): CutterGroup[] {
+  const locations = openGridConnectorLocationsFor(parameters)
+  if (locations.length === 0) return []
+  if (parameters.variant !== 'Heavy') {
+    const layerHeight =
+      parameters.variant === 'Lite'
+        ? OPENGRID_CONFIGURATION.variants.Lite.thickness
+        : OPENGRID_CONFIGURATION.variants.Full.thickness
+    return createConnectorCutterGroupsForLocations(
+      parameters,
+      locations,
+      layerHeight,
+    )
+  }
+
+  const layerHeight = OPENGRID_CONFIGURATION.variants.Full.thickness
+  const upperLayerOffset = layerHeight + OPENGRID_CONFIGURATION.heavyGap
+  const groups: CutterGroup[] = []
+  try {
+    groups.push(
+      ...createConnectorCutterGroupsForLocations(
+        parameters,
+        locations,
+        layerHeight,
+      ),
+    )
+    groups.push(
+      ...createConnectorCutterGroupsForLocations(
+        parameters,
+        locations,
+        layerHeight,
+        upperLayerOffset,
+      ),
+    )
+    return groups
+  } catch (error) {
+    for (const group of groups) disposeCutter(group)
+    throw error
+  }
+}
+
+async function applyBoardFeatures(
+  source: Shape3D,
+  parameters: OpenGridParameters,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  const groups: CutterGroup[] = []
+  try {
+    groups.push(...createBoardScrewCutterGroups(parameters))
+    groups.push(...createBoardConnectorCutterGroups(parameters))
+    groups.push(...createChamferCutters(parameters))
+    return await applyCutterGroups(source, groups, context)
+  } catch (error) {
+    for (const group of groups) disposeCutter(group)
+    throw error
+  }
+}
+
+function cutShape(source: Shape3D, cutter: Shape3D): Shape3D {
+  const result = source.cut(cutter, { optimisation: 'none' })
+  if (result !== source) deleteShape(source)
+  return result
+}
+
+async function applyCutterGroups(
+  source: Shape3D,
+  groups: CutterGroup[],
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  let current = source
+  try {
+    while (groups.length > 0) {
+      assertGenerationCurrent(context)
+      const group = groups.shift()
+      if (!group) continue
+      try {
+        current = cutShape(current, group.shape)
+      } finally {
+        disposeCutter(group)
+      }
+      await yieldAtSafeBoundary(context)
+    }
+    return current
+  } catch (error) {
+    for (const group of groups) disposeCutter(group)
+    deleteShape(current)
+    throw error
+  }
+}
+
+async function applyBatchedCuts(
+  source: Shape3D,
+  parameters: OpenGridParameters,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  const groups: CutterGroup[] = []
+  groups.push(...createChamferCutters(parameters))
+  return applyCutterGroups(source, groups, context)
+}
+
+async function applyHeavyBridgeFeatures(
+  source: Shape3D,
+  parameters: OpenGridParameters,
+  zOffset: number,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  const groups: CutterGroup[] = []
+  groups.push(
+    ...createChamferCutters(
+      parameters,
+      zOffset,
+      OPENGRID_CONFIGURATION.heavyGap,
+    ),
+  )
+  groups.push(...createHeavyBridgeScrewCutterGroups(parameters, zOffset))
+  return applyCutterGroups(source, groups, context)
+}
+
+export async function buildOpenGridBRepWithStrategy(
+  parameters: OpenGridParameters,
+  strategy: OpenGridAssemblyStrategy,
+  context: OpenGridBuildContext = {},
+): Promise<Shape3D> {
+  if (
+    strategy !== 'whole-profile' &&
+    strategy !== 'row-block' &&
+    strategy !== 'cell-balanced' &&
+    strategy !== 'prototype-template'
+  ) {
+    throw new Error('OPENGRID_STRATEGY_MISSING')
+  }
+  let base: Shape3D | null = null
+  try {
+    assertGenerationCurrent(context)
+    base = await buildProductBase(parameters, strategy, context)
+    if (strategy === 'prototype-template') {
+      base = await applyBoardFeatures(base, parameters, context)
+    } else if (parameters.variant !== 'Heavy') {
+      base = await applyBatchedCuts(base, parameters, context)
+    }
+    assertGenerationCurrent(context)
+    return base
+  } catch (error) {
+    deleteShape(base)
+    throw error
+  }
+}
+
+export async function buildOpenGridBRep(
+  parameters: OpenGridParameters,
+  context: OpenGridBuildContext = {},
+): Promise<Shape3D> {
+  const strategy = OPENGRID_PRODUCT_STRATEGIES[parameters.variant]
+  return buildOpenGridBRepWithStrategy(parameters, strategy, context)
+}
+
+export function effectiveScrewPositionsForOpenGrid(
+  parameters: OpenGridParameters,
+): OpenGridScrewPosition[] {
+  return openGridScrewPositionsFor(parameters)
+}

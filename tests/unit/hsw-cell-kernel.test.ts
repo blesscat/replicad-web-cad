@@ -16,6 +16,10 @@ const mocks = vi.hoisted(() => ({
     model: 'modular-grid-base',
     delete: vi.fn(),
   })),
+  buildOpenGridBRep: vi.fn(async () => ({
+    model: 'opengrid',
+    delete: vi.fn(),
+  })),
 }))
 
 vi.mock('../../src/cad-kernel/components/box/builder', () => ({
@@ -36,6 +40,10 @@ vi.mock('../../src/cad-kernel/components/hexagonal-column/builder', () => ({
 
 vi.mock('../../src/cad-kernel/components/modular-grid-base/builder', () => ({
   buildModularGridBase: mocks.buildModularGridBase,
+}))
+
+vi.mock('../../src/cad-kernel/components/opengrid/builder', () => ({
+  buildOpenGridBRep: mocks.buildOpenGridBRep,
 }))
 
 import {
@@ -63,6 +71,7 @@ describe('HSW kernel model registration', () => {
       'modular-grid-base',
       'hsw-cell',
       'hexagonal-column',
+      'opengrid',
     ])
     expect(getKernelModelDefinition('hsw-cell')?.id).toBe('hsw-cell')
     expect(getKernelModelDefinition('hexagonal-column')?.id).toBe(

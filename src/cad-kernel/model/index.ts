@@ -6,9 +6,12 @@ import {
   isHexagonalColumnParameters,
   isHswCellParameters,
   isModularGridBaseParameters,
+  isOpenGridParameters,
+  validateOpenGridGenerationSupport,
   validateModelParameters,
   type ModelId,
   type ModelParameterValues,
+  type OpenGridVariant,
 } from '../../cad-contract/units'
 import { buildBoxBRep } from '../components/box/builder'
 import {
@@ -18,12 +21,14 @@ import {
 import { buildHswCell } from '../components/hsw-cell/builder'
 import { buildHexagonalColumn } from '../components/hexagonal-column/builder'
 import { buildModularGridBase } from '../components/modular-grid-base/builder'
+import { buildOpenGridBRep } from '../components/opengrid/builder'
 
 export type KernelBuildContext = {
   getModularGridBaseTemplate: () => Promise<Shape3D>
   getHswCellTemplate: () => Promise<Shape3D>
   getBoxNormalReference?: () => Promise<Shape3D>
   getHexagonalColumnReference?: () => Promise<Shape3D>
+  getOpenGridPrototype?: (variant: OpenGridVariant) => Promise<Shape3D>
   yieldToEventLoop?: () => Promise<void>
   isGenerationCurrent?: () => boolean
   reportProgress?: (progress: {
@@ -135,6 +140,30 @@ async function buildHexagonalColumnModel(
   })
 }
 
+async function buildOpenGridModel(
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Promise<Shape3D> {
+  if (!isOpenGridParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid')
+  }
+  const support = validateOpenGridGenerationSupport(parameters)
+  if (!support.valid) {
+    throw new Error('OPENGRID_UNSUPPORTED_CONFIGURATION')
+  }
+  return buildOpenGridBRep(parameters, {
+    yieldToEventLoop: context.yieldToEventLoop,
+    isGenerationCurrent: context.isGenerationCurrent,
+    getOpenGridPrototype: context.getOpenGridPrototype,
+    reportProgress: context.reportProgress,
+    reportPhase: (phase, durationMs) => {
+      if (phase === 'assembly-fuse' || phase === 'prototype-build') {
+        context.reportPhase?.(phase, durationMs)
+      }
+    },
+  })
+}
+
 export const boxKernelDefinition: KernelModelDefinition = {
   id: 'box',
   build: buildBoxModel,
@@ -160,12 +189,18 @@ export const hexagonalColumnKernelDefinition: KernelModelDefinition = {
   build: buildHexagonalColumnModel,
 }
 
+export const opengridKernelDefinition: KernelModelDefinition = {
+  id: 'opengrid',
+  build: buildOpenGridModel,
+}
+
 export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   boxKernelDefinition,
   boxNormalKernelDefinition,
   modularGridBaseKernelDefinition,
   hswCellKernelDefinition,
   hexagonalColumnKernelDefinition,
+  opengridKernelDefinition,
 ]
 
 export function getKernelModelDefinition(

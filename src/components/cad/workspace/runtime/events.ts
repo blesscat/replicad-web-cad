@@ -3,7 +3,13 @@ import {
   isWorkerEvent,
   type WorkerEvent,
 } from '../../../../cad-contract/messages'
-import { PROTOTYPE_CONFIGURATION } from '../../../../cad-contract/units'
+import {
+  PROTOTYPE_CONFIGURATION,
+  validateModelParameters,
+  type ModelId,
+  type ModelParameterKey,
+  type ModelParameterValues,
+} from '../../../../cad-contract/units'
 import { errorForInput, parseRawParameters } from '../validation'
 import { validateMeshSnapshot } from '../../../../features/cad/worker-client'
 import type { ExportHandlers } from './export'
@@ -12,6 +18,31 @@ import type { ModelGenerationHandlers, RuntimeContext } from './types'
 type WorkerEventContext = RuntimeContext & {
   generation: ModelGenerationHandlers
   exportHandlers: ExportHandlers
+}
+
+type InitialParameterParseResult =
+  | { valid: true; value: ModelParameterValues }
+  | { valid: false; message: string; field?: ModelParameterKey }
+
+function parseInitialModelParameters(
+  context: RuntimeContext,
+  modelId: ModelId,
+): InitialParameterParseResult {
+  if (modelId !== 'opengrid') {
+    return parseRawParameters(context.refs.rawParameters.current, modelId)
+  }
+
+  const validation = validateModelParameters(
+    modelId,
+    context.refs.state.current.input,
+  )
+  if (!validation.valid) {
+    return {
+      valid: false,
+      message: validation.issues[0]?.message ?? 'OpenGrid 參數無效。',
+    }
+  }
+  return { valid: true, value: validation.value.parameters }
 }
 
 function isCurrentModelOperation(
@@ -64,10 +95,7 @@ export function createWorkerEventHandler(
           workerEpoch: event.workerEpoch,
         })
         const modelId = context.refs.state.current.modelId
-        const parsed = parseRawParameters(
-          context.refs.rawParameters.current,
-          modelId,
-        )
+        const parsed = parseInitialModelParameters(context, modelId)
         if (parsed.valid) {
           context.dispatch({
             type: 'generation-start',

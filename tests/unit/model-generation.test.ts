@@ -3,7 +3,9 @@ import type { WorkerCommandInput } from '../../src/cad-contract/messages'
 import type {
   ModelId,
   ModelParameterValues,
+  OpenGridParameters,
 } from '../../src/cad-contract/units'
+import { OPENGRID_CONFIGURATION } from '../../src/cad-contract/units'
 import type { CadWorkerClient } from '../../src/features/cad/worker-client'
 import { initialCadState } from '../../src/features/cad/state'
 import { rawFromParameters } from '../../src/components/cad/workspace/validation'
@@ -25,7 +27,26 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
   if (modelId === 'hexagonal-column') {
     return { height: 8, count: 1, gap: 1, orientation: 'lying' }
   }
+  if (modelId === 'opengrid') {
+    return opengridParameters()
+  }
   throw new Error(`Unknown model: ${modelId}`)
+}
+
+function opengridParameters(
+  overrides: Partial<OpenGridParameters> = {},
+): OpenGridParameters {
+  return {
+    ...OPENGRID_CONFIGURATION.defaultParameters,
+    chamferCorners: {
+      ...OPENGRID_CONFIGURATION.defaultParameters.chamferCorners,
+    },
+    connectorSides: {
+      ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
+    },
+    customScrewPositions: [],
+    ...overrides,
+  }
 }
 
 function createRuntimeContext(
@@ -275,5 +296,87 @@ describe('CAD model generation debounce', () => {
     expect(
       send.mock.calls.some(([command]) => command.kind === 'model.generate'),
     ).toBe(false)
+  })
+
+  it('debounces a complete typed OpenGrid snapshot without scalar serialization', () => {
+    const { client, send, context } = createRuntimeContext('opengrid')
+    const handlers = createModelGenerationHandlers(context)
+    const input = opengridParameters({
+      variant: 'Lite',
+      rows: 5,
+      columns: 7,
+      screwKind: 'custom',
+      screwMode: 'custom',
+      customScrewPositions: [{ row: 2, column: 3 }],
+      connectorHoles: 'enabled',
+    })
+    handlers.handleOpenGridParametersChange(input)
+
+    expect(client.send).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'model.invalidate', generation: 1 }),
+    )
+    vi.advanceTimersByTime(500)
+    expect(send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.generate',
+        modelId: 'opengrid',
+        generation: 1,
+        parameters: input,
+      }),
+    )
+  })
+
+  it('invalidates typed OpenGrid snapshots and disables generation for errors', () => {
+    const { client, send, context } = createRuntimeContext('opengrid')
+    const handlers = createModelGenerationHandlers(context)
+    handlers.handleOpenGridParametersChange(
+      opengridParameters({
+        variant: 'Full',
+        rows: 0,
+        columns: 1,
+        connectorHoles: 'none',
+        screwMode: 'none',
+      }) as OpenGridParameters,
+    )
+
+    expect(client.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.invalidate',
+        reason: 'invalid-input',
+        generation: 1,
+      }),
+    )
+    expect(context.setFieldErrors).toHaveBeenCalledWith(
+      expect.objectContaining({ rows: expect.any(String) }),
+    )
+    vi.advanceTimersByTime(500)
+    expect(
+      send.mock.calls.some(([command]) => command.kind === 'model.generate'),
+    ).toBe(false)
+  })
+
+  it('accepts a legal large official OpenGrid tuple before sending model.generate', () => {
+    const { client, send, context } = createRuntimeContext('opengrid')
+    const handlers = createModelGenerationHandlers(context)
+    const input = opengridParameters({
+      variant: 'Heavy',
+      rows: 10,
+      columns: 10,
+      screwKind: 'custom',
+      screwMode: 'everywhere',
+      customScrewPositions: [],
+      connectorHoles: 'enabled',
+    })
+    handlers.handleOpenGridParametersChange(input)
+    vi.advanceTimersByTime(500)
+    expect(
+      send.mock.calls.some(([command]) => command.kind === 'model.generate'),
+    ).toBe(true)
+    expect(client.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.generate',
+        parameters: input,
+      }),
+    )
   })
 })

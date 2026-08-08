@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   boundsForBox,
+  boundsForOpenGrid,
+  OPENGRID_CONFIGURATION,
   type BoxBounds,
   type BoxParameters,
+  type OpenGridParameters,
 } from '../../src/cad-contract/units'
 import {
   createDimensionAnnotations,
@@ -110,5 +113,41 @@ describe('CAD dimension annotation geometry', () => {
       expect(isOutsideBounds(annotation.dimensionLine[1], bounds)).toBe(true)
       expect(isOutsideBounds(annotation.labelPosition, bounds)).toBe(true)
     }
+  })
+
+  it('uses committed OpenGrid bounds for the three viewport dimensions', () => {
+    const parameters: OpenGridParameters = {
+      ...OPENGRID_CONFIGURATION.defaultParameters,
+      variant: 'Lite',
+      rows: 2,
+      columns: 3,
+      screwMode: 'none',
+      customScrewPositions: [],
+      connectorHoles: 'none',
+      chamferCorners: {
+        ...OPENGRID_CONFIGURATION.defaultParameters.chamferCorners,
+      },
+      connectorSides: {
+        ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
+      },
+    }
+    const annotations = createDimensionAnnotations(
+      boundsForOpenGrid(parameters),
+      parameters,
+    )
+    const byKey = annotationMap(annotations)
+
+    expect(byKey.get('width')).toMatchObject({
+      value: 84,
+      ariaLabel: '寬度 X 84 mm',
+    })
+    expect(byKey.get('depth')).toMatchObject({
+      value: 56,
+      ariaLabel: '深度 Y 56 mm',
+    })
+    expect(byKey.get('height')).toMatchObject({
+      value: 4,
+      ariaLabel: '高度 Z 4 mm',
+    })
   })
 })

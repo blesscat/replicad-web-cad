@@ -7,18 +7,26 @@ import {
   type ModelId,
   type ModelParameterKey,
   type ModelParameterValues,
+  type ScalarModelParameterKey,
 } from '../../../cad-contract/units'
 import type { RawParameters } from './types'
 
-export const DIMENSION_KEYS: ModelParameterKey[] = ['width', 'depth', 'height']
-export const GRID_PARAMETER_KEYS: ModelParameterKey[] = ['rows', 'columns']
+export const DIMENSION_KEYS: ScalarModelParameterKey[] = [
+  'width',
+  'depth',
+  'height',
+]
+export const GRID_PARAMETER_KEYS: ScalarModelParameterKey[] = [
+  'rows',
+  'columns',
+]
 export const BOX_NORMAL_PARAMETER_KEYS: ModelParameterKey[] = [
   'x',
   'y',
   'height',
   'cornerPosts',
 ]
-export const HEXAGONAL_COLUMN_PARAMETER_KEYS: ModelParameterKey[] = [
+export const HEXAGONAL_COLUMN_PARAMETER_KEYS: ScalarModelParameterKey[] = [
   'height',
   'count',
   'gap',

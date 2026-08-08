@@ -3,13 +3,16 @@ import type {
   ModelId,
   ModelParameterKey,
   ModelParameterValues,
+  OpenGridParameters,
 } from '../../../../cad-contract/units'
 import type { CadAction, CadState } from '../../../../features/cad/state'
 import type { CadProgress } from '../../../../features/cad/progress'
 import type { CadWorkerClient } from '../../../../features/cad/worker-client'
 import type { ExportRequest, OperationRecord, RawParameters } from '../types'
 
-export type FieldErrors = Partial<Record<ModelParameterKey, string>>
+export type FieldErrors = Partial<
+  Record<ModelParameterKey | 'parameters', string>
+>
 
 export type MutableRef<T> = { current: T }
 
@@ -72,4 +75,5 @@ export type ModelGenerationHandlers = {
     reason: 'invalid-input' | 'superseded',
   ) => void
   handleInputChange: (key: ModelParameterKey, value: string) => void
+  handleOpenGridParametersChange: (parameters: OpenGridParameters) => void
 }

@@ -1,3 +1,56 @@
+import {
+  OPENGRID_CONFIGURATION,
+  boundsForOpenGrid,
+  openGridFileName,
+  openGridStlFileName,
+  validateOpenGridParameters,
+  isOpenGridParameters,
+} from './opengrid'
+import type { OpenGridParameterKey, OpenGridParameters } from './opengrid'
+
+export {
+  OPENGRID_CONFIGURATION,
+  OPENGRID_CONNECTOR_SIDES,
+  boundsForOpenGrid,
+  cellCenterForOpenGrid,
+  deterministicOpenGridCustomScrewPositions,
+  isOpenGridGenerationSupported,
+  isOpenGridParameters,
+  normalizeOpenGridParameters,
+  openGridBoardConfiguration,
+  openGridConnectorLocationsFor,
+  openGridCustomPositionFingerprint,
+  openGridFileName,
+  openGridScrewCentersFor,
+  openGridScrewLatticeDimensions,
+  openGridScrewPositionsFor,
+  openGridStlFileName,
+  screwCenterForOpenGrid,
+  validateOpenGridGenerationSupport,
+  validateOpenGridParameters,
+} from './opengrid'
+export type {
+  OpenGridBoardConfiguration,
+  OpenGridChamferMode,
+  OpenGridCornerFlags,
+  OpenGridConnectorLocation,
+  OpenGridConnectorSide,
+  OpenGridDirection3D,
+  OpenGridGenerationSupportValidation,
+  OpenGridPoint2D,
+  OpenGridScrewDimensions,
+  OpenGridScrewKind,
+  OpenGridScrewMode,
+  OpenGridScrewPosition,
+  OpenGridSideFlags,
+  OpenGridVariant,
+  OpenGridValidation,
+  OpenGridValidationIssue,
+  OpenGridConnectorHoles,
+  OpenGridParameters,
+  OpenGridParameterKey,
+} from './opengrid'
+
 export const HSW_CELL_CONFIGURATION = {
   maxGridCount: 20,
   outerWidth: 27.250933249878,
@@ -83,6 +136,7 @@ export const PROTOTYPE_CONFIGURATION = {
     outerCornerRadius: 2.5,
   },
   hswCell: HSW_CELL_CONFIGURATION,
+  opengrid: OPENGRID_CONFIGURATION,
   boxNormal: BOX_NORMAL_CONFIGURATION,
 } as const
 
@@ -96,8 +150,16 @@ export type ModelParameterKey =
   | GridParameterKey
   | BoxNormalParameterKey
   | HexagonalColumnParameterKey
+  | OpenGridParameterKey
+export type ScalarModelParameterKey =
+  DimensionKey | GridParameterKey | HexagonalColumnParameterKey
 export type ModelId =
-  'box' | 'box-normal' | 'modular-grid-base' | 'hsw-cell' | 'hexagonal-column'
+  | 'box'
+  | 'box-normal'
+  | 'modular-grid-base'
+  | 'hsw-cell'
+  | 'hexagonal-column'
+  | 'opengrid'
 
 export type BoxParameters = Record<DimensionKey, number>
 export type ModularGridBaseParameters = Record<GridParameterKey, number>
@@ -127,6 +189,7 @@ export type ModelParameters =
       modelId: 'hexagonal-column'
       parameters: HexagonalColumnParameters
     }
+  | { modelId: 'opengrid'; parameters: OpenGridParameters }
 
 export type ModelParameterValues = ModelParameters['parameters']
 
@@ -628,6 +691,12 @@ export function validateModelParameters(
     return { valid: true, value: { modelId, parameters: validation.value } }
   }
 
+  if (modelId === 'opengrid') {
+    const validation = validateOpenGridParameters(value)
+    if (!validation.valid) return validation
+    return { valid: true, value: { modelId, parameters: validation.value } }
+  }
+
   return {
     valid: false,
     issues: [{ field: 'parameters', message: '找不到指定的 CAD component。' }],
@@ -839,6 +908,12 @@ export function isHexagonalColumnParameters(
   return validateHexagonalColumnParameters(value).valid
 }
 
+export function isOpenGridModelParameters(
+  value: unknown,
+): value is OpenGridParameters {
+  return isOpenGridParameters(value)
+}
+
 export function isModelParameters(value: unknown): value is ModelParameters {
   if (!value || typeof value !== 'object') return false
   const model = value as { modelId?: unknown; parameters?: unknown }
@@ -857,6 +932,8 @@ export function boundsForModel(model: ModelParameters): ModelBounds {
       return boundsForHswCell(model.parameters)
     case 'hexagonal-column':
       return boundsForHexagonalColumn(model.parameters)
+    case 'opengrid':
+      return boundsForOpenGrid(model.parameters)
   }
 }
 
@@ -872,6 +949,8 @@ export function modelFileName(model: ModelParameters): string {
       return hswCellFileName(model.parameters)
     case 'hexagonal-column':
       return hexagonalColumnFileName(model.parameters)
+    case 'opengrid':
+      return openGridFileName(model.parameters)
   }
 }
 
@@ -887,5 +966,7 @@ export function modelStlFileName(model: ModelParameters): string {
       return hswCellStlFileName(model.parameters)
     case 'hexagonal-column':
       return hexagonalColumnStlFileName(model.parameters)
+    case 'opengrid':
+      return openGridStlFileName(model.parameters)
   }
 }
