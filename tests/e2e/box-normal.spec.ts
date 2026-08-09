@@ -25,7 +25,7 @@ test('box-normal exposes grid controls, optional posts, persistence, and export 
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/')
+  await page.goto('/models')
   await page.getByRole('link', { name: '使用標準開口盒' }).click()
   await waitForCadReady(page)
 

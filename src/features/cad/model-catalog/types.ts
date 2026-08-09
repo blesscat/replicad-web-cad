@@ -6,6 +6,18 @@ import type {
   ModelValidation,
 } from '../../../cad-contract/units'
 
+export type ModelFamily = 'hsw' | 'opengrid' | 'other'
+
+export type ModelFamilyMetadata = {
+  key: ModelFamily
+  label: string
+  description: string
+}
+
+export type ModelFamilyGroup = ModelFamilyMetadata & {
+  definitions: ReadonlyArray<ModelDefinition>
+}
+
 export type ParameterField = {
   key: ModelParameterKey
   label: string
@@ -23,6 +35,7 @@ export type ParameterField = {
 export type ModelDefinition = {
   id: ModelId
   buildKey: ModelId
+  family: ModelFamily
   displayName: string
   selectionDescription: string
   parameterSchema: ReadonlyArray<ParameterField>

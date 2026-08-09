@@ -1,21 +1,21 @@
 ---
-const homePath = '/'
+const modelSelectionPath = '/models'
 ---
 
 <html lang="zh-Hant">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="refresh" content={`0;url=${homePath}`} />
+    <meta http-equiv="refresh" content={`0;url=${modelSelectionPath}`} />
     <title>選擇 CAD 模型 | replicad-web-cad</title>
     <script is:inline>
-      window.location.replace('/')
+      window.location.replace('/models')
     </script>
   </head>
   <body>
     <main>
       <h1>請先選擇 CAD 模型</h1>
       <p>CAD workspace 需要指定模型後才能開啟。</p>
-      <a href={homePath}>返回首頁選擇模型 →</a>
+      <a href={modelSelectionPath}>返回模型選擇 →</a>
     </main>
   </body>
 </html>

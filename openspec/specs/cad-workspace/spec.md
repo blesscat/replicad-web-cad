@@ -89,7 +89,7 @@ CAD workspace 必須是 Svelte 5 + Threlte/Three.js 的瀏覽器端 island，預
 
 ### Requirement: Prototype 方塊模型
 
-The system MUST expose a runtime-validated component catalog. Each catalog entry MUST have an independent definition with a stable `modelId`, display metadata, parameter schema and builder boundary. The existing `box`, `modular-grid-base`, `hsw-cell`, and `hexagonal-column` entries MUST remain available, and `box-normal` MUST be registered as an additional independent entry. Each model-specific CAD route MUST bind to exactly one catalog definition: `/cad/box` to `box`, `/cad/box-normal` to `box-normal`, `/cad/modular-grid-base` to `modular-grid-base`, `/cad/hsw-cell` to `hsw-cell`, and `/cad/hexagonal-column` to `hexagonal-column`. The CAD workspace MUST NOT provide an in-place model selector; changing the selected model MUST require navigation back to the homepage and entry through another model-specific route.
+The system MUST expose a runtime-validated component catalog. Each catalog entry MUST have an independent definition with a stable `modelId`, display metadata, parameter schema and builder boundary. The existing `box`, `modular-grid-base`, `hsw-cell`, and `hexagonal-column` entries MUST remain available, and `box-normal` MUST be registered as an additional independent entry. Each model-specific CAD route MUST bind to exactly one catalog definition: `/cad/box` to `box`, `/cad/box-normal` to `box-normal`, `/cad/modular-grid-base` to `modular-grid-base`, `/cad/hsw-cell` to `hsw-cell`, and `/cad/hexagonal-column` to `hexagonal-column`. The CAD workspace MUST NOT provide an in-place model selector; changing the selected model MUST require navigation to `/models` and entry through another model-specific route.
 
 #### Scenario: `/cad/box` 初始方塊建模
 
@@ -125,7 +125,7 @@ The system MUST expose a runtime-validated component catalog. Each catalog entry
 - **Then** UI MUST 顯示 route 對應的 component 名稱
 - **And** UI MUST 只顯示該 component 定義的參數欄位
 - **And** UI MUST NOT 顯示可切換 model id 的選擇器
-- **And** UI MUST 提供返回首頁選擇其他模型的入口
+- **And** UI MUST 提供導向 `/models` 的模型選擇入口
 
 #### Scenario: 初始化不重複建模
 

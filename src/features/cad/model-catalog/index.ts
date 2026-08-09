@@ -5,10 +5,21 @@ import { hexagonalColumnDefinition } from './components/hexagonal-column'
 import { hswCellDefinition } from './components/hsw-cell'
 import { modularGridBaseDefinition } from './components/modular-grid-base'
 import { opengridDefinition } from './components/opengrid'
-import type { ModelDefinition } from './types'
+import type {
+  ModelDefinition,
+  ModelFamily,
+  ModelFamilyGroup,
+  ModelFamilyMetadata,
+} from './types'
 
 export { displayParameterLabel } from './labels'
-export type { ModelDefinition, ParameterField } from './types'
+export type {
+  ModelDefinition,
+  ModelFamily,
+  ModelFamilyGroup,
+  ModelFamilyMetadata,
+  ParameterField,
+} from './types'
 export { boxDefinition } from './components/box'
 export { boxNormalDefinition } from './components/box-normal'
 export { hexagonalColumnDefinition } from './components/hexagonal-column'
@@ -24,6 +35,43 @@ export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   hexagonalColumnDefinition,
   opengridDefinition,
 ]
+
+export const modelFamilyOrder: ReadonlyArray<ModelFamily> = [
+  'hsw',
+  'opengrid',
+  'other',
+]
+
+export const modelFamilyMetadata: Readonly<
+  Record<ModelFamily, ModelFamilyMetadata>
+> = {
+  hsw: {
+    key: 'hsw',
+    label: 'HSW 系列',
+    description: '適合 HSW 六角蜂巢系統的模型。',
+  },
+  opengrid: {
+    key: 'opengrid',
+    label: 'OpenGrid 系列',
+    description: '依官方 OpenGrid 網格規格建立的模型。',
+  },
+  other: {
+    key: 'other',
+    label: '其他模型',
+    description: '其他獨立的 CAD component。',
+  },
+}
+
+export function groupModelDefinitions(
+  definitions: ReadonlyArray<ModelDefinition> = modelDefinitions,
+): ReadonlyArray<ModelFamilyGroup> {
+  return modelFamilyOrder.map((family) => ({
+    ...modelFamilyMetadata[family],
+    definitions: definitions.filter(
+      (definition) => definition.family === family,
+    ),
+  }))
+}
 
 export function getModelDefinition(
   modelId: ModelId,

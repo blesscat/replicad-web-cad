@@ -24,7 +24,7 @@ test('box CAD route exposes fallback and locked parameter controls', async ({
   ).toHaveCount(0)
   await expect(
     page.getByRole('link', { name: '返回模型選擇' }),
-  ).toHaveAttribute('href', '/')
+  ).toHaveAttribute('href', '/models')
   await expect(page.locator('#cad-fallback')).toBeHidden()
 })
 

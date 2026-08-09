@@ -81,6 +81,7 @@ function boundsForHexagonalColumnDefinition(parameters: ModelParameterValues) {
 export const hexagonalColumnDefinition: ModelDefinition = {
   id: 'hexagonal-column',
   buildKey: 'hexagonal-column',
+  family: 'other',
   displayName: '可調六角柱',
   selectionDescription:
     '以參考六角柱截面建立固定端部倒角的直柱，可調整整體長度、支數與間隙，預設躺下排列（間隙 1 mm）。',

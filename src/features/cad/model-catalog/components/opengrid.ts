@@ -45,6 +45,7 @@ function boundsForOpenGridDefinition(parameters: ModelParameterValues) {
 export const opengridDefinition: ModelDefinition = {
   id: 'opengrid',
   buildKey: 'opengrid',
+  family: 'opengrid',
   displayName: 'OpenGrid 底板',
   selectionDescription:
     '依官方 OpenGrid SCAD 產生 Full、Lite、Heavy 三種 28 mm 網格底板，可調整倒角、側邊接頭與交界螺絲孔。',
