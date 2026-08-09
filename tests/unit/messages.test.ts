@@ -139,6 +139,44 @@ describe('Worker contract runtime validation', () => {
     ).toBe(false)
   })
 
+  it('accepts OpenGrid stackable-box commands only with half-cell parameters', () => {
+    const command = {
+      version: PROTOCOL_VERSION,
+      kind: 'model.generate' as const,
+      requestId: 'request-stackable-1',
+      operationId: 'operation-stackable-1',
+      generation: 1,
+      modelId: 'opengrid-stackable-box' as const,
+      parameters: {
+        x: 0.5,
+        y: 1.5,
+        height: 25,
+        fullBottomHoleGrid: false,
+      },
+      previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
+    }
+
+    expect(isWorkerCommand(command)).toBe(true)
+    expect(
+      isWorkerCommand({
+        ...command,
+        parameters: {
+          x: 0.25,
+          y: 1.5,
+          height: 25,
+          fullBottomHoleGrid: false,
+        },
+      }),
+    ).toBe(false)
+    expect(
+      isWorkerCommand({
+        ...command,
+        modelId: 'opengrid',
+        parameters: { x: 0.5, y: 1.5, height: 25 },
+      }),
+    ).toBe(false)
+  })
+
   it('accepts hexagonal-column commands with orientation', () => {
     const command = {
       version: PROTOCOL_VERSION,

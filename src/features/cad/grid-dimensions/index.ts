@@ -1,10 +1,12 @@
 import {
   HSW_CELL_CONFIGURATION,
   OPENGRID_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_CONFIGURATION,
   PROTOTYPE_CONFIGURATION,
   boundsForHswCell,
   boundsForModularGridBase,
   boundsForOpenGrid,
+  boundsForOpenGridStackableBox,
   type HswCellParameters,
   type ModularGridBaseParameters,
 } from '../../../cad-contract/units'
@@ -108,6 +110,38 @@ function invalidMinimumDimension(
   }
 }
 
+function invalidMaximumDimension(
+  axis: 'X' | 'Y',
+  maximum: number,
+  unitDescription: string,
+): GridDimensionFailure {
+  return {
+    valid: false,
+    errors: {
+      [axis.toLowerCase()]: `${axis} 目標不可超過 ${maximum} mm 的 ${unitDescription}。`,
+    },
+  }
+}
+
+function maxCountThatFitsByStep(
+  minCount: number,
+  maxCount: number,
+  step: number,
+  target: number,
+  dimensionForCount: (count: number) => number,
+): number {
+  const candidateCountLimit = Math.floor((maxCount - minCount) / step)
+  let countThatFits = 0
+
+  for (let index = 0; index <= candidateCountLimit; index += 1) {
+    const count = minCount + index * step
+    if (dimensionForCount(count) > target + COMPARISON_TOLERANCE) break
+    countThatFits = count
+  }
+
+  return countThatFits
+}
+
 function openGridBoundsSize(rows: number, columns: number): BoundsSize {
   const bounds = boundsForOpenGrid({
     variant: OPENGRID_CONFIGURATION.defaultParameters.variant,
@@ -183,6 +217,77 @@ export function calculateOpenGridCounts(
 
   const parameters = { rows, columns }
   const actualDimensions = openGridBoundsSize(rows, columns)
+  return { valid: true, parameters, actualDimensions }
+}
+
+function openGridStackableBoxBoundsSize(x: number, y: number): BoundsSize {
+  return sizeFromBounds(
+    boundsForOpenGridStackableBox({
+      x,
+      y,
+      height: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHeight,
+      fullBottomHoleGrid:
+        OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultFullBottomHoleGrid,
+    }),
+  )
+}
+
+export function calculateOpenGridStackableBoxCounts(
+  input: GridDimensionInput,
+): GridDimensionResult {
+  const targets = parseTargets(input)
+  if (!targets.valid) return targets
+
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const minimumWidth = openGridStackableBoxBoundsSize(
+    configuration.minX,
+    configuration.minY,
+  ).x
+  const maximumWidth = openGridStackableBoxBoundsSize(
+    configuration.maxX,
+    configuration.minY,
+  ).x
+  if (targets.x > maximumWidth + COMPARISON_TOLERANCE) {
+    return invalidMaximumDimension('X', maximumWidth, 'OpenGrid 堆疊盒最大格數')
+  }
+
+  const columns = maxCountThatFitsByStep(
+    configuration.minX,
+    configuration.maxX,
+    configuration.gridStep,
+    targets.x,
+    (count) => openGridStackableBoxBoundsSize(count, configuration.minY).x,
+  )
+  const maximumDepth = openGridStackableBoxBoundsSize(
+    configuration.minX,
+    configuration.maxY,
+  ).y
+  const minimumDepth = openGridStackableBoxBoundsSize(
+    configuration.minX,
+    configuration.minY,
+  ).y
+  if (targets.y > maximumDepth + COMPARISON_TOLERANCE) {
+    return invalidMaximumDimension('Y', maximumDepth, 'OpenGrid 堆疊盒最大格數')
+  }
+
+  const rows = maxCountThatFitsByStep(
+    configuration.minY,
+    configuration.maxY,
+    configuration.gridStep,
+    targets.y,
+    (count) => openGridStackableBoxBoundsSize(configuration.minX, count).y,
+  )
+
+  if (columns === 0) {
+    return invalidMinimumDimension('X', minimumWidth, '1 個 OpenGrid 堆疊盒')
+  }
+
+  if (rows === 0) {
+    return invalidMinimumDimension('Y', minimumDepth, '1 個 OpenGrid 堆疊盒')
+  }
+
+  const parameters = { rows, columns }
+  const actualDimensions = openGridStackableBoxBoundsSize(columns, rows)
   return { valid: true, parameters, actualDimensions }
 }
 

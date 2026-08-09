@@ -20,6 +20,10 @@ const mocks = vi.hoisted(() => ({
     model: 'opengrid',
     delete: vi.fn(),
   })),
+  buildOpenGridStackableBox: vi.fn(() => ({
+    model: 'opengrid-stackable-box',
+    delete: vi.fn(),
+  })),
 }))
 
 vi.mock('../../src/cad-kernel/components/box/builder', () => ({
@@ -45,6 +49,13 @@ vi.mock('../../src/cad-kernel/components/modular-grid-base/builder', () => ({
 vi.mock('../../src/cad-kernel/components/opengrid/builder', () => ({
   buildOpenGridBRep: mocks.buildOpenGridBRep,
 }))
+
+vi.mock(
+  '../../src/cad-kernel/components/opengrid-stackable-box/builder',
+  () => ({
+    buildOpenGridStackableBox: mocks.buildOpenGridStackableBox,
+  }),
+)
 
 import {
   buildModelBRep,
@@ -72,6 +83,7 @@ describe('HSW kernel model registration', () => {
       'hsw-cell',
       'hexagonal-column',
       'opengrid',
+      'opengrid-stackable-box',
       'opengrid-snap',
     ])
     expect(getKernelModelDefinition('hsw-cell')?.id).toBe('hsw-cell')
@@ -127,6 +139,20 @@ describe('HSW kernel model registration', () => {
     expect(context.getModularGridBaseTemplate).toHaveBeenCalledOnce()
   })
 
+  it('routes the stackable-box model to its dedicated builder', async () => {
+    const shape = await buildModelBRep(
+      'opengrid-stackable-box',
+      { x: 0.5, y: 1, height: 20, fullBottomHoleGrid: false },
+      context,
+    )
+
+    expect(shape).toMatchObject({ model: 'opengrid-stackable-box' })
+    expect(mocks.buildOpenGridStackableBox).toHaveBeenCalledWith(
+      { x: 0.5, y: 1, height: 20, fullBottomHoleGrid: false },
+      { isGenerationCurrent: undefined },
+    )
+    expect(mocks.buildOpenGridBRep).not.toHaveBeenCalled()
+  })
   it('routes hexagonal-column only to its own reference and builder', async () => {
     const shape = await buildModelBRep(
       'hexagonal-column',
@@ -143,4 +169,5 @@ describe('HSW kernel model registration', () => {
     expect(mocks.buildHswCell).not.toHaveBeenCalled()
     expect(mocks.buildModularGridBase).not.toHaveBeenCalled()
   })
+
 })

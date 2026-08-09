@@ -33,6 +33,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
+  if (
+    modelId === 'opengrid-stackable-box' &&
+    isRecord(value) &&
+    !Object.prototype.hasOwnProperty.call(value, 'fullBottomHoleGrid')
+  ) {
+    return { ...value, fullBottomHoleGrid: false }
+  }
+
+  return value
+}
+
 function cloneParameters(
   parameters: ModelParameterValues,
 ): ModelParameterValues {
@@ -90,9 +102,13 @@ function hydrateEntries(
   for (const definition of modelDefinitions) {
     const candidate = payload.values[definition.id]
     if (candidate === undefined) continue
+    const normalizedCandidate = normalizeLegacyParameters(
+      definition.id,
+      candidate,
+    )
 
     try {
-      const validation = definition.validateParameters(candidate)
+      const validation = definition.validateParameters(normalizedCandidate)
       if (!validation.valid) continue
       entries[definition.id] = cloneParameters(validation.value.parameters)
     } catch {

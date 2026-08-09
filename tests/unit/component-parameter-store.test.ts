@@ -5,6 +5,7 @@ import {
 } from '../../src/features/cad/parameters'
 import {
   OPENGRID_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_SNAP_CONFIGURATION,
   type OpenGridParameters,
 } from '../../src/cad-contract/units'
@@ -78,6 +79,12 @@ describe('component parameter store', () => {
     expect(store.get('modular-grid-base')).toEqual({ rows: 1, columns: 1 })
     expect(store.get('hsw-cell')).toEqual({ rows: 1, columns: 1 })
     expect(store.get('opengrid')).toEqual(opengridParameters())
+    expect(store.get('opengrid-stackable-box')).toEqual({
+      x: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultX,
+      y: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultY,
+      height: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHeight,
+      fullBottomHoleGrid: false,
+    })
     expect(store.get('opengrid-snap')).toEqual(
       OPENGRID_SNAP_CONFIGURATION.defaultParameters,
     )
@@ -101,6 +108,12 @@ describe('component parameter store', () => {
           customScrewPositions: [{ row: 2, column: 4 }],
           connectorHoles: 'enabled',
         }),
+        'opengrid-stackable-box': {
+          x: 0.5,
+          y: 1.5,
+          height: 25,
+          fullBottomHoleGrid: true,
+        },
         'opengrid-snap': { variant: 'Lite', offset: 0.2 },
       }),
     )
@@ -126,11 +139,52 @@ describe('component parameter store', () => {
         connectorHoles: 'enabled',
       }),
     )
-    expect(store.get('opengrid-snap')).toEqual({
-      variant: 'Lite',
-      offset: 0.2,
+    expect(store.get('opengrid-stackable-box')).toEqual({
+      x: 0.5,
+      y: 1.5,
+      height: 25,
+      fullBottomHoleGrid: true,
     })
 
+    store.dispose()
+  })
+
+  it('normalizes legacy stackable-box entries and rejects invalid grid mode', () => {
+    const storage = createMemoryStorage(
+      createPayload({
+        'opengrid-stackable-box': { x: 0.5, y: 1.5, height: 25 },
+      }),
+    )
+    const store = createComponentParameterStore({ storage })
+
+    expect(store.get('opengrid-stackable-box')).toEqual({
+      x: 0.5,
+      y: 1.5,
+      height: 25,
+      fullBottomHoleGrid: false,
+    })
+    expect(
+      store.set('opengrid-stackable-box', {
+        x: 0.5,
+        y: 1.5,
+        height: 25,
+        fullBottomHoleGrid: true,
+      }),
+    ).toBe(true)
+    expect(store.get('opengrid-stackable-box')).toMatchObject({
+      fullBottomHoleGrid: true,
+    })
+    expect(
+      store.set('opengrid-stackable-box', {
+        x: 0.5,
+        y: 1.5,
+        height: 25,
+        fullBottomHoleGrid: 'true' as never,
+      }),
+    ).toBe(false)
+    expect(store.get('opengrid-stackable-box')).toMatchObject({
+      fullBottomHoleGrid: true,
+    })
     store.dispose()
   })
 
@@ -153,6 +207,7 @@ describe('component parameter store', () => {
           ],
           connectorHoles: 'none',
         },
+        'opengrid-stackable-box': { x: 0.25, y: 1, height: 10 },
         unknown: { rows: 9, columns: 9 },
       }),
     )

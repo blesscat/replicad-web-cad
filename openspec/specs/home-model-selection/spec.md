@@ -6,7 +6,7 @@
 
 ### Requirement: 首頁模型選擇
 
-The system MUST provide a static model-selection page at `/models` driven by the registered model catalog. Every currently available model MUST have an understandable display name, a concise description, a summary of its adjustable parameters, and a link to its model-specific CAD route. The chooser MUST include `box`, `box-normal`, `modular-grid-base`, `hsw-cell`, `hexagonal-column`, `opengrid`, and `opengrid-snap`. The root path `/` MUST remain a separate static product homepage and MUST link to `/models` without rendering the model chooser.
+The system MUST provide a static model-selection page at `/models` driven by the registered model catalog. Every currently available model MUST have an understandable display name, a concise description, a summary of its adjustable parameters, and a link to its model-specific CAD route. The chooser MUST include `box`, `box-normal`, `modular-grid-base`, `hsw-cell`, `hexagonal-column`, `opengrid`, `opengrid-stackable-box`, and `opengrid-snap`. The root path `/` MUST remain a separate static product homepage and MUST link to `/models` without rendering the model chooser.
 
 #### Scenario: 真正首頁不顯示模型選擇器
 
@@ -18,7 +18,7 @@ The system MUST provide a static model-selection page at `/models` driven by the
 #### Scenario: 模型選擇頁顯示目前模型
 
 - **WHEN** 使用者開啟 `/models`
-- **THEN** 頁面 MUST 顯示 `box`、`box-normal`、`modular-grid-base`、`hsw-cell`、`hexagonal-column`、`opengrid` 與 `opengrid-snap` 的可理解名稱
+- **THEN** 頁面 MUST 顯示 `box`、`box-normal`、`modular-grid-base`、`hsw-cell`、`hexagonal-column`、`opengrid`、`opengrid-stackable-box` 與 `opengrid-snap` 的可理解名稱
 - **AND** 每個模型 MUST 顯示與其參數及用途相符的簡短說明
 - **AND** OpenGrid 描述 MUST 說明 Full/Lite/Heavy 板型、28 mm 網格、rows/columns、螺絲孔與 connector-hole 設定
 - **AND** `/models` MUST NOT 初始化 CAD Worker 或 Svelte CAD workspace
@@ -63,7 +63,7 @@ The system MUST provide a static model-selection page at `/models` driven by the
 
 ### Requirement: 模型專屬 CAD 路由
 
-The system MUST expose one CAD route for each registered model id. The current routes MUST map `/cad/box` to `box`, `/cad/box-normal` to `box-normal`, `/cad/modular-grid-base` to `modular-grid-base`, `/cad/hsw-cell` to `hsw-cell`, `/cad/hexagonal-column` to `hexagonal-column`, `/cad/opengrid` to `opengrid`, and `/cad/opengrid-snap` to `opengrid-snap`. The model path segment MUST be the source of truth for the selected component, and a route for an unknown model id MUST NOT initialize a CAD Worker for an unsupported component.
+The system MUST expose one CAD route for each registered model id. The current routes MUST map `/cad/box` to `box`, `/cad/box-normal` to `box-normal`, `/cad/modular-grid-base` to `modular-grid-base`, `/cad/hsw-cell` to `hsw-cell`, `/cad/hexagonal-column` to `hexagonal-column`, `/cad/opengrid` to `opengrid`, `/cad/opengrid-stackable-box` to `opengrid-stackable-box`, and `/cad/opengrid-snap` to `opengrid-snap`. The model path segment MUST be the source of truth for the selected component, and a route for an unknown model id MUST NOT initialize a CAD Worker for an unsupported component.
 
 #### Scenario: 直接開啟 box-normal route
 
@@ -95,6 +95,14 @@ The system MUST expose one CAD route for each registered model id. The current r
 - **WHEN** 頁面完成 route resolution
 - **THEN** 頁面 MUST 載入 OpenGrid 專屬 CAD workspace
 - **AND** 初始 generation MUST 使用有效保存的 OpenGrid 參數；若沒有有效保存參數，MUST 使用 OpenGrid definition 的預設值
+- **AND** 頁面 MUST NOT 要求使用者先在 CAD workspace 重新選擇 component
+
+#### Scenario: 直接開啟 OpenGrid 堆疊盒 route
+
+- **GIVEN** 使用者直接開啟 `/cad/opengrid-stackable-box`
+- **WHEN** 頁面完成 route resolution
+- **THEN** 頁面 MUST 載入 OpenGrid 堆疊盒專屬 CAD workspace
+- **AND** 初始 generation MUST 使用有效保存的堆疊盒參數；若沒有有效保存參數，MUST 使用堆疊盒 definition 的預設值
 - **AND** 頁面 MUST NOT 要求使用者先在 CAD workspace 重新選擇 component
 
 #### Scenario: 直接開啟六角柱 route
@@ -187,6 +195,7 @@ The model-selection page MUST render the registered catalog entries in the three
 - **THEN** every registered model MUST appear exactly once in one of the three series
 - **AND** `hsw-cell` MUST appear in `HSW 系列`
 - **AND** `opengrid` MUST appear in `OpenGrid 系列`
+- **AND** `opengrid-stackable-box` MUST appear in `OpenGrid 系列`
 - **AND** `opengrid-snap` MUST appear in `OpenGrid 系列`
 - **AND** `box`、`box-normal`、`modular-grid-base` 與 `hexagonal-column` MUST appear in `其他模型`
 
@@ -195,8 +204,6 @@ The model-selection page MUST render the registered catalog entries in the three
 - **WHEN** a user views any series on `/models`
 - **THEN** each model entry MUST expose its display metadata, parameter summary, and model-specific route link
 - **AND** the series layout MUST NOT instantiate a CAD Worker or CAD workspace
-
-## ADDED Requirements
 
 ### Requirement: OpenGrid Snap model selection entry
 
@@ -220,3 +227,26 @@ The model catalog MUST resolve `/cad/opengrid-snap` to `modelId=opengrid-snap`. 
 - **THEN** the page MUST load the OpenGrid Snap workspace
 - **AND** initial generation MUST use the valid saved Snap snapshot or the Snap defaults
 - **AND** the route MUST not initialize the existing OpenGrid board definition instead
+
+### Requirement: OpenGrid stackable-box model selection entry
+
+The static `/models` chooser MUST include `opengrid-stackable-box` exactly once in `OpenGrid 系列`. Its entry MUST provide an understandable display name, a concise description of 28 mm and half-cell sizing, same-part stacking, continuous sliding guides, and four-corner Ø5 mm Snap mounting sockets, and a link to `/cad/opengrid-stackable-box`. The chooser MUST remain static and MUST NOT initialize the CAD Worker to display this entry.
+
+#### Scenario: Model page lists the stackable box
+
+- **WHEN** a user opens `/models`
+- **THEN** the OpenGrid series MUST show the stackable-box entry
+- **AND** its description MUST distinguish it from the official OpenGrid board generator
+- **AND** the entry MUST link to `/cad/opengrid-stackable-box`
+
+#### Scenario: Select the stackable box
+
+- **WHEN** a user selects the OpenGrid stackable-box entry
+- **THEN** navigation MUST go to `/cad/opengrid-stackable-box`
+- **AND** the CAD workspace MUST initialize with `modelId=opengrid-stackable-box`
+
+#### Scenario: Static selection page
+
+- **WHEN** the model chooser renders the stackable-box entry
+- **THEN** the page MUST use catalog metadata to render it
+- **AND** it MUST NOT instantiate a CAD Worker or Svelte CAD workspace merely to display the model

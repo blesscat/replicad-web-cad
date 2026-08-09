@@ -4,6 +4,7 @@ import type {
   BoxParameters,
   HexagonalColumnParameters,
   HswCellParameters,
+  OpenGridStackableBoxParameters,
   OpenGridSnapParameters,
 } from '../../src/cad-contract/units'
 import {
@@ -186,6 +187,42 @@ describe('CAD workspace validation helpers', () => {
       valid: false,
       message: '外框增量必須以 0.05 mm 為步進。',
       field: 'offset',
+    })
+  })
+
+  it('round-trips OpenGrid stackable-box half-cell inputs', () => {
+    const parameters: OpenGridStackableBoxParameters = {
+      x: 0.5,
+      y: 1.5,
+      height: 25,
+      fullBottomHoleGrid: true,
+    }
+    const raw = rawFromParameters(parameters)
+
+    expect(raw).toEqual({
+      x: '0.5',
+      y: '1.5',
+      height: '25',
+      fullBottomHoleGrid: 'true',
+    })
+    expect(parseRawParameters(raw, 'opengrid-stackable-box')).toEqual({
+      valid: true,
+      value: parameters,
+    })
+    expect(
+      parseRawParameters(
+        {
+          x: '0.25',
+          y: '1',
+          height: '25',
+          fullBottomHoleGrid: 'true',
+        },
+        'opengrid-stackable-box',
+      ),
+    ).toEqual({
+      valid: false,
+      message: '格數必須是 0.5 的倍數。',
+      field: 'x',
     })
   })
 })

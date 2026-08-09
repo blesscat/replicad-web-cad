@@ -33,7 +33,8 @@ export function cadErrorCodeFor(
   }
   if (
     message.includes('OPENGRID_QUALITY_INVALID') ||
-    message.includes('OPENGRID_BREP_INVALID')
+    message.includes('OPENGRID_BREP_INVALID') ||
+    message.includes('OPENGRID_STACKABLE_BOX_BOTTOM_GRID_')
   ) {
     return 'OPENGRID_QUALITY_INVALID'
   }
@@ -64,7 +65,12 @@ export function cadErrorStageFor(
     return 'validation'
   }
   if (message.includes('OPENGRID_SNAP_QUALITY_INVALID')) return 'meshing'
-  if (message.includes('OPENGRID_QUALITY_INVALID')) return 'meshing'
+  if (
+    message.includes('OPENGRID_QUALITY_INVALID') ||
+    message.includes('OPENGRID_STACKABLE_BOX_BOTTOM_GRID_')
+  ) {
+    return 'meshing'
+  }
   if (message.includes('MESH_INVALID')) return 'meshing'
   switch (commandKind) {
     case 'engine.init':

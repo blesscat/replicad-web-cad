@@ -4,6 +4,7 @@ import {
   BOX_NORMAL_CONFIGURATION,
   HEXAGONAL_COLUMN_CONFIGURATION,
   OPENGRID_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_SNAP_CONFIGURATION,
   PROTOTYPE_CONFIGURATION,
   type BoxParameters,
@@ -71,6 +72,15 @@ function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
     return {
       ...OPENGRID_CONFIGURATION.defaultParameters,
       customScrewPositions: [],
+    }
+  }
+  if (modelId === 'opengrid-stackable-box') {
+    return {
+      x: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultX,
+      y: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultY,
+      height: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHeight,
+      fullBottomHoleGrid:
+        OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultFullBottomHoleGrid,
     }
   }
   if (modelId === 'opengrid-snap') {

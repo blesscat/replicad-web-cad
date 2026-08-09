@@ -7,6 +7,7 @@ import {
   isHswCellParameters,
   isModularGridBaseParameters,
   isOpenGridParameters,
+  isOpenGridStackableBoxParameters,
   isOpenGridSnapParameters,
   validateOpenGridGenerationSupport,
   validateModelParameters,
@@ -24,6 +25,7 @@ import { buildHswCell } from '../components/hsw-cell/builder'
 import { buildHexagonalColumn } from '../components/hexagonal-column/builder'
 import { buildModularGridBase } from '../components/modular-grid-base/builder'
 import { buildOpenGridBRep } from '../components/opengrid/builder'
+import { buildOpenGridStackableBox } from '../components/opengrid-stackable-box/builder'
 import { buildOpenGridSnap } from '../components/opengrid-snap/builder'
 
 export type KernelBuildContext = {
@@ -182,6 +184,18 @@ async function buildOpenGridSnapModel(
   })
 }
 
+function buildOpenGridStackableBoxModel(
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Shape3D {
+  if (!isOpenGridStackableBoxParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-stackable-box')
+  }
+  return buildOpenGridStackableBox(parameters, {
+    isGenerationCurrent: context.isGenerationCurrent,
+  })
+}
+
 export const boxKernelDefinition: KernelModelDefinition = {
   id: 'box',
   build: buildBoxModel,
@@ -217,6 +231,11 @@ export const opengridSnapKernelDefinition: KernelModelDefinition = {
   build: buildOpenGridSnapModel,
 }
 
+export const opengridStackableBoxKernelDefinition: KernelModelDefinition = {
+  id: 'opengrid-stackable-box',
+  build: buildOpenGridStackableBoxModel,
+}
+
 export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   boxKernelDefinition,
   boxNormalKernelDefinition,
@@ -224,6 +243,7 @@ export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   hswCellKernelDefinition,
   hexagonalColumnKernelDefinition,
   opengridKernelDefinition,
+  opengridStackableBoxKernelDefinition,
   opengridSnapKernelDefinition,
 ]
 

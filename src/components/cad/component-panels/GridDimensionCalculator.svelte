@@ -19,9 +19,14 @@
   type Props = {
     calculate: (input: GridDimensionInput) => GridDimensionResult
     onApply: (parameters: GridParameters) => void
+    description?: string
   }
 
-  let { calculate, onApply }: Props = $props()
+  let {
+    calculate,
+    onApply,
+    description = '輸入 X/Y 尺寸，計算不超過目標的最大格數。',
+  }: Props = $props()
 
   let targetX = $state('')
   let targetY = $state('')
@@ -67,9 +72,7 @@
 >
   <div>
     <h3 class="m-0 text-base font-semibold">用尺寸計算格數</h3>
-    <p class="mt-1 mb-0 text-sm text-muted">
-      輸入 X/Y 尺寸，計算不超過目標的最大格數。
-    </p>
+    <p class="mt-1 mb-0 text-sm text-muted">{description}</p>
   </div>
 
   <div

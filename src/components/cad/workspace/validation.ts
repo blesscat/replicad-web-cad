@@ -28,6 +28,12 @@ export const BOX_NORMAL_PARAMETER_KEYS: ModelParameterKey[] = [
   'height',
   'cornerPosts',
 ]
+export const OPENGRID_STACKABLE_BOX_PARAMETER_KEYS: ModelParameterKey[] = [
+  'x',
+  'y',
+  'height',
+  'fullBottomHoleGrid',
+]
 export const HEXAGONAL_COLUMN_PARAMETER_KEYS: ScalarModelParameterKey[] = [
   'height',
   'count',
@@ -41,6 +47,9 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'modular-grid-base') return GRID_PARAMETER_KEYS
   if (modelId === 'hsw-cell') return GRID_PARAMETER_KEYS
   if (modelId === 'hexagonal-column') return HEXAGONAL_COLUMN_PARAMETER_KEYS
+  if (modelId === 'opengrid-stackable-box') {
+    return OPENGRID_STACKABLE_BOX_PARAMETER_KEYS
+  }
   if (modelId === 'opengrid-snap') return ['variant', 'offset']
   throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
 }
@@ -62,6 +71,34 @@ export function rawFromParameters(
       y: String(parameters.y),
       height: String(parameters.height),
       cornerPosts: String(parameters.cornerPosts),
+    }
+  }
+
+  if (
+    'x' in parameters &&
+    'y' in parameters &&
+    'height' in parameters &&
+    'fullBottomHoleGrid' in parameters
+  ) {
+    const stackableParameters = parameters as {
+      x: number
+      y: number
+      height: number
+      fullBottomHoleGrid: boolean
+    }
+    return {
+      x: String(stackableParameters.x),
+      y: String(stackableParameters.y),
+      height: String(stackableParameters.height),
+      fullBottomHoleGrid: String(stackableParameters.fullBottomHoleGrid),
+    }
+  }
+
+  if ('x' in parameters && 'y' in parameters && 'height' in parameters) {
+    return {
+      x: String(parameters.x),
+      y: String(parameters.y),
+      height: String(parameters.height),
     }
   }
 
@@ -140,13 +177,13 @@ export function parseRawParameters(
     Record<ModelParameterKey, number | string | boolean | null>
   > = {}
   for (const key of keys) {
-    if (key === 'cornerPosts') {
+    if (key === 'cornerPosts' || key === 'fullBottomHoleGrid') {
       const rawValue = raw[key]
       if (rawValue !== 'true' && rawValue !== 'false') {
         return {
           valid: false,
           message: '必須是 true 或 false。',
-          field: 'cornerPosts',
+          field: key,
         }
       }
       parsed[key] = rawValue === 'true'
@@ -157,7 +194,15 @@ export function parseRawParameters(
         raw[key] ?? HEXAGONAL_COLUMN_CONFIGURATION.defaultOrientation
       continue
     }
-    parsed[key] = parseDimensionInput(raw[key] ?? '')
+    const rawValue = raw[key] ?? ''
+    if (
+      modelId === 'opengrid-stackable-box' &&
+      (key === 'x' || key === 'y')
+    ) {
+      parsed[key] = parseHalfStepInput(rawValue)
+      continue
+    }
+    parsed[key] = parseDimensionInput(rawValue)
   }
 
   const validation = validateModelParameters(modelId, parsed)
@@ -171,6 +216,17 @@ export function parseRawParameters(
     }
   }
   return { valid: true, value: validation.value.parameters }
+}
+
+function parseHalfStepInput(raw: string): number | null {
+  const value = raw.trim()
+  if (!/^-?(?:\d+\.?\d*|\.\d+)$/.test(value)) return null
+
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || !Number.isSafeInteger(parsed * 2)) {
+    return null
+  }
+  return parsed
 }
 
 export function supportsCadBrowser():

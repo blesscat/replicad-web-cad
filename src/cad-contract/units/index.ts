@@ -8,6 +8,26 @@ import {
 } from './opengrid'
 import type { OpenGridParameterKey, OpenGridParameters } from './opengrid'
 import {
+  boundsForOpenGridStackableBox,
+  isOpenGridStackableBoxParameters,
+  nominalOpenGridStackableBoxFootprintFor,
+  nominalOpenGridStackableBoxBottomGridAxisPositionsFor,
+  nominalOpenGridStackableBoxBottomGridCentersFor,
+  openGridStackableBoxFileName,
+  openGridStackableBoxOrdinaryBottomHoleCentersFor,
+  openGridStackableBoxSocketCentersFor,
+  openGridStackableBoxStlFileName,
+  OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  validateOpenGridStackableBoxParameters,
+} from './opengrid-stackable-box'
+import type {
+  OpenGridStackableBoxParameterKey,
+  OpenGridStackableBoxParameters,
+  OpenGridStackableBoxPoint2D,
+  OpenGridStackableBoxValidation,
+  OpenGridStackableBoxValidationIssue,
+} from './opengrid-stackable-box'
+import {
   boundsForOpenGridSnap,
   isOpenGridSnapParameters,
   openGridSnapFileName,
@@ -43,6 +63,19 @@ export {
   validateOpenGridParameters,
 } from './opengrid'
 export {
+  boundsForOpenGridStackableBox,
+  isOpenGridStackableBoxParameters,
+  nominalOpenGridStackableBoxFootprintFor,
+  nominalOpenGridStackableBoxBottomGridAxisPositionsFor,
+  nominalOpenGridStackableBoxBottomGridCentersFor,
+  openGridStackableBoxFileName,
+  openGridStackableBoxOrdinaryBottomHoleCentersFor,
+  openGridStackableBoxSocketCentersFor,
+  openGridStackableBoxStlFileName,
+  OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  validateOpenGridStackableBoxParameters,
+} from './opengrid-stackable-box'
+export {
   boundsForOpenGridSnap,
   isOpenGridSnapParameters,
   openGridSnapFileName,
@@ -59,6 +92,13 @@ export type {
   OpenGridSnapValidationIssue,
   OpenGridSnapVariant,
 } from './opengrid-snap'
+export type {
+  OpenGridStackableBoxParameterKey,
+  OpenGridStackableBoxParameters,
+  OpenGridStackableBoxPoint2D,
+  OpenGridStackableBoxValidation,
+  OpenGridStackableBoxValidationIssue,
+} from './opengrid-stackable-box'
 export type {
   OpenGridBoardConfiguration,
   OpenGridChamferMode,
@@ -169,6 +209,7 @@ export const PROTOTYPE_CONFIGURATION = {
   hswCell: HSW_CELL_CONFIGURATION,
   opengrid: OPENGRID_CONFIGURATION,
   boxNormal: BOX_NORMAL_CONFIGURATION,
+  opengridStackableBox: OPENGRID_STACKABLE_BOX_CONFIGURATION,
 } as const
 
 export type DimensionKey = 'width' | 'depth' | 'height'
@@ -182,6 +223,7 @@ export type ModelParameterKey =
   | BoxNormalParameterKey
   | HexagonalColumnParameterKey
   | OpenGridParameterKey
+  | OpenGridStackableBoxParameterKey
   | OpenGridSnapParameterKey
 export type ScalarModelParameterKey =
   DimensionKey | GridParameterKey | HexagonalColumnParameterKey | 'offset'
@@ -192,6 +234,7 @@ export type ModelId =
   | 'hsw-cell'
   | 'hexagonal-column'
   | 'opengrid'
+  | 'opengrid-stackable-box'
   | 'opengrid-snap'
 
 export type BoxParameters = Record<DimensionKey, number>
@@ -223,6 +266,10 @@ export type ModelParameters =
       parameters: HexagonalColumnParameters
     }
   | { modelId: 'opengrid'; parameters: OpenGridParameters }
+  | {
+      modelId: 'opengrid-stackable-box'
+      parameters: OpenGridStackableBoxParameters
+    }
   | { modelId: 'opengrid-snap'; parameters: OpenGridSnapParameters }
 
 export type ModelParameterValues = ModelParameters['parameters']
@@ -254,6 +301,16 @@ export type HswCellValidation =
 
 export type BoxNormalValidation =
   | { valid: true; value: BoxNormalParameters }
+  | { valid: false; issues: ValidationIssue[] }
+
+export type OpenGridStackableBoxModelValidation =
+  | {
+      valid: true
+      value: {
+        modelId: 'opengrid-stackable-box'
+        parameters: OpenGridStackableBoxParameters
+      }
+    }
   | { valid: false; issues: ValidationIssue[] }
 
 export type HexagonalColumnValidation =
@@ -733,6 +790,20 @@ export function validateModelParameters(
     return { valid: true, value: { modelId, parameters: validation.value } }
   }
 
+  if (modelId === 'opengrid-stackable-box') {
+    const validation = validateOpenGridStackableBoxParameters(value)
+    if (!validation.valid) {
+      return {
+        valid: false,
+        issues: validation.issues.map((issue) => ({
+          field: issue.field,
+          message: issue.message,
+        })),
+      }
+    }
+    return { valid: true, value: { modelId, parameters: validation.value } }
+  }
+
   if (modelId === 'opengrid-snap') {
     const validation = validateOpenGridSnapParameters(value)
     if (!validation.valid) {
@@ -964,6 +1035,12 @@ export function isOpenGridModelParameters(
   return isOpenGridParameters(value)
 }
 
+export function isOpenGridStackableBoxModelParameters(
+  value: unknown,
+): value is OpenGridStackableBoxParameters {
+  return isOpenGridStackableBoxParameters(value)
+}
+
 export function isOpenGridSnapModelParameters(
   value: unknown,
 ): value is OpenGridSnapParameters {
@@ -990,6 +1067,8 @@ export function boundsForModel(model: ModelParameters): ModelBounds {
       return boundsForHexagonalColumn(model.parameters)
     case 'opengrid':
       return boundsForOpenGrid(model.parameters)
+    case 'opengrid-stackable-box':
+      return boundsForOpenGridStackableBox(model.parameters)
     case 'opengrid-snap':
       return boundsForOpenGridSnap(model.parameters)
   }
@@ -1009,6 +1088,8 @@ export function modelFileName(model: ModelParameters): string {
       return hexagonalColumnFileName(model.parameters)
     case 'opengrid':
       return openGridFileName(model.parameters)
+    case 'opengrid-stackable-box':
+      return openGridStackableBoxFileName(model.parameters)
     case 'opengrid-snap':
       return openGridSnapFileName(model.parameters)
   }
@@ -1028,6 +1109,8 @@ export function modelStlFileName(model: ModelParameters): string {
       return hexagonalColumnStlFileName(model.parameters)
     case 'opengrid':
       return openGridStlFileName(model.parameters)
+    case 'opengrid-stackable-box':
+      return openGridStackableBoxStlFileName(model.parameters)
     case 'opengrid-snap':
       return openGridSnapStlFileName(model.parameters)
   }

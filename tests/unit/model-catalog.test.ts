@@ -47,6 +47,7 @@ describe('CAD component catalog', () => {
     ])
     expect(groups[1]?.definitions.map((definition) => definition.id)).toEqual([
       'opengrid',
+      'opengrid-stackable-box',
       'opengrid-snap',
     ])
     expect(groups[2]?.definitions.map((definition) => definition.id)).toEqual([
@@ -73,6 +74,7 @@ describe('CAD component catalog', () => {
       'hsw-cell',
       'hexagonal-column',
       'opengrid',
+      'opengrid-stackable-box',
       'opengrid-snap',
     ])
 
@@ -259,6 +261,12 @@ describe('CAD component catalog', () => {
     expect(modelIdForCadPath('/cad/hexagonal-column/')).toBe('hexagonal-column')
     expect(cadPathForModel('opengrid')).toBe('/cad/opengrid')
     expect(modelIdForCadPath('/cad/opengrid/')).toBe('opengrid')
+    expect(cadPathForModel('opengrid-stackable-box')).toBe(
+      '/cad/opengrid-stackable-box',
+    )
+    expect(modelIdForCadPath('/cad/opengrid-stackable-box/')).toBe(
+      'opengrid-stackable-box',
+    )
     expect(cadPathForModel('opengrid-snap')).toBe('/cad/opengrid-snap')
     expect(modelIdForCadPath('/cad/opengrid-snap/')).toBe('opengrid-snap')
     expect(modelIdForCadPath('/cad/unknown')).toBeUndefined()
@@ -336,5 +344,63 @@ describe('CAD component catalog', () => {
         parameters: { variant: 'Full', offset: 0.2 },
       },
     })
+  })
+
+  it('exposes the independent OpenGrid stackable-box definition', () => {
+    const definition = getModelDefinition('opengrid-stackable-box')
+
+    expect(definition).toMatchObject({
+      id: 'opengrid-stackable-box',
+      buildKey: 'opengrid-stackable-box',
+      family: 'opengrid',
+      displayName: 'OpenGrid 堆疊盒',
+    })
+    expect(definition?.parameterSchema).toEqual([
+      expect.objectContaining({ key: 'x', min: 0.5, max: 17.5, step: 0.5 }),
+      expect.objectContaining({ key: 'y', min: 0.5, max: 17.5, step: 0.5 }),
+      expect.objectContaining({
+        key: 'height',
+        min: 10,
+        max: 500,
+        step: 1,
+        control: 'range-text',
+      }),
+    ])
+    expect(definition?.defaultParameters).toEqual({
+      x: 2,
+      y: 2,
+      height: 10,
+      fullBottomHoleGrid: false,
+    })
+    expect(
+      definition?.validateParameters({
+        x: 0.5,
+        y: 1,
+        height: 20,
+        fullBottomHoleGrid: false,
+      }),
+    ).toEqual({
+      valid: true,
+      value: {
+        modelId: 'opengrid-stackable-box',
+        parameters: { x: 0.5, y: 1, height: 20, fullBottomHoleGrid: false },
+      },
+    })
+    expect(
+      definition?.exportFileName({
+        x: 1.5,
+        y: 2,
+        height: 30,
+        fullBottomHoleGrid: false,
+      }),
+    ).toBe('opengrid-stackable-box-1.5x2-h30.step')
+    expect(
+      definition?.stlFileName({
+        x: 1.5,
+        y: 2,
+        height: 30,
+        fullBottomHoleGrid: false,
+      }),
+    ).toBe('opengrid-stackable-box-1.5x2-h30.stl')
   })
 })

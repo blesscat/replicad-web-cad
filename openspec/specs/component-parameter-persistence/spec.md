@@ -101,8 +101,6 @@ The system MUST treat browser persistence as an optional enhancement. If browser
 - **THEN** the runtime parameter state MUST still retain the accepted values
 - **AND** CAD generation MUST continue without treating the storage failure as a Worker or model error
 
-## ADDED Requirements
-
 ### Requirement: OpenGrid Snap parameters are persisted independently
 
 The versioned browser persistence MUST store valid Snap parameters under the stable `opengrid-snap` model id. The entry MUST contain only typed `variant` and `offset` values accepted by the Snap validator, and it MUST remain independent from the existing `opengrid` board entry.
@@ -145,3 +143,37 @@ The persistence reader MUST reject malformed Snap entries, entries with board Op
 - **WHEN** the Snap workspace initializes
 - **THEN** it MUST use the Snap definition defaults
 - **AND** initialization MUST continue without a CAD failure
+
+### Requirement: Stackable-box parameters are persisted independently
+
+The versioned browser persistence MUST store valid `opengrid-stackable-box` parameters under that stable model id. The entry MUST contain typed `x`, `y`, and `height` values accepted by the stackable-box validator, plus typed boolean `fullBottomHoleGrid`, and MUST remain independent from both `opengrid` board parameters and `box-normal` parameters. When an older persisted stackable-box entry does not contain `fullBottomHoleGrid`, the workspace MUST interpret the missing field as `false` for backward compatibility. Invalid or incomplete stackable-box input MUST NOT overwrite the last accepted entry.
+
+#### Scenario: Restore saved stackable-box parameters
+
+- **GIVEN** browser persistence contains a valid `opengrid-stackable-box` entry
+- **WHEN** the user opens `/cad/opengrid-stackable-box`
+- **THEN** the controls MUST display the saved typed X/Y/height values and full-hole mode state
+- **AND** the first generation MUST use those values
+
+#### Scenario: Restore a legacy stackable-box entry
+
+- **GIVEN** browser persistence contains a valid stackable-box entry created before `fullBottomHoleGrid` existed
+- **WHEN** the user opens `/cad/opengrid-stackable-box`
+- **THEN** the workspace MUST restore the saved typed X/Y/height values
+- **AND** it MUST use `fullBottomHoleGrid=false`
+- **AND** it MUST NOT reject the entry only because the new field is absent
+
+#### Scenario: Persist a valid stackable-box update
+
+- **GIVEN** a stackable-box snapshot passes its component validation
+- **WHEN** the workspace accepts the update
+- **THEN** persistence MUST update only the `opengrid-stackable-box` entry
+- **AND** half-cell values MUST remain typed numeric values without rounding
+- **AND** `fullBottomHoleGrid` MUST remain a typed boolean
+
+#### Scenario: Invalid stackable-box input does not overwrite persistence
+
+- **GIVEN** a previously accepted stackable-box snapshot exists
+- **WHEN** the user enters an invalid, incomplete, or out-of-range X/Y/height value, or a non-boolean full-hole mode value is supplied
+- **THEN** the previous accepted stackable-box entry MUST remain unchanged
+- **AND** the invalid snapshot MUST NOT be used for initialization or sent to the Worker
