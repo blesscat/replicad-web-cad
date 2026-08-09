@@ -140,7 +140,7 @@ describe('OpenGrid divider contract', () => {
       width: 56,
       depth: 65.5,
       wallHeight: 20,
-      totalHeight: 21,
+      totalHeight: 23,
     })
     const centers = openGridDividerPegCentersFor(parameters)
     const { pegCenterSpacing } = OPENGRID_DIVIDER_CONFIGURATION
@@ -166,7 +166,7 @@ describe('OpenGrid divider contract', () => {
     ).toEqual([[0, 0]])
   })
 
-  it('returns centered bounds including the one millimetre peg extension', () => {
+  it('returns centered bounds including the three millimetre peg extension', () => {
     const bounds = boundsForOpenGridDivider({
       left: 1,
       right: 1,
@@ -176,7 +176,7 @@ describe('OpenGrid divider contract', () => {
     })
 
     expect(bounds).toEqual({
-      min: [-14, -2.5, -1],
+      min: [-14, -2.5, -3],
       max: [14, 2.5, 20],
     })
   })

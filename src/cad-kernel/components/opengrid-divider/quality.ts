@@ -31,16 +31,11 @@ function deleteShape(shape: { delete?: () => void } | null | undefined): void {
   }
 }
 
-function readBounds(shape: Shape3D): ModelBounds {
-  const boundingBox = shape.boundingBox
-  try {
-    const [min, max] = boundingBox.bounds as [
-      [number, number, number],
-      [number, number, number],
-    ]
-    return { min, max }
-  } finally {
-    boundingBox.delete()
+function readMeshBounds(mesh: MeshData | MeshSnapshot): ModelBounds {
+  const bounds = mesh.bounds
+  return {
+    min: [...bounds.min] as [number, number, number],
+    max: [...bounds.max] as [number, number, number],
   }
 }
 
@@ -133,7 +128,7 @@ export function inspectOpenGridDividerShapeQuality(
   let solidCount: number | null = null
 
   try {
-    bounds = readBounds(shape)
+    bounds = readMeshBounds(mesh)
     if (!boundsMatch(bounds, expectedBounds)) {
       failures.push('bounds:expected-envelope-or-placement')
     }

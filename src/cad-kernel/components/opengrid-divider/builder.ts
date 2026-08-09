@@ -51,23 +51,45 @@ function reportProgress(
   })
 }
 
-function edgeIsAtZ(
+const FILLET_RADIUS_EPSILON = 0.0001
+
+function sideFilletRadiusForGeometry(): number {
+  const { sideFilletRadius, wallWidth } = OPENGRID_DIVIDER_CONFIGURATION
+  const maximumStableRadius = wallWidth / 2 - FILLET_RADIUS_EPSILON
+  return Math.min(sideFilletRadius, maximumStableRadius)
+}
+
+function filletRadiusForEdge(
   edge: {
-    startPoint: { z?: number; delete: () => void }
-    endPoint: { z?: number; delete: () => void }
+    startPoint: { x?: number; y?: number; z?: number; delete: () => void }
+    endPoint: { x?: number; y?: number; z?: number; delete: () => void }
   },
-  z: number,
+  parameters: OpenGridDividerParameters,
   tolerance = 0.02,
-): boolean {
+): number | null {
   const start = edge.startPoint
   const end = edge.endPoint
   try {
-    return (
+    const atTop =
       start.z !== undefined &&
       end.z !== undefined &&
-      Math.abs(start.z - z) <= tolerance &&
-      Math.abs(end.z - z) <= tolerance
-    )
+      Math.abs(start.z - parameters.height) <= tolerance &&
+      Math.abs(end.z - parameters.height) <= tolerance
+    if (atTop) return OPENGRID_DIVIDER_CONFIGURATION.topFilletRadius
+
+    const isVertical =
+      start.x !== undefined &&
+      end.x !== undefined &&
+      start.y !== undefined &&
+      end.y !== undefined &&
+      start.z !== undefined &&
+      end.z !== undefined &&
+      Math.abs(start.x - end.x) <= tolerance &&
+      Math.abs(start.y - end.y) <= tolerance &&
+      Math.abs(start.z - end.z) > tolerance
+    if (isVertical) return sideFilletRadiusForGeometry()
+
+    return null
   } finally {
     start.delete()
     end.delete()
@@ -157,10 +179,7 @@ function roundedWallPart(
   let solid: Solid | null = null
   try {
     rounded = wall.fillet((edge) => {
-      if (edgeIsAtZ(edge, parameters.height)) {
-        return OPENGRID_DIVIDER_CONFIGURATION.topFilletRadius
-      }
-      return null
+      return filletRadiusForEdge(edge, parameters)
     })
     solid = asSingleSolid(rounded)
     return solid

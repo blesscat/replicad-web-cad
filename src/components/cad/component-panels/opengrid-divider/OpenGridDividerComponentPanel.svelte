@@ -46,8 +46,9 @@
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
   <p class="m-0 text-sm text-muted">
-    自製底座半格 7 mm、整格 14 mm；牆寬固定 5 mm，底部自動加入 Ø5 × 1 mm 定位柱
-    （中心距 28 mm），頂部做 1 mm 圓角。每次可調整 0.5 格，至少開啟兩個方向。
+    自製底座半格 7 mm、整格 14 mm；牆寬固定 5 mm，底部自動加入 Ø5 × 3 mm 定位柱
+    （中心距 28 mm），側邊做 2.5 mm 圓角、頂部做 1 mm 圓角。每次可調整 0.5
+    格，至少開啟兩個方向。
   </p>
 
   {#if preview}

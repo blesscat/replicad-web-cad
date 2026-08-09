@@ -47,6 +47,12 @@ function boundsOf(shape: Shape3D): number[][] {
   }
 }
 
+function meshBoundsOf(mesh: {
+  bounds: { min: number[]; max: number[] }
+}): number[][] {
+  return [mesh.bounds.min, mesh.bounds.max]
+}
+
 function deleteShape(shape: Shape3D | null | undefined): void {
   try {
     shape?.delete()
@@ -117,7 +123,11 @@ describe('OpenGrid divider CAD kernel integration', () => {
     async (parameters) => {
       const shape = await buildOpenGridDivider(parameters)
       try {
-        const actual = boundsOf(shape)
+        const mesh = meshBRep(shape, {
+          tolerance: 0.05,
+          angularTolerance: 0.1,
+        })
+        const actual = meshBoundsOf(mesh)
         const expected = boundsForOpenGridDivider(parameters)
         expect(actual[0]).toEqual(
           expect.arrayContaining([
@@ -142,7 +152,7 @@ describe('OpenGrid divider CAD kernel integration', () => {
           const probe = makeCylinder(
             OPENGRID_DIVIDER_CONFIGURATION.pegDiameter / 2 - 0.1,
             0.2,
-            [rawX - centerX, rawY - centerY, -1.05],
+            [rawX - centerX, rawY - centerY, -3.05],
           )
           try {
             expect(measureVolume(shape.intersect(probe))).toBeGreaterThan(0)
@@ -151,10 +161,6 @@ describe('OpenGrid divider CAD kernel integration', () => {
           }
         }
 
-        const mesh = meshBRep(shape, {
-          tolerance: 0.05,
-          angularTolerance: 0.1,
-        })
         expect(mesh.triangleCount).toBeGreaterThan(0)
         const quality = inspectOpenGridDividerShapeQuality(
           shape,
@@ -196,7 +202,7 @@ describe('OpenGrid divider CAD kernel integration', () => {
     }
   }, 180_000)
 
-  it('keeps nominal peg diameter, exposed length, and top fillet profile', async () => {
+  it('keeps nominal peg diameter, exposed length, and rounded wall profile', async () => {
     const parameters = { left: 1.5, right: 2.5, up: 0, down: 0, height: 20 }
     const shape = await buildOpenGridDivider(parameters)
     const [centerX, centerY] = rawPlanCenter(parameters)
@@ -211,8 +217,11 @@ describe('OpenGrid divider CAD kernel integration', () => {
       expect(
         probeVolumeAt(shape, [rightPeg[0] + 2.65, rightPeg[1]], -0.5),
       ).toBeLessThan(1e-8)
-      expect(probeVolumeAt(shape, rightPeg, -0.98)).toBeGreaterThan(0)
-      expect(probeVolumeAt(shape, rightPeg, -1.04)).toBeLessThan(1e-8)
+      expect(probeVolumeAt(shape, rightPeg, -2.98)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, rightPeg, -3.04)).toBeLessThan(1e-8)
+
+      expect(probeVolumeAt(shape, [27.5, 1.4], 10, 0.05)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, [27.5, 1.8], 10, 0.05)).toBeLessThan(1e-8)
 
       const filletZ = parameters.height - 0.51
       expect(probeVolumeAt(shape, [2, 2.25], filletZ, 0.05)).toBeGreaterThan(0)
@@ -226,7 +235,7 @@ describe('OpenGrid divider CAD kernel integration', () => {
     const parameters = { left: 1, right: 1, up: 1, down: 1, height: 20 }
     const shape = await buildOpenGridDivider(parameters)
     try {
-      expect(probeVolumeAt(shape, [0, 0], -0.98)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, [0, 0], -2.98)).toBeGreaterThan(0)
       expect(
         probeVolumeAt(
           shape,

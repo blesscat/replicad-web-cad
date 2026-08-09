@@ -216,6 +216,43 @@ function triangulateFace(face: Face, index0: number): TriangulationData {
   }
 }
 
+function boundsFromPositions(positions: Float32Array): BoxBounds {
+  let minX = Infinity
+  let minY = Infinity
+  let minZ = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  let maxZ = -Infinity
+
+  for (let index = 0; index < positions.length; index += 3) {
+    const x = positions[index]
+    const y = positions[index + 1]
+    const z = positions[index + 2]
+    minX = Math.min(minX, x)
+    minY = Math.min(minY, y)
+    minZ = Math.min(minZ, z)
+    maxX = Math.max(maxX, x)
+    maxY = Math.max(maxY, y)
+    maxZ = Math.max(maxZ, z)
+  }
+
+  if (
+    !Number.isFinite(minX) ||
+    !Number.isFinite(minY) ||
+    !Number.isFinite(minZ) ||
+    !Number.isFinite(maxX) ||
+    !Number.isFinite(maxY) ||
+    !Number.isFinite(maxZ)
+  ) {
+    throw new Error('MESH_INVALID: B-Rep mesh positions are not finite')
+  }
+
+  return {
+    min: [minX, minY, minZ],
+    max: [maxX, maxY, maxZ],
+  }
+}
+
 function meshFace(
   face: Face,
   options: { tolerance: number; angularTolerance: number },
@@ -250,24 +287,6 @@ export function meshBRep(
     } else {
       mesh = shape.mesh(options)
     }
-    let boundingBox
-    try {
-      boundingBox = shape.boundingBox
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      throw new Error(`MESH_BOUNDS_INVALID:${message}`)
-    }
-    let bounds: BoxBounds
-    try {
-      const [[minX, minY, minZ], [maxX, maxY, maxZ]] = boundingBox.bounds
-      bounds = {
-        min: [minX, minY, minZ],
-        max: [maxX, maxY, maxZ],
-      }
-    } finally {
-      boundingBox.delete()
-    }
-
     const positions = new Float32Array(mesh.vertices)
     const normals = new Float32Array(mesh.normals)
     const indices = new Uint32Array(mesh.triangles)
@@ -282,6 +301,8 @@ export function meshBRep(
     if (normals.length !== positions.length) {
       throw new Error('MESH_INVALID: B-Rep mesh normals do not match positions')
     }
+
+    const bounds = boundsFromPositions(positions)
 
     return {
       positions,

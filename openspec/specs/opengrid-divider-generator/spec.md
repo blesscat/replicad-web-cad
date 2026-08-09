@@ -64,13 +64,13 @@ The generated body MUST be a continuous 5 mm wide planar divider wall whose arm 
 
 ### Requirement: 依長度自動配置底部定位柱
 
-The generator MUST automatically add cylindrical locating pegs with nominal diameter 5 mm and downward length 1 mm. It MUST place one peg at the central junction, then consider positions every 28 mm (four 7 mm half-grids) along each active arm and emit only positions strictly inside that arm. This MUST keep the maximum initial empty run to four half-grid intervals, avoid dense placement, emit repeated coordinates only once, and fuse every peg to the wall so the result remains one connected solid.
+The generator MUST automatically add cylindrical locating pegs with nominal diameter 5 mm and downward length 3 mm. It MUST place one peg at the central junction, then consider positions every 28 mm (four 7 mm half-grids) along each active arm and emit only positions strictly inside that arm. This MUST keep the maximum initial empty run to four half-grid intervals, avoid dense placement, emit repeated coordinates only once, and fuse every peg to the wall so the result remains one connected solid.
 
 #### Scenario: 短分隔牆定位柱
 
 - **WHEN** `left=1`, `right=1`, `up=1`, and `down=1` form a 3×3 cross
 - **THEN** the generator MUST create exactly the central peg and no arm peg
-- **AND** each peg MUST be 5 mm in diameter and extend 1 mm below the wall base
+- **AND** each peg MUST be 5 mm in diameter and extend 3 mm below the wall base
 
 #### Scenario: 長臂自動增加支撐
 
@@ -100,9 +100,20 @@ The generator MUST round the upper wall perimeter with a nominal 1 mm fillet. Th
 - **THEN** the generator MUST return a diagnosable geometry error
 - **AND** it MUST NOT commit or export a partial result
 
+### Requirement: 側邊圓角
+
+The generator MUST round the vertical side edges of the wall with a nominal 2.5 mm fillet. The side fillet MUST apply to the tall wall edges while the wall remains nominally 5 mm wide, and it MUST coexist with the separate 1 mm upper-perimeter fillet. The bottom wall edge and locating-peg edges MUST remain sharp.
+
+#### Scenario: 側邊圓角存在
+
+- **WHEN** a valid divider with an active arm is generated
+- **THEN** the tall wall side profile MUST contain the requested 2.5 mm rounding
+- **AND** the wall MUST retain a nominal 5 mm plan width below the top fillet
+- **AND** the top perimeter MUST retain its separate 1 mm rounding
+
 ### Requirement: 預覽、bounds 與匯出
 
-The committed divider MUST expose finite bounds, a non-empty mesh, and a single B-Rep solid. The wall base MUST be at `Z=0` and the complete bounds MUST include the peg bottom at `Z=-1`. STEP and binary STL exports MUST be generated from the committed divider B-Rep and MUST be non-empty.
+The committed divider MUST expose finite bounds, a non-empty mesh, and a single B-Rep solid. The wall base MUST be at `Z=0` and the complete bounds MUST include the peg bottom at `Z=-3`. STEP and binary STL exports MUST be generated from the committed divider B-Rep and MUST be non-empty.
 
 #### Scenario: 可預覽的分隔牆
 
