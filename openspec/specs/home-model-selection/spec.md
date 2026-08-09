@@ -268,3 +268,28 @@ The static `/models` chooser MUST include `opengrid-divider` as an independent O
 - **WHEN** a user views the OpenGrid-series model descriptions
 - **THEN** the official `opengrid` description MUST remain about the 28 mm official board
 - **AND** the `opengrid-divider` description MUST identify the separate custom 14 mm full-grid/7 mm half-grid accessory
+
+### Requirement: Pillar model selection entry and route
+
+The static `/models` chooser MUST include `pillar` as an independent entry in `其他模型`, with an understandable display name, a concise description of its Ø5 mm body, 3–500 mm integer length, 1 mm upper chamfer, and optional `連接底版用` Ø7 mm × 0.8 mm base flange. The entry MUST link to `/cad/pillar` without initializing the CAD Worker. The model catalog MUST resolve `/cad/pillar` to `modelId=pillar`, and direct navigation MUST use valid saved pillar parameters or the pillar defaults.
+
+#### Scenario: Model page lists pillar
+
+- **WHEN** a user opens `/models`
+- **THEN** the chooser MUST display the pillar entry in `其他模型`
+- **AND** its description MUST identify the adjustable total length and the optional base-connection mode
+- **AND** the entry MUST provide a link to `/cad/pillar`
+- **AND** the chooser MUST remain static without initializing the CAD Worker
+
+#### Scenario: Select pillar
+
+- **WHEN** a user selects the pillar entry
+- **THEN** navigation MUST go to `/cad/pillar`
+- **AND** the CAD workspace MUST initialize with `modelId=pillar`
+
+#### Scenario: Direct pillar navigation
+
+- **WHEN** a user opens `/cad/pillar` directly
+- **THEN** the page MUST load the pillar-specific CAD workspace
+- **AND** initial generation MUST use the valid saved pillar snapshot when available, otherwise `{ length: 5, baseConnection: false }`
+- **AND** the route MUST NOT silently substitute another component

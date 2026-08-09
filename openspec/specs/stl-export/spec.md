@@ -122,3 +122,27 @@ The system MUST download a non-empty binary `.stl` file that can be opened throu
 - **WHEN** the STL download action completes
 - **THEN** the web app MUST only trigger the browser download
 - **AND** it MUST NOT require a backend upload, custom URL protocol, native helper, or Bambu Studio installation
+
+## ADDED Requirements
+
+### Requirement: Pillar STL metadata
+
+The catalog MUST provide deterministic STL metadata for the `pillar` component. The filename MUST use the existing `.stl` extension and `model/stl` MIME, and MUST be `pillar-{length}-{plain|base}.stl` according to the normalized `baseConnection` value. STL generation MUST continue to use the latest successfully committed pillar B-Rep and the existing export lifecycle gates.
+
+#### Scenario: Plain pillar STL filename
+
+- **WHEN** a committed pillar with `length=5` and `baseConnection=false` is exported as STL
+- **THEN** the filename MUST be `pillar-5-plain.stl`
+- **AND** the response MUST carry `format=stl`, MIME `model/stl`, and non-empty binary bytes
+
+#### Scenario: Base-connection pillar STL filename
+
+- **WHEN** a committed pillar with `length=5` and `baseConnection=true` is exported as STL
+- **THEN** the filename MUST be `pillar-5-base.stl`
+- **AND** the response MUST be generated from the committed pillar revision
+
+#### Scenario: Pillar STL follows readiness gates
+
+- **WHEN** the pillar input is invalid, stale, still generating, or has no committed revision
+- **THEN** the STL action MUST be disabled
+- **AND** the Worker MUST NOT receive an STL export request

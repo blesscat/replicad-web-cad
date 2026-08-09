@@ -47,6 +47,10 @@ export const HEXAGONAL_COLUMN_PARAMETER_KEYS: ScalarModelParameterKey[] = [
   'gap',
   'orientation',
 ]
+export const PILLAR_PARAMETER_KEYS: ModelParameterKey[] = [
+  'length',
+  'baseConnection',
+]
 
 function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'box') return DIMENSION_KEYS
@@ -60,6 +64,7 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'opengrid-snap') return ['variant', 'offset']
   if (modelId === 'opengrid-snap-remover') return []
   if (modelId === 'opengrid-divider') return OPENGRID_DIVIDER_PARAMETER_KEYS
+  if (modelId === 'pillar') return PILLAR_PARAMETER_KEYS
   throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
 }
 
@@ -92,6 +97,17 @@ export function rawFromParameters(
       y: String(parameters.y),
       height: String(parameters.height),
       cornerPosts: String(parameters.cornerPosts),
+    }
+  }
+
+  if ('baseConnection' in parameters) {
+    const pillarParameters = parameters as {
+      length: number
+      baseConnection: boolean
+    }
+    return {
+      length: String(pillarParameters.length),
+      baseConnection: String(pillarParameters.baseConnection),
     }
   }
 
@@ -238,7 +254,11 @@ export function parseRawParameters(
     Record<ModelParameterKey, number | string | boolean | null>
   > = {}
   for (const key of keys) {
-    if (key === 'cornerPosts' || key === 'fullBottomHoleGrid') {
+    if (
+      key === 'cornerPosts' ||
+      key === 'fullBottomHoleGrid' ||
+      key === 'baseConnection'
+    ) {
       const rawValue = raw[key]
       if (rawValue !== 'true' && rawValue !== 'false') {
         return {

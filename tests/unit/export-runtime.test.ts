@@ -7,15 +7,31 @@ import type {
   RuntimeRefs,
 } from '../../src/components/cad/workspace/runtime/types'
 import type { CadWorkerClient } from '../../src/features/cad/worker-client'
+import type {
+  ModelBounds,
+  ModelParameterValues,
+} from '../../src/cad-contract/units'
 
-function createContext(): {
+function createContext(modelId: 'box' | 'pillar' = 'box'): {
   context: RuntimeContext
   refs: RuntimeRefs
   client: { send: ReturnType<typeof vi.fn> }
   dispatch: ReturnType<typeof vi.fn>
 } {
+  const parameters: ModelParameterValues =
+    modelId === 'pillar'
+      ? { length: 12, baseConnection: true }
+      : { width: 20, depth: 30, height: 40 }
+  const rawParameters: Record<string, string> =
+    modelId === 'pillar'
+      ? { length: '12', baseConnection: 'true' }
+      : { width: '20', depth: '30', height: '40' }
+  const bounds: ModelBounds =
+    modelId === 'pillar'
+      ? { min: [-3.5, -3.5, 0], max: [3.5, 3.5, 12] }
+      : { min: [-10, -15, 0], max: [10, 15, 40] }
   const state = {
-    ...initialCadState(),
+    ...initialCadState(modelId, parameters),
     status: 'ready' as const,
     exportStatus: 'idle' as const,
     workerEpoch: 'epoch-1',
@@ -23,13 +39,13 @@ function createContext(): {
       revision: 'revision-1',
       workerEpoch: 'epoch-1',
       generation: 1,
-      modelId: 'box' as const,
-      parameters: { width: 20, depth: 30, height: 40 },
+      modelId,
+      parameters,
       mesh: {
         positions: new ArrayBuffer(12),
         normals: new ArrayBuffer(12),
         indices: new ArrayBuffer(12),
-        bounds: { min: [-10, -15, 0], max: [10, 15, 40] },
+        bounds,
         triangleCount: 1,
       },
     },
@@ -38,7 +54,7 @@ function createContext(): {
   const dispatch = vi.fn()
   const refs = {
     client: { current: client as unknown as CadWorkerClient },
-    rawParameters: { current: { width: '20', depth: '30', height: '40' } },
+    rawParameters: { current: rawParameters },
     state: { current: state },
     workerEpoch: { current: 'epoch-1' },
     latestGeneration: { current: 1 },
@@ -91,6 +107,30 @@ describe('CAD export runtime', () => {
       fileName: 'box-20x30x40.stl',
       downloaded: false,
     })
+  })
+
+  it('uses pillar mode and length in deterministic STEP and STL metadata', () => {
+    const step = createContext('pillar')
+    const stepHandlers = createExportHandlers(step.context)
+    stepHandlers.handleExport('step')
+
+    expect(step.client.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'export.step',
+        file: { name: 'pillar-12-base.step', mime: 'model/step' },
+      }),
+    )
+
+    const stl = createContext('pillar')
+    const stlHandlers = createExportHandlers(stl.context)
+    stlHandlers.handleExport('stl')
+
+    expect(stl.client.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'export.stl',
+        file: { name: 'pillar-12-base.stl', mime: 'model/stl' },
+      }),
+    )
   })
 
   it('rejects a mismatched STL response without triggering a download', () => {

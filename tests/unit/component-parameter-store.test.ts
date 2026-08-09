@@ -8,6 +8,7 @@ import {
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_SNAP_CONFIGURATION,
   OPENGRID_DIVIDER_CONFIGURATION,
+  PILLAR_CONFIGURATION,
   type OpenGridParameters,
 } from '../../src/cad-contract/units'
 
@@ -93,6 +94,7 @@ describe('component parameter store', () => {
     expect(store.get('opengrid-divider')).toEqual(
       OPENGRID_DIVIDER_CONFIGURATION.defaultParameters,
     )
+    expect(store.get('pillar')).toEqual(PILLAR_CONFIGURATION.defaultParameters)
 
     store.dispose()
   })
@@ -121,6 +123,7 @@ describe('component parameter store', () => {
         },
         'opengrid-snap': { variant: 'Lite', offset: 0.2 },
         'opengrid-divider': { left: 1, right: 1, up: 1.5, down: 0, height: 25 },
+        pillar: { length: 12, baseConnection: true },
       }),
     )
     const store = createComponentParameterStore({ storage })
@@ -158,6 +161,7 @@ describe('component parameter store', () => {
       down: 0,
       height: 25,
     })
+    expect(store.get('pillar')).toEqual({ length: 12, baseConnection: true })
 
     store.dispose()
   })
@@ -294,7 +298,28 @@ describe('component parameter store', () => {
       depth: 30,
       height: 40,
     })
+    expect(unsupportedStore.get('pillar')).toEqual(
+      PILLAR_CONFIGURATION.defaultParameters,
+    )
     unsupportedStore.dispose()
+  })
+
+  it('does not overwrite a valid pillar snapshot with an invalid draft', () => {
+    const storage = createMemoryStorage(
+      createPayload({ pillar: { length: 20, baseConnection: false } }),
+    )
+    const store = createComponentParameterStore({ storage })
+
+    expect(store.get('pillar')).toEqual({ length: 20, baseConnection: false })
+    expect(
+      store.set('pillar', {
+        length: 20.5,
+        baseConnection: 'true',
+      } as never),
+    ).toBe(false)
+    expect(store.get('pillar')).toEqual({ length: 20, baseConnection: false })
+
+    store.dispose()
   })
 
   it('keeps accepted values in memory when storage read or write fails', () => {

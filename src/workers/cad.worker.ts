@@ -20,6 +20,7 @@ import { buildModelBRep } from '../cad-kernel/model'
 import { assertOpenGridShapeQuality } from '../cad-kernel/components/opengrid/quality'
 import { assertOpenGridSnapShapeQuality } from '../cad-kernel/components/opengrid-snap/quality'
 import { assertOpenGridDividerShapeQuality } from '../cad-kernel/components/opengrid-divider/quality'
+import { assertPillarShapeQuality } from '../cad-kernel/components/pillar/quality'
 import { meshBRep, serializeMesh, type MeshData } from '../cad-kernel/mesh'
 import {
   errorEvent,
@@ -48,6 +49,7 @@ import {
   type OpenGridVariant,
   type OpenGridSnapVariant,
   isOpenGridSnapParameters,
+  isPillarParameters,
   validateOpenGridGenerationSupport,
   validateModelParameters,
 } from '../cad-contract/units'
@@ -359,6 +361,12 @@ export class CadWorkerRuntime {
           throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-divider')
         }
         assertOpenGridDividerShapeQuality(shape, generationParameters, mesh)
+      }
+      if (command.modelId === 'pillar') {
+        if (!isPillarParameters(generationParameters)) {
+          throw new Error('MODEL_PARAMETERS_MISMATCH:pillar')
+        }
+        assertPillarShapeQuality(shape, generationParameters, mesh)
       }
     } catch (error) {
       try {
