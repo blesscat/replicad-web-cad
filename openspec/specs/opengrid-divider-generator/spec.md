@@ -2,7 +2,7 @@
 
 提供適用於自製 14 mm 整格／7 mm 半格 OpenGrid 底座的獨立分隔牆產生器，讓使用者以四方向 0.5 格步進建立可調高度、具底部定位柱與頂部圓角的可匯出 CAD 零件。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 獨立的分隔牆參數契約
 
