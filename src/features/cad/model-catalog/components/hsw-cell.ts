@@ -63,6 +63,7 @@ function boundsForHswCellDefinition(parameters: ModelParameterValues) {
 export const hswCellDefinition: ModelDefinition = {
   id: 'hsw-cell',
   buildKey: 'hsw-cell',
+  family: 'hsw',
   displayName: 'HSW 六角蜂巢',
   selectionDescription:
     '固定約 27.25 × 23.60 × 8 mm 的平頂六角單元，以交錯 columns 排列成蜂巢。',

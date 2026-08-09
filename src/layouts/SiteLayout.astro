@@ -8,9 +8,10 @@ interface Props {
 }
 
 const { title, description } = Astro.props
-const currentPath = Astro.url.pathname
-const isDocsPage = currentPath.startsWith('/docs')
-const isHomePage = currentPath === '/'
+const normalizedPath = Astro.url.pathname.replace(/\/+$/, '') || '/'
+const isDocsPage = normalizedPath.startsWith('/docs')
+const isHomePage = normalizedPath === '/'
+const isModelSelectionPage = normalizedPath === '/models'
 ---
 
 <html lang="zh-Hant">
@@ -26,7 +27,11 @@ const isHomePage = currentPath === '/'
         class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 bg-ink px-[clamp(1rem,4vw,4rem)] py-4 text-white"
         aria-label="主要導覽"
       >
-        <a class="no-underline" href="/">replicad-web-cad</a>
+        <a
+          class="no-underline"
+          href="/"
+          aria-current={isHomePage ? 'page' : undefined}>replicad-web-cad</a
+        >
         <div class="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
           <a
             class="no-underline"
@@ -35,8 +40,8 @@ const isHomePage = currentPath === '/'
           >
           <a
             class="no-underline"
-            href="/"
-            aria-current={isHomePage ? 'page' : undefined}>選擇模型</a
+            href="/models"
+            aria-current={isModelSelectionPage ? 'page' : undefined}>選擇模型</a
           >
           {
             portalySupportUrl && (

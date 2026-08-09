@@ -28,7 +28,7 @@ test('CAD workspace exposes independent hexagonal-column parameters and exports 
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/')
+  await page.goto('/models')
   await page.getByRole('link', { name: '使用可調六角柱' }).click()
   await waitForCadReady(page)
 

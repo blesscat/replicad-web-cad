@@ -22,7 +22,7 @@ test('CAD header shows the current model and a return link', async ({
 
   const returnLink = page.getByRole('link', { name: '返回模型選擇' })
   await expect(returnLink).toBeVisible()
-  await expect(returnLink).toHaveAttribute('href', '/')
+  await expect(returnLink).toHaveAttribute('href', '/models')
   await returnLink.click()
-  await expect(page).toHaveURL('/')
+  await expect(page).toHaveURL('/models')
 })

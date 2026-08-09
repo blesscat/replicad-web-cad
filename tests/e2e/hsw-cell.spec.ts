@@ -10,7 +10,7 @@ test('CAD workspace exposes the independent HSW honeycomb component and exports 
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/')
+  await page.goto('/models')
   await page.getByRole('link', { name: '使用HSW 六角蜂巢' }).click()
   await waitForCadReady(page)
 

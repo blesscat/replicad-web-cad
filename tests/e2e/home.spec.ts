@@ -1,11 +1,46 @@
 import { expect, test } from '@playwright/test'
 import { configuredPortalySupportUrl, supportLink } from './helpers'
 
-test('home and docs are static Astro pages', async ({ page }) => {
+test('home, model selection, and docs are static Astro pages', async ({
+  page,
+}) => {
   await page.goto('/')
   await expect(
     page.getByRole('heading', { name: '用瀏覽器建立、調整並匯出 CAD 模型' }),
   ).toBeVisible()
+  await expect(
+    page.getByRole('link', { name: 'replicad-web-cad' }),
+  ).toHaveAttribute('aria-current', 'page')
+  await expect(
+    page.getByRole('link', { name: '選擇模型', exact: true }),
+  ).not.toHaveAttribute('aria-current', 'page')
+  const modelCta = page.getByRole('link', { name: '開始選擇模型' })
+  await expect(modelCta).toHaveAttribute('href', '/models')
+  const ctaBackground = await modelCta.evaluate(
+    (element) => getComputedStyle(element).backgroundColor,
+  )
+  const navigationBackground = await page
+    .getByRole('navigation', { name: '主要導覽' })
+    .evaluate((element) => getComputedStyle(element).backgroundColor)
+  expect(ctaBackground).not.toBe(navigationBackground)
+  await expect(page.getByRole('link', { name: '使用方塊' })).toHaveCount(0)
+  await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
+
+  await page.goto('/models')
+  await expect(
+    page.getByRole('link', { name: 'replicad-web-cad' }),
+  ).not.toHaveAttribute('aria-current', 'page')
+  await expect(
+    page.getByRole('link', { name: '選擇模型', exact: true }),
+  ).toHaveAttribute('aria-current', 'page')
+  await expect(
+    page.getByRole('heading', { name: '選擇 CAD 模型' }),
+  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'HSW 系列' })).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'OpenGrid 系列' }),
+  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: '其他模型' })).toBeVisible()
   await expect(page.getByRole('link', { name: '使用方塊' })).toHaveAttribute(
     'href',
     '/cad/box',
@@ -34,6 +69,15 @@ test('home and docs are static Astro pages', async ({ page }) => {
   await expect(
     page.getByText(/方塊、獨立的 box-normal 開口盒、模組化網格底板/),
   ).toBeVisible()
+  await expect(
+    page.getByText(/OpenGrid 系列提供 Full、Lite、Heavy 三種 28 mm 網格板型/),
+  ).toBeVisible()
+  await expect(
+    page.getByText(/HSW 系列、OpenGrid 系列與其他模型分類/),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('link', { name: '返回模型選擇' }),
+  ).toHaveAttribute('href', '/models')
   await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
 })
 
@@ -125,12 +169,12 @@ test('local development serves same-origin Vite HMR client', async ({
   expect(await response.text()).not.toContain('local.blesscat.dev')
 })
 
-test('CAD root returns to the homepage model chooser', async ({ page }) => {
+test('CAD root returns to the model selection page', async ({ page }) => {
   await page.goto('/cad/')
-  await expect(page).toHaveURL('/')
+  await expect(page).toHaveURL('/models')
   await expect(
     page.getByRole('heading', {
-      name: '用瀏覽器建立、調整並匯出 CAD 模型',
+      name: '選擇 CAD 模型',
     }),
   ).toBeVisible()
   await expect(page.getByTestId('cad-workspace')).toHaveCount(0)

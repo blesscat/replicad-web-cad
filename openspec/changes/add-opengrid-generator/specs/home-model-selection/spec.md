@@ -2,38 +2,38 @@
 
 ### Requirement: 首頁模型選擇
 
-The system MUST provide a static homepage model chooser driven by the registered model catalog. Every currently available model MUST have an understandable display name, a concise description, a summary of its adjustable parameters, and a link to its model-specific CAD route. The chooser MUST include `box`, `modular-grid-base`, `hsw-cell`, `hexagonal-column`, and `opengrid`.
+The system MUST provide a static model-selection page at `/models` driven by the registered model catalog. Every currently available model MUST have an understandable display name, a concise description, a summary of its adjustable parameters, and a link to its model-specific CAD route. The chooser MUST include `box`, `modular-grid-base`, `hsw-cell`, `hexagonal-column`, and `opengrid`. The root path `/` MUST remain a separate static product homepage and MUST link to `/models` without rendering the model chooser.
 
-#### Scenario: 首頁顯示目前模型
+#### Scenario: 模型選擇頁顯示目前模型
 
-- **WHEN** 使用者開啟首頁
-- **THEN** 首頁 MUST 顯示 `box`、`modular-grid-base`、`hsw-cell`、`hexagonal-column` 與 `opengrid` 的可理解名稱
+- **WHEN** 使用者開啟 `/models`
+- **THEN** `/models` MUST 顯示 `box`、`modular-grid-base`、`hsw-cell`、`hexagonal-column` 與 `opengrid` 的可理解名稱
 - **AND** 每個模型 MUST 顯示與其參數及用途相符的簡短說明
 - **AND** OpenGrid 描述 MUST 說明 Full/Lite/Heavy 板型、28 mm 網格、可調 rows/columns、螺絲孔與 connector-hole 設定
-- **AND** 首頁 MUST NOT 啟動 CAD Worker 或 Svelte CAD workspace
+- **AND** `/models` MUST NOT 啟動 CAD Worker 或 Svelte CAD workspace
 
 #### Scenario: 選擇方塊
 
-- **WHEN** 使用者在首頁選擇 `box`
+- **WHEN** 使用者在 `/models` 選擇 `box`
 - **THEN** 選擇入口 MUST 導向 `/cad/box`
 - **AND** CAD workspace MUST 以 `modelId=box` 初始化
 
 #### Scenario: 選擇模組化網格底板
 
-- **WHEN** 使用者在首頁選擇 `modular-grid-base`
+- **WHEN** 使用者在 `/models` 選擇 `modular-grid-base`
 - **THEN** 選擇入口 MUST 導向 `/cad/modular-grid-base`
 - **AND** CAD workspace MUST 以 `modelId=modular-grid-base` 初始化
 
 #### Scenario: 選擇可調高度六角柱
 
-- **WHEN** 使用者在首頁選擇 `hexagonal-column`
+- **WHEN** 使用者在 `/models` 選擇 `hexagonal-column`
 - **THEN** 選擇入口 MUST 導向 `/cad/hexagonal-column`
 - **AND** CAD workspace MUST 以 `modelId=hexagonal-column` 初始化
-- **AND** 首頁描述 MUST 說明整體 height、支數 count、預設 1 mm gap 與預設躺下方向
+- **AND** 模型描述 MUST 說明整體 height、支數 count、預設 1 mm gap 與預設躺下方向
 
 #### Scenario: 選擇 OpenGrid
 
-- **WHEN** 使用者在首頁選擇 `opengrid`
+- **WHEN** 使用者在 `/models` 選擇 `opengrid`
 - **THEN** 選擇入口 MUST 導向 `/cad/opengrid`
 - **AND** CAD workspace MUST 以 `modelId=opengrid` 初始化
 
@@ -68,8 +68,8 @@ The system MUST expose one CAD route for each registered model id. The current r
 #### Scenario: 沒有 model id 的 CAD route
 
 - **WHEN** 使用者開啟 `/cad/`
-- **THEN** 系統 MUST 導回 `/`
-- **AND** 頁面 MUST 提供可操作的首頁模型選擇流程
+- **THEN** 系統 MUST 導向 `/models`
+- **AND** 頁面 MUST 提供可操作的模型選擇流程
 - **AND** `/cad/` MUST NOT 啟動 CAD Worker
 
 #### Scenario: 未註冊 model route

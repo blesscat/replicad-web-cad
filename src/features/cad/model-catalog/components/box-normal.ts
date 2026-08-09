@@ -76,6 +76,7 @@ function boundsForBoxNormalDefinition(parameters: ModelParameterValues) {
 export const boxNormalDefinition: ModelDefinition = {
   id: 'box-normal',
   buildKey: 'box-normal',
+  family: 'other',
   displayName: '標準開口盒',
   selectionDescription:
     '依 X/Y 網格格數建立開口盒，總 footprint 各內縮 0.15 mm，可選擇四角 7 mm 六角定位柱。',

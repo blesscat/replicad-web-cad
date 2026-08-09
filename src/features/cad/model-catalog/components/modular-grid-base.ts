@@ -63,6 +63,7 @@ function boundsForGridDefinition(parameters: ModelParameterValues) {
 export const modularGridBaseDefinition: ModelDefinition = {
   id: 'modular-grid-base',
   buildKey: 'modular-grid-base',
+  family: 'other',
   displayName: '模組化網格底板',
   selectionDescription: '由 20 mm 網格單元組成的底板，可調整行數與列數。',
   parameterSchema: GRID_PARAMETER_SCHEMA,

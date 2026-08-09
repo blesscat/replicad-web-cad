@@ -71,6 +71,7 @@ function boundsForBoxDefinition(parameters: ModelParameterValues) {
 export const boxDefinition: ModelDefinition = {
   id: 'box',
   buildKey: 'box',
+  family: 'other',
   displayName: '方塊',
   selectionDescription: '以寬度、深度與高度定義基本方塊。',
   parameterSchema: BOX_PARAMETER_SCHEMA,

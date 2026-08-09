@@ -1,19 +1,5 @@
 ---
 import SiteLayout from '../layouts/SiteLayout.astro'
-import {
-  cadPathForModel,
-  displayParameterLabel,
-  modelDefinitions,
-} from '../features/cad/model-catalog'
-
-function parameterSummary(
-  definition: (typeof modelDefinitions)[number],
-): string {
-  if (definition.id === 'opengrid') {
-    return '板型、X/Y 格數、螺絲種類與孔位、連接孔'
-  }
-  return definition.parameterSchema.map(displayParameterLabel).join('、')
-}
 ---
 
 <SiteLayout
@@ -29,35 +15,36 @@ function parameterSummary(
       用瀏覽器建立、調整並匯出 CAD 模型
     </h1>
     <p class="mb-4 leading-normal">
-      選擇一個 CAD component，調整參數、查看即時 3D 預覽，並下載由精確 B-Rep
-      產生的 STEP。
+      在瀏覽器中建立參數化 CAD 模型，調整 component 專屬設定、查看即時 3D
+      預覽，並下載由精確 B-Rep 產生的 STEP 或 STL。
     </p>
-    <div class="mt-6 grid gap-4 sm:grid-cols-2" aria-label="可用 CAD 模型">
-      {
-        modelDefinitions.map((definition) => (
-          <article
-            class="grid gap-3 rounded-xl border border-border-card bg-page p-4"
-            data-model-id={definition.id}
-          >
-            <h2 class="text-2xl font-semibold leading-tight">
-              {definition.displayName}
-            </h2>
-            <p class="m-0 text-muted">{definition.selectionDescription}</p>
-            <p class="m-0 text-sm text-muted">
-              <span class="font-[650] text-ink">可調整：</span>
-              {parameterSummary(definition)}
-            </p>
-            <p class="mb-0">
-              <a
-                class="text-ink underline underline-offset-4"
-                href={cadPathForModel(definition.id)}
-              >
-                使用{definition.displayName} →
-              </a>
-            </p>
-          </article>
-        ))
-      }
+    <div class="mt-8 grid gap-4 sm:grid-cols-3" aria-label="產品特色">
+      <article class="rounded-xl border border-border-card bg-page p-4">
+        <h2 class="mb-2 text-xl font-semibold leading-tight">瀏覽器內建模</h2>
+        <p class="m-0 text-muted">
+          不需安裝桌面 CAD 軟體，就能在瀏覽器調整參數並預覽模型。
+        </p>
+      </article>
+      <article class="rounded-xl border border-border-card bg-page p-4">
+        <h2 class="mb-2 text-xl font-semibold leading-tight">參數化控制</h2>
+        <p class="m-0 text-muted">
+          每個 component 都有獨立參數、即時驗證與可恢復的設定。
+        </p>
+      </article>
+      <article class="rounded-xl border border-border-card bg-page p-4">
+        <h2 class="mb-2 text-xl font-semibold leading-tight">精確匯出</h2>
+        <p class="m-0 text-muted">
+          從精確 B-Rep 產生 STEP 與 STL，方便進一步製作或加工。
+        </p>
+      </article>
     </div>
+    <p class="mb-0 mt-8">
+      <a
+        class="inline-flex rounded-lg border border-border-card bg-panel px-4 py-3 font-semibold text-ink no-underline shadow-sm hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        href="/models"
+      >
+        開始選擇模型 →
+      </a>
+    </p>
   </section>
 </SiteLayout>
