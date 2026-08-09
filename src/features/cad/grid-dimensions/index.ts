@@ -7,6 +7,8 @@ import {
   boundsForModularGridBase,
   boundsForOpenGrid,
   boundsForOpenGridStackableBox,
+  type HalfCellX,
+  type HalfCellY,
   type HswCellParameters,
   type ModularGridBaseParameters,
 } from '../../../cad-contract/units'
@@ -16,6 +18,8 @@ const COMPARISON_TOLERANCE = 0.000001
 export type GridDimensionInput = {
   x: string
   y: string
+  halfCellX?: HalfCellX
+  halfCellY?: HalfCellY
 }
 
 export type GridDimensionErrors = Partial<Record<'x' | 'y', string>>
@@ -25,6 +29,8 @@ export type GridDimensionSuccess = {
   parameters: {
     rows: number
     columns: number
+    halfCellX?: HalfCellX
+    halfCellY?: HalfCellY
   }
   actualDimensions: {
     x: number
@@ -142,11 +148,18 @@ function maxCountThatFitsByStep(
   return countThatFits
 }
 
-function openGridBoundsSize(rows: number, columns: number): BoundsSize {
+function openGridBoundsSize(
+  rows: number,
+  columns: number,
+  halfCellX: HalfCellX = 'none',
+  halfCellY: HalfCellY = 'none',
+): BoundsSize {
   const bounds = boundsForOpenGrid({
     variant: OPENGRID_CONFIGURATION.defaultParameters.variant,
     rows,
     columns,
+    halfCellX,
+    halfCellY,
   })
   return sizeFromBounds(bounds)
 }
@@ -189,34 +202,39 @@ export function calculateOpenGridCounts(
   const targets = parseTargets(input)
   if (!targets.valid) return targets
 
+  const halfCellX = input.halfCellX ?? 'none'
+  const halfCellY = input.halfCellY ?? 'none'
+  const minimumX = openGridBoundsSize(1, 1, halfCellX, 'none').x
+  const minimumY = openGridBoundsSize(1, 1, 'none', halfCellY).y
+
   const columns = maxCountThatFits(
     OPENGRID_CONFIGURATION.maxGridCount,
     targets.x,
-    (count) => openGridBoundsSize(1, count).x,
+    (count) => openGridBoundsSize(1, count, halfCellX, 'none').x,
   )
   const rows = maxCountThatFits(
     OPENGRID_CONFIGURATION.maxGridCount,
     targets.y,
-    (count) => openGridBoundsSize(count, 1).y,
+    (count) => openGridBoundsSize(count, 1, 'none', halfCellY).y,
   )
 
   if (columns === 0) {
-    return invalidMinimumDimension(
-      'X',
-      OPENGRID_CONFIGURATION.gridPitch,
-      '1 個 OpenGrid 格',
-    )
+    return invalidMinimumDimension('X', minimumX, '1 個 OpenGrid 格與半格')
   }
   if (rows === 0) {
-    return invalidMinimumDimension(
-      'Y',
-      OPENGRID_CONFIGURATION.gridPitch,
-      '1 個 OpenGrid 格',
-    )
+    return invalidMinimumDimension('Y', minimumY, '1 個 OpenGrid 格與半格')
   }
 
-  const parameters = { rows, columns }
-  const actualDimensions = openGridBoundsSize(rows, columns)
+  const parameters =
+    input.halfCellX !== undefined || input.halfCellY !== undefined
+      ? { rows, columns, halfCellX, halfCellY }
+      : { rows, columns }
+  const actualDimensions = openGridBoundsSize(
+    rows,
+    columns,
+    halfCellX,
+    halfCellY,
+  )
   return { valid: true, parameters, actualDimensions }
 }
 

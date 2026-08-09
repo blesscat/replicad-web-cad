@@ -14,10 +14,44 @@ test('OpenGrid CAD route exposes typed controls and the custom matrix', async ({
   await expect(
     page.getByRole('combobox', { name: 'OpenGrid 板型' }),
   ).toBeVisible()
-  await expect(page.getByRole('slider', { name: 'Y' })).toHaveValue('2')
-  await expect(page.getByRole('slider', { name: 'X' })).toHaveValue('2')
+  const rows = page.getByRole('slider', { name: 'Y' })
+  const columns = page.getByRole('slider', { name: 'X' })
+  await expect(rows).toHaveValue('2')
+  await expect(columns).toHaveValue('2')
+  expect(
+    await page
+      .getByTestId('opengrid-panel')
+      .locator('input[type="range"]')
+      .evaluateAll((elements) =>
+        elements.map((element) => element.getAttribute('aria-label')),
+      ),
+  ).toEqual(['X', 'Y'])
   await expect(page.getByTestId('grid-dimension-calculator')).toBeVisible()
   await expect(page.getByText('尺寸：56 × 56 × 4 mm')).toBeVisible()
+  const halfCellX = page.getByRole('combobox', {
+    name: 'OpenGrid X 半格方向',
+  })
+  const halfCellY = page.getByRole('combobox', {
+    name: 'OpenGrid Y 半格方向',
+  })
+  await halfCellX.selectOption('right')
+  await expect(columns).toHaveValue('2.5')
+  await expect(columns).toHaveAttribute('min', '1')
+  await expect(columns).toHaveAttribute('max', '17.5')
+  await expect(columns).toHaveAttribute('step', '0.5')
+  await expect(page.getByText('X 2.5 格')).toBeVisible()
+  await columns.press('ArrowRight')
+  await expect(columns).toHaveValue('3.5')
+  await expect(page.getByText('X 3.5 格')).toBeVisible()
+  await columns.press('ArrowLeft')
+  await expect(columns).toHaveValue('2.5')
+  await expect(page.getByText('尺寸：70 × 56 × 4 mm')).toBeVisible()
+  await halfCellY.selectOption('top')
+  await expect(page.getByText('尺寸：70 × 70 × 4 mm')).toBeVisible()
+  await halfCellX.selectOption('left')
+  await expect(page.getByText('尺寸：70 × 70 × 4 mm')).toBeVisible()
+  await halfCellX.selectOption('none')
+  await halfCellY.selectOption('none')
   const screwSource = page.getByRole('combobox', {
     name: 'OpenGrid 螺絲尺寸來源',
   })
@@ -284,7 +318,7 @@ test('OpenGrid workspace edits typed parameters and keeps export tied to the com
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const stepDownload = await stepDownloadPromise
   expect(stepDownload.suggestedFilename()).toMatch(
-    /^opengrid-lite-3x2-custom-custom-corners-enabled-[0-9a-f]{8}\.step$/,
+    /^opengrid-lite-3x2-xnone-ynone-custom-custom-corners-enabled-[0-9a-f]{8}\.step$/,
   )
   const stepStream = await stepDownload.createReadStream()
   expect(stepStream).not.toBeNull()
@@ -296,7 +330,7 @@ test('OpenGrid workspace edits typed parameters and keeps export tied to the com
   await page.getByRole('button', { name: '下載 STL' }).click()
   const stlDownload = await stlDownloadPromise
   expect(stlDownload.suggestedFilename()).toMatch(
-    /^opengrid-lite-3x2-custom-custom-corners-enabled-[0-9a-f]{8}\.stl$/,
+    /^opengrid-lite-3x2-xnone-ynone-custom-custom-corners-enabled-[0-9a-f]{8}\.stl$/,
   )
   expect(await readBinaryStlByteLength(stlDownload)).toBeGreaterThan(84)
 })

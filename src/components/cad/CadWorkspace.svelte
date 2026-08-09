@@ -57,6 +57,10 @@
     controller?.onOpenGridParametersChange(parameters)
   }
 
+  function handleOpenGridDimensionCalculationInvalid(): void {
+    controller?.onOpenGridDimensionCalculationInvalid()
+  }
+
   function handleExport(format: ExportFormat): void {
     controller?.onExport(format)
   }
@@ -85,6 +89,7 @@
       canExport={snapshot.canExport}
       onInputChange={handleInputChange}
       onOpenGridParametersChange={handleOpenGridParametersChange}
+      onOpenGridDimensionCalculationInvalid={handleOpenGridDimensionCalculationInvalid}
       onExport={handleExport}
       onRetry={handleRetry}
       {resetVersion}

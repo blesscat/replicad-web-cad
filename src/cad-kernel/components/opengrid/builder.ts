@@ -2,15 +2,23 @@ import {
   importSTEP,
   makeBox,
   makeCylinder,
+  makeCompound,
   Sketcher,
   type Shape3D,
 } from 'replicad'
 import type {
+  HalfCellX,
+  HalfCellY,
   OpenGridConnectorLocation,
   OpenGridParameters,
   OpenGridPoint2D,
   OpenGridScrewPosition,
   OpenGridVariant,
+} from '../../../cad-contract/units'
+import {
+  HALF_CELL_CONFIGURATION,
+  fullGridCenterOffsetX,
+  fullGridCenterOffsetY,
 } from '../../../cad-contract/units'
 import {
   OPENGRID_CONFIGURATION,
@@ -304,11 +312,8 @@ async function fuseByStrategy(
 }
 
 async function buildCanonicalTile(
-  parameters: OpenGridParameters,
   variant: 'Full' | 'Lite' | 'Heavy',
   thickness: number,
-  screwCenters: readonly OpenGridPoint2D[],
-  connectorLocations: readonly OpenGridConnectorLocation[],
   context: OpenGridBuildContext,
 ): Promise<Shape3D> {
   const rail = buildRail(variant, thickness)
@@ -341,35 +346,295 @@ async function buildCanonicalTile(
     deleteShape(clip)
   }
   const canonical = await fuseBalanced(parts, context)
-  let result = canonical
+  return canonical
+}
+
+type HalfExtensionTileSpec = {
+  center: OpenGridPoint2D
+  width: number
+  depth: number
+  interfaceX: HalfCellX | null
+  interfaceY: HalfCellY | null
+}
+
+type HalfExtensionTileFactory = (
+  spec: HalfExtensionTileSpec,
+) => Promise<Shape3D>
+
+function hasOpenGridHalfCell(parameters: OpenGridParameters): boolean {
+  return parameters.halfCellX !== 'none' || parameters.halfCellY !== 'none'
+}
+
+function halfExtensionTileSpecs(
+  parameters: OpenGridParameters,
+): HalfExtensionTileSpec[] {
+  const board = openGridBoardConfiguration(parameters)
+  const specs: HalfExtensionTileSpec[] = []
+  const fullXCenters: number[] = []
+  const fullYCenters: number[] = []
+
+  for (let column = 0; column < parameters.columns; column += 1) {
+    fullXCenters.push(cellCenterForOpenGrid(parameters, 0, column)[0])
+  }
+  for (let row = 0; row < parameters.rows; row += 1) {
+    fullYCenters.push(cellCenterForOpenGrid(parameters, row, 0)[1])
+  }
+
+  if (parameters.halfCellX !== 'none') {
+    const centerX =
+      parameters.halfCellX === 'left'
+        ? -board.width / 2 + HALF_CELL_CONFIGURATION.halfPitch / 2
+        : board.width / 2 - HALF_CELL_CONFIGURATION.halfPitch / 2
+    for (const centerY of fullYCenters) {
+      specs.push({
+        center: [centerX, centerY],
+        width: HALF_CELL_CONFIGURATION.halfPitch,
+        depth: HALF_CELL_CONFIGURATION.fullPitch,
+        interfaceX: parameters.halfCellX,
+        interfaceY: null,
+      })
+    }
+  }
+
+  if (parameters.halfCellY !== 'none') {
+    const centerY =
+      parameters.halfCellY === 'top'
+        ? board.depth / 2 - HALF_CELL_CONFIGURATION.halfPitch / 2
+        : -board.depth / 2 + HALF_CELL_CONFIGURATION.halfPitch / 2
+    for (const centerX of fullXCenters) {
+      specs.push({
+        center: [centerX, centerY],
+        width: HALF_CELL_CONFIGURATION.fullPitch,
+        depth: HALF_CELL_CONFIGURATION.halfPitch,
+        interfaceX: null,
+        interfaceY: parameters.halfCellY,
+      })
+    }
+  }
+
+  if (parameters.halfCellX !== 'none' && parameters.halfCellY !== 'none') {
+    const centerX =
+      parameters.halfCellX === 'left'
+        ? -board.width / 2 + HALF_CELL_CONFIGURATION.halfPitch / 2
+        : board.width / 2 - HALF_CELL_CONFIGURATION.halfPitch / 2
+    const centerY =
+      parameters.halfCellY === 'top'
+        ? board.depth / 2 - HALF_CELL_CONFIGURATION.halfPitch / 2
+        : -board.depth / 2 + HALF_CELL_CONFIGURATION.halfPitch / 2
+    specs.push({
+      center: [centerX, centerY],
+      width: HALF_CELL_CONFIGURATION.halfPitch,
+      depth: HALF_CELL_CONFIGURATION.halfPitch,
+      interfaceX: parameters.halfCellX,
+      interfaceY: parameters.halfCellY,
+    })
+  }
+
+  return specs
+}
+
+function translateShape(shape: Shape3D, x: number, y: number, z = 0): Shape3D {
+  const translated = shape.translate(x, y, z)
+  if (translated !== shape) deleteShape(shape)
+  return translated
+}
+
+function clipShapeToBox(shape: Shape3D, clip: Shape3D): Shape3D {
+  const clipped = shape.intersect(clip)
+  if (clipped !== shape) deleteShape(shape)
+  return clipped
+}
+
+type HalfBoundaryTileSource = {
+  rail: Shape3D
+  corner: Shape3D
+}
+
+async function buildHalfBoundaryTile(
+  source: HalfBoundaryTileSource,
+  thickness: number,
+  width: number,
+  depth: number,
+  interfaceX: HalfCellX | null,
+  interfaceY: HalfCellY | null,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  const halfTile = OPENGRID_CONFIGURATION.gridPitch / 2
+  const parts: Shape3D[] = []
+  let clip: Shape3D | null = null
+
   try {
-    if (screwCenters.length > 0) {
-      result = await applyCutterGroups(
-        result,
-        createScrewCutterGroupsForLayer(
-          parameters,
-          screwCenters,
-          thickness,
-          'top',
+    const railPlacements: Array<[number, number, number]> = [
+      [0, -depth / 2 + halfTile, 0],
+      [0, depth / 2 - halfTile, 2],
+      [width / 2 - halfTile, 0, 1],
+      [-width / 2 + halfTile, 0, 3],
+    ]
+    for (const [x, y, quarterTurns] of railPlacements) {
+      const placed = cloneRotated(source.rail, quarterTurns)
+      parts.push(translateShape(placed, x, y))
+    }
+
+    const currentAnchors: OpenGridPoint2D[] = [
+      [-halfTile, -halfTile],
+      [halfTile, -halfTile],
+      [halfTile, halfTile],
+      [-halfTile, halfTile],
+    ]
+    const targetAnchors: OpenGridPoint2D[] = [
+      [-width / 2, -depth / 2],
+      [width / 2, -depth / 2],
+      [width / 2, depth / 2],
+      [-width / 2, depth / 2],
+    ]
+    for (let quarterTurns = 0; quarterTurns < 4; quarterTurns += 1) {
+      const placed = cloneRotated(source.corner, quarterTurns)
+      const currentAnchor = currentAnchors[quarterTurns]
+      const targetAnchor = targetAnchors[quarterTurns]
+      if (!currentAnchor || !targetAnchor) {
+        throw new Error('OPENGRID_HALF_CORNER_MISSING')
+      }
+      parts.push(
+        translateShape(
+          placed,
+          targetAnchor[0] - currentAnchor[0],
+          targetAnchor[1] - currentAnchor[1],
         ),
-        context,
       )
     }
-    if (connectorLocations.length > 0) {
-      result = await applyCutterGroups(
-        result,
-        createConnectorCutterGroupsForLocations(
-          parameters,
-          connectorLocations,
-          thickness,
+
+    clip = makeBox(
+      [-width / 2, -depth / 2, -0.01],
+      [width / 2, depth / 2, thickness + 0.01],
+    )
+    const clippedParts = parts.map((part) => clipShapeToBox(part, clip!))
+    parts.length = 0
+    parts.push(...clippedParts)
+    const seamOverlap = 0.2
+    if (interfaceX === 'left') {
+      parts.push(
+        makeBox(
+          [width / 2 - seamOverlap, -depth / 2, 0],
+          [width / 2 + seamOverlap, depth / 2, thickness],
         ),
-        context,
       )
     }
-    return result
+    if (interfaceX === 'right') {
+      parts.push(
+        makeBox(
+          [-width / 2 - seamOverlap, -depth / 2, 0],
+          [-width / 2 + seamOverlap, depth / 2, thickness],
+        ),
+      )
+    }
+    if (interfaceY === 'bottom') {
+      parts.push(
+        makeBox(
+          [-width / 2, depth / 2 - seamOverlap, 0],
+          [width / 2, depth / 2 + seamOverlap, thickness],
+        ),
+      )
+    }
+    if (interfaceY === 'top') {
+      parts.push(
+        makeBox(
+          [-width / 2, -depth / 2 - seamOverlap, 0],
+          [width / 2, -depth / 2 + seamOverlap, thickness],
+        ),
+      )
+    }
+    return await fuseBalanced(parts, context)
   } catch (error) {
-    deleteShape(result)
+    for (const part of parts) deleteShape(part)
     throw error
+  } finally {
+    deleteShape(clip)
+  }
+}
+
+async function addOfficialHalfCellExtensions(
+  source: Shape3D,
+  parameters: OpenGridParameters,
+  variant: 'Full' | 'Lite' | 'Heavy',
+  thickness: number,
+  zOffset: number,
+  mirrorWithinLayer: boolean,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  if (!hasOpenGridHalfCell(parameters)) return source
+
+  let rail: Shape3D | null = null
+  let corner: Shape3D | null = null
+  try {
+    rail = buildRail(variant, thickness)
+    corner = buildCornerNode(variant, thickness)
+    const tileSource: HalfBoundaryTileSource = { rail, corner }
+    return await addHalfCellExtensions(
+      source,
+      parameters,
+      (spec) =>
+        buildHalfBoundaryTile(
+          tileSource,
+          thickness,
+          spec.width,
+          spec.depth,
+          spec.interfaceX,
+          spec.interfaceY,
+          context,
+        ),
+      thickness,
+      zOffset,
+      mirrorWithinLayer,
+      context,
+    )
+  } catch (error) {
+    deleteShape(source)
+    throw error
+  } finally {
+    deleteShape(rail)
+    deleteShape(corner)
+  }
+}
+
+async function addHalfCellExtensions(
+  source: Shape3D,
+  parameters: OpenGridParameters,
+  tileFactory: HalfExtensionTileFactory,
+  thickness: number,
+  zOffset: number,
+  mirrorWithinLayer: boolean,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  if (!hasOpenGridHalfCell(parameters)) return source
+
+  const pieces: Shape3D[] = [source]
+  const prototypes = new Map<string, Shape3D>()
+  try {
+    for (const spec of halfExtensionTileSpecs(parameters)) {
+      assertGenerationCurrent(context)
+      const prototypeKey = `${spec.width}:${spec.depth}:${spec.interfaceX ?? 'none'}:${spec.interfaceY ?? 'none'}`
+      let prototype = prototypes.get(prototypeKey)
+      if (!prototype) {
+        prototype = await tileFactory(spec)
+        prototypes.set(prototypeKey, prototype)
+      }
+      let piece = prototype.clone()
+      if (mirrorWithinLayer) {
+        const mirrored = mirrorSurfaceWithinLayer(piece, thickness)
+        if (mirrored !== piece) deleteShape(piece)
+        piece = mirrored
+      }
+      pieces.push(
+        translateShape(piece, spec.center[0], spec.center[1], zOffset),
+      )
+      await yieldAtSafeBoundary(context)
+    }
+    return await fuseBalanced(pieces, context)
+  } catch (error) {
+    for (const piece of pieces) deleteShape(piece)
+    throw error
+  } finally {
+    for (const prototype of prototypes.values()) deleteShape(prototype)
   }
 }
 
@@ -391,7 +656,16 @@ async function buildGridSurface(
     (openGridScrewCentersFor(parameters).length > 0 ||
       openGridConnectorLocationsFor(parameters).length > 0)
   ) {
-    return buildGridSurfaceByRows(
+    const result = await buildGridSurfaceByRows(
+      parameters,
+      variant,
+      thickness,
+      zOffset,
+      mirrorWithinLayer,
+      context,
+    )
+    return addOfficialHalfCellExtensions(
+      result,
       parameters,
       variant,
       thickness,
@@ -400,9 +674,6 @@ async function buildGridSurface(
       context,
     )
   }
-  const screwCenters = openGridScrewCentersFor(parameters)
-  const connectorLocations = openGridConnectorLocationsFor(parameters)
-  const screwCenterKeys = new Set(screwCenters.map(([x, y]) => `${x}:${y}`))
   const canonicalByPattern = new Map<string, Shape3D>()
   const rows: Shape3D[][] = []
   const totalCells = parameters.rows * parameters.columns
@@ -419,28 +690,10 @@ async function buildGridSurface(
           row,
           column,
         )
-        const localScrews = localScrewCentersForCell(
-          centerX,
-          centerY,
-          screwCenterKeys,
-        )
-        const localConnectors = localConnectorLocationsForCell(
-          parameters,
-          row,
-          column,
-          connectorLocations,
-        )
-        const patternKey = localTilePatternKey(localScrews, localConnectors)
+        const patternKey = 'default'
         let canonical = canonicalByPattern.get(patternKey)
         if (!canonical) {
-          canonical = await buildCanonicalTile(
-            parameters,
-            variant,
-            thickness,
-            localScrews,
-            localConnectors,
-            context,
-          )
+          canonical = await buildCanonicalTile(variant, thickness, context)
           canonicalByPattern.set(patternKey, canonical)
         }
         let piece = canonical.clone()
@@ -459,7 +712,15 @@ async function buildGridSurface(
     }
     const result = await fuseByStrategy(rows, strategy, context)
     for (const canonical of canonicalByPattern.values()) deleteShape(canonical)
-    return result
+    return addOfficialHalfCellExtensions(
+      result,
+      parameters,
+      variant,
+      thickness,
+      zOffset,
+      mirrorWithinLayer,
+      context,
+    )
   } catch (error) {
     for (const row of rows) {
       for (const piece of row) deleteShape(piece)
@@ -477,10 +738,6 @@ async function buildGridSurfaceByRows(
   mirrorWithinLayer: boolean,
   context: OpenGridBuildContext,
 ): Promise<Shape3D> {
-  const screwCenterKeys = new Set(
-    openGridScrewCentersFor(parameters).map(([x, y]) => `${x}:${y}`),
-  )
-  const connectorLocations = openGridConnectorLocationsFor(parameters)
   const canonicalByPattern = new Map<string, Shape3D>()
   const rowShapes: Shape3D[] = []
   const totalCells = parameters.rows * parameters.columns
@@ -498,28 +755,10 @@ async function buildGridSurfaceByRows(
             row,
             column,
           )
-          const localScrews = localScrewCentersForCell(
-            centerX,
-            centerY,
-            screwCenterKeys,
-          )
-          const localConnectors = localConnectorLocationsForCell(
-            parameters,
-            row,
-            column,
-            connectorLocations,
-          )
-          const patternKey = localTilePatternKey(localScrews, localConnectors)
+          const patternKey = 'default'
           let canonical = canonicalByPattern.get(patternKey)
           if (!canonical) {
-            canonical = await buildCanonicalTile(
-              parameters,
-              variant,
-              thickness,
-              localScrews,
-              localConnectors,
-              context,
-            )
+            canonical = await buildCanonicalTile(variant, thickness, context)
             canonicalByPattern.set(patternKey, canonical)
           }
           let piece = canonical.clone()
@@ -571,14 +810,7 @@ async function buildOpenGridPrototypeShape(
 
   if (variant !== 'Heavy') {
     const thickness = OPENGRID_CONFIGURATION.variants[variant].thickness
-    const prototype = await buildCanonicalTile(
-      parameters,
-      variant,
-      thickness,
-      [],
-      [],
-      context,
-    )
+    const prototype = await buildCanonicalTile(variant, thickness, context)
     context.reportPhase?.('prototype-build', performance.now() - startedAt)
     return prototype
   }
@@ -588,26 +820,12 @@ async function buildOpenGridPrototypeShape(
   let upper: Shape3D | null = null
   let bridge: Shape3D | null = null
   try {
-    lower = await buildCanonicalTile(
-      parameters,
-      'Heavy',
-      layerThickness,
-      [],
-      [],
-      context,
-    )
+    lower = await buildCanonicalTile('Heavy', layerThickness, context)
     const mirroredLower = mirrorSurfaceWithinLayer(lower, layerThickness)
     if (mirroredLower !== lower) deleteShape(lower)
     lower = mirroredLower
 
-    upper = await buildCanonicalTile(
-      parameters,
-      'Heavy',
-      layerThickness,
-      [],
-      [],
-      context,
-    )
+    upper = await buildCanonicalTile('Heavy', layerThickness, context)
     const translatedUpper = upper.translate(
       0,
       0,
@@ -743,85 +961,6 @@ async function buildPrototypeTemplateAssembly(
   }
 }
 
-const OPEN_GRID_TILE_CORNER_SCREWS: readonly OpenGridPoint2D[] = [
-  [-OPENGRID_CONFIGURATION.gridPitch / 2, OPENGRID_CONFIGURATION.gridPitch / 2],
-  [OPENGRID_CONFIGURATION.gridPitch / 2, OPENGRID_CONFIGURATION.gridPitch / 2],
-  [
-    -OPENGRID_CONFIGURATION.gridPitch / 2,
-    -OPENGRID_CONFIGURATION.gridPitch / 2,
-  ],
-  [OPENGRID_CONFIGURATION.gridPitch / 2, -OPENGRID_CONFIGURATION.gridPitch / 2],
-]
-
-function localScrewCentersForCell(
-  centerX: number,
-  centerY: number,
-  screwCenterKeys: ReadonlySet<string>,
-): OpenGridPoint2D[] {
-  return OPEN_GRID_TILE_CORNER_SCREWS.filter(([localX, localY]) =>
-    screwCenterKeys.has(`${centerX + localX}:${centerY + localY}`),
-  ).map(([localX, localY]) => [localX, localY])
-}
-
-function localScrewPatternKey(centers: readonly OpenGridPoint2D[]): string {
-  return centers.map(([x, y]) => `${x}:${y}`).join('|') || 'none'
-}
-
-function localConnectorLocationsForCell(
-  parameters: OpenGridParameters,
-  row: number,
-  column: number,
-  locations: readonly OpenGridConnectorLocation[],
-): OpenGridConnectorLocation[] {
-  const [centerX, centerY] = cellCenterForOpenGrid(parameters, row, column)
-  const halfTile = OPENGRID_CONFIGURATION.gridPitch / 2
-  return locations
-    .filter((location) => {
-      const [x, y] = location.center
-      const onCellEdge =
-        (location.side === 'top' && y === centerY + halfTile) ||
-        (location.side === 'bottom' && y === centerY - halfTile) ||
-        (location.side === 'right' && x === centerX + halfTile) ||
-        (location.side === 'left' && x === centerX - halfTile)
-      if (!onCellEdge) return false
-      const alongCoordinate =
-        location.side === 'top' || location.side === 'bottom' ? x : y
-      const cellAlongCenter =
-        location.side === 'top' || location.side === 'bottom'
-          ? centerX
-          : centerY
-      return Math.abs(alongCoordinate - cellAlongCenter) <= halfTile
-    })
-    .map((location) => ({
-      ...location,
-      center: [
-        location.center[0] - centerX,
-        location.center[1] - centerY,
-      ] as OpenGridPoint2D,
-    }))
-}
-
-function localConnectorPatternKey(
-  locations: readonly OpenGridConnectorLocation[],
-): string {
-  return (
-    locations
-      .map(
-        (location) =>
-          `${location.side}:${location.center[0]}:${location.center[1]}`,
-      )
-      .sort()
-      .join('|') || 'none'
-  )
-}
-
-function localTilePatternKey(
-  screwCenters: readonly OpenGridPoint2D[],
-  connectorLocations: readonly OpenGridConnectorLocation[],
-): string {
-  return `screw=${localScrewPatternKey(screwCenters)};connector=${localConnectorPatternKey(connectorLocations)}`
-}
-
 function buildFlatBridgeTile(
   centerX: number,
   centerY: number,
@@ -888,6 +1027,87 @@ function buildFlatBridgeTile(
   return parts
 }
 
+function buildHalfFlatBridgeTile(
+  centerX: number,
+  centerY: number,
+  zOffset: number,
+  width: number,
+  depth: number,
+  interfaceX: HalfCellX | null,
+  interfaceY: HalfCellY | null,
+): Shape3D[] {
+  const railWidth = OPENGRID_CONFIGURATION.outsideExtrusion
+  const height = OPENGRID_CONFIGURATION.heavyGap
+  const parts: Shape3D[] = [
+    makeBox(
+      [centerX - width / 2, centerY - depth / 2, zOffset],
+      [centerX + width / 2, centerY - depth / 2 + railWidth, zOffset + height],
+    ),
+    makeBox(
+      [centerX - width / 2, centerY + depth / 2 - railWidth, zOffset],
+      [centerX + width / 2, centerY + depth / 2, zOffset + height],
+    ),
+    makeBox(
+      [centerX - width / 2, centerY - depth / 2, zOffset],
+      [centerX - width / 2 + railWidth, centerY + depth / 2, zOffset + height],
+    ),
+    makeBox(
+      [centerX + width / 2 - railWidth, centerY - depth / 2, zOffset],
+      [centerX + width / 2, centerY + depth / 2, zOffset + height],
+    ),
+  ]
+  const seamOverlap = 0.2
+  if (interfaceX === 'left') {
+    parts.push(
+      makeBox(
+        [centerX + width / 2 - seamOverlap, centerY - depth / 2, zOffset],
+        [
+          centerX + width / 2 + seamOverlap,
+          centerY + depth / 2,
+          zOffset + height,
+        ],
+      ),
+    )
+  }
+  if (interfaceX === 'right') {
+    parts.push(
+      makeBox(
+        [centerX - width / 2 - seamOverlap, centerY - depth / 2, zOffset],
+        [
+          centerX - width / 2 + seamOverlap,
+          centerY + depth / 2,
+          zOffset + height,
+        ],
+      ),
+    )
+  }
+  if (interfaceY === 'bottom') {
+    parts.push(
+      makeBox(
+        [centerX - width / 2, centerY + depth / 2 - seamOverlap, zOffset],
+        [
+          centerX + width / 2,
+          centerY + depth / 2 + seamOverlap,
+          zOffset + height,
+        ],
+      ),
+    )
+  }
+  if (interfaceY === 'top') {
+    parts.push(
+      makeBox(
+        [centerX - width / 2, centerY - depth / 2 - seamOverlap, zOffset],
+        [
+          centerX + width / 2,
+          centerY - depth / 2 + seamOverlap,
+          zOffset + height,
+        ],
+      ),
+    )
+  }
+  return parts
+}
+
 async function buildHeavyBridge(
   parameters: OpenGridParameters,
   zOffset: number,
@@ -909,7 +1129,28 @@ async function buildHeavyBridge(
         await yieldAtSafeBoundary(context)
       }
     }
-    return fuseByStrategy(rows, strategy, context)
+    const result = await fuseByStrategy(rows, strategy, context)
+    return addHalfCellExtensions(
+      result,
+      parameters,
+      async (spec) =>
+        fuseBalanced(
+          buildHalfFlatBridgeTile(
+            0,
+            0,
+            0,
+            spec.width,
+            spec.depth,
+            spec.interfaceX,
+            spec.interfaceY,
+          ),
+          context,
+        ),
+      OPENGRID_CONFIGURATION.heavyGap,
+      zOffset,
+      false,
+      context,
+    )
   } catch (error) {
     for (const row of rows) {
       for (const part of row) deleteShape(part)
@@ -923,7 +1164,7 @@ async function buildProductBase(
   strategy: OpenGridAssemblyStrategy,
   context: OpenGridBuildContext,
 ): Promise<Shape3D> {
-  if (strategy === 'prototype-template') {
+  if (strategy === 'prototype-template' && !hasOpenGridHalfCell(parameters)) {
     return buildPrototypeTemplateAssembly(parameters, context)
   }
 
@@ -1000,9 +1241,37 @@ function disposeCutter(group: CutterGroup | null): void {
   }
 }
 
+function combineCutterGroups(groups: CutterGroup[]): CutterGroup[] {
+  if (groups.length <= 1) return groups
+
+  try {
+    // Let the final source cut process every solid together. Fusing separate
+    // cutters first adds expensive cutter-to-cutter booleans without changing
+    // the material removed from the board.
+    const compound = makeCompound(
+      groups.map((group) => group.shape),
+    ).asShape3D()
+    return [
+      {
+        shape: compound,
+        parts: groups.map((group) => group.shape),
+      },
+    ]
+  } catch (error) {
+    for (const group of groups) disposeCutter(group)
+    throw error
+  }
+}
+
 function chamferCenters(parameters: OpenGridParameters): OpenGridPoint2D[] {
   if (parameters.chamfers === 'none') return []
   const board = openGridBoardConfiguration(parameters)
+  const fullGridWidth = parameters.columns * OPENGRID_CONFIGURATION.gridPitch
+  const fullGridDepth = parameters.rows * OPENGRID_CONFIGURATION.gridPitch
+  const fullGridMinX =
+    -fullGridWidth / 2 + fullGridCenterOffsetX(parameters.halfCellX)
+  const fullGridMaxY =
+    fullGridDepth / 2 + fullGridCenterOffsetY(parameters.halfCellY)
   const screwSuppressesInternalChamfers =
     parameters.screwMode === 'corners' || parameters.screwMode === 'everywhere'
   const useEverywhere =
@@ -1012,8 +1281,8 @@ function chamferCenters(parameters: OpenGridParameters): OpenGridPoint2D[] {
     for (let row = 0; row <= parameters.rows; row += 1) {
       for (let column = 0; column <= parameters.columns; column += 1) {
         centers.push([
-          -board.width / 2 + column * OPENGRID_CONFIGURATION.gridPitch,
-          board.depth / 2 - row * OPENGRID_CONFIGURATION.gridPitch,
+          fullGridMinX + column * OPENGRID_CONFIGURATION.gridPitch,
+          fullGridMaxY - row * OPENGRID_CONFIGURATION.gridPitch,
         ])
       }
     }
@@ -1434,31 +1703,6 @@ function createBoardScrewCutterGroups(
   }
 }
 
-function createHeavyBridgeScrewCutterGroups(
-  parameters: OpenGridParameters,
-  zOffset: number,
-): CutterGroup[] {
-  const centers = openGridScrewCentersFor(parameters)
-  if (centers.length === 0) return []
-  const height = OPENGRID_CONFIGURATION.heavyGap
-  const groups: CutterGroup[] = []
-  try {
-    for (const [x, y] of centers) {
-      const cutter = makePolygonalCylinder(
-        parameters.screwDiameter,
-        height + 0.04,
-        [x, y, zOffset - 0.02],
-        OPENGRID_SCREW_SIDES,
-      )
-      groups.push({ shape: cutter, parts: [cutter] })
-    }
-    return groups
-  } catch (error) {
-    for (const group of groups) disposeCutter(group)
-    throw error
-  }
-}
-
 function createBoardConnectorCutterGroups(
   parameters: OpenGridParameters,
 ): CutterGroup[] {
@@ -1509,14 +1753,41 @@ async function applyBoardFeatures(
 ): Promise<Shape3D> {
   const groups: CutterGroup[] = []
   try {
-    groups.push(...createBoardScrewCutterGroups(parameters))
-    groups.push(...createBoardConnectorCutterGroups(parameters))
+    groups.push(
+      ...combineCutterGroups(createBoardConnectorCutterGroups(parameters)),
+    )
     groups.push(...createChamferCutters(parameters))
+    // Screw holes are deliberately the final board-level operation. This
+    // lets a half-cell extension participate in the same cutter as its
+    // complete-cell region instead of leaving a partial hole at the seam.
+    groups.push(
+      ...combineCutterGroups(createBoardScrewCutterGroups(parameters)),
+    )
     return await applyCutterGroups(source, groups, context)
   } catch (error) {
     for (const group of groups) disposeCutter(group)
     throw error
   }
+}
+
+async function applyBoardScrewCuts(
+  source: Shape3D,
+  parameters: OpenGridParameters,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  const groups = combineCutterGroups(createBoardScrewCutterGroups(parameters))
+  return applyCutterGroups(source, groups, context)
+}
+
+async function applyBoardConnectorCuts(
+  source: Shape3D,
+  parameters: OpenGridParameters,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  const groups = combineCutterGroups(
+    createBoardConnectorCutterGroups(parameters),
+  )
+  return applyCutterGroups(source, groups, context)
 }
 
 function cutShape(source: Shape3D, cutter: Shape3D): Shape3D {
@@ -1575,7 +1846,6 @@ async function applyHeavyBridgeFeatures(
       OPENGRID_CONFIGURATION.heavyGap,
     ),
   )
-  groups.push(...createHeavyBridgeScrewCutterGroups(parameters, zOffset))
   return applyCutterGroups(source, groups, context)
 }
 
@@ -1598,8 +1868,12 @@ export async function buildOpenGridBRepWithStrategy(
     base = await buildProductBase(parameters, strategy, context)
     if (strategy === 'prototype-template') {
       base = await applyBoardFeatures(base, parameters, context)
-    } else if (parameters.variant !== 'Heavy') {
-      base = await applyBatchedCuts(base, parameters, context)
+    } else {
+      if (parameters.variant !== 'Heavy') {
+        base = await applyBatchedCuts(base, parameters, context)
+      }
+      base = await applyBoardConnectorCuts(base, parameters, context)
+      base = await applyBoardScrewCuts(base, parameters, context)
     }
     assertGenerationCurrent(context)
     return base

@@ -15,4 +15,5 @@ export type OpenGridComponentPanelProps = {
   parameters: OpenGridParameters
   fieldErrors: Partial<Record<OpenGridParameterKey | 'parameters', string>>
   onParametersChange: (parameters: OpenGridParameters) => void
+  onDimensionCalculationInvalid: () => void
 }

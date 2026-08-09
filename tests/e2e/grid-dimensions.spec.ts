@@ -143,3 +143,26 @@ test('grid dimension calculators remain usable on narrow viewports', async ({
     ).toBeTruthy()
   }
 })
+
+test('OpenGrid dimension calculator respects selected half-cell directions', async ({
+  page,
+}) => {
+  await page.goto('/cad/opengrid')
+  await page
+    .getByRole('combobox', { name: 'OpenGrid X 半格方向' })
+    .selectOption('right')
+  await page
+    .getByRole('combobox', { name: 'OpenGrid Y 半格方向' })
+    .selectOption('top')
+
+  const calculator = page.getByTestId('grid-dimension-calculator')
+  await calculator.getByRole('textbox', { name: 'X（mm）' }).fill('83.99')
+  await calculator.getByRole('textbox', { name: 'Y（mm）' }).fill('69.99')
+  await calculator.getByRole('button', { name: '計算格數' }).click()
+
+  await expect(page.getByRole('slider', { name: 'X' })).toHaveValue('2')
+  await expect(page.getByRole('slider', { name: 'Y' })).toHaveValue('1')
+  await expect(page.getByTestId('grid-dimension-result')).toContainText(
+    'X 70 mm、Y 42 mm',
+  )
+})

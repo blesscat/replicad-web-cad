@@ -307,10 +307,10 @@ describe('CAD component catalog', () => {
       max: [42, 28, 4],
     })
     expect(opengrid?.exportFileName(parameters)).toMatch(
-      /^opengrid-lite-3x2-custom-custom-corners-enabled-[0-9a-f]{8}\.step$/,
+      /^opengrid-lite-3x2-xnone-ynone-custom-custom-corners-enabled-[0-9a-f]{8}\.step$/,
     )
     expect(opengrid?.stlFileName(parameters)).toMatch(
-      /^opengrid-lite-3x2-custom-custom-corners-enabled-[0-9a-f]{8}\.stl$/,
+      /^opengrid-lite-3x2-xnone-ynone-custom-custom-corners-enabled-[0-9a-f]{8}\.stl$/,
     )
     expect(
       getModelDefinition('modular-grid-base')?.validateParameters(parameters),
@@ -336,24 +336,53 @@ describe('CAD component catalog', () => {
     expect(snap?.defaultParameters).toEqual({
       variant: 'Full',
       offset: 0,
+      halfCellX: 'none',
+      halfCellY: 'none',
     })
-    expect(snap?.boundsForParameters({ variant: 'Lite', offset: 0.2 })).toEqual(
-      {
-        min: [-12.9, -12.9, 0],
-        max: [12.9, 12.9, 3.4],
-      },
-    )
-    expect(snap?.exportFileName({ variant: 'Full', offset: 0.2 })).toBe(
-      'opengrid-snap-full-offset0.2.step',
-    )
-    expect(snap?.stlFileName({ variant: 'Lite', offset: 0.15 })).toBe(
-      'opengrid-snap-lite-offset0.15.stl',
-    )
-    expect(snap?.validateParameters({ variant: 'Full', offset: 0.2 })).toEqual({
+    expect(
+      snap?.boundsForParameters({
+        variant: 'Lite',
+        offset: 0.2,
+        halfCellX: 'none',
+        halfCellY: 'none',
+      }),
+    ).toEqual({
+      min: [-12.9, -12.9, 0],
+      max: [12.9, 12.9, 3.4],
+    })
+    expect(
+      snap?.exportFileName({
+        variant: 'Full',
+        offset: 0.2,
+        halfCellX: 'none',
+        halfCellY: 'none',
+      }),
+    ).toBe('opengrid-snap-full-offset0.2-xnone-ynone.step')
+    expect(
+      snap?.stlFileName({
+        variant: 'Lite',
+        offset: 0.15,
+        halfCellX: 'none',
+        halfCellY: 'none',
+      }),
+    ).toBe('opengrid-snap-lite-offset0.15-xnone-ynone.stl')
+    expect(
+      snap?.validateParameters({
+        variant: 'Full',
+        offset: 0.2,
+        halfCellX: 'none',
+        halfCellY: 'none',
+      }),
+    ).toEqual({
       valid: true,
       value: {
         modelId: 'opengrid-snap',
-        parameters: { variant: 'Full', offset: 0.2 },
+        parameters: {
+          variant: 'Full',
+          offset: 0.2,
+          halfCellX: 'none',
+          halfCellY: 'none',
+        },
       },
     })
   })

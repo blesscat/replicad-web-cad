@@ -1,7 +1,13 @@
 <script lang="ts">
-  import { calculateOpenGridCounts } from '../../../../features/cad/grid-dimensions'
+  import {
+    calculateOpenGridCounts,
+    type GridDimensionInput,
+  } from '../../../../features/cad/grid-dimensions'
   import {
     OPENGRID_CONFIGURATION,
+    openGridBoardConfiguration,
+    type HalfCellX,
+    type HalfCellY,
     type OpenGridCornerFlags,
     type OpenGridParameterKey,
     type OpenGridParameters,
@@ -19,10 +25,12 @@
     parameters,
     fieldErrors,
     onParametersChange,
+    onDimensionCalculationInvalid,
   }: OpenGridComponentPanelProps = $props()
 
-  let width = $derived(parameters.columns * OPENGRID_CONFIGURATION.gridPitch)
-  let depth = $derived(parameters.rows * OPENGRID_CONFIGURATION.gridPitch)
+  let board = $derived(openGridBoardConfiguration(parameters))
+  let width = $derived(board.width)
+  let depth = $derived(board.depth)
   let thickness = $derived(
     OPENGRID_CONFIGURATION.variants[parameters.variant]?.thickness ?? 0,
   )
@@ -191,6 +199,49 @@
     return rows % 2 === 0 && columns % 2 === 0
   }
 
+  type GridAxis = 'x' | 'y'
+
+  function axisHasHalfCell(axis: GridAxis): boolean {
+    return axis === 'x'
+      ? parameters.halfCellX !== 'none'
+      : parameters.halfCellY !== 'none'
+  }
+
+  function displayedGridCount(axis: GridAxis): number {
+    const fullCount = axis === 'x' ? parameters.columns : parameters.rows
+    return fullCount + (axisHasHalfCell(axis) ? 0.5 : 0)
+  }
+
+  function formatGridCount(axis: GridAxis): string {
+    return displayedGridCount(axis).toFixed(1).replace(/\.0$/, '')
+  }
+
+  function gridCountMinimum(axis: GridAxis): number {
+    return 1
+  }
+
+  function gridCountMaximum(axis: GridAxis): number {
+    return (
+      OPENGRID_CONFIGURATION.maxGridCount + (axisHasHalfCell(axis) ? 0.5 : 0)
+    )
+  }
+
+  function fullGridCountFromSlider(axis: GridAxis, value: number): number {
+    if (!axisHasHalfCell(axis)) return Math.round(value)
+
+    // Half-cell mode exposes only 1.5, 2.5, ... as committed total counts.
+    // The range keeps a 0.5 step and briefly visits the integer between two
+    // valid half counts while the thumb moves in either direction.
+    const currentValue = displayedGridCount(axis)
+    const fullCount =
+      value < currentValue ? Math.floor(value - 0.5) : Math.ceil(value - 0.5)
+    return Math.max(1, fullCount)
+  }
+
+  function gridCountStep(axis: GridAxis): number {
+    return axisHasHalfCell(axis) ? 0.5 : 1
+  }
+
   function updateGridCounts(
     changes: Pick<OpenGridParameters, 'rows' | 'columns'>,
   ): void {
@@ -262,9 +313,11 @@
       return
     }
 
+    const axis: GridAxis = field === 'columns' ? 'x' : 'y'
+    const fullCount = fullGridCountFromSlider(axis, numericValue)
     updateGridCounts({
-      rows: field === 'rows' ? numericValue : parameters.rows,
-      columns: field === 'columns' ? numericValue : parameters.columns,
+      rows: field === 'rows' ? fullCount : parameters.rows,
+      columns: field === 'columns' ? fullCount : parameters.columns,
     })
   }
 
@@ -273,6 +326,24 @@
     columns: number
   }): void {
     updateGridCounts(changes)
+  }
+
+  function calculateGridDimensions(input: GridDimensionInput) {
+    return calculateOpenGridCounts({
+      ...input,
+      halfCellX: parameters.halfCellX,
+      halfCellY: parameters.halfCellY,
+    })
+  }
+
+  function updateHalfCellX(event: Event): void {
+    if (!(event.currentTarget instanceof HTMLSelectElement)) return
+    updateParameters({ halfCellX: event.currentTarget.value as HalfCellX })
+  }
+
+  function updateHalfCellY(event: Event): void {
+    if (!(event.currentTarget instanceof HTMLSelectElement)) return
+    updateParameters({ halfCellY: event.currentTarget.value as HalfCellY })
   }
 
   function updateSelect(
@@ -399,35 +470,65 @@
   </ParameterField>
 
   <GridDimensionCalculator
-    calculate={calculateOpenGridCounts}
+    calculate={calculateGridDimensions}
     onApply={handleDimensionCalculation}
+    onInvalid={onDimensionCalculationInvalid}
   />
 
   <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
     <ParameterField
-      label="Y"
-      unit={`${parameters.rows} 格`}
-      unitAriaLive
-      changed={parameterChanged('rows')}
-      error={fieldError('rows')}
-      errorId="opengrid-rows-error"
-      restoreLabel="Y"
-      onRestore={() => restoreGridCount('rows')}
+      label="X 半格方向"
+      changed={parameterChanged('halfCellX')}
+      error={fieldError('halfCellX')}
+      errorId="opengrid-half-cell-x-error"
+      restoreLabel="OpenGrid X 半格方向"
+      onRestore={() => restoreParameter('halfCellX')}
     >
-      <Slider
-        value={parameters.rows}
-        label="Y"
-        min={1}
-        max={OPENGRID_CONFIGURATION.maxGridCount}
-        step={1}
-        error={fieldError('rows')}
-        describedBy={fieldError('rows') ? 'opengrid-rows-error' : undefined}
-        onChange={(value) => updateNumberValue('rows', value)}
-      />
+      <select
+        class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+        aria-label="OpenGrid X 半格方向"
+        aria-describedby={fieldError('halfCellX')
+          ? 'opengrid-half-cell-x-error'
+          : undefined}
+        aria-invalid={Boolean(fieldError('halfCellX'))}
+        value={parameters.halfCellX}
+        onchange={updateHalfCellX}
+      >
+        <option value="none">無</option>
+        <option value="left">左</option>
+        <option value="right">右</option>
+      </select>
     </ParameterField>
+
+    <ParameterField
+      label="Y 半格方向"
+      changed={parameterChanged('halfCellY')}
+      error={fieldError('halfCellY')}
+      errorId="opengrid-half-cell-y-error"
+      restoreLabel="OpenGrid Y 半格方向"
+      onRestore={() => restoreParameter('halfCellY')}
+    >
+      <select
+        class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+        aria-label="OpenGrid Y 半格方向"
+        aria-describedby={fieldError('halfCellY')
+          ? 'opengrid-half-cell-y-error'
+          : undefined}
+        aria-invalid={Boolean(fieldError('halfCellY'))}
+        value={parameters.halfCellY}
+        onchange={updateHalfCellY}
+      >
+        <option value="none">無</option>
+        <option value="top">上</option>
+        <option value="bottom">下</option>
+      </select>
+    </ParameterField>
+  </div>
+
+  <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
     <ParameterField
       label="X"
-      unit={`${parameters.columns} 格`}
+      unit={`${formatGridCount('x')} 格`}
       unitAriaLive
       changed={parameterChanged('columns')}
       error={fieldError('columns')}
@@ -436,16 +537,37 @@
       onRestore={() => restoreGridCount('columns')}
     >
       <Slider
-        value={parameters.columns}
+        value={displayedGridCount('x')}
         label="X"
-        min={1}
-        max={OPENGRID_CONFIGURATION.maxGridCount}
-        step={1}
+        min={gridCountMinimum('x')}
+        max={gridCountMaximum('x')}
+        step={gridCountStep('x')}
         error={fieldError('columns')}
         describedBy={fieldError('columns')
           ? 'opengrid-columns-error'
           : undefined}
         onChange={(value) => updateNumberValue('columns', value)}
+      />
+    </ParameterField>
+    <ParameterField
+      label="Y"
+      unit={`${formatGridCount('y')} 格`}
+      unitAriaLive
+      changed={parameterChanged('rows')}
+      error={fieldError('rows')}
+      errorId="opengrid-rows-error"
+      restoreLabel="Y"
+      onRestore={() => restoreGridCount('rows')}
+    >
+      <Slider
+        value={displayedGridCount('y')}
+        label="Y"
+        min={gridCountMinimum('y')}
+        max={gridCountMaximum('y')}
+        step={gridCountStep('y')}
+        error={fieldError('rows')}
+        describedBy={fieldError('rows') ? 'opengrid-rows-error' : undefined}
+        onChange={(value) => updateNumberValue('rows', value)}
       />
     </ParameterField>
   </div>

@@ -108,7 +108,7 @@ describe('Worker contract runtime validation', () => {
     ).toBe(false)
   })
 
-  it('accepts Snap commands only with Full/Lite decimal outer offsets', () => {
+  it('accepts Snap commands only with Full/Lite offsets and axis directions', () => {
     const command = {
       version: PROTOCOL_VERSION,
       kind: 'model.generate' as const,
@@ -116,7 +116,12 @@ describe('Worker contract runtime validation', () => {
       operationId: 'operation-snap-1',
       generation: 1,
       modelId: 'opengrid-snap' as const,
-      parameters: { variant: 'Full' as const, offset: 0.2 },
+      parameters: {
+        variant: 'Full' as const,
+        offset: 0.2,
+        halfCellX: 'none' as const,
+        halfCellY: 'none' as const,
+      },
       previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
     }
 
@@ -128,6 +133,17 @@ describe('Worker contract runtime validation', () => {
           variant: 'Lite',
           offset: 0.2,
           rows: 2,
+        },
+      }),
+    ).toBe(false)
+    expect(
+      isWorkerCommand({
+        ...command,
+        parameters: {
+          variant: 'Full',
+          offset: 0.2,
+          halfCellX: 'diagonal',
+          halfCellY: 'none',
         },
       }),
     ).toBe(false)

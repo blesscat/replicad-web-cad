@@ -41,7 +41,12 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
     return { x: 2, y: 2, height: 10, fullBottomHoleGrid: false }
   }
   if (modelId === 'opengrid-snap') {
-    return { variant: 'Full', offset: 0 }
+    return {
+      variant: 'Full',
+      offset: 0,
+      halfCellX: 'none',
+      halfCellY: 'none',
+    }
   }
   if (modelId === 'opengrid-divider') {
     return { left: 1, right: 1, up: 0, down: 0, height: 20 }
@@ -529,6 +534,36 @@ describe('CAD model generation debounce', () => {
     ).toBe(false)
   })
 
+  it('invalidates a newer generation when OpenGrid dimension calculation fails', () => {
+    const { client, send, context } = createRuntimeContext('opengrid')
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleOpenGridDimensionCalculationInvalid()
+
+    expect(context.refs.latestGeneration.current).toBe(1)
+    expect(context.clearProgress).toHaveBeenCalled()
+    expect(context.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'input-invalid',
+        modelId: 'opengrid',
+        input: context.refs.state.current.input,
+        generation: 1,
+      }),
+    )
+    expect(client.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.invalidate',
+        generation: 1,
+        reason: 'invalid-input',
+      }),
+    )
+
+    vi.advanceTimersByTime(500)
+    expect(
+      send.mock.calls.some(([command]) => command.kind === 'model.generate'),
+    ).toBe(false)
+  })
+
   it('accepts a legal large official OpenGrid tuple before sending model.generate', () => {
     const { client, send, context } = createRuntimeContext('opengrid')
     const handlers = createModelGenerationHandlers(context)
@@ -565,7 +600,12 @@ describe('CAD model generation debounce', () => {
       expect.objectContaining({
         kind: 'model.generate',
         modelId: 'opengrid-snap',
-        parameters: { variant: 'Full', offset: 0.2 },
+        parameters: {
+          variant: 'Full',
+          offset: 0.2,
+          halfCellX: 'none',
+          halfCellY: 'none',
+        },
       }),
     )
 

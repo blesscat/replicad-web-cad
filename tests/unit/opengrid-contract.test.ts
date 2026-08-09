@@ -9,6 +9,10 @@ import {
   openGridScrewLatticeDimensions,
   openGridScrewPositionsFor,
   openGridStlFileName,
+  fullGridCenterOffsetX,
+  fullGridCenterOffsetY,
+  halfCellHostPitch,
+  openGridAxisSize,
   OPENGRID_CONFIGURATION,
   validateOpenGridGenerationSupport,
   validateOpenGridParameters,
@@ -54,6 +58,54 @@ describe('OpenGrid contract', () => {
     expect(validateOpenGridParameters({ ...defaults, rows: 18 }).valid).toBe(
       false,
     )
+  })
+
+  it('adds a 14 mm extension for each selected half-cell axis', () => {
+    const singleAxis = parameters({
+      columns: 3,
+      rows: 2,
+      halfCellX: 'right',
+    })
+    const dualAxis = parameters({
+      columns: 3,
+      rows: 2,
+      halfCellX: 'left',
+      halfCellY: 'top',
+    })
+
+    expect(boundsForOpenGrid(singleAxis)).toEqual({
+      min: [-49, -28, 0],
+      max: [49, 28, 4],
+    })
+    expect(boundsForOpenGrid(dualAxis)).toEqual({
+      min: [-49, -35, 0],
+      max: [49, 35, 4],
+    })
+  })
+
+  it('maps all side directions to centered full-grid offsets and host pitches', () => {
+    expect(openGridAxisSize(2, 'none')).toBe(56)
+    expect(openGridAxisSize(2, 'left')).toBe(70)
+    expect(openGridAxisSize(2, 'right')).toBe(70)
+    expect(openGridAxisSize(2, 'top')).toBe(70)
+    expect(openGridAxisSize(2, 'bottom')).toBe(70)
+    expect(fullGridCenterOffsetX('left')).toBe(7)
+    expect(fullGridCenterOffsetX('right')).toBe(-7)
+    expect(fullGridCenterOffsetY('top')).toBe(-7)
+    expect(fullGridCenterOffsetY('bottom')).toBe(7)
+    expect(halfCellHostPitch('none')).toBe(28)
+    expect(halfCellHostPitch('right')).toBe(14)
+    expect(halfCellHostPitch('top')).toBe(14)
+  })
+
+  it('rejects a boolean or diagonal half-cell contract', () => {
+    const defaults = parameters()
+    expect(
+      validateOpenGridParameters({ ...defaults, allowHalfCell: true }),
+    ).toMatchObject({ valid: false })
+    expect(
+      validateOpenGridParameters({ ...defaults, diagonal: 'left-top' }),
+    ).toMatchObject({ valid: false })
   })
 
   it('keeps the pinned official profile and screw dimensions', () => {
@@ -190,6 +242,54 @@ describe('OpenGrid contract', () => {
     )
   })
 
+  it('includes screw positions generated on selected half-cell boundaries', () => {
+    const centers = openGridScrewCentersFor(
+      parameters({
+        rows: 1,
+        columns: 1,
+        halfCellX: 'right',
+        halfCellY: 'top',
+        screwMode: 'corners',
+      }),
+    )
+
+    expect(centers).toEqual([[7, 7]])
+  })
+
+  it('uses the half-cell seam and the far full-cell corner row on a single-axis extension', () => {
+    const centers = openGridScrewCentersFor(
+      parameters({
+        rows: 5,
+        columns: 3,
+        halfCellX: 'left',
+        halfCellY: 'none',
+        screwMode: 'corners',
+      }),
+    )
+
+    expect(centers).toEqual([
+      [-35, -42],
+      [-35, 42],
+      [21, -42],
+      [21, 42],
+    ])
+  })
+
+  it('keeps custom screw positions explicit when half-cell boundaries exist', () => {
+    const centers = openGridScrewCentersFor(
+      parameters({
+        rows: 2,
+        columns: 2,
+        halfCellX: 'right',
+        halfCellY: 'top',
+        screwMode: 'custom',
+        customScrewPositions: [{ row: 0, column: 0 }],
+      }),
+    )
+
+    expect(centers).toEqual([[-7, -7]])
+  })
+
   it('adds an optional center screw and a centered interval pattern', () => {
     expect(
       openGridScrewPositionsFor(
@@ -303,6 +403,78 @@ describe('OpenGrid contract', () => {
         (location) => location.side === 'top' || location.side === 'bottom',
       ),
     ).toBe(true)
+
+    const halfCellLocations = openGridConnectorLocationsFor(
+      parameters({
+        rows: 2,
+        columns: 2,
+        halfCellX: 'right',
+        halfCellY: 'top',
+        connectorHoles: 'enabled',
+      }),
+    )
+    expect(halfCellLocations).toHaveLength(8)
+    expect(halfCellLocations).toEqual(
+      expect.arrayContaining([
+        { side: 'top', center: [-7, 35], direction: [0, -1, 0] },
+        { side: 'top', center: [21, 35], direction: [0, -1, 0] },
+        { side: 'right', center: [35, -7], direction: [-1, 0, 0] },
+        { side: 'right', center: [35, 21], direction: [-1, 0, 0] },
+        { side: 'bottom', center: [-7, -35], direction: [0, 1, 0] },
+        { side: 'bottom', center: [21, -35], direction: [0, 1, 0] },
+        { side: 'left', center: [-35, -7], direction: [1, 0, 0] },
+        { side: 'left', center: [-35, 21], direction: [1, 0, 0] },
+      ]),
+    )
+  })
+
+  it('maps each single-axis half-cell connector to its selected outer side', () => {
+    const cases = [
+      {
+        halfCellX: 'left' as const,
+        halfCellY: 'none' as const,
+        side: 'left' as const,
+        center: [-35, 0] as [number, number],
+        direction: [1, 0, 0] as [number, number, number],
+      },
+      {
+        halfCellX: 'right' as const,
+        halfCellY: 'none' as const,
+        side: 'right' as const,
+        center: [35, 0] as [number, number],
+        direction: [-1, 0, 0] as [number, number, number],
+      },
+      {
+        halfCellX: 'none' as const,
+        halfCellY: 'top' as const,
+        side: 'top' as const,
+        center: [0, 35] as [number, number],
+        direction: [0, -1, 0] as [number, number, number],
+      },
+      {
+        halfCellX: 'none' as const,
+        halfCellY: 'bottom' as const,
+        side: 'bottom' as const,
+        center: [0, -35] as [number, number],
+        direction: [0, 1, 0] as [number, number, number],
+      },
+    ]
+
+    for (const testCase of cases) {
+      const locations = openGridConnectorLocationsFor(
+        parameters({
+          rows: 2,
+          columns: 2,
+          halfCellX: testCase.halfCellX,
+          halfCellY: testCase.halfCellY,
+        }),
+      )
+      expect(locations).toContainEqual({
+        side: testCase.side,
+        center: testCase.center,
+        direction: testCase.direction,
+      })
+    }
   })
 
   it('keeps the official deterministic custom fixture and removes the old block rule', () => {
@@ -329,10 +501,10 @@ describe('OpenGrid contract', () => {
       customScrewPositions: deterministicOpenGridCustomScrewPositions(5, 5),
     })
     expect(openGridFileName(custom)).toMatch(
-      /^opengrid-full-5x5-custom-custom-corners-enabled-[0-9a-f]{8}\.step$/,
+      /^opengrid-full-5x5-xnone-ynone-custom-custom-corners-enabled-[0-9a-f]{8}\.step$/,
     )
     expect(openGridStlFileName(custom)).toMatch(
-      /^opengrid-full-5x5-custom-custom-corners-enabled-[0-9a-f]{8}\.stl$/,
+      /^opengrid-full-5x5-xnone-ynone-custom-custom-corners-enabled-[0-9a-f]{8}\.stl$/,
     )
 
     expect(

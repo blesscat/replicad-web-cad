@@ -266,6 +266,106 @@ function compareFixedCore(
   return { centralBounds, centralVolume, internalProbeVolumes }
 }
 
+function hasHalfCell(parameters: OpenGridSnapParameters): boolean {
+  return parameters.halfCellX !== 'none' || parameters.halfCellY !== 'none'
+}
+
+function halfCellBoundaryProbes(
+  parameters: OpenGridSnapParameters,
+  bounds: ModelBounds,
+): Probe[] {
+  const probeWidth = 0.6
+  const height = bounds.max[2] + 0.2
+  const probes: Probe[] = []
+  if (parameters.halfCellX !== 'none') {
+    const isLeft = parameters.halfCellX === 'left'
+    const x = isLeft ? bounds.min[0] : bounds.max[0]
+    const minX = isLeft ? x : x - probeWidth
+    const maxX = isLeft ? x + probeWidth : x
+    probes.push({ min: [minX, -1, -0.1], max: [maxX, 1, height] })
+  }
+  if (parameters.halfCellY !== 'none') {
+    const isBottom = parameters.halfCellY === 'bottom'
+    const y = isBottom ? bounds.min[1] : bounds.max[1]
+    const minY = isBottom ? y : y - probeWidth
+    const maxY = isBottom ? y + probeWidth : y
+    probes.push({ min: [-1, minY, -0.1], max: [1, maxY, height] })
+  }
+  return probes
+}
+
+function snapHalfCellSourceInterfaceX(
+  direction: OpenGridSnapParameters['halfCellX'],
+): number {
+  if (direction === 'left') return -4
+  if (direction === 'right') return 4
+  return 0
+}
+
+function snapHalfCellSourceInterfaceY(
+  direction: OpenGridSnapParameters['halfCellY'],
+): number {
+  if (direction === 'bottom') return -4
+  if (direction === 'top') return 4
+  return 0
+}
+
+function snapHalfCellTranslationX(
+  direction: OpenGridSnapParameters['halfCellX'],
+): number {
+  if (direction === 'left') return 6.4
+  if (direction === 'right') return -6.4
+  return 0
+}
+
+function snapHalfCellTranslationY(
+  direction: OpenGridSnapParameters['halfCellY'],
+): number {
+  if (direction === 'bottom') return 6.4
+  if (direction === 'top') return -6.4
+  return 0
+}
+
+function inspectHalfCellQuality(
+  shape: Shape3D,
+  parameters: OpenGridSnapParameters,
+  bounds: ModelBounds | null,
+  failures: string[],
+): number[] {
+  if (!bounds) return []
+  const translatedInterfaceX =
+    snapHalfCellSourceInterfaceX(parameters.halfCellX) +
+    snapHalfCellTranslationX(parameters.halfCellX)
+  const translatedInterfaceY =
+    snapHalfCellSourceInterfaceY(parameters.halfCellY) +
+    snapHalfCellTranslationY(parameters.halfCellY)
+  const probeHalfSize = 0.8
+  const centralProbe: Probe = {
+    min: [
+      translatedInterfaceX - probeHalfSize,
+      translatedInterfaceY - probeHalfSize,
+      -0.2,
+    ],
+    max: [
+      translatedInterfaceX + probeHalfSize,
+      translatedInterfaceY + probeHalfSize,
+      bounds.max[2] + 0.2,
+    ],
+  }
+  const centralVolume = volumeInProbe(shape, centralProbe)
+  const internalProbeVolumes = [centralVolume]
+  if (centralVolume <= 0.01) {
+    failures.push('half-cell:central-interface-missing')
+  }
+
+  for (const probe of halfCellBoundaryProbes(parameters, bounds)) {
+    if (volumeInProbe(shape, probe) <= 0.01) {
+      failures.push('half-cell:outer-support-missing')
+    }
+  }
+  return internalProbeVolumes
+}
+
 export function inspectOpenGridSnapShapeQuality(
   shape: Shape3D,
   parameters: OpenGridSnapParameters,
@@ -282,7 +382,7 @@ export function inspectOpenGridSnapShapeQuality(
 
   try {
     let envelopeTolerance = GENERATED_ENVELOPE_TOLERANCE
-    if (parameters.offset === 0) {
+    if (parameters.offset === 0 && !hasHalfCell(parameters)) {
       envelopeTolerance = ZERO_OFFSET_ENVELOPE_TOLERANCE
     }
     bounds = readAssemblyBounds(shape)
@@ -307,7 +407,11 @@ export function inspectOpenGridSnapShapeQuality(
 
   try {
     solidCount = countSolids(shape)
-    if (solidCount !== 9) failures.push('topology:expected-nine-solids')
+    if (hasHalfCell(parameters)) {
+      if (solidCount < 1) failures.push('topology:half-cell-empty')
+    } else if (solidCount !== 9) {
+      failures.push('topology:expected-nine-solids')
+    }
   } catch (error) {
     failures.push(
       `topology:${error instanceof Error ? error.message : String(error)}`,
@@ -322,15 +426,34 @@ export function inspectOpenGridSnapShapeQuality(
     )
   }
 
-  const fixedCore = compareFixedCore(
-    shape,
-    reference,
-    OPENGRID_SNAP_CONFIGURATION.variantHeights[parameters.variant],
-    failures,
-  )
-  centralBounds = fixedCore.centralBounds
-  centralVolume = fixedCore.centralVolume
-  internalProbeVolumes = fixedCore.internalProbeVolumes
+  if (hasHalfCell(parameters)) {
+    internalProbeVolumes = inspectHalfCellQuality(
+      shape,
+      parameters,
+      bounds,
+      failures,
+    )
+    try {
+      const central = largestSolid(shape)
+      centralBounds = readBounds(central)
+      centralVolume = measureVolume(central)
+      deleteShape(central)
+    } catch (error) {
+      failures.push(
+        `half-cell:central-solid:${error instanceof Error ? error.message : String(error)}`,
+      )
+    }
+  } else {
+    const fixedCore = compareFixedCore(
+      shape,
+      reference,
+      OPENGRID_SNAP_CONFIGURATION.variantHeights[parameters.variant],
+      failures,
+    )
+    centralBounds = fixedCore.centralBounds
+    centralVolume = fixedCore.centralVolume
+    internalProbeVolumes = fixedCore.internalProbeVolumes
+  }
 
   if (mesh.triangleCount <= 0 || !meshIsFinite(mesh)) {
     failures.push('mesh:empty-or-non-finite')

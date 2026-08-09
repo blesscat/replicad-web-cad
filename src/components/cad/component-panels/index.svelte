@@ -21,6 +21,7 @@
     modelId: ModelId
     parameters: ModelParameterValues
     onOpenGridParametersChange: (parameters: OpenGridParameters) => void
+    onOpenGridDimensionCalculationInvalid: () => void
   }
 
   let {
@@ -30,6 +31,7 @@
     fieldErrors,
     onInputChange,
     onOpenGridParametersChange,
+    onOpenGridDimensionCalculationInvalid,
   }: Props = $props()
 </script>
 
@@ -58,6 +60,7 @@
     parameters={parameters as OpenGridParameters}
     {fieldErrors}
     onParametersChange={onOpenGridParametersChange}
+    onDimensionCalculationInvalid={onOpenGridDimensionCalculationInvalid}
   />
 {:else if modelId === 'opengrid-divider'}
   <OpenGridDividerComponentPanel

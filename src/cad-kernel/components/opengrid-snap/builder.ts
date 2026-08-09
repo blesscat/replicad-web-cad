@@ -32,6 +32,7 @@ const OUTER_TOUCH_TOLERANCE = 0.02
 // so the preview and exported B-Rep retain the requested outer dimensions.
 const LITE_MESH_BOUNDARY_MARGIN = 0.135
 const FULL_TRIM_BOUNDARY_MARGIN = 0.055
+const HALF_TRIM_BOUNDARY_MARGIN = 0.14
 
 type PointTuple = [number, number, number]
 type BoundsTuple = [PointTuple, PointTuple]
@@ -369,6 +370,136 @@ function cloneImportedAssembly(shape: Shape3D): Shape3D {
   return deserializeShape(shape.serialize()).asShape3D()
 }
 
+type SnapHalfCellClip = {
+  bounds: ModelBounds
+  translation: [number, number]
+}
+
+function snapHalfCellClip(
+  sourceBounds: ModelBounds,
+  parameters: OpenGridSnapParameters,
+): SnapHalfCellClip {
+  const clipMinX =
+    parameters.halfCellX === 'right'
+      ? 0
+      : sourceBounds.min[0] + HALF_TRIM_BOUNDARY_MARGIN
+  const clipMaxX =
+    parameters.halfCellX === 'left'
+      ? 0
+      : sourceBounds.max[0] - HALF_TRIM_BOUNDARY_MARGIN
+  const clipMinY =
+    parameters.halfCellY === 'top'
+      ? 0
+      : sourceBounds.min[1] + HALF_TRIM_BOUNDARY_MARGIN
+  const clipMaxY =
+    parameters.halfCellY === 'bottom'
+      ? 0
+      : sourceBounds.max[1] - HALF_TRIM_BOUNDARY_MARGIN
+
+  return {
+    bounds: {
+      min: [clipMinX, clipMinY, sourceBounds.min[2]],
+      max: [clipMaxX, clipMaxY, sourceBounds.max[2]],
+    },
+    translation: [-(clipMinX + clipMaxX) / 2, -(clipMinY + clipMaxY) / 2],
+  }
+}
+
+function halfCellSupportShapes(targetBounds: ModelBounds): Shape3D[] {
+  const supportWidth = 0.2
+  const zMin = targetBounds.min[2]
+  const zMax = targetBounds.max[2]
+  return [
+    makeBox(
+      [targetBounds.min[0], targetBounds.min[1], zMin],
+      [targetBounds.min[0] + supportWidth, targetBounds.max[1], zMax],
+    ),
+    makeBox(
+      [targetBounds.max[0] - supportWidth, targetBounds.min[1], zMin],
+      [targetBounds.max[0], targetBounds.max[1], zMax],
+    ),
+    makeBox(
+      [targetBounds.min[0], targetBounds.min[1], zMin],
+      [targetBounds.max[0], targetBounds.min[1] + supportWidth, zMax],
+    ),
+    makeBox(
+      [targetBounds.min[0], targetBounds.max[1] - supportWidth, zMin],
+      [targetBounds.max[0], targetBounds.max[1], zMax],
+    ),
+  ]
+}
+
+async function buildHalfCellSnapAssembly(
+  reference: Shape3D,
+  parameters: OpenGridSnapParameters,
+  context: OpenGridSnapBuildContext,
+): Promise<Shape3D> {
+  const sourceBounds = readBounds(reference)
+  const targetBounds = boundsForOpenGridSnap(parameters)
+  const clip = snapHalfCellClip(sourceBounds, parameters)
+  const clippingBox = makeBox(clip.bounds.min, clip.bounds.max)
+  const sourceSolids = extractSolids(reference)
+  const owned = new Set<Shape3D>(sourceSolids)
+  const output: Shape3D[] = []
+
+  try {
+    for (const solid of sourceSolids) {
+      assertGenerationCurrent(context)
+      let generated: Shape3D = solid
+      const clipped = generated.intersect(clippingBox)
+      if (clipped !== generated) {
+        owned.delete(generated)
+        deleteShape(generated)
+        generated = clipped
+        owned.add(generated)
+      }
+      if (measureVolume(generated) <= ASSET_TOLERANCE) {
+        owned.delete(generated)
+        deleteShape(generated)
+        continue
+      }
+      const translated = generated.translate(
+        clip.translation[0],
+        clip.translation[1],
+        0,
+      )
+      if (translated !== generated) {
+        owned.delete(generated)
+        deleteShape(generated)
+        generated = translated
+        owned.add(generated)
+      }
+      output.push(generated)
+      await context.yieldToEventLoop?.()
+      assertGenerationCurrent(context)
+    }
+
+    if (output.length === 0) {
+      throw new Error('OPENGRID_SNAP_HALF_ASSEMBLY_EMPTY')
+    }
+
+    for (const support of halfCellSupportShapes(targetBounds)) {
+      output.push(support)
+      owned.add(support)
+    }
+    assertGenerationCurrent(context)
+    const compound = makeCompound(output)
+    try {
+      const result = compound.asShape3D()
+      owned.clear()
+      return result
+    } catch (error) {
+      deleteShape(compound)
+      throw error
+    }
+  } catch (error) {
+    for (const shape of owned) deleteShape(shape)
+    throw error
+  } finally {
+    deleteShape(clippingBox)
+  }
+}
+
 export async function importOpenGridSnapReference(
   blob: Blob,
   variant: OpenGridSnapVariant,
@@ -428,8 +559,13 @@ export async function buildOpenGridSnap(
   const reference = await context.getOpenGridSnapReference(parameters.variant)
   assertGenerationCurrent(context)
 
-  if (parameters.offset === 0) {
+  const hasHalfCell =
+    parameters.halfCellX !== 'none' || parameters.halfCellY !== 'none'
+  if (parameters.offset === 0 && !hasHalfCell) {
     return cloneImportedAssembly(reference)
+  }
+  if (hasHalfCell) {
+    return buildHalfCellSnapAssembly(reference, parameters, context)
   }
 
   const sourceBounds = readBounds(reference)

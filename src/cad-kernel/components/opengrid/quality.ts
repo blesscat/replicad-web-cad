@@ -9,6 +9,7 @@ import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForOpenGrid,
   cellCenterForOpenGrid,
+  HALF_CELL_CONFIGURATION,
   OPENGRID_CONFIGURATION,
   type ModelBounds,
   type OpenGridParameters,
@@ -101,14 +102,25 @@ function meshIsFinite(mesh: MeshData | MeshSnapshot): boolean {
     mesh.indices instanceof ArrayBuffer
       ? new Uint32Array(mesh.indices)
       : mesh.indices
-  return (
-    positions.length > 0 &&
-    normals.length === positions.length &&
-    indices.length > 0 &&
-    indices.length % 3 === 0 &&
-    [...positions, ...normals].every(Number.isFinite) &&
-    [...indices].every(Number.isSafeInteger)
-  )
+  if (
+    positions.length === 0 ||
+    normals.length !== positions.length ||
+    indices.length === 0 ||
+    indices.length % 3 !== 0
+  ) {
+    return false
+  }
+
+  for (const value of positions) {
+    if (!Number.isFinite(value)) return false
+  }
+  for (const value of normals) {
+    if (!Number.isFinite(value)) return false
+  }
+  for (const value of indices) {
+    if (!Number.isSafeInteger(value)) return false
+  }
+  return true
 }
 
 function volumeInProbe(
@@ -148,6 +160,10 @@ function inspectOfficialProfile(
   const probeHalfWidth = 0.5
   const probeHalfHeight = Math.min(0.2, layerThickness / 8)
   const inspectOuterRail = parameters.rows * parameters.columns <= 4
+  let fullBoundaryY = board.max[1]
+  if (parameters.halfCellY === 'top') {
+    fullBoundaryY -= HALF_CELL_CONFIGURATION.halfPitch
+  }
 
   for (const zLevel of zLevels) {
     if (inspectOuterRail) {
@@ -155,12 +171,12 @@ function inspectOfficialProfile(
         shape,
         [
           firstCellX - probeHalfWidth,
-          board.max[1] - 0.7,
+          fullBoundaryY - 0.7,
           zLevel - probeHalfHeight,
         ],
         [
           firstCellX + probeHalfWidth,
-          board.max[1] - 0.3,
+          fullBoundaryY - 0.3,
           zLevel + probeHalfHeight,
         ],
       )
@@ -173,17 +189,100 @@ function inspectOfficialProfile(
       shape,
       [
         firstCellX - probeHalfWidth,
-        board.max[1] - 1.35,
+        fullBoundaryY - 1.35,
         zLevel - probeHalfHeight,
       ],
       [
         firstCellX + probeHalfWidth,
-        board.max[1] - 1.15,
+        fullBoundaryY - 1.15,
         zLevel + probeHalfHeight,
       ],
     )
     if (innerCaptureVolume > 0.01) {
       failures.push(`profile:inner-capture-missing@${zLevel}`)
+    }
+  }
+}
+
+function inspectHalfCellBoundary(
+  shape: Shape3D,
+  parameters: OpenGridParameters,
+  failures: string[],
+): void {
+  if (parameters.halfCellX === 'none' && parameters.halfCellY === 'none') {
+    return
+  }
+  const board = boundsForOpenGrid(parameters)
+  const layerThickness =
+    parameters.variant === 'Heavy'
+      ? OPENGRID_CONFIGURATION.variants.Full.thickness
+      : board.max[2]
+  const zLevels =
+    parameters.variant === 'Heavy'
+      ? [
+          layerThickness / 2,
+          layerThickness + OPENGRID_CONFIGURATION.heavyGap + layerThickness / 2,
+        ]
+      : [layerThickness / 2]
+  const probeHalfWidth = 0.5
+  const probeHalfHeight = Math.min(0.2, layerThickness / 8)
+  const halfPitch = HALF_CELL_CONFIGURATION.halfPitch
+  const fullXCenters: number[] = []
+  const fullYCenters: number[] = []
+
+  for (let column = 0; column < parameters.columns; column += 1) {
+    fullXCenters.push(cellCenterForOpenGrid(parameters, 0, column)[0])
+  }
+  for (let row = 0; row < parameters.rows; row += 1) {
+    fullYCenters.push(cellCenterForOpenGrid(parameters, row, 0)[1])
+  }
+
+  for (const zLevel of zLevels) {
+    if (parameters.halfCellX !== 'none') {
+      const isLeft = parameters.halfCellX === 'left'
+      const boundaryX = isLeft ? board.min[0] : board.max[0]
+      const centerYs = [...fullYCenters]
+      if (parameters.halfCellY === 'top') {
+        centerYs.push(board.max[1] - halfPitch / 2)
+      } else if (parameters.halfCellY === 'bottom') {
+        centerYs.push(board.min[1] + halfPitch / 2)
+      }
+      const minX = isLeft ? boundaryX + 0.3 : boundaryX - 0.7
+      const maxX = isLeft ? boundaryX + 0.7 : boundaryX - 0.3
+      for (const centerY of centerYs) {
+        const volume = volumeInProbe(
+          shape,
+          [minX, centerY - probeHalfWidth, zLevel - probeHalfHeight],
+          [maxX, centerY + probeHalfWidth, zLevel + probeHalfHeight],
+        )
+        if (volume <= 0.01) {
+          failures.push(`half-cell:x-boundary-missing@${centerY}:${zLevel}`)
+        }
+      }
+    }
+
+    if (parameters.halfCellY !== 'none') {
+      const isBottom = parameters.halfCellY === 'bottom'
+      const boundaryY = isBottom ? board.min[1] : board.max[1]
+      const centerXs = [...fullXCenters]
+      if (parameters.halfCellX === 'left') {
+        centerXs.push(board.min[0] + halfPitch / 2)
+      } else if (parameters.halfCellX === 'right') {
+        centerXs.push(board.max[0] - halfPitch / 2)
+      }
+      const minY = isBottom ? boundaryY + 0.3 : boundaryY - 0.7
+      const maxY = isBottom ? boundaryY + 0.7 : boundaryY - 0.3
+      const centerY = isBottom ? boundaryY + halfPitch : boundaryY - halfPitch
+      for (const centerX of centerXs) {
+        const volume = volumeInProbe(
+          shape,
+          [centerX - probeHalfWidth, minY, zLevel - probeHalfHeight],
+          [centerX + probeHalfWidth, maxY, zLevel + probeHalfHeight],
+        )
+        if (volume <= 0.01) {
+          failures.push(`half-cell:y-boundary-missing@${centerX}:${zLevel}`)
+        }
+      }
     }
   }
 }
@@ -229,18 +328,18 @@ function inspectCellOpenings(
     }
   }
 
-  for (let row = 0; row < parameters.rows; row += 1) {
-    const rowProbes: Shape3D[] = []
-    let rowProbe: Shape3D | null = null
-    let rowIntersection: Shape3D | null = null
-    try {
+  const cellProbes: Shape3D[] = []
+  let combinedProbe: Shape3D | null = null
+  let combinedIntersection: Shape3D | null = null
+  try {
+    for (let row = 0; row < parameters.rows; row += 1) {
       for (let column = 0; column < parameters.columns; column += 1) {
         const [centerX, centerY] = cellCenterForOpenGrid(
           parameters,
           row,
           column,
         )
-        rowProbes.push(
+        cellProbes.push(
           makeBox(
             [centerX - probeWidth / 2, centerY - probeDepth / 2, -0.5],
             [
@@ -251,30 +350,25 @@ function inspectCellOpenings(
           ),
         )
       }
-      rowProbe = makeCompound(rowProbes).asShape3D()
-      rowIntersection = shape.intersect(rowProbe)
-      const rowVolume = measureVolume(rowIntersection)
-      if (rowVolume <= 0.01) {
-        openingCount += parameters.columns
-        continue
-      }
+    }
+    combinedProbe = makeCompound(cellProbes).asShape3D()
+    combinedIntersection = shape.intersect(combinedProbe)
+    if (measureVolume(combinedIntersection) <= 0.01) {
+      return parameters.rows * parameters.columns
+    }
+  } catch {
+    // Fall back to individual probes so the report keeps cell-level failures.
+  } finally {
+    if (combinedIntersection && combinedIntersection !== shape) {
+      deleteShape(combinedIntersection)
+    }
+    deleteShape(combinedProbe)
+    for (const probe of cellProbes) deleteShape(probe)
+  }
 
-      for (let column = 0; column < parameters.columns; column += 1) {
-        if (inspectCell(row, column)) openingCount += 1
-      }
-    } catch (error) {
-      failures.push(
-        `openings:row-${row}:${error instanceof Error ? error.message : String(error)}`,
-      )
-      for (let column = 0; column < parameters.columns; column += 1) {
-        if (inspectCell(row, column)) openingCount += 1
-      }
-    } finally {
-      if (rowIntersection && rowIntersection !== shape) {
-        deleteShape(rowIntersection)
-      }
-      deleteShape(rowProbe)
-      for (const probe of rowProbes) deleteShape(probe)
+  for (let row = 0; row < parameters.rows; row += 1) {
+    for (let column = 0; column < parameters.columns; column += 1) {
+      if (inspectCell(row, column)) openingCount += 1
     }
   }
   return openingCount
@@ -333,6 +427,7 @@ export function inspectOpenGridShapeQuality(
     failures.push('openings:incomplete-cell-coverage')
   }
   inspectOfficialProfile(shape, parameters, failures)
+  inspectHalfCellBoundary(shape, parameters, failures)
   if (mesh.triangleCount <= 0 || !meshIsFinite(mesh)) {
     failures.push('mesh:empty-or-non-finite')
   }
