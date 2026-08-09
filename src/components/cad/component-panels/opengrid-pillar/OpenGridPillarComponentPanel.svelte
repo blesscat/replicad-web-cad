@@ -2,7 +2,7 @@
   import { PILLAR_CONFIGURATION } from '../../../../cad-contract/units'
   import {
     displayParameterLabel,
-    pillarDefinition,
+    opengridPillarDefinition,
   } from '../../../../features/cad/model-catalog'
   import ParameterControl from '../ParameterControl.svelte'
   import ParameterField from '../ParameterField.svelte'
@@ -25,7 +25,7 @@
     的銳角凸台。
   </p>
 
-  {#each pillarDefinition.parameterSchema as field (field.key)}
+  {#each opengridPillarDefinition.parameterSchema as field (field.key)}
     {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
     <ParameterField
       label={displayParameterLabel(field)}
@@ -53,7 +53,7 @@
         aria-invalid={Boolean(fieldErrors.baseConnection)}
         aria-label="連接底版用"
         class="mt-1 accent-primary"
-        data-testid="pillar-base-connection"
+        data-testid="opengrid-pillar-base-connection"
         type="checkbox"
         checked={rawParameters.baseConnection === 'true'}
         onchange={handleBaseConnectionChange}

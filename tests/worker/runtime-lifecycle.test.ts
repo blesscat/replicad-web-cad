@@ -29,12 +29,12 @@ vi.mock('../../src/cad-kernel/export', () => ({
   exportStepBytes: vi.fn(async () => new Uint8Array([1]).buffer),
 }))
 
-vi.mock('../../src/cad-kernel/components/pillar/quality', () => ({
+vi.mock('../../src/cad-kernel/components/opengrid-pillar/quality', () => ({
   assertPillarShapeQuality: vi.fn(),
 }))
 
 import { CadWorkerRuntime } from '../../src/workers/cad.worker'
-import { assertPillarShapeQuality } from '../../src/cad-kernel/components/pillar/quality'
+import { assertPillarShapeQuality } from '../../src/cad-kernel/components/opengrid-pillar/quality'
 
 const base = {
   version: 1 as const,
@@ -70,7 +70,7 @@ function pillarGenerateCommand(generation = 1) {
     operationId: `pillar-generate-operation-${generation}`,
     kind: 'model.generate' as const,
     generation,
-    modelId: 'pillar' as const,
+    modelId: 'opengrid-pillar' as const,
     parameters: { length: 12, baseConnection: true },
     previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
   }
@@ -183,7 +183,7 @@ describe('CAD Worker candidate terminal lifecycle', () => {
       (event) => event.kind === 'model.candidate-ready',
     )
     expect(candidate).toMatchObject({
-      modelId: 'pillar',
+      modelId: 'opengrid-pillar',
       generation: 1,
       parameters: { length: 12, baseConnection: true },
       workerEpoch: 'epoch-pillar',
@@ -207,7 +207,7 @@ describe('CAD Worker candidate terminal lifecycle', () => {
     expect(events).toContainEqual(
       expect.objectContaining({
         kind: 'model.ready',
-        modelId: 'pillar',
+        modelId: 'opengrid-pillar',
         parameters: { length: 12, baseConnection: true },
       }),
     )

@@ -12,22 +12,22 @@ import type {
   ModelParameterValues,
 } from '../../src/cad-contract/units'
 
-function createContext(modelId: 'box' | 'pillar' = 'box'): {
+function createContext(modelId: 'box' | 'opengrid-pillar' = 'box'): {
   context: RuntimeContext
   refs: RuntimeRefs
   client: { send: ReturnType<typeof vi.fn> }
   dispatch: ReturnType<typeof vi.fn>
 } {
   const parameters: ModelParameterValues =
-    modelId === 'pillar'
+    modelId === 'opengrid-pillar'
       ? { length: 12, baseConnection: true }
       : { width: 20, depth: 30, height: 40 }
   const rawParameters: Record<string, string> =
-    modelId === 'pillar'
+    modelId === 'opengrid-pillar'
       ? { length: '12', baseConnection: 'true' }
       : { width: '20', depth: '30', height: '40' }
   const bounds: ModelBounds =
-    modelId === 'pillar'
+    modelId === 'opengrid-pillar'
       ? { min: [-3.5, -3.5, 0], max: [3.5, 3.5, 12] }
       : { min: [-10, -15, 0], max: [10, 15, 40] }
   const state = {
@@ -110,7 +110,7 @@ describe('CAD export runtime', () => {
   })
 
   it('uses pillar mode and length in deterministic STEP and STL metadata', () => {
-    const step = createContext('pillar')
+    const step = createContext('opengrid-pillar')
     const stepHandlers = createExportHandlers(step.context)
     stepHandlers.handleExport('step')
 
@@ -121,7 +121,7 @@ describe('CAD export runtime', () => {
       }),
     )
 
-    const stl = createContext('pillar')
+    const stl = createContext('opengrid-pillar')
     const stlHandlers = createExportHandlers(stl.context)
     stlHandlers.handleExport('stl')
 

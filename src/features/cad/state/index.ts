@@ -93,7 +93,7 @@ function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
   if (modelId === 'opengrid-divider') {
     return { ...OPENGRID_DIVIDER_CONFIGURATION.defaultParameters }
   }
-  if (modelId === 'pillar') {
+  if (modelId === 'opengrid-pillar') {
     return { ...PILLAR_CONFIGURATION.defaultParameters }
   }
   throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)

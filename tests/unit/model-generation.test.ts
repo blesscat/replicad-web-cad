@@ -31,7 +31,7 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
   if (modelId === 'hexagonal-column') {
     return { height: 8, count: 1, gap: 1, orientation: 'lying' }
   }
-  if (modelId === 'pillar') {
+  if (modelId === 'opengrid-pillar') {
     return { length: 5, baseConnection: false }
   }
   if (modelId === 'opengrid') {
@@ -169,7 +169,7 @@ describe('CAD model generation debounce', () => {
   })
 
   it('debounces pillar length and preserves its base-connection mode', () => {
-    const { client, send, context } = createRuntimeContext('pillar')
+    const { client, send, context } = createRuntimeContext('opengrid-pillar')
     const handlers = createModelGenerationHandlers(context)
 
     handlers.handleInputChange('length', '8')
@@ -179,21 +179,24 @@ describe('CAD model generation debounce', () => {
     expect(send).toHaveBeenLastCalledWith(
       expect.objectContaining({
         kind: 'model.generate',
-        modelId: 'pillar',
+        modelId: 'opengrid-pillar',
         parameters: { length: 8, baseConnection: true },
       }),
     )
     expect(client.send).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'model.invalidate', generation: 1 }),
     )
-    expect(context.setPersistedParameters).toHaveBeenLastCalledWith('pillar', {
-      length: 8,
-      baseConnection: true,
-    })
+    expect(context.setPersistedParameters).toHaveBeenLastCalledWith(
+      'opengrid-pillar',
+      {
+        length: 8,
+        baseConnection: true,
+      },
+    )
   })
 
   it('invalidates a fractional pillar length without generating a snapshot', () => {
-    const { client, send, context } = createRuntimeContext('pillar')
+    const { client, send, context } = createRuntimeContext('opengrid-pillar')
     const handlers = createModelGenerationHandlers(context)
 
     handlers.handleInputChange('length', '5.5')

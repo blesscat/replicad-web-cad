@@ -5,21 +5,21 @@ import {
   waitForCadReady,
 } from './helpers'
 
-test('pillar is listed under other models and initializes with plain defaults', async ({
+test('OpenGrid pillar is listed in its family and initializes with plain defaults', async ({
   page,
 }) => {
   await page.goto('/models')
 
   const modelLink = page.getByRole('link', {
-    name: '使用圓柱支柱 →',
+    name: '使用OpenGrid 圓柱支柱 →',
     exact: true,
   })
-  await expect(modelLink).toHaveAttribute('href', '/cad/pillar')
+  await expect(modelLink).toHaveAttribute('href', '/cad/opengrid-pillar')
   await modelLink.click()
 
-  await expect(page).toHaveURL('/cad/pillar')
+  await expect(page).toHaveURL('/cad/opengrid-pillar')
   await expect(
-    page.getByRole('heading', { name: '目前編輯：圓柱支柱' }),
+    page.getByRole('heading', { name: '目前編輯：OpenGrid 圓柱支柱' }),
   ).toBeVisible()
   await expect(page.getByText(/固定 Ø5 mm/)).toBeVisible()
 
@@ -38,12 +38,12 @@ test('pillar is listed under other models and initializes with plain defaults', 
   ).toHaveCount(0)
 })
 
-test('pillar preserves total length across base mode and exports deterministic files', async ({
+test('OpenGrid pillar preserves total length across base mode and exports deterministic files', async ({
   page,
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/pillar')
+  await page.goto('/cad/opengrid-pillar')
   await waitForCadReady(page)
 
   const length = page.getByRole('textbox', { name: '總長度（Z）' })

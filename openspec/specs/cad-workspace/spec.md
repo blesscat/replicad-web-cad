@@ -784,14 +784,6 @@ The runtime-validated catalog MUST register `opengrid-stackable-box` as an indep
 - **THEN** the workspace MUST make its STEP and STL exports available using stackable-box metadata
 - **AND** exports MUST remain disabled while the current snapshot is invalid, stale, or failed geometry validation
 
-## 可追溯性
-
-- 變更動機、Prototype 範圍與後續演進：../../proposal.md
-- 架構、contract、lifetime 與測試策略：../../design.md
-- 實作順序與 quality gates：../../tasks.md
-
-## ADDED Requirements
-
 ### Requirement: OpenGrid Snap workspace controls
 
 The `/cad/opengrid-snap` workspace MUST expose only a Full/Lite variant control and one `offset` range slider. The slider MUST cover `0` through `1 mm` in `0.05 mm` steps, and its label MUST explain that the value is the shared total outer width/depth increment. The panel MUST display derived outer width, depth, and variant height, with zero offset as the default.
@@ -876,13 +868,13 @@ The divider workspace MUST use the existing typed generation, debounce, latest-w
 - **AND** it MUST send `model.invalidate` instead of `model.generate`
 - **AND** export MUST remain disabled for the invalid or stale generation
 
-### Requirement: Pillar workspace integration
+### Requirement: OpenGrid pillar workspace integration
 
-The runtime-validated component catalog MUST register `pillar` as an independent model definition and MUST route `/cad/pillar` to it. The definition MUST expose the integer `length` field from 3–500 mm and a default-off checkbox labeled `連接底版用`, with defaults of 5 mm and unchecked. The Worker MUST dispatch `modelId=pillar` to the pillar builder, and the CAD workspace MUST not fall through to another component or expose another component's parameters.
+The runtime-validated component catalog MUST register `opengrid-pillar` as an independent OpenGrid model definition and MUST route `/cad/opengrid-pillar` to it. The definition MUST expose the integer `length` field from 3–500 mm and a default-off checkbox labeled `連接底版用`, with defaults of 5 mm and unchecked. The Worker MUST dispatch `modelId=opengrid-pillar` to the pillar builder, and the CAD workspace MUST not fall through to another component or expose another component's parameters.
 
 #### Scenario: Pillar initial generation
 
-- **GIVEN** a user opens `/cad/pillar` in a supported browser
+- **GIVEN** a user opens `/cad/opengrid-pillar` in a supported browser
 - **WHEN** the Worker emits `engine.ready`
 - **THEN** the main thread MUST send generation 1 using a valid saved pillar snapshot or `{ length: 5, baseConnection: false }`
 - **AND** the Worker MUST route the request to the independent pillar builder
@@ -890,7 +882,7 @@ The runtime-validated component catalog MUST register `pillar` as an independent
 
 #### Scenario: Pillar parameter controls
 
-- **GIVEN** a user views the `/cad/pillar` workspace
+- **GIVEN** a user views the `/cad/opengrid-pillar` workspace
 - **WHEN** the parameter panel is rendered
 - **THEN** it MUST expose an integer length control labeled in mm with range 3–500
 - **AND** it MUST expose a checkbox labeled `連接底版用`
@@ -899,7 +891,7 @@ The runtime-validated component catalog MUST register `pillar` as an independent
 
 #### Scenario: Pillar route isolation
 
-- **GIVEN** a `model.generate` request carries `modelId=pillar`
+- **GIVEN** a `model.generate` request carries `modelId=opengrid-pillar`
 - **WHEN** the Worker validates and builds the request
 - **THEN** it MUST accept only the pillar parameter shape
 - **AND** it MUST reject mismatched or unknown parameter shapes
@@ -911,3 +903,9 @@ The runtime-validated component catalog MUST register `pillar` as an independent
 - **THEN** the workspace MUST show a diagnosable field error
 - **AND** it MUST send `model.invalidate` rather than `model.generate` for that invalid snapshot
 - **AND** export MUST remain disabled while the input is invalid or stale
+
+## 可追溯性
+
+- 變更動機、Prototype 範圍與後續演進：../../proposal.md
+- 架構、contract、lifetime 與測試策略：../../design.md
+- 實作順序與 quality gates：../../tasks.md

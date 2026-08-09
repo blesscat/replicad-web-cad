@@ -155,9 +155,9 @@ describe('CAD state machine', () => {
   })
 
   it('initializes the pillar with a plain five-millimetre default', () => {
-    const state = initialCadState('pillar')
+    const state = initialCadState('opengrid-pillar')
 
-    expect(state.modelId).toBe('pillar')
+    expect(state.modelId).toBe('opengrid-pillar')
     expect(state.input).toEqual({ length: 5, baseConnection: false })
   })
 

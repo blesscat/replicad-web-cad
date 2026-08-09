@@ -2,11 +2,11 @@
 
 提供一個可調整總長度、具固定直徑與兩種底端介面的圓柱支柱 component，讓使用者能產生可預覽、可驗證並可匯出的單一 CAD solid。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Pillar parameter contract
 
-The system MUST expose an independent component with stable `modelId=pillar` and `buildKey=pillar`. Its normalized parameter snapshot MUST contain exactly `length` and `baseConnection`: `length` MUST be a safe integer from 3 through 500 mm, and `baseConnection` MUST be a boolean. The default snapshot MUST be `{ length: 5, baseConnection: false }`. Diameter and chamfer dimensions are fixed geometry constants and MUST NOT be exposed as additional user parameters.
+The system MUST expose an independent OpenGrid component with stable `modelId=opengrid-pillar` and `buildKey=opengrid-pillar`. Its normalized parameter snapshot MUST contain exactly `length` and `baseConnection`: `length` MUST be a safe integer from 3 through 500 mm, and `baseConnection` MUST be a boolean. The default snapshot MUST be `{ length: 5, baseConnection: false }`. Diameter and chamfer dimensions are fixed geometry constants and MUST NOT be exposed as additional user parameters.
 
 #### Scenario: Default pillar parameters
 

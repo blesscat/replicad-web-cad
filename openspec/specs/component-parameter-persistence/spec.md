@@ -178,8 +178,6 @@ The versioned browser persistence MUST store valid `opengrid-stackable-box` para
 - **THEN** the previous accepted stackable-box entry MUST remain unchanged
 - **AND** the invalid snapshot MUST NOT be used for initialization or sent to the Worker
 
-## ADDED Requirements
-
 ### Requirement: OpenGrid 分隔器參數獨立保存
 
 The versioned browser-local parameter record MUST store valid `opengrid-divider` snapshots under the stable `opengrid-divider` model id. The entry MUST contain typed `left`, `right`, `up`, `down`, and `height` values and MUST remain isolated from both `opengrid` and `opengrid-stackable-box` entries.
@@ -207,12 +205,12 @@ The versioned browser-local parameter record MUST store valid `opengrid-divider`
 
 ### Requirement: Pillar parameters are persisted independently
 
-The versioned browser persistence MUST store valid pillar parameters under the stable `pillar` model id. Each entry MUST contain only typed integer `length` and typed boolean `baseConnection` values accepted by the pillar validator. The pillar entry MUST remain independent from every other component's parameter entry.
+The versioned browser persistence MUST store valid pillar parameters under the stable `opengrid-pillar` model id. Each entry MUST contain only typed integer `length` and typed boolean `baseConnection` values accepted by the pillar validator. The OpenGrid pillar entry MUST remain independent from every other component's parameter entry.
 
 #### Scenario: Restore saved pillar parameters
 
-- **GIVEN** browser persistence contains `{ length: 12, baseConnection: true }` under `pillar`
-- **WHEN** the user opens `/cad/pillar`
+- **GIVEN** browser persistence contains `{ length: 12, baseConnection: true }` under `opengrid-pillar`
+- **WHEN** the user opens `/cad/opengrid-pillar`
 - **THEN** the controls MUST display 12 mm and a checked `連接底版用` checkbox
 - **AND** the first generation MUST use those typed values
 
@@ -220,20 +218,20 @@ The versioned browser persistence MUST store valid pillar parameters under the s
 
 - **GIVEN** a pillar snapshot passes validation
 - **WHEN** the workspace accepts the update
-- **THEN** persistence MUST update only the `pillar` entry
+- **THEN** persistence MUST update only the `opengrid-pillar` entry
 - **AND** the stored values MUST remain typed values rather than raw input strings
 
 #### Scenario: Invalid pillar input does not overwrite persistence
 
 - **GIVEN** a previously accepted pillar snapshot exists in persistence
 - **WHEN** the user enters an empty, fractional, non-finite, out-of-range, or invalid boolean value
-- **THEN** the previous accepted `pillar` entry MUST remain unchanged
+- **THEN** the previous accepted `opengrid-pillar` entry MUST remain unchanged
 - **AND** the invalid value MUST NOT be sent to the Worker as `model.generate`
 
 #### Scenario: Missing or malformed pillar entry falls back safely
 
-- **GIVEN** the persisted `pillar` entry is missing, malformed, or fails the current validator
-- **WHEN** the pillar workspace initializes
+- **GIVEN** the persisted `opengrid-pillar` entry is missing, malformed, or fails the current validator
+- **WHEN** the OpenGrid pillar workspace initializes
 - **THEN** it MUST use `{ length: 5, baseConnection: false }`
 - **AND** the invalid entry MUST NOT be sent to the Worker
 - **AND** initialization MUST continue without treating persistence failure as a CAD failure

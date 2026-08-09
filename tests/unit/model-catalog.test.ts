@@ -47,6 +47,7 @@ describe('CAD component catalog', () => {
     ])
     expect(groups[1]?.definitions.map((definition) => definition.id)).toEqual([
       'opengrid',
+      'opengrid-pillar',
       'opengrid-divider',
       'opengrid-stackable-box',
       'opengrid-snap',
@@ -57,7 +58,6 @@ describe('CAD component catalog', () => {
       'box-normal',
       'modular-grid-base',
       'hexagonal-column',
-      'pillar',
     ])
 
     const groupedIds = groups.flatMap((group) =>
@@ -76,8 +76,8 @@ describe('CAD component catalog', () => {
       'modular-grid-base',
       'hsw-cell',
       'hexagonal-column',
-      'pillar',
       'opengrid',
+      'opengrid-pillar',
       'opengrid-divider',
       'opengrid-stackable-box',
       'opengrid-snap',
@@ -449,14 +449,14 @@ describe('CAD component catalog', () => {
     expect(modelIdForCadPath('/cad/opengrid-divider/')).toBe('opengrid-divider')
   })
 
-  it('exposes the independent pillar definition and route', () => {
-    const definition = getModelDefinition('pillar')
+  it('exposes the independent OpenGrid pillar definition and route', () => {
+    const definition = getModelDefinition('opengrid-pillar')
 
     expect(definition).toMatchObject({
-      id: 'pillar',
-      buildKey: 'pillar',
-      family: 'other',
-      displayName: '圓柱支柱',
+      id: 'opengrid-pillar',
+      buildKey: 'opengrid-pillar',
+      family: 'opengrid',
+      displayName: 'OpenGrid 圓柱支柱',
     })
     expect(definition?.parameterSchema).toEqual([
       expect.objectContaining({
@@ -478,7 +478,7 @@ describe('CAD component catalog', () => {
     ).toEqual({
       valid: true,
       value: {
-        modelId: 'pillar',
+        modelId: 'opengrid-pillar',
         parameters: { length: 12, baseConnection: true },
       },
     })
@@ -494,7 +494,7 @@ describe('CAD component catalog', () => {
     expect(definition?.stlFileName({ length: 12, baseConnection: true })).toBe(
       'pillar-12-base.stl',
     )
-    expect(cadPathForModel('pillar')).toBe('/cad/pillar')
-    expect(modelIdForCadPath('/cad/pillar/')).toBe('pillar')
+    expect(cadPathForModel('opengrid-pillar')).toBe('/cad/opengrid-pillar')
+    expect(modelIdForCadPath('/cad/opengrid-pillar/')).toBe('opengrid-pillar')
   })
 })
