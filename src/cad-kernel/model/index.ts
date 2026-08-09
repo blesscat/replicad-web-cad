@@ -9,6 +9,7 @@ import {
   isOpenGridParameters,
   isOpenGridStackableBoxParameters,
   isOpenGridSnapParameters,
+  isOpenGridSnapRemoverParameters,
   validateOpenGridGenerationSupport,
   validateModelParameters,
   type ModelId,
@@ -27,6 +28,7 @@ import { buildModularGridBase } from '../components/modular-grid-base/builder'
 import { buildOpenGridBRep } from '../components/opengrid/builder'
 import { buildOpenGridStackableBox } from '../components/opengrid-stackable-box/builder'
 import { buildOpenGridSnap } from '../components/opengrid-snap/builder'
+import { buildOpenGridSnapRemover } from '../components/opengrid-snap-remover/builder'
 
 export type KernelBuildContext = {
   getModularGridBaseTemplate: () => Promise<Shape3D>
@@ -35,6 +37,7 @@ export type KernelBuildContext = {
   getHexagonalColumnReference?: () => Promise<Shape3D>
   getOpenGridPrototype?: (variant: OpenGridVariant) => Promise<Shape3D>
   getOpenGridSnapReference?: (variant: OpenGridSnapVariant) => Promise<Shape3D>
+  getOpenGridSnapRemoverAsset?: () => Promise<Shape3D>
   yieldToEventLoop?: () => Promise<void>
   isGenerationCurrent?: () => boolean
   reportProgress?: (progress: {
@@ -196,6 +199,24 @@ function buildOpenGridStackableBoxModel(
   })
 }
 
+async function buildOpenGridSnapRemoverModel(
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Promise<Shape3D> {
+  if (!isOpenGridSnapRemoverParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap-remover')
+  }
+  if (!context.getOpenGridSnapRemoverAsset) {
+    throw new Error('MODEL_ASSET_CONTEXT_MISSING:opengrid-snap-remover')
+  }
+
+  const source = await context.getOpenGridSnapRemoverAsset()
+  if (context.isGenerationCurrent && !context.isGenerationCurrent()) {
+    throw new Error('STALE_GENERATION')
+  }
+  return buildOpenGridSnapRemover(source, context)
+}
+
 export const boxKernelDefinition: KernelModelDefinition = {
   id: 'box',
   build: buildBoxModel,
@@ -236,6 +257,11 @@ export const opengridStackableBoxKernelDefinition: KernelModelDefinition = {
   build: buildOpenGridStackableBoxModel,
 }
 
+export const openGridSnapRemoverKernelDefinition: KernelModelDefinition = {
+  id: 'opengrid-snap-remover',
+  build: buildOpenGridSnapRemoverModel,
+}
+
 export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   boxKernelDefinition,
   boxNormalKernelDefinition,
@@ -245,6 +271,7 @@ export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   opengridKernelDefinition,
   opengridStackableBoxKernelDefinition,
   opengridSnapKernelDefinition,
+  openGridSnapRemoverKernelDefinition,
 ]
 
 export function getKernelModelDefinition(

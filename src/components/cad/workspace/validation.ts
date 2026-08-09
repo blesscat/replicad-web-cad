@@ -51,12 +51,15 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
     return OPENGRID_STACKABLE_BOX_PARAMETER_KEYS
   }
   if (modelId === 'opengrid-snap') return ['variant', 'offset']
+  if (modelId === 'opengrid-snap-remover') return []
   throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
 }
 
 export function rawFromParameters(
   parameters: ModelParameterValues,
 ): RawParameters {
+  if (Object.keys(parameters).length === 0) return {}
+
   if ('width' in parameters) {
     return {
       width: String(parameters.width),
@@ -118,10 +121,14 @@ export function rawFromParameters(
     }
   }
 
-  return {
-    rows: String(parameters.rows),
-    columns: String(parameters.columns),
+  if ('rows' in parameters) {
+    return {
+      rows: String(parameters.rows),
+      columns: String(parameters.columns),
+    }
   }
+
+  throw new Error('MODEL_PARAMETERS_EMPTY_OR_UNSUPPORTED')
 }
 
 export function parseRawParameters(
@@ -130,6 +137,17 @@ export function parseRawParameters(
 ):
   | { valid: true; value: ModelParameterValues }
   | { valid: false; message: string; field?: ModelParameterKey } {
+  if (modelId === 'opengrid-snap-remover') {
+    const validation = validateModelParameters(modelId, {})
+    if (validation.valid) {
+      return { valid: true, value: validation.value.parameters }
+    }
+    return {
+      valid: false,
+      message: validation.issues[0]?.message ?? '參數輸入無效。',
+    }
+  }
+
   const keys = parameterKeysForModel(modelId)
   const unexpectedKey = Object.keys(raw).find(
     (key) => !keys.includes(key as ModelParameterKey),

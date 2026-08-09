@@ -27,6 +27,11 @@ describe('CAD Worker error mapping', () => {
       'model.generate',
       'MODEL_ASSET_INVALID',
     ],
+    [
+      'MODEL_ASSET_CONTEXT_MISSING:opengrid-snap-remover',
+      'model.generate',
+      'MODEL_ASSET_INVALID',
+    ],
     ['MODEL_PARAMETERS_INVALID', 'model.generate', 'INVALID_INPUT'],
     ['MESH_INVALID: empty', 'model.generate', 'MESH_INVALID'],
     ['STEP_METADATA_INVALID', 'export.step', 'STEP_METADATA_INVALID'],

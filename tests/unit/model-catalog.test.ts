@@ -49,6 +49,7 @@ describe('CAD component catalog', () => {
       'opengrid',
       'opengrid-stackable-box',
       'opengrid-snap',
+      'opengrid-snap-remover',
     ])
     expect(groups[2]?.definitions.map((definition) => definition.id)).toEqual([
       'box',
@@ -76,6 +77,7 @@ describe('CAD component catalog', () => {
       'opengrid',
       'opengrid-stackable-box',
       'opengrid-snap',
+      'opengrid-snap-remover',
     ])
 
     const boxNormal = getModelDefinition('box-normal')
@@ -269,6 +271,12 @@ describe('CAD component catalog', () => {
     )
     expect(cadPathForModel('opengrid-snap')).toBe('/cad/opengrid-snap')
     expect(modelIdForCadPath('/cad/opengrid-snap/')).toBe('opengrid-snap')
+    expect(cadPathForModel('opengrid-snap-remover')).toBe(
+      '/cad/opengrid-snap-remover',
+    )
+    expect(modelIdForCadPath('/cad/opengrid-snap-remover/')).toBe(
+      'opengrid-snap-remover',
+    )
     expect(modelIdForCadPath('/cad/unknown')).toBeUndefined()
     expect(modelIdForCadPath('/docs/box')).toBeUndefined()
   })

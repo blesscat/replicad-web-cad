@@ -7,6 +7,7 @@
     OpenGridParameters,
   } from '../../cad-contract/units'
   import type { ExportFormat } from '../../features/cad/download'
+  import { getModelDefinition } from '../../features/cad/model-catalog'
   import type { RawParameters } from './workspace/types'
   import ComponentParameterPanel from './component-panels/index.svelte'
   import RestoreDefaultsButton from './component-panels/RestoreDefaultsButton.svelte'
@@ -43,23 +44,30 @@
     resetVersion,
     onRestoreDefaults,
   }: Props = $props()
+
+  function hasParameterControlsFor(modelId: ModelId): boolean {
+    if (modelId === 'opengrid') return true
+    return (getModelDefinition(modelId)?.parameterSchema.length ?? 0) > 0
+  }
 </script>
 
 <div
   class="sticky top-4 self-start grid min-h-0 max-h-[calc(100dvh-16rem)] gap-4 overflow-y-auto rounded-2xl border border-border-card bg-panel p-4 max-cad:static max-cad:max-h-none max-cad:overflow-visible"
   data-testid="cad-workspace-panel"
 >
-  <RestoreDefaultsButton onRestore={onRestoreDefaults} />
-  {#key resetVersion}
-    <ComponentParameterPanel
-      {modelId}
-      {parameters}
-      {rawParameters}
-      {fieldErrors}
-      {onInputChange}
-      {onOpenGridParametersChange}
-    />
-  {/key}
+  {#if hasParameterControlsFor(modelId)}
+    <RestoreDefaultsButton onRestore={onRestoreDefaults} />
+    {#key resetVersion}
+      <ComponentParameterPanel
+        {modelId}
+        {parameters}
+        {rawParameters}
+        {fieldErrors}
+        {onInputChange}
+        {onOpenGridParametersChange}
+      />
+    {/key}
+  {/if}
   <div class="flex flex-wrap gap-[0.6rem]">
     <button
       class={ACTION_BUTTON_CLASS}

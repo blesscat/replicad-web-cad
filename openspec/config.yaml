@@ -1,23 +1,23 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, Svelte, Threlte, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Component naming convention: components that belong to OpenGrid MUST use the
+  lowercase `opengrid-<component-slug>` prefix in their stable modelId,
+  buildKey, route slug, catalog component directory, and CAD-kernel component
+  directory. Their user-facing display name MUST begin with `OpenGrid `.
+  Components outside OpenGrid MUST not receive this prefix. Existing component
+  IDs remain unchanged unless a change explicitly scopes a compatibility
+  migration.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  proposal:
+    - Apply the OpenGrid naming convention to every new OpenGrid component and state whether existing IDs are intentionally preserved.
+  specs:
+    - Normative requirements for a new OpenGrid component MUST use its `opengrid-<component-slug>` modelId and route slug.
+  design:
+    - Keep OpenGrid component assets and Worker-only builders under matching `opengrid-<component-slug>` directories.
+  tasks:
+    - Include a verifiable naming/catalog task whenever a new OpenGrid component is added.
 
 # Per-operation guidance (optional)
 # Add advisory guidance for how apply and archive work should be conducted.

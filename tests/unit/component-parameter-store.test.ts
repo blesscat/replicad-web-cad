@@ -88,6 +88,7 @@ describe('component parameter store', () => {
     expect(store.get('opengrid-snap')).toEqual(
       OPENGRID_SNAP_CONFIGURATION.defaultParameters,
     )
+    expect(store.get('opengrid-snap-remover')).toEqual({})
 
     store.dispose()
   })

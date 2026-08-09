@@ -236,6 +236,7 @@ export type ModelId =
   | 'opengrid'
   | 'opengrid-stackable-box'
   | 'opengrid-snap'
+  | 'opengrid-snap-remover'
 
 export type BoxParameters = Record<DimensionKey, number>
 export type ModularGridBaseParameters = Record<GridParameterKey, number>
@@ -252,6 +253,7 @@ export type HexagonalColumnParameters = {
   gap: number
   orientation: HexagonalColumnOrientation
 }
+export type OpenGridSnapRemoverParameters = Record<never, never>
 
 export type ModelParameters =
   | { modelId: 'box'; parameters: BoxParameters }
@@ -271,6 +273,10 @@ export type ModelParameters =
       parameters: OpenGridStackableBoxParameters
     }
   | { modelId: 'opengrid-snap'; parameters: OpenGridSnapParameters }
+  | {
+      modelId: 'opengrid-snap-remover'
+      parameters: OpenGridSnapRemoverParameters
+    }
 
 export type ModelParameterValues = ModelParameters['parameters']
 
@@ -318,6 +324,10 @@ export type HexagonalColumnValidation =
   | { valid: false; issues: ValidationIssue[] }
 
 export type OpenGridSnapModelValidation = OpenGridSnapValidation
+
+export type OpenGridSnapRemoverValidation =
+  | { valid: true; value: OpenGridSnapRemoverParameters }
+  | { valid: false; issues: ValidationIssue[] }
 
 export type HswCellOffset = [number, number]
 
@@ -747,6 +757,31 @@ export function validateHexagonalColumnParameters(
   return { valid: true, value: parameters }
 }
 
+function isPlainEmptyObject(
+  value: unknown,
+): value is OpenGridSnapRemoverParameters {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return false
+  }
+
+  const prototype = Object.getPrototypeOf(value)
+  if (prototype !== Object.prototype && prototype !== null) return false
+  return Object.keys(value).length === 0
+}
+
+export function validateOpenGridSnapRemoverParameters(
+  value: unknown,
+): OpenGridSnapRemoverValidation {
+  if (!isPlainEmptyObject(value)) {
+    return {
+      valid: false,
+      issues: [{ field: 'parameters', message: '此 component 不接受參數。' }],
+    }
+  }
+
+  return { valid: true, value }
+}
+
 export function validateModelParameters(
   modelId: unknown,
   value: unknown,
@@ -816,6 +851,15 @@ export function validateModelParameters(
       }
     }
     return { valid: true, value: { modelId, parameters: validation.value } }
+  }
+
+  if (modelId === 'opengrid-snap-remover') {
+    const validation = validateOpenGridSnapRemoverParameters(value)
+    if (!validation.valid) return validation
+    return {
+      valid: true,
+      value: { modelId, parameters: validation.value },
+    }
   }
 
   return {
@@ -1001,6 +1045,37 @@ export function hexagonalColumnStlFileName(
   return `hexagonal-column-${parameters.height}x${parameters.count}-g${parameters.gap}-${parameters.orientation}${PROTOTYPE_CONFIGURATION.stlExtension}`
 }
 
+export function openGridSnapRemoverFileName(
+  parameters: OpenGridSnapRemoverParameters,
+): string {
+  if (!isOpenGridSnapRemoverParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap-remover')
+  }
+  return `snap remover${PROTOTYPE_CONFIGURATION.stepExtension}`
+}
+
+export function openGridSnapRemoverStlFileName(
+  parameters: OpenGridSnapRemoverParameters,
+): string {
+  if (!isOpenGridSnapRemoverParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap-remover')
+  }
+  return `snap remover${PROTOTYPE_CONFIGURATION.stlExtension}`
+}
+
+export function boundsForOpenGridSnapRemover(
+  parameters: OpenGridSnapRemoverParameters,
+): ModelBounds {
+  if (!isOpenGridSnapRemoverParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap-remover')
+  }
+
+  return {
+    min: [-17.202743248030416, -20.00551582963562, -5.005506125135993],
+    max: [21.276570355137718, 20.00551582963562, 5.005506125135993],
+  }
+}
+
 export function isBoxParameters(value: unknown): value is BoxParameters {
   return validateBoxParameters(value).valid
 }
@@ -1047,6 +1122,12 @@ export function isOpenGridSnapModelParameters(
   return isOpenGridSnapParameters(value)
 }
 
+export function isOpenGridSnapRemoverParameters(
+  value: unknown,
+): value is OpenGridSnapRemoverParameters {
+  return validateOpenGridSnapRemoverParameters(value).valid
+}
+
 export function isModelParameters(value: unknown): value is ModelParameters {
   if (!value || typeof value !== 'object') return false
   const model = value as { modelId?: unknown; parameters?: unknown }
@@ -1071,6 +1152,8 @@ export function boundsForModel(model: ModelParameters): ModelBounds {
       return boundsForOpenGridStackableBox(model.parameters)
     case 'opengrid-snap':
       return boundsForOpenGridSnap(model.parameters)
+    case 'opengrid-snap-remover':
+      return boundsForOpenGridSnapRemover(model.parameters)
   }
 }
 
@@ -1092,6 +1175,8 @@ export function modelFileName(model: ModelParameters): string {
       return openGridStackableBoxFileName(model.parameters)
     case 'opengrid-snap':
       return openGridSnapFileName(model.parameters)
+    case 'opengrid-snap-remover':
+      return openGridSnapRemoverFileName(model.parameters)
   }
 }
 
@@ -1113,5 +1198,7 @@ export function modelStlFileName(model: ModelParameters): string {
       return openGridStackableBoxStlFileName(model.parameters)
     case 'opengrid-snap':
       return openGridSnapStlFileName(model.parameters)
+    case 'opengrid-snap-remover':
+      return openGridSnapRemoverStlFileName(model.parameters)
   }
 }
