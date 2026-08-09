@@ -255,7 +255,7 @@ The static `/models` chooser MUST include `opengrid-stackable-box` exactly once 
 
 ### Requirement: OpenGrid 分隔器模型選擇入口
 
-The static `/models` chooser MUST include `opengrid-divider` as an independent OpenGrid-series model with an understandable display name, a concise description of its custom 14 mm full-grid/7 mm half-grid base, four directional grid-count controls, configurable height, locating pegs, and rounded top. Its entry MUST link to `/cad/opengrid-divider` without initializing the CAD Worker on the chooser page.
+The static `/models` chooser MUST include `opengrid-divider` as an independent OpenGrid-series model with an understandable display name, a concise description of its custom 14 mm full-grid/7 mm half-grid base, four directional grid-count controls, configurable height, Ø5 × 3 mm locating pegs, 2.5 mm side rounding, and 1 mm rounded top. Its entry MUST link to `/cad/opengrid-divider` without initializing the CAD Worker on the chooser page.
 
 #### Scenario: 選擇 OpenGrid 分隔器
 

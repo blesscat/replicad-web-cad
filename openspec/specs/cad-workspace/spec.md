@@ -855,7 +855,7 @@ The system MUST register `opengrid-divider` as an independent model definition a
 - **WHEN** the divider workspace is rendered
 - **THEN** it MUST display four directional grid-count controls and a configurable height in millimetres
 - **AND** it MUST display the derived line/L/T/cross shape
-- **AND** it MUST display the derived 14 mm full-grid/7 mm half-grid footprint and total Z bounds including the 1 mm peg length
+- **AND** it MUST display the derived 14 mm full-grid/7 mm half-grid footprint and total Z bounds including the 3 mm peg length
 - **AND** it MUST NOT display controls belonging to another model
 
 ### Requirement: 分隔器輸入生命週期
