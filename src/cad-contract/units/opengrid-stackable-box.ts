@@ -36,7 +36,7 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   outerCornerRadius: 1,
   topRailHeight: 1,
   topRailWidth: 1.4,
-  topRailBottomChamfer: 0.35,
+  topRailBottomChamfer: 0.5,
   stackingLeadIn: 0.6,
   bottomGrooveDepth: 0.8,
   bottomGrooveWidth: 1.8,

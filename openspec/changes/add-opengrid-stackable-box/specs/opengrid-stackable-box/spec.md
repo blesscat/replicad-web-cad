@@ -39,7 +39,7 @@ The stackable-box parameter panel MUST provide a width/depth calculator that acc
 
 ### Requirement: Identical box-to-box stacking interface
 
-Every generated stackable box MUST have the same box-to-box interface and MUST be usable as either the lower or upper box without an upper/lower variant or mode switch. The top of the box MUST provide a low-profile continuous convex guide rail or flange. The guide rail MUST retain a 45° top lead-in and MUST also have a short 45° chamfer on its lower inner and outer edges so the protruding profile does not create a sharp downward print overhang. The bottom MUST provide the corresponding recessed guide groove with a 45° lead-in. The bottom stacking surface MUST NOT rely on permanently protruding positioning posts. The receiving geometry MUST provide a continuous sliding path rather than only isolated circular holes.
+Every generated stackable box MUST have the same box-to-box interface and MUST be usable as either the lower or upper box without an upper/lower variant or mode switch. The top of the box MUST provide a low-profile continuous convex guide rail or flange. The guide rail MUST retain a 45° top lead-in and MUST use direct planar lower inner and outer transitions that reach the box-rim alignment, so no residual vertical step remains below the sliding rail. The lower transition angle is fit-driven and is not a separate interface requirement. The bottom MUST provide the corresponding recessed guide groove with a 45° lead-in. The bottom stacking surface MUST NOT rely on permanently protruding positioning posts. The receiving geometry MUST provide a continuous sliding path rather than only isolated circular holes.
 
 #### Scenario: Same model stacks with itself
 
@@ -52,8 +52,9 @@ Every generated stackable box MUST have the same box-to-box interface and MUST b
 
 - **WHEN** a stackable box guide rail is generated
 - **THEN** its upper lead-in MUST remain a continuous 45° sliding surface
-- **AND** its lower inner and outer edges MUST each expose a fixed 45° chamfer
-- **AND** the lower chamfers MUST leave the rail continuously connected to the box rim
+- **AND** its lower inner and outer edges MUST each expose a direct continuous sloping transition to the box-rim alignment
+- **AND** the lower transition MUST NOT leave a residual vertical step below the sliding rail
+- **AND** the lower transitions MUST leave the rail continuously connected to the box rim
 
 #### Scenario: Smaller box slides on a longer box
 

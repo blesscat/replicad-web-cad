@@ -59,3 +59,8 @@
 
 - [x] 8.1 Add a fixed 45° chamfer to both lower edges of the continuous top guide rail while preserving the existing top lead-in and matching bottom groove.
 - [x] 8.2 Add geometry-quality and integration assertions proving the lower rail chamfers exist, remain connected to the rim, and preserve sliding/bridging fixtures.
+
+## 9. Flush lower guide-rail transition
+
+- [x] 9.1 Extend the lower guide-rail transition to the box-rim alignment so the approximately 0.15 mm residual vertical step below the sliding rail is removed, while preserving the top lead-in and bottom groove.
+- [x] 9.2 Add behavior-focused geometry assertions proving the lower transition has no residual inner overhang and that sliding/bridging fixtures remain valid.

@@ -7,7 +7,7 @@ OpenGrid currently provides the official 28 mm board generator but no dedicated 
 - Add an OpenGrid-specific stackable box model based on the existing standard open-box parameters.
 - Calculate the box footprint from OpenGrid's 28 mm pitch and allow half-cell dimensions on both axes.
 - Add the same upper convex guide rail and lower recessed guide groove to every box, with a 45° lead-in on the receiving side.
-- Give the continuous upper guide rail a 45° chamfer on its lower edges as well as its top lead-in, so the protruding sliding surface is printable without a sharp downward overhang.
+- Give the continuous upper guide rail a 45° chamfer on its top lead-in and extend the lower transition until it is aligned with the box rim, so the protruding sliding surface is printable without a residual vertical step or sharp downward overhang.
 - Keep the box bottom generally flush: do not use four permanently protruding stacking posts.
 - Add four bottom-corner Ø5 mm base-mounting holes aligned to the OpenGrid Snap interface, using the 7 mm corner offset.
 - Shape each mounting-hole entry as a Ø5.05 mm base-facing opening with a fixed 0.5 mm 45° transition to a Ø6.05 mm inner opening; do not use a long graduated lead-in.

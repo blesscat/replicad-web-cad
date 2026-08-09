@@ -147,6 +147,11 @@ describe('OpenGrid stackable-box B-Rep', () => {
         interfaceQuality.topRailBottomChamferFaceCount,
       ).toBeGreaterThanOrEqual(4)
       expect(
+        interfaceQuality.topRailBottomResidualVolumes.every(
+          (volume) => volume <= 0.0025,
+        ),
+      ).toBe(true)
+      expect(
         interfaceQuality.bottomGrooveLeadInFaceCount,
       ).toBeGreaterThanOrEqual(4)
       expect(

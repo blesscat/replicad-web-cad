@@ -335,6 +335,7 @@ export type OpenGridStackableBoxInterfaceQualityReport = {
   bottomGrooveVolumes: number[]
   topRailLeadInFaceCount: number
   topRailBottomChamferFaceCount: number
+  topRailBottomResidualVolumes: number[]
   bottomGrooveLeadInFaceCount: number
   mountingHoleChamferFaceCount: number
   captiveSocketRecords: InterfaceQualityRecord[]
@@ -614,6 +615,18 @@ export function inspectOpenGridStackableBoxInterface(
     configuration.topRailBottomChamfer,
     -1,
   )
+  const lowerTransitionBaseZ = parameters.height - configuration.topRailHeight
+  const alignmentProbeMinZ = lowerTransitionBaseZ + 0.01
+  const alignmentProbeMaxZ = lowerTransitionBaseZ + 0.04
+  const topRailBottomResidualVolumes = edgeBandVolumes(
+    shape,
+    width,
+    depth,
+    configuration.wallThickness + 0.08,
+    configuration.wallThickness + 0.01,
+    alignmentProbeMinZ,
+    alignmentProbeMaxZ,
+  )
   const grooveTopZ = -0.01 + configuration.bottomGrooveDepth
   const bottomGrooveLeadInFaceCount = countFortyFiveDegreeFaces(
     shape,
@@ -632,6 +645,7 @@ export function inspectOpenGridStackableBoxInterface(
     bottomGrooveVolumes,
     topRailLeadInFaceCount,
     topRailBottomChamferFaceCount,
+    topRailBottomResidualVolumes,
     bottomGrooveLeadInFaceCount,
     mountingHoleChamferFaceCount,
     captiveSocketRecords,
@@ -716,7 +730,10 @@ export function assertOpenGridStackableBoxGeometry(
   if (
     interfaceQuality.topRailVolumes.some((volume) => volume <= 0.01) ||
     interfaceQuality.topRailLeadInFaceCount < 4 ||
-    interfaceQuality.topRailBottomChamferFaceCount < 4
+    interfaceQuality.topRailBottomChamferFaceCount < 4 ||
+    interfaceQuality.topRailBottomResidualVolumes.some(
+      (volume) => volume > 0.0025,
+    )
   ) {
     throw new Error('OPENGRID_STACKABLE_BOX_TOP_RAIL_INVALID')
   }

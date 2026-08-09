@@ -47,7 +47,7 @@ The floor starts at Z=0 and the height field retains the standard open-box meani
 
 Every box receives a low-profile convex guide rail on its top rim and a matching recessed groove on its underside. The receiving groove has a 45° lead-in to tolerate small placement errors. The guide path is continuous along the relevant box edges, so a smaller box can move along a longer box without being restricted to discrete pin holes.
 
-The upper rail uses a two-sided printable profile: its existing top lead-in remains, and the lower inner/outer rail edges also transition at 45° over a short fixed distance. The lower chamfer removes the sharp downward overhang at the rail base while leaving a continuous sliding path and a positive mating surface for the underside groove.
+The upper rail uses a two-sided printable profile: its existing top lead-in remains, and the lower inner/outer rail edges use direct planar transitions sized to reach the box-rim alignment. The lower transition removes the residual vertical step and sharp downward overhang at the rail base while leaving a continuous sliding path and a positive mating surface for the underside groove. The lower transition angle is not treated as a separate fit contract; the alignment and absence of a residual step are the contract.
 
 The rail profile is kept low and broad enough to transfer lateral load through a surface rather than through four thin posts. Internal seams between adjacent lower boxes must be lower than, or relieved from, the upper box's mating surface. For a larger upper box spanning smaller boxes, the underside relief and outer guide path must allow it to bridge the seam while remaining seated on the combined outer perimeter.
 
@@ -104,6 +104,10 @@ The fixtures inspect bounds, watertightness, non-overlapping socket cutters, rai
 ### 8. Calculate requested dimensions with half-cell upward rounding
 
 The stackable-box panel includes the shared dimension calculator. For a requested X/Y footprint, it evaluates the generated footprint (`cell count × 28 mm − 0.15 mm`) at 0.5-cell increments and selects the smallest valid count whose footprint is not smaller than the requested dimension. This calculator is independent from the existing calculators for models whose contract intentionally rounds down to the largest fitting integer count.
+
+### 9. Align the lower guide-rail transition
+
+The lower guide-rail transition is extended from the previous 0.35 mm distance to the full 0.5 mm rail-to-rim transition. This consumes the remaining 0.15 mm inner overhang and makes the lower transition meet the box rim without a vertical segment. The top lead-in and underside receiving groove remain unchanged.
 
 ## Risks / Trade-offs
 
