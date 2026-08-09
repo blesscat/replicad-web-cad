@@ -38,6 +38,9 @@ export function cadErrorCodeFor(
   ) {
     return 'OPENGRID_QUALITY_INVALID'
   }
+  if (message.includes('OPENGRID_DIVIDER_QUALITY_INVALID')) {
+    return 'OPENGRID_DIVIDER_QUALITY_INVALID'
+  }
   if (message.includes('STEP_METADATA_INVALID')) return 'STEP_METADATA_INVALID'
   if (message.includes('STL_METADATA_INVALID')) return 'STL_METADATA_INVALID'
   if (message.includes('MESH_INVALID')) return 'MESH_INVALID'
@@ -73,6 +76,7 @@ export function cadErrorStageFor(
   ) {
     return 'meshing'
   }
+  if (message.includes('OPENGRID_DIVIDER_QUALITY_INVALID')) return 'meshing'
   if (message.includes('MESH_INVALID')) return 'meshing'
   switch (commandKind) {
     case 'engine.init':

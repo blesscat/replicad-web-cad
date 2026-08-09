@@ -6,6 +6,7 @@ import {
   isHexagonalColumnParameters,
   isHswCellParameters,
   isModularGridBaseParameters,
+  isOpenGridDividerModelParameters,
   isOpenGridParameters,
   isOpenGridStackableBoxParameters,
   isOpenGridSnapParameters,
@@ -26,6 +27,7 @@ import { buildHswCell } from '../components/hsw-cell/builder'
 import { buildHexagonalColumn } from '../components/hexagonal-column/builder'
 import { buildModularGridBase } from '../components/modular-grid-base/builder'
 import { buildOpenGridBRep } from '../components/opengrid/builder'
+import { buildOpenGridDivider } from '../components/opengrid-divider/builder'
 import { buildOpenGridStackableBox } from '../components/opengrid-stackable-box/builder'
 import { buildOpenGridSnap } from '../components/opengrid-snap/builder'
 import { buildOpenGridSnapRemover } from '../components/opengrid-snap-remover/builder'
@@ -187,6 +189,20 @@ async function buildOpenGridSnapModel(
   })
 }
 
+async function buildOpenGridDividerModel(
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Promise<Shape3D> {
+  if (!isOpenGridDividerModelParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-divider')
+  }
+  return buildOpenGridDivider(parameters, {
+    yieldToEventLoop: context.yieldToEventLoop,
+    isGenerationCurrent: context.isGenerationCurrent,
+    reportProgress: context.reportProgress,
+  })
+}
+
 function buildOpenGridStackableBoxModel(
   parameters: ModelParameterValues,
   context: KernelBuildContext,
@@ -262,6 +278,11 @@ export const openGridSnapRemoverKernelDefinition: KernelModelDefinition = {
   build: buildOpenGridSnapRemoverModel,
 }
 
+export const opengridDividerKernelDefinition: KernelModelDefinition = {
+  id: 'opengrid-divider',
+  build: buildOpenGridDividerModel,
+}
+
 export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   boxKernelDefinition,
   boxNormalKernelDefinition,
@@ -272,6 +293,7 @@ export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   opengridStackableBoxKernelDefinition,
   opengridSnapKernelDefinition,
   openGridSnapRemoverKernelDefinition,
+  opengridDividerKernelDefinition,
 ]
 
 export function getKernelModelDefinition(

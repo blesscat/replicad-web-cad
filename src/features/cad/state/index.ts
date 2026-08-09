@@ -3,6 +3,7 @@ import type { MeshSnapshot } from '../../../cad-contract/messages'
 import {
   BOX_NORMAL_CONFIGURATION,
   HEXAGONAL_COLUMN_CONFIGURATION,
+  OPENGRID_DIVIDER_CONFIGURATION,
   OPENGRID_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_SNAP_CONFIGURATION,
@@ -87,6 +88,10 @@ function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
     return { ...OPENGRID_SNAP_CONFIGURATION.defaultParameters }
   }
   if (modelId === 'opengrid-snap-remover') return {}
+
+  if (modelId === 'opengrid-divider') {
+    return { ...OPENGRID_DIVIDER_CONFIGURATION.defaultParameters }
+  }
   throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
 }
 

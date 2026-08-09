@@ -6,8 +6,10 @@ import type {
   OpenGridParameters,
   OpenGridSnapParameters,
 } from '../../src/cad-contract/units'
-import { OPENGRID_CONFIGURATION } from '../../src/cad-contract/units'
-import { PROTOTYPE_CONFIGURATION } from '../../src/cad-contract/units'
+import {
+  OPENGRID_CONFIGURATION,
+  PROTOTYPE_CONFIGURATION,
+} from '../../src/cad-contract/units'
 import type { CadWorkerClient } from '../../src/features/cad/worker-client'
 import { initialCadState } from '../../src/features/cad/state'
 import { rawFromParameters } from '../../src/components/cad/workspace/validation'
@@ -37,6 +39,9 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
   }
   if (modelId === 'opengrid-snap') {
     return { variant: 'Full', offset: 0 }
+  }
+  if (modelId === 'opengrid-divider') {
+    return { left: 1, right: 1, up: 0, down: 0, height: 20 }
   }
   throw new Error(`Unknown model: ${modelId}`)
 }
@@ -363,7 +368,11 @@ describe('CAD model generation debounce', () => {
     const generateCommand = send.mock.calls.find(
       ([command]) => command.kind === 'model.generate',
     )?.[0]
-    const timeoutCall = context.setOperationTimeout.mock.calls.at(-1)
+    const timeoutCall = (
+      context.setOperationTimeout as unknown as {
+        mock: { calls: Array<[string, number, () => void]> }
+      }
+    ).mock.calls.at(-1)
     expect(timeoutCall?.[0]).toBe(generateCommand?.operationId)
     expect(timeoutCall?.[1]).toBe(PROTOTYPE_CONFIGURATION.operationTimeoutMs)
     const timeoutCallback = timeoutCall?.[2] as (() => void) | undefined
@@ -376,6 +385,68 @@ describe('CAD model generation debounce', () => {
         operationId: generateCommand?.operationId,
       }),
       client,
+    )
+  })
+
+  it('debounces divider arm counts with 0.5-grid input support', () => {
+    const { client, send, context } = createRuntimeContext('opengrid-divider', {
+      left: 1,
+      right: 1,
+      up: 0,
+      down: 0,
+      height: 20,
+    })
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('up', '1.5')
+    vi.advanceTimersByTime(500)
+
+    expect(send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.generate',
+        modelId: 'opengrid-divider',
+        parameters: { left: 1, right: 1, up: 1.5, down: 0, height: 20 },
+      }),
+    )
+    expect(client.send).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'model.invalidate', generation: 1 }),
+    )
+  })
+
+  it('registers divider generation timeout recovery for the current operation', () => {
+    const { client, send, context } = createRuntimeContext('opengrid-divider', {
+      left: 1,
+      right: 1,
+      up: 0,
+      down: 0,
+      height: 20,
+    })
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('height', '24')
+    vi.advanceTimersByTime(500)
+
+    const generateCommand = send.mock.calls.find(
+      ([command]) => command.kind === 'model.generate',
+    )?.[0]
+    const timeoutCall = (
+      context.setOperationTimeout as unknown as {
+        mock: { calls: Array<[string, number, () => void]> }
+      }
+    ).mock.calls.at(-1)
+    expect(timeoutCall?.[0]).toBe(generateCommand?.operationId)
+    expect(timeoutCall?.[1]).toBe(PROTOTYPE_CONFIGURATION.operationTimeoutMs)
+    const timeoutCallback = timeoutCall?.[2] as (() => void) | undefined
+    expect(timeoutCallback).toBeDefined()
+    timeoutCallback?.()
+    expect(context.recoverWorker).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: 'WORKER_TIMEOUT',
+        generation: 1,
+        operationId: generateCommand?.operationId,
+      }),
+      client,
+    )
   })
 
   it('invalidates typed OpenGrid snapshots and disables generation for errors', () => {

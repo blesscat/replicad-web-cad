@@ -40,6 +40,29 @@ import type {
   OpenGridSnapParameters,
   OpenGridSnapValidation,
 } from './opengrid-snap'
+import {
+  boundsForOpenGridDivider,
+  classifyOpenGridDividerShape,
+  isOpenGridDividerParameters,
+  normalizeOpenGridDividerParameters,
+  openGridDividerAxisFor,
+  openGridDividerFileName,
+  openGridDividerPegCentersFor,
+  openGridDividerPlanDimensionsFor,
+  openGridDividerStlFileName,
+  OPENGRID_DIVIDER_CONFIGURATION,
+  validateOpenGridDividerParameters,
+} from './opengrid-divider'
+import type {
+  OpenGridDividerAxis,
+  OpenGridDividerParameterKey,
+  OpenGridDividerParameters,
+  OpenGridDividerPlanDimensions,
+  OpenGridDividerPoint2D,
+  OpenGridDividerShape,
+  OpenGridDividerValidation,
+  OpenGridDividerValidationIssue,
+} from './opengrid-divider'
 
 export {
   OPENGRID_CONFIGURATION,
@@ -62,6 +85,19 @@ export {
   validateOpenGridGenerationSupport,
   validateOpenGridParameters,
 } from './opengrid'
+export {
+  boundsForOpenGridDivider,
+  classifyOpenGridDividerShape,
+  isOpenGridDividerParameters,
+  normalizeOpenGridDividerParameters,
+  openGridDividerAxisFor,
+  openGridDividerFileName,
+  openGridDividerPegCentersFor,
+  openGridDividerPlanDimensionsFor,
+  openGridDividerStlFileName,
+  OPENGRID_DIVIDER_CONFIGURATION,
+  validateOpenGridDividerParameters,
+} from './opengrid-divider'
 export {
   boundsForOpenGridStackableBox,
   isOpenGridStackableBoxParameters,
@@ -121,6 +157,16 @@ export type {
   OpenGridParameters,
   OpenGridParameterKey,
 } from './opengrid'
+export type {
+  OpenGridDividerAxis,
+  OpenGridDividerParameterKey,
+  OpenGridDividerParameters,
+  OpenGridDividerPlanDimensions,
+  OpenGridDividerPoint2D,
+  OpenGridDividerShape,
+  OpenGridDividerValidation,
+  OpenGridDividerValidationIssue,
+} from './opengrid-divider'
 
 export const HSW_CELL_CONFIGURATION = {
   maxGridCount: 20,
@@ -210,6 +256,7 @@ export const PROTOTYPE_CONFIGURATION = {
   opengrid: OPENGRID_CONFIGURATION,
   boxNormal: BOX_NORMAL_CONFIGURATION,
   opengridStackableBox: OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  opengridDivider: OPENGRID_DIVIDER_CONFIGURATION,
 } as const
 
 export type DimensionKey = 'width' | 'depth' | 'height'
@@ -225,8 +272,13 @@ export type ModelParameterKey =
   | OpenGridParameterKey
   | OpenGridStackableBoxParameterKey
   | OpenGridSnapParameterKey
+  | OpenGridDividerParameterKey
 export type ScalarModelParameterKey =
-  DimensionKey | GridParameterKey | HexagonalColumnParameterKey | 'offset'
+  | DimensionKey
+  | GridParameterKey
+  | HexagonalColumnParameterKey
+  | OpenGridDividerParameterKey
+  | 'offset'
 export type ModelId =
   | 'box'
   | 'box-normal'
@@ -237,6 +289,7 @@ export type ModelId =
   | 'opengrid-stackable-box'
   | 'opengrid-snap'
   | 'opengrid-snap-remover'
+  | 'opengrid-divider'
 
 export type BoxParameters = Record<DimensionKey, number>
 export type ModularGridBaseParameters = Record<GridParameterKey, number>
@@ -276,6 +329,10 @@ export type ModelParameters =
   | {
       modelId: 'opengrid-snap-remover'
       parameters: OpenGridSnapRemoverParameters
+    }
+  | {
+      modelId: 'opengrid-divider'
+      parameters: OpenGridDividerParameters
     }
 
 export type ModelParameterValues = ModelParameters['parameters']
@@ -324,6 +381,15 @@ export type HexagonalColumnValidation =
   | { valid: false; issues: ValidationIssue[] }
 
 export type OpenGridSnapModelValidation = OpenGridSnapValidation
+export type OpenGridDividerModelValidation =
+  | {
+      valid: true
+      value: {
+        modelId: 'opengrid-divider'
+        parameters: OpenGridDividerParameters
+      }
+    }
+  | { valid: false; issues: ValidationIssue[] }
 
 export type OpenGridSnapRemoverValidation =
   | { valid: true; value: OpenGridSnapRemoverParameters }
@@ -862,6 +928,20 @@ export function validateModelParameters(
     }
   }
 
+  if (modelId === 'opengrid-divider') {
+    const validation = validateOpenGridDividerParameters(value)
+    if (!validation.valid) {
+      return {
+        valid: false,
+        issues: validation.issues.map((issue) => ({
+          field: issue.field,
+          message: issue.message,
+        })),
+      }
+    }
+    return { valid: true, value: { modelId, parameters: validation.value } }
+  }
+
   return {
     valid: false,
     issues: [{ field: 'parameters', message: '找不到指定的 CAD component。' }],
@@ -1128,6 +1208,12 @@ export function isOpenGridSnapRemoverParameters(
   return validateOpenGridSnapRemoverParameters(value).valid
 }
 
+export function isOpenGridDividerModelParameters(
+  value: unknown,
+): value is OpenGridDividerParameters {
+  return isOpenGridDividerParameters(value)
+}
+
 export function isModelParameters(value: unknown): value is ModelParameters {
   if (!value || typeof value !== 'object') return false
   const model = value as { modelId?: unknown; parameters?: unknown }
@@ -1154,6 +1240,8 @@ export function boundsForModel(model: ModelParameters): ModelBounds {
       return boundsForOpenGridSnap(model.parameters)
     case 'opengrid-snap-remover':
       return boundsForOpenGridSnapRemover(model.parameters)
+    case 'opengrid-divider':
+      return boundsForOpenGridDivider(model.parameters)
   }
 }
 
@@ -1177,6 +1265,8 @@ export function modelFileName(model: ModelParameters): string {
       return openGridSnapFileName(model.parameters)
     case 'opengrid-snap-remover':
       return openGridSnapRemoverFileName(model.parameters)
+    case 'opengrid-divider':
+      return openGridDividerFileName(model.parameters)
   }
 }
 
@@ -1200,5 +1290,7 @@ export function modelStlFileName(model: ModelParameters): string {
       return openGridSnapStlFileName(model.parameters)
     case 'opengrid-snap-remover':
       return openGridSnapRemoverStlFileName(model.parameters)
+    case 'opengrid-divider':
+      return openGridDividerStlFileName(model.parameters)
   }
 }

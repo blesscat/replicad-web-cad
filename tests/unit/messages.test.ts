@@ -177,6 +177,46 @@ describe('Worker contract runtime validation', () => {
     ).toBe(false)
   })
 
+  it('accepts only the independent divider arm-count contract', () => {
+    const command = {
+      version: PROTOCOL_VERSION,
+      kind: 'model.generate' as const,
+      requestId: 'request-divider-1',
+      operationId: 'operation-divider-1',
+      generation: 1,
+      modelId: 'opengrid-divider' as const,
+      parameters: { left: 1, right: 1, up: 2, down: 0, height: 20 },
+      previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
+    }
+
+    expect(isWorkerCommand(command)).toBe(true)
+    expect(
+      isWorkerCommand({
+        ...command,
+        parameters: { left: 1, right: 0, up: 0, down: 0, height: 20 },
+      }),
+    ).toBe(false)
+    expect(
+      isWorkerCommand({
+        ...command,
+        parameters: { left: 1.25, right: 1, up: 0, down: 0, height: 20 },
+      }),
+    ).toBe(false)
+    expect(
+      isWorkerCommand({
+        ...command,
+        parameters: {
+          left: 1,
+          right: 1,
+          up: 0,
+          down: 0,
+          height: 20,
+          rows: 1,
+        },
+      }),
+    ).toBe(false)
+  })
+
   it('accepts hexagonal-column commands with orientation', () => {
     const command = {
       version: PROTOCOL_VERSION,

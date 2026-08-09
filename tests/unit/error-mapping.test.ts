@@ -32,6 +32,11 @@ describe('CAD Worker error mapping', () => {
       'model.generate',
       'MODEL_ASSET_INVALID',
     ],
+    [
+      'OPENGRID_DIVIDER_QUALITY_INVALID:fillet:top-edge-rounding-missing',
+      'model.generate',
+      'OPENGRID_DIVIDER_QUALITY_INVALID',
+    ],
     ['MODEL_PARAMETERS_INVALID', 'model.generate', 'INVALID_INPUT'],
     ['MESH_INVALID: empty', 'model.generate', 'MESH_INVALID'],
     ['STEP_METADATA_INVALID', 'export.step', 'STEP_METADATA_INVALID'],
@@ -53,6 +58,12 @@ describe('CAD Worker error mapping', () => {
     expect(cadErrorStageFor('export.step')).toBe('exporting')
     expect(cadErrorStageFor('model.generate')).toBe('building')
     expect(cadErrorStageFor('model.generate', 'MESH_INVALID')).toBe('meshing')
+    expect(
+      cadErrorStageFor(
+        'model.generate',
+        'OPENGRID_DIVIDER_QUALITY_INVALID:pegs:missing',
+      ),
+    ).toBe('meshing')
     expect(cadErrorStageFor('model.commit')).toBe('worker')
   })
 })

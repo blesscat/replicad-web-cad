@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   meshBRep: vi.fn(),
   serializeMesh: vi.fn(),
   assertOpenGridShapeQuality: vi.fn(),
+  assertOpenGridDividerShapeQuality: vi.fn(),
   exportStepBytes: vi.fn(),
   exportStlBytes: vi.fn(),
 }))
@@ -23,6 +24,9 @@ vi.mock('../../src/cad-kernel/mesh', () => ({
 vi.mock('../../src/cad-kernel/components/opengrid/quality', () => ({
   assertOpenGridShapeQuality: mocks.assertOpenGridShapeQuality,
 }))
+vi.mock('../../src/cad-kernel/components/opengrid-divider/quality', () => ({
+  assertOpenGridDividerShapeQuality: mocks.assertOpenGridDividerShapeQuality,
+}))
 vi.mock('../../src/cad-kernel/export', () => ({
   exportStepBytes: mocks.exportStepBytes,
   exportStlBytes: mocks.exportStlBytes,
@@ -35,6 +39,8 @@ import {
   openGridStackableBoxStlFileName,
   openGridFileName,
   openGridStlFileName,
+  openGridDividerFileName,
+  openGridDividerStlFileName,
   type OpenGridParameters,
   type OpenGridStackableBoxParameters,
 } from '../../src/cad-contract/units'
@@ -102,6 +108,19 @@ function stackableBoxGenerateCommand(
     },
     previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
     ...overrides,
+  }
+}
+
+function dividerGenerateCommand(generation = 1) {
+  return {
+    ...base,
+    requestId: `divider-request-${generation}`,
+    operationId: `divider-operation-${generation}`,
+    kind: 'model.generate' as const,
+    generation,
+    modelId: 'opengrid-divider' as const,
+    parameters: { left: 1, right: 1, up: 2, down: 0, height: 20 },
+    previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
   }
 }
 
@@ -363,10 +382,20 @@ describe('OpenGrid Worker runtime', () => {
         event.kind === 'model.ready',
     ) as {
       modelRevision: string
-      parameters: { x: number; y: number; height: number }
+      parameters: {
+        x: number
+        y: number
+        height: number
+        fullBottomHoleGrid: boolean
+      }
       workerEpoch: string
     }
-    expect(ready.parameters).toEqual({ x: 0.5, y: 1.5, height: 20 })
+    expect(ready.parameters).toEqual({
+      x: 0.5,
+      y: 1.5,
+      height: 20,
+      fullBottomHoleGrid: true,
+    })
 
     await runtime.handle({
       ...base,
@@ -405,6 +434,108 @@ describe('OpenGrid Worker runtime', () => {
     ).toHaveLength(2)
   })
 
+  it('routes divider commands through its own quality gate and exports', async () => {
+    const events: unknown[] = []
+    const runtime = new CadWorkerRuntime('epoch-divider', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(dividerGenerateCommand())
+
+    const parameters = {
+      left: 1,
+      right: 1,
+      up: 2,
+      down: 0,
+      height: 20,
+    }
+    expect(mocks.buildModelBRep).toHaveBeenCalledWith(
+      'opengrid-divider',
+      parameters,
+      expect.any(Object),
+    )
+    expect(mocks.assertOpenGridDividerShapeQuality).toHaveBeenCalledOnce()
+    expect(mocks.assertOpenGridShapeQuality).not.toHaveBeenCalled()
+
+    const candidate = events.find(
+      (event) =>
+        typeof event === 'object' &&
+        event !== null &&
+        'kind' in event &&
+        event.kind === 'model.candidate-ready',
+    ) as { candidateId: string } | undefined
+    expect(candidate).toBeDefined()
+
+    await runtime.handle({
+      ...base,
+      requestId: 'divider-commit-request',
+      operationId: 'divider-operation-1',
+      kind: 'model.commit' as const,
+      generation: 1,
+      candidateId: candidate!.candidateId,
+      workerEpoch: 'epoch-divider',
+    })
+    const ready = events.find(
+      (event) =>
+        typeof event === 'object' &&
+        event !== null &&
+        'kind' in event &&
+        event.kind === 'model.ready',
+    ) as { modelRevision: string; workerEpoch: string }
+
+    await runtime.handle({
+      ...base,
+      requestId: 'divider-export-step-request',
+      operationId: 'divider-export-step-operation',
+      kind: 'export.step' as const,
+      modelRevision: ready.modelRevision,
+      workerEpoch: ready.workerEpoch,
+      file: {
+        name: openGridDividerFileName(parameters),
+        mime: 'model/step' as const,
+      },
+    })
+    await runtime.handle({
+      ...base,
+      requestId: 'divider-export-stl-request',
+      operationId: 'divider-export-stl-operation',
+      kind: 'export.stl' as const,
+      modelRevision: ready.modelRevision,
+      workerEpoch: ready.workerEpoch,
+      file: {
+        name: openGridDividerStlFileName(parameters),
+        mime: 'model/stl' as const,
+      },
+    })
+    expect(mocks.exportStepBytes).toHaveBeenCalledOnce()
+    expect(mocks.exportStlBytes).toHaveBeenCalledOnce()
+  })
+
+  it('keeps latest-wins invalidation for divider generations', async () => {
+    const events: unknown[] = []
+    const runtime = new CadWorkerRuntime('epoch-divider-latest', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(dividerGenerateCommand(1))
+    await runtime.handle(dividerGenerateCommand(2))
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'operation.superseded',
+        operationId: 'divider-operation-1',
+        reason: 'STALE_GENERATION',
+      }),
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'model.candidate-ready',
+        operationId: 'divider-operation-2',
+        modelId: 'opengrid-divider',
+      }),
+    )
+  })
+
   it('rejects malformed stackable-box parameters at the Worker protocol boundary', async () => {
     const events: unknown[] = []
     const runtime = new CadWorkerRuntime('epoch-stackable-invalid', (event) =>
@@ -440,7 +571,12 @@ describe('OpenGrid Worker runtime', () => {
       stackableBoxGenerateCommand(2, {
         requestId: 'stackable-request-2',
         operationId: 'stackable-operation-2',
-        parameters: { x: 1, y: 1, height: 20 },
+        parameters: {
+          x: 1,
+          y: 1,
+          height: 20,
+          fullBottomHoleGrid: false,
+        },
       }),
     )
 
@@ -459,4 +595,62 @@ describe('OpenGrid Worker runtime', () => {
       }),
     )
   })
+
+  it('discards a divider candidate exactly once', async () => {
+    const events: unknown[] = []
+    const runtime = new CadWorkerRuntime('epoch-divider-discard', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(dividerGenerateCommand())
+
+    const candidate = events.find(
+      (event) =>
+        typeof event === 'object' &&
+        event !== null &&
+        'kind' in event &&
+        event.kind === 'model.candidate-ready',
+    ) as { candidateId: string } | undefined
+    expect(candidate).toBeDefined()
+
+    const discard = {
+      ...base,
+      requestId: 'divider-discard-request-1',
+      operationId: 'divider-operation-1',
+      kind: 'model.discard' as const,
+      generation: 1,
+      candidateId: candidate!.candidateId,
+      workerEpoch: 'epoch-divider-discard',
+    }
+    await runtime.handle(discard)
+    await runtime.handle({ ...discard, requestId: 'divider-discard-request-2' })
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'operation.superseded',
+        operationId: 'divider-operation-1',
+        terminalForRequestId: 'divider-request-1',
+        reason: 'CANDIDATE_ORPHANED',
+      }),
+    )
+    expect(
+      events.filter(
+        (event) =>
+          typeof event === 'object' &&
+          event !== null &&
+          'kind' in event &&
+          event.kind === 'operation.superseded',
+      ),
+    ).toHaveLength(1)
+    expect(
+      events.some(
+        (event) =>
+          typeof event === 'object' &&
+          event !== null &&
+          'kind' in event &&
+          event.kind === 'model.ready',
+      ),
+    ).toBe(false)
+  })
+  // Divider candidate terminal coverage is also exercised in lifecycle suite.
 })

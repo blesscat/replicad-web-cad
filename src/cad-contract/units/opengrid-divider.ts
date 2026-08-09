@@ -1,0 +1,308 @@
+export type OpenGridDividerShape = 'straight' | 'L' | 'T' | 'cross'
+export type OpenGridDividerAxis = 'horizontal' | 'vertical' | null
+
+export type OpenGridDividerParameterKey =
+  'left' | 'right' | 'up' | 'down' | 'height'
+
+export type OpenGridDividerParameters = {
+  left: number
+  right: number
+  up: number
+  down: number
+  height: number
+}
+
+export type OpenGridDividerPoint2D = [number, number]
+
+export type OpenGridDividerPlanDimensions = {
+  width: number
+  depth: number
+  wallHeight: number
+  totalHeight: number
+}
+
+export type OpenGridDividerValidationIssue = {
+  field: OpenGridDividerParameterKey | 'parameters'
+  message: string
+}
+
+export type OpenGridDividerValidation =
+  | { valid: true; value: OpenGridDividerParameters }
+  | { valid: false; issues: OpenGridDividerValidationIssue[] }
+
+const DIVIDER_PARAMETER_KEYS: readonly OpenGridDividerParameterKey[] = [
+  'left',
+  'right',
+  'up',
+  'down',
+  'height',
+]
+
+export const OPENGRID_DIVIDER_CONFIGURATION = {
+  gridPitch: 14,
+  halfGridPitch: 7,
+  gridStep: 0.5,
+  wallWidth: 5,
+  pegDiameter: 5,
+  pegLength: 1,
+  pegCenterSpacing: 28,
+  topFilletRadius: 1,
+  maxDimension: 500,
+  maxArmCount: 35.5,
+  minHeight: 2,
+  maxHeight: 500,
+  defaultParameters: {
+    left: 1,
+    right: 1,
+    up: 0,
+    down: 0,
+    height: 20,
+  } satisfies OpenGridDividerParameters,
+} as const
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function hasExactKeys(
+  value: Record<string, unknown>,
+  keys: readonly string[],
+): boolean {
+  return (
+    Object.keys(value).length === keys.length &&
+    keys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
+  )
+}
+
+function isSafeCount(value: unknown): value is number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return false
+  const halfGridCount = value / OPENGRID_DIVIDER_CONFIGURATION.gridStep
+  return (
+    Number.isSafeInteger(halfGridCount) &&
+    value >= 0 &&
+    value <= OPENGRID_DIVIDER_CONFIGURATION.maxArmCount
+  )
+}
+
+function isSafeHeight(value: unknown): value is number {
+  return (
+    Number.isSafeInteger(value) &&
+    (value as number) >= OPENGRID_DIVIDER_CONFIGURATION.minHeight &&
+    (value as number) <= OPENGRID_DIVIDER_CONFIGURATION.maxHeight
+  )
+}
+
+function countActiveDirections(
+  parameters: Pick<OpenGridDividerParameters, 'left' | 'right' | 'up' | 'down'>,
+): number {
+  return [
+    parameters.left,
+    parameters.right,
+    parameters.up,
+    parameters.down,
+  ].filter((count) => count > 0).length
+}
+
+export function classifyOpenGridDividerShape(
+  parameters: Pick<OpenGridDividerParameters, 'left' | 'right' | 'up' | 'down'>,
+): OpenGridDividerShape {
+  const activeDirections = countActiveDirections(parameters)
+  if (activeDirections < 2) throw new Error('OPENGRID_DIVIDER_SHAPE_INVALID')
+  if (activeDirections === 4) return 'cross'
+  if (activeDirections === 3) return 'T'
+  if (
+    (parameters.left > 0 && parameters.right > 0) ||
+    (parameters.up > 0 && parameters.down > 0)
+  ) {
+    return 'straight'
+  }
+  return 'L'
+}
+
+export function openGridDividerAxisFor(
+  parameters: Pick<OpenGridDividerParameters, 'left' | 'right' | 'up' | 'down'>,
+): OpenGridDividerAxis {
+  if (classifyOpenGridDividerShape(parameters) !== 'straight') return null
+  if (parameters.left > 0 || parameters.right > 0) return 'horizontal'
+  return 'vertical'
+}
+
+function rawPlanBoundsFor(
+  parameters: Pick<OpenGridDividerParameters, 'left' | 'right' | 'up' | 'down'>,
+): {
+  minX: number
+  maxX: number
+  minY: number
+  maxY: number
+} {
+  const { gridPitch, wallWidth } = OPENGRID_DIVIDER_CONFIGURATION
+  return {
+    minX: Math.min(-parameters.left * gridPitch, -wallWidth / 2),
+    maxX: Math.max(parameters.right * gridPitch, wallWidth / 2),
+    minY: Math.min(-parameters.down * gridPitch, -wallWidth / 2),
+    maxY: Math.max(parameters.up * gridPitch, wallWidth / 2),
+  }
+}
+
+export function openGridDividerPlanDimensionsFor(
+  parameters: Pick<
+    OpenGridDividerParameters,
+    'left' | 'right' | 'up' | 'down' | 'height'
+  >,
+): OpenGridDividerPlanDimensions {
+  const bounds = rawPlanBoundsFor(parameters)
+  return {
+    width: bounds.maxX - bounds.minX,
+    depth: bounds.maxY - bounds.minY,
+    wallHeight: parameters.height,
+    totalHeight: parameters.height + OPENGRID_DIVIDER_CONFIGURATION.pegLength,
+  }
+}
+
+export function validateOpenGridDividerParameters(
+  value: unknown,
+): OpenGridDividerValidation {
+  if (!isRecord(value)) {
+    return {
+      valid: false,
+      issues: [{ field: 'parameters', message: '需要提供完整的分隔器參數。' }],
+    }
+  }
+
+  const issues: OpenGridDividerValidationIssue[] = []
+  if (!hasExactKeys(value, DIVIDER_PARAMETER_KEYS)) {
+    issues.push({
+      field: 'parameters',
+      message: '包含不支援或缺少的分隔器參數欄位。',
+    })
+  }
+
+  for (const field of ['left', 'right', 'up', 'down'] as const) {
+    const count = value[field]
+    if (!isSafeCount(count)) {
+      issues.push({
+        field,
+        message: `格數必須是 0–${OPENGRID_DIVIDER_CONFIGURATION.maxArmCount} 的 ${OPENGRID_DIVIDER_CONFIGURATION.gridStep} 格倍數。`,
+      })
+    }
+  }
+
+  if (!isSafeHeight(value.height)) {
+    issues.push({
+      field: 'height',
+      message: `高度必須是 ${OPENGRID_DIVIDER_CONFIGURATION.minHeight}–${OPENGRID_DIVIDER_CONFIGURATION.maxHeight} mm 的安全整數。`,
+    })
+  }
+
+  const countsAreValid = (['left', 'right', 'up', 'down'] as const).every(
+    (field) => isSafeCount(value[field]),
+  )
+  if (countsAreValid) {
+    const candidate = {
+      left: value.left as number,
+      right: value.right as number,
+      up: value.up as number,
+      down: value.down as number,
+    }
+    if (countActiveDirections(candidate) < 2) {
+      issues.push({
+        field: 'parameters',
+        message: '至少需要兩個方向才能建立一字型、L 型、T 型或十字型。',
+      })
+    } else {
+      const plan = rawPlanBoundsFor(candidate)
+      if (
+        plan.maxX - plan.minX > OPENGRID_DIVIDER_CONFIGURATION.maxDimension ||
+        plan.maxY - plan.minY > OPENGRID_DIVIDER_CONFIGURATION.maxDimension
+      ) {
+        issues.push({
+          field: 'parameters',
+          message: `分隔器平面尺寸不可超過 ${OPENGRID_DIVIDER_CONFIGURATION.maxDimension} mm。`,
+        })
+      }
+    }
+  }
+
+  if (issues.length > 0) return { valid: false, issues }
+
+  return {
+    valid: true,
+    value: {
+      left: value.left as number,
+      right: value.right as number,
+      up: value.up as number,
+      down: value.down as number,
+      height: value.height as number,
+    },
+  }
+}
+
+export function normalizeOpenGridDividerParameters(
+  value: unknown,
+): OpenGridDividerParameters {
+  const validation = validateOpenGridDividerParameters(value)
+  if (!validation.valid) throw new Error('OPENGRID_DIVIDER_PARAMETERS_INVALID')
+  return validation.value
+}
+
+export function isOpenGridDividerParameters(
+  value: unknown,
+): value is OpenGridDividerParameters {
+  return validateOpenGridDividerParameters(value).valid
+}
+
+export function openGridDividerPegCentersFor(
+  parameters: Pick<OpenGridDividerParameters, 'left' | 'right' | 'up' | 'down'>,
+): OpenGridDividerPoint2D[] {
+  const { gridPitch, pegCenterSpacing } = OPENGRID_DIVIDER_CONFIGURATION
+  const centers: OpenGridDividerPoint2D[] = [[0, 0]]
+
+  function addArm(count: number, direction: OpenGridDividerPoint2D): void {
+    const armLength = count * gridPitch
+    for (
+      let distance = pegCenterSpacing;
+      distance < armLength;
+      distance += pegCenterSpacing
+    ) {
+      centers.push([direction[0] * distance, direction[1] * distance])
+    }
+  }
+
+  addArm(parameters.left, [-1, 0])
+  addArm(parameters.right, [1, 0])
+  addArm(parameters.up, [0, 1])
+  addArm(parameters.down, [0, -1])
+  return centers
+}
+
+export function boundsForOpenGridDivider(
+  parameters: OpenGridDividerParameters,
+) {
+  const plan = rawPlanBoundsFor(parameters)
+  const centerX = (plan.minX + plan.maxX) / 2
+  const centerY = (plan.minY + plan.maxY) / 2
+  return {
+    min: [
+      plan.minX - centerX,
+      plan.minY - centerY,
+      -OPENGRID_DIVIDER_CONFIGURATION.pegLength,
+    ] as [number, number, number],
+    max: [plan.maxX - centerX, plan.maxY - centerY, parameters.height] as [
+      number,
+      number,
+      number,
+    ],
+  }
+}
+
+export function openGridDividerFileName(
+  parameters: OpenGridDividerParameters,
+): string {
+  return `opengrid-divider-l${parameters.left}-r${parameters.right}-u${parameters.up}-d${parameters.down}-h${parameters.height}.step`
+}
+
+export function openGridDividerStlFileName(
+  parameters: OpenGridDividerParameters,
+): string {
+  return `opengrid-divider-l${parameters.left}-r${parameters.right}-u${parameters.up}-d${parameters.down}-h${parameters.height}.stl`
+}
