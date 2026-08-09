@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+定義 OpenGrid 底板與 Snap 半格幾何共用的方向、尺寸、連接介面、外框支撐與最終特徵配置契約。
+
+## Requirements
 
 ### Requirement: Shared half-cell axis contract
 
