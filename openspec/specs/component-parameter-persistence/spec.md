@@ -100,3 +100,48 @@ The system MUST treat browser persistence as an optional enhancement. If browser
 - **WHEN** browser storage rejects the persistence write
 - **THEN** the runtime parameter state MUST still retain the accepted values
 - **AND** CAD generation MUST continue without treating the storage failure as a Worker or model error
+
+## ADDED Requirements
+
+### Requirement: OpenGrid Snap parameters are persisted independently
+
+The versioned browser persistence MUST store valid Snap parameters under the stable `opengrid-snap` model id. The entry MUST contain only typed `variant` and `offset` values accepted by the Snap validator, and it MUST remain independent from the existing `opengrid` board entry.
+
+#### Scenario: Restore saved Snap parameters
+
+- **GIVEN** browser persistence contains a valid `opengrid-snap` entry
+- **WHEN** the user opens `/cad/opengrid-snap`
+- **THEN** the control MUST display the saved variant and shared total X/Y offset
+- **AND** the first generation MUST use those typed values
+
+#### Scenario: Persist a valid Snap update
+
+- **GIVEN** a Snap parameter snapshot passes validation
+- **WHEN** the workspace accepts the update
+- **THEN** persistence MUST update only the `opengrid-snap` entry
+- **AND** the stored values MUST be typed values rather than raw input strings
+
+#### Scenario: Invalid Snap input does not overwrite persistence
+
+- **GIVEN** a previously accepted Snap snapshot exists in persistence
+- **WHEN** the user enters an invalid or incomplete variant or offset
+- **THEN** the previous accepted `opengrid-snap` entry MUST remain unchanged
+- **AND** the invalid value MUST NOT be sent to the Worker as `model.generate`
+
+### Requirement: Invalid or legacy Snap persistence falls back safely
+
+The persistence reader MUST reject malformed Snap entries, entries with board OpenGrid fields, and entries with unsupported variants or offsets. When such an entry is found, the Snap workspace MUST use its definition defaults without affecting the existing `opengrid` board entry or other model entries.
+
+#### Scenario: Legacy board entry is not reused for Snap
+
+- **GIVEN** persistence contains an `opengrid` board snapshot but no valid `opengrid-snap` snapshot
+- **WHEN** the user opens `/cad/opengrid-snap`
+- **THEN** the workspace MUST use the Snap defaults
+- **AND** it MUST NOT merge board rows, screws, connectors, or variant values into the Snap snapshot
+
+#### Scenario: Malformed Snap entry falls back
+
+- **GIVEN** the stored `opengrid-snap` entry fails the current validator
+- **WHEN** the Snap workspace initializes
+- **THEN** it MUST use the Snap definition defaults
+- **AND** initialization MUST continue without a CAD failure

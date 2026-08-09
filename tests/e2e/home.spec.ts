@@ -60,6 +60,9 @@ test('home, model selection, and docs are static Astro pages', async ({
   await expect(
     page.getByRole('link', { name: '使用OpenGrid 底板' }),
   ).toHaveAttribute('href', '/cad/opengrid')
+  await expect(
+    page.getByRole('link', { name: '使用OpenGrid Snap' }),
+  ).toHaveAttribute('href', '/cad/opengrid-snap')
   await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
 
   await page.goto('/docs/')

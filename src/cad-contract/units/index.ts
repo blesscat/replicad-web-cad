@@ -7,6 +7,19 @@ import {
   isOpenGridParameters,
 } from './opengrid'
 import type { OpenGridParameterKey, OpenGridParameters } from './opengrid'
+import {
+  boundsForOpenGridSnap,
+  isOpenGridSnapParameters,
+  openGridSnapFileName,
+  openGridSnapStlFileName,
+  OPENGRID_SNAP_CONFIGURATION,
+  validateOpenGridSnapParameters,
+} from './opengrid-snap'
+import type {
+  OpenGridSnapParameterKey,
+  OpenGridSnapParameters,
+  OpenGridSnapValidation,
+} from './opengrid-snap'
 
 export {
   OPENGRID_CONFIGURATION,
@@ -29,6 +42,23 @@ export {
   validateOpenGridGenerationSupport,
   validateOpenGridParameters,
 } from './opengrid'
+export {
+  boundsForOpenGridSnap,
+  isOpenGridSnapParameters,
+  openGridSnapFileName,
+  openGridSnapStlFileName,
+  OPENGRID_SNAP_CONFIGURATION,
+  parseOpenGridSnapDecimalInput,
+  validateOpenGridSnapParameters,
+} from './opengrid-snap'
+export type {
+  OpenGridSnapBounds,
+  OpenGridSnapParameterKey,
+  OpenGridSnapParameters,
+  OpenGridSnapValidation,
+  OpenGridSnapValidationIssue,
+  OpenGridSnapVariant,
+} from './opengrid-snap'
 export type {
   OpenGridBoardConfiguration,
   OpenGridChamferMode,
@@ -152,8 +182,9 @@ export type ModelParameterKey =
   | BoxNormalParameterKey
   | HexagonalColumnParameterKey
   | OpenGridParameterKey
+  | OpenGridSnapParameterKey
 export type ScalarModelParameterKey =
-  DimensionKey | GridParameterKey | HexagonalColumnParameterKey
+  DimensionKey | GridParameterKey | HexagonalColumnParameterKey | 'offset'
 export type ModelId =
   | 'box'
   | 'box-normal'
@@ -161,6 +192,7 @@ export type ModelId =
   | 'hsw-cell'
   | 'hexagonal-column'
   | 'opengrid'
+  | 'opengrid-snap'
 
 export type BoxParameters = Record<DimensionKey, number>
 export type ModularGridBaseParameters = Record<GridParameterKey, number>
@@ -191,6 +223,7 @@ export type ModelParameters =
       parameters: HexagonalColumnParameters
     }
   | { modelId: 'opengrid'; parameters: OpenGridParameters }
+  | { modelId: 'opengrid-snap'; parameters: OpenGridSnapParameters }
 
 export type ModelParameterValues = ModelParameters['parameters']
 
@@ -226,6 +259,8 @@ export type BoxNormalValidation =
 export type HexagonalColumnValidation =
   | { valid: true; value: HexagonalColumnParameters }
   | { valid: false; issues: ValidationIssue[] }
+
+export type OpenGridSnapModelValidation = OpenGridSnapValidation
 
 export type HswCellOffset = [number, number]
 
@@ -698,6 +733,20 @@ export function validateModelParameters(
     return { valid: true, value: { modelId, parameters: validation.value } }
   }
 
+  if (modelId === 'opengrid-snap') {
+    const validation = validateOpenGridSnapParameters(value)
+    if (!validation.valid) {
+      return {
+        valid: false,
+        issues: validation.issues.map((issue) => ({
+          field: issue.field as ValidationIssue['field'],
+          message: issue.message,
+        })),
+      }
+    }
+    return { valid: true, value: { modelId, parameters: validation.value } }
+  }
+
   return {
     valid: false,
     issues: [{ field: 'parameters', message: '找不到指定的 CAD component。' }],
@@ -915,6 +964,12 @@ export function isOpenGridModelParameters(
   return isOpenGridParameters(value)
 }
 
+export function isOpenGridSnapModelParameters(
+  value: unknown,
+): value is OpenGridSnapParameters {
+  return isOpenGridSnapParameters(value)
+}
+
 export function isModelParameters(value: unknown): value is ModelParameters {
   if (!value || typeof value !== 'object') return false
   const model = value as { modelId?: unknown; parameters?: unknown }
@@ -935,6 +990,8 @@ export function boundsForModel(model: ModelParameters): ModelBounds {
       return boundsForHexagonalColumn(model.parameters)
     case 'opengrid':
       return boundsForOpenGrid(model.parameters)
+    case 'opengrid-snap':
+      return boundsForOpenGridSnap(model.parameters)
   }
 }
 
@@ -952,6 +1009,8 @@ export function modelFileName(model: ModelParameters): string {
       return hexagonalColumnFileName(model.parameters)
     case 'opengrid':
       return openGridFileName(model.parameters)
+    case 'opengrid-snap':
+      return openGridSnapFileName(model.parameters)
   }
 }
 
@@ -969,5 +1028,7 @@ export function modelStlFileName(model: ModelParameters): string {
       return hexagonalColumnStlFileName(model.parameters)
     case 'opengrid':
       return openGridStlFileName(model.parameters)
+    case 'opengrid-snap':
+      return openGridSnapStlFileName(model.parameters)
   }
 }

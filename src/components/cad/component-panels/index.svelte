@@ -3,6 +3,7 @@
     ModelId,
     ModelParameterValues,
     OpenGridParameters,
+    OpenGridSnapParameters,
   } from '../../../cad-contract/units'
   import BoxComponentPanel from './box/BoxComponentPanel.svelte'
   import BoxNormalComponentPanel from './box-normal/BoxNormalComponentPanel.svelte'
@@ -10,6 +11,7 @@
   import HswCellComponentPanel from './hsw-cell/HswCellComponentPanel.svelte'
   import ModularGridBaseComponentPanel from './modular-grid-base/ModularGridBaseComponentPanel.svelte'
   import OpenGridComponentPanel from './opengrid/OpenGridComponentPanel.svelte'
+  import OpenGridSnapComponentPanel from './opengrid-snap/OpenGridSnapComponentPanel.svelte'
   import type { ComponentPanelProps } from './types'
 
   type Props = ComponentPanelProps & {
@@ -51,5 +53,12 @@
     parameters={parameters as OpenGridParameters}
     {fieldErrors}
     onParametersChange={onOpenGridParametersChange}
+  />
+{:else if modelId === 'opengrid-snap'}
+  <OpenGridSnapComponentPanel
+    parameters={parameters as OpenGridSnapParameters}
+    {rawParameters}
+    {fieldErrors}
+    {onInputChange}
   />
 {/if}

@@ -6,7 +6,7 @@
 
 ### Requirement: 首頁模型選擇
 
-The system MUST provide a static model-selection page at `/models` driven by the registered model catalog. Every currently available model MUST have an understandable display name, a concise description, a summary of its adjustable parameters, and a link to its model-specific CAD route. The chooser MUST include `box`, `box-normal`, `modular-grid-base`, `hsw-cell`, `hexagonal-column`, and `opengrid`. The root path `/` MUST remain a separate static product homepage and MUST link to `/models` without rendering the model chooser.
+The system MUST provide a static model-selection page at `/models` driven by the registered model catalog. Every currently available model MUST have an understandable display name, a concise description, a summary of its adjustable parameters, and a link to its model-specific CAD route. The chooser MUST include `box`, `box-normal`, `modular-grid-base`, `hsw-cell`, `hexagonal-column`, `opengrid`, and `opengrid-snap`. The root path `/` MUST remain a separate static product homepage and MUST link to `/models` without rendering the model chooser.
 
 #### Scenario: 真正首頁不顯示模型選擇器
 
@@ -18,7 +18,7 @@ The system MUST provide a static model-selection page at `/models` driven by the
 #### Scenario: 模型選擇頁顯示目前模型
 
 - **WHEN** 使用者開啟 `/models`
-- **THEN** 頁面 MUST 顯示 `box`、`box-normal`、`modular-grid-base`、`hsw-cell`、`hexagonal-column` 與 `opengrid` 的可理解名稱
+- **THEN** 頁面 MUST 顯示 `box`、`box-normal`、`modular-grid-base`、`hsw-cell`、`hexagonal-column`、`opengrid` 與 `opengrid-snap` 的可理解名稱
 - **AND** 每個模型 MUST 顯示與其參數及用途相符的簡短說明
 - **AND** OpenGrid 描述 MUST 說明 Full/Lite/Heavy 板型、28 mm 網格、rows/columns、螺絲孔與 connector-hole 設定
 - **AND** `/models` MUST NOT 初始化 CAD Worker 或 Svelte CAD workspace
@@ -63,7 +63,7 @@ The system MUST provide a static model-selection page at `/models` driven by the
 
 ### Requirement: 模型專屬 CAD 路由
 
-The system MUST expose one CAD route for each registered model id. The current routes MUST map `/cad/box` to `box`, `/cad/box-normal` to `box-normal`, `/cad/modular-grid-base` to `modular-grid-base`, `/cad/hsw-cell` to `hsw-cell`, `/cad/hexagonal-column` to `hexagonal-column`, and `/cad/opengrid` to `opengrid`. The model path segment MUST be the source of truth for the selected component, and a route for an unknown model id MUST NOT initialize a CAD Worker for an unsupported component.
+The system MUST expose one CAD route for each registered model id. The current routes MUST map `/cad/box` to `box`, `/cad/box-normal` to `box-normal`, `/cad/modular-grid-base` to `modular-grid-base`, `/cad/hsw-cell` to `hsw-cell`, `/cad/hexagonal-column` to `hexagonal-column`, `/cad/opengrid` to `opengrid`, and `/cad/opengrid-snap` to `opengrid-snap`. The model path segment MUST be the source of truth for the selected component, and a route for an unknown model id MUST NOT initialize a CAD Worker for an unsupported component.
 
 #### Scenario: 直接開啟 box-normal route
 
@@ -187,6 +187,7 @@ The model-selection page MUST render the registered catalog entries in the three
 - **THEN** every registered model MUST appear exactly once in one of the three series
 - **AND** `hsw-cell` MUST appear in `HSW 系列`
 - **AND** `opengrid` MUST appear in `OpenGrid 系列`
+- **AND** `opengrid-snap` MUST appear in `OpenGrid 系列`
 - **AND** `box`、`box-normal`、`modular-grid-base` 與 `hexagonal-column` MUST appear in `其他模型`
 
 #### Scenario: Series page remains a static chooser
@@ -194,3 +195,28 @@ The model-selection page MUST render the registered catalog entries in the three
 - **WHEN** a user views any series on `/models`
 - **THEN** each model entry MUST expose its display metadata, parameter summary, and model-specific route link
 - **AND** the series layout MUST NOT instantiate a CAD Worker or CAD workspace
+
+## ADDED Requirements
+
+### Requirement: OpenGrid Snap model selection entry
+
+The registered model catalog and `/models` chooser MUST include `opengrid-snap` as an independent CAD component. The chooser MUST display an understandable OpenGrid Snap name, describe the Full/Lite variants and one shared total X/Y outer-envelope offset, and link to `/cad/opengrid-snap` without starting the CAD Worker.
+
+#### Scenario: Model selection page lists OpenGrid Snap
+
+- **WHEN** a user opens `/models`
+- **THEN** the model chooser MUST display an OpenGrid Snap entry
+- **AND** its description MUST identify Full/Lite variants and outer width/depth fine-tuning
+- **AND** the chooser MUST provide a link to `/cad/opengrid-snap`
+- **AND** `/models` MUST remain static without initializing the CAD Worker
+
+### Requirement: OpenGrid Snap model-specific route
+
+The model catalog MUST resolve `/cad/opengrid-snap` to `modelId=opengrid-snap`. Direct navigation to the route MUST load the Snap-specific workspace and MUST NOT silently substitute the existing `opengrid` board model or any other component.
+
+#### Scenario: Direct OpenGrid Snap navigation
+
+- **WHEN** a user opens `/cad/opengrid-snap`
+- **THEN** the page MUST load the OpenGrid Snap workspace
+- **AND** initial generation MUST use the valid saved Snap snapshot or the Snap defaults
+- **AND** the route MUST not initialize the existing OpenGrid board definition instead

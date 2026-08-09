@@ -4,6 +4,7 @@ import type {
   ModelId,
   ModelParameterValues,
   OpenGridParameters,
+  OpenGridSnapParameters,
 } from '../../src/cad-contract/units'
 import { OPENGRID_CONFIGURATION } from '../../src/cad-contract/units'
 import type { CadWorkerClient } from '../../src/features/cad/worker-client'
@@ -29,6 +30,9 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
   }
   if (modelId === 'opengrid') {
     return opengridParameters()
+  }
+  if (modelId === 'opengrid-snap') {
+    return { variant: 'Full', offset: 0 }
   }
   throw new Error(`Unknown model: ${modelId}`)
 }
@@ -378,5 +382,38 @@ describe('CAD model generation debounce', () => {
         parameters: input,
       }),
     )
+  })
+
+  it('debounces decimal OpenGrid Snap offsets and invalidates incomplete input', () => {
+    const { client, send, context } = createRuntimeContext('opengrid-snap')
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('offset', '0.2')
+    vi.advanceTimersByTime(500)
+
+    expect(send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.generate',
+        modelId: 'opengrid-snap',
+        parameters: { variant: 'Full', offset: 0.2 },
+      }),
+    )
+
+    handlers.handleInputChange('offset', '')
+    expect(client.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.invalidate',
+        reason: 'invalid-input',
+      }),
+    )
+    expect(
+      send.mock.calls.some(
+        ([command]) =>
+          command.kind === 'model.generate' &&
+          command.parameters &&
+          'offset' in command.parameters &&
+          (command.parameters as OpenGridSnapParameters).offset === null,
+      ),
+    ).toBe(false)
   })
 })

@@ -14,8 +14,10 @@ import {
 import { loadHexagonalColumnReference } from '../cad-kernel/components/hexagonal-column/builder'
 import { loadModularGridBaseTemplate } from '../cad-kernel/components/modular-grid-base/builder'
 import { loadOpenGridPrototypeTemplate } from '../cad-kernel/components/opengrid/builder'
+import { loadOpenGridSnapReference } from '../cad-kernel/components/opengrid-snap/builder'
 import { buildModelBRep } from '../cad-kernel/model'
 import { assertOpenGridShapeQuality } from '../cad-kernel/components/opengrid/quality'
+import { assertOpenGridSnapShapeQuality } from '../cad-kernel/components/opengrid-snap/quality'
 import { meshBRep, serializeMesh, type MeshData } from '../cad-kernel/mesh'
 import {
   errorEvent,
@@ -33,12 +35,15 @@ import type {
 import {
   modelFileName,
   modelStlFileName,
+  boundsForOpenGridSnap,
   isHswCellParameters,
   isOpenGridParameters,
   normalizeOpenGridParameters,
   PROTOTYPE_CONFIGURATION,
   type ModelParameterValues,
   type OpenGridVariant,
+  type OpenGridSnapVariant,
+  isOpenGridSnapParameters,
   validateOpenGridGenerationSupport,
   validateModelParameters,
 } from '../cad-contract/units'
@@ -91,6 +96,10 @@ export class CadWorkerRuntime {
     null
   private readonly openGridPrototypes = new Map<
     OpenGridVariant,
+    Promise<import('replicad').Shape3D>
+  >()
+  private readonly openGridSnapReferences = new Map<
+    OpenGridSnapVariant,
     Promise<import('replicad').Shape3D>
   >()
   private readonly lifetime: RevisionLifetime
@@ -178,6 +187,7 @@ export class CadWorkerRuntime {
           this.disposeBoxNormalReference()
           this.disposeHexagonalColumnReference()
           this.disposeOpenGridPrototypes()
+          this.disposeOpenGridSnapReferences()
           this.lastBoxNormalOperationCounts = null
           this.initialized = false
           this.initializing = null
@@ -268,6 +278,8 @@ export class CadWorkerRuntime {
         getBoxNormalReference: () => this.getBoxNormalReference(),
         getHexagonalColumnReference: () => this.getHexagonalColumnReference(),
         getOpenGridPrototype: (variant) => this.getOpenGridPrototype(variant),
+        getOpenGridSnapReference: (variant) =>
+          this.getOpenGridSnapReference(variant),
         yieldToEventLoop: yieldToWorkerEventLoop,
         isGenerationCurrent: () => this.isGenerationCurrent(command.generation),
         reportProgress: (progress) =>
@@ -302,11 +314,31 @@ export class CadWorkerRuntime {
     try {
       this.emitProgress(command, 'meshing')
       mesh = meshBRep(shape, command.previewConfig)
+      if (command.modelId === 'opengrid-snap') {
+        if (!isOpenGridSnapParameters(generationParameters)) {
+          throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
+        }
+        mesh.bounds = boundsForOpenGridSnap(generationParameters)
+      }
       if (command.modelId === 'opengrid') {
         if (!isOpenGridParameters(generationParameters)) {
           throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid')
         }
         assertOpenGridShapeQuality(shape, generationParameters, mesh)
+      }
+      if (command.modelId === 'opengrid-snap') {
+        if (!isOpenGridSnapParameters(generationParameters)) {
+          throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
+        }
+        const reference = await this.getOpenGridSnapReference(
+          generationParameters.variant,
+        )
+        assertOpenGridSnapShapeQuality(
+          shape,
+          generationParameters,
+          mesh,
+          reference,
+        )
       }
     } catch (error) {
       try {
@@ -752,6 +784,27 @@ export class CadWorkerRuntime {
     return recoverable
   }
 
+  private getOpenGridSnapReference(
+    variant: OpenGridSnapVariant,
+  ): Promise<import('replicad').Shape3D> {
+    const cached = this.openGridSnapReferences.get(variant)
+    if (cached) return cached
+
+    const reference = loadOpenGridSnapReference(variant).then((shape) => {
+      if (this.disposed) {
+        shape.delete()
+        throw new Error('WORKER_TERMINATED')
+      }
+      return shape
+    })
+    const recoverable = reference.catch((error) => {
+      this.openGridSnapReferences.delete(variant)
+      throw error
+    })
+    this.openGridSnapReferences.set(variant, recoverable)
+    return recoverable
+  }
+
   private getBoxNormalReference(): Promise<import('replicad').Shape3D> {
     if (!this.boxNormalReference) {
       const referencePromise = loadBoxNormalReference()
@@ -816,6 +869,14 @@ export class CadWorkerRuntime {
     }
   }
 
+  private disposeOpenGridSnapReferences(): void {
+    const references = [...this.openGridSnapReferences.values()]
+    this.openGridSnapReferences.clear()
+    for (const reference of references) {
+      void reference.then((shape) => shape.delete()).catch(() => undefined)
+    }
+  }
+
   private disposeBoxNormalReference(): void {
     const referencePromise = this.boxNormalReference
     this.boxNormalReference = null
@@ -849,6 +910,14 @@ export class CadWorkerRuntime {
         'meshing',
         code,
         'OpenGrid 幾何未通過品質檢查，請調整參數後重試。',
+        true,
+      )
+    }
+    if (code === 'OPENGRID_SNAP_QUALITY_INVALID') {
+      return makeError(
+        'meshing',
+        code,
+        'OpenGrid Snap 幾何未通過品質檢查，請調整外框增量後重試。',
         true,
       )
     }

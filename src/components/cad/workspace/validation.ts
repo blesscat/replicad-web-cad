@@ -2,11 +2,13 @@ import { normalizeError, type CadError } from '../../../cad-contract/errors'
 import type { WorkerClientError } from '../../../features/cad/worker-client'
 import {
   HEXAGONAL_COLUMN_CONFIGURATION,
+  parseOpenGridSnapDecimalInput,
   parseDimensionInput,
   validateModelParameters,
   type ModelId,
   type ModelParameterKey,
   type ModelParameterValues,
+  type OpenGridSnapParameters,
   type ScalarModelParameterKey,
 } from '../../../cad-contract/units'
 import type { RawParameters } from './types'
@@ -39,6 +41,7 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'modular-grid-base') return GRID_PARAMETER_KEYS
   if (modelId === 'hsw-cell') return GRID_PARAMETER_KEYS
   if (modelId === 'hexagonal-column') return HEXAGONAL_COLUMN_PARAMETER_KEYS
+  if (modelId === 'opengrid-snap') return ['variant', 'offset']
   throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
 }
 
@@ -71,6 +74,13 @@ export function rawFromParameters(
     }
   }
 
+  if ('offset' in parameters) {
+    return {
+      variant: parameters.variant,
+      offset: String(parameters.offset),
+    }
+  }
+
   return {
     rows: String(parameters.rows),
     columns: String(parameters.columns),
@@ -89,6 +99,41 @@ export function parseRawParameters(
   )
   if (unexpectedKey) {
     return { valid: false, message: '包含不支援的參數欄位。' }
+  }
+
+  if (modelId === 'opengrid-snap') {
+    const variant = raw.variant
+    if (variant !== 'Full' && variant !== 'Lite') {
+      return {
+        valid: false,
+        message: '型號必須是 Full 或 Lite。',
+        field: 'variant',
+      }
+    }
+
+    const offset = parseOpenGridSnapDecimalInput(raw.offset ?? '')
+    if (offset === null) {
+      return {
+        valid: false,
+        message: '外框總增量必須是有限的小數。',
+        field: 'offset',
+      }
+    }
+
+    const validation = validateModelParameters(modelId, {
+      variant,
+      offset,
+    } satisfies OpenGridSnapParameters)
+    if (!validation.valid) {
+      const issue = validation.issues[0]
+      const field = issue?.field
+      return {
+        valid: false,
+        message: issue?.message ?? 'OpenGrid Snap 輸入無效。',
+        field: field === 'parameters' ? undefined : field,
+      }
+    }
+    return { valid: true, value: validation.value.parameters }
   }
 
   const parsed: Partial<

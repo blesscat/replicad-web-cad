@@ -108,6 +108,37 @@ describe('Worker contract runtime validation', () => {
     ).toBe(false)
   })
 
+  it('accepts Snap commands only with Full/Lite decimal outer offsets', () => {
+    const command = {
+      version: PROTOCOL_VERSION,
+      kind: 'model.generate' as const,
+      requestId: 'request-snap-1',
+      operationId: 'operation-snap-1',
+      generation: 1,
+      modelId: 'opengrid-snap' as const,
+      parameters: { variant: 'Full' as const, offset: 0.2 },
+      previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
+    }
+
+    expect(isWorkerCommand(command)).toBe(true)
+    expect(
+      isWorkerCommand({
+        ...command,
+        parameters: {
+          variant: 'Lite',
+          offset: 0.2,
+          rows: 2,
+        },
+      }),
+    ).toBe(false)
+    expect(
+      isWorkerCommand({
+        ...command,
+        parameters: { variant: 'Full', offset: Number.NaN },
+      }),
+    ).toBe(false)
+  })
+
   it('accepts hexagonal-column commands with orientation', () => {
     const command = {
       version: PROTOCOL_VERSION,

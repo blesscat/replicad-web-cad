@@ -4,6 +4,7 @@ import type {
   BoxParameters,
   HexagonalColumnParameters,
   HswCellParameters,
+  OpenGridSnapParameters,
 } from '../../src/cad-contract/units'
 import {
   parseRawParameters,
@@ -141,6 +142,50 @@ describe('CAD workspace validation helpers', () => {
       valid: false,
       message: '必須是 true 或 false。',
       field: 'cornerPosts',
+    })
+  })
+
+  it('parses decimal OpenGrid Snap offsets without accepting board fields', () => {
+    const parameters: OpenGridSnapParameters = {
+      variant: 'Lite',
+      offset: 0.2,
+    }
+    const raw = rawFromParameters(parameters)
+
+    expect(raw).toEqual({
+      variant: 'Lite',
+      offset: '0.2',
+    })
+    expect(parseRawParameters(raw, 'opengrid-snap')).toEqual({
+      valid: true,
+      value: parameters,
+    })
+    expect(
+      parseRawParameters(
+        {
+          variant: 'Lite',
+          offset: '0.2',
+          rows: '2',
+        } as RawParameters,
+        'opengrid-snap',
+      ),
+    ).toEqual({
+      valid: false,
+      message: '包含不支援的參數欄位。',
+    })
+    expect(
+      parseRawParameters({ variant: 'Lite', offset: '' }, 'opengrid-snap'),
+    ).toEqual({
+      valid: false,
+      message: '外框總增量必須是有限的小數。',
+      field: 'offset',
+    })
+    expect(
+      parseRawParameters({ variant: 'Lite', offset: '0.03' }, 'opengrid-snap'),
+    ).toEqual({
+      valid: false,
+      message: '外框增量必須以 0.05 mm 為步進。',
+      field: 'offset',
     })
   })
 })
