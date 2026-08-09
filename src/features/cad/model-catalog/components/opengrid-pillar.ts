@@ -36,7 +36,7 @@ function validatePillarDefinitionParameters(value: unknown) {
   return {
     valid: true as const,
     value: {
-      modelId: 'pillar' as const,
+      modelId: 'opengrid-pillar' as const,
       parameters: validation.value,
     },
   }
@@ -44,32 +44,32 @@ function validatePillarDefinitionParameters(value: unknown) {
 
 function boundsForPillarDefinition(parameters: ModelParameterValues) {
   if (!isPillarParameters(parameters)) {
-    throw new Error('MODEL_PARAMETERS_MISMATCH:pillar')
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-pillar')
   }
   return boundsForPillar(parameters)
 }
 
 function exportPillarFileName(parameters: ModelParameterValues): string {
   if (!isPillarParameters(parameters)) {
-    throw new Error('MODEL_PARAMETERS_MISMATCH:pillar')
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-pillar')
   }
   return pillarFileName(parameters)
 }
 
 function exportPillarStlFileName(parameters: ModelParameterValues): string {
   if (!isPillarParameters(parameters)) {
-    throw new Error('MODEL_PARAMETERS_MISMATCH:pillar')
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-pillar')
   }
   return pillarStlFileName(parameters)
 }
 
-export const pillarDefinition: ModelDefinition = {
-  id: 'pillar',
-  buildKey: 'pillar',
-  family: 'other',
-  displayName: '圓柱支柱',
+export const opengridPillarDefinition: ModelDefinition = {
+  id: 'opengrid-pillar',
+  buildKey: 'opengrid-pillar',
+  family: 'opengrid',
+  displayName: 'OpenGrid 圓柱支柱',
   selectionDescription:
-    'Ø5 mm 圓柱支柱，總長度可調整為 3–500 mm，上端固定 1 mm chamfer，可選擇 Ø7 × 0.8 mm 的連接底版凸台。',
+    'OpenGrid 用 Ø5 mm 圓柱支柱，總長度可調整為 3–500 mm，上端固定 1 mm chamfer，可選擇 Ø7 × 0.8 mm 的連接底版凸台。',
   parameterSchema: PILLAR_PARAMETER_SCHEMA,
   defaultParameters: { ...PILLAR_CONFIGURATION.defaultParameters },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },

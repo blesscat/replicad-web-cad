@@ -32,7 +32,7 @@ import { buildOpenGridDivider } from '../components/opengrid-divider/builder'
 import { buildOpenGridStackableBox } from '../components/opengrid-stackable-box/builder'
 import { buildOpenGridSnap } from '../components/opengrid-snap/builder'
 import { buildOpenGridSnapRemover } from '../components/opengrid-snap-remover/builder'
-import { buildPillar } from '../components/pillar/builder'
+import { buildPillar } from '../components/opengrid-pillar/builder'
 
 export type KernelBuildContext = {
   getModularGridBaseTemplate: () => Promise<Shape3D>
@@ -158,7 +158,7 @@ async function buildPillarModel(
   context: KernelBuildContext,
 ): Promise<Shape3D> {
   if (!isPillarParameters(parameters)) {
-    throw new Error('MODEL_PARAMETERS_MISMATCH:pillar')
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-pillar')
   }
   return buildPillar(parameters, {
     yieldToEventLoop: context.yieldToEventLoop,
@@ -274,7 +274,7 @@ export const hexagonalColumnKernelDefinition: KernelModelDefinition = {
 }
 
 export const pillarKernelDefinition: KernelModelDefinition = {
-  id: 'pillar',
+  id: 'opengrid-pillar',
   build: buildPillarModel,
 }
 

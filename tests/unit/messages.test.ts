@@ -258,7 +258,7 @@ describe('Worker contract runtime validation', () => {
       requestId: 'request-pillar-1',
       operationId: 'operation-pillar-1',
       generation: 1,
-      modelId: 'pillar' as const,
+      modelId: 'opengrid-pillar' as const,
       parameters: { length: 12, baseConnection: true },
       previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
     }

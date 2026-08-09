@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
     delete: vi.fn(),
   })),
   buildPillar: vi.fn(async () => ({
-    model: 'pillar',
+    model: 'opengrid-pillar',
     delete: vi.fn(),
   })),
   buildModularGridBase: vi.fn(async () => ({
@@ -51,7 +51,7 @@ vi.mock('../../src/cad-kernel/components/hexagonal-column/builder', () => ({
   buildHexagonalColumn: mocks.buildHexagonalColumn,
 }))
 
-vi.mock('../../src/cad-kernel/components/pillar/builder', () => ({
+vi.mock('../../src/cad-kernel/components/opengrid-pillar/builder', () => ({
   buildPillar: mocks.buildPillar,
 }))
 
@@ -99,7 +99,7 @@ describe('HSW kernel model registration', () => {
       'modular-grid-base',
       'hsw-cell',
       'hexagonal-column',
-      'pillar',
+      'opengrid-pillar',
       'opengrid',
       'opengrid-stackable-box',
       'opengrid-snap',
@@ -224,12 +224,12 @@ describe('HSW kernel model registration', () => {
 
   it('routes pillar directly to its asset-free builder', async () => {
     const shape = await buildModelBRep(
-      'pillar',
+      'opengrid-pillar',
       { length: 5, baseConnection: true },
       context,
     )
 
-    expect(shape).toMatchObject({ model: 'pillar' })
+    expect(shape).toMatchObject({ model: 'opengrid-pillar' })
     expect(mocks.buildPillar).toHaveBeenCalledWith(
       { length: 5, baseConnection: true },
       expect.objectContaining({

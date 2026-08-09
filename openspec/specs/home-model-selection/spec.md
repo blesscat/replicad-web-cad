@@ -195,6 +195,7 @@ The model-selection page MUST render the registered catalog entries in the three
 - **THEN** every registered model MUST appear exactly once in one of the three series
 - **AND** `hsw-cell` MUST appear in `HSW 系列`
 - **AND** `opengrid` MUST appear in `OpenGrid 系列`
+- **AND** `opengrid-pillar` MUST appear in `OpenGrid 系列`
 - **AND** `opengrid-stackable-box` MUST appear in `OpenGrid 系列`
 - **AND** `opengrid-snap` MUST appear in `OpenGrid 系列`
 - **AND** `box`、`box-normal`、`modular-grid-base` 與 `hexagonal-column` MUST appear in `其他模型`
@@ -251,8 +252,6 @@ The static `/models` chooser MUST include `opengrid-stackable-box` exactly once 
 - **THEN** the page MUST use catalog metadata to render it
 - **AND** it MUST NOT instantiate a CAD Worker or Svelte CAD workspace merely to display the model
 
-## ADDED Requirements
-
 ### Requirement: OpenGrid 分隔器模型選擇入口
 
 The static `/models` chooser MUST include `opengrid-divider` as an independent OpenGrid-series model with an understandable display name, a concise description of its custom 14 mm full-grid/7 mm half-grid base, four directional grid-count controls, configurable height, Ø5 × 3 mm locating pegs, 2.5 mm side rounding, and 1 mm rounded top. Its entry MUST link to `/cad/opengrid-divider` without initializing the CAD Worker on the chooser page.
@@ -269,27 +268,27 @@ The static `/models` chooser MUST include `opengrid-divider` as an independent O
 - **THEN** the official `opengrid` description MUST remain about the 28 mm official board
 - **AND** the `opengrid-divider` description MUST identify the separate custom 14 mm full-grid/7 mm half-grid accessory
 
-### Requirement: Pillar model selection entry and route
+### Requirement: OpenGrid pillar model selection entry and route
 
-The static `/models` chooser MUST include `pillar` as an independent entry in `其他模型`, with an understandable display name, a concise description of its Ø5 mm body, 3–500 mm integer length, 1 mm upper chamfer, and optional `連接底版用` Ø7 mm × 0.8 mm base flange. The entry MUST link to `/cad/pillar` without initializing the CAD Worker. The model catalog MUST resolve `/cad/pillar` to `modelId=pillar`, and direct navigation MUST use valid saved pillar parameters or the pillar defaults.
+The static `/models` chooser MUST include `opengrid-pillar` as an independent entry in `OpenGrid 系列`, with an `OpenGrid `-prefixed display name, a concise description of its Ø5 mm body, 3–500 mm integer length, 1 mm upper chamfer, and optional `連接底版用` Ø7 mm × 0.8 mm base flange. The entry MUST link to `/cad/opengrid-pillar` without initializing the CAD Worker. The model catalog MUST resolve `/cad/opengrid-pillar` to `modelId=opengrid-pillar`, and direct navigation MUST use valid saved pillar parameters or the pillar defaults.
 
 #### Scenario: Model page lists pillar
 
 - **WHEN** a user opens `/models`
-- **THEN** the chooser MUST display the pillar entry in `其他模型`
+- **THEN** the chooser MUST display the OpenGrid pillar entry in `OpenGrid 系列`
 - **AND** its description MUST identify the adjustable total length and the optional base-connection mode
-- **AND** the entry MUST provide a link to `/cad/pillar`
+- **AND** the entry MUST provide a link to `/cad/opengrid-pillar`
 - **AND** the chooser MUST remain static without initializing the CAD Worker
 
 #### Scenario: Select pillar
 
 - **WHEN** a user selects the pillar entry
-- **THEN** navigation MUST go to `/cad/pillar`
-- **AND** the CAD workspace MUST initialize with `modelId=pillar`
+- **THEN** navigation MUST go to `/cad/opengrid-pillar`
+- **AND** the CAD workspace MUST initialize with `modelId=opengrid-pillar`
 
 #### Scenario: Direct pillar navigation
 
-- **WHEN** a user opens `/cad/pillar` directly
-- **THEN** the page MUST load the pillar-specific CAD workspace
+- **WHEN** a user opens `/cad/opengrid-pillar` directly
+- **THEN** the page MUST load the OpenGrid pillar-specific CAD workspace
 - **AND** initial generation MUST use the valid saved pillar snapshot when available, otherwise `{ length: 5, baseConnection: false }`
 - **AND** the route MUST NOT silently substitute another component

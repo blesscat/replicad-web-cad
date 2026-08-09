@@ -8,8 +8,8 @@ import {
   PILLAR_CONFIGURATION,
   type PillarParameters,
 } from '../../src/cad-contract/units'
-import { buildPillar } from '../../src/cad-kernel/components/pillar/builder'
-import { assertPillarShapeQuality } from '../../src/cad-kernel/components/pillar/quality'
+import { buildPillar } from '../../src/cad-kernel/components/opengrid-pillar/builder'
+import { assertPillarShapeQuality } from '../../src/cad-kernel/components/opengrid-pillar/quality'
 import { exportStlBytes, exportStepBytes } from '../../src/cad-kernel/export'
 import { meshBRep } from '../../src/cad-kernel/mesh'
 
@@ -60,7 +60,7 @@ function probeVolumeAt(shape: Shape3D, x: number, z: number): number {
   }
 }
 
-describe('pillar CAD kernel integration', () => {
+describe('OpenGrid pillar CAD kernel integration', () => {
   it.each([
     { length: 3, baseConnection: false },
     { length: 5, baseConnection: false },

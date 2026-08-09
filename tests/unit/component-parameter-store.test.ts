@@ -94,7 +94,9 @@ describe('component parameter store', () => {
     expect(store.get('opengrid-divider')).toEqual(
       OPENGRID_DIVIDER_CONFIGURATION.defaultParameters,
     )
-    expect(store.get('pillar')).toEqual(PILLAR_CONFIGURATION.defaultParameters)
+    expect(store.get('opengrid-pillar')).toEqual(
+      PILLAR_CONFIGURATION.defaultParameters,
+    )
 
     store.dispose()
   })
@@ -123,7 +125,7 @@ describe('component parameter store', () => {
         },
         'opengrid-snap': { variant: 'Lite', offset: 0.2 },
         'opengrid-divider': { left: 1, right: 1, up: 1.5, down: 0, height: 25 },
-        pillar: { length: 12, baseConnection: true },
+        'opengrid-pillar': { length: 12, baseConnection: true },
       }),
     )
     const store = createComponentParameterStore({ storage })
@@ -161,7 +163,10 @@ describe('component parameter store', () => {
       down: 0,
       height: 25,
     })
-    expect(store.get('pillar')).toEqual({ length: 12, baseConnection: true })
+    expect(store.get('opengrid-pillar')).toEqual({
+      length: 12,
+      baseConnection: true,
+    })
 
     store.dispose()
   })
@@ -298,7 +303,7 @@ describe('component parameter store', () => {
       depth: 30,
       height: 40,
     })
-    expect(unsupportedStore.get('pillar')).toEqual(
+    expect(unsupportedStore.get('opengrid-pillar')).toEqual(
       PILLAR_CONFIGURATION.defaultParameters,
     )
     unsupportedStore.dispose()
@@ -306,18 +311,26 @@ describe('component parameter store', () => {
 
   it('does not overwrite a valid pillar snapshot with an invalid draft', () => {
     const storage = createMemoryStorage(
-      createPayload({ pillar: { length: 20, baseConnection: false } }),
+      createPayload({
+        'opengrid-pillar': { length: 20, baseConnection: false },
+      }),
     )
     const store = createComponentParameterStore({ storage })
 
-    expect(store.get('pillar')).toEqual({ length: 20, baseConnection: false })
+    expect(store.get('opengrid-pillar')).toEqual({
+      length: 20,
+      baseConnection: false,
+    })
     expect(
-      store.set('pillar', {
+      store.set('opengrid-pillar', {
         length: 20.5,
         baseConnection: 'true',
       } as never),
     ).toBe(false)
-    expect(store.get('pillar')).toEqual({ length: 20, baseConnection: false })
+    expect(store.get('opengrid-pillar')).toEqual({
+      length: 20,
+      baseConnection: false,
+    })
 
     store.dispose()
   })

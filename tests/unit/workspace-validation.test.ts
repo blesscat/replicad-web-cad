@@ -279,19 +279,25 @@ describe('CAD workspace validation helpers', () => {
     const raw = rawFromParameters(parameters)
 
     expect(raw).toEqual({ length: '5', baseConnection: 'true' })
-    expect(parseRawParameters(raw, 'pillar')).toEqual({
+    expect(parseRawParameters(raw, 'opengrid-pillar')).toEqual({
       valid: true,
       value: parameters,
     })
     expect(
-      parseRawParameters({ length: '5', baseConnection: 'yes' }, 'pillar'),
+      parseRawParameters(
+        { length: '5', baseConnection: 'yes' },
+        'opengrid-pillar',
+      ),
     ).toEqual({
       valid: false,
       message: '必須是 true 或 false。',
       field: 'baseConnection',
     })
     expect(
-      parseRawParameters({ length: '5.5', baseConnection: 'false' }, 'pillar'),
+      parseRawParameters(
+        { length: '5.5', baseConnection: 'false' },
+        'opengrid-pillar',
+      ),
     ).toEqual({
       valid: false,
       message: '總長度必須是有限的整數 mm。',

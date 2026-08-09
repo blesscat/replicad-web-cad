@@ -64,7 +64,7 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'opengrid-snap') return ['variant', 'offset']
   if (modelId === 'opengrid-snap-remover') return []
   if (modelId === 'opengrid-divider') return OPENGRID_DIVIDER_PARAMETER_KEYS
-  if (modelId === 'pillar') return PILLAR_PARAMETER_KEYS
+  if (modelId === 'opengrid-pillar') return PILLAR_PARAMETER_KEYS
   throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
 }
 
