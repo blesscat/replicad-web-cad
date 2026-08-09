@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
   HSW_CELL_CONFIGURATION,
+  OPENGRID_CONFIGURATION,
   PROTOTYPE_CONFIGURATION,
+  boundsForOpenGrid,
   boundsForHswCell,
 } from '../../src/cad-contract/units'
 import {
   calculateHswCellCounts,
   calculateModularGridCounts,
+  calculateOpenGridCounts,
 } from '../../src/features/cad/grid-dimensions'
 
 function sizeOf(bounds: ReturnType<typeof boundsForHswCell>) {
@@ -118,6 +121,52 @@ describe('HSW dimension calculation', () => {
     expect(tooSmall).toMatchObject({
       valid: false,
       errors: { x: expect.stringContaining('HSW') },
+    })
+  })
+})
+
+describe('OpenGrid dimension calculation', () => {
+  it('rounds each target down to the largest fitting count', () => {
+    const result = calculateOpenGridCounts({ x: '83.99', y: '55.99' })
+
+    expect(result).toEqual({
+      valid: true,
+      parameters: { columns: 2, rows: 1 },
+      actualDimensions: { x: 56, y: 28 },
+    })
+  })
+
+  it('keeps an exact boundary and rounds down just below it', () => {
+    const exact = calculateOpenGridCounts({ x: '84', y: '56' })
+    const below = calculateOpenGridCounts({ x: '83.99', y: '55.99' })
+
+    expect(exact.valid && exact.parameters).toEqual({ columns: 3, rows: 2 })
+    expect(below.valid && below.parameters).toEqual({ columns: 2, rows: 1 })
+  })
+
+  it('caps counts at the existing maximum', () => {
+    const result = calculateOpenGridCounts({ x: '10000', y: '10000' })
+
+    expect(result.valid && result.parameters).toEqual({
+      columns: OPENGRID_CONFIGURATION.maxGridCount,
+      rows: OPENGRID_CONFIGURATION.maxGridCount,
+    })
+    if (result.valid) {
+      const bounds = boundsForOpenGrid({
+        variant: 'Lite',
+        ...result.parameters,
+      })
+      expect(bounds.max[0] - bounds.min[0]).toBeLessThanOrEqual(10000)
+      expect(bounds.max[1] - bounds.min[1]).toBeLessThanOrEqual(10000)
+    }
+  })
+
+  it('rejects a target smaller than one OpenGrid cell', () => {
+    const result = calculateOpenGridCounts({ x: '27.99', y: '28' })
+
+    expect(result).toMatchObject({
+      valid: false,
+      errors: { x: expect.stringContaining('28 mm') },
     })
   })
 })

@@ -29,6 +29,7 @@ export type CadWorkspaceController = {
   getSnapshot: () => CadWorkspaceControllerSnapshot
   onInputChange: (key: ModelParameterKey, value: string) => void
   onOpenGridParametersChange: (parameters: OpenGridParameters) => void
+  onRestoreDefaults: () => void
   onExport: (format?: ExportFormat) => void
   onRetry: () => void
   dispose: () => void
@@ -36,6 +37,19 @@ export type CadWorkspaceController = {
 
 export type CadWorkspaceControllerOptions = {
   parameterStore: ComponentParameterStore
+}
+
+function cloneOpenGridParameters(
+  parameters: OpenGridParameters,
+): OpenGridParameters {
+  return {
+    ...parameters,
+    chamferCorners: { ...parameters.chamferCorners },
+    connectorSides: { ...parameters.connectorSides },
+    customScrewPositions: parameters.customScrewPositions.map((position) => ({
+      ...position,
+    })),
+  }
 }
 
 function createSnapshot(
@@ -99,6 +113,21 @@ export function createCadWorkspaceController(
     },
   })
 
+  const onRestoreDefaults = (): void => {
+    if (modelId === 'opengrid') {
+      runtime.handleOpenGridParametersChange(
+        cloneOpenGridParameters(
+          definition.defaultParameters as OpenGridParameters,
+        ),
+      )
+      return
+    }
+
+    for (const [key, value] of Object.entries(definition.defaultParameters)) {
+      runtime.handleInputChange(key as ModelParameterKey, String(value))
+    }
+  }
+
   emit()
 
   return {
@@ -106,6 +135,7 @@ export function createCadWorkspaceController(
       createSnapshot(state, rawParameters, fieldErrors, progress),
     onInputChange: runtime.handleInputChange,
     onOpenGridParametersChange: runtime.handleOpenGridParametersChange,
+    onRestoreDefaults,
     onExport: runtime.handleExport,
     onRetry: runtime.handleRetry,
     dispose: runtime.dispose,

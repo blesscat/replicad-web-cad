@@ -41,6 +41,7 @@ export type {
   OpenGridScrewDimensions,
   OpenGridScrewKind,
   OpenGridScrewMode,
+  OpenGridScrewPreset,
   OpenGridScrewPosition,
   OpenGridSideFlags,
   OpenGridVariant,

@@ -83,6 +83,8 @@ The system MUST expose a catalog model with stable `modelId=opengrid`. Its norma
 - `screwKind`: `official-default` or `custom`;
 - official screw dimensions: diameter, head diameter, head inset, countersunk toggle, and countersunk angle;
 - `screwMode`: `none`, `corners`, `everywhere`, `by-row-column`, or `custom`;
+- `screwCenter`: a boolean that adds the exact central internal intersection when both grid axes have an even cell count;
+- `screwEvery`: a non-negative integer interval, where `0` disables the additional centered interval pattern;
 - row/column intervals for `by-row-column`; and
 - a normalized custom screw-position list on the internal tile-intersection lattice.
 
@@ -157,6 +159,8 @@ The modes MUST match the official source:
 - `everywhere`: every internal-lattice position;
 - `by-row-column`: positions selected at the requested row/column intervals using official alignment; and
 - `custom`: exactly the selected internal-lattice positions.
+
+The optional `screwCenter` and `screwEvery` modifiers MUST add positions to the selected mode, MUST use the internal intersection lattice, and MUST de-duplicate overlapping positions. A centered interval of `N` MUST use the same official centering/alignment rules on both axes; `N=0` MUST add no interval positions. `screwCenter=true` MUST be rejected unless both `rows` and `columns` are even.
 
 #### Scenario: Official default screw geometry
 

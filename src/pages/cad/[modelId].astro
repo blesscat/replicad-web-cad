@@ -31,13 +31,20 @@ if (!definition) {
   description={`Browser-based ${definition.displayName} CAD workspace.`}
 >
   <section aria-labelledby="cad-title">
-    <p class="mb-4 text-muted">Browser CAD Prototype</p>
-    <h1 class="mb-4 text-4xl font-semibold leading-tight" id="cad-title">
-      CAD workspace
-    </h1>
-    <p class="mb-4 text-muted leading-normal">
-      目前編輯：{definition.displayName}。如要切換模型，請返回首頁重新選擇。
-    </p>
+    <header
+      class="mb-4 flex flex-wrap items-center justify-between gap-3"
+      data-testid="cad-header"
+    >
+      <h1 class="m-0 text-4xl font-semibold leading-tight" id="cad-title">
+        目前編輯：{definition.displayName}
+      </h1>
+      <a
+        class="rounded-lg border border-border-card bg-panel px-[0.8rem] py-[0.6rem] text-base text-ink no-underline hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        href="/"
+      >
+        返回模型選擇
+      </a>
+    </header>
     <div
       class="rounded-2xl border border-border-card bg-panel p-5 shadow-card"
       id="cad-fallback"

@@ -84,6 +84,65 @@ describe('OpenGrid contract', () => {
     })
   })
 
+  it('exposes common wood screw presets without replacing the official profile', () => {
+    const presets = OPENGRID_CONFIGURATION.screwPresets
+
+    expect(Object.keys(presets)).toEqual(['m3', 'm4', 'm5', 'm6', 'm7'])
+    expect(presets.m3.diameter).toBeLessThan(presets.m4.diameter)
+    expect(presets.m4.diameter).toBeLessThan(presets.m5.diameter)
+    expect(presets.m5.diameter).toBeLessThan(presets.m6.diameter)
+    expect(presets.m6.diameter).toBeLessThan(presets.m7.diameter)
+    expect(
+      Object.values(presets).every(
+        ({ headDiameter }) =>
+          headDiameter <= OPENGRID_CONFIGURATION.tileInnerSize,
+      ),
+    ).toBe(true)
+
+    for (const [preset, dimensions] of Object.entries(presets)) {
+      for (const variant of Object.keys(
+        OPENGRID_CONFIGURATION.variants,
+      ) as OpenGridParameters['variant'][]) {
+        const validation = validateOpenGridParameters(
+          parameters({
+            variant,
+            screwKind: 'custom',
+            screwDiameter: dimensions.diameter,
+            screwHeadDiameter: dimensions.headDiameter,
+            screwHeadInset: dimensions.headInset,
+            screwHeadIsCountersunk: dimensions.headIsCountersunk,
+            screwHeadCountersunkDegree: dimensions.headCountersunkDegree,
+          }),
+        )
+        expect(validation.valid, `${preset} should fit ${variant}`).toBe(true)
+      }
+    }
+  })
+
+  it('requires official-default to keep the official SCAD screw dimensions', () => {
+    const invalid = validateOpenGridParameters(
+      parameters({
+        screwKind: 'official-default',
+        screwHeadIsCountersunk: false,
+      }),
+    )
+
+    if (invalid.valid) {
+      throw new Error('official-default accepted non-official screw dimensions')
+    }
+    expect(invalid.issues).toContainEqual({
+      field: 'screwKind',
+      message:
+        'official-default 必須使用官方 SCAD 的螺絲尺寸；其他尺寸請選 custom。',
+    })
+    expect(
+      validateOpenGridParameters({
+        ...parameters({ screwHeadIsCountersunk: false }),
+        screwKind: 'custom',
+      }).valid,
+    ).toBe(true)
+  })
+
   it('maps official screw modes to the internal intersection lattice', () => {
     const input = parameters({ rows: 5, columns: 5 })
     expect(openGridScrewLatticeDimensions(input)).toEqual({
@@ -129,6 +188,58 @@ describe('OpenGrid contract', () => {
         [14, 14],
       ]),
     )
+  })
+
+  it('adds an optional center screw and a centered interval pattern', () => {
+    expect(
+      openGridScrewPositionsFor(
+        parameters({
+          rows: 2,
+          columns: 2,
+          screwMode: 'none',
+          screwCenter: true,
+          screwEvery: 0,
+        }),
+      ),
+    ).toEqual([{ row: 0, column: 0 }])
+
+    expect(
+      openGridScrewPositionsFor(
+        parameters({
+          rows: 5,
+          columns: 5,
+          screwMode: 'none',
+          screwCenter: false,
+          screwEvery: 2,
+        }),
+      ),
+    ).toEqual([
+      { row: 0, column: 0 },
+      { row: 0, column: 2 },
+      { row: 2, column: 0 },
+      { row: 2, column: 2 },
+    ])
+
+    expect(
+      openGridScrewPositionsFor(
+        parameters({
+          rows: 2,
+          columns: 2,
+          screwMode: 'corners',
+          screwCenter: true,
+          screwEvery: 1,
+        }),
+      ),
+    ).toEqual([{ row: 0, column: 0 }])
+
+    expect(
+      validateOpenGridParameters(
+        parameters({ rows: 3, columns: 3, screwCenter: true }),
+      ).valid,
+    ).toBe(false)
+    expect(
+      validateOpenGridParameters(parameters({ screwEvery: -1 })).valid,
+    ).toBe(false)
   })
 
   it('normalizes custom intersection positions and rejects duplicates or old fields', () => {

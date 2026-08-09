@@ -1,6 +1,7 @@
 export type OpenGridVariant = 'Full' | 'Lite' | 'Heavy'
 export type OpenGridChamferMode = 'none' | 'corners' | 'everywhere'
 export type OpenGridScrewKind = 'official-default' | 'custom'
+export type OpenGridScrewPreset = 'm3' | 'm4' | 'm5' | 'm6' | 'm7'
 export type OpenGridScrewMode =
   'none' | 'corners' | 'everywhere' | 'by-row-column' | 'custom'
 export type OpenGridConnectorHoles = 'none' | 'enabled'
@@ -16,6 +17,8 @@ export type OpenGridParameterKey =
   | 'connectorSides'
   | 'screwKind'
   | 'screwMode'
+  | 'screwCenter'
+  | 'screwEvery'
   | 'screwEveryRows'
   | 'screwEveryColumns'
   | 'screwDiameter'
@@ -56,6 +59,8 @@ export type OpenGridParameters = {
   connectorSides: OpenGridSideFlags
   screwKind: OpenGridScrewKind
   screwMode: OpenGridScrewMode
+  screwCenter: boolean
+  screwEvery: number
   screwEveryRows: number
   screwEveryColumns: number
   screwDiameter: number
@@ -95,6 +100,47 @@ const DEFAULT_SCREW_DIMENSIONS: OpenGridScrewDimensions = {
   headInset: 1,
   headIsCountersunk: true,
   headCountersunkDegree: 90,
+}
+
+const COMMON_WOOD_SCREW_PRESETS: Record<
+  OpenGridScrewPreset,
+  OpenGridScrewDimensions
+> = {
+  m3: {
+    diameter: 3.2,
+    headDiameter: 5.6,
+    headInset: 1.65,
+    headIsCountersunk: true,
+    headCountersunkDegree: 90,
+  },
+  m4: {
+    diameter: 4.2,
+    headDiameter: 7.5,
+    headInset: 2.2,
+    headIsCountersunk: true,
+    headCountersunkDegree: 90,
+  },
+  m5: {
+    diameter: 5.2,
+    headDiameter: 9.2,
+    headInset: 2.5,
+    headIsCountersunk: true,
+    headCountersunkDegree: 90,
+  },
+  m6: {
+    diameter: 6.2,
+    headDiameter: 11,
+    headInset: 3,
+    headIsCountersunk: true,
+    headCountersunkDegree: 90,
+  },
+  m7: {
+    diameter: 7.2,
+    headDiameter: 12.5,
+    headInset: 3.5,
+    headIsCountersunk: true,
+    headCountersunkDegree: 90,
+  },
 }
 
 const DEFAULT_CHAMFER_CORNERS: OpenGridCornerFlags = {
@@ -137,6 +183,7 @@ export const OPENGRID_CONFIGURATION = {
     Heavy: { thickness: 13.8 },
   } satisfies Record<OpenGridVariant, { thickness: number }>,
   defaultScrew: DEFAULT_SCREW_DIMENSIONS,
+  screwPresets: COMMON_WOOD_SCREW_PRESETS,
   defaultParameters: {
     variant: 'Lite' as OpenGridVariant,
     rows: 2,
@@ -147,6 +194,8 @@ export const OPENGRID_CONFIGURATION = {
     connectorSides: DEFAULT_CONNECTOR_SIDES,
     screwKind: 'official-default' as OpenGridScrewKind,
     screwMode: 'corners' as OpenGridScrewMode,
+    screwCenter: false,
+    screwEvery: 0,
     screwEveryRows: 1,
     screwEveryColumns: 2,
     screwDiameter: DEFAULT_SCREW_DIMENSIONS.diameter,
@@ -175,6 +224,8 @@ const OPEN_GRID_PARAMETER_KEYS: readonly OpenGridParameterKey[] = [
   'connectorSides',
   'screwKind',
   'screwMode',
+  'screwCenter',
+  'screwEvery',
   'screwEveryRows',
   'screwEveryColumns',
   'screwDiameter',
@@ -372,6 +423,24 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     issues.push({ field: 'screwMode', message: '螺絲孔模式不受支援。' })
   }
 
+  if (typeof value.screwCenter !== 'boolean') {
+    issues.push({
+      field: 'screwCenter',
+      message: '正中心螺絲孔旗標必須是布林值。',
+    })
+  }
+
+  if (
+    !Number.isSafeInteger(value.screwEvery) ||
+    (value.screwEvery as number) < 0 ||
+    (value.screwEvery as number) > OPENGRID_CONFIGURATION.maxGridCount
+  ) {
+    issues.push({
+      field: 'screwEvery',
+      message: `螺絲孔間隔必須是 0–${OPENGRID_CONFIGURATION.maxGridCount} 的整數；0 代表關閉。`,
+    })
+  }
+
   for (const field of ['screwEveryRows', 'screwEveryColumns'] as const) {
     const interval = value[field]
     if (
@@ -408,6 +477,17 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     : null
   const rowsAreValid = rowCount !== null && rowCount >= 1
   const columnsAreValid = columnCount !== null && columnCount >= 1
+  if (
+    value.screwCenter === true &&
+    rowsAreValid &&
+    columnsAreValid &&
+    ((rowCount as number) % 2 !== 0 || (columnCount as number) % 2 !== 0)
+  ) {
+    issues.push({
+      field: 'screwCenter',
+      message: '正中心螺絲孔需要 X、Y 格數都是偶數。',
+    })
+  }
   const screwDiameter = isFiniteNumber(value.screwDiameter)
     ? value.screwDiameter
     : null
@@ -545,6 +625,8 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
       connectorSides: { ...(value.connectorSides as OpenGridSideFlags) },
       screwKind: value.screwKind as OpenGridScrewKind,
       screwMode: value.screwMode as OpenGridScrewMode,
+      screwCenter: value.screwCenter as boolean,
+      screwEvery: value.screwEvery as number,
       screwEveryRows: value.screwEveryRows as number,
       screwEveryColumns: value.screwEveryColumns as number,
       screwDiameter: value.screwDiameter as number,
@@ -677,6 +759,17 @@ function allInternalScrewPositions(
   return positions
 }
 
+function centeredScrewPosition(
+  parameters: Pick<OpenGridParameters, 'rows' | 'columns'>,
+): OpenGridScrewPosition | null {
+  if (parameters.rows % 2 !== 0 || parameters.columns % 2 !== 0) return null
+  const lattice = openGridScrewLatticeDimensions(parameters)
+  return {
+    row: (lattice.rows - 1) / 2,
+    column: (lattice.columns - 1) / 2,
+  }
+}
+
 function addUniquePosition(
   positions: OpenGridScrewPosition[],
   seen: Set<string>,
@@ -730,7 +823,18 @@ function positionsByRowAndColumn(
   return rows.flatMap((row) => columns.map((column) => ({ row, column })))
 }
 
-export function openGridScrewPositionsFor(
+function positionsByUniformInterval(
+  parameters: Pick<OpenGridParameters, 'rows' | 'columns' | 'screwEvery'>,
+): OpenGridScrewPosition[] {
+  return positionsByRowAndColumn({
+    rows: parameters.rows,
+    columns: parameters.columns,
+    screwEveryRows: parameters.screwEvery,
+    screwEveryColumns: parameters.screwEvery,
+  })
+}
+
+function baseScrewPositionsFor(
   parameters: OpenGridParameters,
 ): OpenGridScrewPosition[] {
   if (parameters.screwMode === 'none') return []
@@ -757,34 +861,72 @@ export function openGridScrewPositionsFor(
   return positions.sort(comparePositions)
 }
 
+export function openGridScrewPositionsFor(
+  parameters: OpenGridParameters,
+): OpenGridScrewPosition[] {
+  const positions: OpenGridScrewPosition[] = []
+  const seen = new Set<string>()
+  for (const position of baseScrewPositionsFor(parameters)) {
+    addUniquePosition(positions, seen, position)
+  }
+
+  if (parameters.screwCenter) {
+    const center = centeredScrewPosition(parameters)
+    if (center) addUniquePosition(positions, seen, center)
+  }
+
+  if (parameters.screwEvery > 0) {
+    for (const position of positionsByUniformInterval(parameters)) {
+      addUniquePosition(positions, seen, position)
+    }
+  }
+
+  return positions.sort(comparePositions)
+}
+
 export function openGridScrewCentersFor(
   parameters: OpenGridParameters,
 ): OpenGridPoint2D[] {
-  if (parameters.screwMode !== 'corners') {
-    return openGridScrewPositionsFor(parameters).map((position) =>
-      screwCenterForOpenGrid(parameters, position),
-    )
-  }
-
-  const board = openGridBoardConfiguration(parameters)
-  const xCandidates = [
-    -board.width / 2 + OPENGRID_CONFIGURATION.gridPitch,
-    board.width / 2 - OPENGRID_CONFIGURATION.gridPitch,
-  ]
-  const yCandidates = [
-    -board.depth / 2 + OPENGRID_CONFIGURATION.gridPitch,
-    board.depth / 2 - OPENGRID_CONFIGURATION.gridPitch,
-  ]
   const centers: OpenGridPoint2D[] = []
   const seen = new Set<string>()
-  for (const x of xCandidates) {
-    for (const y of yCandidates) {
-      const key = `${x}:${y}`
-      if (seen.has(key)) continue
-      seen.add(key)
-      centers.push([x, y])
+
+  const addCenter = (center: OpenGridPoint2D): void => {
+    const key = `${center[0]}:${center[1]}`
+    if (seen.has(key)) return
+    seen.add(key)
+    centers.push(center)
+  }
+
+  if (parameters.screwMode === 'corners') {
+    const board = openGridBoardConfiguration(parameters)
+    const xCandidates = [
+      -board.width / 2 + OPENGRID_CONFIGURATION.gridPitch,
+      board.width / 2 - OPENGRID_CONFIGURATION.gridPitch,
+    ]
+    const yCandidates = [
+      -board.depth / 2 + OPENGRID_CONFIGURATION.gridPitch,
+      board.depth / 2 - OPENGRID_CONFIGURATION.gridPitch,
+    ]
+    for (const x of xCandidates) {
+      for (const y of yCandidates) addCenter([x, y])
+    }
+  } else {
+    for (const position of openGridScrewPositionsFor(parameters)) {
+      addCenter(screwCenterForOpenGrid(parameters, position))
+    }
+    return centers
+  }
+
+  if (parameters.screwCenter) {
+    const center = centeredScrewPosition(parameters)
+    if (center) addCenter(screwCenterForOpenGrid(parameters, center))
+  }
+  if (parameters.screwEvery > 0) {
+    for (const position of positionsByUniformInterval(parameters)) {
+      addCenter(screwCenterForOpenGrid(parameters, position))
     }
   }
+
   return centers
 }
 
@@ -856,14 +998,29 @@ export function openGridCustomPositionFingerprint(
   return fnv1a(parameters.customScrewPositions.map(positionKey).join('|'))
 }
 
+function openGridScrewPatternFingerprint(
+  parameters: OpenGridParameters,
+): string {
+  const customFingerprint = openGridCustomPositionFingerprint(parameters)
+  if (!parameters.screwCenter && parameters.screwEvery === 0) {
+    return customFingerprint
+  }
+  return fnv1a(
+    `${customFingerprint}|center=${parameters.screwCenter}|every=${parameters.screwEvery}`,
+  )
+}
+
 function buildOpenGridFileName(
   parameters: OpenGridParameters,
   extension: '.step' | '.stl',
 ): string {
-  const fingerprint =
-    parameters.screwMode === 'custom'
-      ? `-${openGridCustomPositionFingerprint(parameters)}`
-      : ''
+  const hasScrewPatternModifiers =
+    parameters.screwMode === 'custom' ||
+    parameters.screwCenter ||
+    parameters.screwEvery > 0
+  const fingerprint = hasScrewPatternModifiers
+    ? `-${openGridScrewPatternFingerprint(parameters)}`
+    : ''
   return `opengrid-${parameters.variant.toLowerCase()}-${parameters.columns}x${parameters.rows}-${parameters.screwKind}-${parameters.screwMode}-${parameters.chamfers}-${parameters.connectorHoles}${fingerprint}${extension}`
 }
 

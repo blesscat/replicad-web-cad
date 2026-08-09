@@ -670,6 +670,41 @@ The HSW catalog definition MUST provide the deterministic STEP filename `hsw-cel
 - **AND** the suggested filename MUST be `hsw-cell-2x2.step`
 - **AND** the downloaded bytes MUST be non-empty exact STEP output from the committed HSW B-Rep
 
+### Requirement: 穩定且響應式的參數復原控制
+
+CAD workspace MUST 提供可辨識且可用的 component-level「全部恢復預設」操作，將目前模型的所有參數恢復為定義的預設值。非 boolean 的模型參數 MAY 另外提供個別復原操作；boolean 控制與尺寸計算器的暫存輸入不提供個別復原按鈕。復原操作出現或消失時，不得重新分配相關 slider、select、文字輸入框或 checkbox 的主要控制區域；在窄版面板中，控制項 MUST 維持可讀、可操作，且不得因復原操作造成水平溢出。
+
+#### Scenario: 非 boolean 參數修改後顯示個別復原操作
+
+- **GIVEN** 使用者位於任一提供可復原參數的 model-specific CAD workspace，且該參數目前為預設值
+- **WHEN** 使用者將該參數修改為不同的合法值
+- **THEN** 該參數 MUST 顯示具備可理解 accessible name 的復原操作
+- **AND** 原本的 slider、select、文字輸入框或 checkbox MUST 維持可操作
+- **AND** 參數控制的主要位置與可用寬度 MUST 不因復原操作動態出現而改變
+
+#### Scenario: boolean 與尺寸計算器使用 component-level 復原
+
+- **GIVEN** 使用者修改 model component 的 boolean 參數，或在尺寸計算器輸入目標尺寸
+- **THEN** 該控制 MUST NOT 顯示個別復原按鈕
+- **AND** component MUST 顯示具備可理解 accessible name 的「全部恢復預設」操作
+- **AND** 原本的 checkbox 或文字輸入框 MUST 維持可操作
+
+#### Scenario: 窄版面板不被復原操作壓縮
+
+- **GIVEN** 使用者在窄視窗查看模型參數面板
+- **WHEN** 使用者修改會顯示復原操作的 select、slider 或數字輸入參數
+- **THEN** 參數控制 MUST 保留足以顯示及操作其值的寬度
+- **AND** 復原操作 MUST 保持可見且可點擊
+- **AND** 頁面 MUST 不因該復原操作產生水平溢出
+
+#### Scenario: 全部恢復預設後維持穩定版面
+
+- **GIVEN** component 內一個以上參數已修改
+- **WHEN** 使用者啟動「全部恢復預設」操作
+- **THEN** 所有模型參數 MUST 回到定義的預設值
+- **AND** 尺寸計算器的暫存輸入 MUST 清空
+- **AND** 相關控制項與相鄰欄位 MUST 不發生額外的水平或垂直位移
+
 ## 可追溯性
 
 - 變更動機、Prototype 範圍與後續演進：../../proposal.md

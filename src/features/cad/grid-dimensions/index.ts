@@ -1,8 +1,10 @@
 import {
   HSW_CELL_CONFIGURATION,
+  OPENGRID_CONFIGURATION,
   PROTOTYPE_CONFIGURATION,
   boundsForHswCell,
   boundsForModularGridBase,
+  boundsForOpenGrid,
   type HswCellParameters,
   type ModularGridBaseParameters,
 } from '../../../cad-contract/units'
@@ -106,6 +108,15 @@ function invalidMinimumDimension(
   }
 }
 
+function openGridBoundsSize(rows: number, columns: number): BoundsSize {
+  const bounds = boundsForOpenGrid({
+    variant: OPENGRID_CONFIGURATION.defaultParameters.variant,
+    rows,
+    columns,
+  })
+  return sizeFromBounds(bounds)
+}
+
 export function calculateModularGridCounts(
   input: GridDimensionInput,
 ): GridDimensionResult {
@@ -135,6 +146,43 @@ export function calculateModularGridCounts(
 
   const parameters: ModularGridBaseParameters = { rows, columns }
   const actualDimensions = sizeFromBounds(boundsForModularGridBase(parameters))
+  return { valid: true, parameters, actualDimensions }
+}
+
+export function calculateOpenGridCounts(
+  input: GridDimensionInput,
+): GridDimensionResult {
+  const targets = parseTargets(input)
+  if (!targets.valid) return targets
+
+  const columns = maxCountThatFits(
+    OPENGRID_CONFIGURATION.maxGridCount,
+    targets.x,
+    (count) => openGridBoundsSize(1, count).x,
+  )
+  const rows = maxCountThatFits(
+    OPENGRID_CONFIGURATION.maxGridCount,
+    targets.y,
+    (count) => openGridBoundsSize(count, 1).y,
+  )
+
+  if (columns === 0) {
+    return invalidMinimumDimension(
+      'X',
+      OPENGRID_CONFIGURATION.gridPitch,
+      '1 個 OpenGrid 格',
+    )
+  }
+  if (rows === 0) {
+    return invalidMinimumDimension(
+      'Y',
+      OPENGRID_CONFIGURATION.gridPitch,
+      '1 個 OpenGrid 格',
+    )
+  }
+
+  const parameters = { rows, columns }
+  const actualDimensions = openGridBoundsSize(rows, columns)
   return { valid: true, parameters, actualDimensions }
 }
 

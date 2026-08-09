@@ -4,6 +4,7 @@
     GridDimensionInput,
     GridDimensionResult,
   } from '../../../features/cad/grid-dimensions'
+  import ParameterField from './ParameterField.svelte'
 
   type GridParameters = {
     rows: number
@@ -67,65 +68,58 @@
   <div>
     <h3 class="m-0 text-base font-semibold">用尺寸計算格數</h3>
     <p class="mt-1 mb-0 text-sm text-muted">
-      輸入目標 X/Y 尺寸，計算不超過目標的最大格數。
+      輸入 X/Y 尺寸，計算不超過目標的最大格數。
     </p>
   </div>
 
-  <div class="grid gap-3 sm:grid-cols-2">
-    <label class="grid gap-[0.3rem]">
-      <span class="font-[650]">目標 X 尺寸（mm）</span>
+  <div
+    class="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-start gap-2"
+  >
+    <ParameterField
+      label="X"
+      unit="mm"
+      error={errors.x}
+      errorId="grid-dimension-x-error"
+    >
       <input
         aria-describedby={errors.x ? 'grid-dimension-x-error' : undefined}
         aria-invalid={Boolean(errors.x)}
-        aria-label="目標 X 尺寸（mm）"
-        class="w-full rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
+        aria-label="X（mm）"
+        class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
         inputmode="decimal"
         type="text"
         value={targetX}
         oninput={(event) => handleTargetInput('x', event)}
       />
-      {#if errors.x}
-        <span
-          id="grid-dimension-x-error"
-          class="text-sm text-error"
-          role="alert"
-        >
-          {errors.x}
-        </span>
-      {/if}
-    </label>
+    </ParameterField>
 
-    <label class="grid gap-[0.3rem]">
-      <span class="font-[650]">目標 Y 尺寸（mm）</span>
+    <ParameterField
+      label="Y"
+      unit="mm"
+      error={errors.y}
+      errorId="grid-dimension-y-error"
+    >
       <input
         aria-describedby={errors.y ? 'grid-dimension-y-error' : undefined}
         aria-invalid={Boolean(errors.y)}
-        aria-label="目標 Y 尺寸（mm）"
-        class="w-full rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
+        aria-label="Y（mm）"
+        class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
         inputmode="decimal"
         type="text"
         value={targetY}
         oninput={(event) => handleTargetInput('y', event)}
       />
-      {#if errors.y}
-        <span
-          id="grid-dimension-y-error"
-          class="text-sm text-error"
-          role="alert"
-        >
-          {errors.y}
-        </span>
-      {/if}
-    </label>
+    </ParameterField>
+    <div class="min-w-0 pt-[1.8rem]">
+      <button
+        class="h-[2.725rem] shrink-0 cursor-pointer whitespace-nowrap rounded-lg border-0 bg-primary px-2 text-sm text-white disabled:cursor-not-allowed disabled:bg-disabled"
+        type="button"
+        onclick={handleCalculate}
+      >
+        計算格數
+      </button>
+    </div>
   </div>
-
-  <button
-    class="w-fit cursor-pointer rounded-lg border-0 bg-primary px-[0.8rem] py-[0.6rem] text-base text-white disabled:cursor-not-allowed disabled:bg-disabled"
-    type="button"
-    onclick={handleCalculate}
-  >
-    計算格數
-  </button>
 
   {#if actualDimensions}
     <p

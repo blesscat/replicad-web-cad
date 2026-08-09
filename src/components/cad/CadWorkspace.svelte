@@ -25,6 +25,7 @@
 
   let { modelId }: Props = $props()
   let snapshot = $state<CadWorkspaceControllerSnapshot | null>(null)
+  let resetVersion = $state(0)
   let controller: CadWorkspaceController | null = null
   let parameterStore: ComponentParameterStore | null = null
 
@@ -63,11 +64,16 @@
   function handleRetry(): void {
     controller?.onRetry()
   }
+
+  function handleRestoreDefaults(): void {
+    controller?.onRestoreDefaults()
+    resetVersion += 1
+  }
 </script>
 
 {#if snapshot}
   <div
-    class="mt-6 grid items-start grid-cols-[minmax(220px,280px)_minmax(0,1fr)] gap-4 max-cad:grid-cols-1"
+    class="mt-6 grid items-start grid-cols-[minmax(220px,320px)_minmax(0,1fr)] gap-4 max-cad:grid-cols-1"
     data-testid="cad-workspace"
   >
     <CadWorkspacePanel
@@ -81,6 +87,8 @@
       onOpenGridParametersChange={handleOpenGridParametersChange}
       onExport={handleExport}
       onRetry={handleRetry}
+      {resetVersion}
+      onRestoreDefaults={handleRestoreDefaults}
     />
     <CadViewport
       mesh={snapshot.state.committed?.mesh ?? null}

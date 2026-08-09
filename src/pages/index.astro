@@ -2,6 +2,7 @@
 import SiteLayout from '../layouts/SiteLayout.astro'
 import {
   cadPathForModel,
+  displayParameterLabel,
   modelDefinitions,
 } from '../features/cad/model-catalog'
 
@@ -9,11 +10,9 @@ function parameterSummary(
   definition: (typeof modelDefinitions)[number],
 ): string {
   if (definition.id === 'opengrid') {
-    return '板型、行列格數、螺絲種類與孔位、連接孔'
+    return '板型、X/Y 格數、螺絲種類與孔位、連接孔'
   }
-  return definition.parameterSchema
-    .map((field) => `${field.label}（${field.axis}）`)
-    .join('、')
+  return definition.parameterSchema.map(displayParameterLabel).join('、')
 }
 ---
 

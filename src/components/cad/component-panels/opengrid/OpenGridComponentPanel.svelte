@@ -1,10 +1,18 @@
 <script lang="ts">
+  import { calculateOpenGridCounts } from '../../../../features/cad/grid-dimensions'
   import {
     OPENGRID_CONFIGURATION,
     type OpenGridCornerFlags,
+    type OpenGridParameterKey,
     type OpenGridParameters,
     type OpenGridSideFlags,
+    type OpenGridScrewDimensions,
+    type OpenGridScrewPreset,
   } from '../../../../cad-contract/units'
+  import GridDimensionCalculator from '../GridDimensionCalculator.svelte'
+  import ParameterField from '../ParameterField.svelte'
+  import RestoreButton from '../RestoreButton.svelte'
+  import Slider from '../Slider.svelte'
   import type { OpenGridComponentPanelProps } from '../types'
 
   let {
@@ -22,8 +30,181 @@
   let latticeColumns = $derived(Math.max(parameters.columns - 1, 0))
   let selectedCount = $derived(parameters.customScrewPositions.length)
 
+  type ScrewPresetOption = 'official-default' | OpenGridScrewPreset | 'custom'
+
+  const screwPresetKeys: readonly OpenGridScrewPreset[] = [
+    'm3',
+    'm4',
+    'm5',
+    'm6',
+    'm7',
+  ]
+
+  function screwDimensionsMatch(dimensions: OpenGridScrewDimensions): boolean {
+    return (
+      parameters.screwDiameter === dimensions.diameter &&
+      parameters.screwHeadDiameter === dimensions.headDiameter &&
+      parameters.screwHeadInset === dimensions.headInset &&
+      parameters.screwHeadIsCountersunk === dimensions.headIsCountersunk &&
+      parameters.screwHeadCountersunkDegree === dimensions.headCountersunkDegree
+    )
+  }
+
+  function currentScrewPreset(): ScrewPresetOption {
+    if (parameters.screwKind === 'official-default') {
+      return 'official-default'
+    }
+    for (const preset of screwPresetKeys) {
+      if (screwDimensionsMatch(OPENGRID_CONFIGURATION.screwPresets[preset])) {
+        return preset
+      }
+    }
+    return 'custom'
+  }
+
+  let selectedScrewPreset = $derived.by(() => currentScrewPreset())
+  let showAdvancedScrewSettings = $state(parameters.screwKind === 'custom')
+
+  function valuesEqual(left: unknown, right: unknown): boolean {
+    if (Object.is(left, right)) return true
+    if (Array.isArray(left) && Array.isArray(right)) {
+      return (
+        left.length === right.length &&
+        left.every((value, index) => valuesEqual(value, right[index]))
+      )
+    }
+    if (
+      typeof left === 'object' &&
+      left !== null &&
+      typeof right === 'object' &&
+      right !== null
+    ) {
+      const leftRecord = left as Record<string, unknown>
+      const rightRecord = right as Record<string, unknown>
+      const leftKeys = Object.keys(leftRecord)
+      const rightKeys = Object.keys(rightRecord)
+      return (
+        leftKeys.length === rightKeys.length &&
+        leftKeys.every(
+          (key) =>
+            Object.prototype.hasOwnProperty.call(rightRecord, key) &&
+            valuesEqual(leftRecord[key], rightRecord[key]),
+        )
+      )
+    }
+    return false
+  }
+
+  function parameterChanged(field: OpenGridParameterKey): boolean {
+    return !valuesEqual(
+      parameters[field],
+      OPENGRID_CONFIGURATION.defaultParameters[field],
+    )
+  }
+
+  function screwConfigurationChanged(): boolean {
+    return (
+      parameterChanged('screwKind') ||
+      parameterChanged('screwDiameter') ||
+      parameterChanged('screwHeadDiameter') ||
+      parameterChanged('screwHeadInset') ||
+      parameterChanged('screwHeadIsCountersunk') ||
+      parameterChanged('screwHeadCountersunkDegree')
+    )
+  }
+
+  function restoreParameter(field: OpenGridParameterKey): void {
+    const defaultValue = OPENGRID_CONFIGURATION.defaultParameters[field]
+    updateParameters({ [field]: defaultValue } as Partial<OpenGridParameters>)
+  }
+
+  function restoreGridCount(field: 'rows' | 'columns'): void {
+    const defaultValue = OPENGRID_CONFIGURATION.defaultParameters[field]
+    updateGridCounts({
+      rows: field === 'rows' ? defaultValue : parameters.rows,
+      columns: field === 'columns' ? defaultValue : parameters.columns,
+    })
+  }
+
+  function restoreScrewMode(): void {
+    updateParameters({
+      screwMode: OPENGRID_CONFIGURATION.defaultParameters.screwMode,
+      customScrewPositions: [],
+    })
+  }
+
+  function restoreScrewConfiguration(): void {
+    showAdvancedScrewSettings = false
+    applyScrewDimensions(
+      OPENGRID_CONFIGURATION.defaultParameters.screwKind,
+      OPENGRID_CONFIGURATION.defaultScrew,
+    )
+  }
+
+  function isScrewPreset(value: string): value is OpenGridScrewPreset {
+    return screwPresetKeys.includes(value as OpenGridScrewPreset)
+  }
+
+  function isScrewPresetOption(value: string): value is ScrewPresetOption {
+    return (
+      value === 'official-default' || value === 'custom' || isScrewPreset(value)
+    )
+  }
+
+  function screwPresetFitsCurrentBoard(
+    dimensions: OpenGridScrewDimensions,
+  ): boolean {
+    const boardThickness =
+      OPENGRID_CONFIGURATION.variants[parameters.variant].thickness
+    return (
+      dimensions.diameter > 0 &&
+      dimensions.diameter <= dimensions.headDiameter &&
+      dimensions.headDiameter <= OPENGRID_CONFIGURATION.tileInnerSize &&
+      dimensions.headInset >= 0 &&
+      dimensions.headInset <= boardThickness
+    )
+  }
+
+  function applyScrewDimensions(
+    screwKind: OpenGridParameters['screwKind'],
+    dimensions: OpenGridScrewDimensions,
+  ): void {
+    updateParameters({
+      screwKind,
+      screwDiameter: dimensions.diameter,
+      screwHeadDiameter: dimensions.headDiameter,
+      screwHeadInset: dimensions.headInset,
+      screwHeadIsCountersunk: dimensions.headIsCountersunk,
+      screwHeadCountersunkDegree: dimensions.headCountersunkDegree,
+    })
+  }
+
+  function applyScrewPreset(preset: OpenGridScrewPreset): void {
+    applyScrewDimensions('custom', OPENGRID_CONFIGURATION.screwPresets[preset])
+  }
+
   function clonePositions(): OpenGridParameters['customScrewPositions'] {
     return parameters.customScrewPositions.map((position) => ({ ...position }))
+  }
+
+  function centerScrewAvailable(rows: number, columns: number): boolean {
+    return rows % 2 === 0 && columns % 2 === 0
+  }
+
+  function updateGridCounts(
+    changes: Pick<OpenGridParameters, 'rows' | 'columns'>,
+  ): void {
+    const positions = clonePositions().filter(
+      (position) =>
+        position.row < changes.rows && position.column < changes.columns,
+    )
+    updateParameters({
+      ...changes,
+      screwCenter: centerScrewAvailable(changes.rows, changes.columns)
+        ? parameters.screwCenter
+        : false,
+      customScrewPositions: positions,
+    })
   }
 
   function updateParameters(changes: Partial<OpenGridParameters>): void {
@@ -49,6 +230,7 @@
     field:
       | 'rows'
       | 'columns'
+      | 'screwEvery'
       | 'screwEveryRows'
       | 'screwEveryColumns'
       | 'screwDiameter'
@@ -58,21 +240,39 @@
     event: Event,
   ): void {
     if (!(event.currentTarget instanceof HTMLInputElement)) return
-    const numericValue = Number(event.currentTarget.value)
+    updateNumberValue(field, event.currentTarget.value)
+  }
+
+  function updateNumberValue(
+    field:
+      | 'rows'
+      | 'columns'
+      | 'screwEvery'
+      | 'screwEveryRows'
+      | 'screwEveryColumns'
+      | 'screwDiameter'
+      | 'screwHeadDiameter'
+      | 'screwHeadInset'
+      | 'screwHeadCountersunkDegree',
+    value: string,
+  ): void {
+    const numericValue = Number(value)
     if (field !== 'rows' && field !== 'columns') {
       updateParameters({ [field]: numericValue })
       return
     }
 
-    const nextRows = field === 'rows' ? numericValue : parameters.rows
-    const nextColumns = field === 'columns' ? numericValue : parameters.columns
-    const positions = clonePositions().filter(
-      (position) => position.row < nextRows && position.column < nextColumns,
-    )
-    updateParameters({
-      [field]: numericValue,
-      customScrewPositions: positions,
+    updateGridCounts({
+      rows: field === 'rows' ? numericValue : parameters.rows,
+      columns: field === 'columns' ? numericValue : parameters.columns,
     })
+  }
+
+  function handleDimensionCalculation(changes: {
+    rows: number
+    columns: number
+  }): void {
+    updateGridCounts(changes)
   }
 
   function updateSelect(
@@ -91,13 +291,19 @@
       return
     }
     if (field === 'screwKind') {
+      if (!isScrewPresetOption(value)) return
       if (value === 'official-default') {
-        updateParameters({
-          screwKind: 'official-default',
-          ...OPENGRID_CONFIGURATION.defaultScrew,
-        })
-      } else {
+        showAdvancedScrewSettings = false
+        applyScrewDimensions(
+          'official-default',
+          OPENGRID_CONFIGURATION.defaultScrew,
+        )
+      } else if (value === 'custom') {
+        showAdvancedScrewSettings = true
         updateParameters({ screwKind: 'custom' })
+      } else {
+        showAdvancedScrewSettings = true
+        applyScrewPreset(value)
       }
       return
     }
@@ -133,6 +339,16 @@
     updateParameters({ screwHeadIsCountersunk: event.currentTarget.checked })
   }
 
+  function updateScrewCenter(event: Event): void {
+    if (!(event.currentTarget instanceof HTMLInputElement)) return
+    updateParameters({ screwCenter: event.currentTarget.checked })
+  }
+
+  function updateAdvancedScrewSettings(event: Event): void {
+    if (!(event.currentTarget instanceof HTMLInputElement)) return
+    showAdvancedScrewSettings = event.currentTarget.checked
+  }
+
   function hasPosition(row: number, column: number): boolean {
     return parameters.customScrewPositions.some(
       (position) => position.row === row && position.column === column,
@@ -158,13 +374,20 @@
 </script>
 
 <fieldset class="m-0 grid gap-3 border-0 p-0" data-testid="opengrid-panel">
-  <legend class="text-muted">OpenGrid 官方參數</legend>
-
-  <label class="grid gap-1">
-    <span class="font-[650]">板型</span>
+  <ParameterField
+    label="板型"
+    changed={parameterChanged('variant')}
+    error={fieldError('variant')}
+    errorId="opengrid-variant-error"
+    restoreLabel="OpenGrid 板型"
+    onRestore={() => restoreParameter('variant')}
+  >
     <select
-      class="rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+      class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
       aria-label="OpenGrid 板型"
+      aria-describedby={fieldError('variant')
+        ? 'opengrid-variant-error'
+        : undefined}
       aria-invalid={Boolean(fieldError('variant'))}
       value={parameters.variant}
       onchange={(event) => updateSelect('variant', event)}
@@ -173,56 +396,72 @@
       <option value="Lite">Lite（4 mm）</option>
       <option value="Heavy">Heavy（13.8 mm，雙面）</option>
     </select>
-    {#if fieldError('variant')}<span class="text-sm text-error" role="alert"
-        >{fieldError('variant')}</span
-      >{/if}
-  </label>
+  </ParameterField>
 
-  <div class="grid grid-cols-2 gap-2">
-    <label class="grid gap-1">
-      <span class="font-[650]">行數（Y）</span>
-      <input
-        class="rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-        aria-label="OpenGrid 行數"
-        aria-invalid={Boolean(fieldError('rows'))}
-        type="number"
-        min="1"
-        max={OPENGRID_CONFIGURATION.maxGridCount}
-        step="1"
+  <GridDimensionCalculator
+    calculate={calculateOpenGridCounts}
+    onApply={handleDimensionCalculation}
+  />
+
+  <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+    <ParameterField
+      label="Y"
+      unit={`${parameters.rows} 格`}
+      unitAriaLive
+      changed={parameterChanged('rows')}
+      error={fieldError('rows')}
+      errorId="opengrid-rows-error"
+      restoreLabel="Y"
+      onRestore={() => restoreGridCount('rows')}
+    >
+      <Slider
         value={parameters.rows}
-        oninput={(event) => updateNumber('rows', event)}
-      />
-      {#if fieldError('rows')}<span class="text-sm text-error" role="alert"
-          >{fieldError('rows')}</span
-        >{/if}
-    </label>
-    <label class="grid gap-1">
-      <span class="font-[650]">列數（X）</span>
-      <input
-        class="rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-        aria-label="OpenGrid 列數"
-        aria-invalid={Boolean(fieldError('columns'))}
-        type="number"
-        min="1"
+        label="Y"
+        min={1}
         max={OPENGRID_CONFIGURATION.maxGridCount}
-        step="1"
-        value={parameters.columns}
-        oninput={(event) => updateNumber('columns', event)}
+        step={1}
+        error={fieldError('rows')}
+        describedBy={fieldError('rows') ? 'opengrid-rows-error' : undefined}
+        onChange={(value) => updateNumberValue('rows', value)}
       />
-      {#if fieldError('columns')}<span class="text-sm text-error" role="alert"
-          >{fieldError('columns')}</span
-        >{/if}
-    </label>
+    </ParameterField>
+    <ParameterField
+      label="X"
+      unit={`${parameters.columns} 格`}
+      unitAriaLive
+      changed={parameterChanged('columns')}
+      error={fieldError('columns')}
+      errorId="opengrid-columns-error"
+      restoreLabel="X"
+      onRestore={() => restoreGridCount('columns')}
+    >
+      <Slider
+        value={parameters.columns}
+        label="X"
+        min={1}
+        max={OPENGRID_CONFIGURATION.maxGridCount}
+        step={1}
+        error={fieldError('columns')}
+        describedBy={fieldError('columns')
+          ? 'opengrid-columns-error'
+          : undefined}
+        onChange={(value) => updateNumberValue('columns', value)}
+      />
+    </ParameterField>
   </div>
 
   <p class="m-0 text-sm text-muted">
     尺寸：{width} × {depth} × {thickness} mm（官方 28 mm pitch；內部淨空 25 mm）
   </p>
 
-  <label class="grid gap-1">
-    <span class="font-[650]">倒角模式</span>
+  <ParameterField
+    label="倒角模式"
+    changed={parameterChanged('chamfers')}
+    restoreLabel="OpenGrid 倒角模式"
+    onRestore={() => restoreParameter('chamfers')}
+  >
     <select
-      class="rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+      class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
       aria-label="OpenGrid 倒角模式"
       value={parameters.chamfers}
       onchange={(event) => updateSelect('chamfers', event)}
@@ -231,34 +470,43 @@
       <option value="everywhere">Everywhere</option>
       <option value="none">None</option>
     </select>
-  </label>
+  </ParameterField>
 
   {#if parameters.chamfers !== 'none'}
     <div class="grid gap-2 rounded-lg border border-border-card p-2">
       <span class="font-[650]">外角倒角</span>
-      <div class="grid grid-cols-2 gap-2 text-sm">
+      <div class="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
         {#each [['topLeft', '左上'], ['topRight', '右上'], ['bottomLeft', '左下'], ['bottomRight', '右下']] as item}
-          <label class="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={parameters.chamferCorners[
-                item[0] as keyof OpenGridCornerFlags
-              ]}
-              onchange={(event) =>
-                updateCorner(item[0] as keyof OpenGridCornerFlags, event)}
-            />
-            {item[1]}
-          </label>
+          {@const corner = item[0] as keyof OpenGridCornerFlags}
+          <div class="relative min-w-0 flex items-center gap-2">
+            <label class="flex min-w-0 grow items-center gap-2">
+              <input
+                type="checkbox"
+                checked={parameters.chamferCorners[corner]}
+                onchange={(event) => updateCorner(corner, event)}
+              />
+              {item[1]}
+            </label>
+          </div>
         {/each}
       </div>
     </div>
   {/if}
 
-  <label class="grid gap-1">
-    <span class="font-[650]">連接孔</span>
+  <ParameterField
+    label="連接孔"
+    changed={parameterChanged('connectorHoles')}
+    error={fieldError('connectorHoles')}
+    errorId="opengrid-connector-holes-error"
+    restoreLabel="OpenGrid 連接孔"
+    onRestore={() => restoreParameter('connectorHoles')}
+  >
     <select
-      class="rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+      class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
       aria-label="OpenGrid 連接孔"
+      aria-describedby={fieldError('connectorHoles')
+        ? 'opengrid-connector-holes-error'
+        : undefined}
       aria-invalid={Boolean(fieldError('connectorHoles'))}
       value={parameters.connectorHoles}
       onchange={(event) => updateSelect('connectorHoles', event)}
@@ -266,47 +514,150 @@
       <option value="enabled">啟用官方接頭孔</option>
       <option value="none">無</option>
     </select>
-  </label>
+  </ParameterField>
 
   {#if parameters.connectorHoles === 'enabled'}
     <div class="grid gap-2 rounded-lg border border-border-card p-2">
       <span class="font-[650]">接頭孔側邊</span>
-      <div class="grid grid-cols-2 gap-2 text-sm">
+      <div class="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
         {#each [['top', '上'], ['right', '右'], ['bottom', '下'], ['left', '左']] as item}
-          <label class="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={parameters.connectorSides[
-                item[0] as keyof OpenGridSideFlags
-              ]}
-              onchange={(event) =>
-                updateSide(item[0] as keyof OpenGridSideFlags, event)}
-            />
-            {item[1]}
-          </label>
+          {@const side = item[0] as keyof OpenGridSideFlags}
+          <div class="relative min-w-0 flex items-center gap-2">
+            <label class="flex min-w-0 grow items-center gap-2">
+              <input
+                type="checkbox"
+                checked={parameters.connectorSides[side]}
+                onchange={(event) => updateSide(side, event)}
+              />
+              {item[1]}
+            </label>
+          </div>
         {/each}
       </div>
     </div>
   {/if}
 
-  <label class="grid gap-1">
-    <span class="font-[650]">螺絲尺寸來源</span>
+  <ParameterField
+    label="螺絲尺寸來源"
+    changed={screwConfigurationChanged()}
+    restoreLabel="OpenGrid 螺絲尺寸來源"
+    onRestore={restoreScrewConfiguration}
+  >
     <select
-      class="rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+      class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
       aria-label="OpenGrid 螺絲尺寸來源"
-      value={parameters.screwKind}
+      value={selectedScrewPreset}
       onchange={(event) => updateSelect('screwKind', event)}
     >
-      <option value="official-default">官方預設（Ø4.1 / 頭Ø7.2）</option>
-      <option value="custom">Custom 尺寸</option>
+      <option value="official-default">
+        官方 SCAD 預設（Ø4.1 / 頭Ø7.2）
+      </option>
+      <optgroup label="常見沉頭木螺絲（DIN 7997）">
+        {#each screwPresetKeys as preset}
+          {@const dimensions = OPENGRID_CONFIGURATION.screwPresets[preset]}
+          <option
+            value={preset}
+            disabled={!screwPresetFitsCurrentBoard(dimensions)}
+          >
+            {preset.toUpperCase()} 木螺絲（通孔 Ø{dimensions.diameter} / 頭Ø{dimensions.headDiameter}）
+          </option>
+        {/each}
+      </optgroup>
+      <option value="custom">custom（自訂尺寸）</option>
     </select>
-  </label>
+    <p class="m-0 text-sm text-muted">
+      木螺絲預設採 90° 沉頭；板厚或格內淨空不足的規格會停用。
+    </p>
+  </ParameterField>
 
-  <label class="grid gap-1">
-    <span class="font-[650]">螺絲孔模式</span>
+  {#if parameters.screwKind === 'custom'}
+    <label class="flex items-center gap-2 text-sm">
+      <input
+        type="checkbox"
+        aria-label="進階設定"
+        checked={showAdvancedScrewSettings}
+        onchange={updateAdvancedScrewSettings}
+      />
+      進階設定
+    </label>
+
+    {#if showAdvancedScrewSettings}
+      <div class="grid gap-2" data-testid="opengrid-advanced-screw-settings">
+        <label class="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            aria-label="OpenGrid 是否沉頭"
+            checked={parameters.screwHeadIsCountersunk}
+            onchange={updateCountersunk}
+          />
+          使用沉頭孔
+        </label>
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <ParameterField label="通孔直徑（mm）">
+            <input
+              class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+              aria-label="OpenGrid 螺絲通孔直徑"
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={parameters.screwDiameter}
+              oninput={(event) => updateNumber('screwDiameter', event)}
+            />
+          </ParameterField>
+          <ParameterField label="頭部直徑（mm）">
+            <input
+              class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+              aria-label="OpenGrid 螺絲頭直徑"
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={parameters.screwHeadDiameter}
+              oninput={(event) => updateNumber('screwHeadDiameter', event)}
+            />
+          </ParameterField>
+          <ParameterField label="頭部內縮（mm）">
+            <input
+              class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+              aria-label="OpenGrid 螺絲頭內縮"
+              type="number"
+              min="0"
+              step="0.1"
+              value={parameters.screwHeadInset}
+              oninput={(event) => updateNumber('screwHeadInset', event)}
+            />
+          </ParameterField>
+          <ParameterField label="沉頭角度（°）">
+            <input
+              class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+              aria-label="OpenGrid 螺絲沉頭角度"
+              type="number"
+              min="1"
+              max="179"
+              step="1"
+              value={parameters.screwHeadCountersunkDegree}
+              oninput={(event) =>
+                updateNumber('screwHeadCountersunkDegree', event)}
+            />
+          </ParameterField>
+        </div>
+      </div>
+    {/if}
+  {/if}
+
+  <ParameterField
+    label="螺絲孔模式"
+    changed={parameterChanged('screwMode')}
+    error={fieldError('screwMode')}
+    errorId="opengrid-screw-mode-error"
+    restoreLabel="OpenGrid 螺絲孔模式"
+    onRestore={restoreScrewMode}
+  >
     <select
-      class="rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+      class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
       aria-label="OpenGrid 螺絲孔模式"
+      aria-describedby={fieldError('screwMode')
+        ? 'opengrid-screw-mode-error'
+        : undefined}
       aria-invalid={Boolean(fieldError('screwMode'))}
       value={parameters.screwMode}
       onchange={(event) => updateSelect('screwMode', event)}
@@ -317,14 +668,18 @@
       <option value="custom">Custom</option>
       <option value="none">None</option>
     </select>
-  </label>
+  </ParameterField>
 
   {#if parameters.screwMode === 'by-row-column'}
-    <div class="grid grid-cols-2 gap-2">
-      <label class="grid gap-1">
-        <span class="text-sm">Every X Rows</span>
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <ParameterField
+        label="Every X Rows"
+        changed={parameterChanged('screwEveryRows')}
+        restoreLabel="OpenGrid 每幾行螺絲孔"
+        onRestore={() => restoreParameter('screwEveryRows')}
+      >
         <input
-          class="rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+          class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
           aria-label="OpenGrid 每幾行螺絲孔"
           type="number"
           min="1"
@@ -333,11 +688,15 @@
           value={parameters.screwEveryRows}
           oninput={(event) => updateNumber('screwEveryRows', event)}
         />
-      </label>
-      <label class="grid gap-1">
-        <span class="text-sm">Every X Columns</span>
+      </ParameterField>
+      <ParameterField
+        label="Every X Columns"
+        changed={parameterChanged('screwEveryColumns')}
+        restoreLabel="OpenGrid 每幾列螺絲孔"
+        onRestore={() => restoreParameter('screwEveryColumns')}
+      >
         <input
-          class="rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+          class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
           aria-label="OpenGrid 每幾列螺絲孔"
           type="number"
           min="1"
@@ -346,78 +705,58 @@
           value={parameters.screwEveryColumns}
           oninput={(event) => updateNumber('screwEveryColumns', event)}
         />
-      </label>
+      </ParameterField>
     </div>
   {/if}
 
-  <div class="grid grid-cols-2 gap-2">
-    <label class="grid gap-1">
-      <span class="text-sm">通孔直徑（mm）</span>
+  <div class="grid gap-3">
+    <div class="grid gap-1 text-sm">
+      <label class="flex min-w-0 grow items-center gap-2">
+        <input
+          type="checkbox"
+          aria-label="OpenGrid 正中心螺絲孔"
+          checked={parameters.screwCenter}
+          disabled={!centerScrewAvailable(parameters.rows, parameters.columns)}
+          onchange={updateScrewCenter}
+        />
+        正中心螺絲孔
+      </label>
+      <p class="m-0 text-muted">
+        正中心需要 X、Y 格數都是偶數，才會對應到中央格線交界。
+      </p>
+    </div>
+    <ParameterField
+      label="每隔幾格一個孔（0=關閉）"
+      changed={parameterChanged('screwEvery')}
+      restoreLabel="OpenGrid 每隔幾格一個螺絲孔"
+      onRestore={() => restoreParameter('screwEvery')}
+    >
       <input
-        class="rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-        aria-label="OpenGrid 螺絲通孔直徑"
-        type="number"
-        min="0.1"
-        step="0.1"
-        value={parameters.screwDiameter}
-        oninput={(event) => updateNumber('screwDiameter', event)}
-      />
-    </label>
-    <label class="grid gap-1">
-      <span class="text-sm">頭部直徑（mm）</span>
-      <input
-        class="rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-        aria-label="OpenGrid 螺絲頭直徑"
-        type="number"
-        min="0.1"
-        step="0.1"
-        value={parameters.screwHeadDiameter}
-        oninput={(event) => updateNumber('screwHeadDiameter', event)}
-      />
-    </label>
-    <label class="grid gap-1">
-      <span class="text-sm">頭部內縮（mm）</span>
-      <input
-        class="rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-        aria-label="OpenGrid 螺絲頭內縮"
+        class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+        aria-label="OpenGrid 每隔幾格一個螺絲孔"
         type="number"
         min="0"
-        step="0.1"
-        value={parameters.screwHeadInset}
-        oninput={(event) => updateNumber('screwHeadInset', event)}
-      />
-    </label>
-    <label class="grid gap-1">
-      <span class="text-sm">沉頭角度（°）</span>
-      <input
-        class="rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-        aria-label="OpenGrid 螺絲沉頭角度"
-        type="number"
-        min="1"
-        max="179"
+        max={OPENGRID_CONFIGURATION.maxGridCount}
         step="1"
-        value={parameters.screwHeadCountersunkDegree}
-        oninput={(event) => updateNumber('screwHeadCountersunkDegree', event)}
+        value={parameters.screwEvery}
+        oninput={(event) => updateNumber('screwEvery', event)}
       />
-    </label>
+    </ParameterField>
   </div>
-  <label class="flex items-center gap-2 text-sm">
-    <input
-      type="checkbox"
-      aria-label="OpenGrid 是否沉頭"
-      checked={parameters.screwHeadIsCountersunk}
-      onchange={updateCountersunk}
-    />
-    使用沉頭孔
-  </label>
-
   {#if parameters.screwMode === 'custom'}
     <div class="grid gap-2" data-testid="opengrid-custom-matrix">
-      <div class="flex items-center justify-between gap-2">
-        <span class="font-[650]">自訂內部交界螺絲孔</span>
-        <span class="text-sm text-muted" aria-live="polite"
-          >已選 {selectedCount} 孔</span
-        >
+      <div class="relative flex items-center justify-between gap-2">
+        <span class="min-w-0 font-[650]">自訂內部交界螺絲孔</span>
+        <div class="flex shrink-0 items-center gap-1">
+          <RestoreButton
+            label="OpenGrid 自訂內部交界螺絲孔"
+            visible={parameterChanged('customScrewPositions')}
+            onRestore={() => restoreParameter('customScrewPositions')}
+          />
+          <span class="text-sm text-muted" aria-live="polite"
+            >已選 {selectedCount} 孔</span
+          >
+        </div>
       </div>
       <p class="m-0 text-sm text-muted">
         按官方 SCAD 的左至右、上至下順序選取；只有內部格線交界可選。
@@ -451,7 +790,7 @@
     </div>
   {/if}
 
-  {#each ['variant', 'chamfers', 'connectorHoles', 'screwKind', 'screwMode', 'screwDiameter', 'screwHeadDiameter', 'screwHeadInset', 'screwHeadCountersunkDegree'] as field}
+  {#each ['variant', 'chamfers', 'connectorHoles', 'screwKind', 'screwMode', 'screwCenter', 'screwEvery', 'screwDiameter', 'screwHeadDiameter', 'screwHeadInset', 'screwHeadCountersunkDegree'] as field}
     {#if fieldError(field as keyof OpenGridParameters)}<span
         class="text-sm text-error"
         role="alert">{fieldError(field as keyof OpenGridParameters)}</span

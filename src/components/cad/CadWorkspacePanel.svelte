@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { getModelDefinition } from '../../features/cad/model-catalog'
   import type { CadState } from '../../features/cad/state'
   import type {
     ModelId,
@@ -10,6 +9,7 @@
   import type { ExportFormat } from '../../features/cad/download'
   import type { RawParameters } from './workspace/types'
   import ComponentParameterPanel from './component-panels/index.svelte'
+  import RestoreDefaultsButton from './component-panels/RestoreDefaultsButton.svelte'
 
   const ACTION_BUTTON_CLASS =
     'cursor-pointer rounded-lg border-0 bg-primary px-[0.8rem] py-[0.6rem] text-base text-white disabled:cursor-not-allowed disabled:bg-disabled'
@@ -25,6 +25,8 @@
     onOpenGridParametersChange: (parameters: OpenGridParameters) => void
     onExport: (format: ExportFormat) => void
     onRetry: () => void
+    resetVersion: number
+    onRestoreDefaults: () => void
   }
 
   let {
@@ -38,38 +40,26 @@
     onOpenGridParametersChange,
     onExport,
     onRetry,
+    resetVersion,
+    onRestoreDefaults,
   }: Props = $props()
-
-  let definition = $derived.by(() => {
-    const nextDefinition = getModelDefinition(modelId)
-    if (!nextDefinition) throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
-    return nextDefinition
-  })
 </script>
 
 <div
-  class="self-start grid gap-4 rounded-2xl border border-border-card bg-panel p-4"
+  class="sticky top-4 self-start grid min-h-0 max-h-[calc(100vh-15rem)] gap-4 overflow-y-auto rounded-2xl border border-border-card bg-panel p-4 max-cad:static max-cad:max-h-none max-cad:overflow-visible"
+  data-testid="cad-workspace-panel"
 >
-  <div>
-    <h2 class="mb-2 text-2xl font-semibold leading-tight">
-      {definition.displayName}參數
-    </h2>
-    <p class="text-muted">
-      目前編輯此 component；如要切換模型，請
-      <a class="text-ink underline underline-offset-4" href="/">
-        返回首頁選擇其他模型
-      </a>
-      。
-    </p>
-  </div>
-  <ComponentParameterPanel
-    {modelId}
-    {parameters}
-    {rawParameters}
-    {fieldErrors}
-    {onInputChange}
-    {onOpenGridParametersChange}
-  />
+  <RestoreDefaultsButton onRestore={onRestoreDefaults} />
+  {#key resetVersion}
+    <ComponentParameterPanel
+      {modelId}
+      {parameters}
+      {rawParameters}
+      {fieldErrors}
+      {onInputChange}
+      {onOpenGridParametersChange}
+    />
+  {/key}
   <div class="flex flex-wrap gap-[0.6rem]">
     <button
       class={ACTION_BUTTON_CLASS}

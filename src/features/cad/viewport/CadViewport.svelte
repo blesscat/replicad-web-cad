@@ -29,7 +29,7 @@
 </script>
 
 <div
-  class={`viewport relative h-[520px] self-start overflow-hidden rounded-2xl border ${stale ? 'border-stale' : 'border-border-card'} bg-viewport`}
+  class={`viewport relative h-[min(520px,calc(100vh-15rem))] self-start overflow-hidden rounded-2xl border max-cad:h-[520px] ${stale ? 'border-stale' : 'border-border-card'} bg-viewport`}
   data-testid="cad-viewport"
   role="img"
   aria-label="3D CAD 預覽"

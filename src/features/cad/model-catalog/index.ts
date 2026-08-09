@@ -7,6 +7,7 @@ import { modularGridBaseDefinition } from './components/modular-grid-base'
 import { opengridDefinition } from './components/opengrid'
 import type { ModelDefinition } from './types'
 
+export { displayParameterLabel } from './labels'
 export type { ModelDefinition, ParameterField } from './types'
 export { boxDefinition } from './components/box'
 export { boxNormalDefinition } from './components/box-normal'

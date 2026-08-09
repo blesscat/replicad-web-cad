@@ -59,11 +59,12 @@ The profile builder will use Replicad sketches/faces and booleans to reproduce t
 The domain contract will replace the old schema:
 
 - Screw positions are `{ row, column }` on the `(rows-1) × (columns-1)` internal intersection lattice. World coordinates follow the source's top-to-bottom custom string order and 28 mm spacing.
+- Screw placement also exposes an optional `screwCenter` boolean for the exact central internal intersection (only when both grid axes have an even cell count) and a `screwEvery` integer interval (`0` disables it). Both modifiers compile to the same normalized intersection positions and are de-duplicated with the selected screw mode.
 - Screw dimensions are generic official fields. `official-default` is a named preset; `custom` uses the normalized numeric fields. There are no hardcoded M3/M4/M5 counterbore semantics in the official compatibility contract.
 - Connector control is an enable flag plus four side flags. Positions are internal seams along each eligible board edge, and the cutter is the official non-circular profile.
 - Chamfer control is a mode plus four outer-corner flags.
 
-The UI may offer convenience presets later, but every generated result is determined by the normalized official dimensions and positions.
+The UI may offer convenience screw-size presets, but every generated result is determined by the normalized official dimensions and positions.
 
 ### 3. Build and validate one canonical official tile, then assemble
 

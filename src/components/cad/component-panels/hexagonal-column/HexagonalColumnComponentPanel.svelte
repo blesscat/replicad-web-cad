@@ -1,6 +1,10 @@
 <script lang="ts">
   import { HEXAGONAL_COLUMN_CONFIGURATION } from '../../../../cad-contract/units'
-  import { hexagonalColumnDefinition } from '../../../../features/cad/model-catalog'
+  import {
+    displayParameterLabel,
+    hexagonalColumnDefinition,
+  } from '../../../../features/cad/model-catalog'
+  import ParameterField from '../ParameterField.svelte'
   import ParameterControl from '../ParameterControl.svelte'
   import type { ComponentPanelProps } from '../types'
 
@@ -16,7 +20,6 @@
 </script>
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
-  <legend class="text-muted">六角柱參數</legend>
   <p class="m-0 text-sm text-muted">
     長度包含兩端固定 0.2 mm 過渡；長度可用 slider 調整 1–200 mm 或輸入 1–999
     mm，間隙可用 slider 調整 1–10 mm 或輸入 1–99 mm；支數沿 Y
@@ -24,31 +27,34 @@
     mm，不融合。
   </p>
   {#each hexagonalColumnDefinition.parameterSchema as field (field.key)}
-    <label class="grid gap-[0.3rem]">
-      <span class="flex justify-between font-[650]">
-        <span>{field.label}（{field.axis}）</span>
-        <span>{field.unit}</span>
-      </span>
+    {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
+    <ParameterField
+      label={displayParameterLabel(field)}
+      unit={field.unit}
+      changed={value !== String(field.defaultValue)}
+      error={fieldErrors[field.key]}
+      errorId={`${field.key}-error`}
+      onRestore={() => onInputChange(field.key, String(field.defaultValue))}
+    >
       <ParameterControl
         {field}
-        value={rawParameters[field.key] ?? String(field.defaultValue)}
+        {value}
         error={fieldErrors[field.key]}
-        onChange={(value) => onInputChange(field.key, value)}
+        onChange={(nextValue) => onInputChange(field.key, nextValue)}
       />
-      {#if fieldErrors[field.key]}
-        <span class="text-sm text-error" id={`${field.key}-error`} role="alert"
-          >{fieldErrors[field.key]}</span
-        >
-      {/if}
-    </label>
+    </ParameterField>
   {/each}
-  <label class="grid gap-[0.3rem]">
-    <span class="flex justify-between font-[650]">
-      <span>擺放方向</span>
-      <span>orientation</span>
-    </span>
+  <ParameterField
+    label="擺放方向"
+    unit="orientation"
+    changed={(rawParameters.orientation ?? defaultOrientation) !==
+      defaultOrientation}
+    error={fieldErrors.orientation}
+    errorId="orientation-error"
+    onRestore={() => onInputChange('orientation', defaultOrientation)}
+  >
     <select
-      class="rounded border border-surface-300 bg-surface-50 px-2 py-1.5 text-sm text-surface-900 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-50"
+      class="w-full min-w-0 rounded border border-surface-300 bg-surface-50 px-2 py-1.5 text-sm text-surface-900 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-50"
       aria-label="擺放方向"
       value={rawParameters.orientation ?? defaultOrientation}
       onchange={handleOrientationChange}
@@ -56,10 +62,5 @@
       <option value="lying">躺下（長軸 X）</option>
       <option value="standing">站立（長軸 Z）</option>
     </select>
-    {#if fieldErrors.orientation}
-      <span class="text-sm text-error" id="orientation-error" role="alert"
-        >{fieldErrors.orientation}</span
-      >
-    {/if}
-  </label>
+  </ParameterField>
 </fieldset>
