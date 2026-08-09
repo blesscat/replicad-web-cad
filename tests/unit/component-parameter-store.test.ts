@@ -5,6 +5,7 @@ import {
 } from '../../src/features/cad/parameters'
 import {
   OPENGRID_CONFIGURATION,
+  OPENGRID_SNAP_CONFIGURATION,
   type OpenGridParameters,
 } from '../../src/cad-contract/units'
 
@@ -77,6 +78,9 @@ describe('component parameter store', () => {
     expect(store.get('modular-grid-base')).toEqual({ rows: 1, columns: 1 })
     expect(store.get('hsw-cell')).toEqual({ rows: 1, columns: 1 })
     expect(store.get('opengrid')).toEqual(opengridParameters())
+    expect(store.get('opengrid-snap')).toEqual(
+      OPENGRID_SNAP_CONFIGURATION.defaultParameters,
+    )
 
     store.dispose()
   })
@@ -97,6 +101,7 @@ describe('component parameter store', () => {
           customScrewPositions: [{ row: 2, column: 4 }],
           connectorHoles: 'enabled',
         }),
+        'opengrid-snap': { variant: 'Lite', offset: 0.2 },
       }),
     )
     const store = createComponentParameterStore({ storage })
@@ -121,6 +126,10 @@ describe('component parameter store', () => {
         connectorHoles: 'enabled',
       }),
     )
+    expect(store.get('opengrid-snap')).toEqual({
+      variant: 'Lite',
+      offset: 0.2,
+    })
 
     store.dispose()
   })
@@ -165,6 +174,34 @@ describe('component parameter store', () => {
       },
     })
 
+    store.dispose()
+  })
+
+  it('rejects legacy board-shaped Snap entries without affecting the board entry', () => {
+    const board = opengridParameters({ variant: 'Lite', rows: 2, columns: 2 })
+    const storage = createMemoryStorage(
+      createPayload({
+        opengrid: board,
+        'opengrid-snap': { ...board },
+      }),
+    )
+    const store = createComponentParameterStore({ storage })
+
+    expect(store.get('opengrid')).toEqual(board)
+    expect(store.get('opengrid-snap')).toEqual(
+      OPENGRID_SNAP_CONFIGURATION.defaultParameters,
+    )
+    expect(
+      store.set('opengrid-snap', {
+        variant: 'Full',
+        offset: 0.25,
+      }),
+    ).toBe(true)
+    expect(store.get('opengrid')).toEqual(board)
+    expect(store.get('opengrid-snap')).toEqual({
+      variant: 'Full',
+      offset: 0.25,
+    })
     store.dispose()
   })
 

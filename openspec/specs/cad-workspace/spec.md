@@ -710,3 +710,52 @@ CAD workspace MUST 提供可辨識且可用的 component-level「全部恢復預
 - 變更動機、Prototype 範圍與後續演進：../../proposal.md
 - 架構、contract、lifetime 與測試策略：../../design.md
 - 實作順序與 quality gates：../../tasks.md
+
+## ADDED Requirements
+
+### Requirement: OpenGrid Snap workspace controls
+
+The `/cad/opengrid-snap` workspace MUST expose only a Full/Lite variant control and one `offset` range slider. The slider MUST cover `0` through `1 mm` in `0.05 mm` steps, and its label MUST explain that the value is the shared total outer width/depth increment. The panel MUST display derived outer width, depth, and variant height, with zero offset as the default.
+
+#### Scenario: Configure Full Snap dimensions
+
+- **WHEN** a user selects Full and enters `offset=0.2`
+- **THEN** the pending typed snapshot MUST contain exactly `variant=Full` and `offset=0.2`
+- **AND** the panel MUST display the resulting equal total outer width/depth increments
+- **AND** the panel MUST not display board rows, columns, screws, connectors, or chamfers
+
+#### Scenario: Configure Lite Snap dimensions
+
+- **WHEN** a user selects Lite and leaves the offset at zero
+- **THEN** the pending typed snapshot MUST use the Lite reference defaults
+- **AND** the panel MUST display the Lite reference height of approximately 3.4 mm
+
+#### Scenario: Invalid Snap control
+
+- **WHEN** a Snap snapshot contains a non-finite, non-step, or out-of-range offset
+- **THEN** the corresponding field MUST show a diagnosable validation error
+- **AND** the workspace MUST send `model.invalidate` rather than `model.generate`
+- **AND** STEP/STL export MUST remain disabled for the invalid or stale generation
+
+### Requirement: OpenGrid Snap workspace lifecycle and preview
+
+The Snap workspace MUST use the existing debounce, latest-wins, candidate commit/discard, stale-preview, Worker recovery, and route-locking behavior. A committed preview MUST display the complete nine-solid assembly and derived dimensions from the committed bounds.
+
+#### Scenario: Initial Snap generation
+
+- **WHEN** `/cad/opengrid-snap` receives `engine.ready`
+- **THEN** the main thread MUST send generation 1 with the valid saved Snap snapshot or defaults
+- **AND** the Worker MUST return a candidate for `modelId=opengrid-snap`
+- **AND** the committed viewport MUST display the complete assembly
+
+#### Scenario: Latest Snap input wins
+
+- **WHEN** a newer valid or invalid Snap snapshot supersedes a running generation
+- **THEN** the older candidate MUST not commit or replace the newer revision
+- **AND** the existing stale/invalid export rules MUST remain in effect
+
+#### Scenario: Snap export uses committed revision
+
+- **WHEN** a Snap model is committed and the user requests STEP or STL
+- **THEN** the export request MUST use the same committed revision shown in the viewport
+- **AND** the downloaded model MUST contain the complete Snap assembly rather than only its central body

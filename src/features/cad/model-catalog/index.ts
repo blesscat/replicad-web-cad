@@ -5,6 +5,7 @@ import { hexagonalColumnDefinition } from './components/hexagonal-column'
 import { hswCellDefinition } from './components/hsw-cell'
 import { modularGridBaseDefinition } from './components/modular-grid-base'
 import { opengridDefinition } from './components/opengrid'
+import { opengridSnapDefinition } from './components/opengrid-snap'
 import type {
   ModelDefinition,
   ModelFamily,
@@ -26,6 +27,7 @@ export { hexagonalColumnDefinition } from './components/hexagonal-column'
 export { hswCellDefinition } from './components/hsw-cell'
 export { modularGridBaseDefinition } from './components/modular-grid-base'
 export { opengridDefinition } from './components/opengrid'
+export { opengridSnapDefinition } from './components/opengrid-snap'
 
 export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   boxDefinition,
@@ -34,6 +36,7 @@ export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   hswCellDefinition,
   hexagonalColumnDefinition,
   opengridDefinition,
+  opengridSnapDefinition,
 ]
 
 export const modelFamilyOrder: ReadonlyArray<ModelFamily> = [

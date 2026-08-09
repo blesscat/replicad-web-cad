@@ -7,11 +7,13 @@ import {
   isHswCellParameters,
   isModularGridBaseParameters,
   isOpenGridParameters,
+  isOpenGridSnapParameters,
   validateOpenGridGenerationSupport,
   validateModelParameters,
   type ModelId,
   type ModelParameterValues,
   type OpenGridVariant,
+  type OpenGridSnapVariant,
 } from '../../cad-contract/units'
 import { buildBoxBRep } from '../components/box/builder'
 import {
@@ -22,6 +24,7 @@ import { buildHswCell } from '../components/hsw-cell/builder'
 import { buildHexagonalColumn } from '../components/hexagonal-column/builder'
 import { buildModularGridBase } from '../components/modular-grid-base/builder'
 import { buildOpenGridBRep } from '../components/opengrid/builder'
+import { buildOpenGridSnap } from '../components/opengrid-snap/builder'
 
 export type KernelBuildContext = {
   getModularGridBaseTemplate: () => Promise<Shape3D>
@@ -29,6 +32,7 @@ export type KernelBuildContext = {
   getBoxNormalReference?: () => Promise<Shape3D>
   getHexagonalColumnReference?: () => Promise<Shape3D>
   getOpenGridPrototype?: (variant: OpenGridVariant) => Promise<Shape3D>
+  getOpenGridSnapReference?: (variant: OpenGridSnapVariant) => Promise<Shape3D>
   yieldToEventLoop?: () => Promise<void>
   isGenerationCurrent?: () => boolean
   reportProgress?: (progress: {
@@ -164,6 +168,20 @@ async function buildOpenGridModel(
   })
 }
 
+async function buildOpenGridSnapModel(
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Promise<Shape3D> {
+  if (!isOpenGridSnapParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
+  }
+  return buildOpenGridSnap(parameters, {
+    getOpenGridSnapReference: context.getOpenGridSnapReference,
+    yieldToEventLoop: context.yieldToEventLoop,
+    isGenerationCurrent: context.isGenerationCurrent,
+  })
+}
+
 export const boxKernelDefinition: KernelModelDefinition = {
   id: 'box',
   build: buildBoxModel,
@@ -194,6 +212,11 @@ export const opengridKernelDefinition: KernelModelDefinition = {
   build: buildOpenGridModel,
 }
 
+export const opengridSnapKernelDefinition: KernelModelDefinition = {
+  id: 'opengrid-snap',
+  build: buildOpenGridSnapModel,
+}
+
 export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   boxKernelDefinition,
   boxNormalKernelDefinition,
@@ -201,6 +224,7 @@ export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   hswCellKernelDefinition,
   hexagonalColumnKernelDefinition,
   opengridKernelDefinition,
+  opengridSnapKernelDefinition,
 ]
 
 export function getKernelModelDefinition(

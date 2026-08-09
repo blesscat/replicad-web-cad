@@ -23,6 +23,15 @@ export function cadErrorCodeFor(
     return 'OPENGRID_UNSUPPORTED_CONFIGURATION'
   }
   if (
+    message.includes('OPENGRID_SNAP_PARAMETERS_INVALID') ||
+    message.includes('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
+  ) {
+    return 'INVALID_INPUT'
+  }
+  if (message.includes('OPENGRID_SNAP_QUALITY_INVALID')) {
+    return 'OPENGRID_SNAP_QUALITY_INVALID'
+  }
+  if (
     message.includes('OPENGRID_QUALITY_INVALID') ||
     message.includes('OPENGRID_BREP_INVALID')
   ) {
@@ -36,7 +45,8 @@ export function cadErrorCodeFor(
     message.includes('GRID_TEMPLATE') ||
     message.includes('HSW_CELL_ASSET') ||
     message.includes('BOX_NORMAL_ASSET') ||
-    message.includes('HEXAGONAL_COLUMN_ASSET')
+    message.includes('HEXAGONAL_COLUMN_ASSET') ||
+    message.includes('OPENGRID_SNAP_ASSET')
   ) {
     return 'MODEL_ASSET_INVALID'
   }
@@ -53,6 +63,7 @@ export function cadErrorStageFor(
   if (message.includes('OPENGRID_UNSUPPORTED_CONFIGURATION')) {
     return 'validation'
   }
+  if (message.includes('OPENGRID_SNAP_QUALITY_INVALID')) return 'meshing'
   if (message.includes('OPENGRID_QUALITY_INVALID')) return 'meshing'
   if (message.includes('MESH_INVALID')) return 'meshing'
   switch (commandKind) {

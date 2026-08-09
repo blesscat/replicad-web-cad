@@ -4,6 +4,7 @@ import {
   BOX_NORMAL_CONFIGURATION,
   HEXAGONAL_COLUMN_CONFIGURATION,
   OPENGRID_CONFIGURATION,
+  OPENGRID_SNAP_CONFIGURATION,
   PROTOTYPE_CONFIGURATION,
   type BoxParameters,
   type ModelId,
@@ -71,6 +72,9 @@ function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
       ...OPENGRID_CONFIGURATION.defaultParameters,
       customScrewPositions: [],
     }
+  }
+  if (modelId === 'opengrid-snap') {
+    return { ...OPENGRID_SNAP_CONFIGURATION.defaultParameters }
   }
   throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
 }

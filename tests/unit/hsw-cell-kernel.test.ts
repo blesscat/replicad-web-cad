@@ -72,6 +72,7 @@ describe('HSW kernel model registration', () => {
       'hsw-cell',
       'hexagonal-column',
       'opengrid',
+      'opengrid-snap',
     ])
     expect(getKernelModelDefinition('hsw-cell')?.id).toBe('hsw-cell')
     expect(getKernelModelDefinition('hexagonal-column')?.id).toBe(

@@ -47,6 +47,7 @@ describe('CAD component catalog', () => {
     ])
     expect(groups[1]?.definitions.map((definition) => definition.id)).toEqual([
       'opengrid',
+      'opengrid-snap',
     ])
     expect(groups[2]?.definitions.map((definition) => definition.id)).toEqual([
       'box',
@@ -72,6 +73,7 @@ describe('CAD component catalog', () => {
       'hsw-cell',
       'hexagonal-column',
       'opengrid',
+      'opengrid-snap',
     ])
 
     const boxNormal = getModelDefinition('box-normal')
@@ -257,6 +259,8 @@ describe('CAD component catalog', () => {
     expect(modelIdForCadPath('/cad/hexagonal-column/')).toBe('hexagonal-column')
     expect(cadPathForModel('opengrid')).toBe('/cad/opengrid')
     expect(modelIdForCadPath('/cad/opengrid/')).toBe('opengrid')
+    expect(cadPathForModel('opengrid-snap')).toBe('/cad/opengrid-snap')
+    expect(modelIdForCadPath('/cad/opengrid-snap/')).toBe('opengrid-snap')
     expect(modelIdForCadPath('/cad/unknown')).toBeUndefined()
     expect(modelIdForCadPath('/docs/box')).toBeUndefined()
   })
@@ -294,6 +298,43 @@ describe('CAD component catalog', () => {
     expect(getModelDefinition('box')?.validateParameters(parameters)).toEqual({
       valid: false,
       issues: expect.any(Array),
+    })
+  })
+
+  it('registers Snap as a separate Full/Lite model with outer-only controls', () => {
+    const snap = getModelDefinition('opengrid-snap')
+    expect(snap?.displayName).toBe('OpenGrid Snap')
+    expect(snap?.selectionDescription).toContain('Full')
+    expect(snap?.selectionDescription).toContain('Lite')
+    expect(snap?.parameterSchema.map((field) => field.key)).toEqual(['offset'])
+    expect(snap?.parameterSchema[0]).toMatchObject({
+      control: 'range',
+      min: 0,
+      max: 1,
+      step: 0.05,
+    })
+    expect(snap?.defaultParameters).toEqual({
+      variant: 'Full',
+      offset: 0,
+    })
+    expect(snap?.boundsForParameters({ variant: 'Lite', offset: 0.2 })).toEqual(
+      {
+        min: [-12.9, -12.9, 0],
+        max: [12.9, 12.9, 3.4],
+      },
+    )
+    expect(snap?.exportFileName({ variant: 'Full', offset: 0.2 })).toBe(
+      'opengrid-snap-full-offset0.2.step',
+    )
+    expect(snap?.stlFileName({ variant: 'Lite', offset: 0.15 })).toBe(
+      'opengrid-snap-lite-offset0.15.stl',
+    )
+    expect(snap?.validateParameters({ variant: 'Full', offset: 0.2 })).toEqual({
+      valid: true,
+      value: {
+        modelId: 'opengrid-snap',
+        parameters: { variant: 'Full', offset: 0.2 },
+      },
     })
   })
 })
