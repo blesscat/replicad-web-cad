@@ -46,7 +46,7 @@
 </script>
 
 <div
-  class="sticky top-4 self-start grid min-h-0 max-h-[calc(100vh-15rem)] gap-4 overflow-y-auto rounded-2xl border border-border-card bg-panel p-4 max-cad:static max-cad:max-h-none max-cad:overflow-visible"
+  class="sticky top-4 self-start grid min-h-0 max-h-[calc(100dvh-16rem)] gap-4 overflow-y-auto rounded-2xl border border-border-card bg-panel p-4 max-cad:static max-cad:max-h-none max-cad:overflow-visible"
   data-testid="cad-workspace-panel"
 >
   <RestoreDefaultsButton onRestore={onRestoreDefaults} />
