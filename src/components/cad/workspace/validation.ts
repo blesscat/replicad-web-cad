@@ -61,7 +61,9 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'opengrid-stackable-box') {
     return OPENGRID_STACKABLE_BOX_PARAMETER_KEYS
   }
-  if (modelId === 'opengrid-snap') return ['variant', 'offset']
+  if (modelId === 'opengrid-snap') {
+    return ['variant', 'offset', 'halfCellX', 'halfCellY']
+  }
   if (modelId === 'opengrid-snap-remover') return []
   if (modelId === 'opengrid-divider') return OPENGRID_DIVIDER_PARAMETER_KEYS
   if (modelId === 'opengrid-pillar') return PILLAR_PARAMETER_KEYS
@@ -155,10 +157,12 @@ export function rawFromParameters(
   }
 
   if ('offset' in parameters) {
-    const snapParameters = parameters as { variant: string; offset: number }
+    const snapParameters = parameters as OpenGridSnapParameters
     return {
       variant: snapParameters.variant,
       offset: String(snapParameters.offset),
+      halfCellX: snapParameters.halfCellX,
+      halfCellY: snapParameters.halfCellY,
     }
   }
 
@@ -234,9 +238,29 @@ export function parseRawParameters(
       }
     }
 
+    const halfCellX = raw.halfCellX ?? 'none'
+    if (halfCellX !== 'none' && halfCellX !== 'left' && halfCellX !== 'right') {
+      return {
+        valid: false,
+        message: 'X 半格方向必須是 none、left 或 right。',
+        field: 'halfCellX',
+      }
+    }
+
+    const halfCellY = raw.halfCellY ?? 'none'
+    if (halfCellY !== 'none' && halfCellY !== 'top' && halfCellY !== 'bottom') {
+      return {
+        valid: false,
+        message: 'Y 半格方向必須是 none、top 或 bottom。',
+        field: 'halfCellY',
+      }
+    }
+
     const validation = validateModelParameters(modelId, {
       variant,
       offset,
+      halfCellX,
+      halfCellY,
     } satisfies OpenGridSnapParameters)
     if (!validation.valid) {
       const issue = validation.issues[0]

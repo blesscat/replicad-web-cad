@@ -153,12 +153,16 @@ describe('CAD workspace validation helpers', () => {
     const parameters: OpenGridSnapParameters = {
       variant: 'Lite',
       offset: 0.2,
+      halfCellX: 'none',
+      halfCellY: 'none',
     }
     const raw = rawFromParameters(parameters)
 
     expect(raw).toEqual({
       variant: 'Lite',
       offset: '0.2',
+      halfCellX: 'none',
+      halfCellY: 'none',
     })
     expect(parseRawParameters(raw, 'opengrid-snap')).toEqual({
       valid: true,

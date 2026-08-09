@@ -24,6 +24,7 @@
     canExport: boolean
     onInputChange: (key: ModelParameterKey, value: string) => void
     onOpenGridParametersChange: (parameters: OpenGridParameters) => void
+    onOpenGridDimensionCalculationInvalid: () => void
     onExport: (format: ExportFormat) => void
     onRetry: () => void
     resetVersion: number
@@ -39,6 +40,7 @@
     canExport,
     onInputChange,
     onOpenGridParametersChange,
+    onOpenGridDimensionCalculationInvalid,
     onExport,
     onRetry,
     resetVersion,
@@ -65,6 +67,7 @@
         {fieldErrors}
         {onInputChange}
         {onOpenGridParametersChange}
+        {onOpenGridDimensionCalculationInvalid}
       />
     {/key}
   {/if}

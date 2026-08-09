@@ -20,12 +20,14 @@
     calculate: (input: GridDimensionInput) => GridDimensionResult
     onApply: (parameters: GridParameters) => void
     description?: string
+    onInvalid?: () => void
   }
 
   let {
     calculate,
     onApply,
     description = '輸入 X/Y 尺寸，計算不超過目標的最大格數。',
+    onInvalid,
   }: Props = $props()
 
   let targetX = $state('')
@@ -53,6 +55,7 @@
     if (!result.valid) {
       errors = result.errors
       actualDimensions = null
+      onInvalid?.()
       return
     }
 

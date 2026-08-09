@@ -222,10 +222,29 @@ export function createModelGenerationHandlers(
     queueModelGeneration(modelId, validation.value, generation)
   }
 
+  const handleOpenGridDimensionCalculationInvalid = (): void => {
+    const generation = context.refs.latestGeneration.current + 1
+    context.refs.latestGeneration.current = generation
+    if (context.refs.debounce.current) {
+      clearTimeout(context.refs.debounce.current)
+      context.refs.debounce.current = null
+    }
+    context.clearProgress()
+    context.dispatch({
+      type: 'input-invalid',
+      modelId: 'opengrid',
+      input: context.refs.state.current.input,
+      generation,
+      error: errorForInput('OpenGrid 尺寸計算輸入無效。'),
+    })
+    sendInvalidate(generation, 'invalid-input')
+  }
+
   return {
     sendGenerate,
     sendInvalidate,
     handleInputChange,
     handleOpenGridParametersChange,
+    handleOpenGridDimensionCalculationInvalid,
   }
 }

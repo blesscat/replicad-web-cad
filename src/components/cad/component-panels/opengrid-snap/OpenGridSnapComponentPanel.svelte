@@ -1,6 +1,9 @@
 <script lang="ts">
   import {
     boundsForOpenGridSnap,
+    halfCellHostPitch,
+    type HalfCellX,
+    type HalfCellY,
     type ModelParameterKey,
     type OpenGridSnapParameters,
   } from '../../../../cad-contract/units'
@@ -28,12 +31,26 @@
   let width = $derived(bounds.max[0] - bounds.min[0])
   let depth = $derived(bounds.max[1] - bounds.min[1])
   let height = $derived(bounds.max[2] - bounds.min[2])
+  let hostWidth = $derived(halfCellHostPitch(parameters.halfCellX))
+  let hostDepth = $derived(halfCellHostPitch(parameters.halfCellY))
 
   function fieldError(field: ModelParameterKey | 'parameters') {
     return fieldErrors[field]
   }
 
   let rawOffset = $derived(rawParameters.offset ?? String(parameters.offset))
+  let rawHalfCellX = $derived(rawParameters.halfCellX ?? parameters.halfCellX)
+  let rawHalfCellY = $derived(rawParameters.halfCellY ?? parameters.halfCellY)
+
+  function updateHalfCellX(event: Event): void {
+    if (!(event.currentTarget instanceof HTMLSelectElement)) return
+    onInputChange('halfCellX', event.currentTarget.value as HalfCellX)
+  }
+
+  function updateHalfCellY(event: Event): void {
+    if (!(event.currentTarget instanceof HTMLSelectElement)) return
+    onInputChange('halfCellY', event.currentTarget.value as HalfCellY)
+  }
 </script>
 
 <fieldset class="m-0 grid gap-3 border-0 p-0" data-testid="opengrid-snap-panel">
@@ -77,7 +94,54 @@
     />
   </ParameterField>
 
+  <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+    <ParameterField
+      label="X 半格方向"
+      error={fieldError('halfCellX')}
+      errorId="opengrid-snap-half-cell-x-error"
+      onRestore={() => onInputChange('halfCellX', 'none')}
+    >
+      <select
+        class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+        aria-label="OpenGrid Snap X 半格方向"
+        aria-describedby={fieldError('halfCellX')
+          ? 'opengrid-snap-half-cell-x-error'
+          : undefined}
+        aria-invalid={Boolean(fieldError('halfCellX'))}
+        value={rawHalfCellX}
+        onchange={updateHalfCellX}
+      >
+        <option value="none">無</option>
+        <option value="left">左</option>
+        <option value="right">右</option>
+      </select>
+    </ParameterField>
+
+    <ParameterField
+      label="Y 半格方向"
+      error={fieldError('halfCellY')}
+      errorId="opengrid-snap-half-cell-y-error"
+      onRestore={() => onInputChange('halfCellY', 'none')}
+    >
+      <select
+        class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+        aria-label="OpenGrid Snap Y 半格方向"
+        aria-describedby={fieldError('halfCellY')
+          ? 'opengrid-snap-half-cell-y-error'
+          : undefined}
+        aria-invalid={Boolean(fieldError('halfCellY'))}
+        value={rawHalfCellY}
+        onchange={updateHalfCellY}
+      >
+        <option value="none">無</option>
+        <option value="top">上</option>
+        <option value="bottom">下</option>
+      </select>
+    </ParameterField>
+  </div>
+
   <p class="m-0 text-sm text-muted" aria-live="polite">
-    外框總尺寸：{width.toFixed(2)} × {depth.toFixed(2)} × {height.toFixed(2)} mm
+    外框總尺寸：{width.toFixed(2)} × {depth.toFixed(2)} × {height.toFixed(2)} mm （宿主格距：X
+    {hostWidth} × Y {hostDepth} mm）
   </p>
 </fieldset>

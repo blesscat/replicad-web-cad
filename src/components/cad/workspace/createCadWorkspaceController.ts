@@ -29,6 +29,7 @@ export type CadWorkspaceController = {
   getSnapshot: () => CadWorkspaceControllerSnapshot
   onInputChange: (key: ModelParameterKey, value: string) => void
   onOpenGridParametersChange: (parameters: OpenGridParameters) => void
+  onOpenGridDimensionCalculationInvalid: () => void
   onRestoreDefaults: () => void
   onExport: (format?: ExportFormat) => void
   onRetry: () => void
@@ -135,6 +136,8 @@ export function createCadWorkspaceController(
       createSnapshot(state, rawParameters, fieldErrors, progress),
     onInputChange: runtime.handleInputChange,
     onOpenGridParametersChange: runtime.handleOpenGridParametersChange,
+    onOpenGridDimensionCalculationInvalid:
+      runtime.handleOpenGridDimensionCalculationInvalid,
     onRestoreDefaults,
     onExport: runtime.handleExport,
     onRetry: runtime.handleRetry,

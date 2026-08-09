@@ -48,7 +48,7 @@ export const opengridDefinition: ModelDefinition = {
   family: 'opengrid',
   displayName: 'OpenGrid 底板',
   selectionDescription:
-    '依官方 OpenGrid SCAD 產生 Full、Lite、Heavy 三種 28 mm 網格底板，可調整倒角、側邊接頭與交界螺絲孔。',
+    '依官方 OpenGrid SCAD 產生 Full、Lite、Heavy 三種 28 mm 網格底板，可調整 X/Y 半格方向、倒角、側邊接頭與交界螺絲孔。',
   parameterSchema: [],
   defaultParameters: {
     ...OPENGRID_CONFIGURATION.defaultParameters,

@@ -17,9 +17,12 @@ import {
 } from '../../src/cad-kernel/components/opengrid/builder'
 import { meshBRep } from '../../src/cad-kernel/mesh'
 import {
+  boundsForOpenGrid,
+  cellCenterForOpenGrid,
   deterministicOpenGridCustomScrewPositions,
   normalizeOpenGridParameters,
   OPENGRID_CONFIGURATION,
+  openGridScrewCentersFor,
   type OpenGridParameters,
 } from '../../src/cad-contract/units'
 
@@ -82,6 +85,77 @@ function measureIntersectionVolume(
   }
 }
 
+function readShapeBounds(shape: Shape3D): {
+  min: [number, number, number]
+  max: [number, number, number]
+} {
+  const boundingBox = shape.boundingBox
+  try {
+    const [min, max] = boundingBox.bounds as [
+      [number, number, number],
+      [number, number, number],
+    ]
+    return {
+      min,
+      max,
+    }
+  } finally {
+    boundingBox.delete()
+  }
+}
+
+function expectHalfCellBoundaryStrips(
+  shape: Shape3D,
+  input: OpenGridParameters,
+  checkCorner: boolean,
+): void {
+  const bounds = boundsForOpenGrid(input)
+  if (input.halfCellX !== 'none') {
+    const isLeft = input.halfCellX === 'left'
+    const minX = isLeft ? bounds.min[0] + 0.3 : bounds.max[0] - 0.7
+    const maxX = isLeft ? bounds.min[0] + 0.7 : bounds.max[0] - 0.3
+    for (let row = 0; row < input.rows; row += 1) {
+      const [, centerY] = cellCenterForOpenGrid(input, row, 0)
+      const volume = measureIntersectionVolume(
+        shape,
+        [minX, centerY - 0.5, 0.5],
+        [maxX, centerY + 0.5, 1.5],
+      )
+      expect(volume).toBeGreaterThan(0.01)
+    }
+  }
+
+  if (input.halfCellY !== 'none') {
+    const isBottom = input.halfCellY === 'bottom'
+    const minY = isBottom ? bounds.min[1] + 0.3 : bounds.max[1] - 0.7
+    const maxY = isBottom ? bounds.min[1] + 0.7 : bounds.max[1] - 0.3
+    for (let column = 0; column < input.columns; column += 1) {
+      const [centerX] = cellCenterForOpenGrid(input, 0, column)
+      const volume = measureIntersectionVolume(
+        shape,
+        [centerX - 0.5, minY, 0.5],
+        [centerX + 0.5, maxY, 1.5],
+      )
+      expect(volume).toBeGreaterThan(0.01)
+    }
+  }
+
+  if (checkCorner && input.halfCellX !== 'none' && input.halfCellY !== 'none') {
+    const isLeft = input.halfCellX === 'left'
+    const isBottom = input.halfCellY === 'bottom'
+    const minX = isLeft ? bounds.min[0] + 0.3 : bounds.max[0] - 0.7
+    const maxX = isLeft ? bounds.min[0] + 0.7 : bounds.max[0] - 0.3
+    const minY = isBottom ? bounds.min[1] + 0.3 : bounds.max[1] - 0.7
+    const maxY = isBottom ? bounds.min[1] + 0.7 : bounds.max[1] - 0.3
+    const volume = measureIntersectionVolume(
+      shape,
+      [minX, minY, 0.5],
+      [maxX, maxY, 1.5],
+    )
+    expect(volume).toBeGreaterThan(0.01)
+  }
+}
+
 function captureLedgeProbes(
   zMin: number,
   zMax: number,
@@ -139,6 +213,196 @@ describe('OpenGrid official-profile product builder', () => {
       }
     }
   }, 15_000)
+
+  it('builds centered single and dual half-cell envelopes for every Full direction', async () => {
+    const directions = [
+      { halfCellX: 'left' as const, halfCellY: 'none' as const },
+      { halfCellX: 'right' as const, halfCellY: 'none' as const },
+      { halfCellX: 'none' as const, halfCellY: 'top' as const },
+      { halfCellX: 'none' as const, halfCellY: 'bottom' as const },
+      { halfCellX: 'left' as const, halfCellY: 'top' as const },
+      { halfCellX: 'left' as const, halfCellY: 'bottom' as const },
+      { halfCellX: 'right' as const, halfCellY: 'top' as const },
+      { halfCellX: 'right' as const, halfCellY: 'bottom' as const },
+    ]
+    for (const direction of directions) {
+      const input = parameters({
+        variant: 'Full',
+        rows: 1,
+        columns: 1,
+        chamfers: 'none',
+        connectorHoles: 'none',
+        screwMode: 'none',
+        ...direction,
+      })
+      const shape = await buildOpenGridBRep(input)
+      try {
+        const bounds = readShapeBounds(shape)
+        const expectedWidth = direction.halfCellX === 'none' ? 28 : 42
+        const expectedDepth = direction.halfCellY === 'none' ? 28 : 42
+        expect(bounds.min[0]).toBeCloseTo(-expectedWidth / 2, 2)
+        expect(bounds.max[0]).toBeCloseTo(expectedWidth / 2, 2)
+        expect(bounds.min[1]).toBeCloseTo(-expectedDepth / 2, 2)
+        expect(bounds.max[1]).toBeCloseTo(expectedDepth / 2, 2)
+        expect(bounds.min[2]).toBeCloseTo(0, 2)
+        expectHalfCellBoundaryStrips(shape, input, true)
+      } finally {
+        shape.delete()
+      }
+    }
+  }, 60_000)
+
+  it('keeps feature cutters and Heavy layers valid at a dual half-cell boundary', async () => {
+    for (const variant of ['Full', 'Lite', 'Heavy'] as const) {
+      const input = parameters({
+        variant,
+        rows: 2,
+        columns: 2,
+        halfCellX: 'right',
+        halfCellY: 'top',
+        chamfers: 'corners',
+        connectorHoles: 'enabled',
+        screwMode: 'corners',
+      })
+      const { shape, quality } = await buildAndInspect(input)
+      try {
+        expect(quality.passed, `${variant}:${quality.failures.join(';')}`).toBe(
+          true,
+        )
+        expect(quality.cellOpeningCount).toBe(4)
+        expectHalfCellBoundaryStrips(shape, input, false)
+      } finally {
+        shape.delete()
+      }
+    }
+  }, 120_000)
+
+  it('cuts the corner screw completely through a dual half-cell seam', async () => {
+    const input = parameters({
+      variant: 'Full',
+      rows: 1,
+      columns: 1,
+      halfCellX: 'right',
+      halfCellY: 'top',
+      chamfers: 'none',
+      connectorHoles: 'none',
+      screwMode: 'corners',
+    })
+    const seamCenter = openGridScrewCentersFor(input).find(
+      ([x, y]) => x > 0 && y > 0,
+    )
+    expect(seamCenter).toEqual([7, 7])
+    if (!seamCenter) throw new Error('TEST_SEAM_SCREW_MISSING')
+
+    const shape = await buildOpenGridBRep(input)
+    try {
+      const [x, y] = seamCenter
+      const halfCornerMaterial = measureIntersectionVolume(
+        shape,
+        [x + 0.5, y + 0.5, 0.5],
+        [x + 1.5, y + 1.5, 1.5],
+      )
+      expect(halfCornerMaterial).toBeLessThan(0.01)
+    } finally {
+      shape.delete()
+    }
+  }, 60_000)
+
+  it('cuts connector holes on the final outer sides of half-cell extensions', async () => {
+    const input = parameters({
+      variant: 'Full',
+      rows: 2,
+      columns: 2,
+      halfCellX: 'right',
+      halfCellY: 'top',
+      chamfers: 'none',
+      connectorHoles: 'enabled',
+      screwMode: 'none',
+    })
+    const bounds = boundsForOpenGrid(input)
+    const shape = await buildOpenGridBRep(input)
+    try {
+      const rightOuterMaterial = measureIntersectionVolume(
+        shape,
+        [bounds.max[0] - 1, -8, 2.5],
+        [bounds.max[0] + 0.1, -6, 4.3],
+      )
+      const topOuterMaterial = measureIntersectionVolume(
+        shape,
+        [-8, bounds.max[1] - 1, 2.5],
+        [-6, bounds.max[1] + 0.1, 4.3],
+      )
+      expect(rightOuterMaterial).toBeLessThan(0.01)
+      expect(topOuterMaterial).toBeLessThan(0.01)
+    } finally {
+      shape.delete()
+    }
+  }, 60_000)
+
+  it('cuts connector holes on left and bottom half-cell outer sides', async () => {
+    const input = parameters({
+      variant: 'Full',
+      rows: 2,
+      columns: 2,
+      halfCellX: 'left',
+      halfCellY: 'bottom',
+      chamfers: 'none',
+      connectorHoles: 'enabled',
+      screwMode: 'none',
+    })
+    const bounds = boundsForOpenGrid(input)
+    const shape = await buildOpenGridBRep(input)
+    try {
+      const leftOuterMaterial = measureIntersectionVolume(
+        shape,
+        [bounds.min[0] - 0.1, 6, 2.5],
+        [bounds.min[0] + 1, 8, 4.3],
+      )
+      const bottomOuterMaterial = measureIntersectionVolume(
+        shape,
+        [6, bounds.min[1] - 0.1, 2.5],
+        [8, bounds.min[1] + 1, 4.3],
+      )
+      expect(leftOuterMaterial).toBeLessThan(0.01)
+      expect(bottomOuterMaterial).toBeLessThan(0.01)
+    } finally {
+      shape.delete()
+    }
+  }, 60_000)
+
+  it('cuts generated corner screws on both boundaries of a single X extension', async () => {
+    const input = parameters({
+      variant: 'Full',
+      rows: 5,
+      columns: 3,
+      halfCellX: 'left',
+      halfCellY: 'none',
+      chamfers: 'none',
+      connectorHoles: 'none',
+      screwMode: 'corners',
+    })
+    const centers = openGridScrewCentersFor(input)
+    expect(centers).toEqual([
+      [-35, -42],
+      [-35, 42],
+      [21, -42],
+      [21, 42],
+    ])
+
+    const shape = await buildOpenGridBRep(input)
+    try {
+      for (const [x, y] of centers) {
+        const seamMaterial = measureIntersectionVolume(
+          shape,
+          [x + 0.5, y - 1.5, 0.5],
+          [x + 1.5, y - 0.5, 1.5],
+        )
+        expect(seamMaterial).toBeLessThan(0.01)
+      }
+    } finally {
+      shape.delete()
+    }
+  }, 60_000)
 
   it.each(CAPTURE_LEDGE_CASES)(
     'keeps the inward capture ledge on all four sides for $variant',

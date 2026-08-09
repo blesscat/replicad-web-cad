@@ -67,6 +67,26 @@ function getDefinition(modelId: ModelId) {
   return definition
 }
 
+function normalizeLegacyHalfCellParameters(
+  modelId: ModelId,
+  candidate: unknown,
+): unknown {
+  if (!isRecord(candidate)) return candidate
+  if (modelId !== 'opengrid' && modelId !== 'opengrid-snap') {
+    return candidate
+  }
+  const hasHalfCellX = Object.prototype.hasOwnProperty.call(
+    candidate,
+    'halfCellX',
+  )
+  const hasHalfCellY = Object.prototype.hasOwnProperty.call(
+    candidate,
+    'halfCellY',
+  )
+  if (hasHalfCellX || hasHalfCellY) return candidate
+  return { ...candidate, halfCellX: 'none', halfCellY: 'none' }
+}
+
 function getBrowserStorage(): ComponentParameterStorage | null {
   try {
     if (typeof globalThis === 'undefined' || !globalThis.localStorage) {
@@ -102,9 +122,9 @@ function hydrateEntries(
   for (const definition of modelDefinitions) {
     const candidate = payload.values[definition.id]
     if (candidate === undefined) continue
-    const normalizedCandidate = normalizeLegacyParameters(
+    const normalizedCandidate = normalizeLegacyHalfCellParameters(
       definition.id,
-      candidate,
+      normalizeLegacyParameters(definition.id, candidate),
     )
 
     try {

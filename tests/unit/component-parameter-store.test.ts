@@ -167,6 +167,12 @@ describe('component parameter store', () => {
       length: 12,
       baseConnection: true,
     })
+    expect(store.get('opengrid-snap')).toEqual({
+      variant: 'Lite',
+      offset: 0.2,
+      halfCellX: 'none',
+      halfCellY: 'none',
+    })
 
     store.dispose()
   })
@@ -272,12 +278,60 @@ describe('component parameter store', () => {
       store.set('opengrid-snap', {
         variant: 'Full',
         offset: 0.25,
+        halfCellX: 'none',
+        halfCellY: 'none',
       }),
     ).toBe(true)
     expect(store.get('opengrid')).toEqual(board)
     expect(store.get('opengrid-snap')).toEqual({
       variant: 'Full',
       offset: 0.25,
+      halfCellX: 'none',
+      halfCellY: 'none',
+    })
+    store.dispose()
+  })
+
+  it('persists independent half-cell directions and rejects malformed directions', () => {
+    const storage = createMemoryStorage(
+      createPayload({
+        opengrid: {
+          ...opengridParameters(),
+          halfCellX: 'diagonal',
+        },
+        'opengrid-snap': {
+          ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
+          allowHalfCell: true,
+        },
+      }),
+    )
+    const store = createComponentParameterStore({ storage })
+
+    expect(store.get('opengrid')).toEqual(opengridParameters())
+    expect(store.get('opengrid-snap')).toEqual(
+      OPENGRID_SNAP_CONFIGURATION.defaultParameters,
+    )
+
+    expect(
+      store.set(
+        'opengrid',
+        opengridParameters({ halfCellX: 'left', halfCellY: 'top' }),
+      ),
+    ).toBe(true)
+    expect(
+      store.set('opengrid-snap', {
+        ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
+        halfCellX: 'right',
+        halfCellY: 'bottom',
+      }),
+    ).toBe(true)
+    expect(store.get('opengrid')).toMatchObject({
+      halfCellX: 'left',
+      halfCellY: 'top',
+    })
+    expect(store.get('opengrid-snap')).toMatchObject({
+      halfCellX: 'right',
+      halfCellY: 'bottom',
     })
     store.dispose()
   })

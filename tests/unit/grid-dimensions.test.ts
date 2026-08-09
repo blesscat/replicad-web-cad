@@ -175,6 +175,56 @@ describe('OpenGrid dimension calculation', () => {
       errors: { x: expect.stringContaining('28 mm') },
     })
   })
+
+  it('adds the selected half-cell extension on each calculated axis', () => {
+    const xOnly = calculateOpenGridCounts({
+      x: '98',
+      y: '56',
+      halfCellX: 'right',
+      halfCellY: 'none',
+    })
+    const dual = calculateOpenGridCounts({
+      x: '98',
+      y: '98',
+      halfCellX: 'left',
+      halfCellY: 'top',
+    })
+
+    expect(xOnly).toEqual({
+      valid: true,
+      parameters: {
+        columns: 3,
+        rows: 2,
+        halfCellX: 'right',
+        halfCellY: 'none',
+      },
+      actualDimensions: { x: 98, y: 56 },
+    })
+    expect(dual).toMatchObject({
+      valid: true,
+      parameters: {
+        columns: 3,
+        rows: 3,
+        halfCellX: 'left',
+        halfCellY: 'top',
+      },
+      actualDimensions: { x: 98, y: 98 },
+    })
+  })
+
+  it('keeps selected directions and reports an axis-specific minimum error', () => {
+    const result = calculateOpenGridCounts({
+      x: '41.99',
+      y: '28',
+      halfCellX: 'left',
+      halfCellY: 'none',
+    })
+
+    expect(result).toEqual({
+      valid: false,
+      errors: { x: expect.stringContaining('42 mm') },
+    })
+  })
 })
 
 describe('OpenGrid stackable-box dimension calculation', () => {

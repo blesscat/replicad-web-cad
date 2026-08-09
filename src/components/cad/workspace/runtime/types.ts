@@ -76,4 +76,5 @@ export type ModelGenerationHandlers = {
   ) => void
   handleInputChange: (key: ModelParameterKey, value: string) => void
   handleOpenGridParametersChange: (parameters: OpenGridParameters) => void
+  handleOpenGridDimensionCalculationInvalid: () => void
 }

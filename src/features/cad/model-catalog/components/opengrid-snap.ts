@@ -62,7 +62,7 @@ export const opengridSnapDefinition: ModelDefinition = {
   family: 'opengrid',
   displayName: 'OpenGrid Snap',
   selectionDescription:
-    '保留完整 Snap 九實體組件，可選 Full 或 Lite，使用同一數值微調外框 X/Y 總寬深。',
+    '提供 Full 或 Lite Snap，可用 X/Y 半格方向嵌入自訂 OpenGrid 半格，並微調外框總寬深。',
   parameterSchema: OPENGRID_SNAP_PARAMETER_SCHEMA,
   defaultParameters: OPENGRID_SNAP_CONFIGURATION.defaultParameters,
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },

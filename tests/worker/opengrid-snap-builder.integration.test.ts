@@ -128,6 +128,15 @@ function assetBlob(variant: 'Full' | 'Lite'): Blob {
   ])
 }
 
+function snapParameters(
+  variant: 'Full' | 'Lite',
+  offset: number,
+  halfCellX: 'none' | 'left' | 'right' = 'none',
+  halfCellY: 'none' | 'top' | 'bottom' = 'none',
+) {
+  return { variant, offset, halfCellX, halfCellY }
+}
+
 describe('OpenGrid Snap reference builder', () => {
   beforeAll(async () => {
     await initialiseCadKernel(WASM_PATH)
@@ -165,10 +174,9 @@ describe('OpenGrid Snap reference builder', () => {
         assetBlob(variant),
         variant,
       )
-      const generated = await buildOpenGridSnap(
-        { variant, offset: 0 },
-        { getOpenGridSnapReference: async () => reference },
-      )
+      const generated = await buildOpenGridSnap(snapParameters(variant, 0), {
+        getOpenGridSnapReference: async () => reference,
+      })
       try {
         expect(countSolids(generated)).toBe(9)
         expect(shapeBounds(generated)).toEqual([
@@ -185,7 +193,7 @@ describe('OpenGrid Snap reference builder', () => {
         ])
         const quality = inspectOpenGridSnapShapeQuality(
           generated,
-          { variant, offset: 0 },
+          snapParameters(variant, 0),
           meshBRep(generated, { tolerance: 0.05, angularTolerance: 0.1 }),
           reference,
         )
@@ -198,16 +206,70 @@ describe('OpenGrid Snap reference builder', () => {
   )
 
   it.each(['Full', 'Lite'] as const)(
+    'derives every single and dual half-cell direction for %s',
+    async (variant) => {
+      const reference = await importOpenGridSnapReference(
+        assetBlob(variant),
+        variant,
+      )
+      const directions = [
+        ['left', 'none'],
+        ['right', 'none'],
+        ['none', 'top'],
+        ['none', 'bottom'],
+        ['left', 'top'],
+        ['left', 'bottom'],
+        ['right', 'top'],
+        ['right', 'bottom'],
+      ] as const
+      try {
+        for (const [halfCellX, halfCellY] of directions) {
+          const parameters = snapParameters(variant, 0, halfCellX, halfCellY)
+          const generated = await buildOpenGridSnap(parameters, {
+            getOpenGridSnapReference: async () => reference,
+          })
+          try {
+            const mesh = meshBRep(generated, {
+              tolerance: 0.05,
+              angularTolerance: 0.1,
+            })
+            const quality = inspectOpenGridSnapShapeQuality(
+              generated,
+              parameters,
+              mesh,
+              reference,
+            )
+            const bounds = assemblyBounds(generated)
+            const expectedX = halfCellX === 'none' ? 12.8 : 6.4
+            const expectedY = halfCellY === 'none' ? 12.8 : 6.4
+            expect(
+              quality.passed,
+              `${halfCellX}/${halfCellY}: ${quality.failures.join(';')} actual=${JSON.stringify(bounds)}`,
+            ).toBe(true)
+            expect(bounds[0][0]).toBeCloseTo(-expectedX, 2)
+            expect(bounds[1][0]).toBeCloseTo(expectedX, 2)
+            expect(bounds[0][1]).toBeCloseTo(-expectedY, 2)
+            expect(bounds[1][1]).toBeCloseTo(expectedY, 2)
+          } finally {
+            generated.delete()
+          }
+        }
+      } finally {
+        reference.delete()
+      }
+    },
+  )
+
+  it.each(['Full', 'Lite'] as const)(
     'applies one positive offset symmetrically on the $variant envelope',
     async (variant) => {
       const reference = await importOpenGridSnapReference(
         assetBlob(variant),
         variant,
       )
-      const generated = await buildOpenGridSnap(
-        { variant, offset: 0.2 },
-        { getOpenGridSnapReference: async () => reference },
-      )
+      const generated = await buildOpenGridSnap(snapParameters(variant, 0.2), {
+        getOpenGridSnapReference: async () => reference,
+      })
       try {
         meshBRep(generated, { tolerance: 0.05, angularTolerance: 0.1 })
         const bounds = assemblyBounds(generated)
@@ -224,15 +286,49 @@ describe('OpenGrid Snap reference builder', () => {
     },
   )
 
+  it.each(['Full', 'Lite'] as const)(
+    'keeps a dual half-cell within both host pitches at maximum offset for $variant',
+    async (variant) => {
+      const reference = await importOpenGridSnapReference(
+        assetBlob(variant),
+        variant,
+      )
+      const parameters = snapParameters(variant, 1, 'right', 'bottom')
+      const generated = await buildOpenGridSnap(parameters, {
+        getOpenGridSnapReference: async () => reference,
+      })
+      try {
+        const mesh = meshBRep(generated, {
+          tolerance: 0.05,
+          angularTolerance: 0.1,
+        })
+        const quality = inspectOpenGridSnapShapeQuality(
+          generated,
+          parameters,
+          mesh,
+          reference,
+        )
+        expect(quality.passed, quality.failures.join(';')).toBe(true)
+        const bounds = assemblyBounds(generated)
+        expect(bounds[0][0]).toBeCloseTo(-6.9, 2)
+        expect(bounds[1][0]).toBeCloseTo(6.9, 2)
+        expect(bounds[0][1]).toBeCloseTo(-6.9, 2)
+        expect(bounds[1][1]).toBeCloseTo(6.9, 2)
+      } finally {
+        generated.delete()
+        reference.delete()
+      }
+    },
+  )
+
   it('changes only the requested centered outer envelope and keeps the central solid fixed', async () => {
     const reference = await importOpenGridSnapReference(
       assetBlob('Full'),
       'Full',
     )
-    const generated = await buildOpenGridSnap(
-      { variant: 'Full', offset: 0.2 },
-      { getOpenGridSnapReference: async () => reference },
-    )
+    const generated = await buildOpenGridSnap(snapParameters('Full', 0.2), {
+      getOpenGridSnapReference: async () => reference,
+    })
     const referenceCore = centralSolid(reference)
     const generatedCore = centralSolid(generated)
     try {
@@ -255,7 +351,7 @@ describe('OpenGrid Snap reference builder', () => {
       })
       const quality = inspectOpenGridSnapShapeQuality(
         generated,
-        { variant: 'Full', offset: 0.2 },
+        snapParameters('Full', 0.2),
         mesh,
         reference,
       )
@@ -278,10 +374,9 @@ describe('OpenGrid Snap reference builder', () => {
       assetBlob('Lite'),
       'Lite',
     )
-    const generated = await buildOpenGridSnap(
-      { variant: 'Lite', offset: 0.2 },
-      { getOpenGridSnapReference: async () => reference },
-    )
+    const generated = await buildOpenGridSnap(snapParameters('Lite', 0.2), {
+      getOpenGridSnapReference: async () => reference,
+    })
     try {
       const mesh = meshBRep(generated, {
         tolerance: 0.05,
@@ -289,7 +384,7 @@ describe('OpenGrid Snap reference builder', () => {
       })
       const quality = inspectOpenGridSnapShapeQuality(
         generated,
-        { variant: 'Lite', offset: 0.2 },
+        snapParameters('Lite', 0.2),
         mesh,
         reference,
       )
@@ -309,12 +404,9 @@ describe('OpenGrid Snap reference builder', () => {
         assetBlob(parameters),
         parameters,
       )
-      const generated = await buildOpenGridSnap(
-        { variant: parameters, offset: 1 },
-        {
-          getOpenGridSnapReference: async () => reference,
-        },
-      )
+      const generated = await buildOpenGridSnap(snapParameters(parameters, 1), {
+        getOpenGridSnapReference: async () => reference,
+      })
       try {
         const mesh = meshBRep(generated, {
           tolerance: 0.05,
@@ -322,7 +414,7 @@ describe('OpenGrid Snap reference builder', () => {
         })
         const quality = inspectOpenGridSnapShapeQuality(
           generated,
-          { variant: parameters, offset: 1 },
+          snapParameters(parameters, 1),
           mesh,
           reference,
         )
@@ -345,16 +437,14 @@ describe('OpenGrid Snap reference builder', () => {
       assetBlob('Full'),
       'Full',
     )
-    const zeroOffset = await buildOpenGridSnap(
-      { variant: 'Full', offset: 0 },
-      { getOpenGridSnapReference: async () => reference },
-    )
+    const zeroOffset = await buildOpenGridSnap(snapParameters('Full', 0), {
+      getOpenGridSnapReference: async () => reference,
+    })
     meshBRep(zeroOffset, { tolerance: 0.05, angularTolerance: 0.1 })
     expect(countSolids(reference)).toBe(9)
-    const generated = await buildOpenGridSnap(
-      { variant: 'Full', offset: 0.2 },
-      { getOpenGridSnapReference: async () => reference },
-    )
+    const generated = await buildOpenGridSnap(snapParameters('Full', 0.2), {
+      getOpenGridSnapReference: async () => reference,
+    })
     try {
       expect(countSolids(generated)).toBe(9)
     } finally {
@@ -371,10 +461,9 @@ describe('OpenGrid Snap reference builder', () => {
     )
     try {
       await expect(
-        buildOpenGridSnap(
-          { variant: 'Full', offset: -0.05 },
-          { getOpenGridSnapReference: async () => reference },
-        ),
+        buildOpenGridSnap(snapParameters('Full', -0.05), {
+          getOpenGridSnapReference: async () => reference,
+        }),
       ).rejects.toThrow('OPENGRID_SNAP_PARAMETERS_INVALID')
     } finally {
       reference.delete()

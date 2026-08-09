@@ -1,11 +1,25 @@
+import {
+  HALF_CELL_CONFIGURATION,
+  halfCellHostPitch,
+  isHalfCellX,
+  isHalfCellY,
+  snapFixedCoreAxisSize,
+  snapNominalAxisSize,
+  type HalfCellX,
+  type HalfCellY,
+} from './half-cell'
+
 export type OpenGridSnapVariant = 'Full' | 'Lite'
 
-export type OpenGridSnapParameterKey = 'variant' | 'offset'
+export type OpenGridSnapParameterKey =
+  'variant' | 'offset' | 'halfCellX' | 'halfCellY'
 
 export type OpenGridSnapParameters = {
   variant: OpenGridSnapVariant
   /** Total X and Y envelope increment in millimetres, applied symmetrically. */
   offset: number
+  halfCellX: HalfCellX
+  halfCellY: HalfCellY
 }
 
 export type OpenGridSnapBounds = {
@@ -23,10 +37,14 @@ export type OpenGridSnapValidation =
   | { valid: false; issues: OpenGridSnapValidationIssue[] }
 
 export const OPENGRID_SNAP_CONFIGURATION = {
-  nominalWidth: 25.6,
-  nominalDepth: 25.6,
-  fixedCoreWidth: 24.8,
-  fixedCoreDepth: 24.8,
+  nominalWidth: HALF_CELL_CONFIGURATION.fullSnapNominalSize,
+  nominalDepth: HALF_CELL_CONFIGURATION.fullSnapNominalSize,
+  fixedCoreWidth: HALF_CELL_CONFIGURATION.fullSnapFixedCoreSize,
+  fixedCoreDepth: HALF_CELL_CONFIGURATION.fullSnapFixedCoreSize,
+  halfNominalWidth: HALF_CELL_CONFIGURATION.halfSnapNominalSize,
+  halfNominalDepth: HALF_CELL_CONFIGURATION.halfSnapNominalSize,
+  halfFixedCoreWidth: HALF_CELL_CONFIGURATION.halfSnapFixedCoreSize,
+  halfFixedCoreDepth: HALF_CELL_CONFIGURATION.halfSnapFixedCoreSize,
   minOffset: 0,
   maxOffset: 1,
   offsetStep: 0.05,
@@ -42,12 +60,16 @@ export const OPENGRID_SNAP_CONFIGURATION = {
   defaultParameters: {
     variant: 'Full' as OpenGridSnapVariant,
     offset: 0,
+    halfCellX: 'none' as HalfCellX,
+    halfCellY: 'none' as HalfCellY,
   } satisfies OpenGridSnapParameters,
 } as const
 
 const PARAMETER_KEYS: readonly OpenGridSnapParameterKey[] = [
   'variant',
   'offset',
+  'halfCellX',
+  'halfCellY',
 ]
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -98,12 +120,25 @@ export function validateOpenGridSnapParameters(
   if (!hasExactKeys(value, PARAMETER_KEYS)) {
     issues.push({
       field: 'parameters',
-      message: 'OpenGrid Snap 只接受 variant、offset。',
+      message: 'OpenGrid Snap 只接受 variant、offset、halfCellX、halfCellY。',
     })
   }
 
   if (!isOpenGridSnapVariant(value.variant)) {
     issues.push({ field: 'variant', message: '型號必須是 Full 或 Lite。' })
+  }
+
+  if (!isHalfCellX(value.halfCellX)) {
+    issues.push({
+      field: 'halfCellX',
+      message: 'X 半格方向必須是 none、left 或 right。',
+    })
+  }
+  if (!isHalfCellY(value.halfCellY)) {
+    issues.push({
+      field: 'halfCellY',
+      message: 'Y 半格方向必須是 none、top 或 bottom。',
+    })
   }
 
   const offset = value.offset
@@ -134,16 +169,29 @@ export function validateOpenGridSnapParameters(
       })
     }
 
-    if (
-      OPENGRID_SNAP_CONFIGURATION.nominalWidth + offset <=
-        OPENGRID_SNAP_CONFIGURATION.fixedCoreWidth ||
-      OPENGRID_SNAP_CONFIGURATION.nominalDepth + offset <=
-        OPENGRID_SNAP_CONFIGURATION.fixedCoreDepth
-    ) {
-      issues.push({
-        field: 'offset',
-        message: '外框增量會侵入中央 Snap 固定區域。',
-      })
+    if (isHalfCellX(value.halfCellX) && isHalfCellY(value.halfCellY)) {
+      const nominalWidth = snapNominalAxisSize(value.halfCellX)
+      const nominalDepth = snapNominalAxisSize(value.halfCellY)
+      const fixedCoreWidth = snapFixedCoreAxisSize(value.halfCellX)
+      const fixedCoreDepth = snapFixedCoreAxisSize(value.halfCellY)
+      if (
+        nominalWidth + offset <= fixedCoreWidth ||
+        nominalDepth + offset <= fixedCoreDepth
+      ) {
+        issues.push({
+          field: 'offset',
+          message: '外框增量會侵入中央 Snap 固定區域。',
+        })
+      }
+      if (
+        nominalWidth + offset > halfCellHostPitch(value.halfCellX) ||
+        nominalDepth + offset > halfCellHostPitch(value.halfCellY)
+      ) {
+        issues.push({
+          field: 'offset',
+          message: '外框增量會超過所選半格的宿主格距。',
+        })
+      }
     }
   }
 
@@ -154,6 +202,8 @@ export function validateOpenGridSnapParameters(
     value: {
       variant: value.variant as OpenGridSnapVariant,
       offset: value.offset as number,
+      halfCellX: value.halfCellX as HalfCellX,
+      halfCellY: value.halfCellY as HalfCellY,
     },
   }
 }
@@ -165,10 +215,13 @@ export function isOpenGridSnapParameters(
 }
 
 export function boundsForOpenGridSnap(
-  parameters: Pick<OpenGridSnapParameters, 'variant' | 'offset'>,
+  parameters: Pick<
+    OpenGridSnapParameters,
+    'variant' | 'offset' | 'halfCellX' | 'halfCellY'
+  >,
 ): OpenGridSnapBounds {
-  const width = OPENGRID_SNAP_CONFIGURATION.nominalWidth + parameters.offset
-  const depth = OPENGRID_SNAP_CONFIGURATION.nominalDepth + parameters.offset
+  const width = snapNominalAxisSize(parameters.halfCellX) + parameters.offset
+  const depth = snapNominalAxisSize(parameters.halfCellY) + parameters.offset
   return {
     min: [-width / 2, -depth / 2, 0],
     max: [
@@ -182,13 +235,13 @@ export function boundsForOpenGridSnap(
 export function openGridSnapFileName(
   parameters: OpenGridSnapParameters,
 ): string {
-  return `opengrid-snap-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}.step`
+  return `opengrid-snap-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-x${parameters.halfCellX}-y${parameters.halfCellY}.step`
 }
 
 export function openGridSnapStlFileName(
   parameters: OpenGridSnapParameters,
 ): string {
-  return `opengrid-snap-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}.stl`
+  return `opengrid-snap-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-x${parameters.halfCellX}-y${parameters.halfCellY}.stl`
 }
 
 export function openGridSnapHeightFor(variant: OpenGridSnapVariant): number {

@@ -1,3 +1,14 @@
+import {
+  fullGridCenterOffsetX,
+  fullGridCenterOffsetY,
+  isHalfCellX,
+  isHalfCellY,
+  openGridAxisSize,
+  type HalfCellDirection,
+  type HalfCellX,
+  type HalfCellY,
+} from './half-cell'
+
 export type OpenGridVariant = 'Full' | 'Lite' | 'Heavy'
 export type OpenGridChamferMode = 'none' | 'corners' | 'everywhere'
 export type OpenGridScrewKind = 'official-default' | 'custom'
@@ -11,6 +22,8 @@ export type OpenGridParameterKey =
   | 'variant'
   | 'rows'
   | 'columns'
+  | 'halfCellX'
+  | 'halfCellY'
   | 'chamfers'
   | 'chamferCorners'
   | 'connectorHoles'
@@ -53,6 +66,8 @@ export type OpenGridParameters = {
   variant: OpenGridVariant
   rows: number
   columns: number
+  halfCellX: HalfCellX
+  halfCellY: HalfCellY
   chamfers: OpenGridChamferMode
   chamferCorners: OpenGridCornerFlags
   connectorHoles: OpenGridConnectorHoles
@@ -188,6 +203,8 @@ export const OPENGRID_CONFIGURATION = {
     variant: 'Lite' as OpenGridVariant,
     rows: 2,
     columns: 2,
+    halfCellX: 'none' as HalfCellX,
+    halfCellY: 'none' as HalfCellY,
     chamfers: 'corners' as OpenGridChamferMode,
     chamferCorners: DEFAULT_CHAMFER_CORNERS,
     connectorHoles: 'enabled' as OpenGridConnectorHoles,
@@ -218,6 +235,8 @@ const OPEN_GRID_PARAMETER_KEYS: readonly OpenGridParameterKey[] = [
   'variant',
   'rows',
   'columns',
+  'halfCellX',
+  'halfCellY',
   'chamfers',
   'chamferCorners',
   'connectorHoles',
@@ -367,6 +386,19 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     issues.push({
       field: 'variant',
       message: '板型必須是 Full、Lite 或 Heavy。',
+    })
+  }
+
+  if (!isHalfCellX(value.halfCellX)) {
+    issues.push({
+      field: 'halfCellX',
+      message: 'X 半格方向必須是 none、left 或 right。',
+    })
+  }
+  if (!isHalfCellY(value.halfCellY)) {
+    issues.push({
+      field: 'halfCellY',
+      message: 'Y 半格方向必須是 none、top 或 bottom。',
     })
   }
 
@@ -619,6 +651,8 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
       variant: value.variant as OpenGridVariant,
       rows: value.rows as number,
       columns: value.columns as number,
+      halfCellX: value.halfCellX as HalfCellX,
+      halfCellY: value.halfCellY as HalfCellY,
       chamfers: value.chamfers as OpenGridChamferMode,
       chamferCorners: { ...(value.chamferCorners as OpenGridCornerFlags) },
       connectorHoles: value.connectorHoles as OpenGridConnectorHoles,
@@ -666,17 +700,21 @@ export function isOpenGridGenerationSupported(
 }
 
 export function openGridBoardConfiguration(
-  parameters: Pick<OpenGridParameters, 'variant' | 'rows' | 'columns'>,
+  parameters: Pick<OpenGridParameters, 'variant' | 'rows' | 'columns'> &
+    Partial<Pick<OpenGridParameters, 'halfCellX' | 'halfCellY'>>,
 ): OpenGridBoardConfiguration {
+  const halfCellX = parameters.halfCellX ?? 'none'
+  const halfCellY = parameters.halfCellY ?? 'none'
   return {
-    width: parameters.columns * OPENGRID_CONFIGURATION.gridPitch,
-    depth: parameters.rows * OPENGRID_CONFIGURATION.gridPitch,
+    width: openGridAxisSize(parameters.columns, halfCellX),
+    depth: openGridAxisSize(parameters.rows, halfCellY),
     height: OPENGRID_CONFIGURATION.variants[parameters.variant].thickness,
   }
 }
 
 export function boundsForOpenGrid(
-  parameters: Pick<OpenGridParameters, 'variant' | 'rows' | 'columns'>,
+  parameters: Pick<OpenGridParameters, 'variant' | 'rows' | 'columns'> &
+    Partial<Pick<OpenGridParameters, 'halfCellX' | 'halfCellY'>>,
 ) {
   const board = openGridBoardConfiguration(parameters)
   return {
@@ -690,13 +728,18 @@ export function boundsForOpenGrid(
 }
 
 export function cellCenterForOpenGrid(
-  parameters: Pick<OpenGridParameters, 'rows' | 'columns'>,
+  parameters: Pick<OpenGridParameters, 'rows' | 'columns'> &
+    Partial<Pick<OpenGridParameters, 'halfCellX' | 'halfCellY'>>,
   row: number,
   column: number,
 ): OpenGridPoint2D {
+  const halfCellX = parameters.halfCellX ?? 'none'
+  const halfCellY = parameters.halfCellY ?? 'none'
   return [
-    (column - (parameters.columns - 1) / 2) * OPENGRID_CONFIGURATION.gridPitch,
-    ((parameters.rows - 1) / 2 - row) * OPENGRID_CONFIGURATION.gridPitch,
+    (column - (parameters.columns - 1) / 2) * OPENGRID_CONFIGURATION.gridPitch +
+      fullGridCenterOffsetX(halfCellX),
+    ((parameters.rows - 1) / 2 - row) * OPENGRID_CONFIGURATION.gridPitch +
+      fullGridCenterOffsetY(halfCellY),
   ]
 }
 
@@ -710,14 +753,19 @@ export function openGridScrewLatticeDimensions(
 }
 
 export function screwCenterForOpenGrid(
-  parameters: Pick<OpenGridParameters, 'rows' | 'columns'>,
+  parameters: Pick<OpenGridParameters, 'rows' | 'columns'> &
+    Partial<Pick<OpenGridParameters, 'halfCellX' | 'halfCellY'>>,
   position: OpenGridScrewPosition,
 ): OpenGridPoint2D {
+  const halfCellX = parameters.halfCellX ?? 'none'
+  const halfCellY = parameters.halfCellY ?? 'none'
   return [
     (position.column - (parameters.columns - 2) / 2) *
-      OPENGRID_CONFIGURATION.gridPitch,
+      OPENGRID_CONFIGURATION.gridPitch +
+      fullGridCenterOffsetX(halfCellX),
     ((parameters.rows - 2) / 2 - position.row) *
-      OPENGRID_CONFIGURATION.gridPitch,
+      OPENGRID_CONFIGURATION.gridPitch +
+      fullGridCenterOffsetY(halfCellY),
   ]
 }
 
@@ -898,15 +946,20 @@ export function openGridScrewCentersFor(
   }
 
   if (parameters.screwMode === 'corners') {
-    const board = openGridBoardConfiguration(parameters)
-    const xCandidates = [
-      -board.width / 2 + OPENGRID_CONFIGURATION.gridPitch,
-      board.width / 2 - OPENGRID_CONFIGURATION.gridPitch,
-    ]
-    const yCandidates = [
-      -board.depth / 2 + OPENGRID_CONFIGURATION.gridPitch,
-      board.depth / 2 - OPENGRID_CONFIGURATION.gridPitch,
-    ]
+    const fullGridWidth = parameters.columns * OPENGRID_CONFIGURATION.gridPitch
+    const fullGridDepth = parameters.rows * OPENGRID_CONFIGURATION.gridPitch
+    const centerOffsetX = fullGridCenterOffsetX(parameters.halfCellX ?? 'none')
+    const centerOffsetY = fullGridCenterOffsetY(parameters.halfCellY ?? 'none')
+    const xCandidates = cornerScrewAxisCoordinates(
+      fullGridWidth,
+      parameters.halfCellX ?? 'none',
+      centerOffsetX,
+    )
+    const yCandidates = cornerScrewAxisCoordinates(
+      fullGridDepth,
+      parameters.halfCellY ?? 'none',
+      centerOffsetY,
+    )
     for (const x of xCandidates) {
       for (const y of yCandidates) addCenter([x, y])
     }
@@ -914,6 +967,7 @@ export function openGridScrewCentersFor(
     for (const position of openGridScrewPositionsFor(parameters)) {
       addCenter(screwCenterForOpenGrid(parameters, position))
     }
+    addHalfCellBoundaryScrewCenters(parameters, centers, addCenter)
     return centers
   }
 
@@ -927,30 +981,150 @@ export function openGridScrewCentersFor(
     }
   }
 
+  addHalfCellBoundaryScrewCenters(parameters, centers, addCenter)
   return centers
 }
 
-function seamCoordinates(count: number): number[] {
+function cornerScrewAxisCoordinates(
+  fullGridSize: number,
+  halfDirection: HalfCellDirection,
+  centerOffset: number,
+): number[] {
+  const halfBoundary = halfCellBoundaryCoordinate(
+    fullGridSize,
+    halfDirection,
+    centerOffset,
+  )
+  if (halfBoundary !== null) {
+    const farFullCellCorner = farFullCellCornerCoordinate(
+      fullGridSize,
+      halfDirection,
+      centerOffset,
+    )
+    return [...new Set([halfBoundary, farFullCellCorner])].sort(
+      (first, second) => first - second,
+    )
+  }
+
+  return [
+    -fullGridSize / 2 + OPENGRID_CONFIGURATION.gridPitch + centerOffset,
+    fullGridSize / 2 - OPENGRID_CONFIGURATION.gridPitch + centerOffset,
+  ]
+}
+
+function farFullCellCornerCoordinate(
+  fullGridSize: number,
+  halfDirection: HalfCellDirection,
+  centerOffset: number,
+): number {
+  if (halfDirection === 'left' || halfDirection === 'bottom') {
+    return fullGridSize / 2 - OPENGRID_CONFIGURATION.gridPitch + centerOffset
+  }
+  return -fullGridSize / 2 + OPENGRID_CONFIGURATION.gridPitch + centerOffset
+}
+
+function halfCellBoundaryCoordinate(
+  fullGridSize: number,
+  halfDirection: HalfCellDirection,
+  centerOffset: number,
+): number | null {
+  if (halfDirection === 'left' || halfDirection === 'bottom') {
+    return -fullGridSize / 2 + centerOffset
+  }
+  if (halfDirection === 'right' || halfDirection === 'top') {
+    return fullGridSize / 2 + centerOffset
+  }
+  return null
+}
+
+function addHalfCellBoundaryScrewCenters(
+  parameters: OpenGridParameters,
+  centers: readonly OpenGridPoint2D[],
+  addCenter: (center: OpenGridPoint2D) => void,
+): void {
+  if (
+    parameters.screwMode === 'custom' ||
+    centers.length === 0 ||
+    ((parameters.halfCellX ?? 'none') === 'none' &&
+      (parameters.halfCellY ?? 'none') === 'none')
+  ) {
+    return
+  }
+
+  const xCoordinates = [...new Set(centers.map(([x]) => x))]
+  const yCoordinates = [...new Set(centers.map(([, y]) => y))]
+  const halfBoundaryX = halfCellBoundaryCoordinate(
+    parameters.columns * OPENGRID_CONFIGURATION.gridPitch,
+    parameters.halfCellX ?? 'none',
+    fullGridCenterOffsetX(parameters.halfCellX ?? 'none'),
+  )
+  if (halfBoundaryX !== null) {
+    xCoordinates.push(halfBoundaryX)
+  }
+  const halfBoundaryY = halfCellBoundaryCoordinate(
+    parameters.rows * OPENGRID_CONFIGURATION.gridPitch,
+    parameters.halfCellY ?? 'none',
+    fullGridCenterOffsetY(parameters.halfCellY ?? 'none'),
+  )
+  if (halfBoundaryY !== null) {
+    yCoordinates.push(halfBoundaryY)
+  }
+
+  for (const x of xCoordinates) {
+    for (const y of yCoordinates) addCenter([x, y])
+  }
+}
+
+function seamCoordinates(count: number, centerOffset = 0): number[] {
   const positions: number[] = []
   for (let index = 0; index < Math.max(count - 1, 0); index += 1) {
-    positions.push((index - (count - 2) / 2) * OPENGRID_CONFIGURATION.gridPitch)
+    positions.push(
+      (index - (count - 2) / 2) * OPENGRID_CONFIGURATION.gridPitch +
+        centerOffset,
+    )
   }
   return positions
+}
+
+function seamCoordinatesWithHalfBoundary(
+  count: number,
+  centerOffset: number,
+  halfDirection: 'none' | 'left' | 'right' | 'top' | 'bottom',
+  fullMin: number,
+  fullMax: number,
+): number[] {
+  const positions = seamCoordinates(count, centerOffset)
+  if (halfDirection === 'left' || halfDirection === 'bottom') {
+    positions.push(fullMin)
+  } else if (halfDirection === 'right' || halfDirection === 'top') {
+    positions.push(fullMax)
+  }
+  return [...new Set(positions)].sort((first, second) => first - second)
 }
 
 export function openGridConnectorLocationsFor(
   parameters: Pick<
     OpenGridParameters,
     'rows' | 'columns' | 'connectorHoles' | 'connectorSides'
-  >,
+  > &
+    Partial<Pick<OpenGridParameters, 'halfCellX' | 'halfCellY'>>,
 ): OpenGridConnectorLocation[] {
   if (parameters.connectorHoles === 'none') return []
-  const board = openGridBoardConfiguration({
-    variant: 'Full',
-    rows: parameters.rows,
-    columns: parameters.columns,
-  })
+  const halfCellX = parameters.halfCellX ?? 'none'
+  const halfCellY = parameters.halfCellY ?? 'none'
+  const fullGridWidth = parameters.columns * OPENGRID_CONFIGURATION.gridPitch
+  const fullGridDepth = parameters.rows * OPENGRID_CONFIGURATION.gridPitch
+  const fullGridMinX =
+    -fullGridWidth / 2 + fullGridCenterOffsetX(parameters.halfCellX ?? 'none')
+  const fullGridMaxX =
+    fullGridWidth / 2 + fullGridCenterOffsetX(parameters.halfCellX ?? 'none')
+  const fullGridMinY =
+    -fullGridDepth / 2 + fullGridCenterOffsetY(parameters.halfCellY ?? 'none')
+  const fullGridMaxY =
+    fullGridDepth / 2 + fullGridCenterOffsetY(parameters.halfCellY ?? 'none')
   const locations: OpenGridConnectorLocation[] = []
+  const boardWidth = openGridAxisSize(parameters.columns, halfCellX)
+  const boardDepth = openGridAxisSize(parameters.rows, halfCellY)
   const addSide = (
     side: OpenGridConnectorSide,
     center: OpenGridPoint2D,
@@ -959,24 +1133,53 @@ export function openGridConnectorLocationsFor(
     locations.push({ side, center, direction })
   }
 
+  const topY = halfCellY === 'top' ? boardDepth / 2 : fullGridMaxY
+  const rightX = halfCellX === 'right' ? boardWidth / 2 : fullGridMaxX
+  const bottomY = halfCellY === 'bottom' ? -boardDepth / 2 : fullGridMinY
+  const leftX = halfCellX === 'left' ? -boardWidth / 2 : fullGridMinX
+
   if (parameters.connectorSides.top) {
-    for (const x of seamCoordinates(parameters.columns)) {
-      addSide('top', [x, board.depth / 2], [0, -1, 0])
+    for (const x of seamCoordinatesWithHalfBoundary(
+      parameters.columns,
+      fullGridCenterOffsetX(parameters.halfCellX ?? 'none'),
+      halfCellX,
+      fullGridMinX,
+      fullGridMaxX,
+    )) {
+      addSide('top', [x, topY], [0, -1, 0])
     }
   }
   if (parameters.connectorSides.right) {
-    for (const y of seamCoordinates(parameters.rows)) {
-      addSide('right', [board.width / 2, y], [-1, 0, 0])
+    for (const y of seamCoordinatesWithHalfBoundary(
+      parameters.rows,
+      fullGridCenterOffsetY(parameters.halfCellY ?? 'none'),
+      halfCellY,
+      fullGridMinY,
+      fullGridMaxY,
+    )) {
+      addSide('right', [rightX, y], [-1, 0, 0])
     }
   }
   if (parameters.connectorSides.bottom) {
-    for (const x of seamCoordinates(parameters.columns)) {
-      addSide('bottom', [x, -board.depth / 2], [0, 1, 0])
+    for (const x of seamCoordinatesWithHalfBoundary(
+      parameters.columns,
+      fullGridCenterOffsetX(parameters.halfCellX ?? 'none'),
+      halfCellX,
+      fullGridMinX,
+      fullGridMaxX,
+    )) {
+      addSide('bottom', [x, bottomY], [0, 1, 0])
     }
   }
   if (parameters.connectorSides.left) {
-    for (const y of seamCoordinates(parameters.rows)) {
-      addSide('left', [-board.width / 2, y], [1, 0, 0])
+    for (const y of seamCoordinatesWithHalfBoundary(
+      parameters.rows,
+      fullGridCenterOffsetY(parameters.halfCellY ?? 'none'),
+      halfCellY,
+      fullGridMinY,
+      fullGridMaxY,
+    )) {
+      addSide('left', [leftX, y], [1, 0, 0])
     }
   }
   return locations
@@ -1021,7 +1224,7 @@ function buildOpenGridFileName(
   const fingerprint = hasScrewPatternModifiers
     ? `-${openGridScrewPatternFingerprint(parameters)}`
     : ''
-  return `opengrid-${parameters.variant.toLowerCase()}-${parameters.columns}x${parameters.rows}-${parameters.screwKind}-${parameters.screwMode}-${parameters.chamfers}-${parameters.connectorHoles}${fingerprint}${extension}`
+  return `opengrid-${parameters.variant.toLowerCase()}-${parameters.columns}x${parameters.rows}-x${parameters.halfCellX}-y${parameters.halfCellY}-${parameters.screwKind}-${parameters.screwMode}-${parameters.chamfers}-${parameters.connectorHoles}${fingerprint}${extension}`
 }
 
 export function openGridFileName(parameters: OpenGridParameters): string {

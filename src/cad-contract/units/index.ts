@@ -135,6 +135,22 @@ export {
   parseOpenGridSnapDecimalInput,
   validateOpenGridSnapParameters,
 } from './opengrid-snap'
+export {
+  HALF_CELL_CONFIGURATION,
+  halfCellDirectionLabel,
+  halfCellExtensionFor,
+  fullGridCenterOffsetX,
+  fullGridCenterOffsetY,
+  hasHalfCellX,
+  hasHalfCellY,
+  halfCellHostPitch,
+  isHalfCellX,
+  isHalfCellY,
+  openGridAxisSize,
+  snapFixedCoreAxisSize,
+  snapNominalAxisSize,
+} from './half-cell'
+export type { HalfCellDirection, HalfCellX, HalfCellY } from './half-cell'
 export type {
   OpenGridSnapBounds,
   OpenGridSnapParameterKey,

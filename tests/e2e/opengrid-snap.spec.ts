@@ -28,6 +28,25 @@ test('OpenGrid Snap route exposes only Full/Lite and one shared outer offset', a
   await expect(
     page.getByText('外框總尺寸：25.60 × 25.60 × 6.80 mm'),
   ).toBeVisible()
+  const halfCellX = page.getByRole('combobox', {
+    name: 'OpenGrid Snap X 半格方向',
+  })
+  const halfCellY = page.getByRole('combobox', {
+    name: 'OpenGrid Snap Y 半格方向',
+  })
+  await halfCellX.selectOption('left')
+  await expect(
+    page.getByText('外框總尺寸：12.80 × 25.60 × 6.80 mm'),
+  ).toBeVisible()
+  await halfCellY.selectOption('top')
+  await expect(
+    page.getByText('外框總尺寸：12.80 × 12.80 × 6.80 mm'),
+  ).toBeVisible()
+  await expect(page.getByTestId('opengrid-snap-panel')).toContainText(
+    '宿主格距：X 14 × Y 14 mm',
+  )
+  await halfCellX.selectOption('none')
+  await halfCellY.selectOption('none')
   await expect(page.getByTestId('opengrid-panel')).toHaveCount(0)
   await expect(
     page.getByTestId('opengrid-snap-panel').getByText(/板型|格數|螺絲|連接孔/),
@@ -75,14 +94,14 @@ test('OpenGrid Snap generates the complete assembly and exports the committed re
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const stepDownload = await stepDownloadPromise
   expect(stepDownload.suggestedFilename()).toBe(
-    'opengrid-snap-full-offset0.2.step',
+    'opengrid-snap-full-offset0.2-xnone-ynone.step',
   )
 
   const stlDownloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: '下載 STL' }).click()
   const stlDownload = await stlDownloadPromise
   expect(stlDownload.suggestedFilename()).toBe(
-    'opengrid-snap-full-offset0.2.stl',
+    'opengrid-snap-full-offset0.2-xnone-ynone.stl',
   )
   await expect
     .poll(() => readBinaryStlByteLength(stlDownload))

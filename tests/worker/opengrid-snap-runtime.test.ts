@@ -48,6 +48,15 @@ const base = {
   operationId: 'operation-base',
 }
 
+function snapParameters(
+  variant: 'Full' | 'Lite',
+  offset: number,
+  halfCellX: 'none' | 'left' | 'right' = 'none',
+  halfCellY: 'none' | 'top' | 'bottom' = 'none',
+): OpenGridSnapParameters {
+  return { variant, offset, halfCellX, halfCellY }
+}
+
 function initCommand() {
   return {
     ...base,
@@ -58,8 +67,7 @@ function initCommand() {
 
 function generateCommand(
   parameters: OpenGridSnapParameters = {
-    variant: 'Full',
-    offset: 0,
+    ...snapParameters('Full', 0),
   },
   generation = 1,
 ) {
@@ -111,9 +119,9 @@ describe('OpenGrid Snap Worker runtime', () => {
       events.push(event),
     )
     await runtime.handle(initCommand())
-    await runtime.handle(generateCommand({ variant: 'Full', offset: 0.2 }))
-    await runtime.handle(generateCommand({ variant: 'Full', offset: 0 }, 2))
-    await runtime.handle(generateCommand({ variant: 'Lite', offset: 0 }, 3))
+    await runtime.handle(generateCommand(snapParameters('Full', 0.2)))
+    await runtime.handle(generateCommand(snapParameters('Full', 0), 2))
+    await runtime.handle(generateCommand(snapParameters('Lite', 0), 3))
 
     expect(mocks.buildModelBRep).toHaveBeenCalledWith(
       'opengrid-snap',
@@ -128,7 +136,7 @@ describe('OpenGrid Snap Worker runtime', () => {
       expect.objectContaining({
         kind: 'model.candidate-ready',
         modelId: 'opengrid-snap',
-        parameters: { variant: 'Lite', offset: 0 },
+        parameters: snapParameters('Lite', 0),
       }),
     )
   })
@@ -144,7 +152,7 @@ describe('OpenGrid Snap Worker runtime', () => {
 
     await runtime.handle(initCommand())
     await runtime.handle(generateCommand())
-    await runtime.handle(generateCommand({ variant: 'Full', offset: 0.1 }, 2))
+    await runtime.handle(generateCommand(snapParameters('Full', 0.1), 2))
 
     expect(mocks.loadOpenGridSnapReference).toHaveBeenCalledTimes(2)
     expect(events).toContainEqual(
@@ -185,11 +193,11 @@ describe('OpenGrid Snap Worker runtime', () => {
     await runtime.handle(initCommand())
 
     const first = runtime.handle(
-      generateCommand({ variant: 'Full', offset: 0.2 }, 1),
+      generateCommand(snapParameters('Full', 0.2), 1),
     )
     await Promise.resolve()
     const second = runtime.handle(
-      generateCommand({ variant: 'Full', offset: 0.3 }, 2),
+      generateCommand(snapParameters('Full', 0.3, 'right', 'top'), 2),
     )
     await second
     releaseFirst()
@@ -205,7 +213,7 @@ describe('OpenGrid Snap Worker runtime', () => {
       expect.objectContaining({
         kind: 'model.candidate-ready',
         generation: 2,
-        parameters: { variant: 'Full', offset: 0.3 },
+        parameters: snapParameters('Full', 0.3, 'right', 'top'),
       }),
     )
     expect(generatedShapes).toHaveLength(1)
@@ -217,7 +225,9 @@ describe('OpenGrid Snap Worker runtime', () => {
       events.push(event),
     )
     await runtime.handle(initCommand())
-    await runtime.handle(generateCommand({ variant: 'Lite', offset: 0.2 }))
+    await runtime.handle(
+      generateCommand(snapParameters('Lite', 0.2, 'left', 'top')),
+    )
     const candidate = events.find(
       (event) =>
         typeof event === 'object' &&
@@ -293,8 +303,8 @@ describe('OpenGrid Snap Worker runtime', () => {
       events.push(event),
     )
     await runtime.handle(initCommand())
-    await runtime.handle(generateCommand({ variant: 'Full', offset: 0 }))
-    await runtime.handle(generateCommand({ variant: 'Lite', offset: 0 }, 2))
+    await runtime.handle(generateCommand(snapParameters('Full', 0)))
+    await runtime.handle(generateCommand(snapParameters('Lite', 0), 2))
     await runtime.handle({
       ...base,
       requestId: 'snap-dispose-request',
