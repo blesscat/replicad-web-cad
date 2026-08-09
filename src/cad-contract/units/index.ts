@@ -63,6 +63,21 @@ import type {
   OpenGridDividerValidation,
   OpenGridDividerValidationIssue,
 } from './opengrid-divider'
+import {
+  boundsForPillar,
+  isPillarParameters,
+  pillarFileName,
+  pillarStlFileName,
+  PILLAR_CONFIGURATION,
+  validatePillarParameters,
+} from './pillar'
+import type {
+  PillarBounds,
+  PillarParameterKey,
+  PillarParameters,
+  PillarValidation,
+  PillarValidationIssue,
+} from './pillar'
 
 export {
   OPENGRID_CONFIGURATION,
@@ -167,6 +182,21 @@ export type {
   OpenGridDividerValidation,
   OpenGridDividerValidationIssue,
 } from './opengrid-divider'
+export {
+  boundsForPillar,
+  isPillarParameters,
+  pillarFileName,
+  pillarStlFileName,
+  PILLAR_CONFIGURATION,
+  validatePillarParameters,
+} from './pillar'
+export type {
+  PillarBounds,
+  PillarParameterKey,
+  PillarParameters,
+  PillarValidation,
+  PillarValidationIssue,
+} from './pillar'
 
 export const HSW_CELL_CONFIGURATION = {
   maxGridCount: 20,
@@ -273,12 +303,14 @@ export type ModelParameterKey =
   | OpenGridStackableBoxParameterKey
   | OpenGridSnapParameterKey
   | OpenGridDividerParameterKey
+  | PillarParameterKey
 export type ScalarModelParameterKey =
   | DimensionKey
   | GridParameterKey
   | HexagonalColumnParameterKey
   | OpenGridDividerParameterKey
   | 'offset'
+  | 'length'
 export type ModelId =
   | 'box'
   | 'box-normal'
@@ -290,6 +322,7 @@ export type ModelId =
   | 'opengrid-snap'
   | 'opengrid-snap-remover'
   | 'opengrid-divider'
+  | 'pillar'
 
 export type BoxParameters = Record<DimensionKey, number>
 export type ModularGridBaseParameters = Record<GridParameterKey, number>
@@ -334,6 +367,7 @@ export type ModelParameters =
       modelId: 'opengrid-divider'
       parameters: OpenGridDividerParameters
     }
+  | { modelId: 'pillar'; parameters: PillarParameters }
 
 export type ModelParameterValues = ModelParameters['parameters']
 
@@ -393,6 +427,13 @@ export type OpenGridDividerModelValidation =
 
 export type OpenGridSnapRemoverValidation =
   | { valid: true; value: OpenGridSnapRemoverParameters }
+  | { valid: false; issues: ValidationIssue[] }
+
+export type PillarModelValidation =
+  | {
+      valid: true
+      value: { modelId: 'pillar'; parameters: PillarParameters }
+    }
   | { valid: false; issues: ValidationIssue[] }
 
 export type HswCellOffset = [number, number]
@@ -942,6 +983,20 @@ export function validateModelParameters(
     return { valid: true, value: { modelId, parameters: validation.value } }
   }
 
+  if (modelId === 'pillar') {
+    const validation = validatePillarParameters(value)
+    if (!validation.valid) {
+      return {
+        valid: false,
+        issues: validation.issues.map((issue) => ({
+          field: issue.field,
+          message: issue.message,
+        })),
+      }
+    }
+    return { valid: true, value: { modelId, parameters: validation.value } }
+  }
+
   return {
     valid: false,
     issues: [{ field: 'parameters', message: '找不到指定的 CAD component。' }],
@@ -1214,6 +1269,12 @@ export function isOpenGridDividerModelParameters(
   return isOpenGridDividerParameters(value)
 }
 
+export function isPillarModelParameters(
+  value: unknown,
+): value is PillarParameters {
+  return isPillarParameters(value)
+}
+
 export function isModelParameters(value: unknown): value is ModelParameters {
   if (!value || typeof value !== 'object') return false
   const model = value as { modelId?: unknown; parameters?: unknown }
@@ -1242,6 +1303,8 @@ export function boundsForModel(model: ModelParameters): ModelBounds {
       return boundsForOpenGridSnapRemover(model.parameters)
     case 'opengrid-divider':
       return boundsForOpenGridDivider(model.parameters)
+    case 'pillar':
+      return boundsForPillar(model.parameters)
   }
 }
 
@@ -1267,6 +1330,8 @@ export function modelFileName(model: ModelParameters): string {
       return openGridSnapRemoverFileName(model.parameters)
     case 'opengrid-divider':
       return openGridDividerFileName(model.parameters)
+    case 'pillar':
+      return pillarFileName(model.parameters)
   }
 }
 
@@ -1292,5 +1357,7 @@ export function modelStlFileName(model: ModelParameters): string {
       return openGridSnapRemoverStlFileName(model.parameters)
     case 'opengrid-divider':
       return openGridDividerStlFileName(model.parameters)
+    case 'pillar':
+      return pillarStlFileName(model.parameters)
   }
 }

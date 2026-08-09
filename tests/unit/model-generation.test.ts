@@ -31,6 +31,9 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
   if (modelId === 'hexagonal-column') {
     return { height: 8, count: 1, gap: 1, orientation: 'lying' }
   }
+  if (modelId === 'pillar') {
+    return { length: 5, baseConnection: false }
+  }
   if (modelId === 'opengrid') {
     return opengridParameters()
   }
@@ -163,6 +166,51 @@ describe('CAD model generation debounce', () => {
       depth: 30,
       height: 40,
     })
+  })
+
+  it('debounces pillar length and preserves its base-connection mode', () => {
+    const { client, send, context } = createRuntimeContext('pillar')
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('length', '8')
+    handlers.handleInputChange('baseConnection', 'true')
+    vi.advanceTimersByTime(500)
+
+    expect(send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.generate',
+        modelId: 'pillar',
+        parameters: { length: 8, baseConnection: true },
+      }),
+    )
+    expect(client.send).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'model.invalidate', generation: 1 }),
+    )
+    expect(context.setPersistedParameters).toHaveBeenLastCalledWith('pillar', {
+      length: 8,
+      baseConnection: true,
+    })
+  })
+
+  it('invalidates a fractional pillar length without generating a snapshot', () => {
+    const { client, send, context } = createRuntimeContext('pillar')
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('length', '5.5')
+    vi.advanceTimersByTime(500)
+
+    expect(context.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'input-invalid' }),
+    )
+    expect(client.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.invalidate',
+        reason: 'invalid-input',
+      }),
+    )
+    expect(
+      send.mock.calls.some(([command]) => command.kind === 'model.generate'),
+    ).toBe(false)
   })
 
   it('invalidates each rapid snapshot but generates only the final legal value', () => {

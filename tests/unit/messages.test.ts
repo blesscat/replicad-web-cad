@@ -251,6 +251,39 @@ describe('Worker contract runtime validation', () => {
     ).toBe(false)
   })
 
+  it('accepts pillar commands only with integer length and boolean mode', () => {
+    const command = {
+      version: PROTOCOL_VERSION,
+      kind: 'model.generate' as const,
+      requestId: 'request-pillar-1',
+      operationId: 'operation-pillar-1',
+      generation: 1,
+      modelId: 'pillar' as const,
+      parameters: { length: 12, baseConnection: true },
+      previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
+    }
+
+    expect(isWorkerCommand(command)).toBe(true)
+    expect(
+      isWorkerCommand({
+        ...command,
+        parameters: { length: 12.5, baseConnection: true },
+      }),
+    ).toBe(false)
+    expect(
+      isWorkerCommand({
+        ...command,
+        parameters: { length: 12, baseConnection: 'true' },
+      }),
+    ).toBe(false)
+    expect(
+      isWorkerCommand({
+        ...command,
+        parameters: { length: 12, baseConnection: true, height: 5 },
+      }),
+    ).toBe(false)
+  })
+
   it('accepts a validated STL export command and response', () => {
     const command = {
       version: PROTOCOL_VERSION,

@@ -11,6 +11,7 @@ import {
   isOpenGridStackableBoxParameters,
   isOpenGridSnapParameters,
   isOpenGridSnapRemoverParameters,
+  isPillarParameters,
   validateOpenGridGenerationSupport,
   validateModelParameters,
   type ModelId,
@@ -31,6 +32,7 @@ import { buildOpenGridDivider } from '../components/opengrid-divider/builder'
 import { buildOpenGridStackableBox } from '../components/opengrid-stackable-box/builder'
 import { buildOpenGridSnap } from '../components/opengrid-snap/builder'
 import { buildOpenGridSnapRemover } from '../components/opengrid-snap-remover/builder'
+import { buildPillar } from '../components/pillar/builder'
 
 export type KernelBuildContext = {
   getModularGridBaseTemplate: () => Promise<Shape3D>
@@ -151,6 +153,19 @@ async function buildHexagonalColumnModel(
   })
 }
 
+async function buildPillarModel(
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Promise<Shape3D> {
+  if (!isPillarParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:pillar')
+  }
+  return buildPillar(parameters, {
+    yieldToEventLoop: context.yieldToEventLoop,
+    isGenerationCurrent: context.isGenerationCurrent,
+  })
+}
+
 async function buildOpenGridModel(
   parameters: ModelParameterValues,
   context: KernelBuildContext,
@@ -258,6 +273,11 @@ export const hexagonalColumnKernelDefinition: KernelModelDefinition = {
   build: buildHexagonalColumnModel,
 }
 
+export const pillarKernelDefinition: KernelModelDefinition = {
+  id: 'pillar',
+  build: buildPillarModel,
+}
+
 export const opengridKernelDefinition: KernelModelDefinition = {
   id: 'opengrid',
   build: buildOpenGridModel,
@@ -289,6 +309,7 @@ export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   modularGridBaseKernelDefinition,
   hswCellKernelDefinition,
   hexagonalColumnKernelDefinition,
+  pillarKernelDefinition,
   opengridKernelDefinition,
   opengridStackableBoxKernelDefinition,
   opengridSnapKernelDefinition,

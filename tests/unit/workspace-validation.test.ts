@@ -7,6 +7,7 @@ import type {
   OpenGridDividerParameters,
   OpenGridStackableBoxParameters,
   OpenGridSnapParameters,
+  PillarParameters,
 } from '../../src/cad-contract/units'
 import { OPENGRID_DIVIDER_CONFIGURATION } from '../../src/cad-contract/units'
 import {
@@ -267,6 +268,34 @@ describe('CAD workspace validation helpers', () => {
       valid: false,
       message: `格數必須是 0–${OPENGRID_DIVIDER_CONFIGURATION.maxArmCount} 的 ${OPENGRID_DIVIDER_CONFIGURATION.gridStep} 格倍數。`,
       field: 'left',
+    })
+  })
+
+  it('round-trips pillar length and its typed base-connection checkbox', () => {
+    const parameters: PillarParameters = {
+      length: 5,
+      baseConnection: true,
+    }
+    const raw = rawFromParameters(parameters)
+
+    expect(raw).toEqual({ length: '5', baseConnection: 'true' })
+    expect(parseRawParameters(raw, 'pillar')).toEqual({
+      valid: true,
+      value: parameters,
+    })
+    expect(
+      parseRawParameters({ length: '5', baseConnection: 'yes' }, 'pillar'),
+    ).toEqual({
+      valid: false,
+      message: '必須是 true 或 false。',
+      field: 'baseConnection',
+    })
+    expect(
+      parseRawParameters({ length: '5.5', baseConnection: 'false' }, 'pillar'),
+    ).toEqual({
+      valid: false,
+      message: '總長度必須是有限的整數 mm。',
+      field: 'length',
     })
   })
 })

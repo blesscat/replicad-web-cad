@@ -154,6 +154,13 @@ describe('CAD state machine', () => {
     )
   })
 
+  it('initializes the pillar with a plain five-millimetre default', () => {
+    const state = initialCadState('pillar')
+
+    expect(state.modelId).toBe('pillar')
+    expect(state.input).toEqual({ length: 5, baseConnection: false })
+  })
+
   it('retains OpenGrid committed metadata while marking a newer input stale', () => {
     const parameters = opengridParameters({
       variant: 'Full',

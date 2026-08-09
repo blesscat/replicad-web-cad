@@ -7,6 +7,7 @@ import {
   OPENGRID_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_SNAP_CONFIGURATION,
+  PILLAR_CONFIGURATION,
   PROTOTYPE_CONFIGURATION,
   type BoxParameters,
   type ModelId,
@@ -91,6 +92,9 @@ function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
 
   if (modelId === 'opengrid-divider') {
     return { ...OPENGRID_DIVIDER_CONFIGURATION.defaultParameters }
+  }
+  if (modelId === 'pillar') {
+    return { ...PILLAR_CONFIGURATION.defaultParameters }
   }
   throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
 }

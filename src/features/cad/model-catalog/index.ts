@@ -9,6 +9,7 @@ import { opengridDividerDefinition } from './components/opengrid-divider'
 import { opengridStackableBoxDefinition } from './components/opengrid-stackable-box'
 import { opengridSnapDefinition } from './components/opengrid-snap'
 import { openGridSnapRemoverDefinition } from './components/opengrid-snap-remover'
+import { pillarDefinition } from './components/pillar'
 import type {
   ModelDefinition,
   ModelFamily,
@@ -34,6 +35,7 @@ export { opengridDividerDefinition } from './components/opengrid-divider'
 export { opengridStackableBoxDefinition } from './components/opengrid-stackable-box'
 export { opengridSnapDefinition } from './components/opengrid-snap'
 export { openGridSnapRemoverDefinition } from './components/opengrid-snap-remover'
+export { pillarDefinition } from './components/pillar'
 
 export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   boxDefinition,
@@ -41,6 +43,7 @@ export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   modularGridBaseDefinition,
   hswCellDefinition,
   hexagonalColumnDefinition,
+  pillarDefinition,
   opengridDefinition,
   opengridDividerDefinition,
   opengridStackableBoxDefinition,

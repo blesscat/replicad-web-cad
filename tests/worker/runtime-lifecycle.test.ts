@@ -29,7 +29,12 @@ vi.mock('../../src/cad-kernel/export', () => ({
   exportStepBytes: vi.fn(async () => new Uint8Array([1]).buffer),
 }))
 
+vi.mock('../../src/cad-kernel/components/pillar/quality', () => ({
+  assertPillarShapeQuality: vi.fn(),
+}))
+
 import { CadWorkerRuntime } from '../../src/workers/cad.worker'
+import { assertPillarShapeQuality } from '../../src/cad-kernel/components/pillar/quality'
 
 const base = {
   version: 1 as const,
@@ -54,6 +59,19 @@ function generateCommand(generation = 1) {
     generation,
     modelId: 'box' as const,
     parameters: { width: 20, depth: 30, height: 40 },
+    previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
+  }
+}
+
+function pillarGenerateCommand(generation = 1) {
+  return {
+    ...base,
+    requestId: `pillar-generate-request-${generation}`,
+    operationId: `pillar-generate-operation-${generation}`,
+    kind: 'model.generate' as const,
+    generation,
+    modelId: 'pillar' as const,
+    parameters: { length: 12, baseConnection: true },
     previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
   }
 }
@@ -151,5 +169,47 @@ describe('CAD Worker candidate terminal lifecycle', () => {
       kind: 'operation.error',
       code: 'WORKER_TERMINATED',
     })
+  })
+
+  it('generates and commits pillar metadata through the shared lifecycle', async () => {
+    const events: any[] = []
+    const runtime = new CadWorkerRuntime('epoch-pillar', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(pillarGenerateCommand())
+
+    const candidate = events.find(
+      (event) => event.kind === 'model.candidate-ready',
+    )
+    expect(candidate).toMatchObject({
+      modelId: 'pillar',
+      generation: 1,
+      parameters: { length: 12, baseConnection: true },
+      workerEpoch: 'epoch-pillar',
+    })
+    expect(assertPillarShapeQuality).toHaveBeenCalledWith(
+      expect.anything(),
+      { length: 12, baseConnection: true },
+      expect.objectContaining({ triangleCount: 1 }),
+    )
+
+    await runtime.handle({
+      ...base,
+      requestId: 'pillar-commit-request',
+      operationId: 'pillar-generate-operation-1',
+      kind: 'model.commit' as const,
+      generation: 1,
+      candidateId: candidate.candidateId,
+      workerEpoch: 'epoch-pillar',
+    })
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'model.ready',
+        modelId: 'pillar',
+        parameters: { length: 12, baseConnection: true },
+      }),
+    )
   })
 })

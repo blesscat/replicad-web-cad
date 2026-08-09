@@ -13,6 +13,10 @@ const mocks = vi.hoisted(() => ({
     model: 'hexagonal-column',
     delete: vi.fn(),
   })),
+  buildPillar: vi.fn(async () => ({
+    model: 'pillar',
+    delete: vi.fn(),
+  })),
   buildModularGridBase: vi.fn(async () => ({
     model: 'modular-grid-base',
     delete: vi.fn(),
@@ -45,6 +49,10 @@ vi.mock('../../src/cad-kernel/components/hsw-cell/builder', () => ({
 
 vi.mock('../../src/cad-kernel/components/hexagonal-column/builder', () => ({
   buildHexagonalColumn: mocks.buildHexagonalColumn,
+}))
+
+vi.mock('../../src/cad-kernel/components/pillar/builder', () => ({
+  buildPillar: mocks.buildPillar,
 }))
 
 vi.mock('../../src/cad-kernel/components/modular-grid-base/builder', () => ({
@@ -91,6 +99,7 @@ describe('HSW kernel model registration', () => {
       'modular-grid-base',
       'hsw-cell',
       'hexagonal-column',
+      'pillar',
       'opengrid',
       'opengrid-stackable-box',
       'opengrid-snap',
@@ -211,5 +220,24 @@ describe('HSW kernel model registration', () => {
     )
     expect(mocks.buildHswCell).not.toHaveBeenCalled()
     expect(mocks.buildModularGridBase).not.toHaveBeenCalled()
+  })
+
+  it('routes pillar directly to its asset-free builder', async () => {
+    const shape = await buildModelBRep(
+      'pillar',
+      { length: 5, baseConnection: true },
+      context,
+    )
+
+    expect(shape).toMatchObject({ model: 'pillar' })
+    expect(mocks.buildPillar).toHaveBeenCalledWith(
+      { length: 5, baseConnection: true },
+      expect.objectContaining({
+        isGenerationCurrent: undefined,
+        yieldToEventLoop: undefined,
+      }),
+    )
+    expect(context.getBoxNormalReference).not.toHaveBeenCalled()
+    expect(context.getHexagonalColumnReference).not.toHaveBeenCalled()
   })
 })

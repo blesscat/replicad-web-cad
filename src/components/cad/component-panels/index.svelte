@@ -14,6 +14,7 @@
   import OpenGridDividerComponentPanel from './opengrid-divider/OpenGridDividerComponentPanel.svelte'
   import OpenGridStackableBoxComponentPanel from './opengrid-stackable-box/OpenGridStackableBoxComponentPanel.svelte'
   import OpenGridSnapComponentPanel from './opengrid-snap/OpenGridSnapComponentPanel.svelte'
+  import PillarComponentPanel from './pillar/PillarComponentPanel.svelte'
   import type { ComponentPanelProps } from './types'
 
   type Props = ComponentPanelProps & {
@@ -50,6 +51,8 @@
     {fieldErrors}
     {onInputChange}
   />
+{:else if modelId === 'pillar'}
+  <PillarComponentPanel {rawParameters} {fieldErrors} {onInputChange} />
 {:else if modelId === 'opengrid'}
   <OpenGridComponentPanel
     parameters={parameters as OpenGridParameters}
