@@ -178,7 +178,7 @@ describe('OpenGrid dimension calculation', () => {
 })
 
 describe('OpenGrid stackable-box dimension calculation', () => {
-  it('rounds each target up to the nearest half-cell that is not smaller', () => {
+  it('rounds each target down to the nearest half-cell that fits', () => {
     const oneCell = sizeOf(
       boundsForOpenGridStackableBox({
         x: 1,
@@ -192,13 +192,26 @@ describe('OpenGrid stackable-box dimension calculation', () => {
       y: String(oneCell.y),
     })
 
+    expect(result.valid && result.parameters).toEqual({ columns: 1, rows: 1 })
+    if (result.valid) {
+      expect(result.actualDimensions.x).toBeLessThanOrEqual(oneCell.x + 0.01)
+      expect(result.actualDimensions.y).toBeLessThanOrEqual(oneCell.y)
+    }
+  })
+
+  it('keeps a 100 mm target at the closest fitting half-cell', () => {
+    const result = calculateOpenGridStackableBoxCounts({
+      x: '100',
+      y: '100',
+    })
+
     expect(result.valid && result.parameters).toEqual({
-      columns: 1.5,
-      rows: 1,
+      columns: 3.5,
+      rows: 3.5,
     })
     if (result.valid) {
-      expect(result.actualDimensions.x).toBeGreaterThanOrEqual(oneCell.x + 0.01)
-      expect(result.actualDimensions.y).toBeGreaterThanOrEqual(oneCell.y)
+      expect(result.actualDimensions.x).toBeLessThanOrEqual(100)
+      expect(result.actualDimensions.y).toBeLessThanOrEqual(100)
     }
   })
 
