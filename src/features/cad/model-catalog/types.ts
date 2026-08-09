@@ -40,7 +40,7 @@ export type ModelDefinition = {
   selectionDescription: string
   parameterSchema: ReadonlyArray<ParameterField>
   defaultParameters: ModelParameterValues
-  previewMetadata: { centeredOnXY: true; baseAtZ: 0 }
+  previewMetadata: { centeredOnXY: boolean; baseAtZ: number }
   validateParameters: (parameters: unknown) => ModelValidation
   boundsForParameters: (parameters: ModelParameterValues) => ModelBounds
   exportFileName: (parameters: ModelParameterValues) => string

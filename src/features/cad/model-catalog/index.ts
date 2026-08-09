@@ -7,6 +7,7 @@ import { modularGridBaseDefinition } from './components/modular-grid-base'
 import { opengridDefinition } from './components/opengrid'
 import { opengridStackableBoxDefinition } from './components/opengrid-stackable-box'
 import { opengridSnapDefinition } from './components/opengrid-snap'
+import { openGridSnapRemoverDefinition } from './components/opengrid-snap-remover'
 import type {
   ModelDefinition,
   ModelFamily,
@@ -30,6 +31,7 @@ export { modularGridBaseDefinition } from './components/modular-grid-base'
 export { opengridDefinition } from './components/opengrid'
 export { opengridStackableBoxDefinition } from './components/opengrid-stackable-box'
 export { opengridSnapDefinition } from './components/opengrid-snap'
+export { openGridSnapRemoverDefinition } from './components/opengrid-snap-remover'
 
 export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   boxDefinition,
@@ -40,6 +42,7 @@ export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   opengridDefinition,
   opengridStackableBoxDefinition,
   opengridSnapDefinition,
+  openGridSnapRemoverDefinition,
 ]
 
 export const modelFamilyOrder: ReadonlyArray<ModelFamily> = [

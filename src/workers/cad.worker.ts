@@ -15,6 +15,7 @@ import { loadHexagonalColumnReference } from '../cad-kernel/components/hexagonal
 import { loadModularGridBaseTemplate } from '../cad-kernel/components/modular-grid-base/builder'
 import { loadOpenGridPrototypeTemplate } from '../cad-kernel/components/opengrid/builder'
 import { loadOpenGridSnapReference } from '../cad-kernel/components/opengrid-snap/builder'
+import { loadOpenGridSnapRemoverAsset } from '../cad-kernel/components/opengrid-snap-remover/builder'
 import { buildModelBRep } from '../cad-kernel/model'
 import { assertOpenGridShapeQuality } from '../cad-kernel/components/opengrid/quality'
 import { assertOpenGridSnapShapeQuality } from '../cad-kernel/components/opengrid-snap/quality'
@@ -102,6 +103,8 @@ export class CadWorkerRuntime {
     OpenGridSnapVariant,
     Promise<import('replicad').Shape3D>
   >()
+  private openGridSnapRemoverAsset: Promise<import('replicad').Shape3D> | null =
+    null
   private readonly lifetime: RevisionLifetime
   private readonly candidateTimers = new Map<
     string,
@@ -188,6 +191,7 @@ export class CadWorkerRuntime {
           this.disposeHexagonalColumnReference()
           this.disposeOpenGridPrototypes()
           this.disposeOpenGridSnapReferences()
+          this.disposeOpenGridSnapRemoverAsset()
           this.lastBoxNormalOperationCounts = null
           this.initialized = false
           this.initializing = null
@@ -280,6 +284,7 @@ export class CadWorkerRuntime {
         getOpenGridPrototype: (variant) => this.getOpenGridPrototype(variant),
         getOpenGridSnapReference: (variant) =>
           this.getOpenGridSnapReference(variant),
+        getOpenGridSnapRemoverAsset: () => this.getOpenGridSnapRemoverAsset(),
         yieldToEventLoop: yieldToWorkerEventLoop,
         isGenerationCurrent: () => this.isGenerationCurrent(command.generation),
         reportProgress: (progress) =>
@@ -805,6 +810,27 @@ export class CadWorkerRuntime {
     return recoverable
   }
 
+  private getOpenGridSnapRemoverAsset(): Promise<import('replicad').Shape3D> {
+    if (!this.openGridSnapRemoverAsset) {
+      const assetPromise = loadOpenGridSnapRemoverAsset()
+        .then((asset) => {
+          if (this.disposed) {
+            asset.delete()
+            throw new Error('WORKER_TERMINATED')
+          }
+          return asset
+        })
+        .catch((error) => {
+          if (this.openGridSnapRemoverAsset === assetPromise) {
+            this.openGridSnapRemoverAsset = null
+          }
+          throw error
+        })
+      this.openGridSnapRemoverAsset = assetPromise
+    }
+    return this.openGridSnapRemoverAsset
+  }
+
   private getBoxNormalReference(): Promise<import('replicad').Shape3D> {
     if (!this.boxNormalReference) {
       const referencePromise = loadBoxNormalReference()
@@ -875,6 +901,13 @@ export class CadWorkerRuntime {
     for (const reference of references) {
       void reference.then((shape) => shape.delete()).catch(() => undefined)
     }
+  }
+
+  private disposeOpenGridSnapRemoverAsset(): void {
+    const assetPromise = this.openGridSnapRemoverAsset
+    this.openGridSnapRemoverAsset = null
+    if (!assetPromise) return
+    void assetPromise.then((asset) => asset.delete()).catch(() => undefined)
   }
 
   private disposeBoxNormalReference(): void {

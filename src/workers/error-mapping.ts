@@ -47,7 +47,9 @@ export function cadErrorCodeFor(
     message.includes('HSW_CELL_ASSET') ||
     message.includes('BOX_NORMAL_ASSET') ||
     message.includes('HEXAGONAL_COLUMN_ASSET') ||
-    message.includes('OPENGRID_SNAP_ASSET')
+    message.includes('MODEL_ASSET_CONTEXT_MISSING') ||
+    message.includes('OPENGRID_SNAP_ASSET') ||
+    message.includes('OPENGRID_SNAP_REMOVER_ASSET')
   ) {
     return 'MODEL_ASSET_INVALID'
   }

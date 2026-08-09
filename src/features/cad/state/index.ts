@@ -86,6 +86,7 @@ function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
   if (modelId === 'opengrid-snap') {
     return { ...OPENGRID_SNAP_CONFIGURATION.defaultParameters }
   }
+  if (modelId === 'opengrid-snap-remover') return {}
   throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
 }
 
