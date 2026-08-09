@@ -11,6 +11,7 @@
   import HswCellComponentPanel from './hsw-cell/HswCellComponentPanel.svelte'
   import ModularGridBaseComponentPanel from './modular-grid-base/ModularGridBaseComponentPanel.svelte'
   import OpenGridComponentPanel from './opengrid/OpenGridComponentPanel.svelte'
+  import OpenGridDividerComponentPanel from './opengrid-divider/OpenGridDividerComponentPanel.svelte'
   import OpenGridStackableBoxComponentPanel from './opengrid-stackable-box/OpenGridStackableBoxComponentPanel.svelte'
   import OpenGridSnapComponentPanel from './opengrid-snap/OpenGridSnapComponentPanel.svelte'
   import type { ComponentPanelProps } from './types'
@@ -54,6 +55,12 @@
     parameters={parameters as OpenGridParameters}
     {fieldErrors}
     onParametersChange={onOpenGridParametersChange}
+  />
+{:else if modelId === 'opengrid-divider'}
+  <OpenGridDividerComponentPanel
+    {rawParameters}
+    {fieldErrors}
+    {onInputChange}
   />
 {:else if modelId === 'opengrid-stackable-box'}
   <OpenGridStackableBoxComponentPanel

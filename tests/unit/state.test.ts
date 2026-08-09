@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { normalizeError } from '../../src/cad-contract/errors'
 import {
   OPENGRID_CONFIGURATION,
+  OPENGRID_DIVIDER_CONFIGURATION,
   type OpenGridParameters,
 } from '../../src/cad-contract/units'
 import { cadReducer, initialCadState } from '../../src/features/cad/state'
@@ -142,6 +143,15 @@ describe('CAD state machine', () => {
       height: 10,
       fullBottomHoleGrid: false,
     })
+  })
+
+  it('initializes the independent OpenGrid divider defaults', () => {
+    const state = initialCadState('opengrid-divider')
+
+    expect(state.modelId).toBe('opengrid-divider')
+    expect(state.input).toEqual(
+      OPENGRID_DIVIDER_CONFIGURATION.defaultParameters,
+    )
   })
 
   it('retains OpenGrid committed metadata while marking a newer input stale', () => {

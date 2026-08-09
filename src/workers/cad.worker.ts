@@ -19,6 +19,7 @@ import { loadOpenGridSnapRemoverAsset } from '../cad-kernel/components/opengrid-
 import { buildModelBRep } from '../cad-kernel/model'
 import { assertOpenGridShapeQuality } from '../cad-kernel/components/opengrid/quality'
 import { assertOpenGridSnapShapeQuality } from '../cad-kernel/components/opengrid-snap/quality'
+import { assertOpenGridDividerShapeQuality } from '../cad-kernel/components/opengrid-divider/quality'
 import { meshBRep, serializeMesh, type MeshData } from '../cad-kernel/mesh'
 import {
   errorEvent,
@@ -38,7 +39,9 @@ import {
   modelStlFileName,
   boundsForOpenGridSnap,
   isHswCellParameters,
+  isOpenGridDividerModelParameters,
   isOpenGridParameters,
+  normalizeOpenGridDividerParameters,
   normalizeOpenGridParameters,
   PROTOTYPE_CONFIGURATION,
   type ModelParameterValues,
@@ -265,6 +268,11 @@ export class CadWorkerRuntime {
       const support = validateOpenGridGenerationSupport(normalizedParameters)
       if (!support.valid) throw new Error('OPENGRID_UNSUPPORTED_CONFIGURATION')
     }
+    if (command.modelId === 'opengrid-divider') {
+      generationParameters = normalizeOpenGridDividerParameters(
+        command.parameters,
+      )
+    }
     const hswProgress =
       command.modelId === 'hsw-cell' && isHswCellParameters(command.parameters)
         ? {
@@ -344,6 +352,13 @@ export class CadWorkerRuntime {
           mesh,
           reference,
         )
+      }
+
+      if (command.modelId === 'opengrid-divider') {
+        if (!isOpenGridDividerModelParameters(generationParameters)) {
+          throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-divider')
+        }
+        assertOpenGridDividerShapeQuality(shape, generationParameters, mesh)
       }
     } catch (error) {
       try {
@@ -951,6 +966,15 @@ export class CadWorkerRuntime {
         'meshing',
         code,
         'OpenGrid Snap 幾何未通過品質檢查，請調整外框增量後重試。',
+        true,
+      )
+    }
+
+    if (code === 'OPENGRID_DIVIDER_QUALITY_INVALID') {
+      return makeError(
+        'meshing',
+        code,
+        '自製 14 mm 整格／7 mm 半格 OpenGrid 分隔器幾何未通過品質檢查，請調整參數後重試。',
         true,
       )
     }

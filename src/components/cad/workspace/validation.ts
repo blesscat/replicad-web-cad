@@ -34,6 +34,13 @@ export const OPENGRID_STACKABLE_BOX_PARAMETER_KEYS: ModelParameterKey[] = [
   'height',
   'fullBottomHoleGrid',
 ]
+export const OPENGRID_DIVIDER_PARAMETER_KEYS: ModelParameterKey[] = [
+  'left',
+  'right',
+  'up',
+  'down',
+  'height',
+]
 export const HEXAGONAL_COLUMN_PARAMETER_KEYS: ScalarModelParameterKey[] = [
   'height',
   'count',
@@ -52,7 +59,18 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   }
   if (modelId === 'opengrid-snap') return ['variant', 'offset']
   if (modelId === 'opengrid-snap-remover') return []
+  if (modelId === 'opengrid-divider') return OPENGRID_DIVIDER_PARAMETER_KEYS
   throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
+}
+
+function usesHalfStepInput(modelId: ModelId, key: ModelParameterKey): boolean {
+  if (modelId === 'opengrid-stackable-box') {
+    return key === 'x' || key === 'y'
+  }
+  if (modelId === 'opengrid-divider') {
+    return key === 'left' || key === 'right' || key === 'up' || key === 'down'
+  }
+  return false
 }
 
 export function rawFromParameters(
@@ -106,25 +124,50 @@ export function rawFromParameters(
   }
 
   if ('orientation' in parameters) {
+    const columnParameters = parameters as {
+      height: number
+      count: number
+      gap: number
+      orientation: string
+    }
     return {
-      height: String(parameters.height),
-      count: String(parameters.count),
-      gap: String(parameters.gap),
-      orientation: parameters.orientation,
+      height: String(columnParameters.height),
+      count: String(columnParameters.count),
+      gap: String(columnParameters.gap),
+      orientation: columnParameters.orientation,
     }
   }
 
   if ('offset' in parameters) {
+    const snapParameters = parameters as { variant: string; offset: number }
     return {
-      variant: parameters.variant,
-      offset: String(parameters.offset),
+      variant: snapParameters.variant,
+      offset: String(snapParameters.offset),
     }
   }
 
   if ('rows' in parameters) {
+    const gridParameters = parameters as { rows: number; columns: number }
     return {
-      rows: String(parameters.rows),
-      columns: String(parameters.columns),
+      rows: String(gridParameters.rows),
+      columns: String(gridParameters.columns),
+    }
+  }
+
+  if ('left' in parameters) {
+    const dividerParameters = parameters as {
+      left: number
+      right: number
+      up: number
+      down: number
+      height: number
+    }
+    return {
+      left: String(dividerParameters.left),
+      right: String(dividerParameters.right),
+      up: String(dividerParameters.up),
+      down: String(dividerParameters.down),
+      height: String(dividerParameters.height),
     }
   }
 
@@ -213,14 +256,9 @@ export function parseRawParameters(
       continue
     }
     const rawValue = raw[key] ?? ''
-    if (
-      modelId === 'opengrid-stackable-box' &&
-      (key === 'x' || key === 'y')
-    ) {
-      parsed[key] = parseHalfStepInput(rawValue)
-      continue
-    }
-    parsed[key] = parseDimensionInput(rawValue)
+    parsed[key] = usesHalfStepInput(modelId, key)
+      ? parseHalfStepInput(rawValue)
+      : parseDimensionInput(rawValue)
   }
 
   const validation = validateModelParameters(modelId, parsed)

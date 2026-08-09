@@ -47,6 +47,7 @@ describe('CAD component catalog', () => {
     ])
     expect(groups[1]?.definitions.map((definition) => definition.id)).toEqual([
       'opengrid',
+      'opengrid-divider',
       'opengrid-stackable-box',
       'opengrid-snap',
       'opengrid-snap-remover',
@@ -75,6 +76,7 @@ describe('CAD component catalog', () => {
       'hsw-cell',
       'hexagonal-column',
       'opengrid',
+      'opengrid-divider',
       'opengrid-stackable-box',
       'opengrid-snap',
       'opengrid-snap-remover',
@@ -410,5 +412,38 @@ describe('CAD component catalog', () => {
         fullBottomHoleGrid: false,
       }),
     ).toBe('opengrid-stackable-box-1.5x2-h30.stl')
+  })
+
+  it('exposes the independent OpenGrid divider definition and route', () => {
+    const definition = getModelDefinition('opengrid-divider')
+
+    expect(definition).toMatchObject({
+      id: 'opengrid-divider',
+      buildKey: 'opengrid-divider',
+      family: 'opengrid',
+      displayName: 'OpenGrid 分隔塊',
+    })
+    expect(definition?.parameterSchema.map((field) => field.key)).toEqual([
+      'left',
+      'right',
+      'up',
+      'down',
+      'height',
+    ])
+    expect(definition?.defaultParameters).toEqual({
+      left: 1,
+      right: 1,
+      up: 0,
+      down: 0,
+      height: 20,
+    })
+    expect(definition?.exportFileName(definition.defaultParameters)).toBe(
+      'opengrid-divider-l1-r1-u0-d0-h20.step',
+    )
+    expect(definition?.stlFileName(definition.defaultParameters)).toBe(
+      'opengrid-divider-l1-r1-u0-d0-h20.stl',
+    )
+    expect(cadPathForModel('opengrid-divider')).toBe('/cad/opengrid-divider')
+    expect(modelIdForCadPath('/cad/opengrid-divider/')).toBe('opengrid-divider')
   })
 })

@@ -7,6 +7,7 @@ import {
   OPENGRID_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_SNAP_CONFIGURATION,
+  OPENGRID_DIVIDER_CONFIGURATION,
   type OpenGridParameters,
 } from '../../src/cad-contract/units'
 
@@ -89,6 +90,9 @@ describe('component parameter store', () => {
       OPENGRID_SNAP_CONFIGURATION.defaultParameters,
     )
     expect(store.get('opengrid-snap-remover')).toEqual({})
+    expect(store.get('opengrid-divider')).toEqual(
+      OPENGRID_DIVIDER_CONFIGURATION.defaultParameters,
+    )
 
     store.dispose()
   })
@@ -116,6 +120,7 @@ describe('component parameter store', () => {
           fullBottomHoleGrid: true,
         },
         'opengrid-snap': { variant: 'Lite', offset: 0.2 },
+        'opengrid-divider': { left: 1, right: 1, up: 1.5, down: 0, height: 25 },
       }),
     )
     const store = createComponentParameterStore({ storage })
@@ -145,6 +150,13 @@ describe('component parameter store', () => {
       y: 1.5,
       height: 25,
       fullBottomHoleGrid: true,
+    })
+    expect(store.get('opengrid-divider')).toEqual({
+      left: 1,
+      right: 1,
+      up: 1.5,
+      down: 0,
+      height: 25,
     })
 
     store.dispose()

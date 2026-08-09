@@ -5,6 +5,7 @@ import { hexagonalColumnDefinition } from './components/hexagonal-column'
 import { hswCellDefinition } from './components/hsw-cell'
 import { modularGridBaseDefinition } from './components/modular-grid-base'
 import { opengridDefinition } from './components/opengrid'
+import { opengridDividerDefinition } from './components/opengrid-divider'
 import { opengridStackableBoxDefinition } from './components/opengrid-stackable-box'
 import { opengridSnapDefinition } from './components/opengrid-snap'
 import { openGridSnapRemoverDefinition } from './components/opengrid-snap-remover'
@@ -29,6 +30,7 @@ export { hexagonalColumnDefinition } from './components/hexagonal-column'
 export { hswCellDefinition } from './components/hsw-cell'
 export { modularGridBaseDefinition } from './components/modular-grid-base'
 export { opengridDefinition } from './components/opengrid'
+export { opengridDividerDefinition } from './components/opengrid-divider'
 export { opengridStackableBoxDefinition } from './components/opengrid-stackable-box'
 export { opengridSnapDefinition } from './components/opengrid-snap'
 export { openGridSnapRemoverDefinition } from './components/opengrid-snap-remover'
@@ -40,6 +42,7 @@ export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   hswCellDefinition,
   hexagonalColumnDefinition,
   opengridDefinition,
+  opengridDividerDefinition,
   opengridStackableBoxDefinition,
   opengridSnapDefinition,
   openGridSnapRemoverDefinition,
@@ -62,7 +65,7 @@ export const modelFamilyMetadata: Readonly<
   opengrid: {
     key: 'opengrid',
     label: 'OpenGrid 系列',
-    description: '依官方 OpenGrid 網格規格建立的模型。',
+    description: '官方 OpenGrid 模型與自製底座配件。',
   },
   other: {
     key: 'other',

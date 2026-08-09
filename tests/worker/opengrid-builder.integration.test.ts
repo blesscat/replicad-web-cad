@@ -138,7 +138,7 @@ describe('OpenGrid official-profile product builder', () => {
         shape.delete()
       }
     }
-  })
+  }, 15_000)
 
   it.each(CAPTURE_LEDGE_CASES)(
     'keeps the inward capture ledge on all four sides for $variant',

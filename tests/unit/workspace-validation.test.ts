@@ -4,9 +4,11 @@ import type {
   BoxParameters,
   HexagonalColumnParameters,
   HswCellParameters,
+  OpenGridDividerParameters,
   OpenGridStackableBoxParameters,
   OpenGridSnapParameters,
 } from '../../src/cad-contract/units'
+import { OPENGRID_DIVIDER_CONFIGURATION } from '../../src/cad-contract/units'
 import {
   parseRawParameters,
   rawFromParameters,
@@ -223,6 +225,48 @@ describe('CAD workspace validation helpers', () => {
       valid: false,
       message: '格數必須是 0.5 的倍數。',
       field: 'x',
+    })
+  })
+
+  it('round-trips independent divider arm counts and height', () => {
+    const parameters: OpenGridDividerParameters = {
+      left: 1,
+      right: 1,
+      up: 1.5,
+      down: 0,
+      height: 20,
+    }
+    const raw = rawFromParameters(parameters)
+
+    expect(raw).toEqual({
+      left: '1',
+      right: '1',
+      up: '1.5',
+      down: '0',
+      height: '20',
+    })
+    expect(parseRawParameters(raw, 'opengrid-divider')).toEqual({
+      valid: true,
+      value: parameters,
+    })
+    expect(
+      parseRawParameters(
+        { left: '1', right: '0', up: '0', down: '0', height: '20' },
+        'opengrid-divider',
+      ),
+    ).toEqual({
+      valid: false,
+      message: '至少需要兩個方向才能建立一字型、L 型、T 型或十字型。',
+    })
+    expect(
+      parseRawParameters(
+        { left: '1.25', right: '1', up: '0', down: '0', height: '20' },
+        'opengrid-divider',
+      ),
+    ).toEqual({
+      valid: false,
+      message: `格數必須是 0–${OPENGRID_DIVIDER_CONFIGURATION.maxArmCount} 的 ${OPENGRID_DIVIDER_CONFIGURATION.gridStep} 格倍數。`,
+      field: 'left',
     })
   })
 })

@@ -48,6 +48,20 @@ test('CAD workspaces restore valid parameters independently per component', asyn
   await expect(hswRows).toHaveValue('3')
   await expect(hswColumns).toHaveValue('4')
 
+  await page.goto('/cad/opengrid-divider')
+  await waitForCadReady(page)
+  const dividerUp = page.getByRole('slider', { name: '上臂（Y）' })
+  const dividerHeight = page.getByRole('textbox', {
+    name: '分隔牆高度（Z）',
+  })
+  await dividerUp.press('ArrowRight')
+  await dividerHeight.fill('25')
+  await waitForCadReady(page)
+  await page.reload()
+  await waitForCadReady(page)
+  await expect(dividerUp).toHaveValue('0.5')
+  await expect(dividerHeight).toHaveValue('25')
+
   await page.goto('/cad/box')
   await waitForCadReady(page)
   await expect(page.getByLabel('寬度 X 25 mm')).toBeVisible()

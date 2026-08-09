@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { KernelBuildContext } from '../../src/cad-kernel/model'
+import type { ModelParameterValues } from '../../src/cad-contract/units'
 
 const mocks = vi.hoisted(() => ({
   buildBoxBRep: vi.fn(() => ({ model: 'box', delete: vi.fn() })),
@@ -22,6 +23,10 @@ const mocks = vi.hoisted(() => ({
   })),
   buildOpenGridStackableBox: vi.fn(() => ({
     model: 'opengrid-stackable-box',
+    delete: vi.fn(),
+  })),
+  buildOpenGridDivider: vi.fn(async () => ({
+    model: 'opengrid-divider',
     delete: vi.fn(),
   })),
 }))
@@ -57,6 +62,10 @@ vi.mock(
   }),
 )
 
+vi.mock('../../src/cad-kernel/components/opengrid-divider/builder', () => ({
+  buildOpenGridDivider: mocks.buildOpenGridDivider,
+}))
+
 import {
   buildModelBRep,
   getKernelModelDefinition,
@@ -86,6 +95,7 @@ describe('HSW kernel model registration', () => {
       'opengrid-stackable-box',
       'opengrid-snap',
       'opengrid-snap-remover',
+      'opengrid-divider',
     ])
     expect(getKernelModelDefinition('hsw-cell')?.id).toBe('hsw-cell')
     expect(getKernelModelDefinition('hexagonal-column')?.id).toBe(
@@ -154,6 +164,38 @@ describe('HSW kernel model registration', () => {
     )
     expect(mocks.buildOpenGridBRep).not.toHaveBeenCalled()
   })
+
+  it('routes the custom divider to its independent builder', async () => {
+    const shape = await buildModelBRep(
+      'opengrid-divider',
+      { left: 1, right: 1, up: 2, down: 0, height: 20 },
+      context,
+    )
+
+    expect(shape).toMatchObject({ model: 'opengrid-divider' })
+    expect(mocks.buildOpenGridDivider).toHaveBeenCalledWith(
+      { left: 1, right: 1, up: 2, down: 0, height: 20 },
+      expect.objectContaining({
+        isGenerationCurrent: undefined,
+        yieldToEventLoop: undefined,
+      }),
+    )
+    expect(mocks.buildOpenGridBRep).not.toHaveBeenCalled()
+    expect(mocks.buildOpenGridStackableBox).not.toHaveBeenCalled()
+  })
+
+  it('rejects mismatched divider parameters before dispatch', async () => {
+    await expect(
+      buildModelBRep(
+        'opengrid-divider',
+        { rows: 1, columns: 1 } as ModelParameterValues,
+        context,
+      ),
+    ).rejects.toThrow('MODEL_PARAMETERS_INVALID')
+    expect(mocks.buildOpenGridDivider).not.toHaveBeenCalled()
+    expect(mocks.buildOpenGridBRep).not.toHaveBeenCalled()
+  })
+
   it('routes hexagonal-column only to its own reference and builder', async () => {
     const shape = await buildModelBRep(
       'hexagonal-column',
@@ -170,5 +212,4 @@ describe('HSW kernel model registration', () => {
     expect(mocks.buildHswCell).not.toHaveBeenCalled()
     expect(mocks.buildModularGridBase).not.toHaveBeenCalled()
   })
-
 })
