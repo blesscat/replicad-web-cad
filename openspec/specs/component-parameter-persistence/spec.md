@@ -101,8 +101,6 @@ The system MUST treat browser persistence as an optional enhancement. If browser
 - **THEN** the runtime parameter state MUST still retain the accepted values
 - **AND** CAD generation MUST continue without treating the storage failure as a Worker or model error
 
-## ADDED Requirements
-
 ### Requirement: OpenGrid Snap parameters are persisted independently
 
 The versioned browser persistence MUST store valid Snap parameters under the stable `opengrid-snap` model id. The entry MUST contain only typed `variant` and `offset` values accepted by the Snap validator, and it MUST remain independent from the existing `opengrid` board entry.

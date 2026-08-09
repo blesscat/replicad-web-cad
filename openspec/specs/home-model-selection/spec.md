@@ -205,8 +205,6 @@ The model-selection page MUST render the registered catalog entries in the three
 - **THEN** each model entry MUST expose its display metadata, parameter summary, and model-specific route link
 - **AND** the series layout MUST NOT instantiate a CAD Worker or CAD workspace
 
-## ADDED Requirements
-
 ### Requirement: OpenGrid Snap model selection entry
 
 The registered model catalog and `/models` chooser MUST include `opengrid-snap` as an independent CAD component. The chooser MUST display an understandable OpenGrid Snap name, describe the Full/Lite variants and one shared total X/Y outer-envelope offset, and link to `/cad/opengrid-snap` without starting the CAD Worker.

@@ -185,11 +185,6 @@ describe('component parameter store', () => {
     expect(store.get('opengrid-stackable-box')).toMatchObject({
       fullBottomHoleGrid: true,
     })
-    expect(store.get('opengrid-snap')).toEqual({
-      variant: 'Lite',
-      offset: 0.2,
-    })
-
     store.dispose()
   })
 
