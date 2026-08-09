@@ -2,6 +2,7 @@ import {
   importSTEP,
   makeBox,
   makeCylinder,
+  makeCompound,
   Sketcher,
   type Shape3D,
 } from 'replicad'
@@ -1240,6 +1241,28 @@ function disposeCutter(group: CutterGroup | null): void {
   }
 }
 
+function combineCutterGroups(groups: CutterGroup[]): CutterGroup[] {
+  if (groups.length <= 1) return groups
+
+  try {
+    // Let the final source cut process every solid together. Fusing separate
+    // cutters first adds expensive cutter-to-cutter booleans without changing
+    // the material removed from the board.
+    const compound = makeCompound(
+      groups.map((group) => group.shape),
+    ).asShape3D()
+    return [
+      {
+        shape: compound,
+        parts: groups.map((group) => group.shape),
+      },
+    ]
+  } catch (error) {
+    for (const group of groups) disposeCutter(group)
+    throw error
+  }
+}
+
 function chamferCenters(parameters: OpenGridParameters): OpenGridPoint2D[] {
   if (parameters.chamfers === 'none') return []
   const board = openGridBoardConfiguration(parameters)
@@ -1730,12 +1753,16 @@ async function applyBoardFeatures(
 ): Promise<Shape3D> {
   const groups: CutterGroup[] = []
   try {
-    groups.push(...createBoardConnectorCutterGroups(parameters))
+    groups.push(
+      ...combineCutterGroups(createBoardConnectorCutterGroups(parameters)),
+    )
     groups.push(...createChamferCutters(parameters))
     // Screw holes are deliberately the final board-level operation. This
     // lets a half-cell extension participate in the same cutter as its
     // complete-cell region instead of leaving a partial hole at the seam.
-    groups.push(...createBoardScrewCutterGroups(parameters))
+    groups.push(
+      ...combineCutterGroups(createBoardScrewCutterGroups(parameters)),
+    )
     return await applyCutterGroups(source, groups, context)
   } catch (error) {
     for (const group of groups) disposeCutter(group)
@@ -1748,11 +1775,8 @@ async function applyBoardScrewCuts(
   parameters: OpenGridParameters,
   context: OpenGridBuildContext,
 ): Promise<Shape3D> {
-  return applyCutterGroups(
-    source,
-    createBoardScrewCutterGroups(parameters),
-    context,
-  )
+  const groups = combineCutterGroups(createBoardScrewCutterGroups(parameters))
+  return applyCutterGroups(source, groups, context)
 }
 
 async function applyBoardConnectorCuts(
@@ -1760,11 +1784,10 @@ async function applyBoardConnectorCuts(
   parameters: OpenGridParameters,
   context: OpenGridBuildContext,
 ): Promise<Shape3D> {
-  return applyCutterGroups(
-    source,
+  const groups = combineCutterGroups(
     createBoardConnectorCutterGroups(parameters),
-    context,
   )
+  return applyCutterGroups(source, groups, context)
 }
 
 function cutShape(source: Shape3D, cutter: Shape3D): Shape3D {

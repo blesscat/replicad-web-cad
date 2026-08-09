@@ -15,7 +15,7 @@ import {
   importOpenGridPrototypeTemplate,
   OPENGRID_PROTOTYPE_TEMPLATE_URLS,
 } from '../../src/cad-kernel/components/opengrid/builder'
-import { meshBRep } from '../../src/cad-kernel/mesh'
+import { meshBRep, serializeMesh } from '../../src/cad-kernel/mesh'
 import {
   boundsForOpenGrid,
   cellCenterForOpenGrid,
@@ -759,4 +759,32 @@ describe('OpenGrid official-profile product builder', () => {
       shape.delete()
     }
   })
+
+  it.skipIf(process.env.RUN_OPENGRID_PERFORMANCE_TEST !== '1')(
+    'builds the UI-like half-cell preview within the interactive budget',
+    async () => {
+      const input = parameters({
+        variant: 'Full',
+        rows: 5,
+        columns: 3,
+        halfCellX: 'left',
+        halfCellY: 'none',
+      })
+      const startedAt = performance.now()
+      const shape = await buildOpenGridBRep(input)
+      try {
+        const mesh = meshBRep(shape, {
+          tolerance: 0.05,
+          angularTolerance: 0.1,
+        })
+        assertOpenGridShapeQuality(shape, input, mesh)
+        serializeMesh(mesh)
+        const elapsedMs = performance.now() - startedAt
+        expect(elapsedMs).toBeLessThan(12_000)
+      } finally {
+        shape.delete()
+      }
+    },
+    30_000,
+  )
 })

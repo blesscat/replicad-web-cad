@@ -102,14 +102,25 @@ function meshIsFinite(mesh: MeshData | MeshSnapshot): boolean {
     mesh.indices instanceof ArrayBuffer
       ? new Uint32Array(mesh.indices)
       : mesh.indices
-  return (
-    positions.length > 0 &&
-    normals.length === positions.length &&
-    indices.length > 0 &&
-    indices.length % 3 === 0 &&
-    [...positions, ...normals].every(Number.isFinite) &&
-    [...indices].every(Number.isSafeInteger)
-  )
+  if (
+    positions.length === 0 ||
+    normals.length !== positions.length ||
+    indices.length === 0 ||
+    indices.length % 3 !== 0
+  ) {
+    return false
+  }
+
+  for (const value of positions) {
+    if (!Number.isFinite(value)) return false
+  }
+  for (const value of normals) {
+    if (!Number.isFinite(value)) return false
+  }
+  for (const value of indices) {
+    if (!Number.isSafeInteger(value)) return false
+  }
+  return true
 }
 
 function volumeInProbe(
@@ -317,18 +328,18 @@ function inspectCellOpenings(
     }
   }
 
-  for (let row = 0; row < parameters.rows; row += 1) {
-    const rowProbes: Shape3D[] = []
-    let rowProbe: Shape3D | null = null
-    let rowIntersection: Shape3D | null = null
-    try {
+  const cellProbes: Shape3D[] = []
+  let combinedProbe: Shape3D | null = null
+  let combinedIntersection: Shape3D | null = null
+  try {
+    for (let row = 0; row < parameters.rows; row += 1) {
       for (let column = 0; column < parameters.columns; column += 1) {
         const [centerX, centerY] = cellCenterForOpenGrid(
           parameters,
           row,
           column,
         )
-        rowProbes.push(
+        cellProbes.push(
           makeBox(
             [centerX - probeWidth / 2, centerY - probeDepth / 2, -0.5],
             [
@@ -339,30 +350,25 @@ function inspectCellOpenings(
           ),
         )
       }
-      rowProbe = makeCompound(rowProbes).asShape3D()
-      rowIntersection = shape.intersect(rowProbe)
-      const rowVolume = measureVolume(rowIntersection)
-      if (rowVolume <= 0.01) {
-        openingCount += parameters.columns
-        continue
-      }
+    }
+    combinedProbe = makeCompound(cellProbes).asShape3D()
+    combinedIntersection = shape.intersect(combinedProbe)
+    if (measureVolume(combinedIntersection) <= 0.01) {
+      return parameters.rows * parameters.columns
+    }
+  } catch {
+    // Fall back to individual probes so the report keeps cell-level failures.
+  } finally {
+    if (combinedIntersection && combinedIntersection !== shape) {
+      deleteShape(combinedIntersection)
+    }
+    deleteShape(combinedProbe)
+    for (const probe of cellProbes) deleteShape(probe)
+  }
 
-      for (let column = 0; column < parameters.columns; column += 1) {
-        if (inspectCell(row, column)) openingCount += 1
-      }
-    } catch (error) {
-      failures.push(
-        `openings:row-${row}:${error instanceof Error ? error.message : String(error)}`,
-      )
-      for (let column = 0; column < parameters.columns; column += 1) {
-        if (inspectCell(row, column)) openingCount += 1
-      }
-    } finally {
-      if (rowIntersection && rowIntersection !== shape) {
-        deleteShape(rowIntersection)
-      }
-      deleteShape(rowProbe)
-      for (const probe of rowProbes) deleteShape(probe)
+  for (let row = 0; row < parameters.rows; row += 1) {
+    for (let column = 0; column < parameters.columns; column += 1) {
+      if (inspectCell(row, column)) openingCount += 1
     }
   }
   return openingCount
