@@ -2,17 +2,23 @@ import { describe, expect, it } from 'vitest'
 import {
   HSW_CELL_CONFIGURATION,
   OPENGRID_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_CONFIGURATION,
   PROTOTYPE_CONFIGURATION,
   boundsForOpenGrid,
+  boundsForOpenGridStackableBox,
   boundsForHswCell,
 } from '../../src/cad-contract/units'
 import {
   calculateHswCellCounts,
   calculateModularGridCounts,
   calculateOpenGridCounts,
+  calculateOpenGridStackableBoxCounts,
 } from '../../src/features/cad/grid-dimensions'
 
-function sizeOf(bounds: ReturnType<typeof boundsForHswCell>) {
+function sizeOf(bounds: {
+  min: [number, number, number]
+  max: [number, number, number]
+}) {
   return {
     x: bounds.max[0] - bounds.min[0],
     y: bounds.max[1] - bounds.min[1],
@@ -167,6 +173,67 @@ describe('OpenGrid dimension calculation', () => {
     expect(result).toMatchObject({
       valid: false,
       errors: { x: expect.stringContaining('28 mm') },
+    })
+  })
+})
+
+describe('OpenGrid stackable-box dimension calculation', () => {
+  it('rounds each target up to the nearest half-cell that is not smaller', () => {
+    const oneCell = sizeOf(
+      boundsForOpenGridStackableBox({ x: 1, y: 1, height: 10 }),
+    )
+    const result = calculateOpenGridStackableBoxCounts({
+      x: String(oneCell.x + 0.01),
+      y: String(oneCell.y),
+    })
+
+    expect(result.valid && result.parameters).toEqual({
+      columns: 1.5,
+      rows: 1,
+    })
+    if (result.valid) {
+      expect(result.actualDimensions.x).toBeGreaterThanOrEqual(oneCell.x + 0.01)
+      expect(result.actualDimensions.y).toBeGreaterThanOrEqual(oneCell.y)
+    }
+  })
+
+  it('keeps exact half-cell boundaries and preserves the requested precision', () => {
+    const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+    const halfCell = sizeOf(
+      boundsForOpenGridStackableBox({
+        x: configuration.gridStep,
+        y: configuration.gridStep,
+        height: configuration.defaultHeight,
+      }),
+    )
+    const result = calculateOpenGridStackableBoxCounts({
+      x: String(halfCell.x),
+      y: String(halfCell.y),
+    })
+
+    expect(result.valid && result.parameters).toEqual({
+      columns: configuration.gridStep,
+      rows: configuration.gridStep,
+    })
+  })
+
+  it('rejects dimensions beyond the maximum stackable-box footprint', () => {
+    const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+    const maximumWidth = sizeOf(
+      boundsForOpenGridStackableBox({
+        x: configuration.maxX,
+        y: configuration.minY,
+        height: configuration.defaultHeight,
+      }),
+    ).x
+    const result = calculateOpenGridStackableBoxCounts({
+      x: String(maximumWidth + 1),
+      y: String(maximumWidth),
+    })
+
+    expect(result).toMatchObject({
+      valid: false,
+      errors: { x: expect.stringContaining('最大格數') },
     })
   })
 })

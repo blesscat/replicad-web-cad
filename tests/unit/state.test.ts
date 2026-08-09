@@ -132,6 +132,13 @@ describe('CAD state machine', () => {
     })
   })
 
+  it('initializes the independent OpenGrid stackable-box defaults', () => {
+    const state = initialCadState('opengrid-stackable-box')
+
+    expect(state.modelId).toBe('opengrid-stackable-box')
+    expect(state.input).toEqual({ x: 2, y: 2, height: 10 })
+  })
+
   it('retains OpenGrid committed metadata while marking a newer input stale', () => {
     const parameters = opengridParameters({
       variant: 'Full',

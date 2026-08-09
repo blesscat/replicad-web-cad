@@ -31,6 +31,8 @@ vi.mock('../../src/cad-kernel/export', () => ({
 import { CadWorkerRuntime } from '../../src/workers/cad.worker'
 import {
   OPENGRID_CONFIGURATION,
+  openGridStackableBoxFileName,
+  openGridStackableBoxStlFileName,
   openGridFileName,
   openGridStlFileName,
   type OpenGridParameters,
@@ -75,6 +77,23 @@ function generateCommand(overrides: Record<string, unknown> = {}) {
     generation: 1,
     modelId: 'opengrid' as const,
     parameters: opengridParameters(),
+    previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
+    ...overrides,
+  }
+}
+
+function stackableBoxGenerateCommand(
+  generation = 1,
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    ...base,
+    requestId: `stackable-request-${generation}`,
+    operationId: `stackable-operation-${generation}`,
+    kind: 'model.generate' as const,
+    generation,
+    modelId: 'opengrid-stackable-box' as const,
+    parameters: { x: 0.5, y: 1.5, height: 20 },
     previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
     ...overrides,
   }
@@ -288,5 +307,136 @@ describe('OpenGrid Worker runtime', () => {
           event.kind === 'export.ready',
       ),
     ).toHaveLength(2)
+  })
+
+  it('routes stackable-box commands independently and keeps export names typed', async () => {
+    const events: unknown[] = []
+    const runtime = new CadWorkerRuntime('epoch-stackable', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(stackableBoxGenerateCommand())
+
+    expect(mocks.buildModelBRep).toHaveBeenCalledWith(
+      'opengrid-stackable-box',
+      { x: 0.5, y: 1.5, height: 20 },
+      expect.any(Object),
+    )
+    const candidate = events.find(
+      (event) =>
+        typeof event === 'object' &&
+        event !== null &&
+        'kind' in event &&
+        event.kind === 'model.candidate-ready',
+    ) as { candidateId: string } | undefined
+    expect(candidate).toBeDefined()
+
+    await runtime.handle({
+      ...base,
+      requestId: 'stackable-commit-request',
+      operationId: 'stackable-operation-1',
+      kind: 'model.commit' as const,
+      generation: 1,
+      candidateId: candidate!.candidateId,
+      workerEpoch: 'epoch-stackable',
+    })
+    const ready = events.find(
+      (event) =>
+        typeof event === 'object' &&
+        event !== null &&
+        'kind' in event &&
+        event.kind === 'model.ready',
+    ) as {
+      modelRevision: string
+      parameters: { x: number; y: number; height: number }
+      workerEpoch: string
+    }
+    expect(ready.parameters).toEqual({ x: 0.5, y: 1.5, height: 20 })
+
+    await runtime.handle({
+      ...base,
+      requestId: 'stackable-export-step-request',
+      operationId: 'stackable-export-step-operation',
+      kind: 'export.step' as const,
+      modelRevision: ready.modelRevision,
+      workerEpoch: ready.workerEpoch,
+      file: {
+        name: openGridStackableBoxFileName(ready.parameters),
+        mime: 'model/step' as const,
+      },
+    })
+    await runtime.handle({
+      ...base,
+      requestId: 'stackable-export-stl-request',
+      operationId: 'stackable-export-stl-operation',
+      kind: 'export.stl' as const,
+      modelRevision: ready.modelRevision,
+      workerEpoch: ready.workerEpoch,
+      file: {
+        name: openGridStackableBoxStlFileName(ready.parameters),
+        mime: 'model/stl' as const,
+      },
+    })
+    expect(mocks.exportStepBytes).toHaveBeenCalledOnce()
+    expect(mocks.exportStlBytes).toHaveBeenCalledOnce()
+    expect(
+      events.filter(
+        (event) =>
+          typeof event === 'object' &&
+          event !== null &&
+          'kind' in event &&
+          event.kind === 'export.ready',
+      ),
+    ).toHaveLength(2)
+  })
+
+  it('rejects malformed stackable-box parameters at the Worker protocol boundary', async () => {
+    const events: unknown[] = []
+    const runtime = new CadWorkerRuntime('epoch-stackable-invalid', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(
+      stackableBoxGenerateCommand(1, {
+        parameters: { x: 0.25, y: 1.5, height: 20 },
+      }),
+    )
+
+    expect(mocks.buildModelBRep).not.toHaveBeenCalled()
+    expect(events.at(-1)).toMatchObject({
+      kind: 'operation.error',
+      code: 'PROTOCOL_INVALID',
+    })
+  })
+
+  it('keeps latest-wins candidate invalidation for stackable-box generations', async () => {
+    const events: unknown[] = []
+    const runtime = new CadWorkerRuntime('epoch-stackable-latest', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(stackableBoxGenerateCommand(1))
+    await runtime.handle(
+      stackableBoxGenerateCommand(2, {
+        requestId: 'stackable-request-2',
+        operationId: 'stackable-operation-2',
+        parameters: { x: 1, y: 1, height: 20 },
+      }),
+    )
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'operation.superseded',
+        operationId: 'stackable-operation-1',
+        reason: 'STALE_GENERATION',
+      }),
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'model.candidate-ready',
+        operationId: 'stackable-operation-2',
+        modelId: 'opengrid-stackable-box',
+      }),
+    )
   })
 })

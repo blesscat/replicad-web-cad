@@ -31,6 +31,9 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
   if (modelId === 'opengrid') {
     return opengridParameters()
   }
+  if (modelId === 'opengrid-stackable-box') {
+    return { x: 2, y: 2, height: 10 }
+  }
   if (modelId === 'opengrid-snap') {
     return { variant: 'Full', offset: 0 }
   }
@@ -327,6 +330,28 @@ describe('CAD model generation debounce', () => {
         generation: 1,
         parameters: input,
       }),
+    )
+  })
+
+  it('debounces OpenGrid stackable-box half-cell input through its own model id', () => {
+    const { client, send, context } = createRuntimeContext(
+      'opengrid-stackable-box',
+      { x: 0.5, y: 1, height: 10 },
+    )
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('x', '1.5')
+    vi.advanceTimersByTime(500)
+
+    expect(send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.generate',
+        modelId: 'opengrid-stackable-box',
+        parameters: { x: 1.5, y: 1, height: 10 },
+      }),
+    )
+    expect(client.send).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'model.invalidate', generation: 1 }),
     )
   })
 
