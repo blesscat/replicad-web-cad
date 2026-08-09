@@ -370,21 +370,37 @@ describe('CAD component catalog', () => {
       x: 2,
       y: 2,
       height: 10,
+      fullBottomHoleGrid: false,
     })
     expect(
-      definition?.validateParameters({ x: 0.5, y: 1, height: 20 }),
+      definition?.validateParameters({
+        x: 0.5,
+        y: 1,
+        height: 20,
+        fullBottomHoleGrid: false,
+      }),
     ).toEqual({
       valid: true,
       value: {
         modelId: 'opengrid-stackable-box',
-        parameters: { x: 0.5, y: 1, height: 20 },
+        parameters: { x: 0.5, y: 1, height: 20, fullBottomHoleGrid: false },
       },
     })
-    expect(definition?.exportFileName({ x: 1.5, y: 2, height: 30 })).toBe(
-      'opengrid-stackable-box-1.5x2-h30.step',
-    )
-    expect(definition?.stlFileName({ x: 1.5, y: 2, height: 30 })).toBe(
-      'opengrid-stackable-box-1.5x2-h30.stl',
-    )
+    expect(
+      definition?.exportFileName({
+        x: 1.5,
+        y: 2,
+        height: 30,
+        fullBottomHoleGrid: false,
+      }),
+    ).toBe('opengrid-stackable-box-1.5x2-h30.step')
+    expect(
+      definition?.stlFileName({
+        x: 1.5,
+        y: 2,
+        height: 30,
+        fullBottomHoleGrid: false,
+      }),
+    ).toBe('opengrid-stackable-box-1.5x2-h30.stl')
   })
 })

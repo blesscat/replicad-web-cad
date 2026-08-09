@@ -224,6 +224,8 @@ function openGridStackableBoxBoundsSize(x: number, y: number): BoundsSize {
       x,
       y,
       height: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHeight,
+      fullBottomHoleGrid:
+        OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultFullBottomHoleGrid,
     }),
   )
 }

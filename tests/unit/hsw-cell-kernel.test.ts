@@ -139,6 +139,20 @@ describe('HSW kernel model registration', () => {
     expect(context.getModularGridBaseTemplate).toHaveBeenCalledOnce()
   })
 
+  it('routes the stackable-box model to its dedicated builder', async () => {
+    const shape = await buildModelBRep(
+      'opengrid-stackable-box',
+      { x: 0.5, y: 1, height: 20, fullBottomHoleGrid: false },
+      context,
+    )
+
+    expect(shape).toMatchObject({ model: 'opengrid-stackable-box' })
+    expect(mocks.buildOpenGridStackableBox).toHaveBeenCalledWith(
+      { x: 0.5, y: 1, height: 20, fullBottomHoleGrid: false },
+      { isGenerationCurrent: undefined },
+    )
+    expect(mocks.buildOpenGridBRep).not.toHaveBeenCalled()
+  })
   it('routes hexagonal-column only to its own reference and builder', async () => {
     const shape = await buildModelBRep(
       'hexagonal-column',
@@ -156,18 +170,4 @@ describe('HSW kernel model registration', () => {
     expect(mocks.buildModularGridBase).not.toHaveBeenCalled()
   })
 
-  it('routes the stackable-box model to its dedicated builder', async () => {
-    const shape = await buildModelBRep(
-      'opengrid-stackable-box',
-      { x: 0.5, y: 1, height: 20 },
-      context,
-    )
-
-    expect(shape).toMatchObject({ model: 'opengrid-stackable-box' })
-    expect(mocks.buildOpenGridStackableBox).toHaveBeenCalledWith(
-      { x: 0.5, y: 1, height: 20 },
-      { isGenerationCurrent: undefined },
-    )
-    expect(mocks.buildOpenGridBRep).not.toHaveBeenCalled()
-  })
 })

@@ -83,6 +83,7 @@ describe('component parameter store', () => {
       x: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultX,
       y: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultY,
       height: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHeight,
+      fullBottomHoleGrid: false,
     })
     expect(store.get('opengrid-snap')).toEqual(
       OPENGRID_SNAP_CONFIGURATION.defaultParameters,
@@ -107,7 +108,12 @@ describe('component parameter store', () => {
           customScrewPositions: [{ row: 2, column: 4 }],
           connectorHoles: 'enabled',
         }),
-        'opengrid-stackable-box': { x: 0.5, y: 1.5, height: 25 },
+        'opengrid-stackable-box': {
+          x: 0.5,
+          y: 1.5,
+          height: 25,
+          fullBottomHoleGrid: true,
+        },
         'opengrid-snap': { variant: 'Lite', offset: 0.2 },
       }),
     )
@@ -137,6 +143,47 @@ describe('component parameter store', () => {
       x: 0.5,
       y: 1.5,
       height: 25,
+      fullBottomHoleGrid: true,
+    })
+
+    store.dispose()
+  })
+
+  it('normalizes legacy stackable-box entries and rejects invalid grid mode', () => {
+    const storage = createMemoryStorage(
+      createPayload({
+        'opengrid-stackable-box': { x: 0.5, y: 1.5, height: 25 },
+      }),
+    )
+    const store = createComponentParameterStore({ storage })
+
+    expect(store.get('opengrid-stackable-box')).toEqual({
+      x: 0.5,
+      y: 1.5,
+      height: 25,
+      fullBottomHoleGrid: false,
+    })
+    expect(
+      store.set('opengrid-stackable-box', {
+        x: 0.5,
+        y: 1.5,
+        height: 25,
+        fullBottomHoleGrid: true,
+      }),
+    ).toBe(true)
+    expect(store.get('opengrid-stackable-box')).toMatchObject({
+      fullBottomHoleGrid: true,
+    })
+    expect(
+      store.set('opengrid-stackable-box', {
+        x: 0.5,
+        y: 1.5,
+        height: 25,
+        fullBottomHoleGrid: 'true' as never,
+      }),
+    ).toBe(false)
+    expect(store.get('opengrid-stackable-box')).toMatchObject({
+      fullBottomHoleGrid: true,
     })
     expect(store.get('opengrid-snap')).toEqual({
       variant: 'Lite',

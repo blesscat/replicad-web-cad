@@ -147,7 +147,12 @@ describe('Worker contract runtime validation', () => {
       operationId: 'operation-stackable-1',
       generation: 1,
       modelId: 'opengrid-stackable-box' as const,
-      parameters: { x: 0.5, y: 1.5, height: 25 },
+      parameters: {
+        x: 0.5,
+        y: 1.5,
+        height: 25,
+        fullBottomHoleGrid: false,
+      },
       previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
     }
 
@@ -155,7 +160,12 @@ describe('Worker contract runtime validation', () => {
     expect(
       isWorkerCommand({
         ...command,
-        parameters: { x: 0.25, y: 1.5, height: 25 },
+        parameters: {
+          x: 0.25,
+          y: 1.5,
+          height: 25,
+          fullBottomHoleGrid: false,
+        },
       }),
     ).toBe(false)
     expect(

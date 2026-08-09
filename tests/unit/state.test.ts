@@ -136,7 +136,12 @@ describe('CAD state machine', () => {
     const state = initialCadState('opengrid-stackable-box')
 
     expect(state.modelId).toBe('opengrid-stackable-box')
-    expect(state.input).toEqual({ x: 2, y: 2, height: 10 })
+    expect(state.input).toEqual({
+      x: 2,
+      y: 2,
+      height: 10,
+      fullBottomHoleGrid: false,
+    })
   })
 
   it('retains OpenGrid committed metadata while marking a newer input stale', () => {

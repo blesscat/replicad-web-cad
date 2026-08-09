@@ -7,6 +7,7 @@ import type {
   OpenGridSnapParameters,
 } from '../../src/cad-contract/units'
 import { OPENGRID_CONFIGURATION } from '../../src/cad-contract/units'
+import { PROTOTYPE_CONFIGURATION } from '../../src/cad-contract/units'
 import type { CadWorkerClient } from '../../src/features/cad/worker-client'
 import { initialCadState } from '../../src/features/cad/state'
 import { rawFromParameters } from '../../src/components/cad/workspace/validation'
@@ -32,7 +33,7 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
     return opengridParameters()
   }
   if (modelId === 'opengrid-stackable-box') {
-    return { x: 2, y: 2, height: 10 }
+    return { x: 2, y: 2, height: 10, fullBottomHoleGrid: false }
   }
   if (modelId === 'opengrid-snap') {
     return { variant: 'Full', offset: 0 }
@@ -336,7 +337,7 @@ describe('CAD model generation debounce', () => {
   it('debounces OpenGrid stackable-box half-cell input through its own model id', () => {
     const { client, send, context } = createRuntimeContext(
       'opengrid-stackable-box',
-      { x: 0.5, y: 1, height: 10 },
+      { x: 0.5, y: 1, height: 10, fullBottomHoleGrid: false },
     )
     const handlers = createModelGenerationHandlers(context)
 
@@ -347,12 +348,34 @@ describe('CAD model generation debounce', () => {
       expect.objectContaining({
         kind: 'model.generate',
         modelId: 'opengrid-stackable-box',
-        parameters: { x: 1.5, y: 1, height: 10 },
+        parameters: {
+          x: 1.5,
+          y: 1,
+          height: 10,
+          fullBottomHoleGrid: false,
+        },
       }),
     )
     expect(client.send).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'model.invalidate', generation: 1 }),
     )
+
+    const generateCommand = send.mock.calls.find(
+      ([command]) => command.kind === 'model.generate',
+    )?.[0]
+    const timeoutCall = context.setOperationTimeout.mock.calls.at(-1)
+    expect(timeoutCall?.[0]).toBe(generateCommand?.operationId)
+    expect(timeoutCall?.[1]).toBe(PROTOTYPE_CONFIGURATION.operationTimeoutMs)
+    const timeoutCallback = timeoutCall?.[2] as (() => void) | undefined
+    expect(timeoutCallback).toBeDefined()
+    timeoutCallback?.()
+    expect(context.recoverWorker).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: 'WORKER_TIMEOUT',
+        generation: 1,
+        operationId: generateCommand?.operationId,
+      }),
+      client,
   })
 
   it('invalidates typed OpenGrid snapshots and disables generation for errors', () => {

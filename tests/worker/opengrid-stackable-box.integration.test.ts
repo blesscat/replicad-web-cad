@@ -20,6 +20,7 @@ import {
 } from '../../src/cad-kernel/components/opengrid-stackable-box/builder'
 import {
   boundsForOpenGridStackableBox,
+  openGridStackableBoxOrdinaryBottomHoleCentersFor,
   openGridStackableBoxSocketCentersFor,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   type OpenGridStackableBoxParameters,
@@ -52,7 +53,12 @@ beforeAll(async () => {
 function parameters(
   overrides: Partial<OpenGridStackableBoxParameters> = {},
 ): OpenGridStackableBoxParameters {
-  return { x: 2, y: 2, height: 10, ...overrides }
+  return {
+    x: overrides.x ?? 2,
+    y: overrides.y ?? 2,
+    height: overrides.height ?? 10,
+    fullBottomHoleGrid: overrides.fullBottomHoleGrid ?? false,
+  }
 }
 
 function boundsOf(shape: Shape3D): number[][] {
@@ -119,6 +125,54 @@ describe('OpenGrid stackable-box B-Rep', () => {
         expect(cylindricalFaceCount(shape)).toBeGreaterThanOrEqual(
           openGridStackableBoxSocketCentersFor(input).length,
         )
+      } finally {
+        deleteShape(shape)
+      }
+    },
+    120_000,
+  )
+
+  it.each([
+    { x: 1, y: 1 },
+    { x: 1, y: 4 },
+    { x: 2, y: 2 },
+    { x: 0.5, y: 1 },
+    { x: 1, y: 0.5 },
+    { x: 0.5, y: 0.5 },
+  ])(
+    'builds the nominal full-hole grid for $x×$y without replacing corner sockets',
+    ({ x, y }) => {
+      const input = parameters({ x, y, fullBottomHoleGrid: true })
+      const shape = buildOpenGridStackableBox(input)
+      try {
+        const report = inspectOpenGridStackableBoxInterface(shape, input)
+        const ordinaryCenters =
+          openGridStackableBoxOrdinaryBottomHoleCentersFor(input)
+
+        expect(report.expectedOrdinaryBottomHoleCount).toBe(
+          ordinaryCenters.length,
+        )
+        expect(report.ordinaryBottomHoleCount).toBe(ordinaryCenters.length)
+        expect(report.captiveSocketRecords).toHaveLength(
+          openGridStackableBoxSocketCentersFor(input).length,
+        )
+        const actualBounds = boundsOf(shape)
+        const expectedBounds = boundsForOpenGridStackableBox(input)
+        expect(actualBounds[0]).toEqual(
+          expect.arrayContaining([
+            expect.closeTo(expectedBounds.min[0], 3),
+            expect.closeTo(expectedBounds.min[1], 3),
+            expect.closeTo(expectedBounds.min[2], 3),
+          ]),
+        )
+        expect(actualBounds[1]).toEqual(
+          expect.arrayContaining([
+            expect.closeTo(expectedBounds.max[0], 3),
+            expect.closeTo(expectedBounds.max[1], 3),
+            expect.closeTo(expectedBounds.max[2], 3),
+          ]),
+        )
+        expect(measureVolume(shape)).toBeGreaterThan(0)
       } finally {
         deleteShape(shape)
       }
@@ -265,7 +319,9 @@ describe('OpenGrid stackable-box B-Rep', () => {
   }, 120_000)
 
   it('exports successful full-cell geometry as STEP and STL', async () => {
-    const shape = buildOpenGridStackableBox(parameters())
+    const shape = buildOpenGridStackableBox(
+      parameters({ fullBottomHoleGrid: true }),
+    )
     try {
       const mesh = meshBRep(shape, {
         tolerance: 0.05,
@@ -318,6 +374,7 @@ describe('OpenGrid stackable-box B-Rep', () => {
             x: 0.5,
             y: 0.5,
             height: 10,
+            fullBottomHoleGrid: false,
           }),
         ).toThrow('OPENGRID_SNAP_HOLD_INSERTION_ENVELOPE_MISMATCH')
       } finally {

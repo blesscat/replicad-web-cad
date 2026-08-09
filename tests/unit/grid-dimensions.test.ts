@@ -180,7 +180,12 @@ describe('OpenGrid dimension calculation', () => {
 describe('OpenGrid stackable-box dimension calculation', () => {
   it('rounds each target up to the nearest half-cell that is not smaller', () => {
     const oneCell = sizeOf(
-      boundsForOpenGridStackableBox({ x: 1, y: 1, height: 10 }),
+      boundsForOpenGridStackableBox({
+        x: 1,
+        y: 1,
+        height: 10,
+        fullBottomHoleGrid: false,
+      }),
     )
     const result = calculateOpenGridStackableBoxCounts({
       x: String(oneCell.x + 0.01),
@@ -204,6 +209,7 @@ describe('OpenGrid stackable-box dimension calculation', () => {
         x: configuration.gridStep,
         y: configuration.gridStep,
         height: configuration.defaultHeight,
+        fullBottomHoleGrid: false,
       }),
     )
     const result = calculateOpenGridStackableBoxCounts({
@@ -224,6 +230,7 @@ describe('OpenGrid stackable-box dimension calculation', () => {
         x: configuration.maxX,
         y: configuration.minY,
         height: configuration.defaultHeight,
+        fullBottomHoleGrid: false,
       }),
     ).x
     const result = calculateOpenGridStackableBoxCounts({

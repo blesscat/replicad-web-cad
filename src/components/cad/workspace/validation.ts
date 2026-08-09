@@ -32,6 +32,7 @@ export const OPENGRID_STACKABLE_BOX_PARAMETER_KEYS: ModelParameterKey[] = [
   'x',
   'y',
   'height',
+  'fullBottomHoleGrid',
 ]
 export const HEXAGONAL_COLUMN_PARAMETER_KEYS: ScalarModelParameterKey[] = [
   'height',
@@ -73,7 +74,27 @@ export function rawFromParameters(
     }
   }
 
-  if ('x' in parameters && 'y' in parameters) {
+  if (
+    'x' in parameters &&
+    'y' in parameters &&
+    'height' in parameters &&
+    'fullBottomHoleGrid' in parameters
+  ) {
+    const stackableParameters = parameters as {
+      x: number
+      y: number
+      height: number
+      fullBottomHoleGrid: boolean
+    }
+    return {
+      x: String(stackableParameters.x),
+      y: String(stackableParameters.y),
+      height: String(stackableParameters.height),
+      fullBottomHoleGrid: String(stackableParameters.fullBottomHoleGrid),
+    }
+  }
+
+  if ('x' in parameters && 'y' in parameters && 'height' in parameters) {
     return {
       x: String(parameters.x),
       y: String(parameters.y),
@@ -156,13 +177,13 @@ export function parseRawParameters(
     Record<ModelParameterKey, number | string | boolean | null>
   > = {}
   for (const key of keys) {
-    if (key === 'cornerPosts') {
+    if (key === 'cornerPosts' || key === 'fullBottomHoleGrid') {
       const rawValue = raw[key]
       if (rawValue !== 'true' && rawValue !== 'false') {
         return {
           valid: false,
           message: '必須是 true 或 false。',
-          field: 'cornerPosts',
+          field: key,
         }
       }
       parsed[key] = rawValue === 'true'

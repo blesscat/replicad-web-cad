@@ -1,9 +1,11 @@
-export type OpenGridStackableBoxParameterKey = 'x' | 'y' | 'height'
+export type OpenGridStackableBoxParameterKey =
+  'x' | 'y' | 'height' | 'fullBottomHoleGrid'
 
 export type OpenGridStackableBoxParameters = {
   x: number
   y: number
   height: number
+  fullBottomHoleGrid: boolean
 }
 
 export type OpenGridStackableBoxValidationIssue = {
@@ -24,6 +26,7 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   defaultX: 2,
   defaultY: 2,
   defaultHeight: 10,
+  defaultFullBottomHoleGrid: false,
   minX: 0.5,
   maxX: 17.5,
   minY: 0.5,
@@ -46,6 +49,9 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   baseHoleBottomOpeningDiameter: 5.05,
   baseHoleTopOpeningDiameter: 6.05,
   baseHoleChamferDepth: 0.5,
+  bottomHoleGridPitch: 14,
+  bottomHoleGridEdgeOffset: 7,
+  bottomGridHoleDiameter: 5.05,
   baseFlangeDiameter: 5.8,
   baseFlangeThickness: 0.5,
   baseShaftExposure: 3,
@@ -115,6 +121,18 @@ function validateHeight(
   }
 }
 
+function validateFullBottomHoleGrid(
+  value: unknown,
+  issues: OpenGridStackableBoxValidationIssue[],
+): void {
+  if (typeof value !== 'boolean') {
+    issues.push({
+      field: 'fullBottomHoleGrid',
+      message: '底部全孔模式必須是布林值。',
+    })
+  }
+}
+
 export function nominalOpenGridStackableBoxFootprintFor(
   parameters: OpenGridStackableBoxParameters,
 ): [number, number] {
@@ -142,7 +160,7 @@ export function validateOpenGridStackableBoxParameters(
   }
 
   const issues: OpenGridStackableBoxValidationIssue[] = []
-  if (!hasExactKeys(value, ['x', 'y', 'height'])) {
+  if (!hasExactKeys(value, ['x', 'y', 'height', 'fullBottomHoleGrid'])) {
     issues.push({ field: 'parameters', message: '包含不支援的參數欄位。' })
   }
 
@@ -161,6 +179,7 @@ export function validateOpenGridStackableBoxParameters(
     issues,
   )
   validateHeight(value.height, issues)
+  validateFullBottomHoleGrid(value.fullBottomHoleGrid, issues)
 
   if (issues.length > 0) return { valid: false, issues }
 
@@ -168,6 +187,7 @@ export function validateOpenGridStackableBoxParameters(
     x: value.x as number,
     y: value.y as number,
     height: value.height as number,
+    fullBottomHoleGrid: value.fullBottomHoleGrid as boolean,
   }
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
   if (width > OPENGRID_STACKABLE_BOX_CONFIGURATION.workspaceMaxDimension) {
@@ -208,9 +228,92 @@ function uniqueSocketAxisPositions(halfExtent: number): number[] {
   return candidates
 }
 
+function uniqueGridEndpointPositions(positions: number[]): number[] {
+  const first = positions[0]
+  const last = positions[positions.length - 1]
+  if (first === undefined || last === undefined) return []
+  if (
+    Math.abs(last - first) <
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.socketDeduplicationDistance
+  ) {
+    return [(first + last) / 2]
+  }
+  return [first, last]
+}
+
+export function nominalOpenGridStackableBoxBottomGridAxisPositionsFor(
+  axisCount: number,
+): number[] {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const halfCellCount = Math.round(axisCount / configuration.gridStep)
+  const positionCount = Math.max(1, halfCellCount)
+  const nominalAxisLength = axisCount * configuration.gridPitch
+  const firstPosition =
+    -nominalAxisLength / 2 + configuration.bottomHoleGridEdgeOffset
+
+  return Array.from(
+    { length: positionCount },
+    (_, index) => firstPosition + index * configuration.bottomHoleGridPitch,
+  )
+}
+
+export function nominalOpenGridStackableBoxBottomGridCentersFor(
+  parameters: OpenGridStackableBoxParameters,
+): OpenGridStackableBoxPoint2D[] {
+  const xPositions = nominalOpenGridStackableBoxBottomGridAxisPositionsFor(
+    parameters.x,
+  )
+  const yPositions = nominalOpenGridStackableBoxBottomGridAxisPositionsFor(
+    parameters.y,
+  )
+  const centers: OpenGridStackableBoxPoint2D[] = []
+
+  for (const x of xPositions) {
+    for (const y of yPositions) centers.push([x, y])
+  }
+
+  return centers
+}
+
+export function openGridStackableBoxOrdinaryBottomHoleCentersFor(
+  parameters: OpenGridStackableBoxParameters,
+): OpenGridStackableBoxPoint2D[] {
+  if (!parameters.fullBottomHoleGrid) return []
+
+  const specialCenters = openGridStackableBoxSocketCentersFor(parameters)
+  const gridCenters =
+    nominalOpenGridStackableBoxBottomGridCentersFor(parameters)
+  const pitchTolerance = 0.001
+
+  return gridCenters.filter(
+    ([x, y]) =>
+      !specialCenters.some(
+        ([specialX, specialY]) =>
+          Math.abs(x - specialX) <= pitchTolerance &&
+          Math.abs(y - specialY) <= pitchTolerance,
+      ),
+  )
+}
+
 export function openGridStackableBoxSocketCentersFor(
   parameters: OpenGridStackableBoxParameters,
 ): OpenGridStackableBoxPoint2D[] {
+  if (parameters.fullBottomHoleGrid) {
+    const xPositions = uniqueGridEndpointPositions(
+      nominalOpenGridStackableBoxBottomGridAxisPositionsFor(parameters.x),
+    )
+    const yPositions = uniqueGridEndpointPositions(
+      nominalOpenGridStackableBoxBottomGridAxisPositionsFor(parameters.y),
+    )
+    const centers: OpenGridStackableBoxPoint2D[] = []
+
+    for (const x of xPositions) {
+      for (const y of yPositions) centers.push([x, y])
+    }
+
+    return centers
+  }
+
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
   const xPositions = uniqueSocketAxisPositions(width / 2)
   const yPositions = uniqueSocketAxisPositions(depth / 2)

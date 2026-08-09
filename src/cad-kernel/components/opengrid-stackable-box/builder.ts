@@ -11,7 +11,9 @@ import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForOpenGridStackableBox,
   isOpenGridStackableBoxParameters,
+  nominalOpenGridStackableBoxBottomGridAxisPositionsFor,
   nominalOpenGridStackableBoxFootprintFor,
+  openGridStackableBoxOrdinaryBottomHoleCentersFor,
   openGridStackableBoxSocketCentersFor,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   validateOpenGridStackableBoxParameters,
@@ -265,19 +267,80 @@ function makeMountingHoleCutter(): Shape3D {
   return cutter
 }
 
+function makeOrdinaryBottomHoleCutter(): Shape3D {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  return makeCylinder(
+    configuration.bottomGridHoleDiameter / 2,
+    configuration.floorThickness + 0.12,
+    [0, 0, -0.1],
+  )
+}
+
+const ORDINARY_BOTTOM_HOLE_BATCH_SIZE = 16
+
+function makeOrdinaryBottomHoleBatch(
+  centers: ReadonlyArray<[number, number]>,
+): Shape3D | null {
+  let combined: Shape3D | null = null
+
+  try {
+    for (const [x, y] of centers) {
+      const cutter = makeOrdinaryBottomHoleCutter().translate(x, y, 0)
+      if (combined === null) {
+        combined = cutter
+        continue
+      }
+
+      const fused = combined.fuse(cutter)
+      deleteShape(combined)
+      deleteShape(cutter)
+      combined = fused
+    }
+
+    return combined
+  } catch (error) {
+    deleteShape(combined)
+    throw error
+  }
+}
+
 function addMountingSockets(
   shape: Shape3D,
   parameters: OpenGridStackableBoxParameters,
+  context: OpenGridStackableBoxBuildContext,
 ): Shape3D {
   let current = shape
   const centers = openGridStackableBoxSocketCentersFor(parameters)
   for (const [x, y] of centers) {
+    assertGenerationCurrent(context)
     const shaftCutter = makeMountingHoleCutter().translate(x, y, 0)
     const cut = current.cut(shaftCutter)
     deleteShape(current)
     deleteShape(shaftCutter)
     current = cut
   }
+
+  const ordinaryCenters =
+    openGridStackableBoxOrdinaryBottomHoleCentersFor(parameters)
+  for (
+    let start = 0;
+    start < ordinaryCenters.length;
+    start += ORDINARY_BOTTOM_HOLE_BATCH_SIZE
+  ) {
+    assertGenerationCurrent(context)
+    const batch = ordinaryCenters.slice(
+      start,
+      start + ORDINARY_BOTTOM_HOLE_BATCH_SIZE,
+    )
+    const batchCutter = makeOrdinaryBottomHoleBatch(batch)
+    if (batchCutter === null) continue
+
+    const cut = current.cut(batchCutter)
+    deleteShape(current)
+    deleteShape(batchCutter)
+    current = cut
+  }
+
   return current
 }
 
@@ -339,6 +402,8 @@ export type OpenGridStackableBoxInterfaceQualityReport = {
   bottomGrooveLeadInFaceCount: number
   mountingHoleChamferFaceCount: number
   captiveSocketRecords: InterfaceQualityRecord[]
+  ordinaryBottomHoleCount: number
+  expectedOrdinaryBottomHoleCount: number
 }
 
 type FaceQualityRecord = {
@@ -493,6 +558,63 @@ function countMountingHoleChamferFaces(shape: Shape3D): number {
   }).length
 }
 
+function countOrdinaryBottomHoleFaces(
+  shape: Shape3D,
+  centers: ReadonlyArray<[number, number]>,
+): number {
+  if (centers.length === 0) return 0
+
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const records = readFaceQualityRecords(shape)
+  let count = 0
+
+  for (const [centerX, centerY] of centers) {
+    const hasThroughHole = records.some((record) => {
+      if (record.surfaceType !== 'CYLINDRE') return false
+      const center = [
+        (record.min[0] + record.max[0]) / 2,
+        (record.min[1] + record.max[1]) / 2,
+      ]
+      const diameter = Math.max(
+        record.max[0] - record.min[0],
+        record.max[1] - record.min[1],
+      )
+      return (
+        closeEnough(center[0], centerX, 0.04) &&
+        closeEnough(center[1], centerY, 0.04) &&
+        closeEnough(diameter, configuration.bottomGridHoleDiameter, 0.04) &&
+        record.min[2] >= -0.03 &&
+        record.max[2] >= configuration.floorThickness - 0.03
+      )
+    })
+
+    if (hasThroughHole) count += 1
+  }
+
+  return count
+}
+
+function assertBottomGridSpacing(
+  parameters: OpenGridStackableBoxParameters,
+): void {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  for (const axis of [parameters.x, parameters.y]) {
+    const positions =
+      nominalOpenGridStackableBoxBottomGridAxisPositionsFor(axis)
+    for (let index = 1; index < positions.length; index += 1) {
+      const previous = positions[index - 1]
+      const current = positions[index]
+      if (
+        previous === undefined ||
+        current === undefined ||
+        !closeEnough(current - previous, configuration.bottomHoleGridPitch)
+      ) {
+        throw new Error('OPENGRID_STACKABLE_BOX_BOTTOM_GRID_SPACING_INVALID')
+      }
+    }
+  }
+}
+
 function makeFlangedSocketInsert(center: [number, number]): Shape3D {
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
   const shaft = makeCylinder(
@@ -636,6 +758,8 @@ export function inspectOpenGridStackableBoxInterface(
     -1,
   )
   const mountingHoleChamferFaceCount = countMountingHoleChamferFaces(shape)
+  const ordinaryBottomHoleCenters =
+    openGridStackableBoxOrdinaryBottomHoleCentersFor(parameters)
   const captiveSocketRecords = openGridStackableBoxSocketCentersFor(
     parameters,
   ).map((center) => inspectCaptiveSocketInterface(shape, center))
@@ -649,6 +773,11 @@ export function inspectOpenGridStackableBoxInterface(
     bottomGrooveLeadInFaceCount,
     mountingHoleChamferFaceCount,
     captiveSocketRecords,
+    ordinaryBottomHoleCount: countOrdinaryBottomHoleFaces(
+      shape,
+      ordinaryBottomHoleCenters,
+    ),
+    expectedOrdinaryBottomHoleCount: ordinaryBottomHoleCenters.length,
   }
 }
 
@@ -667,6 +796,8 @@ export function assertOpenGridStackableBoxGeometry(
   if (openGridStackableBoxSocketCentersFor(parameters).length === 0) {
     throw new Error('OPENGRID_STACKABLE_BOX_SOCKET_LAYOUT_INVALID')
   }
+
+  if (parameters.fullBottomHoleGrid) assertBottomGridSpacing(parameters)
 
   const socketCenters = openGridStackableBoxSocketCentersFor(parameters)
   for (let firstIndex = 0; firstIndex < socketCenters.length; firstIndex += 1) {
@@ -747,6 +878,13 @@ export function assertOpenGridStackableBoxGeometry(
     throw new Error('OPENGRID_STACKABLE_BOX_MOUNTING_HOLE_CHAMFER_INVALID')
   }
 
+  if (
+    interfaceQuality.ordinaryBottomHoleCount !==
+    interfaceQuality.expectedOrdinaryBottomHoleCount
+  ) {
+    throw new Error('OPENGRID_STACKABLE_BOX_BOTTOM_GRID_HOLES_INVALID')
+  }
+
   for (const record of interfaceQuality.captiveSocketRecords) {
     if (record.bottomOpeningBoundaryVolume <= 0.001) {
       throw new Error('OPENGRID_STACKABLE_BOX_BOTTOM_OPENING_INVALID')
@@ -780,7 +918,7 @@ export function buildOpenGridStackableBox(
   shape = addTopGuideRail(shape, parameters)
   shape = addBottomGuideGroove(shape, parameters)
   shape = addInternalSeamRelief(shape, parameters)
-  shape = addMountingSockets(shape, parameters)
+  shape = addMountingSockets(shape, parameters, context)
   assertGenerationCurrent(context)
   assertOpenGridStackableBoxGeometry(shape, parameters)
   return shape
@@ -881,7 +1019,12 @@ function maximumCenterError(
 
 export function inspectOpenGridSnapHoldCompatibility(
   reference: Shape3D,
-  parameters: OpenGridStackableBoxParameters = { x: 1, y: 1, height: 10 },
+  parameters: OpenGridStackableBoxParameters = {
+    x: 1,
+    y: 1,
+    height: 10,
+    fullBottomHoleGrid: false,
+  },
 ): OpenGridSnapHoldCompatibilityReport {
   assertReferenceBounds(reference)
   const nominalInterfaces = cylindricalInterfacesFor(reference)
@@ -936,7 +1079,12 @@ export async function loadOpenGridSnapHoldReference(
 
 export function assertOpenGridSnapHoldCompatibility(
   reference: Shape3D,
-  parameters: OpenGridStackableBoxParameters = { x: 1, y: 1, height: 10 },
+  parameters: OpenGridStackableBoxParameters = {
+    x: 1,
+    y: 1,
+    height: 10,
+    fullBottomHoleGrid: false,
+  },
 ): void {
   const report = inspectOpenGridSnapHoldCompatibility(reference, parameters)
   if (

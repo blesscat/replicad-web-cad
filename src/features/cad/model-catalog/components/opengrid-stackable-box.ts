@@ -86,12 +86,14 @@ export const opengridStackableBoxDefinition: ModelDefinition = {
   family: 'opengrid',
   displayName: 'OpenGrid 堆疊盒',
   selectionDescription:
-    '依 28 mm OpenGrid 格線建立可堆疊開口盒，支援半格尺寸、連續滑動導軌與四角 Ø5 mm Snap 固定孔。',
+    '依 28 mm OpenGrid 格線建立可堆疊開口盒，支援半格尺寸、連續滑動導軌、四角 Ø5 mm Snap 固定孔與可選的 14 mm Ø5.05 mm 底部全孔網格。',
   parameterSchema: OPENGRID_STACKABLE_BOX_PARAMETER_SCHEMA,
   defaultParameters: {
     x: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultX,
     y: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultY,
     height: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHeight,
+    fullBottomHoleGrid:
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultFullBottomHoleGrid,
   },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   validateParameters: validateDefinitionParameters,

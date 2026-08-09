@@ -24,7 +24,11 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
   await expect(y).toHaveAttribute('step', '0.5')
   await expect(height).toHaveAttribute('min', '10')
   await expect(height).toHaveAttribute('max', '500')
-  await expect(page.getByRole('checkbox')).toHaveCount(0)
+  const fullGrid = page.getByRole('checkbox', { name: '底部全孔模式' })
+  await expect(fullGrid).toBeVisible()
+  await expect(fullGrid).not.toBeChecked()
+  await fullGrid.check()
+  await expect(fullGrid).toBeChecked()
   await expect(page.getByText(/上方是連續凸導軌/)).toBeVisible()
 
   const targetX = page.getByRole('textbox', { name: 'X（mm）' })

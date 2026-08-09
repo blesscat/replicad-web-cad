@@ -36,6 +36,7 @@ import {
   openGridFileName,
   openGridStlFileName,
   type OpenGridParameters,
+  type OpenGridStackableBoxParameters,
 } from '../../src/cad-contract/units'
 
 const base = {
@@ -93,7 +94,12 @@ function stackableBoxGenerateCommand(
     kind: 'model.generate' as const,
     generation,
     modelId: 'opengrid-stackable-box' as const,
-    parameters: { x: 0.5, y: 1.5, height: 20 },
+    parameters: {
+      x: 0.5,
+      y: 1.5,
+      height: 20,
+      fullBottomHoleGrid: false,
+    },
     previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
     ...overrides,
   }
@@ -315,11 +321,20 @@ describe('OpenGrid Worker runtime', () => {
       events.push(event),
     )
     await runtime.handle(initCommand())
-    await runtime.handle(stackableBoxGenerateCommand())
+    await runtime.handle(
+      stackableBoxGenerateCommand(1, {
+        parameters: {
+          x: 0.5,
+          y: 1.5,
+          height: 20,
+          fullBottomHoleGrid: true,
+        },
+      }),
+    )
 
     expect(mocks.buildModelBRep).toHaveBeenCalledWith(
       'opengrid-stackable-box',
-      { x: 0.5, y: 1.5, height: 20 },
+      { x: 0.5, y: 1.5, height: 20, fullBottomHoleGrid: true },
       expect.any(Object),
     )
     const candidate = events.find(
@@ -398,7 +413,12 @@ describe('OpenGrid Worker runtime', () => {
     await runtime.handle(initCommand())
     await runtime.handle(
       stackableBoxGenerateCommand(1, {
-        parameters: { x: 0.25, y: 1.5, height: 20 },
+        parameters: {
+          x: 0.25,
+          y: 1.5,
+          height: 20,
+          fullBottomHoleGrid: false,
+        },
       }),
     )
 
