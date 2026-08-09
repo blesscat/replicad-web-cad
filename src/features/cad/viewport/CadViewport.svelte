@@ -80,4 +80,8 @@
     height: 100% !important;
     border-radius: calc(var(--viewport-radius) - 1px);
   }
+
+  .viewport :global(#cad-viewport-xyz-gizmo) {
+    pointer-events: none;
+  }
 </style>

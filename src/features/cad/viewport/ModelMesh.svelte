@@ -30,6 +30,8 @@
   function createMaterial(): THREE.MeshStandardMaterial {
     return new THREE.MeshStandardMaterial({
       color: CAD_VIEWPORT_CONFIG.modelColor,
+      emissive: CAD_VIEWPORT_CONFIG.modelColor,
+      emissiveIntensity: CAD_VIEWPORT_CONFIG.modelEmissiveIntensity,
       metalness: 0.18,
       roughness: 0.42,
     })
