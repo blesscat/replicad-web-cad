@@ -12,9 +12,9 @@ test('CAD workspace exposes the independent HSW honeycomb component and exports 
   skipHeadlessFirefoxWithoutWebGL(browserName)
   await page.goto('/models')
   await page
-    .getByRole('heading', { name: 'HSW 六角蜂巢', exact: true })
+    .getByRole('heading', { name: '六角蜂巢', exact: true })
     .locator('..')
-    .getByRole('link', { name: '編輯 HSW 六角蜂巢', exact: true })
+    .getByRole('link', { name: '編輯 六角蜂巢', exact: true })
     .click()
   await waitForCadReady(page)
 

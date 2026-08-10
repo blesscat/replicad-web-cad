@@ -121,6 +121,7 @@ export const opengridDividerDefinition: ModelDefinition = {
   buildKey: 'opengrid-divider',
   family: 'opengrid',
   displayName: 'OpenGrid 分隔塊',
+  selectionLabel: '分隔塊',
   selectionDescription:
     '自製 OpenGrid 分隔塊；高度文字輸入 2–500 mm、slider 2–200 mm，平面 footprint 上限 500 mm。',
   parameterSchema: OPENGRID_DIVIDER_PARAMETER_SCHEMA,

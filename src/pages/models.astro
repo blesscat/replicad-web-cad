@@ -3,6 +3,7 @@ import SiteLayout from '../layouts/SiteLayout.astro'
 import {
   cadPathForModel,
   groupModelDefinitions,
+  modelSelectionLabelFor,
 } from '../features/cad/model-catalog'
 
 const modelGroups = groupModelDefinitions()
@@ -44,12 +45,12 @@ const modelGroups = groupModelDefinitions()
                   data-model-id={definition.id}
                 >
                   <h3 class="text-2xl font-semibold leading-tight">
-                    {definition.displayName}
+                    {modelSelectionLabelFor(definition)}
                   </h3>
                   <a
                     class="inline-flex items-center justify-self-start rounded-lg border border-border-card bg-panel px-3 py-2 font-semibold text-ink no-underline shadow-sm hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                     href={cadPathForModel(definition.id)}
-                    aria-label={`編輯 ${definition.displayName}`}
+                    aria-label={`編輯 ${modelSelectionLabelFor(definition)}`}
                   >
                     編輯 →
                   </a>

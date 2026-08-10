@@ -46,6 +46,7 @@ export const openGridSnapRemoverDefinition: ModelDefinition = {
   buildKey: 'opengrid-snap-remover',
   family: 'opengrid',
   displayName: 'OpenGrid Snap Remover',
+  selectionLabel: 'Snap Remover',
   selectionDescription: '固定 STEP 預覽，不提供參數調整。',
   parameterSchema: [],
   defaultParameters: {},

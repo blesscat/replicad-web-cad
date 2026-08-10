@@ -38,6 +38,7 @@ export type ModelDefinition = {
   buildKey: ModelId
   family: ModelFamily
   displayName: string
+  selectionLabel?: string
   selectionDescription: string
   parameterSchema: ReadonlyArray<ParameterField>
   defaultParameters: ModelParameterValues

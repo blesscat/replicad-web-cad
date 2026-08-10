@@ -310,3 +310,45 @@ The model chooser MUST list `opengrid-stackable-cylinder` in the OpenGrid family
 - **WHEN** the model chooser displays the cylinder entry
 - **THEN** it MUST render from catalog metadata
 - **AND** it MUST NOT instantiate the CAD Worker or a CAD viewport merely to display the entry
+
+## ADDED Requirements
+
+### Requirement: 系列相對模型選擇名稱
+
+The `/models` chooser MUST use a selection-only label for each visible model card so that a family prefix already represented by the series heading is not repeated. The series headings MUST remain `OpenGrid 系列` and `HSW 系列`. The current visible card labels MUST be:
+
+- OpenGrid: `底板`、`Snap`、`圓柱支柱`、`分隔塊`、`堆疊盒`、`可堆疊圓柱`、`Snap Remover`
+- HSW: `六角蜂巢`
+
+The corresponding edit links MUST use the same selection-only label in their accessible names. Full model names, including the `OpenGrid` or `HSW` prefix where currently present, MUST remain unchanged anywhere outside the `/models` chooser.
+
+#### Scenario: 模型選擇頁使用系列相對名稱
+
+- **WHEN** 使用者開啟 `/models`
+- **THEN** OpenGrid 系列的卡片標題 MUST 依序顯示 `底板`、`Snap`、`圓柱支柱`、`分隔塊`、`堆疊盒`、`可堆疊圓柱`、`Snap Remover`
+- **AND** HSW 系列的卡片標題 MUST 顯示 `六角蜂巢`
+- **AND** 編輯入口的 accessible name MUST 分別使用 `編輯 底板`、`編輯 Snap`、`編輯 圓柱支柱`、`編輯 分隔塊`、`編輯 堆疊盒`、`編輯 可堆疊圓柱`、`編輯 Snap Remover` 與 `編輯 六角蜂巢`
+- **AND** 系列標題 MUST 仍顯示 `OpenGrid 系列` 與 `HSW 系列`
+
+#### Scenario: 其他頁面維持完整模型名稱
+
+- **WHEN** 使用者離開 `/models` 並查看目前模型的 CAD workspace 或其他既有模型識別文案
+- **THEN** 系統 MUST 維持該模型原本的完整名稱，例如 `OpenGrid 底板`、`OpenGrid Snap` 與 `HSW 六角蜂巢`
+
+### Requirement: OpenGrid Snap 選擇入口順序
+
+The `/models` chooser MUST render the OpenGrid entries in this order: `opengrid`, `opengrid-snap`, `opengrid-pillar`, `opengrid-divider`, `opengrid-stackable-box`, `opengrid-stackable-cylinder`, and `opengrid-snap-remover`. The Snap card MUST immediately follow the bottom-plate card in the rendered OpenGrid sequence; when the existing desktop two-column layout is used, the two cards MUST appear next to each other. Every entry MUST retain its existing model-specific route.
+
+#### Scenario: Snap 與底板相鄰
+
+- **WHEN** 使用者以支援雙欄版面的視窗開啟 `/models`
+- **THEN** OpenGrid 系列的第一張卡片 MUST 是 `底板`
+- **AND** OpenGrid 系列的第二張卡片 MUST 是 `Snap`
+- **AND** `底板` 的入口 MUST 導向 `/cad/opengrid`
+- **AND** `Snap` 的入口 MUST 導向 `/cad/opengrid-snap`
+
+#### Scenario: 其他 OpenGrid 入口仍保留
+
+- **WHEN** 使用者開啟 `/models`
+- **THEN** OpenGrid 系列 MUST 仍包含 `opengrid-pillar`、`opengrid-divider`、`opengrid-stackable-box`、`opengrid-stackable-cylinder` 與 `opengrid-snap-remover`
+- **AND** 這些入口的既有 model ID 與 `/cad/<modelId>` 路由 MUST 維持不變
