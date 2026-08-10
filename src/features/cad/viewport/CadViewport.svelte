@@ -70,6 +70,7 @@
   .viewport-surface {
     height: 100%;
     overflow: hidden;
+    touch-action: none;
     border-radius: calc(var(--viewport-radius) - 1px);
     isolation: isolate;
   }
