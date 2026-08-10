@@ -9,10 +9,12 @@ test('OpenGrid Snap Remover previews and exports without parameter controls', as
   skipHeadlessFirefoxWithoutWebGL(browserName)
 
   await page.goto('/models')
-  await expect(
-    page.getByRole('link', { name: '使用OpenGrid Snap Remover' }),
-  ).toHaveAttribute('href', '/cad/opengrid-snap-remover')
-  await page.getByRole('link', { name: '使用OpenGrid Snap Remover' }).click()
+  const modelLink = page
+    .getByRole('heading', { name: 'OpenGrid Snap Remover', exact: true })
+    .locator('..')
+    .getByRole('link', { name: '編輯 OpenGrid Snap Remover', exact: true })
+  await expect(modelLink).toHaveAttribute('href', '/cad/opengrid-snap-remover')
+  await modelLink.click()
   await expect(page).toHaveURL('/cad/opengrid-snap-remover')
   await expect(
     page.getByRole('heading', {
