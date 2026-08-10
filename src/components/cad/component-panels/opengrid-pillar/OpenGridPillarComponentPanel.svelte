@@ -52,7 +52,7 @@
             {#each COMMON_PILLAR_LENGTHS as commonLength}
               {@const isSelected = value === String(commonLength)}
               <button
-                class="cursor-pointer rounded-lg border border-border-field bg-panel px-3 py-1.5 text-sm font-semibold text-ink hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                class="cursor-pointer rounded-lg border border-border-field bg-panel px-3 py-1.5 text-sm font-semibold text-ink hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                 class:border-primary={isSelected}
                 class:bg-primary={isSelected}
                 class:text-white={isSelected}

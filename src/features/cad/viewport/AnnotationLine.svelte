@@ -5,12 +5,11 @@
 
   type Props = {
     points: LineSegment
+    color: string
     opacity?: number
   }
 
-  const ANNOTATION_COLOR = '#8d98a3'
-
-  let { points, opacity = 0.58 }: Props = $props()
+  let { points, color, opacity = 0.58 }: Props = $props()
 
   function createGeometry(segment: LineSegment): THREE.BufferGeometry {
     const geometry = new THREE.BufferGeometry()
@@ -19,9 +18,12 @@
     return geometry
   }
 
-  function createMaterial(alpha: number): THREE.LineBasicMaterial {
+  function createMaterial(
+    alpha: number,
+    lineColor: string,
+  ): THREE.LineBasicMaterial {
     return new THREE.LineBasicMaterial({
-      color: ANNOTATION_COLOR,
+      color: lineColor,
       depthTest: false,
       opacity: alpha,
       transparent: alpha < 1,
@@ -29,7 +31,7 @@
   }
 
   let geometry = $derived(createGeometry(points))
-  let material = $derived(createMaterial(opacity))
+  let material = $derived(createMaterial(opacity, color))
 
   $effect(() => {
     const currentGeometry = geometry

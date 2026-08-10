@@ -3,6 +3,7 @@
   import * as THREE from 'three'
   import type { MeshSnapshot } from '../../../cad-contract/messages'
   import { CAD_VIEWPORT_CONFIG } from './config'
+  import type { CadViewportTheme } from './theme'
   import {
     createViewportEdgeGeometry,
     createViewportEdgeMaterial,
@@ -10,9 +11,10 @@
 
   type Props = {
     mesh: MeshSnapshot
+    theme: CadViewportTheme
   }
 
-  let { mesh }: Props = $props()
+  let { mesh, theme }: Props = $props()
 
   function createGeometry(snapshot: MeshSnapshot): THREE.BufferGeometry {
     const nextGeometry = new THREE.BufferGeometry()
@@ -47,7 +49,7 @@
   let geometry = $derived(createGeometry(mesh))
   let material = $derived(createMaterial())
   let edgeGeometry = $derived(createViewportEdgeGeometry(geometry))
-  let edgeMaterial = $derived(createViewportEdgeMaterial())
+  let edgeMaterial = $derived(createViewportEdgeMaterial(theme.edge))
 
   $effect(() => {
     const currentGeometry = geometry
