@@ -27,6 +27,10 @@
 </script>
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
+  <p class="m-0 text-sm text-muted">
+    盒內淨高文字輸入為 10–500 mm、slider 為 10–200 mm；X/Y footprint 維持 500 mm
+    安全上限。
+  </p>
   <GridDimensionCalculator
     calculate={calculateOpenGridStackableBoxCounts}
     description=""
@@ -74,14 +78,21 @@
       <span class="font-[650]">底部全孔模式</span>
     </label>
   </div>
-  <div aria-label="盒體模式" class="grid gap-1" role="radiogroup">
+  <div
+    aria-describedby={fieldErrors.basePlateMode
+      ? 'basePlateMode-error'
+      : undefined}
+    aria-invalid={Boolean(fieldErrors.basePlateMode)}
+    aria-label="盒體模式"
+    class="grid gap-1"
+    role="radiogroup"
+  >
     <div class="flex flex-wrap items-start gap-x-4 gap-y-2">
       <label class="flex min-w-0 items-start gap-2">
         <input
           aria-describedby={fieldErrors.basePlateMode
             ? 'basePlateMode-error'
             : undefined}
-          aria-invalid={Boolean(fieldErrors.basePlateMode)}
           aria-label="預設模式"
           class="mt-1 accent-primary"
           data-testid="opengrid-stackable-box-default-mode"
@@ -98,7 +109,6 @@
           aria-describedby={fieldErrors.basePlateMode
             ? 'basePlateMode-error'
             : undefined}
-          aria-invalid={Boolean(fieldErrors.basePlateMode)}
           aria-label="底版模式"
           class="mt-1 accent-primary"
           data-testid="opengrid-stackable-box-base-plate-mode"

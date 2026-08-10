@@ -309,7 +309,7 @@ export const BOX_NORMAL_CONFIGURATION = {
   maxY: 35,
   minHeight: 10,
   maxHeight: 500,
-  heightSliderMax: 500,
+  heightSliderMax: 200,
   clearanceTotal: 0.15,
   cornerPostHeight: 7,
   cornerPostCrossSectionRotationDegrees: 0,
@@ -327,7 +327,7 @@ export type HexagonalColumnOrientation = 'lying' | 'standing'
 export const HEXAGONAL_COLUMN_CONFIGURATION = {
   defaultHeight: 8,
   minHeight: 1,
-  maxHeight: 999,
+  maxHeight: 500,
   heightSliderMax: 200,
   defaultCount: 1,
   minCount: 1,

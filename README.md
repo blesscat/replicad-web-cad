@@ -90,17 +90,17 @@ pages/
 
 - 內建 component：X/Y 置中於世界原點、底面位於 Z=0 的 `box`、獨立的 `box-normal`、`modular-grid-base`、`hsw-cell` 與 `hexagonal-column`。
 - `box` 參數：`width`、`depth`、`height`，單位為 mm。
-- `box-normal` 參數：`x`=2–40、`y`=2–35 格，`height`=10–500 mm，以及預設勾選的四角定位柱。X/Y 每軸總共內縮 0.15 mm；定位柱使用平頂/底六角截面，外露高度為 7 mm，盒底接合端不做端部斜角。路由為 `/cad/box-normal`，輸出檔名為 `box-normal-{x}x{y}-h{height}-{posts|plain}.step` 與對應的 `.stl`。
+- `box-normal` 參數：`x`=2–40、`y`=2–35 格，`height` 文字輸入=10–500 mm、slider=10–200 mm，以及預設勾選的四角定位柱。X/Y 每軸總共內縮 0.15 mm；定位柱使用平頂/底六角截面，外露高度為 7 mm，盒底接合端不做端部斜角。路由為 `/cad/box-normal`，輸出檔名為 `box-normal-{x}x{y}-h{height}-{posts|plain}.step` 與對應的 `.stl`。
 - `modular-grid-base` 參數：`rows`、`columns` 格數 slider，範圍為 1–20 格；每格為 20 × 20 mm，高度固定 5 mm，最大寬/深為 400 mm。預切除 `cell-template.step` 會複製、平移、融合後，只對整體外側四角套用 R2.5 mm 圓角。
 - `hsw-cell` 參數：`rows`、`columns` 格數 slider，範圍為 1–20 格；使用固定約 27.25 × 23.60 × 8 mm 的平頂六角 canonical `hsw-cell.step`，columns 沿 X 方向交錯排列成蜂巢，整體不套用額外圓角。路由為 `/cad/hsw-cell`，輸出檔名為 `hsw-cell-{columns}x{rows}.step` 與 `hsw-cell-{columns}x{rows}.stl`。
-- `hexagonal-column` 參數：`height`、`count`、`gap` 與 `orientation`，路由為 `/cad/hexagonal-column`；它與 `box-normal` 共用低階六角柱 profile helper，但保持獨立 component contract。
+- `hexagonal-column` 參數：`height` 文字輸入=1–500 mm、slider=1–200 mm、`count`、`gap` 與 `orientation`，路由為 `/cad/hexagonal-column`；它與 `box-normal` 共用低階六角柱 profile helper，但保持獨立 component contract，列平面 footprint 安全上限維持 500 mm。
 - 預覽：由 Worker 產生的 B-Rep mesh。
 - 匯出：由 Worker 目前 committed B-Rep 產生 STEP 或 binary STL。
 - 不包含模型匯入、3MF/G-code、儲存、帳號、後端、多人協作或自動啟動 Bambu Studio。
 
 ## 使用 Prototype
 
-先在首頁選擇模型，再進入對應的 CAD workspace：`box` 使用 `/cad/box`、`box-normal` 使用 `/cad/box-normal`、`modular-grid-base` 使用 `/cad/modular-grid-base`、`hsw-cell` 使用 `/cad/hsw-cell`、`hexagonal-column` 使用 `/cad/hexagonal-column`、`opengrid` 使用 `/cad/opengrid`、`opengrid-stackable-box` 使用 `/cad/opengrid-stackable-box`。CAD workspace 只調整目前 route 的 component；要切換模型必須返回模型選擇頁。`box-normal` 的 `x`、`y`、`height` 是整數，合法範圍為 `2–40`、`2–35` 格與 `10–500 mm`；預設為 `2 × 2 × 10` 且啟用四角定位柱。OpenGrid 堆疊盒的 `x`、`y` 支援 `0.5` 格步進，外部 footprint 為 `x × 28 − 0.15 mm`、`y × 28 − 0.15 mm`；`height` 是盒內淨高，外部 Z 高度為 `height + 5 + 7.55 mm`。固定底部總高 5 mm（內層地板 1.2 mm）、主側壁 1.2 mm，盒頂階梯滑軌依序為 1.75／45°、垂直 1.2、0.8／45°、垂直 1.8、2／45°；底部依序為 0.8／45°、垂直 1.8、1.2／45° 導入支撐地板。每條內部 28 mm 格線交界採逐段收窄、斜面收進地板的可列印避讓，止於底板下表面並保留連續內部地板；0.25 mm 名義滑動間隙讓相同盒體可以堆疊並滑動。四角 Snap 固定孔為距名義邊 7 mm 的兩段階梯孔：外側 Ø5.05 mm 深 3 mm，內側 Ø7.05 mm 深 2 mm。輸入停止 500 ms 後才會送出建模；每個新 snapshot 會先使舊 generation 失效，連續 slider 變更只會對最後合法值送出建模；無效外部 snapshot 不會送出 `model.generate` 或匯出 request。
+先在首頁選擇模型，再進入對應的 CAD workspace：`box` 使用 `/cad/box`、`box-normal` 使用 `/cad/box-normal`、`modular-grid-base` 使用 `/cad/modular-grid-base`、`hsw-cell` 使用 `/cad/hsw-cell`、`hexagonal-column` 使用 `/cad/hexagonal-column`、`opengrid` 使用 `/cad/opengrid`、`opengrid-stackable-box` 使用 `/cad/opengrid-stackable-box`。CAD workspace 只調整目前 route 的 component；要切換模型必須返回模型選擇頁。`box-normal` 的 `x`、`y`、`height` 是整數，合法範圍為 `2–40`、`2–35` 格與 `10–500 mm`，其中 height slider 為 `10–200 mm`；預設為 `2 × 2 × 10` 且啟用四角定位柱。各目標高度／長度欄位的文字輸入上限為 500 mm、slider 上限為 200 mm；OpenGrid 堆疊盒的 X/Y footprint 與其他平面 workspace 安全上限維持 500 mm，外徑欄位維持 20–300 mm。OpenGrid 堆疊盒的 `x`、`y` 支援 `0.5` 格步進，外部 footprint 為 `x × 28 − 0.15 mm`、`y × 28 − 0.15 mm`；`height` 是盒內淨高，外部 Z 高度為 `height + 5 + 7.55 mm`。固定底部總高 5 mm（內層地板 1.2 mm）、主側壁 1.2 mm，盒頂階梯滑軌依序為 1.75／45°、垂直 1.2、0.8／45°、垂直 1.8、2／45°；底部依序為 0.8／45°、垂直 1.8、1.2／45° 導入支撐地板。每條內部 28 mm 格線交界採逐段收窄、斜面收進地板的可列印避讓，止於底板下表面並保留連續內部地板；0.25 mm 名義滑動間隙讓相同盒體可以堆疊並滑動。四角 Snap 固定孔為距名義邊 7 mm 的兩段階梯孔：外側 Ø5.05 mm 深 3 mm，內側 Ø7.05 mm 深 2 mm。輸入停止 500 ms 後才會送出建模；每個新 snapshot 會先使舊 generation 失效，連續 slider 變更只會對最後合法值送出建模；無效外部 snapshot 不會送出 `model.generate` 或匯出 request。
 
 輸入高度直接控制盒內淨高；5 mm 底部與 7.55 mm 上部堆疊介面固定加在外部高度，外部 footprint、參數快照與匯出檔名維持不變。
 

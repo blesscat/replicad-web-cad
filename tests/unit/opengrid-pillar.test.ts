@@ -13,6 +13,7 @@ describe('pillar contract', () => {
       defaultLength: 5,
       minLength: 3,
       maxLength: 500,
+      lengthSliderMax: 200,
       bodyDiameter: 5,
       baseDiameter: 7,
       baseHeight: 0.8,

@@ -18,8 +18,9 @@
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
   <p class="m-0 text-sm text-muted">
-    X/Y 依底版格數調整，X 為 2–40 格、Y 為 2–35 格；盒體高度為 10–500 mm，
-    footprint X/Y 各內縮 0.15 mm。預設在四角加入 7 mm 六角定位柱。
+    X/Y 依底版格數調整，X 為 2–40 格、Y 為 2–35 格；盒體高度文字輸入為 10–500
+    mm、slider 為 10–200 mm，footprint X/Y 各內縮 0.15 mm。預設在四角加入 7 mm
+    六角定位柱。
   </p>
   {#each boxNormalDefinition.parameterSchema as field (field.key)}
     {@const value = rawParameters[field.key] ?? String(field.defaultValue)}

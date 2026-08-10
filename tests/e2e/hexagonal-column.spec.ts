@@ -40,7 +40,7 @@ test('CAD workspace exposes independent hexagonal-column parameters and exports 
   const gapSlider = page.getByRole('slider', { name: '柱間隙（Y）' })
   await expect(height).toHaveValue('8')
   await expect(height).toHaveAttribute('min', '1')
-  await expect(height).toHaveAttribute('max', '999')
+  await expect(height).toHaveAttribute('max', '500')
   await expect(heightSlider).toHaveAttribute('min', '1')
   await expect(heightSlider).toHaveAttribute('max', '200')
   await expect(heightSlider).toHaveValue('8')

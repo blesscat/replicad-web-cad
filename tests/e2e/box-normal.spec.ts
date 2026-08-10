@@ -42,7 +42,7 @@ test('box-normal exposes grid controls, optional posts, persistence, and export 
   await expect(height).toHaveAttribute('min', '10')
   await expect(height).toHaveAttribute('max', '500')
   await expect(heightSlider).toHaveAttribute('min', '10')
-  await expect(heightSlider).toHaveAttribute('max', '500')
+  await expect(heightSlider).toHaveAttribute('max', '200')
   await expect(x).toHaveValue('2')
   await expect(y).toHaveValue('2')
   await expect(height).toHaveValue('10')

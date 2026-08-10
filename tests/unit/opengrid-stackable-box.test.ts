@@ -31,6 +31,16 @@ function parameters(
 }
 
 describe('OpenGrid stackable-box contract', () => {
+  it('keeps manual height at 500 mm while limiting the slider to 200 mm', () => {
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.heightSliderMax).toBe(200)
+    expect(
+      validateOpenGridStackableBoxParameters(parameters({ height: 500 })).valid,
+    ).toBe(true)
+    expect(
+      validateOpenGridStackableBoxParameters(parameters({ height: 501 })).valid,
+    ).toBe(false)
+  })
+
   it('controls corner sockets and the full bottom grid independently', () => {
     const parametersForHoleMode = (
       cornerBottomHoles: boolean,

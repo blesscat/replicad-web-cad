@@ -34,8 +34,11 @@ test('OpenGrid divider is listed with independent directional controls', async (
     )
   }
   const height = page.getByRole('textbox', { name: '分隔牆高度（Z）' })
+  const heightSlider = page.getByRole('slider', { name: '分隔牆高度（Z）' })
   await expect(height).toHaveAttribute('min', '2')
   await expect(height).toHaveAttribute('max', '500')
+  await expect(heightSlider).toHaveAttribute('min', '2')
+  await expect(heightSlider).toHaveAttribute('max', '200')
   const wallThickness = page.getByRole('textbox', { name: '上方牆厚（Z）' })
   await expect(wallThickness).toHaveAttribute('min', '1')
   await expect(wallThickness).toHaveAttribute('max', '5')
@@ -65,4 +68,23 @@ test('OpenGrid divider exports the committed normalized shape', async ({
   expect(download.suggestedFilename()).toBe(
     'opengrid-divider-l1-r1-u0-d0-t2-h24.step',
   )
+})
+
+test('OpenGrid divider rejects a planar footprint above 500 mm', async ({
+  page,
+  browserName,
+}) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.goto('/cad/opengrid-divider')
+  await waitForCadReady(page)
+
+  const left = page.getByRole('slider', { name: '左臂（X）' })
+  const right = page.getByRole('slider', { name: '右臂（X）' })
+  await left.fill('18')
+  await right.fill('18')
+
+  await expect(right).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByRole('alert')).toContainText('500 mm')
+  await expect(page.getByRole('button', { name: '下載 STEP' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: '下載 STL' })).toBeDisabled()
 })

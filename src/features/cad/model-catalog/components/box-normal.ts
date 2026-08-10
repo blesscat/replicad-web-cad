@@ -79,7 +79,7 @@ export const boxNormalDefinition: ModelDefinition = {
   family: 'other',
   displayName: '標準開口盒',
   selectionDescription:
-    '依 X/Y 網格格數建立開口盒，總 footprint 各內縮 0.15 mm，可選擇四角 7 mm 六角定位柱。',
+    '依 X/Y 網格格數建立開口盒；height 文字輸入 10–500 mm、slider 10–200 mm，總 footprint 各內縮 0.15 mm，可選擇四角 7 mm 六角定位柱。',
   parameterSchema: BOX_NORMAL_PARAMETER_SCHEMA,
   defaultParameters: {
     x: BOX_NORMAL_CONFIGURATION.defaultX,

@@ -91,6 +91,12 @@ describe('CAD component catalog', () => {
     expect(boxNormal?.parameterSchema.map((field) => field.max)).toEqual([
       40, 35, 500,
     ])
+    expect(boxNormal?.parameterSchema.at(2)).toMatchObject({
+      key: 'height',
+      max: 500,
+      sliderMin: 10,
+      sliderMax: 200,
+    })
     expect(boxNormal?.defaultParameters).toEqual({
       x: 2,
       y: 2,
@@ -182,7 +188,7 @@ describe('CAD component catalog', () => {
         control: 'range-text',
         defaultValue: 8,
         min: 1,
-        max: 999,
+        max: 500,
         sliderMin: 1,
         sliderMax: 200,
         step: 1,
@@ -415,6 +421,8 @@ describe('CAD component catalog', () => {
         max: 500,
         step: 1,
         control: 'range-text',
+        sliderMin: 10,
+        sliderMax: 200,
       }),
     ])
     expect(definition?.defaultParameters).toEqual({
@@ -496,7 +504,17 @@ describe('CAD component catalog', () => {
       defaultValue:
         OPENGRID_DIVIDER_CONFIGURATION.defaultParameters.wallThickness,
     })
-    expect(definition?.selectionDescription).toBe('自製 OpenGrid 分隔塊。')
+    expect(definition?.parameterSchema.at(4)).toMatchObject({
+      key: 'height',
+      control: 'range-text',
+      min: 2,
+      max: 500,
+      step: 1,
+      sliderMin: 2,
+      sliderMax: 200,
+    })
+    expect(definition?.selectionDescription).toContain('高度文字輸入 2–500 mm')
+    expect(definition?.selectionDescription).toContain('slider 2–200 mm')
     expect(definition?.defaultParameters).toEqual({
       left: 1,
       right: 1,
@@ -524,6 +542,9 @@ describe('CAD component catalog', () => {
       family: 'opengrid',
       displayName: 'OpenGrid 圓柱支柱',
     })
+    expect(definition?.selectionDescription).toContain(
+      '文字輸入 3–500 mm、slider 3–200 mm',
+    )
     expect(definition?.parameterSchema).toEqual([
       expect.objectContaining({
         key: 'length',
@@ -533,6 +554,8 @@ describe('CAD component catalog', () => {
         min: 3,
         max: 500,
         step: 1,
+        sliderMin: 3,
+        sliderMax: 200,
       }),
     ])
     expect(definition?.defaultParameters).toEqual({
@@ -589,6 +612,8 @@ describe('CAD component catalog', () => {
           max: 500,
           step: 1,
           control: 'range-text',
+          sliderMin: 10,
+          sliderMax: 200,
         }),
         expect.objectContaining({
           key: 'openingPlusXAngle',

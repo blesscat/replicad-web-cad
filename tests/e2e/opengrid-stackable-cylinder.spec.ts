@@ -78,12 +78,15 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
 
   const diameter = page.getByRole('slider', { name: '外徑（直徑）' })
   const height = page.getByRole('slider', { name: '高度（Z）' })
+  const heightInput = page.getByRole('textbox', { name: '高度（Z）' })
   await expect(diameter).toHaveAttribute('min', '20')
   await expect(diameter).toHaveAttribute('max', '300')
   await expect(diameter).toHaveAttribute('step', '1')
   await expect(height).toHaveAttribute('min', '10')
-  await expect(height).toHaveAttribute('max', '500')
+  await expect(height).toHaveAttribute('max', '200')
   await expect(height).toHaveAttribute('step', '1')
+  await expect(heightInput).toHaveAttribute('min', '10')
+  await expect(heightInput).toHaveAttribute('max', '500')
   for (const [index, { direction, label }] of sideOpeningGroups.entries()) {
     const group = page.getByTestId(
       `opengrid-cylinder-opening-group-${direction}`,

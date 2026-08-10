@@ -43,7 +43,7 @@ const OPENGRID_STACKABLE_BOX_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
     max: OPENGRID_STACKABLE_BOX_CONFIGURATION.maxHeight,
     step: 1,
     sliderMin: OPENGRID_STACKABLE_BOX_CONFIGURATION.minHeight,
-    sliderMax: OPENGRID_STACKABLE_BOX_CONFIGURATION.maxHeight,
+    sliderMax: OPENGRID_STACKABLE_BOX_CONFIGURATION.heightSliderMax,
   },
 ]
 
@@ -85,7 +85,8 @@ export const opengridStackableBoxDefinition: ModelDefinition = {
   buildKey: 'opengrid-stackable-box',
   family: 'opengrid',
   displayName: 'OpenGrid 堆疊盒',
-  selectionDescription: '',
+  selectionDescription:
+    'OpenGrid 堆疊盒；盒內淨高文字輸入 10–500 mm、slider 10–200 mm，X/Y footprint 上限 500 mm。',
   parameterSchema: OPENGRID_STACKABLE_BOX_PARAMETER_SCHEMA,
   defaultParameters: {
     x: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultX,

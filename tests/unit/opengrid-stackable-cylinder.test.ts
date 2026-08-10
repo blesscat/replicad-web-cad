@@ -29,6 +29,18 @@ function parameters(
 }
 
 describe('OpenGrid stackable-cylinder contract', () => {
+  it('keeps manual height at 500 mm while limiting the slider to 200 mm', () => {
+    expect(OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.heightSliderMax).toBe(200)
+    expect(
+      validateOpenGridStackableCylinderParameters(parameters({ height: 500 }))
+        .valid,
+    ).toBe(true)
+    expect(
+      validateOpenGridStackableCylinderParameters(parameters({ height: 501 }))
+        .valid,
+    ).toBe(false)
+  })
+
   it('accepts the exact typed outer-diameter and height snapshot', () => {
     const value = parameters()
 

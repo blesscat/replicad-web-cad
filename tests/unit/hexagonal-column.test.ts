@@ -13,7 +13,7 @@ describe('hexagonal-column contract', () => {
       defaultHeight: 8,
       defaultCount: 1,
       defaultGap: 1,
-      maxHeight: 999,
+      maxHeight: 500,
       heightSliderMax: 200,
       maxGap: 99,
       gapSliderMax: 10,
@@ -57,7 +57,7 @@ describe('hexagonal-column contract', () => {
       { height: 8, count: 0, gap: 1 },
       { height: 8, count: 21, gap: 1 },
       { height: 8, count: 1, gap: 0 },
-      { height: 1000, count: 1, gap: 1 },
+      { height: 501, count: 1, gap: 1 },
       { height: 8, count: 1, gap: 100 },
       { height: 8, count: 1, gap: 1.5 },
       { height: 8, count: 1, gap: 1, rows: 1 },
@@ -66,10 +66,10 @@ describe('hexagonal-column contract', () => {
     }
 
     expect(
-      validateHexagonalColumnParameters({ height: 999, count: 1, gap: 99 }),
+      validateHexagonalColumnParameters({ height: 500, count: 1, gap: 99 }),
     ).toEqual({
       valid: true,
-      value: { height: 999, count: 1, gap: 99, orientation: 'lying' },
+      value: { height: 500, count: 1, gap: 99, orientation: 'lying' },
     })
   })
 

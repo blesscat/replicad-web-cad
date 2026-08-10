@@ -15,6 +15,30 @@ import {
 } from '../../src/cad-contract/units'
 
 describe('OpenGrid divider contract', () => {
+  it('keeps manual height at 500 mm while limiting the slider to 200 mm', () => {
+    expect(OPENGRID_DIVIDER_CONFIGURATION.heightSliderMax).toBe(200)
+    expect(
+      validateOpenGridDividerParameters({
+        left: 1,
+        right: 1,
+        up: 0,
+        down: 0,
+        height: 500,
+        wallThickness: 2,
+      }).valid,
+    ).toBe(true)
+    expect(
+      validateOpenGridDividerParameters({
+        left: 1,
+        right: 1,
+        up: 0,
+        down: 0,
+        height: 501,
+        wallThickness: 2,
+      }).valid,
+    ).toBe(false)
+  })
+
   it('accepts selectable wall thickness and exposes profile dimensions', () => {
     const parameters = normalizeOpenGridDividerParameters({
       left: 1,

@@ -21,7 +21,7 @@ const PILLAR_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
     max: PILLAR_CONFIGURATION.maxLength,
     step: 1,
     sliderMin: PILLAR_CONFIGURATION.minLength,
-    sliderMax: PILLAR_CONFIGURATION.maxLength,
+    sliderMax: PILLAR_CONFIGURATION.lengthSliderMax,
   },
 ]
 
@@ -68,7 +68,7 @@ export const opengridPillarDefinition: ModelDefinition = {
   buildKey: 'opengrid-pillar',
   family: 'opengrid',
   displayName: 'OpenGrid 圓柱支柱',
-  selectionDescription: `OpenGrid 用 Ø5 mm 圓柱支柱，總長度可調整為 3–500 mm，上端固定 ${PILLAR_CONFIGURATION.upperChamfer} mm chamfer，可選擇 Ø7 × 0.8 mm 的連接底版凸台。`,
+  selectionDescription: `OpenGrid 用 Ø5 mm 圓柱支柱；總長度文字輸入 ${PILLAR_CONFIGURATION.minLength}–${PILLAR_CONFIGURATION.maxLength} mm、slider ${PILLAR_CONFIGURATION.minLength}–${PILLAR_CONFIGURATION.lengthSliderMax} mm，上端固定 ${PILLAR_CONFIGURATION.upperChamfer} mm chamfer，可選擇 Ø7 × 0.8 mm 的連接底版凸台。`,
   parameterSchema: PILLAR_PARAMETER_SCHEMA,
   defaultParameters: { ...PILLAR_CONFIGURATION.defaultParameters },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },

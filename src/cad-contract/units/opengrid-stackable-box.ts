@@ -42,6 +42,7 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   maxY: 17.5,
   minHeight: 10,
   maxHeight: 500,
+  heightSliderMax: 200,
   clearanceTotal: 0.15,
   wallThickness: 1.2,
   floorThickness: 1.2,

@@ -71,7 +71,11 @@
   }
 
   let selectedScrewPreset = $derived.by(() => currentScrewPreset())
-  let showAdvancedScrewSettings = $state(parameters.screwKind === 'custom')
+  let showAdvancedScrewSettings = $state(false)
+
+  $effect(() => {
+    showAdvancedScrewSettings = parameters.screwKind === 'custom'
+  })
 
   function valuesEqual(left: unknown, right: unknown): boolean {
     if (Object.is(left, right)) return true
