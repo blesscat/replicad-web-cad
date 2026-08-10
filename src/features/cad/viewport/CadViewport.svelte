@@ -9,15 +9,17 @@
     readCadViewportTheme,
     type CadViewportTheme,
   } from './theme'
+  import type { CadViewportPresentation } from './presentation'
 
   type Props = {
     mesh: MeshSnapshot | null
     modelRevision: string | null
     parameters: ModelParameterValues | null
     stale: boolean
+    presentation: CadViewportPresentation
   }
 
-  let { mesh, modelRevision, parameters, stale }: Props = $props()
+  let { mesh, modelRevision, parameters, stale, presentation }: Props = $props()
   let webglSupported = $state(true)
   let viewportTheme = $state<CadViewportTheme>(readCadViewportTheme())
 
@@ -40,6 +42,7 @@
 <div
   class={`viewport relative h-[calc(100dvh-16rem)] self-start overflow-hidden rounded-2xl border ${stale ? 'border-stale' : 'border-border-card'} bg-viewport`}
   data-testid="cad-viewport"
+  data-presentation={presentation}
   role="img"
   aria-label="3D CAD 預覽"
 >
@@ -59,6 +62,7 @@
           {modelRevision}
           {parameters}
           theme={viewportTheme}
+          {presentation}
         />
       </Canvas>
     {:else}

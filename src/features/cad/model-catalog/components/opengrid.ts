@@ -56,6 +56,12 @@ export const opengridDefinition: ModelDefinition = {
     customScrewPositions: [],
   },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
+  previewImage: {
+    src: '/model-previews/opengrid.png',
+    alt: 'OpenGrid 底板預覽',
+    width: 640,
+    height: 400,
+  },
   validateParameters: validateOpenGridDefinitionParameters,
   boundsForParameters: boundsForOpenGridDefinition,
   exportFileName: openGridFileNameFor,

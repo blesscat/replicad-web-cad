@@ -67,6 +67,12 @@ export const opengridSnapDefinition: ModelDefinition = {
   parameterSchema: OPENGRID_SNAP_PARAMETER_SCHEMA,
   defaultParameters: OPENGRID_SNAP_CONFIGURATION.defaultParameters,
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
+  previewImage: {
+    src: '/model-previews/opengrid-snap.png',
+    alt: 'OpenGrid Snap 預覽',
+    width: 640,
+    height: 400,
+  },
   validateParameters: validateOpenGridSnapDefinitionParameters,
   boundsForParameters: boundsForOpenGridSnapDefinition,
   exportFileName: openGridSnapFileNameFor,

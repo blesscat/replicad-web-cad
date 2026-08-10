@@ -174,6 +174,12 @@ export const opengridStackableBoxDefinition: ModelDefinition = {
     ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
+  previewImage: {
+    src: '/model-previews/opengrid-stackable-box.png',
+    alt: 'OpenGrid 堆疊盒預覽',
+    width: 640,
+    height: 400,
+  },
   validateParameters: validateDefinitionParameters,
   boundsForParameters: boundsForDefinition,
   exportFileName,
