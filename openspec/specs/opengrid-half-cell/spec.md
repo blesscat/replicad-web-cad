@@ -6,31 +6,31 @@
 
 ### Requirement: Shared half-cell axis contract
 
-OpenGrid board and OpenGrid Snap normalized snapshots MUST use the same typed axis fields: `halfCellX` MUST be `none`, `left`, or `right`, and `halfCellY` MUST be `none`, `top`, or `bottom`. `none` MUST mean that the axis has no half-cell. The snapshot MUST NOT use `allowHalfCell`, `halfCellMode`, or an independent diagonal value. Left/right and top/bottom MUST be mutually exclusive by construction of their respective enum fields.
+OpenGrid board normalized snapshots MUST continue to use typed axis fields: `halfCellX` MUST be `none`, `left`, or `right`, and `halfCellY` MUST be `none`, `top`, or `bottom`. Snap normalized snapshots MUST instead use `footprint=full`, `half`, or `quarter`; they MUST NOT persist or expose independent Snap X/Y axis fields. `full` MUST map internally to `none/none`, `half` MUST map internally to `left/none`, and `quarter` MUST map internally to `left/top`. The board and Snap mappings MUST remain isolated, and a Snap footprint MUST NOT be inferred from a board snapshot.
 
-#### Scenario: Full-cell snapshot
+#### Scenario: Full board and full Snap
 
-- **WHEN** a valid OpenGrid or Snap snapshot has `halfCellX=none` and `halfCellY=none`
-- **THEN** the snapshot MUST represent the existing full-cell behavior
-- **AND** no half-cell geometry or half-cell offset MAY be generated
+- **WHEN** a valid OpenGrid board uses `halfCellX=none` and `halfCellY=none` and a valid Snap uses `footprint=full`
+- **THEN** the board MUST represent its existing full-cell behavior
+- **AND** the Snap MUST generate no half-cell boundary geometry
 
-#### Scenario: Single-axis snapshot
+#### Scenario: Board keeps arbitrary supported axis directions
 
-- **WHEN** a valid snapshot has `halfCellX=left` or `right` and `halfCellY=none`
-- **THEN** it MUST represent one X-axis half-cell
-- **AND** it MUST NOT require a separate half-cell-enabled boolean
+- **WHEN** a valid OpenGrid board uses any supported single or dual axis directions
+- **THEN** the board MUST retain its existing direction, dimension, and boundary behavior
+- **AND** those directions MUST NOT appear in or modify the Snap footprint snapshot
 
-#### Scenario: Dual-axis snapshot
+#### Scenario: Canonical Snap half and quarter mapping
 
-- **WHEN** a valid snapshot has a non-`none` `halfCellX` and a non-`none` `halfCellY`
-- **THEN** it MUST represent one X-axis and one Y-axis half-cell
-- **AND** the combined state MUST be derived from those two fields rather than a diagonal enum
+- **WHEN** a valid Snap uses `footprint=half` or `footprint=quarter`
+- **THEN** the builder MUST use `left/none` or `left/top` as its internal mapping respectively
+- **AND** the mapping MUST be deterministic and independent of any OpenGrid board entry
 
-#### Scenario: Invalid half-cell fields
+#### Scenario: Invalid Snap axis fields
 
-- **WHEN** a snapshot contains an unknown X/Y direction, both opposing directions in one axis, `allowHalfCell`, or a diagonal-only field
-- **THEN** runtime validation MUST reject the snapshot before native CAD work
-- **AND** the validation issue MUST identify the half-cell contract mismatch
+- **WHEN** a normalized Snap snapshot contains `halfCellX`, `halfCellY`, opposing directions, `allowHalfCell`, or an independent diagonal field
+- **THEN** Snap validation MUST reject it before native CAD work
+- **AND** the OpenGrid board validator MUST remain responsible for board axis validation
 
 ### Requirement: OpenGrid half-cell dimensions and orientation
 
@@ -111,17 +111,26 @@ half-cell interface is calculated against the complete resulting solid.
 
 ### Requirement: Snap host pitch compatibility
 
-The shared half-cell contract MUST define the Snap host pitch as 28 mm on an axis whose direction is `none` and 14 mm on an axis whose direction is selected. A generated Snap MUST fit inside the corresponding host pitch with the existing clearance policy. Its local bounds MUST remain centered on X/Y, and its direction fields MUST use the same world-axis mapping as the OpenGrid board.
+The shared half-cell geometry contract MUST define the Snap host pitch as 28 mm on an internal canonical axis whose footprint dimension is full and 14 mm on an internal canonical axis whose footprint dimension is half. A generated Snap with `footprint=full` MUST fit a 28 × 28 host; `footprint=half` MUST fit a 14 × 28 host; and `footprint=quarter` MUST fit a 14 × 14 host. Its local bounds MUST remain centered on X/Y, and its canonical boundary orientation MUST match the official `xleft/ytop` OpenGrid edge mapping.
 
-#### Scenario: Single-axis Snap host fit
+#### Scenario: Full-footprint Snap host fit
 
-- **WHEN** a Snap selects `halfCellX=left` and `halfCellY=none`
-- **THEN** its final X envelope MUST fit within the 14 mm X host pitch
-- **AND** its final Y envelope MUST fit within the 28 mm Y host pitch
+- **WHEN** a Snap uses `footprint=full`
+- **THEN** its final X and Y envelopes MUST fit within 28 mm host pitches
+- **AND** its local bounds MUST remain centered on the origin
+
+#### Scenario: Half-footprint Snap host fit
+
+- **WHEN** a Snap uses `footprint=half`
+- **THEN** its final X envelope MUST fit within the 14 mm canonical left host pitch
+- **AND** its final Y envelope MUST fit within the 28 mm host pitch
 - **AND** its left-side interface orientation MUST match the OpenGrid left half-cell contract
+- **AND** all four local footprint corners MUST retain the OpenGrid diagonal locking profile through the selected assembly height
 
-#### Scenario: Dual-axis Snap host fit
+#### Scenario: Quarter-footprint Snap host fit
 
-- **WHEN** a Snap selects non-`none` directions on both axes
-- **THEN** its final X and Y envelopes MUST each fit within a 14 mm host pitch
+- **WHEN** a Snap uses `footprint=quarter`
+- **THEN** its final X and Y envelopes MUST each fit within 14 mm host pitches
+- **AND** its canonical left-top boundary interfaces MUST match the official OpenGrid edge profile
 - **AND** it MUST remain a valid non-empty B-Rep with a usable central embedding interface
+- **AND** all four local footprint corners MUST retain a full-height diagonal locking profile so the result can enter the 1/4 host opening
