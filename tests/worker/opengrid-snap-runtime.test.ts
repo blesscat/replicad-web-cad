@@ -53,8 +53,23 @@ function snapParameters(
   offset: number,
   halfCellX: 'none' | 'left' | 'right' = 'none',
   halfCellY: 'none' | 'top' | 'bottom' = 'none',
+  overrides: Partial<
+    Pick<
+      OpenGridSnapParameters,
+      'profile' | 'fourCornerLocatingHoles' | 'centerRemoverHole'
+    >
+  > = {},
 ): OpenGridSnapParameters {
-  return { variant, offset, halfCellX, halfCellY }
+  return {
+    variant,
+    profile: 'Standard',
+    offset,
+    halfCellX,
+    halfCellY,
+    fourCornerLocatingHoles: false,
+    centerRemoverHole: false,
+    ...overrides,
+  }
 }
 
 function initCommand() {
@@ -113,7 +128,7 @@ describe('OpenGrid Snap Worker runtime', () => {
     configureMocks()
   })
 
-  it('dispatches Snap independently, caches each variant, and quality-gates it', async () => {
+  it('dispatches Snap independently, caches each profile/variant, and quality-gates it', async () => {
     const events: unknown[] = []
     const runtime = new CadWorkerRuntime('epoch-snap', (event) =>
       events.push(event),
@@ -122,6 +137,14 @@ describe('OpenGrid Snap Worker runtime', () => {
     await runtime.handle(generateCommand(snapParameters('Full', 0.2)))
     await runtime.handle(generateCommand(snapParameters('Full', 0), 2))
     await runtime.handle(generateCommand(snapParameters('Lite', 0), 3))
+    await runtime.handle(
+      generateCommand(
+        snapParameters('Full', 0, 'none', 'none', {
+          profile: 'Directional',
+        }),
+        4,
+      ),
+    )
 
     expect(mocks.buildModelBRep).toHaveBeenCalledWith(
       'opengrid-snap',
@@ -130,8 +153,18 @@ describe('OpenGrid Snap Worker runtime', () => {
         getOpenGridSnapReference: expect.any(Function),
       }),
     )
-    expect(mocks.loadOpenGridSnapReference).toHaveBeenCalledTimes(2)
-    expect(mocks.assertOpenGridSnapShapeQuality).toHaveBeenCalledTimes(3)
+    expect(mocks.loadOpenGridSnapReference).toHaveBeenCalledTimes(3)
+    expect(mocks.loadOpenGridSnapReference).toHaveBeenNthCalledWith(
+      1,
+      'Full',
+      'Standard',
+    )
+    expect(mocks.loadOpenGridSnapReference).toHaveBeenNthCalledWith(
+      3,
+      'Full',
+      'Directional',
+    )
+    expect(mocks.assertOpenGridSnapShapeQuality).toHaveBeenCalledTimes(4)
     expect(events).toContainEqual(
       expect.objectContaining({
         kind: 'model.candidate-ready',
@@ -159,6 +192,34 @@ describe('OpenGrid Snap Worker runtime', () => {
       expect.objectContaining({
         kind: 'model.candidate-ready',
         modelId: 'opengrid-snap',
+      }),
+    )
+  })
+
+  it('discards a quality-failed Snap candidate while retaining the next valid one', async () => {
+    const events: unknown[] = []
+    mocks.assertOpenGridSnapShapeQuality.mockImplementationOnce(() => {
+      throw new Error('OPENGRID_SNAP_QUALITY_INVALID')
+    })
+    const runtime = new CadWorkerRuntime('epoch-snap-quality', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(generateCommand(snapParameters('Full', 0), 1))
+    await runtime.handle(generateCommand(snapParameters('Full', 0.05), 2))
+
+    expect(
+      events.filter(
+        (event) =>
+          typeof event === 'object' &&
+          event !== null &&
+          'kind' in event &&
+          event.kind === 'model.candidate-ready',
+      ),
+    ).toHaveLength(1)
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'operation.error',
       }),
     )
   })
@@ -295,16 +356,29 @@ describe('OpenGrid Snap Worker runtime', () => {
 
   it('disposes loaded variant references once', async () => {
     const events: unknown[] = []
-    const references = [{ delete: vi.fn() }, { delete: vi.fn() }]
+    const references = [
+      { delete: vi.fn() },
+      { delete: vi.fn() },
+      { delete: vi.fn() },
+    ]
     mocks.loadOpenGridSnapReference
       .mockResolvedValueOnce(references[0])
       .mockResolvedValueOnce(references[1])
+      .mockResolvedValueOnce(references[2])
     const runtime = new CadWorkerRuntime('epoch-snap-dispose', (event) =>
       events.push(event),
     )
     await runtime.handle(initCommand())
     await runtime.handle(generateCommand(snapParameters('Full', 0)))
     await runtime.handle(generateCommand(snapParameters('Lite', 0), 2))
+    await runtime.handle(
+      generateCommand(
+        snapParameters('Full', 0, 'none', 'none', {
+          profile: 'Directional',
+        }),
+        3,
+      ),
+    )
     await runtime.handle({
       ...base,
       requestId: 'snap-dispose-request',
@@ -314,5 +388,6 @@ describe('OpenGrid Snap Worker runtime', () => {
 
     expect(references[0].delete).toHaveBeenCalledOnce()
     expect(references[1].delete).toHaveBeenCalledOnce()
+    expect(references[2].delete).toHaveBeenCalledOnce()
   })
 })

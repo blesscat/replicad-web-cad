@@ -59,9 +59,12 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
   if (modelId === 'opengrid-snap') {
     return {
       variant: 'Full',
+      profile: 'Standard',
       offset: 0,
       halfCellX: 'none',
       halfCellY: 'none',
+      fourCornerLocatingHoles: false,
+      centerRemoverHole: false,
     }
   }
   if (modelId === 'opengrid-divider') {
@@ -728,9 +731,12 @@ describe('CAD model generation debounce', () => {
         modelId: 'opengrid-snap',
         parameters: {
           variant: 'Full',
+          profile: 'Standard',
           offset: 0.2,
           halfCellX: 'none',
           halfCellY: 'none',
+          fourCornerLocatingHoles: false,
+          centerRemoverHole: false,
         },
       }),
     )

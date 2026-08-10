@@ -12,16 +12,22 @@ describe('OpenGrid Snap contract', () => {
   function parameters(
     overrides: Partial<{
       variant: 'Full' | 'Lite'
+      profile: 'Standard' | 'Directional'
       offset: number
       halfCellX: 'none' | 'left' | 'right'
       halfCellY: 'none' | 'top' | 'bottom'
+      fourCornerLocatingHoles: boolean
+      centerRemoverHole: boolean
     }> = {},
   ) {
     return {
       variant: 'Full' as const,
+      profile: 'Standard' as const,
       offset: 0,
       halfCellX: 'none' as const,
       halfCellY: 'none' as const,
+      fourCornerLocatingHoles: false,
+      centerRemoverHole: false,
       ...overrides,
     }
   }
@@ -47,9 +53,12 @@ describe('OpenGrid Snap contract', () => {
     expect(isOpenGridSnapParameters(full)).toBe(true)
     expect(OPENGRID_SNAP_CONFIGURATION.defaultParameters).toEqual({
       variant: 'Full',
+      profile: 'Standard',
       offset: 0,
       halfCellX: 'none',
       halfCellY: 'none',
+      fourCornerLocatingHoles: false,
+      centerRemoverHole: false,
     })
   })
 
@@ -69,13 +78,19 @@ describe('OpenGrid Snap contract', () => {
   })
 
   it('keeps deterministic variant-aware export filenames', () => {
-    const input = parameters({ variant: 'Lite', offset: 0.15 })
+    const input = parameters({
+      variant: 'Lite',
+      profile: 'Directional',
+      offset: 0.15,
+      fourCornerLocatingHoles: true,
+      centerRemoverHole: true,
+    })
 
     expect(openGridSnapFileName(input)).toBe(
-      'opengrid-snap-lite-offset0.15-xnone-ynone.step',
+      'opengrid-snap-directional-lite-offset0.15-xnone-ynone-corners1-center1.step',
     )
     expect(openGridSnapStlFileName(input)).toBe(
-      'opengrid-snap-lite-offset0.15-xnone-ynone.stl',
+      'opengrid-snap-directional-lite-offset0.15-xnone-ynone-corners1-center1.stl',
     )
   })
 
@@ -134,6 +149,60 @@ describe('OpenGrid Snap contract', () => {
       min: [-6.4, -6.4, 0],
       max: [6.4, 6.4, 6.8],
     })
+  })
+
+  it('keeps Directional asymmetry when selecting a footprint', () => {
+    const full = parameters({ profile: 'Directional' })
+    const left = parameters({ profile: 'Directional', halfCellX: 'left' })
+    const top = parameters({ profile: 'Directional', halfCellY: 'top' })
+    const bottom = parameters({
+      profile: 'Directional',
+      halfCellY: 'bottom',
+    })
+
+    const expectedDirectionalBounds = [
+      [
+        boundsForOpenGridSnap(full),
+        [-12.801, -12.801, -0.001],
+        [12.801, 13.201, 6.801],
+      ],
+      [
+        boundsForOpenGridSnap(left),
+        [-6.4005, -12.801, -0.001],
+        [6.4005, 13.201, 6.801],
+      ],
+      [
+        boundsForOpenGridSnap(top),
+        [-12.801, -6.6005, -0.001],
+        [12.801, 6.6005, 6.801],
+      ],
+      [
+        boundsForOpenGridSnap(bottom),
+        [-12.801, -6.4005, -0.001],
+        [12.801, 6.4005, 6.801],
+      ],
+    ] as const
+    for (const [
+      bounds,
+      expectedMin,
+      expectedMax,
+    ] of expectedDirectionalBounds) {
+      expect(bounds.min[0]).toBeCloseTo(expectedMin[0], 10)
+      expect(bounds.min[1]).toBeCloseTo(expectedMin[1], 10)
+      expect(bounds.min[2]).toBeCloseTo(expectedMin[2], 10)
+      expect(bounds.max[0]).toBeCloseTo(expectedMax[0], 10)
+      expect(bounds.max[1]).toBeCloseTo(expectedMax[1], 10)
+      expect(bounds.max[2]).toBeCloseTo(expectedMax[2], 10)
+    }
+    expect(
+      validateOpenGridSnapParameters(
+        parameters({
+          profile: 'Directional',
+          halfCellY: 'top',
+          offset: 1,
+        }),
+      ).valid,
+    ).toBe(false)
   })
 
   it('keeps every axis direction mutually exclusive and host-compatible', () => {

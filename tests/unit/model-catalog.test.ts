@@ -324,11 +324,12 @@ describe('CAD component catalog', () => {
     })
   })
 
-  it('registers Snap as a separate Full/Lite model with outer-only controls', () => {
+  it('registers Snap profiles and optional body features', () => {
     const snap = getModelDefinition('opengrid-snap')
     expect(snap?.displayName).toBe('OpenGrid Snap')
     expect(snap?.selectionDescription).toContain('Full')
     expect(snap?.selectionDescription).toContain('Lite')
+    expect(snap?.selectionDescription).toContain('Directional')
     expect(snap?.parameterSchema.map((field) => field.key)).toEqual(['offset'])
     expect(snap?.parameterSchema[0]).toMatchObject({
       control: 'range',
@@ -338,16 +339,22 @@ describe('CAD component catalog', () => {
     })
     expect(snap?.defaultParameters).toEqual({
       variant: 'Full',
+      profile: 'Standard',
       offset: 0,
       halfCellX: 'none',
       halfCellY: 'none',
+      fourCornerLocatingHoles: false,
+      centerRemoverHole: false,
     })
     expect(
       snap?.boundsForParameters({
         variant: 'Lite',
+        profile: 'Standard',
         offset: 0.2,
         halfCellX: 'none',
         halfCellY: 'none',
+        fourCornerLocatingHoles: false,
+        centerRemoverHole: false,
       }),
     ).toEqual({
       min: [-12.9, -12.9, 0],
@@ -356,25 +363,38 @@ describe('CAD component catalog', () => {
     expect(
       snap?.exportFileName({
         variant: 'Full',
+        profile: 'Standard',
         offset: 0.2,
         halfCellX: 'none',
         halfCellY: 'none',
+        fourCornerLocatingHoles: false,
+        centerRemoverHole: false,
       }),
-    ).toBe('opengrid-snap-full-offset0.2-xnone-ynone.step')
+    ).toBe(
+      'opengrid-snap-standard-full-offset0.2-xnone-ynone-corners0-center0.step',
+    )
     expect(
       snap?.stlFileName({
         variant: 'Lite',
+        profile: 'Standard',
         offset: 0.15,
         halfCellX: 'none',
         halfCellY: 'none',
+        fourCornerLocatingHoles: false,
+        centerRemoverHole: false,
       }),
-    ).toBe('opengrid-snap-lite-offset0.15-xnone-ynone.stl')
+    ).toBe(
+      'opengrid-snap-standard-lite-offset0.15-xnone-ynone-corners0-center0.stl',
+    )
     expect(
       snap?.validateParameters({
         variant: 'Full',
+        profile: 'Directional',
         offset: 0.2,
         halfCellX: 'none',
         halfCellY: 'none',
+        fourCornerLocatingHoles: true,
+        centerRemoverHole: true,
       }),
     ).toEqual({
       valid: true,
@@ -382,9 +402,12 @@ describe('CAD component catalog', () => {
         modelId: 'opengrid-snap',
         parameters: {
           variant: 'Full',
+          profile: 'Directional',
           offset: 0.2,
           halfCellX: 'none',
           halfCellY: 'none',
+          fourCornerLocatingHoles: true,
+          centerRemoverHole: true,
         },
       },
     })

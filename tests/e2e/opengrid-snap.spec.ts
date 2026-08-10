@@ -4,7 +4,7 @@ import {
   skipHeadlessFirefoxWithoutWebGL,
 } from './helpers'
 
-test('OpenGrid Snap route exposes only Full/Lite and one shared outer offset', async ({
+test('OpenGrid Snap route exposes profiles, features, and one shared outer offset', async ({
   page,
 }) => {
   await page.goto('/cad/opengrid-snap')
@@ -17,6 +17,26 @@ test('OpenGrid Snap route exposes only Full/Lite and one shared outer offset', a
       .getByRole('combobox', { name: 'OpenGrid Snap 型號' })
       .locator('option'),
   ).toHaveCount(2)
+  const profile = page.getByRole('combobox', { name: 'OpenGrid Snap 幾何版本' })
+  await expect(profile.locator('option')).toHaveCount(2)
+  const cornerHoles = page.getByRole('checkbox', {
+    name: 'OpenGrid Snap 四周定位孔',
+  })
+  const centerRemover = page.getByRole('checkbox', {
+    name: 'OpenGrid Snap 中心 remover 孔',
+  })
+  await expect(cornerHoles).not.toBeChecked()
+  await expect(centerRemover).not.toBeChecked()
+  await profile.selectOption('Directional')
+  await cornerHoles.check()
+  await centerRemover.check()
+  await page.reload()
+  await expect(profile).toHaveValue('Directional')
+  await expect(cornerHoles).toBeChecked()
+  await expect(centerRemover).toBeChecked()
+  await profile.selectOption('Standard')
+  await cornerHoles.uncheck()
+  await centerRemover.uncheck()
   const offset = page.getByRole('slider', { name: '外框總增量（X/Y）' })
   await expect(offset).toHaveValue('0')
   await expect(offset).toHaveAttribute('min', '0')
@@ -94,16 +114,33 @@ test('OpenGrid Snap generates the complete assembly and exports the committed re
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const stepDownload = await stepDownloadPromise
   expect(stepDownload.suggestedFilename()).toBe(
-    'opengrid-snap-full-offset0.2-xnone-ynone.step',
+    'opengrid-snap-standard-full-offset0.2-xnone-ynone-corners0-center0.step',
   )
 
   const stlDownloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: '下載 STL' }).click()
   const stlDownload = await stlDownloadPromise
   expect(stlDownload.suggestedFilename()).toBe(
-    'opengrid-snap-full-offset0.2-xnone-ynone.stl',
+    'opengrid-snap-standard-full-offset0.2-xnone-ynone-corners0-center0.stl',
   )
   await expect
     .poll(() => readBinaryStlByteLength(stlDownload))
     .toBeGreaterThan(84)
+
+  await page
+    .getByRole('combobox', { name: 'OpenGrid Snap 幾何版本' })
+    .selectOption('Directional')
+  await page.getByRole('checkbox', { name: 'OpenGrid Snap 四周定位孔' }).check()
+  await page
+    .getByRole('checkbox', { name: 'OpenGrid Snap 中心 remover 孔' })
+    .check()
+  await expect(page.getByRole('button', { name: '下載 STEP' })).toBeEnabled({
+    timeout: 90_000,
+  })
+  const directionalStepDownloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '下載 STEP' }).click()
+  const directionalStepDownload = await directionalStepDownloadPromise
+  expect(directionalStepDownload.suggestedFilename()).toBe(
+    'opengrid-snap-directional-full-offset0.2-xnone-ynone-corners1-center1.step',
+  )
 })

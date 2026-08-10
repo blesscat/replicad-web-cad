@@ -76,7 +76,15 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
     return OPENGRID_STACKABLE_CYLINDER_PARAMETER_KEYS
   }
   if (modelId === 'opengrid-snap') {
-    return ['variant', 'offset', 'halfCellX', 'halfCellY']
+    return [
+      'variant',
+      'profile',
+      'offset',
+      'halfCellX',
+      'halfCellY',
+      'fourCornerLocatingHoles',
+      'centerRemoverHole',
+    ]
   }
   if (modelId === 'opengrid-snap-remover') return []
   if (modelId === 'opengrid-divider') return OPENGRID_DIVIDER_PARAMETER_KEYS
@@ -103,6 +111,22 @@ function legacyBooleanDefault(
   if (key === 'bottomPlateMode') return 'false'
   if (key === 'bottomHolesEnabled') return 'true'
   return undefined
+}
+
+function parseBooleanRawParameter(
+  rawValue: string | undefined,
+  field: ModelParameterKey,
+):
+  | { valid: true; value: boolean }
+  | { valid: false; message: string; field: ModelParameterKey } {
+  const value = rawValue ?? 'false'
+  if (value === 'true') return { valid: true, value: true }
+  if (value === 'false') return { valid: true, value: false }
+  return {
+    valid: false,
+    message: '必須是 true 或 false。',
+    field,
+  }
 }
 
 export function rawFromParameters(
@@ -204,9 +228,12 @@ export function rawFromParameters(
     const snapParameters = parameters as OpenGridSnapParameters
     return {
       variant: snapParameters.variant,
+      profile: snapParameters.profile,
       offset: String(snapParameters.offset),
       halfCellX: snapParameters.halfCellX,
       halfCellY: snapParameters.halfCellY,
+      fourCornerLocatingHoles: String(snapParameters.fourCornerLocatingHoles),
+      centerRemoverHole: String(snapParameters.centerRemoverHole),
     }
   }
 
@@ -275,6 +302,15 @@ export function parseRawParameters(
       }
     }
 
+    const profile = raw.profile ?? 'Standard'
+    if (profile !== 'Standard' && profile !== 'Directional') {
+      return {
+        valid: false,
+        message: '幾何 profile 必須是 Standard 或 Directional。',
+        field: 'profile',
+      }
+    }
+
     const offset = parseOpenGridSnapDecimalInput(raw.offset ?? '')
     if (offset === null) {
       return {
@@ -302,11 +338,26 @@ export function parseRawParameters(
       }
     }
 
+    const fourCornerLocatingHoles = parseBooleanRawParameter(
+      raw.fourCornerLocatingHoles,
+      'fourCornerLocatingHoles',
+    )
+    if (!fourCornerLocatingHoles.valid) return fourCornerLocatingHoles
+
+    const centerRemoverHole = parseBooleanRawParameter(
+      raw.centerRemoverHole,
+      'centerRemoverHole',
+    )
+    if (!centerRemoverHole.valid) return centerRemoverHole
+
     const validation = validateModelParameters(modelId, {
       variant,
+      profile,
       offset,
       halfCellX,
       halfCellY,
+      fourCornerLocatingHoles: fourCornerLocatingHoles.value,
+      centerRemoverHole: centerRemoverHole.value,
     } satisfies OpenGridSnapParameters)
     if (!validation.valid) {
       const issue = validation.issues[0]

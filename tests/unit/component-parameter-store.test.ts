@@ -192,9 +192,12 @@ describe('component parameter store', () => {
     })
     expect(store.get('opengrid-snap')).toEqual({
       variant: 'Lite',
+      profile: 'Standard',
       offset: 0.2,
       halfCellX: 'none',
       halfCellY: 'none',
+      fourCornerLocatingHoles: false,
+      centerRemoverHole: false,
     })
 
     expect(store.get('opengrid-stackable-cylinder')).toEqual({
@@ -409,17 +412,23 @@ describe('component parameter store', () => {
     expect(
       store.set('opengrid-snap', {
         variant: 'Full',
+        profile: 'Standard',
         offset: 0.25,
         halfCellX: 'none',
         halfCellY: 'none',
+        fourCornerLocatingHoles: true,
+        centerRemoverHole: false,
       }),
     ).toBe(true)
     expect(store.get('opengrid')).toEqual(board)
     expect(store.get('opengrid-snap')).toEqual({
       variant: 'Full',
+      profile: 'Standard',
       offset: 0.25,
       halfCellX: 'none',
       halfCellY: 'none',
+      fourCornerLocatingHoles: true,
+      centerRemoverHole: false,
     })
     store.dispose()
   })
@@ -453,8 +462,11 @@ describe('component parameter store', () => {
     expect(
       store.set('opengrid-snap', {
         ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
+        profile: 'Directional',
         halfCellX: 'right',
         halfCellY: 'bottom',
+        fourCornerLocatingHoles: true,
+        centerRemoverHole: false,
       }),
     ).toBe(true)
     expect(store.get('opengrid')).toMatchObject({
@@ -462,9 +474,23 @@ describe('component parameter store', () => {
       halfCellY: 'top',
     })
     expect(store.get('opengrid-snap')).toMatchObject({
+      profile: 'Directional',
       halfCellX: 'right',
       halfCellY: 'bottom',
+      fourCornerLocatingHoles: true,
     })
+    expect(
+      store.set('opengrid-snap', {
+        ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
+        profile: 'Diagonal' as never,
+      }),
+    ).toBe(false)
+    expect(
+      store.set('opengrid-snap', {
+        ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
+        fourCornerLocatingHoles: 'true' as never,
+      }),
+    ).toBe(false)
     store.dispose()
   })
 

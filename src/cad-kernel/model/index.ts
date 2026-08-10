@@ -18,6 +18,7 @@ import {
   type ModelId,
   type ModelParameterValues,
   type OpenGridVariant,
+  type OpenGridSnapProfile,
   type OpenGridSnapVariant,
 } from '../../cad-contract/units'
 import { buildBoxBRep } from '../components/box/builder'
@@ -43,7 +44,10 @@ export type KernelBuildContext = {
   getBoxNormalReference?: () => Promise<Shape3D>
   getHexagonalColumnReference?: () => Promise<Shape3D>
   getOpenGridPrototype?: (variant: OpenGridVariant) => Promise<Shape3D>
-  getOpenGridSnapReference?: (variant: OpenGridSnapVariant) => Promise<Shape3D>
+  getOpenGridSnapReference?: (
+    variant: OpenGridSnapVariant,
+    profile: OpenGridSnapProfile,
+  ) => Promise<Shape3D>
   getOpenGridSnapRemoverAsset?: () => Promise<Shape3D>
   yieldToEventLoop?: () => Promise<void>
   isGenerationCurrent?: () => boolean

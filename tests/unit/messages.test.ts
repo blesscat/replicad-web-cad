@@ -118,9 +118,12 @@ describe('Worker contract runtime validation', () => {
       modelId: 'opengrid-snap' as const,
       parameters: {
         variant: 'Full' as const,
+        profile: 'Standard' as const,
         offset: 0.2,
         halfCellX: 'none' as const,
         halfCellY: 'none' as const,
+        fourCornerLocatingHoles: false,
+        centerRemoverHole: false,
       },
       previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
     }
@@ -141,9 +144,12 @@ describe('Worker contract runtime validation', () => {
         ...command,
         parameters: {
           variant: 'Full',
+          profile: 'Standard',
           offset: 0.2,
           halfCellX: 'diagonal',
           halfCellY: 'none',
+          fourCornerLocatingHoles: false,
+          centerRemoverHole: false,
         },
       }),
     ).toBe(false)

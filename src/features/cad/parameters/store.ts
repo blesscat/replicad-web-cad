@@ -5,6 +5,7 @@ import {
   type ModelParameterValues,
 } from '../../../cad-contract/units'
 import { getModelDefinition, modelDefinitions } from '../model-catalog'
+import { normalizeOpenGridSnapParameters } from '../../../cad-contract/units'
 
 export const COMPONENT_PARAMETER_STORAGE_KEY =
   'replicad-web-cad.component-parameters'
@@ -38,6 +39,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
+  if (modelId === 'opengrid-snap') {
+    return normalizeOpenGridSnapParameters(value)
+  }
   if (modelId === 'opengrid-stackable-cylinder' && isRecord(value)) {
     return {
       ...value,
@@ -60,6 +64,13 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
         ? value.bottomHolesEnabled
         : true,
     }
+  }
+  if (
+    modelId === 'opengrid-stackable-box' &&
+    isRecord(value) &&
+    !Object.prototype.hasOwnProperty.call(value, 'fullBottomHoleGrid')
+  ) {
+    return { ...value, fullBottomHoleGrid: false }
   }
 
   if (modelId === 'opengrid-divider' && isRecord(value)) {

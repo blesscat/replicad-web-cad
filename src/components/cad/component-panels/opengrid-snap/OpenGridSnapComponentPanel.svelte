@@ -39,8 +39,16 @@
   }
 
   let rawOffset = $derived(rawParameters.offset ?? String(parameters.offset))
+  let rawProfile = $derived(rawParameters.profile ?? parameters.profile)
   let rawHalfCellX = $derived(rawParameters.halfCellX ?? parameters.halfCellX)
   let rawHalfCellY = $derived(rawParameters.halfCellY ?? parameters.halfCellY)
+  let rawFourCornerLocatingHoles = $derived(
+    rawParameters.fourCornerLocatingHoles ??
+      String(parameters.fourCornerLocatingHoles),
+  )
+  let rawCenterRemoverHole = $derived(
+    rawParameters.centerRemoverHole ?? String(parameters.centerRemoverHole),
+  )
 
   function updateHalfCellX(event: Event): void {
     if (!(event.currentTarget instanceof HTMLSelectElement)) return
@@ -50,6 +58,14 @@
   function updateHalfCellY(event: Event): void {
     if (!(event.currentTarget instanceof HTMLSelectElement)) return
     onInputChange('halfCellY', event.currentTarget.value as HalfCellY)
+  }
+
+  function updateBoolean(
+    key: 'fourCornerLocatingHoles' | 'centerRemoverHole',
+    event: Event,
+  ): void {
+    if (!(event.currentTarget instanceof HTMLInputElement)) return
+    onInputChange(key, String(event.currentTarget.checked))
   }
 </script>
 
@@ -75,6 +91,31 @@
     >
       <option value="Full">Full（6.8 mm）</option>
       <option value="Lite">Lite（3.4 mm）</option>
+    </select>
+  </ParameterField>
+
+  <ParameterField
+    label="幾何版本"
+    error={fieldError('profile')}
+    errorId="opengrid-snap-profile-error"
+    onRestore={() => onInputChange('profile', 'Standard')}
+  >
+    <select
+      class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+      aria-label="OpenGrid Snap 幾何版本"
+      aria-describedby={fieldError('profile')
+        ? 'opengrid-snap-profile-error'
+        : undefined}
+      aria-invalid={Boolean(fieldError('profile'))}
+      value={rawProfile}
+      onchange={(event) => {
+        if (event.currentTarget instanceof HTMLSelectElement) {
+          onInputChange('profile', event.currentTarget.value)
+        }
+      }}
+    >
+      <option value="Standard">Standard</option>
+      <option value="Directional">Directional</option>
     </select>
   </ParameterField>
 
@@ -137,6 +178,42 @@
         <option value="top">上</option>
         <option value="bottom">下</option>
       </select>
+    </ParameterField>
+  </div>
+
+  <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+    <ParameterField
+      label="四周定位孔"
+      error={fieldError('fourCornerLocatingHoles')}
+      errorId="opengrid-snap-four-corner-holes-error"
+      onRestore={() => onInputChange('fourCornerLocatingHoles', 'false')}
+    >
+      <label class="flex items-center gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          aria-label="OpenGrid Snap 四周定位孔"
+          checked={rawFourCornerLocatingHoles === 'true'}
+          onchange={(event) => updateBoolean('fourCornerLocatingHoles', event)}
+        />
+        啟用四個定位孔
+      </label>
+    </ParameterField>
+
+    <ParameterField
+      label="中心 remover 孔"
+      error={fieldError('centerRemoverHole')}
+      errorId="opengrid-snap-center-remover-hole-error"
+      onRestore={() => onInputChange('centerRemoverHole', 'false')}
+    >
+      <label class="flex items-center gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          aria-label="OpenGrid Snap 中心 remover 孔"
+          checked={rawCenterRemoverHole === 'true'}
+          onchange={(event) => updateBoolean('centerRemoverHole', event)}
+        />
+        啟用中心 remover 孔
+      </label>
     </ParameterField>
   </div>
 

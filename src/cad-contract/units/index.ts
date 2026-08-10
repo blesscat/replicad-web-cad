@@ -53,6 +53,7 @@ import type {
 import {
   boundsForOpenGridSnap,
   isOpenGridSnapParameters,
+  normalizeOpenGridSnapParameters,
   openGridSnapFileName,
   openGridSnapStlFileName,
   OPENGRID_SNAP_CONFIGURATION,
@@ -168,6 +169,7 @@ export {
 export {
   boundsForOpenGridSnap,
   isOpenGridSnapParameters,
+  normalizeOpenGridSnapParameters,
   openGridSnapFileName,
   openGridSnapStlFileName,
   OPENGRID_SNAP_CONFIGURATION,
@@ -196,6 +198,7 @@ export type {
   OpenGridSnapParameters,
   OpenGridSnapValidation,
   OpenGridSnapValidationIssue,
+  OpenGridSnapProfile,
   OpenGridSnapVariant,
 } from './opengrid-snap'
 export type {
