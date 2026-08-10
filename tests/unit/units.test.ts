@@ -36,6 +36,9 @@ describe('box units and validation', () => {
       validateBoxParameters({ width: 501, depth: 30, height: 40 }).valid,
     ).toBe(false)
     expect(
+      validateBoxParameters({ width: 500, depth: 500, height: 500 }).valid,
+    ).toBe(true)
+    expect(
       validateBoxParameters({ width: 20.5, depth: 30, height: 40 }).valid,
     ).toBe(false)
     expect(
@@ -65,6 +68,7 @@ describe('box-normal units and validation', () => {
       maxY: 35,
       minHeight: 10,
       maxHeight: 500,
+      heightSliderMax: 200,
       clearanceTotal: 0.15,
       cornerPostHeight: 7,
       cornerPostCrossSectionRotationDegrees: 0,
@@ -111,6 +115,17 @@ describe('box-normal units and validation', () => {
         expect.closeTo(-200.6, 10),
         expect.closeTo(200.6, 10),
       ]),
+    )
+  })
+
+  it('accepts the manual height maximum and rejects values above it', () => {
+    const base = { x: 2, y: 2, cornerPosts: true }
+
+    expect(validateBoxNormalParameters({ ...base, height: 500 }).valid).toBe(
+      true,
+    )
+    expect(validateBoxNormalParameters({ ...base, height: 501 }).valid).toBe(
+      false,
     )
   })
 

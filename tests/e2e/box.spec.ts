@@ -16,9 +16,11 @@ test('box CAD route exposes fallback and locked parameter controls', async ({
   await expect(
     page.getByRole('heading', { name: '目前編輯：方塊', exact: true }),
   ).toBeVisible()
-  await expect(page.getByRole('textbox', { name: /寬度/ })).toBeVisible()
-  await expect(page.getByRole('textbox', { name: /深度/ })).toBeVisible()
-  await expect(page.getByRole('textbox', { name: /高度/ })).toBeVisible()
+  for (const name of [/寬度/, /深度/, /高度/]) {
+    const field = page.getByRole('textbox', { name })
+    await expect(field).toBeVisible()
+    await expect(field).toHaveAttribute('max', '500')
+  }
   await expect(
     page.getByRole('combobox', { name: 'CAD component' }),
   ).toHaveCount(0)

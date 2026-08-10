@@ -84,7 +84,7 @@ export const hexagonalColumnDefinition: ModelDefinition = {
   family: 'other',
   displayName: '可調六角柱',
   selectionDescription:
-    '以參考六角柱截面建立固定端部倒角的直柱，可調整整體長度、支數與間隙，預設躺下排列（間隙 1 mm）。',
+    '以參考六角柱截面建立固定端部倒角的直柱；長度文字輸入 1–500 mm、slider 1–200 mm，可調整支數與間隙，預設躺下排列（間隙 1 mm）。',
   parameterSchema: HEXAGONAL_COLUMN_PARAMETER_SCHEMA,
   defaultParameters: {
     height: HEXAGONAL_COLUMN_CONFIGURATION.defaultHeight,

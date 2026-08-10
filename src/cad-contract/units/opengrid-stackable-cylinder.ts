@@ -95,6 +95,7 @@ export const OPENGRID_STACKABLE_CYLINDER_CONFIGURATION = {
   defaultHeight: 30,
   minHeight: 10,
   maxHeight: 500,
+  heightSliderMax: 200,
   inputStep: 1,
   wallThickness: 2,
   defaultFloorThickness: 5,

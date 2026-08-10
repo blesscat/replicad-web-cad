@@ -61,6 +61,7 @@ export const OPENGRID_DIVIDER_CONFIGURATION = {
   maxArmCount: 35.5,
   minHeight: 2,
   maxHeight: 500,
+  heightSliderMax: 200,
   defaultParameters: {
     left: 1,
     right: 1,

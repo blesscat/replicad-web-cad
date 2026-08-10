@@ -21,7 +21,7 @@
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
   <p class="m-0 text-sm text-muted">
-    長度包含兩端固定 0.2 mm 過渡；長度可用 slider 調整 1–200 mm 或輸入 1–999
+    長度包含兩端固定 0.2 mm 過渡；長度可用 slider 調整 1–200 mm 或輸入 1–500
     mm，間隙可用 slider 調整 1–10 mm 或輸入 1–99 mm；支數沿 Y
     軸排列，預設躺下（長軸沿 X），也可切換站立（長軸沿 Z）；預設柱間隙為 1
     mm，不融合。

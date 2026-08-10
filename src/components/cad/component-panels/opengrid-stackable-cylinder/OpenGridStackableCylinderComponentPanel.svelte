@@ -237,6 +237,9 @@
   >
     {modeSummary(activeMode)}
   </p>
+  <p class="m-0 text-sm text-muted">
+    高度文字輸入為 10–500 mm、slider 為 10–200 mm；外徑維持 20–300 mm。
+  </p>
   <label class="flex items-start gap-2 text-sm">
     <input
       class="mt-0.5"

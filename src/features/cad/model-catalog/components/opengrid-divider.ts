@@ -65,7 +65,7 @@ const OPENGRID_DIVIDER_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
     max: OPENGRID_DIVIDER_CONFIGURATION.maxHeight,
     step: 1,
     sliderMin: OPENGRID_DIVIDER_CONFIGURATION.minHeight,
-    sliderMax: OPENGRID_DIVIDER_CONFIGURATION.maxHeight,
+    sliderMax: OPENGRID_DIVIDER_CONFIGURATION.heightSliderMax,
   },
   {
     key: 'wallThickness',
@@ -121,7 +121,8 @@ export const opengridDividerDefinition: ModelDefinition = {
   buildKey: 'opengrid-divider',
   family: 'opengrid',
   displayName: 'OpenGrid 分隔塊',
-  selectionDescription: '自製 OpenGrid 分隔塊。',
+  selectionDescription:
+    '自製 OpenGrid 分隔塊；高度文字輸入 2–500 mm、slider 2–200 mm，平面 footprint 上限 500 mm。',
   parameterSchema: OPENGRID_DIVIDER_PARAMETER_SCHEMA,
   defaultParameters: { ...OPENGRID_DIVIDER_CONFIGURATION.defaultParameters },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
