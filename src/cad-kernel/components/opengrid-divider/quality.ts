@@ -29,6 +29,7 @@ export type OpenGridDividerQualityReport = {
   locatedPegCount: number
   topFilletFaceCount: number
   transitionFaceCount: number
+  transitionFilletFaceCount: number
   baseProfileWidth: number | null
   transitionProfileWidth: number | null
   upperProfileWidth: number | null
@@ -97,6 +98,38 @@ function faceCountInZBand(
     try {
       const [[, , minZ], [, , maxZ]] = boundingBox.bounds as number[][]
       if (predicate(face.surface.surfaceType, minZ, maxZ)) count += 1
+    } finally {
+      boundingBox.delete()
+      face.delete()
+    }
+  }
+  return count
+}
+
+function transitionFilletFaceCountFor(
+  shape: Shape3D,
+  parameters: OpenGridDividerParameters,
+): number {
+  const transitionHeight = openGridDividerTransitionHeightFor(parameters)
+  if (transitionHeight <= 0) return 0
+  const transitionStart = OPENGRID_DIVIDER_CONFIGURATION.geometrySafetyMargin
+  const transitionEnd = transitionStart + transitionHeight
+  let count = 0
+  for (const face of shape.faces) {
+    const boundingBox = face.boundingBox
+    try {
+      const [[minX, minY, minZ], [maxX, maxY, maxZ]] =
+        boundingBox.bounds as number[][]
+      const shortPlanSpan = Math.min(maxX - minX, maxY - minY)
+      if (
+        face.surface.surfaceType === 'CYLINDRE' &&
+        minZ <= transitionStart + 0.02 &&
+        maxZ >= transitionStart + 0.02 &&
+        maxZ <= transitionEnd + 1 &&
+        shortPlanSpan < parameters.wallThickness
+      ) {
+        count += 1
+      }
     } finally {
       boundingBox.delete()
       face.delete()
@@ -341,6 +374,13 @@ export function inspectOpenGridDividerShapeQuality(
   if (transitionHeight > 0 && transitionFaceCount < 1) {
     failures.push('chamfer:45-degree-transition-missing')
   }
+  const transitionFilletFaceCount = transitionFilletFaceCountFor(
+    shape,
+    parameters,
+  )
+  if (transitionHeight > 0 && transitionFilletFaceCount < 1) {
+    failures.push('fillet:transition-edge-rounding-missing')
+  }
 
   let baseProfileWidth: number | null = null
   let transitionProfileWidth: number | null = null
@@ -403,6 +443,7 @@ export function inspectOpenGridDividerShapeQuality(
     locatedPegCount,
     topFilletFaceCount,
     transitionFaceCount,
+    transitionFilletFaceCount,
     baseProfileWidth,
     transitionProfileWidth,
     upperProfileWidth,

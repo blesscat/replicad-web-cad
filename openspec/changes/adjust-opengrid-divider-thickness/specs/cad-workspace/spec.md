@@ -2,7 +2,7 @@
 
 ### Requirement: OpenGrid 分隔器 CAD workspace
 
-The system MUST register `opengrid-divider` as an independent model definition and MUST route `/cad/opengrid-divider` to that definition. The route MUST expose only the divider's `left`, `right`, `up`, `down`, `height`, and `wallThickness` controls, plus the derived shape label, thickness, 45-degree chamfer description, and dimensions. It MUST NOT show the official OpenGrid Full/Lite/Heavy, connector, or screw controls.
+The system MUST register `opengrid-divider` as an independent model definition and MUST route `/cad/opengrid-divider` to that definition. The route MUST expose only the divider's `left`, `right`, `up`, `down`, `height`, and `wallThickness` controls without a detailed derived geometry summary. It MUST NOT show the official OpenGrid Full/Lite/Heavy, connector, or screw controls.
 
 #### Scenario: 直接開啟分隔器 route
 
@@ -16,8 +16,7 @@ The system MUST register `opengrid-divider` as an independent model definition a
 - **WHEN** the divider workspace is rendered
 - **THEN** it MUST display four directional grid-count controls, a configurable height in millimetres, and a wall-thickness control with values from 1 through 5 mm
 - **AND** the thickness control MUST identify 2 mm as the default
-- **AND** it MUST display the derived line/L/T/cross shape
-- **AND** it MUST display the derived 14 mm full-grid/7 mm half-grid footprint, selected wall thickness, 45-degree base chamfer, and total Z bounds including the 3 mm peg length
+- **AND** it MUST NOT display a separate technical summary for the 14 mm/7 mm footprint, shape, plane dimensions, chamfer, locating pegs, or total Z bounds
 - **AND** it MUST NOT display controls belonging to another model
 
 ### Requirement: 分隔器輸入生命週期

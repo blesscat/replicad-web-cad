@@ -50,6 +50,7 @@ export const OPENGRID_DIVIDER_CONFIGURATION = {
   minWallThickness: 1,
   maxWallThickness: 5,
   transitionChamferAngle: 45,
+  transitionFilletRadius: 0.4,
   geometrySafetyMargin: 0.1,
   pegDiameter: 5,
   pegLength: 3,

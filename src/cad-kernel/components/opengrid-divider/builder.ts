@@ -116,6 +116,24 @@ function topFilletRadiusForGeometry(
   )
 }
 
+function transitionFilletRadiusForGeometry(
+  parameters: OpenGridDividerParameters,
+): number {
+  const transitionHeight = openGridDividerTransitionHeightFor(parameters)
+  if (transitionHeight <= FILLET_RADIUS_EPSILON) return 0
+  const maximumRadius = Math.min(
+    parameters.wallThickness / 2,
+    transitionHeight / 2,
+  )
+  return Math.max(
+    0,
+    Math.min(
+      OPENGRID_DIVIDER_CONFIGURATION.transitionFilletRadius,
+      maximumRadius - FILLET_RADIUS_EPSILON,
+    ),
+  )
+}
+
 function filletRadiusForEdge(
   edge: {
     startPoint: { x?: number; y?: number; z?: number; delete: () => void }
@@ -157,6 +175,24 @@ function filletRadiusForEdge(
         return null
       }
       return sideFilletRadiusForGeometry(parameters)
+    }
+
+    const armCoordinateDelta =
+      armAxis === 'x'
+        ? Math.abs((end.x ?? 0) - (start.x ?? 0))
+        : Math.abs((end.y ?? 0) - (start.y ?? 0))
+    const transverseCoordinateDelta =
+      armAxis === 'x'
+        ? Math.abs((end.y ?? 0) - (start.y ?? 0))
+        : Math.abs((end.x ?? 0) - (start.x ?? 0))
+    const isTransitionSlope =
+      armCoordinateDelta <= tolerance &&
+      transverseCoordinateDelta > tolerance &&
+      start.z !== undefined &&
+      end.z !== undefined &&
+      Math.abs(end.z - start.z) > tolerance
+    if (isTransitionSlope) {
+      return transitionFilletRadiusForGeometry(parameters)
     }
 
     return null
@@ -314,7 +350,8 @@ function roundedWallPart(
   try {
     if (
       topFilletRadiusForGeometry(parameters) <= FILLET_RADIUS_EPSILON &&
-      sideFilletRadiusForGeometry(parameters) <= FILLET_RADIUS_EPSILON
+      sideFilletRadiusForGeometry(parameters) <= FILLET_RADIUS_EPSILON &&
+      transitionFilletRadiusForGeometry(parameters) <= FILLET_RADIUS_EPSILON
     ) {
       solid = asSingleSolid(wall)
       return solid

@@ -121,8 +121,7 @@ export const opengridDividerDefinition: ModelDefinition = {
   buildKey: 'opengrid-divider',
   family: 'opengrid',
   displayName: 'OpenGrid 分隔塊',
-  selectionDescription:
-    '適用於自製 14 mm 整格（7 mm 半格）底座的分隔牆產生器，可用 0.5 格步進設定上下左右格數、可調 1–5 mm 上方牆厚（預設 2 mm）與高度；底部保留 5 mm 支撐並以名義 45° 斜角過渡，保留穩定側邊圓角與 1 mm 頂部圓角，另自動加入 Ø5 × 3 mm、28 mm 中心距定位柱。',
+  selectionDescription: '自製 OpenGrid 分隔塊。',
   parameterSchema: OPENGRID_DIVIDER_PARAMETER_SCHEMA,
   defaultParameters: { ...OPENGRID_DIVIDER_CONFIGURATION.defaultParameters },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },

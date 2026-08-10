@@ -6,9 +6,10 @@ The existing divider contract has an exact five-field snapshot (`left`, `right`,
 
 **Goals:**
 
-- Add one integer `wallThickness` control with values 1, 2, 3, 4, and 5 mm, defaulting to 2 mm.
+- Add one integer `wallThickness` control with values 1, 2, 3, 4, and 5 mm, defaulting to 2 mm, without adding a detailed derived-geometry summary to the panel.
 - Preserve a 5 mm base support footprint at `Z=0` while producing the selected thinner upper wall.
 - Build a symmetric nominal 45-degree planar chamfer transition, stable for every supported thickness value and suitable for upside-down printing.
+- Round the short end edges of the 45-degree transition with a bounded fixed radius so the transition's side corners are softened without adding another user control.
 - Preserve the existing directional arm semantics, central-junction anchoring, peg placement, Worker lifecycle, model IDs, and export behavior.
 - Keep all generated profiles as valid single solids and add cross-section evidence for the new geometry.
 
@@ -43,7 +44,7 @@ Construct horizontal and vertical arms from the same canonical cross-section, th
 
 ### 3. Bound every fillet by its local profile
 
-The current nominal 2.5 mm side radius is valid for the 5 mm base but cannot be applied unchanged to a 1 mm upper wall. Compute stable side and top radii from the local wall thickness, retaining the nominal value when it fits and reducing it when necessary. The bottom wall edge and peg edges remain excluded from these operations; the base-to-wall transition itself is a chamfer rather than a fillet.
+The current nominal 2.5 mm side radius is valid for the 5 mm base but cannot be applied unchanged to a 1 mm upper wall. Compute stable side and top radii from the local wall thickness, retaining the nominal value when it fits and reducing it when necessary. The bottom wall edge and peg edges remain excluded from these operations; the main base-to-wall transition remains a planar chamfer, while only its short end edges receive the separate bounded transition fillet.
 
 The builder must treat a failed fillet, self-intersection, or non-single-solid result as a generation error and clean up all intermediate shapes. It must never return a partial candidate. Geometry fixtures will cover all five thickness values, including the minimum 1 mm case.
 
@@ -59,15 +60,19 @@ When the browser store reads an existing divider record with the legacy five fie
 
 ### 6. Keep the UI as a model-catalog projection
 
-Add a `range-text` field for `wallThickness` to the divider catalog definition, with min 1, max 5, step 1, and default 2. The Svelte panel should continue deriving shape and dimensions from the validated candidate; it should display the selected thickness and 45-degree chamfer transition in the explanatory copy and summary without duplicating validation rules.
+Add a `range-text` field for `wallThickness` to the divider catalog definition, with min 1, max 5, step 1, and default 2. The Svelte panel should expose the typed controls only; it should not render the detailed grid, shape, dimensions, transition, locating-peg, or total-height summary. The model chooser may retain only a concise identity description without duplicating validation rules.
 
 ### 7. Test the contract and geometry at separate layers
 
 - Contract tests cover accepted values, rejection of fractional/out-of-range thickness, defaults, dimensions, and filenames.
-- Workspace/catalog tests cover the new field, raw-input parsing, labels, and summary text.
+- Workspace/catalog tests cover the new field, raw-input parsing, labels, and the absence of the removed technical summary.
 - Persistence tests cover legacy default migration, typed round-tripping, and invalid-record fallback.
 - CAD integration tests probe cross-sections at the bottom support, 45-degree transition, and upper wall for thicknesses 1, 2, 3, 4, and 5 mm; they also assert one solid, B-Rep validity, finite mesh, top rounding, unchanged peg behavior, and distinct export names.
 - E2E tests verify the 1–5 mm control and a 2 mm preview/export path.
+
+### 8. Round the transition's short end edges with a bounded fixed radius
+
+The two short profile edges at each arm end where the 45-degree chamfer meets the end face will participate in the same local fillet operation as the existing side and top edges. The nominal radius is `transitionFilletRadius=0.4` mm. For each selected profile, cap it to the smaller of half the selected upper wall thickness and half the actual transition rise; skip it when the selected thickness is 5 mm and no transition edge exists. Classify these edges from endpoint coordinates (constant arm-axis coordinate, changing transverse and Z coordinates) so horizontal and vertical arms use the same geometry role without relying on edge indexes. Include the transition radius in the no-op fillet guard so very short profiles still receive the transition rounding when top and vertical side radii collapse to zero.
 
 ### Alternatives considered
 
@@ -79,6 +84,7 @@ Add a `range-text` field for `wallThickness` to the divider catalog definition, 
 ## Risks / Trade-offs
 
 - **OpenCascade fillets may fail at 1 mm or at near-5 mm thickness differences** → limit effective radii to stable local dimensions, probe every supported thickness, and convert failures into diagnostic generation errors.
+- **Transition-end fillets may fail when the chamfer becomes shallow or the height is minimal** → cap the fixed 0.4 mm nominal radius by the local wall thickness and actual transition rise, and verify cylindrical transition faces across both arm orientations and the minimum-height matrix.
 - **The minimum height may not fit a full 45-degree chamfer for the thinnest wall** → reserve the bottom geometry-safety ledge, cap the rise at `height - 2 * geometrySafetyMargin`, keep the selected upper wall non-zero, and test the actual cross-section rather than assuming the nominal angle.
 - **The exact parameter object gains a required field** → update every contract consumer in one change and add legacy hydration before validation.
 - **Changing filenames can affect download assertions and cached artifacts** → update all filename fixtures and ensure the old model IDs/routes remain unchanged.

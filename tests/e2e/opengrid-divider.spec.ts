@@ -13,17 +13,9 @@ test('OpenGrid divider is listed with independent directional controls', async (
   await expect(
     page.getByRole('heading', { name: '目前編輯：OpenGrid 分隔塊' }),
   ).toBeVisible()
-  await expect(page.getByText(/自製底座半格 7 mm、整格 14 mm/)).toBeVisible()
-  await expect(page.getByText(/中心距 28 mm/)).toBeVisible()
-  await expect(page.getByTestId('opengrid-divider-summary')).toContainText(
-    '一字型',
-  )
-  await expect(page.getByTestId('opengrid-divider-summary')).toContainText(
-    '上方牆厚 2 mm',
-  )
-  await expect(page.getByTestId('opengrid-divider-summary')).toContainText(
-    '45° 斜角過渡',
-  )
+  await expect(page.getByText(/自製底座半格 7 mm、整格 14 mm/)).toHaveCount(0)
+  await expect(page.getByText(/中心距 28 mm/)).toHaveCount(0)
+  await expect(page.getByTestId('opengrid-divider-summary')).toHaveCount(0)
   await expect(page.getByRole('checkbox')).toHaveCount(0)
   await expect(page.getByText(/Full|Lite|Heavy|螺絲|接頭孔/)).toHaveCount(0)
 
@@ -47,17 +39,9 @@ test('OpenGrid divider is listed with independent directional controls', async (
   await expect(wallThickness).toHaveValue('2')
 
   await wallThickness.fill('4')
-  await expect(page.getByTestId('opengrid-divider-summary')).toContainText(
-    '上方牆厚 4 mm',
-  )
+  await expect(wallThickness).toHaveValue('4')
 
   await page.getByRole('slider', { name: '上臂（Y）' }).press('ArrowRight')
-  await expect(page.getByTestId('opengrid-divider-summary')).toContainText(
-    'T 型',
-  )
-  await expect(page.getByTestId('opengrid-divider-summary')).toContainText(
-    '28 × 9.5 mm',
-  )
 })
 
 test('OpenGrid divider exports the committed normalized shape', async ({

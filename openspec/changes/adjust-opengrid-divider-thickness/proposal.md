@@ -7,8 +7,9 @@ The OpenGrid divider currently generates a continuous 5 mm-wide wall, which is t
 - **BREAKING** Extend the normalized `opengrid-divider` parameter snapshot with an integer `wallThickness` from 1 through 5 mm, defaulting to 2 mm; preserve the existing `modelId`, route, and `buildKey`.
 - Replace the current continuous 5 mm wall profile with a 5 mm base support and an upper wall whose plan thickness is the selected `wallThickness`.
 - Add a nominal 45-degree planar chamfer transition from the 5 mm base to the adjustable upper wall. The geometry MUST cap the chamfer height at the stable value available for the selected thickness and MUST reject any profile that cannot be built as one valid solid.
+- Round the short profile edges where the 45-degree transition meets each arm end, using a fixed nominal 0.4 mm radius bounded by the local wall thickness and transition rise; omit this rounding when no transition exists at 5 mm.
 - Keep the existing directional arm layout, 14 mm/7 mm grid semantics, locating pegs, top 1 mm rounding, and export lifecycle; adapt bounds, quality checks, and the thin-wall side-rounding behavior to the new profile.
-- Add a divider-thickness control to the CAD panel, include the selected thickness and transition in the derived summary/copy, and update the model chooser description.
+- Add a divider-thickness control to the CAD panel while keeping the panel free of the detailed geometry summary; keep only a concise model chooser description.
 - Persist the new typed thickness value under the existing `opengrid-divider` entry. Stored snapshots missing the new field MUST fall back to the default thickness of 2 mm; invalid thickness values MUST use the normal validated-default path.
 - Include wall thickness in deterministic STEP/STL filenames so exports with different thicknesses cannot collide.
 

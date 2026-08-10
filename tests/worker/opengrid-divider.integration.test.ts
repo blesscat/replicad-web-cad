@@ -84,6 +84,38 @@ function topRoundFaceCount(shape: Shape3D, height: number): number {
   return count
 }
 
+function transitionRoundFaceCount(
+  shape: Shape3D,
+  parameters: OpenGridDividerParameters,
+): number {
+  const transitionHeight = openGridDividerTransitionHeightFor(parameters)
+  if (transitionHeight <= 0) return 0
+  const transitionStart = OPENGRID_DIVIDER_CONFIGURATION.geometrySafetyMargin
+  const transitionEnd = transitionStart + transitionHeight
+  let count = 0
+  for (const face of shape.faces) {
+    const bounds = face.boundingBox
+    try {
+      const [[minX, minY, minZ], [maxX, maxY, maxZ]] =
+        bounds.bounds as number[][]
+      const shortPlanSpan = Math.min(maxX - minX, maxY - minY)
+      if (
+        face.surface.surfaceType === 'CYLINDRE' &&
+        minZ <= transitionStart + 0.02 &&
+        maxZ >= transitionStart + 0.02 &&
+        maxZ <= transitionEnd + 1 &&
+        shortPlanSpan < parameters.wallThickness
+      ) {
+        count += 1
+      }
+    } finally {
+      bounds.delete()
+      face.delete()
+    }
+  }
+  return count
+}
+
 function rawPlanCenter(
   parameters: OpenGridDividerParameters,
 ): [number, number] {
@@ -181,9 +213,10 @@ describe('OpenGrid divider CAD kernel integration', () => {
           parameters,
           mesh,
         )
-        expect(quality.passed).toBe(true)
+        expect(quality.passed, quality.failures.join(';')).toBe(true)
         expect(quality.topFilletFaceCount).toBeGreaterThan(0)
         expect(quality.transitionFaceCount).toBeGreaterThan(0)
+        expect(quality.transitionFilletFaceCount).toBeGreaterThan(0)
         expect((await exportStepBytes(shape)).byteLength).toBeGreaterThan(0)
         expect(
           (
@@ -195,6 +228,25 @@ describe('OpenGrid divider CAD kernel integration', () => {
         ).toBeGreaterThan(0)
       } finally {
         deleteShape(shape)
+      }
+    },
+    180_000,
+  )
+
+  it.each([
+    ['horizontal', { left: 1, right: 1, up: 0, down: 0 }],
+    ['vertical', { left: 0, right: 0, up: 1, down: 1 }],
+  ])(
+    'rounds the short edges of the 45-degree transition for %s arms',
+    async (_axis, plan) => {
+      for (const wallThickness of [1, 2, 3, 4]) {
+        const parameters = { ...plan, height: 20, wallThickness }
+        const shape = await buildOpenGridDivider(parameters)
+        try {
+          expect(transitionRoundFaceCount(shape, parameters)).toBeGreaterThan(0)
+        } finally {
+          deleteShape(shape)
+        }
       }
     },
     180_000,
@@ -240,8 +292,10 @@ describe('OpenGrid divider CAD kernel integration', () => {
         expect(quality.passed).toBe(true)
         if (wallThickness < OPENGRID_DIVIDER_CONFIGURATION.wallWidth) {
           expect(quality.transitionFaceCount).toBeGreaterThan(0)
+          expect(quality.transitionFilletFaceCount).toBeGreaterThan(0)
         } else {
           expect(quality.transitionFaceCount).toBe(0)
+          expect(quality.transitionFilletFaceCount).toBe(0)
         }
         expect(quality.topFilletFaceCount).toBeGreaterThan(0)
         expect(mesh.triangleCount).toBeGreaterThan(0)
@@ -283,7 +337,7 @@ describe('OpenGrid divider CAD kernel integration', () => {
 
         expect(shape.constructor.name).toBe('Solid')
         expect(measureVolume(shape)).toBeGreaterThan(0)
-        expect(quality.passed).toBe(true)
+        expect(quality.passed, quality.failures.join(';')).toBe(true)
         expect(mesh.triangleCount).toBeGreaterThan(0)
       } finally {
         deleteShape(shape)

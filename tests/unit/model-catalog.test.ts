@@ -474,10 +474,7 @@ describe('CAD component catalog', () => {
       defaultValue:
         OPENGRID_DIVIDER_CONFIGURATION.defaultParameters.wallThickness,
     })
-    expect(definition?.selectionDescription).toContain('1–5 mm')
-    expect(definition?.selectionDescription).toContain('45° 斜角過渡')
-    expect(definition?.selectionDescription).toContain('穩定側邊圓角')
-    expect(definition?.selectionDescription).toContain('1 mm 頂部圓角')
+    expect(definition?.selectionDescription).toBe('自製 OpenGrid 分隔塊。')
     expect(definition?.defaultParameters).toEqual({
       left: 1,
       right: 1,

@@ -58,6 +58,28 @@ The generator MUST round the vertical side edges of the divider with the existin
 - **THEN** the side rounding MUST coexist with the separate 1 mm upper-perimeter rounding and the base chamfer
 - **AND** the bottom wall edge and locating-peg edges MUST remain sharp
 
+### Requirement: 45 度過渡斜邊端部圓角
+
+When the selected upper wall is thinner than the 5 mm base support, the generator MUST also round the short profile edges at both ends of each active arm where the 45-degree transition meets the arm end face. The nominal transition-edge radius MUST be 0.4 mm and MUST be capped at the smaller of half the selected upper wall thickness and half the actual transition rise. The transition-edge rounding MUST use the same cleaned-up local fillet operation as the other profile rounds, MUST remain a valid part of the single solid, and MUST be omitted when `wallThickness=5` because no transition edge exists.
+
+#### Scenario: 2 mm 過渡斜邊一起圓角
+
+- **WHEN** a valid divider is generated with `wallThickness=2`
+- **THEN** both short 45-degree transition edges at each active arm end MUST produce cylindrical rounding faces
+- **AND** the horizontal and vertical arm orientations MUST receive the same edge treatment
+- **AND** the transition rounding MUST coexist with the planar 45-degree chamfer, upper-perimeter rounding, and locating pegs in one valid solid
+
+#### Scenario: 薄牆與最小高度的過渡圓角限制
+
+- **WHEN** a valid divider uses `wallThickness` from 1 through 4 mm or the minimum supported height
+- **THEN** the transition-edge radius MUST be reduced when needed to fit the local transition geometry
+- **AND** generation MUST remain a valid single solid with finite mesh output
+
+#### Scenario: 5 mm 上牆沒有過渡圓角
+
+- **WHEN** a valid divider is generated with `wallThickness=5`
+- **THEN** no transition-edge fillet MUST be requested or reported because the profile remains continuously 5 mm wide
+
 ### Requirement: 預覽、bounds 與匯出
 
 The committed divider MUST expose finite bounds, a non-empty mesh, and a single B-Rep solid. The wall base MUST be at `Z=0` and the complete bounds MUST include the peg bottom at `Z=-3` and the actual 5 mm base support envelope. STEP and binary STL exports MUST be generated from the committed divider B-Rep and MUST be non-empty. Export filenames MUST identify the selected wall thickness.
@@ -85,7 +107,7 @@ When the selected upper wall is thinner than the 5 mm base support, the generate
 
 - **WHEN** a valid divider is generated with `wallThickness=2`
 - **THEN** the 5 mm base support MUST blend into the 2 mm upper wall through a symmetric 45-degree planar chamfer
-- **AND** the transition MUST not expose a curved fillet surface
+- **AND** the main transition surface MUST remain planar rather than becoming a rounded shoulder; only its short end edges receive the separate bounded fillet
 - **AND** the generated result MUST remain one valid solid
 
 #### Scenario: 極薄牆的穩定斜角

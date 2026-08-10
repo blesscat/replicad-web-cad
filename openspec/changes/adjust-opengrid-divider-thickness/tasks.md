@@ -12,12 +12,14 @@
 - [x] 2.3 Adapt side and top fillet selection to the chamfered local profile so thin upper walls do not receive oversized radii; preserve sharp bottom wall and peg edges and clean up every failed intermediate shape.
 - [x] 2.4 Keep the existing locating-peg positions, Ø5 mm diameter, 3 mm downward extension, progress reporting, stale-generation checks, and Worker-only builder boundary unchanged.
 - [x] 2.5 Update divider quality inspection to verify the actual base/chamfer/upper envelopes, planar 45-degree transition, single valid solid, finite mesh, top rounding, and unchanged peg count/placement.
+- [x] 2.6 Add bounded 0.4 mm transition-edge rounding for the short 45-degree profile edges at arm ends, including the minimum-height no-op guard.
 
 ## 3. Catalog, panel, and model copy
 
 - [x] 3.1 Add a `wallThickness` range-text field to the divider catalog schema with min 1, max 5, step 1, and default 2; verify the existing divider id, route, and catalog naming remain unchanged.
-- [x] 3.2 Update the divider panel copy and derived summary to show the selected upper thickness, 5 mm base support, and 45-degree chamfer without duplicating contract validation logic.
-- [x] 3.3 Update the `/models` divider description and any accessible labels to describe adjustable 1–5 mm thickness and the 45-degree base chamfer while keeping official OpenGrid copy separate.
+- [x] 3.2 Keep the divider panel focused on typed controls and remove the detailed technical help and derived summary without duplicating contract validation logic.
+- [x] 3.3 Keep the `/models` divider entry as a concise custom-model identity while keeping official OpenGrid copy separate.
+- [x] 3.4 Remove the detailed divider help paragraph, derived shape/dimensions summary, and technical chooser description while retaining the parameter controls and concise model identity.
 
 ## 4. Verification coverage
 
@@ -25,7 +27,9 @@
 - [x] 4.2 Update catalog, workspace-validation, state, model-generation, persistence, and regression tests for the new typed field and legacy snapshot migration.
 - [x] 4.3 Extend CAD integration fixtures across thicknesses 1, 2, 3, 4, and 5 mm; probe the 5 mm base, 45-degree chamfer, selected upper wall, top rounding, one-solid validity, finite mesh, pegs, STEP, and STL output.
 - [x] 4.4 Update Worker lifecycle and export fixtures so generated, committed, stale, discarded, and exported divider snapshots carry the thickness field and use the new deterministic filenames.
-- [x] 4.5 Update divider end-to-end coverage for the 1–5 mm control, default 2 mm state, chamfer summary, and a thickness-specific export filename.
+- [x] 4.5 Update divider end-to-end coverage for the 1–5 mm control, default 2 mm state, absent technical summary, and a thickness-specific export filename.
+- [x] 4.6 Add behavior-focused CAD coverage for transition-edge cylindrical faces in horizontal and vertical arms across wall thicknesses 1–4 mm and quality reporting for missing transition rounding.
+- [x] 4.7 Update catalog and end-to-end coverage for the removed technical descriptions and absent derived summary.
 
 ## 5. Validation and handoff
 
