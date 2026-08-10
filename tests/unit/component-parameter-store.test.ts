@@ -133,7 +133,14 @@ describe('component parameter store', () => {
         },
         'opengrid-stackable-cylinder': { diameter: 80, height: 45 },
         'opengrid-snap': { variant: 'Lite', offset: 0.2 },
-        'opengrid-divider': { left: 1, right: 1, up: 1.5, down: 0, height: 25 },
+        'opengrid-divider': {
+          left: 1,
+          right: 1,
+          up: 1.5,
+          down: 0,
+          height: 25,
+          wallThickness: 3,
+        },
         'opengrid-pillar': { length: 12, baseConnection: true },
       }),
     )
@@ -171,6 +178,7 @@ describe('component parameter store', () => {
       up: 1.5,
       down: 0,
       height: 25,
+      wallThickness: 3,
     })
     expect(store.get('opengrid-pillar')).toEqual({
       length: 12,
@@ -280,6 +288,52 @@ describe('component parameter store', () => {
     )
 
     store.dispose()
+  })
+
+  it('migrates legacy divider snapshots to the default wall thickness', () => {
+    const storage = createMemoryStorage(
+      createPayload({
+        'opengrid-divider': {
+          left: 1,
+          right: 1,
+          up: 0,
+          down: 0,
+          height: 20,
+        },
+      }),
+    )
+    const store = createComponentParameterStore({ storage })
+
+    expect(store.get('opengrid-divider')).toEqual({
+      left: 1,
+      right: 1,
+      up: 0,
+      down: 0,
+      height: 20,
+      wallThickness:
+        OPENGRID_DIVIDER_CONFIGURATION.defaultParameters.wallThickness,
+    })
+    store.dispose()
+
+    const invalidStorage = createMemoryStorage(
+      createPayload({
+        'opengrid-divider': {
+          left: 1,
+          right: 1,
+          up: 0,
+          down: 0,
+          height: 20,
+          wallThickness: 6,
+        },
+      }),
+    )
+    const invalidStore = createComponentParameterStore({
+      storage: invalidStorage,
+    })
+    expect(invalidStore.get('opengrid-divider')).toEqual(
+      OPENGRID_DIVIDER_CONFIGURATION.defaultParameters,
+    )
+    invalidStore.dispose()
   })
 
   it('isolates component entries and removes malformed or unknown values on write', () => {

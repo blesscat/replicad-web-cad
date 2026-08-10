@@ -10,17 +10,19 @@ import {
   openGridDividerPegCentersFor,
   openGridDividerPlanDimensionsFor,
   openGridDividerStlFileName,
+  openGridDividerTransitionHeightFor,
   validateOpenGridDividerParameters,
 } from '../../src/cad-contract/units'
 
 describe('OpenGrid divider contract', () => {
-  it('accepts the default horizontal two-grid divider', () => {
+  it('accepts selectable wall thickness and exposes profile dimensions', () => {
     const parameters = normalizeOpenGridDividerParameters({
       left: 1,
       right: 1,
       up: 0,
       down: 0,
       height: 20,
+      wallThickness: 2,
     })
 
     expect(parameters).toEqual({
@@ -29,6 +31,58 @@ describe('OpenGrid divider contract', () => {
       up: 0,
       down: 0,
       height: 20,
+      wallThickness: 2,
+    })
+    expect(openGridDividerPlanDimensionsFor(parameters)).toMatchObject({
+      wallThickness: 2,
+      baseWallWidth: OPENGRID_DIVIDER_CONFIGURATION.wallWidth,
+    })
+  })
+
+  it('rejects fractional and out-of-range wall thickness', () => {
+    const base = {
+      left: 1,
+      right: 1,
+      up: 0,
+      down: 0,
+      height: 20,
+    }
+
+    expect(
+      validateOpenGridDividerParameters({ ...base, wallThickness: 1.5 }),
+    ).toMatchObject({ valid: false })
+    expect(
+      validateOpenGridDividerParameters({ ...base, wallThickness: 0 }),
+    ).toMatchObject({ valid: false })
+    expect(
+      validateOpenGridDividerParameters({ ...base, wallThickness: 6 }),
+    ).toMatchObject({ valid: false })
+    for (const wallThickness of [1, 2, 3, 4, 5]) {
+      expect(
+        validateOpenGridDividerParameters({ ...base, wallThickness }).valid,
+      ).toBe(true)
+    }
+  })
+
+  it('accepts the default horizontal two-grid divider', () => {
+    const parameters = normalizeOpenGridDividerParameters({
+      left: 1,
+      right: 1,
+      up: 0,
+      down: 0,
+      height: 20,
+      wallThickness:
+        OPENGRID_DIVIDER_CONFIGURATION.defaultParameters.wallThickness,
+    })
+
+    expect(parameters).toEqual({
+      left: 1,
+      right: 1,
+      up: 0,
+      down: 0,
+      height: 20,
+      wallThickness:
+        OPENGRID_DIVIDER_CONFIGURATION.defaultParameters.wallThickness,
     })
     expect(classifyOpenGridDividerShape(parameters)).toBe('straight')
     expect(openGridDividerAxisFor(parameters)).toBe('horizontal')
@@ -105,6 +159,7 @@ describe('OpenGrid divider contract', () => {
         up: 0.5,
         down: 0,
         height: 20,
+        wallThickness: 2,
       }).valid,
     ).toBe(true)
     expect(
@@ -114,6 +169,7 @@ describe('OpenGrid divider contract', () => {
         up: 0,
         down: 0,
         height: 20,
+        wallThickness: 2,
       }).valid,
     ).toBe(false)
     expect(
@@ -123,6 +179,7 @@ describe('OpenGrid divider contract', () => {
         up: 0,
         down: 0,
         height: 20,
+        wallThickness: 2,
       }).valid,
     ).toBe(false)
   })
@@ -134,6 +191,7 @@ describe('OpenGrid divider contract', () => {
       up: 4.5,
       down: 0,
       height: 20,
+      wallThickness: 2,
     })
 
     expect(openGridDividerPlanDimensionsFor(parameters)).toMatchObject({
@@ -173,6 +231,7 @@ describe('OpenGrid divider contract', () => {
       up: 0,
       down: 0,
       height: 20,
+      wallThickness: 2,
     })
 
     expect(bounds).toEqual({
@@ -188,13 +247,35 @@ describe('OpenGrid divider contract', () => {
       up: 3,
       down: 4,
       height: 20,
+      wallThickness: 2,
     })
 
     expect(openGridDividerFileName(parameters)).toBe(
-      'opengrid-divider-l1-r2-u3-d4-h20.step',
+      'opengrid-divider-l1-r2-u3-d4-t2-h20.step',
     )
     expect(openGridDividerStlFileName(parameters)).toBe(
-      'opengrid-divider-l1-r2-u3-d4-h20.stl',
+      'opengrid-divider-l1-r2-u3-d4-t2-h20.stl',
     )
+    expect(
+      openGridDividerFileName({ ...parameters, wallThickness: 1 }),
+    ).not.toBe(openGridDividerFileName(parameters))
+    expect(
+      openGridDividerStlFileName({ ...parameters, wallThickness: 5 }),
+    ).not.toBe(openGridDividerStlFileName(parameters))
+  })
+
+  it('uses a 45-degree transition height when the profile has room', () => {
+    expect(
+      openGridDividerTransitionHeightFor({ wallThickness: 1, height: 20 }),
+    ).toBe(2)
+    expect(
+      openGridDividerTransitionHeightFor({ wallThickness: 4, height: 20 }),
+    ).toBe(0.5)
+    expect(
+      openGridDividerTransitionHeightFor({ wallThickness: 5, height: 20 }),
+    ).toBe(0)
+    expect(
+      openGridDividerTransitionHeightFor({ wallThickness: 1, height: 2 }),
+    ).toBeCloseTo(1.8, 10)
   })
 })

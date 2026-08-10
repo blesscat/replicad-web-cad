@@ -54,13 +54,18 @@ test('CAD workspaces restore valid parameters independently per component', asyn
   const dividerHeight = page.getByRole('textbox', {
     name: '分隔牆高度（Z）',
   })
+  const dividerThickness = page.getByRole('textbox', {
+    name: '上方牆厚（Z）',
+  })
   await dividerUp.press('ArrowRight')
   await dividerHeight.fill('25')
+  await dividerThickness.fill('3')
   await waitForCadReady(page)
   await page.reload()
   await waitForCadReady(page)
   await expect(dividerUp).toHaveValue('0.5')
   await expect(dividerHeight).toHaveValue('25')
+  await expect(dividerThickness).toHaveValue('3')
 
   await page.goto('/cad/box')
   await waitForCadReady(page)

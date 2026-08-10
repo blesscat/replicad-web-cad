@@ -241,6 +241,7 @@ describe('CAD workspace validation helpers', () => {
       up: 1.5,
       down: 0,
       height: 20,
+      wallThickness: 2,
     }
     const raw = rawFromParameters(parameters)
 
@@ -250,6 +251,7 @@ describe('CAD workspace validation helpers', () => {
       up: '1.5',
       down: '0',
       height: '20',
+      wallThickness: '2',
     })
     expect(parseRawParameters(raw, 'opengrid-divider')).toEqual({
       valid: true,
@@ -257,7 +259,14 @@ describe('CAD workspace validation helpers', () => {
     })
     expect(
       parseRawParameters(
-        { left: '1', right: '0', up: '0', down: '0', height: '20' },
+        {
+          left: '1',
+          right: '0',
+          up: '0',
+          down: '0',
+          height: '20',
+          wallThickness: '2',
+        },
         'opengrid-divider',
       ),
     ).toEqual({
@@ -266,7 +275,14 @@ describe('CAD workspace validation helpers', () => {
     })
     expect(
       parseRawParameters(
-        { left: '1.25', right: '1', up: '0', down: '0', height: '20' },
+        {
+          left: '1.25',
+          right: '1',
+          up: '0',
+          down: '0',
+          height: '20',
+          wallThickness: '2',
+        },
         'opengrid-divider',
       ),
     ).toEqual({

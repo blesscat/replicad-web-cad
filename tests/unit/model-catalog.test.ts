@@ -8,6 +8,7 @@ import {
 } from '../../src/features/cad/model-catalog'
 import {
   OPENGRID_CONFIGURATION,
+  OPENGRID_DIVIDER_CONFIGURATION,
   type OpenGridParameters,
 } from '../../src/cad-contract/units'
 
@@ -462,19 +463,31 @@ describe('CAD component catalog', () => {
       'up',
       'down',
       'height',
+      'wallThickness',
     ])
+    expect(definition?.parameterSchema.at(-1)).toMatchObject({
+      key: 'wallThickness',
+      control: 'range-text',
+      min: OPENGRID_DIVIDER_CONFIGURATION.minWallThickness,
+      max: OPENGRID_DIVIDER_CONFIGURATION.maxWallThickness,
+      step: 1,
+      defaultValue:
+        OPENGRID_DIVIDER_CONFIGURATION.defaultParameters.wallThickness,
+    })
+    expect(definition?.selectionDescription).toBe('自製 OpenGrid 分隔塊。')
     expect(definition?.defaultParameters).toEqual({
       left: 1,
       right: 1,
       up: 0,
       down: 0,
       height: 20,
+      wallThickness: 2,
     })
     expect(definition?.exportFileName(definition.defaultParameters)).toBe(
-      'opengrid-divider-l1-r1-u0-d0-h20.step',
+      'opengrid-divider-l1-r1-u0-d0-t2-h20.step',
     )
     expect(definition?.stlFileName(definition.defaultParameters)).toBe(
-      'opengrid-divider-l1-r1-u0-d0-h20.stl',
+      'opengrid-divider-l1-r1-u0-d0-t2-h20.stl',
     )
     expect(cadPathForModel('opengrid-divider')).toBe('/cad/opengrid-divider')
     expect(modelIdForCadPath('/cad/opengrid-divider/')).toBe('opengrid-divider')

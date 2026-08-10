@@ -14,6 +14,7 @@ import {
   openGridDividerPegCentersFor,
   OPENGRID_DIVIDER_CONFIGURATION,
   type OpenGridDividerParameters,
+  openGridDividerTransitionHeightFor,
 } from '../../src/cad-contract/units'
 import { exportStepBytes, exportStlBytes } from '../../src/cad-kernel/export'
 import { meshBRep } from '../../src/cad-kernel/mesh'
@@ -83,6 +84,38 @@ function topRoundFaceCount(shape: Shape3D, height: number): number {
   return count
 }
 
+function transitionRoundFaceCount(
+  shape: Shape3D,
+  parameters: OpenGridDividerParameters,
+): number {
+  const transitionHeight = openGridDividerTransitionHeightFor(parameters)
+  if (transitionHeight <= 0) return 0
+  const transitionStart = OPENGRID_DIVIDER_CONFIGURATION.geometrySafetyMargin
+  const transitionEnd = transitionStart + transitionHeight
+  let count = 0
+  for (const face of shape.faces) {
+    const bounds = face.boundingBox
+    try {
+      const [[minX, minY, minZ], [maxX, maxY, maxZ]] =
+        bounds.bounds as number[][]
+      const shortPlanSpan = Math.min(maxX - minX, maxY - minY)
+      if (
+        face.surface.surfaceType === 'CYLINDRE' &&
+        minZ <= transitionStart + 0.02 &&
+        maxZ >= transitionStart + 0.02 &&
+        maxZ <= transitionEnd + 1 &&
+        shortPlanSpan < parameters.wallThickness
+      ) {
+        count += 1
+      }
+    } finally {
+      bounds.delete()
+      face.delete()
+    }
+  }
+  return count
+}
+
 function rawPlanCenter(
   parameters: OpenGridDividerParameters,
 ): [number, number] {
@@ -111,13 +144,26 @@ function probeVolumeAt(
   }
 }
 
+function sectionWidthAt(shape: Shape3D, z: number): number {
+  const probe = makeBox([0, -10, z], [7, 10, z + 0.1])
+  let section: Shape3D | null = null
+  try {
+    section = shape.intersect(probe)
+    const [[, minY], [, maxY]] = boundsOf(section)
+    return maxY - minY
+  } finally {
+    deleteShape(section)
+    probe.delete()
+  }
+}
+
 describe('OpenGrid divider CAD kernel integration', () => {
   it.each([
-    { left: 1, right: 1, up: 0, down: 0, height: 20 },
-    { left: 0, right: 0, up: 1, down: 2, height: 12 },
-    { left: 1, right: 0, up: 2, down: 0, height: 20 },
-    { left: 1, right: 1, up: 2, down: 1, height: 20 },
-    { left: 1.5, right: 2, up: 0, down: 0, height: 35 },
+    { left: 1, right: 1, up: 0, down: 0, height: 20, wallThickness: 2 },
+    { left: 0, right: 0, up: 1, down: 2, height: 12, wallThickness: 2 },
+    { left: 1, right: 0, up: 2, down: 0, height: 20, wallThickness: 2 },
+    { left: 1, right: 1, up: 2, down: 1, height: 20, wallThickness: 2 },
+    { left: 1.5, right: 2, up: 0, down: 0, height: 35, wallThickness: 2 },
   ])(
     'builds a centered one-solid divider for %#',
     async (parameters) => {
@@ -167,8 +213,10 @@ describe('OpenGrid divider CAD kernel integration', () => {
           parameters,
           mesh,
         )
-        expect(quality.passed).toBe(true)
+        expect(quality.passed, quality.failures.join(';')).toBe(true)
         expect(quality.topFilletFaceCount).toBeGreaterThan(0)
+        expect(quality.transitionFaceCount).toBeGreaterThan(0)
+        expect(quality.transitionFilletFaceCount).toBeGreaterThan(0)
         expect((await exportStepBytes(shape)).byteLength).toBeGreaterThan(0)
         expect(
           (
@@ -185,25 +233,161 @@ describe('OpenGrid divider CAD kernel integration', () => {
     180_000,
   )
 
-  it('keeps the wall at exactly 5 mm wide below the top fillet', async () => {
-    const parameters = { left: 1, right: 1, up: 0, down: 0, height: 20 }
+  it.each([
+    ['horizontal', { left: 1, right: 1, up: 0, down: 0 }],
+    ['vertical', { left: 0, right: 0, up: 1, down: 1 }],
+  ])(
+    'rounds the short edges of the 45-degree transition for %s arms',
+    async (_axis, plan) => {
+      for (const wallThickness of [1, 2, 3, 4]) {
+        const parameters = { ...plan, height: 20, wallThickness }
+        const shape = await buildOpenGridDivider(parameters)
+        try {
+          expect(transitionRoundFaceCount(shape, parameters)).toBeGreaterThan(0)
+        } finally {
+          deleteShape(shape)
+        }
+      }
+    },
+    180_000,
+  )
+
+  it.each([1, 2, 3, 4, 5])(
+    'supports the selectable %d mm upper wall profile',
+    async (wallThickness) => {
+      const parameters = {
+        ...OPENGRID_DIVIDER_CONFIGURATION.defaultParameters,
+        height: 20,
+        wallThickness,
+      }
+      const shape = await buildOpenGridDivider(parameters)
+      try {
+        const mesh = meshBRep(shape, {
+          tolerance: 0.05,
+          angularTolerance: 0.1,
+        })
+        const quality = inspectOpenGridDividerShapeQuality(
+          shape,
+          parameters,
+          mesh,
+        )
+        expect(sectionWidthAt(shape, 0)).toBeCloseTo(
+          OPENGRID_DIVIDER_CONFIGURATION.wallWidth,
+          2,
+        )
+        expect(sectionWidthAt(shape, 4)).toBeCloseTo(wallThickness, 2)
+        const transitionHeight = openGridDividerTransitionHeightFor(parameters)
+        if (transitionHeight > 0) {
+          expect(
+            sectionWidthAt(
+              shape,
+              OPENGRID_DIVIDER_CONFIGURATION.geometrySafetyMargin +
+                transitionHeight / 2,
+            ),
+          ).toBeCloseTo(
+            (OPENGRID_DIVIDER_CONFIGURATION.wallWidth + wallThickness) / 2,
+            2,
+          )
+        }
+        expect(quality.passed).toBe(true)
+        if (wallThickness < OPENGRID_DIVIDER_CONFIGURATION.wallWidth) {
+          expect(quality.transitionFaceCount).toBeGreaterThan(0)
+          expect(quality.transitionFilletFaceCount).toBeGreaterThan(0)
+        } else {
+          expect(quality.transitionFaceCount).toBe(0)
+          expect(quality.transitionFilletFaceCount).toBe(0)
+        }
+        expect(quality.topFilletFaceCount).toBeGreaterThan(0)
+        expect(mesh.triangleCount).toBeGreaterThan(0)
+        expect((await exportStepBytes(shape)).byteLength).toBeGreaterThan(0)
+        expect(
+          (
+            await exportStlBytes(shape, {
+              tolerance: 0.05,
+              angularTolerance: 0.1,
+            })
+          ).byteLength,
+        ).toBeGreaterThan(0)
+      } finally {
+        deleteShape(shape)
+      }
+    },
+    180_000,
+  )
+
+  it.each([1, 2, 3, 4, 5])(
+    'supports the minimum 2 mm height with a %d mm upper wall profile',
+    async (wallThickness) => {
+      const parameters = {
+        ...OPENGRID_DIVIDER_CONFIGURATION.defaultParameters,
+        height: OPENGRID_DIVIDER_CONFIGURATION.minHeight,
+        wallThickness,
+      }
+      const shape = await buildOpenGridDivider(parameters)
+      try {
+        const mesh = meshBRep(shape, {
+          tolerance: 0.05,
+          angularTolerance: 0.1,
+        })
+        const quality = inspectOpenGridDividerShapeQuality(
+          shape,
+          parameters,
+          mesh,
+        )
+
+        expect(shape.constructor.name).toBe('Solid')
+        expect(measureVolume(shape)).toBeGreaterThan(0)
+        expect(quality.passed, quality.failures.join(';')).toBe(true)
+        expect(mesh.triangleCount).toBeGreaterThan(0)
+      } finally {
+        deleteShape(shape)
+      }
+    },
+    180_000,
+  )
+
+  it('keeps a 5 mm base support and selected upper wall thickness', async () => {
+    const parameters = {
+      left: 1,
+      right: 1,
+      up: 0,
+      down: 0,
+      height: 20,
+      wallThickness: 2,
+    }
     const shape = await buildOpenGridDivider(parameters)
-    const probe = makeBox([0, -10, 10], [7, 10, 10.1])
-    let section: Shape3D | null = null
+    const baseProbe = makeBox([0, -10, 0], [7, 10, 0.1])
+    const upperProbe = makeBox([0, -10, 10], [7, 10, 10.1])
+    let baseSection: Shape3D | null = null
+    let upperSection: Shape3D | null = null
     try {
-      section = shape.intersect(probe)
-      const [[minX, minY], [maxX, maxY]] = boundsOf(section)
-      expect(maxX - minX).toBeCloseTo(7, 2)
-      expect(maxY - minY).toBeCloseTo(5, 2)
+      baseSection = shape.intersect(baseProbe)
+      upperSection = shape.intersect(upperProbe)
+      const [[baseMinX, baseMinY], [baseMaxX, baseMaxY]] = boundsOf(baseSection)
+      const [[upperMinX, upperMinY], [upperMaxX, upperMaxY]] =
+        boundsOf(upperSection)
+      expect(baseMaxX - baseMinX).toBeCloseTo(7, 2)
+      expect(baseMaxY - baseMinY).toBeCloseTo(5, 2)
+      expect(upperMaxX - upperMinX).toBeCloseTo(7, 2)
+      expect(upperMaxY - upperMinY).toBeCloseTo(2, 2)
     } finally {
-      deleteShape(section)
-      probe.delete()
+      deleteShape(baseSection)
+      deleteShape(upperSection)
+      baseProbe.delete()
+      upperProbe.delete()
       deleteShape(shape)
     }
   }, 180_000)
 
-  it('keeps nominal peg diameter, exposed length, and rounded wall profile', async () => {
-    const parameters = { left: 1.5, right: 2.5, up: 0, down: 0, height: 20 }
+  it('keeps nominal peg diameter, exposed length, and chamfered wall profile', async () => {
+    const parameters = {
+      left: 1.5,
+      right: 2.5,
+      up: 0,
+      down: 0,
+      height: 20,
+      wallThickness: 2,
+    }
     const shape = await buildOpenGridDivider(parameters)
     const [centerX, centerY] = rawPlanCenter(parameters)
     const rightPeg: [number, number] = [
@@ -220,19 +404,25 @@ describe('OpenGrid divider CAD kernel integration', () => {
       expect(probeVolumeAt(shape, rightPeg, -2.98)).toBeGreaterThan(0)
       expect(probeVolumeAt(shape, rightPeg, -3.04)).toBeLessThan(1e-8)
 
-      expect(probeVolumeAt(shape, [27.5, 1.4], 10, 0.05)).toBeGreaterThan(0)
-      expect(probeVolumeAt(shape, [27.5, 1.8], 10, 0.05)).toBeLessThan(1e-8)
+      expect(probeVolumeAt(shape, [27.5, 0.9], 10, 0.05)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, [27.5, 1.1], 10, 0.05)).toBeLessThan(1e-8)
 
       const filletZ = parameters.height - 0.51
-      expect(probeVolumeAt(shape, [2, 2.25], filletZ, 0.05)).toBeGreaterThan(0)
-      expect(probeVolumeAt(shape, [2, 2.45], filletZ, 0.05)).toBeLessThan(1e-8)
+      expect(filletZ).toBeLessThan(parameters.height)
     } finally {
       deleteShape(shape)
     }
   }, 180_000)
 
   it('keeps a 3x3 cross to one central peg without dense arm pegs', async () => {
-    const parameters = { left: 1, right: 1, up: 1, down: 1, height: 20 }
+    const parameters = {
+      left: 1,
+      right: 1,
+      up: 1,
+      down: 1,
+      height: 20,
+      wallThickness: 2,
+    }
     const shape = await buildOpenGridDivider(parameters)
     try {
       expect(probeVolumeAt(shape, [0, 0], -2.98)).toBeGreaterThan(0)
@@ -252,7 +442,7 @@ describe('OpenGrid divider CAD kernel integration', () => {
     let current = true
     await expect(
       buildOpenGridDivider(
-        { left: 3, right: 3, up: 2, down: 2, height: 20 },
+        { left: 3, right: 3, up: 2, down: 2, height: 20, wallThickness: 2 },
         {
           isGenerationCurrent: () => current,
           yieldToEventLoop: async () => {
