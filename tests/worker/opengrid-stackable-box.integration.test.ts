@@ -296,7 +296,7 @@ describe('OpenGrid stackable-box B-Rep', () => {
   }, 120_000)
 
   it.each([{ basePlateMode: false }, { basePlateMode: true }])(
-    'builds a straight-sided +X opening in $basePlateMode mode',
+    'builds a rounded +X opening in $basePlateMode mode',
     ({ basePlateMode }) => {
       const input = parameters({
         x: 2,
@@ -317,7 +317,7 @@ describe('OpenGrid stackable-box B-Rep', () => {
         })
         expect(quality?.planarSillFaceCount).toBeGreaterThanOrEqual(1)
         expect(quality?.planarSideFaceCount).toBeGreaterThanOrEqual(2)
-        expect(quality?.cylindricalFaceCount).toBe(0)
+        expect(quality?.cylindricalFaceCount).toBeGreaterThanOrEqual(4)
       } finally {
         deleteShape(shape)
       }
@@ -325,13 +325,98 @@ describe('OpenGrid stackable-box B-Rep', () => {
     120_000,
   )
 
+  it('opens the notch through the top edge with rounded transitions', () => {
+    const input = parameters({
+      x: 2,
+      y: 2,
+      height: 20,
+      openingPlusXDepth: 18,
+      openingPlusXBottomLength: 20,
+      openingPlusXAngle: 90,
+    })
+    const shape = buildOpenGridStackableBox(input)
+    const [sideHalfExtent] = boundsForOpenGridStackableBox(input).max
+    const externalHeight = externalOpenGridStackableBoxHeightFor(input)
+    const topEdgeProbe = makeBox(
+      [sideHalfExtent - 1.15, -6, externalHeight - 1.5],
+      [sideHalfExtent + 0.02, 6, externalHeight - 0.1],
+    )
+    const railProbe = makeBox(
+      [
+        sideHalfExtent -
+          OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailWidth +
+          0.08,
+        -6,
+        externalHeight -
+          OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailHeight +
+          0.1,
+      ],
+      [
+        sideHalfExtent -
+          OPENGRID_STACKABLE_BOX_CONFIGURATION.wallThickness +
+          0.02,
+        6,
+        externalHeight - 0.1,
+      ],
+    )
+    try {
+      const [quality] = inspectOpenGridStackableBoxOpenings(shape, input)
+      expect(measureVolume(shape.intersect(topEdgeProbe))).toBeCloseTo(0, 2)
+      expect(measureVolume(shape.intersect(railProbe))).toBeCloseTo(0, 2)
+      expect(quality?.cylindricalFaceCount).toBeGreaterThanOrEqual(4)
+    } finally {
+      topEdgeProbe.delete()
+      railProbe.delete()
+      deleteShape(shape)
+    }
+  }, 120_000)
+
+  it('removes the complete selected rail for a long -Y opening', () => {
+    const input = parameters({
+      x: 4.5,
+      y: 2,
+      height: 63,
+      openingMinusYDepth: 18,
+      openingMinusYBottomLength: 20,
+      openingMinusYAngle: 90,
+    })
+    const shape = buildOpenGridStackableBox(input)
+    const bounds = boundsForOpenGridStackableBox(input)
+    const sideHalfExtent = Math.abs(bounds.min[1] ?? 0)
+    const externalHeight = externalOpenGridStackableBoxHeightFor(input)
+    const railProbe = makeBox(
+      [
+        -10,
+        -sideHalfExtent +
+          OPENGRID_STACKABLE_BOX_CONFIGURATION.wallThickness -
+          0.02,
+        externalHeight -
+          OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailHeight +
+          0.1,
+      ],
+      [
+        10,
+        -sideHalfExtent +
+          OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailWidth -
+          0.08,
+        externalHeight - 0.1,
+      ],
+    )
+    try {
+      expect(measureVolume(shape.intersect(railProbe))).toBeCloseTo(0, 2)
+    } finally {
+      railProbe.delete()
+      deleteShape(shape)
+    }
+  }, 120_000)
+
   it('builds four independent rectangular openings without changing the box footprint', () => {
     const input = parameters({
       x: 2,
       y: 2,
       height: 20,
       fullBottomHoleGrid: true,
-      openingPlusXDepth: 3,
+      openingPlusXDepth: 6,
       openingPlusXBottomLength: 8,
       openingPlusXAngle: 90,
       openingMinusXDepth: 4,
@@ -340,7 +425,7 @@ describe('OpenGrid stackable-box B-Rep', () => {
       openingPlusYDepth: 5,
       openingPlusYBottomLength: 7,
       openingPlusYAngle: 45,
-      openingMinusYDepth: 2,
+      openingMinusYDepth: 5,
       openingMinusYBottomLength: 9,
       openingMinusYAngle: 75,
     })
@@ -403,15 +488,15 @@ describe('OpenGrid stackable-box B-Rep', () => {
       x: 0.5,
       y: 1.5,
       height: 20,
-      openingPlusYDepth: 2,
-      openingPlusYBottomLength: 1,
-      openingPlusYAngle: 90,
+      openingPlusXDepth: 2,
+      openingPlusXBottomLength: 1,
+      openingPlusXAngle: 90,
     })
     const shape = buildOpenGridStackableBox(input)
     try {
       const [quality] = inspectOpenGridStackableBoxOpenings(shape, input)
       expect(quality).toMatchObject({
-        direction: '+Y',
+        direction: '+X',
         cutProbeVolume: expect.closeTo(0, 2),
       })
       expect(

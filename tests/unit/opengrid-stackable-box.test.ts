@@ -226,10 +226,11 @@ describe('OpenGrid stackable-box contract', () => {
 
   it('keeps four opening triples independent and validates their ranges', () => {
     const value = parameters({
+      y: 2,
       openingPlusXDepth: 4,
       openingPlusXBottomLength: 3,
       openingPlusXAngle: 45,
-      openingMinusYDepth: 2,
+      openingMinusYDepth: 6,
       openingMinusYBottomLength: 1,
       openingMinusYAngle: 90,
     })
@@ -278,12 +279,13 @@ describe('OpenGrid stackable-box contract', () => {
       normalSign: 1,
       enabled: true,
       bottomZ: 21,
-      horizontalRun: expect.closeTo(4, 5),
-      upperWidth: expect.closeTo(16, 5),
+      arcRadius: expect.closeTo(2.5, 5),
+      horizontalRun: expect.closeTo(13.621, 3),
+      upperWidth: expect.closeTo(35.242, 3),
     })
     expect(
       openGridStackableBoxOpeningBottomLengthMaximumFor(sloped, '+X'),
-    ).toBe(36)
+    ).toBe(17)
   })
 
   it('rejects enabled openings that pass the floor or the corner bridge', () => {
@@ -298,7 +300,7 @@ describe('OpenGrid stackable-box contract', () => {
       parameters({
         x: 0.5,
         y: 0.5,
-        openingPlusXDepth: 1,
+        openingPlusXDepth: 6,
         openingPlusXBottomLength: 3,
       }),
     )

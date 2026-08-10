@@ -74,6 +74,11 @@ export type OpenGridStackableBoxDerivedOpening = {
   depth: number
   bottomLength: number
   angle: number
+  arcRadius: number
+  cornerRun: number
+  cornerRise: number
+  verticalSideHeight: number
+  straightSideRun: number
   bottomZ: number
   tangentSpan: number
   straightRun: number
@@ -85,6 +90,7 @@ export type OpenGridStackableBoxDerivedOpening = {
 export type OpenGridStackableBoxDerivedGeometry = {
   activeFloorTopZ: number
   activeUpperInnerRimZ: number
+  activeUpperOuterEdgeZ: number
   openings: Record<
     OpenGridStackableBoxOpeningDirection,
     OpenGridStackableBoxDerivedOpening
@@ -168,6 +174,7 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   openingDepthStep: 1,
   openingBottomLengthStep: 1,
   openingAngleStep: 1,
+  openingCornerRadius: 2.5,
   defaultOpeningDepth: 0,
   defaultOpeningBottomLength: 1,
   defaultOpeningAngle: 90,
@@ -467,6 +474,8 @@ export function openGridStackableBoxDerivedGeometryFor(
   const activeFloorTopZ = openGridStackableBoxActiveFloorTopZFor(parameters)
   const activeUpperInnerRimZ =
     openGridStackableBoxActiveUpperInnerRimZFor(parameters)
+  const activeUpperOuterEdgeZ =
+    externalOpenGridStackableBoxHeightFor(parameters)
   const values = openingValuesFromParameters(parameters)
   const bridgeWidth = openingBridgeWidth()
   const openings = {} as Record<
@@ -485,7 +494,18 @@ export function openGridStackableBoxDerivedGeometryFor(
       tangentSpan - 2 * OPENGRID_STACKABLE_BOX_CONFIGURATION.outerCornerRadius,
     )
     const angleRadians = (angle * Math.PI) / 180
-    const horizontalRun = depth > 0 ? depth / Math.tan(angleRadians) : 0
+    const arcRadius =
+      depth > 0 ? OPENGRID_STACKABLE_BOX_CONFIGURATION.openingCornerRadius : 0
+    const cornerRun = arcRadius * Math.sin(angleRadians)
+    const cornerRise = arcRadius * (1 - Math.cos(angleRadians))
+    const bottomZ = activeUpperInnerRimZ - depth
+    const verticalSpan = activeUpperOuterEdgeZ - bottomZ
+    const verticalSideHeight = verticalSpan - 2 * cornerRise
+    const straightSideRun =
+      Math.abs(Math.cos(angleRadians)) < 1e-9
+        ? 0
+        : verticalSideHeight / Math.tan(angleRadians)
+    const horizontalRun = cornerRun * 2 + straightSideRun
     const usesXNormal = direction === '+X' || direction === '-X'
     openings[direction] = {
       direction,
@@ -496,7 +516,12 @@ export function openGridStackableBoxDerivedGeometryFor(
       depth,
       bottomLength,
       angle,
-      bottomZ: activeUpperInnerRimZ - depth,
+      arcRadius,
+      cornerRun,
+      cornerRise,
+      verticalSideHeight,
+      straightSideRun,
+      bottomZ,
       tangentSpan,
       straightRun,
       horizontalRun,
@@ -505,7 +530,12 @@ export function openGridStackableBoxDerivedGeometryFor(
     }
   }
 
-  return { activeFloorTopZ, activeUpperInnerRimZ, openings }
+  return {
+    activeFloorTopZ,
+    activeUpperInnerRimZ,
+    activeUpperOuterEdgeZ,
+    openings,
+  }
 }
 
 export function openGridStackableBoxOpeningBottomLengthMaximumFor(
@@ -595,6 +625,12 @@ function openingValidationIssuesFor(
       issues.push({
         field: keys.bottomLength,
         message: '啟用開口時，平底長度至少需要 1 mm。',
+      })
+    }
+    if (opening.verticalSideHeight <= 1e-9) {
+      issues.push({
+        field: keys.depth,
+        message: `固定 ${configuration.openingCornerRadius} mm 圓角之間需要保留直壁，目前下切深度不足。`,
       })
     }
     if (opening.bottomZ < derived.activeFloorTopZ - 0.0001) {
