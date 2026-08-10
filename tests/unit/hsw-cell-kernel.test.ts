@@ -37,7 +37,6 @@ const mocks = vi.hoisted(() => ({
     model: 'opengrid-stackable-cylinder',
     delete: vi.fn(),
   })),
-  assertOpenGridSnapHoldCompatibility: vi.fn(),
 }))
 
 vi.mock('../../src/cad-kernel/components/box/builder', () => ({
@@ -84,14 +83,6 @@ vi.mock(
 vi.mock('../../src/cad-kernel/components/opengrid-divider/builder', () => ({
   buildOpenGridDivider: mocks.buildOpenGridDivider,
 }))
-vi.mock(
-  '../../src/cad-kernel/components/opengrid-stackable-box/snap-hold',
-  () => ({
-    assertOpenGridSnapHoldCompatibility:
-      mocks.assertOpenGridSnapHoldCompatibility,
-  }),
-)
-
 import {
   buildModelBRep,
   getKernelModelDefinition,
@@ -179,7 +170,10 @@ describe('HSW kernel model registration', () => {
     expect(context.getModularGridBaseTemplate).toHaveBeenCalledOnce()
   })
 
-  it('routes the stackable-box model to its dedicated builder', async () => {
+  it('routes the stackable-box model without loading a Snap reference', async () => {
+    const unavailableSnapReferenceLoader = vi.fn(async () => {
+      throw new Error('SNAP_REFERENCE_MUST_NOT_BE_LOADED')
+    })
     const shape = await buildModelBRep(
       'opengrid-stackable-box',
       {
@@ -190,14 +184,14 @@ describe('HSW kernel model registration', () => {
         fullBottomHoleGrid: false,
         basePlateMode: false,
       },
-      context,
+      {
+        ...context,
+        getOpenGridSnapReference: unavailableSnapReferenceLoader,
+      },
     )
 
     expect(shape).toMatchObject({ model: 'opengrid-stackable-box' })
-    expect(context.getOpenGridSnapReference).toHaveBeenCalledWith('Lite')
-    expect(mocks.assertOpenGridSnapHoldCompatibility).toHaveBeenCalledWith(
-      expect.anything(),
-    )
+    expect(unavailableSnapReferenceLoader).not.toHaveBeenCalled()
     expect(mocks.buildOpenGridStackableBox).toHaveBeenCalledWith(
       {
         x: 0.5,

@@ -463,8 +463,8 @@
       value={parameters.variant}
       onchange={(event) => updateSelect('variant', event)}
     >
-      <option value="Full">Full（6.8 mm）</option>
       <option value="Lite">Lite（4 mm）</option>
+      <option value="Full">Full（6.8 mm）</option>
       <option value="Heavy">Heavy（13.8 mm，雙面）</option>
     </select>
   </ParameterField>

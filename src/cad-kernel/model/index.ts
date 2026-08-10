@@ -33,7 +33,6 @@ import { buildOpenGridBRep } from '../components/opengrid/builder'
 import { buildOpenGridDivider } from '../components/opengrid-divider/builder'
 import { buildOpenGridStackableBox } from '../components/opengrid-stackable-box/builder'
 import { buildOpenGridStackableCylinder } from '../components/opengrid-stackable-cylinder/builder'
-import { assertOpenGridSnapHoldCompatibility } from '../components/opengrid-stackable-box/snap-hold'
 import { buildOpenGridSnap } from '../components/opengrid-snap/builder'
 import { buildOpenGridSnapRemover } from '../components/opengrid-snap-remover/builder'
 import { buildPillar } from '../components/opengrid-pillar/builder'
@@ -232,14 +231,6 @@ async function buildOpenGridStackableBoxModel(
   if (!isOpenGridStackableBoxParameters(parameters)) {
     throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-stackable-box')
   }
-  if (!context.getOpenGridSnapReference) {
-    throw new Error('OPENGRID_SNAP_HOLD_REFERENCE_MISSING')
-  }
-  const snapReference = await context.getOpenGridSnapReference(
-    'Lite',
-    'Standard',
-  )
-  assertOpenGridSnapHoldCompatibility(snapReference)
   return buildOpenGridStackableBox(parameters, {
     isGenerationCurrent: context.isGenerationCurrent,
   })

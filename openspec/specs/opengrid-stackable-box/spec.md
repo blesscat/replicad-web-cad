@@ -87,7 +87,7 @@ Every generated stackable box MUST have the same box-to-box interface and MUST b
 
 ### Requirement: OpenGrid Snap base mounting sockets
 
-The box MUST retain a fixed 5 mm bottom assembly in normal mode. When `cornerBottomHoles` is `true`, it MUST provide nominal Ø5 mm base-mounting sockets at the external corner positions used by the OpenGrid Snap interface. When `cornerBottomHoles` is `false`, it MUST NOT cut those special Snap sockets. When `fullBottomHoleGrid` is `true`, the box MUST additionally provide the ordinary holes defined by the optional nominal OpenGrid bottom hole grid requirement; the ordinary grid holes MUST remain available even when `cornerBottomHoles` is `false`. For a full-cell axis with corner sockets enabled, the four special socket centers MUST occupy the outermost positions of the nominal 14 mm hole grid, 7 mm from the corresponding pre-clearance nominal box footprint edge. In normal mode, each special socket MUST have a Ø5.05 mm base-facing bore through the lower/outside 3.0 mm of the fixed bottom assembly followed by a Ø7.05 mm bore through the upper/interior 2.0 mm toward the box interior. In base-plate mode, each retained 3.0 mm base plate socket MUST instead have a Ø5.05 mm outside/lower bore for 2.0 mm followed by a Ø7.05 mm inside/upper retaining seat for 1.0 mm. In both modes, the diameter change MUST be a fixed planar retaining shoulder, not a long graduated lead-in, conical chamfer, or overlaid counterbore. The Ø7.05 mm upper opening MUST also serve as the retaining seat for a Ø5 mm shaft with a Ø5.8 mm flange. After insertion from inside the box, the flange's upper surface MUST be flush with the box interior floor and the shaft MUST extend approximately 3 mm below the box's outside bottom surface. The four nominal corner locations MUST be geometrically de-duplicated when a half-cell axis would otherwise cause overlapping Ø5 mm sockets, without removing the corresponding nominal grid position in full-hole mode.
+The box MUST retain a fixed 5 mm bottom assembly in normal mode. When `cornerBottomHoles` is `true`, it MUST provide nominal Ø5 mm base-mounting sockets at the external corner positions used by the OpenGrid Snap interface. When `cornerBottomHoles` is `false`, it MUST NOT cut those special Snap sockets. When `fullBottomHoleGrid` is `true`, the box MUST additionally provide the ordinary holes defined by the optional nominal OpenGrid bottom hole grid requirement; the ordinary grid holes MUST remain available even when `cornerBottomHoles` is `false`. For a full-cell axis with corner sockets enabled, the four special socket centers MUST occupy the outermost positions of the nominal 14 mm hole grid, 7 mm from the corresponding pre-clearance nominal box footprint edge. In normal mode, each special socket MUST have a Ø5.05 mm base-facing bore through the lower/outside 3.0 mm of the fixed bottom assembly followed by a Ø7.05 mm bore through the upper/interior 2.0 mm toward the box interior. In base-plate mode, each retained 3.0 mm base plate socket MUST instead have a Ø5.05 mm outside/lower bore for 2.0 mm followed by a Ø7.05 mm inside/upper retaining seat for 1.0 mm. In both modes, the diameter change MUST be a fixed planar retaining shoulder, not a long graduated lead-in, conical chamfer, or overlaid counterbore. The Ø7.05 mm upper opening MUST also serve as the retaining seat for a Ø5 mm shaft with a Ø5.8 mm flange. After insertion from inside the box, the flange's upper surface MUST be flush with the box interior floor and the shaft MUST extend approximately 3 mm below the box's outside bottom surface. The four nominal corner locations MUST be geometrically de-duplicated when a half-cell axis would otherwise cause overlapping Ø5 mm sockets, without removing the corresponding nominal grid position in full-hole mode. Runtime generation MUST realize these interfaces from the declared OpenGrid geometry contract and MUST NOT require a Snap STEP reference to be downloaded, loaded, or parsed. The bundled dedicated Snap reference MUST be validated separately during integration or CI testing.
 
 #### Scenario: Full-cell base mounting
 
@@ -132,11 +132,18 @@ The box MUST retain a fixed 5 mm bottom assembly in normal mode. When `cornerBot
 - **AND** the geometry MUST remain watertight and free of overlapping cutters
 - **AND** the model MUST preserve the valid half-cell footprint instead of silently changing its dimensions
 
-#### Scenario: Snap reference mismatch
+#### Scenario: Snap reference compatibility is checked in test/CI
 
-- **WHEN** the bundled module-relative `opengrid-bare-lite-snap.step` reference cannot be reconciled with the generated nominal Ø5 mm mounting interface within the declared fit tolerance
-- **THEN** geometry validation MUST report a diagnosable mating-interface failure
-- **AND** the normal kernel model build path MUST NOT silently scale or move the box footprint to hide the mismatch
+- **WHEN** the test/CI suite validates the bundled module-relative `opengrid-bare-lite-snap.step` reference against the generated nominal Ø5 mm mounting interface within the declared fit tolerance
+- **THEN** a compatible reference MUST pass the dedicated mating-interface validation
+- **AND** an incompatible, malformed, or insufficient reference MUST fail with a diagnosable mating-interface error
+- **AND** a reference mismatch MUST NOT cause the normal Stackable Box runtime model build to scale or move the box footprint
+
+#### Scenario: Runtime generation without a Snap reference
+
+- **WHEN** valid `opengrid-stackable-box` parameters are sent to the runtime model builder while the Snap reference loader is unavailable
+- **THEN** the builder MUST still produce a valid non-empty Stackable Box B-Rep when the declared parameter and geometry contracts are valid
+- **AND** the runtime MUST NOT download, load, parse, or validate a Snap STEP reference as part of that build
 
 ### Requirement: Optional nominal OpenGrid bottom hole grid
 
