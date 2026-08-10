@@ -2,6 +2,7 @@ import { importSTEP, type Shape3D } from 'replicad'
 import {
   openGridStackableBoxSocketCentersFor,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   type OpenGridStackableBoxParameters,
 } from '../../../cad-contract/units'
 import { deleteShape, readBounds, type Bounds } from './shared'
@@ -107,12 +108,10 @@ function maximumCenterError(
 export function inspectOpenGridSnapHoldCompatibility(
   reference: Shape3D,
   parameters: OpenGridStackableBoxParameters = {
+    ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
     x: 1,
     y: 1,
     height: 10,
-    cornerBottomHoles: true,
-    fullBottomHoleGrid: false,
-    basePlateMode: false,
   },
 ): OpenGridSnapHoldCompatibilityReport {
   assertReferenceBounds(reference)
@@ -169,12 +168,10 @@ export async function loadOpenGridSnapHoldReference(
 export function assertOpenGridSnapHoldCompatibility(
   reference: Shape3D,
   parameters: OpenGridStackableBoxParameters = {
+    ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
     x: 1,
     y: 1,
     height: 10,
-    cornerBottomHoles: true,
-    fullBottomHoleGrid: false,
-    basePlateMode: false,
   },
 ): void {
   const report = inspectOpenGridSnapHoldCompatibility(reference, parameters)

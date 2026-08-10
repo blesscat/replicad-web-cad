@@ -3,11 +3,21 @@
     displayParameterLabel,
     opengridStackableBoxDefinition,
   } from '../../../../features/cad/model-catalog'
+  import {
+    openGridStackableBoxOpeningBottomLengthMaximumFor,
+    OPENGRID_STACKABLE_BOX_CONFIGURATION,
+    OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+    OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
+    type OpenGridStackableBoxOpeningDirection,
+    type OpenGridStackableBoxOpeningParameterKey,
+    type OpenGridStackableBoxParameters,
+  } from '../../../../cad-contract/units'
   import { calculateOpenGridStackableBoxCounts } from '../../../../features/cad/grid-dimensions'
   import GridDimensionCalculator from '../GridDimensionCalculator.svelte'
   import ParameterControl from '../ParameterControl.svelte'
   import ParameterField from '../ParameterField.svelte'
   import type { ComponentPanelProps } from '../types'
+  import type { ParameterField as ParameterFieldDefinition } from '../../../../features/cad/model-catalog'
 
   let { rawParameters, fieldErrors, onInputChange }: ComponentPanelProps =
     $props()
@@ -23,6 +33,130 @@
   function handleBasePlateModeChange(event: Event): void {
     if (!(event.currentTarget instanceof HTMLInputElement)) return
     onInputChange('basePlateMode', event.currentTarget.value)
+  }
+
+  const openingGroups = [
+    {
+      direction: '-Y',
+      label: '前方',
+      defaultOpen: true,
+      keys: [
+        'openingMinusYDepth',
+        'openingMinusYBottomLength',
+        'openingMinusYAngle',
+      ],
+    },
+    {
+      direction: '+Y',
+      label: '後方',
+      defaultOpen: false,
+      keys: [
+        'openingPlusYDepth',
+        'openingPlusYBottomLength',
+        'openingPlusYAngle',
+      ],
+    },
+    {
+      direction: '-X',
+      label: '左方',
+      defaultOpen: false,
+      keys: [
+        'openingMinusXDepth',
+        'openingMinusXBottomLength',
+        'openingMinusXAngle',
+      ],
+    },
+    {
+      direction: '+X',
+      label: '右方',
+      defaultOpen: false,
+      keys: [
+        'openingPlusXDepth',
+        'openingPlusXBottomLength',
+        'openingPlusXAngle',
+      ],
+    },
+  ] as const
+
+  function rawNumberFor(key: string): number | null {
+    const rawValue = rawParameters[key as keyof typeof rawParameters]
+    if (rawValue === undefined || rawValue.trim() === '') return null
+    const value = Number(rawValue)
+    return Number.isFinite(value) ? value : null
+  }
+
+  function parametersForRange(): OpenGridStackableBoxParameters | null {
+    const x = rawNumberFor('x')
+    const y = rawNumberFor('y')
+    const height = rawNumberFor('height')
+    if (x === null || y === null || height === null) return null
+
+    const openingValues = {} as Record<
+      OpenGridStackableBoxOpeningParameterKey,
+      number
+    >
+    for (const key of OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS) {
+      openingValues[key] =
+        rawNumberFor(key) ?? OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS[key]
+    }
+
+    return {
+      x,
+      y,
+      height,
+      cornerBottomHoles: rawParameters.cornerBottomHoles === 'true',
+      fullBottomHoleGrid: rawParameters.fullBottomHoleGrid === 'true',
+      basePlateMode: rawParameters.basePlateMode === 'true',
+      ...openingValues,
+    }
+  }
+
+  function fieldsFor(
+    keys: readonly OpenGridStackableBoxOpeningParameterKey[],
+    direction: OpenGridStackableBoxOpeningDirection,
+    displayDirection: string,
+  ): ParameterFieldDefinition[] {
+    return keys.flatMap((key) => {
+      const field = opengridStackableBoxDefinition.parameterSchema.find(
+        (candidate) => candidate.key === key,
+      )
+      if (!field) return []
+      const displayedField = { ...field, axis: displayDirection }
+      if (field.key.endsWith('BottomLength')) {
+        const depth = rawNumberFor(keys[0])
+        const minimum =
+          depth !== null && depth > 0
+            ? 1
+            : OPENGRID_STACKABLE_BOX_CONFIGURATION.openingBottomLengthMin
+        const parameters = parametersForRange()
+        let calculatedMaximum = field.max
+        if (parameters) {
+          calculatedMaximum = openGridStackableBoxOpeningBottomLengthMaximumFor(
+            parameters,
+            direction,
+          )
+        }
+        const maximum = Math.max(
+          minimum,
+          Math.min(field.max, calculatedMaximum),
+        )
+        return [
+          {
+            ...displayedField,
+            min: minimum,
+            max: maximum,
+            sliderMin: minimum,
+            sliderMax: maximum,
+          },
+        ]
+      }
+      if (!field.key.endsWith('Depth')) return [displayedField]
+
+      const height = rawNumberFor('height')
+      if (height === null) return [displayedField]
+      const maximum = Math.max(field.min, Math.min(field.max, height))
+      return [{ ...displayedField, max: maximum, sliderMax: maximum }]
+    })
   }
 </script>
 
@@ -146,7 +280,7 @@
       >{fieldErrors.basePlateMode}</span
     >
   {/if}
-  {#each opengridStackableBoxDefinition.parameterSchema as field (field.key)}
+  {#each opengridStackableBoxDefinition.parameterSchema.slice(0, 3) as field (field.key)}
     {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
     <ParameterField
       label={displayParameterLabel(field)}
@@ -164,4 +298,44 @@
       />
     </ParameterField>
   {/each}
+  <details
+    class="grid gap-3 rounded-lg border border-border-field p-3"
+    data-testid="opengrid-stackable-box-opening-disclosure"
+  >
+    <summary class="cursor-pointer font-[650]">四個方向開口設定</summary>
+    <div class="grid gap-3 pt-1">
+      {#each openingGroups as group (group.direction)}
+        <details
+          class="grid gap-3 rounded-lg border border-border-field p-3"
+          data-direction={group.direction}
+          data-testid={`opengrid-stackable-box-opening-group-${group.direction}`}
+          open={group.defaultOpen}
+        >
+          <summary class="cursor-pointer font-[650]">{group.label}</summary>
+          <fieldset class="grid gap-3 border-0 p-0 pt-1">
+            {#each fieldsFor(group.keys, group.direction, group.label) as field (field.key)}
+              {@const value =
+                rawParameters[field.key] ?? String(field.defaultValue)}
+              <ParameterField
+                label={displayParameterLabel(field)}
+                unit={field.unit}
+                changed={value !== String(field.defaultValue)}
+                error={fieldErrors[field.key]}
+                errorId={`${field.key}-error`}
+                onRestore={() =>
+                  onInputChange(field.key, String(field.defaultValue))}
+              >
+                <ParameterControl
+                  {field}
+                  {value}
+                  error={fieldErrors[field.key]}
+                  onChange={(nextValue) => onInputChange(field.key, nextValue)}
+                />
+              </ParameterField>
+            {/each}
+          </fieldset>
+        </details>
+      {/each}
+    </div>
+  </details>
 </fieldset>

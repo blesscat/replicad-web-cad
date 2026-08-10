@@ -1,6 +1,8 @@
 import { get as getStoreValue, writable, type Subscriber } from 'svelte/store'
 import {
   OPENGRID_DIVIDER_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+  OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   type ModelId,
   type ModelParameterValues,
@@ -94,11 +96,7 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
     value,
     'basePlateMode',
   )
-  if (hasCornerBottomHoles && hasFullBottomHoleGrid && hasBasePlateMode) {
-    return value
-  }
-
-  return {
+  const normalized: Record<string, unknown> = {
     ...value,
     cornerBottomHoles: hasCornerBottomHoles ? value.cornerBottomHoles : true,
     fullBottomHoleGrid: hasFullBottomHoleGrid
@@ -106,6 +104,11 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
       : false,
     basePlateMode: hasBasePlateMode ? value.basePlateMode : false,
   }
+  for (const key of OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(value, key)) continue
+    normalized[key] = OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS[key]
+  }
+  return normalized
 }
 
 function cloneParameters(

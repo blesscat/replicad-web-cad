@@ -6,6 +6,7 @@ import {
   openGridStackableBoxSocketCentersFor,
   openGridStackableBoxUpperInnerRimZFor,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   type OpenGridStackableBoxParameters,
 } from '../../../cad-contract/units'
 import {
@@ -237,20 +238,16 @@ function matingClearanceFixtureFor(height: number): MatingClearanceFixture {
   }
 
   const lowerParameters: OpenGridStackableBoxParameters = {
+    ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
     x: 1,
     y: 4,
     height,
-    cornerBottomHoles: true,
-    fullBottomHoleGrid: false,
-    basePlateMode: false,
   }
   const upperParameters: OpenGridStackableBoxParameters = {
+    ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
     x: 1,
     y: 1,
     height,
-    cornerBottomHoles: true,
-    fullBottomHoleGrid: false,
-    basePlateMode: false,
   }
   let lower = makeBoxShell(lowerParameters)
   let upper = makeBoxShell(upperParameters)

@@ -5,8 +5,7 @@ import {
 } from '../../src/features/cad/parameters'
 import {
   OPENGRID_CONFIGURATION,
-  OPENGRID_STACKABLE_BOX_CONFIGURATION,
-  OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   OPENGRID_SNAP_CONFIGURATION,
   OPENGRID_DIVIDER_CONFIGURATION,
@@ -83,14 +82,9 @@ describe('component parameter store', () => {
     expect(store.get('modular-grid-base')).toEqual({ rows: 1, columns: 1 })
     expect(store.get('hsw-cell')).toEqual({ rows: 1, columns: 1 })
     expect(store.get('opengrid')).toEqual(opengridParameters())
-    expect(store.get('opengrid-stackable-box')).toEqual({
-      x: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultX,
-      y: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultY,
-      height: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHeight,
-      cornerBottomHoles: true,
-      fullBottomHoleGrid: false,
-      basePlateMode: false,
-    })
+    expect(store.get('opengrid-stackable-box')).toEqual(
+      OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+    )
     expect(store.get('opengrid-stackable-cylinder')).toEqual(
       OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
     )
@@ -168,6 +162,7 @@ describe('component parameter store', () => {
       }),
     )
     expect(store.get('opengrid-stackable-box')).toEqual({
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
       x: 0.5,
       y: 1.5,
       height: 25,
@@ -231,6 +226,7 @@ describe('component parameter store', () => {
     const store = createComponentParameterStore({ storage })
 
     expect(store.get('opengrid-stackable-box')).toEqual({
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
       x: 0.5,
       y: 1.5,
       height: 25,

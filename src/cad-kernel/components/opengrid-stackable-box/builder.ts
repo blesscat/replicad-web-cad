@@ -7,6 +7,7 @@ import {
   addMountingSockets,
   applyBasePlateMode,
   applyStackingProfile,
+  addSideOpenings,
   makeBoxShell,
 } from './geometry'
 import {
@@ -24,6 +25,11 @@ export {
   assertOpenGridStackableBoxGeometry,
   inspectOpenGridStackableBoxInterface,
 } from './quality'
+export {
+  assertOpenGridStackableBoxOpenings,
+  inspectOpenGridStackableBoxOpenings,
+} from './quality-openings'
+export type { OpenGridStackableBoxOpeningQuality } from './quality-openings'
 export type {
   OpenGridStackableBoxCaptiveSocketRecord,
   OpenGridStackableBoxInterfaceQualityReport,
@@ -44,6 +50,7 @@ export function buildOpenGridStackableBox(
   shape = applyStackingProfile(shape, parameters, context)
   shape = addMountingSockets(shape, parameters, context)
   shape = applyBasePlateMode(shape, parameters)
+  shape = addSideOpenings(shape, parameters, context)
   assertGenerationCurrent(context)
   assertOpenGridStackableBoxGeometry(shape, parameters)
   return shape

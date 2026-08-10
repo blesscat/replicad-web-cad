@@ -2,6 +2,7 @@ import {
   HSW_CELL_CONFIGURATION,
   OPENGRID_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   PROTOTYPE_CONFIGURATION,
   boundsForHswCell,
   boundsForModularGridBase,
@@ -241,14 +242,9 @@ export function calculateOpenGridCounts(
 function openGridStackableBoxBoundsSize(x: number, y: number): BoundsSize {
   return sizeFromBounds(
     boundsForOpenGridStackableBox({
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
       x,
       y,
-      height: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHeight,
-      cornerBottomHoles:
-        OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultCornerBottomHoles,
-      fullBottomHoleGrid:
-        OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultFullBottomHoleGrid,
-      basePlateMode: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultBasePlateMode,
     }),
   )
 }

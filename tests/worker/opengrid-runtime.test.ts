@@ -37,6 +37,7 @@ import {
   OPENGRID_CONFIGURATION,
   openGridStackableBoxFileName,
   openGridStackableBoxStlFileName,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   openGridFileName,
   openGridStlFileName,
   openGridDividerFileName,
@@ -104,6 +105,7 @@ function stackableBoxGenerateCommand(
     generation,
     modelId: 'opengrid-stackable-box' as const,
     parameters: {
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
       x: 0.5,
       y: 1.5,
       height: 20,
@@ -378,6 +380,7 @@ describe('OpenGrid Worker runtime', () => {
     await runtime.handle(
       stackableBoxGenerateCommand(1, {
         parameters: {
+          ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
           x: 0.5,
           y: 1.5,
           height: 20,
@@ -391,6 +394,7 @@ describe('OpenGrid Worker runtime', () => {
     expect(mocks.buildModelBRep).toHaveBeenCalledWith(
       'opengrid-stackable-box',
       {
+        ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
         x: 0.5,
         y: 1.5,
         height: 20,
@@ -426,17 +430,11 @@ describe('OpenGrid Worker runtime', () => {
         event.kind === 'model.ready',
     ) as {
       modelRevision: string
-      parameters: {
-        x: number
-        y: number
-        height: number
-        cornerBottomHoles: boolean
-        fullBottomHoleGrid: boolean
-        basePlateMode: boolean
-      }
+      parameters: OpenGridStackableBoxParameters
       workerEpoch: string
     }
     expect(ready.parameters).toEqual({
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
       x: 0.5,
       y: 1.5,
       height: 20,

@@ -3,6 +3,7 @@ import { normalizeError } from '../../src/cad-contract/errors'
 import {
   OPENGRID_CONFIGURATION,
   OPENGRID_DIVIDER_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   type OpenGridParameters,
 } from '../../src/cad-contract/units'
@@ -138,14 +139,7 @@ describe('CAD state machine', () => {
     const state = initialCadState('opengrid-stackable-box')
 
     expect(state.modelId).toBe('opengrid-stackable-box')
-    expect(state.input).toEqual({
-      x: 2,
-      y: 2,
-      height: 10,
-      cornerBottomHoles: true,
-      fullBottomHoleGrid: false,
-      basePlateMode: false,
-    })
+    expect(state.input).toEqual(OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS)
   })
 
   it('initializes the independent OpenGrid divider defaults', () => {

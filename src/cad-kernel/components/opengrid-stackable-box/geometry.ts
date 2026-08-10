@@ -10,10 +10,13 @@ import {
 } from 'replicad'
 import {
   nominalOpenGridStackableBoxFootprintFor,
+  openGridStackableBoxDerivedGeometryFor,
   openGridStackableBoxUpperInnerRimZFor,
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
+  OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS,
   openGridStackableBoxSocketCentersFor,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  type OpenGridStackableBoxOpeningDirection,
   type OpenGridStackableBoxParameters,
 } from '../../../cad-contract/units'
 import {
@@ -315,6 +318,101 @@ function extrudeProfile(
     deleteShape(sketch)
     sketcher.delete()
   }
+}
+
+function sideOpeningProfile(
+  bottomZ: number,
+  upperZ: number,
+  bottomLength: number,
+  upperWidth: number,
+): readonly [number, number][] {
+  const bottomHalfLength = bottomLength / 2
+  const upperHalfWidth = upperWidth / 2
+  return [
+    [-bottomHalfLength, bottomZ],
+    [bottomHalfLength, bottomZ],
+    [upperHalfWidth, upperZ],
+    [-upperHalfWidth, upperZ],
+  ]
+}
+
+function makeSideOpeningCutter(
+  parameters: OpenGridStackableBoxParameters,
+  direction: OpenGridStackableBoxOpeningDirection,
+): Shape3D {
+  const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const derived = openGridStackableBoxDerivedGeometryFor(parameters)
+  const opening = derived.openings[direction]
+  const upperZ = derived.activeUpperInnerRimZ + 0.04
+  const profile = sideOpeningProfile(
+    opening.bottomZ,
+    upperZ,
+    opening.bottomLength,
+    opening.upperWidth,
+  )
+  const margin = 0.04
+  const wallStart = configuration.wallThickness - margin
+
+  if (direction === '+X') {
+    return extrudeProfile(
+      'YZ',
+      [width / 2 - wallStart, 0, 0],
+      profile,
+      configuration.wallThickness + 2 * margin,
+      [1, 0, 0],
+    )
+  }
+  if (direction === '-X') {
+    return extrudeProfile(
+      'YZ',
+      [-width / 2 - margin, 0, 0],
+      profile,
+      configuration.wallThickness + 2 * margin,
+      [1, 0, 0],
+    )
+  }
+  if (direction === '+Y') {
+    return extrudeProfile(
+      'XZ',
+      [0, depth / 2 - wallStart, 0],
+      profile,
+      configuration.wallThickness + 2 * margin,
+      [0, 1, 0],
+    )
+  }
+  return extrudeProfile(
+    'XZ',
+    [0, -depth / 2 - margin, 0],
+    profile,
+    configuration.wallThickness + 2 * margin,
+    [0, 1, 0],
+  )
+}
+
+export function addSideOpenings(
+  shape: Shape3D,
+  parameters: OpenGridStackableBoxParameters,
+  context: OpenGridStackableBoxBuildContext,
+): Shape3D {
+  const derived = openGridStackableBoxDerivedGeometryFor(parameters)
+  let current = shape
+
+  for (const direction of OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS) {
+    if (!derived.openings[direction].enabled) continue
+    assertGenerationCurrent(context)
+    const cutter = makeSideOpeningCutter(parameters, direction)
+    try {
+      const cut = current.cut(cutter)
+      deleteShape(current)
+      current = cut
+    } finally {
+      deleteShape(cutter)
+    }
+    assertGenerationCurrent(context)
+  }
+
+  return current
 }
 
 export type OpenGridStackableBoxBottomGridSeam = {

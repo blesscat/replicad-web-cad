@@ -5,6 +5,56 @@ export type OpenGridStackableBoxParameterKey =
   | 'cornerBottomHoles'
   | 'fullBottomHoleGrid'
   | 'basePlateMode'
+  | 'openingPlusXDepth'
+  | 'openingPlusXBottomLength'
+  | 'openingPlusXAngle'
+  | 'openingMinusXDepth'
+  | 'openingMinusXBottomLength'
+  | 'openingMinusXAngle'
+  | 'openingPlusYDepth'
+  | 'openingPlusYBottomLength'
+  | 'openingPlusYAngle'
+  | 'openingMinusYDepth'
+  | 'openingMinusYBottomLength'
+  | 'openingMinusYAngle'
+
+export type OpenGridStackableBoxOpeningDirection = '+X' | '-X' | '+Y' | '-Y'
+
+export type OpenGridStackableBoxOpeningParameterKey =
+  | 'openingPlusXDepth'
+  | 'openingPlusXBottomLength'
+  | 'openingPlusXAngle'
+  | 'openingMinusXDepth'
+  | 'openingMinusXBottomLength'
+  | 'openingMinusXAngle'
+  | 'openingPlusYDepth'
+  | 'openingPlusYBottomLength'
+  | 'openingPlusYAngle'
+  | 'openingMinusYDepth'
+  | 'openingMinusYBottomLength'
+  | 'openingMinusYAngle'
+
+export const OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS = [
+  '+X',
+  '-X',
+  '+Y',
+  '-Y',
+] as const satisfies readonly OpenGridStackableBoxOpeningDirection[]
+
+export const OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS = [
+  'openingPlusXDepth',
+  'openingPlusXBottomLength',
+  'openingPlusXAngle',
+  'openingMinusXDepth',
+  'openingMinusXBottomLength',
+  'openingMinusXAngle',
+  'openingPlusYDepth',
+  'openingPlusYBottomLength',
+  'openingPlusYAngle',
+  'openingMinusYDepth',
+  'openingMinusYBottomLength',
+  'openingMinusYAngle',
+] as const satisfies readonly OpenGridStackableBoxOpeningParameterKey[]
 
 export type OpenGridStackableBoxParameters = {
   x: number
@@ -13,6 +63,32 @@ export type OpenGridStackableBoxParameters = {
   cornerBottomHoles: boolean
   fullBottomHoleGrid: boolean
   basePlateMode: boolean
+} & Record<OpenGridStackableBoxOpeningParameterKey, number>
+
+export type OpenGridStackableBoxDerivedOpening = {
+  direction: OpenGridStackableBoxOpeningDirection
+  normalAxis: 'x' | 'y'
+  tangentAxis: 'x' | 'y'
+  normalSign: -1 | 1
+  enabled: boolean
+  depth: number
+  bottomLength: number
+  angle: number
+  bottomZ: number
+  tangentSpan: number
+  straightRun: number
+  horizontalRun: number
+  upperWidth: number
+  bridgeWidth: number
+}
+
+export type OpenGridStackableBoxDerivedGeometry = {
+  activeFloorTopZ: number
+  activeUpperInnerRimZ: number
+  openings: Record<
+    OpenGridStackableBoxOpeningDirection,
+    OpenGridStackableBoxDerivedOpening
+  >
 }
 
 export type OpenGridStackableBoxValidationIssue = {
@@ -83,7 +159,131 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   baseFlangeThickness: 0.5,
   baseShaftExposure: 3,
   socketDeduplicationDistance: 5,
+  openingDepthMin: 0,
+  openingDepthMax: 500,
+  openingBottomLengthMin: 1,
+  openingBottomLengthMax: 300,
+  openingAngleMin: 1,
+  openingAngleMax: 90,
+  openingDepthStep: 1,
+  openingBottomLengthStep: 1,
+  openingAngleStep: 1,
+  defaultOpeningDepth: 0,
+  defaultOpeningBottomLength: 1,
+  defaultOpeningAngle: 90,
+  openingCornerBridge: 2,
 } as const
+
+export const OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS = {
+  x: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultX,
+  y: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultY,
+  height: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHeight,
+  cornerBottomHoles:
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultCornerBottomHoles,
+  fullBottomHoleGrid:
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultFullBottomHoleGrid,
+  basePlateMode: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultBasePlateMode,
+  openingPlusXDepth: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultOpeningDepth,
+  openingPlusXBottomLength:
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultOpeningBottomLength,
+  openingPlusXAngle: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultOpeningAngle,
+  openingMinusXDepth: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultOpeningDepth,
+  openingMinusXBottomLength:
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultOpeningBottomLength,
+  openingMinusXAngle: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultOpeningAngle,
+  openingPlusYDepth: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultOpeningDepth,
+  openingPlusYBottomLength:
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultOpeningBottomLength,
+  openingPlusYAngle: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultOpeningAngle,
+  openingMinusYDepth: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultOpeningDepth,
+  openingMinusYBottomLength:
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultOpeningBottomLength,
+  openingMinusYAngle: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultOpeningAngle,
+} as const satisfies OpenGridStackableBoxParameters
+
+type OpenGridStackableBoxOpeningKeys = {
+  depth: OpenGridStackableBoxOpeningParameterKey & `${string}Depth`
+  bottomLength: OpenGridStackableBoxOpeningParameterKey &
+    `${string}BottomLength`
+  angle: OpenGridStackableBoxOpeningParameterKey & `${string}Angle`
+}
+
+const OPENING_KEYS_BY_DIRECTION: Record<
+  OpenGridStackableBoxOpeningDirection,
+  OpenGridStackableBoxOpeningKeys
+> = {
+  '+X': {
+    depth: 'openingPlusXDepth',
+    bottomLength: 'openingPlusXBottomLength',
+    angle: 'openingPlusXAngle',
+  },
+  '-X': {
+    depth: 'openingMinusXDepth',
+    bottomLength: 'openingMinusXBottomLength',
+    angle: 'openingMinusXAngle',
+  },
+  '+Y': {
+    depth: 'openingPlusYDepth',
+    bottomLength: 'openingPlusYBottomLength',
+    angle: 'openingPlusYAngle',
+  },
+  '-Y': {
+    depth: 'openingMinusYDepth',
+    bottomLength: 'openingMinusYBottomLength',
+    angle: 'openingMinusYAngle',
+  },
+}
+
+const LEGACY_PARAMETER_KEYS = [
+  'x',
+  'y',
+  'height',
+  'cornerBottomHoles',
+  'fullBottomHoleGrid',
+  'basePlateMode',
+] as const
+
+function defaultOpeningValues(): Pick<
+  OpenGridStackableBoxParameters,
+  OpenGridStackableBoxOpeningParameterKey
+> {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  return {
+    openingPlusXDepth: configuration.defaultOpeningDepth,
+    openingPlusXBottomLength: configuration.defaultOpeningBottomLength,
+    openingPlusXAngle: configuration.defaultOpeningAngle,
+    openingMinusXDepth: configuration.defaultOpeningDepth,
+    openingMinusXBottomLength: configuration.defaultOpeningBottomLength,
+    openingMinusXAngle: configuration.defaultOpeningAngle,
+    openingPlusYDepth: configuration.defaultOpeningDepth,
+    openingPlusYBottomLength: configuration.defaultOpeningBottomLength,
+    openingPlusYAngle: configuration.defaultOpeningAngle,
+    openingMinusYDepth: configuration.defaultOpeningDepth,
+    openingMinusYBottomLength: configuration.defaultOpeningBottomLength,
+    openingMinusYAngle: configuration.defaultOpeningAngle,
+  }
+}
+
+function openingValuesFor(
+  value: Record<string, unknown>,
+  hasCurrentParameters: boolean,
+): Pick<
+  OpenGridStackableBoxParameters,
+  OpenGridStackableBoxOpeningParameterKey
+> {
+  if (!hasCurrentParameters) return defaultOpeningValues()
+
+  const defaults = defaultOpeningValues()
+  const values = {} as Pick<
+    OpenGridStackableBoxParameters,
+    OpenGridStackableBoxOpeningParameterKey
+  >
+  for (const key of OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS) {
+    values[key] =
+      typeof value[key] === 'number' ? (value[key] as number) : defaults[key]
+  }
+  return values
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -217,6 +417,210 @@ export function externalOpenGridStackableBoxHeightFor(
   )
 }
 
+export function openGridStackableBoxActiveFloorTopZFor(
+  parameters: OpenGridStackableBoxParameters,
+): number {
+  if (parameters.basePlateMode) {
+    return OPENGRID_STACKABLE_BOX_CONFIGURATION.basePlateThickness
+  }
+  return OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight
+}
+
+export function openGridStackableBoxActiveUpperInnerRimZFor(
+  parameters: OpenGridStackableBoxParameters,
+): number {
+  return openGridStackableBoxActiveFloorTopZFor(parameters) + parameters.height
+}
+
+function tangentSpanFor(
+  parameters: OpenGridStackableBoxParameters,
+  direction: OpenGridStackableBoxOpeningDirection,
+): number {
+  const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
+  if (direction === '+X' || direction === '-X') return depth
+  return width
+}
+
+function openingBridgeWidth(): number {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  return Math.max(
+    configuration.openingCornerBridge,
+    configuration.wallThickness + configuration.stackingClearance,
+  )
+}
+
+function openingValuesFromParameters(
+  parameters: OpenGridStackableBoxParameters,
+): Pick<
+  OpenGridStackableBoxParameters,
+  OpenGridStackableBoxOpeningParameterKey
+> {
+  return openingValuesFor(
+    parameters as unknown as Record<string, unknown>,
+    true,
+  )
+}
+
+export function openGridStackableBoxDerivedGeometryFor(
+  parameters: OpenGridStackableBoxParameters,
+): OpenGridStackableBoxDerivedGeometry {
+  const activeFloorTopZ = openGridStackableBoxActiveFloorTopZFor(parameters)
+  const activeUpperInnerRimZ =
+    openGridStackableBoxActiveUpperInnerRimZFor(parameters)
+  const values = openingValuesFromParameters(parameters)
+  const bridgeWidth = openingBridgeWidth()
+  const openings = {} as Record<
+    OpenGridStackableBoxOpeningDirection,
+    OpenGridStackableBoxDerivedOpening
+  >
+
+  for (const direction of OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS) {
+    const keys = OPENING_KEYS_BY_DIRECTION[direction]
+    const depth = values[keys.depth]
+    const bottomLength = values[keys.bottomLength]
+    const angle = values[keys.angle]
+    const tangentSpan = tangentSpanFor(parameters, direction)
+    const straightRun = Math.max(
+      0,
+      tangentSpan - 2 * OPENGRID_STACKABLE_BOX_CONFIGURATION.outerCornerRadius,
+    )
+    const angleRadians = (angle * Math.PI) / 180
+    const horizontalRun = depth > 0 ? depth / Math.tan(angleRadians) : 0
+    const usesXNormal = direction === '+X' || direction === '-X'
+    openings[direction] = {
+      direction,
+      normalAxis: usesXNormal ? 'x' : 'y',
+      tangentAxis: usesXNormal ? 'y' : 'x',
+      normalSign: direction === '+X' || direction === '+Y' ? 1 : -1,
+      enabled: depth > 0,
+      depth,
+      bottomLength,
+      angle,
+      bottomZ: activeUpperInnerRimZ - depth,
+      tangentSpan,
+      straightRun,
+      horizontalRun,
+      upperWidth: bottomLength + 2 * horizontalRun,
+      bridgeWidth,
+    }
+  }
+
+  return { activeFloorTopZ, activeUpperInnerRimZ, openings }
+}
+
+export function openGridStackableBoxOpeningBottomLengthMaximumFor(
+  parameters: OpenGridStackableBoxParameters,
+  direction: OpenGridStackableBoxOpeningDirection,
+): number {
+  const opening =
+    openGridStackableBoxDerivedGeometryFor(parameters).openings[direction]
+  const availableWidth = opening.straightRun - 2 * opening.bridgeWidth
+  const maximum = Math.floor(availableWidth - 2 * opening.horizontalRun)
+  return Math.max(
+    0,
+    Math.min(
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.openingBottomLengthMax,
+      maximum,
+    ),
+  )
+}
+
+function validateOpeningIntegerField(
+  value: unknown,
+  field: OpenGridStackableBoxOpeningParameterKey,
+  min: number,
+  max: number,
+  unit: 'mm' | '°',
+  issues: OpenGridStackableBoxValidationIssue[],
+): void {
+  const unitSuffix = unit === '°' ? ' °' : ' mm'
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    issues.push({ field, message: `必須是有限的整數${unitSuffix}。` })
+    return
+  }
+  if (!Number.isSafeInteger(value)) {
+    issues.push({ field, message: `只接受安全範圍內的整數${unitSuffix}。` })
+    return
+  }
+  if (value < min || value > max) {
+    issues.push({
+      field,
+      message: `必須介於 ${min}–${max}${unitSuffix}。`,
+    })
+  }
+}
+
+function openingValidationBoundsFor(
+  key: OpenGridStackableBoxOpeningParameterKey,
+  height: unknown,
+): { minimum: number; maximum: number; unit: 'mm' | '°' } {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  if (key.endsWith('Depth')) {
+    const heightMaximum =
+      typeof height === 'number' && Number.isFinite(height)
+        ? height
+        : configuration.openingDepthMax
+    return {
+      minimum: configuration.openingDepthMin,
+      maximum: Math.min(configuration.openingDepthMax, heightMaximum),
+      unit: 'mm',
+    }
+  }
+  if (key.endsWith('BottomLength')) {
+    return {
+      minimum: 0,
+      maximum: configuration.openingBottomLengthMax,
+      unit: 'mm',
+    }
+  }
+  return {
+    minimum: configuration.openingAngleMin,
+    maximum: configuration.openingAngleMax,
+    unit: '°',
+  }
+}
+
+function openingValidationIssuesFor(
+  parameters: OpenGridStackableBoxParameters,
+): OpenGridStackableBoxValidationIssue[] {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const derived = openGridStackableBoxDerivedGeometryFor(parameters)
+  const issues: OpenGridStackableBoxValidationIssue[] = []
+
+  for (const direction of OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS) {
+    const opening = derived.openings[direction]
+    if (!opening.enabled) continue
+    const keys = OPENING_KEYS_BY_DIRECTION[direction]
+    if (opening.bottomLength < configuration.openingBottomLengthMin) {
+      issues.push({
+        field: keys.bottomLength,
+        message: '啟用開口時，平底長度至少需要 1 mm。',
+      })
+    }
+    if (opening.bottomZ < derived.activeFloorTopZ - 0.0001) {
+      issues.push({ field: keys.depth, message: '開口底部不可切入目前底板。' })
+    }
+    const maximum = openGridStackableBoxOpeningBottomLengthMaximumFor(
+      parameters,
+      direction,
+    )
+    if (opening.bottomLength > maximum) {
+      issues.push({
+        field: keys.bottomLength,
+        message: '開口寬度超過盒體直線側壁可用範圍。',
+      })
+    }
+    if (opening.straightRun <= 2 * opening.bridgeWidth) {
+      issues.push({
+        field: keys.bottomLength,
+        message: '盒體側壁沒有足夠的直線段保留開口結構。',
+      })
+    }
+  }
+
+  return issues
+}
+
 export function validateOpenGridStackableBoxParameters(
   value: unknown,
 ): OpenGridStackableBoxValidation {
@@ -233,16 +637,12 @@ export function validateOpenGridStackableBoxParameters(
   }
 
   const issues: OpenGridStackableBoxValidationIssue[] = []
-  if (
-    !hasExactKeys(value, [
-      'x',
-      'y',
-      'height',
-      'cornerBottomHoles',
-      'fullBottomHoleGrid',
-      'basePlateMode',
-    ])
-  ) {
+  const hasLegacyParameters = hasExactKeys(value, LEGACY_PARAMETER_KEYS)
+  const hasCurrentParameters = hasExactKeys(value, [
+    ...LEGACY_PARAMETER_KEYS,
+    ...OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
+  ])
+  if (!hasLegacyParameters && !hasCurrentParameters) {
     issues.push({ field: 'parameters', message: '包含不支援的參數欄位。' })
   }
 
@@ -265,6 +665,20 @@ export function validateOpenGridStackableBoxParameters(
   validateFullBottomHoleGrid(value.fullBottomHoleGrid, issues)
   validateBasePlateMode(value.basePlateMode, issues)
 
+  if (hasCurrentParameters) {
+    for (const key of OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS) {
+      const bounds = openingValidationBoundsFor(key, value.height)
+      validateOpeningIntegerField(
+        value[key],
+        key,
+        bounds.minimum,
+        bounds.maximum,
+        bounds.unit,
+        issues,
+      )
+    }
+  }
+
   if (issues.length > 0) return { valid: false, issues }
 
   const parameters = {
@@ -274,6 +688,7 @@ export function validateOpenGridStackableBoxParameters(
     cornerBottomHoles: value.cornerBottomHoles as boolean,
     fullBottomHoleGrid: value.fullBottomHoleGrid as boolean,
     basePlateMode: value.basePlateMode as boolean,
+    ...openingValuesFor(value, hasCurrentParameters),
   }
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
   if (width > OPENGRID_STACKABLE_BOX_CONFIGURATION.workspaceMaxDimension) {
@@ -290,6 +705,12 @@ export function validateOpenGridStackableBoxParameters(
   }
 
   if (issues.length > 0) return { valid: false, issues }
+  if (hasCurrentParameters) {
+    const openingIssues = openingValidationIssuesFor(parameters)
+    if (openingIssues.length > 0) {
+      return { valid: false, issues: openingIssues }
+    }
+  }
   return { valid: true, value: parameters }
 }
 
@@ -430,16 +851,34 @@ export function boundsForOpenGridStackableBox(
   }
 }
 
+function openingFileSuffixFor(
+  parameters: OpenGridStackableBoxParameters,
+): string {
+  const values = openingValuesFromParameters(parameters)
+  const hasEnabledOpening = OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS.some(
+    (direction) => {
+      const depthKey = OPENING_KEYS_BY_DIRECTION[direction].depth
+      return values[depthKey] > 0
+    },
+  )
+  if (!hasEnabledOpening) return ''
+
+  const fingerprint = OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS.map((key) =>
+    String(values[key]),
+  ).join('-')
+  return `-open-${fingerprint}`
+}
+
 export function openGridStackableBoxFileName(
   parameters: OpenGridStackableBoxParameters,
 ): string {
   const modeSuffix = parameters.basePlateMode ? '-base-plate' : ''
-  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${modeSuffix}.step`
+  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${openingFileSuffixFor(parameters)}${modeSuffix}.step`
 }
 
 export function openGridStackableBoxStlFileName(
   parameters: OpenGridStackableBoxParameters,
 ): string {
   const modeSuffix = parameters.basePlateMode ? '-base-plate' : ''
-  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${modeSuffix}.stl`
+  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${openingFileSuffixFor(parameters)}${modeSuffix}.stl`
 }
