@@ -50,6 +50,7 @@ describe('CAD component catalog', () => {
       'opengrid-pillar',
       'opengrid-divider',
       'opengrid-stackable-box',
+      'opengrid-stackable-cylinder',
       'opengrid-snap',
       'opengrid-snap-remover',
     ])
@@ -80,6 +81,7 @@ describe('CAD component catalog', () => {
       'opengrid-pillar',
       'opengrid-divider',
       'opengrid-stackable-box',
+      'opengrid-stackable-cylinder',
       'opengrid-snap',
       'opengrid-snap-remover',
     ])
@@ -525,5 +527,83 @@ describe('CAD component catalog', () => {
     )
     expect(cadPathForModel('opengrid-pillar')).toBe('/cad/opengrid-pillar')
     expect(modelIdForCadPath('/cad/opengrid-pillar/')).toBe('opengrid-pillar')
+  })
+
+  it('exposes the independent OpenGrid stackable-cylinder definition', () => {
+    const definition = getModelDefinition('opengrid-stackable-cylinder')
+
+    expect(definition).toMatchObject({
+      id: 'opengrid-stackable-cylinder',
+      buildKey: 'opengrid-stackable-cylinder',
+      family: 'opengrid',
+      displayName: 'OpenGrid 可堆疊圓柱',
+    })
+    expect(definition?.parameterSchema).toEqual([
+      expect.objectContaining({
+        key: 'diameter',
+        min: 20,
+        max: 300,
+        step: 1,
+        control: 'range-text',
+      }),
+      expect.objectContaining({
+        key: 'height',
+        min: 10,
+        max: 500,
+        step: 1,
+        control: 'range-text',
+      }),
+    ])
+    expect(definition?.defaultParameters).toEqual({
+      diameter: 56,
+      height: 30,
+      thinBottomMode: false,
+      bottomPlateMode: false,
+      bottomHolesEnabled: true,
+    })
+    expect(definition?.selectionDescription).toContain('最多四個孔')
+    expect(definition?.selectionDescription).toContain('底部孔洞可一次全部開關')
+    expect(
+      definition?.validateParameters({ diameter: 56, height: 30 }),
+    ).toEqual({
+      valid: true,
+      value: {
+        modelId: 'opengrid-stackable-cylinder',
+        parameters: {
+          diameter: 56,
+          height: 30,
+          thinBottomMode: false,
+          bottomPlateMode: false,
+          bottomHolesEnabled: true,
+        },
+      },
+    })
+    expect(
+      definition?.exportFileName({
+        diameter: 56,
+        height: 30,
+        thinBottomMode: false,
+        bottomPlateMode: false,
+        bottomHolesEnabled: true,
+      }),
+    ).toBe('opengrid-stackable-cylinder-d56-h30.step')
+    expect(
+      definition?.stlFileName({
+        diameter: 56,
+        height: 30,
+        thinBottomMode: true,
+        bottomPlateMode: false,
+        bottomHolesEnabled: false,
+      }),
+    ).toBe('opengrid-stackable-cylinder-d56-h30-thin-no-holes.stl')
+    expect(
+      definition?.exportFileName({
+        diameter: 56,
+        height: 30,
+        thinBottomMode: false,
+        bottomPlateMode: true,
+        bottomHolesEnabled: true,
+      }),
+    ).toBe('opengrid-stackable-cylinder-d56-h30-bottom-plate.step')
   })
 })

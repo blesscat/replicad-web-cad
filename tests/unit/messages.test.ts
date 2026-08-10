@@ -233,6 +233,52 @@ describe('Worker contract runtime validation', () => {
     ).toBe(false)
   })
 
+  it('accepts OpenGrid stackable-cylinder commands only with integer diameter and height', () => {
+    const command = {
+      version: PROTOCOL_VERSION,
+      kind: 'model.generate' as const,
+      requestId: 'request-cylinder-1',
+      operationId: 'operation-cylinder-1',
+      generation: 1,
+      modelId: 'opengrid-stackable-cylinder' as const,
+      parameters: {
+        diameter: 56,
+        height: 30,
+        thinBottomMode: false,
+        bottomPlateMode: false,
+        bottomHolesEnabled: true,
+      },
+      previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
+    }
+
+    expect(isWorkerCommand(command)).toBe(true)
+    expect(
+      isWorkerCommand({
+        ...command,
+        parameters: {
+          diameter: 56.5,
+          height: 30,
+          thinBottomMode: false,
+          bottomPlateMode: false,
+          bottomHolesEnabled: true,
+        },
+      }),
+    ).toBe(false)
+    expect(
+      isWorkerCommand({
+        ...command,
+        parameters: {
+          diameter: 56,
+          height: 30,
+          thinBottomMode: false,
+          bottomPlateMode: false,
+          bottomHolesEnabled: true,
+          fullBottomHoleGrid: false,
+        },
+      }),
+    ).toBe(false)
+  })
+
   it('accepts hexagonal-column commands with orientation', () => {
     const command = {
       version: PROTOCOL_VERSION,

@@ -38,6 +38,16 @@ describe('CAD Worker error mapping', () => {
       'OPENGRID_DIVIDER_QUALITY_INVALID',
     ],
     ['MODEL_PARAMETERS_INVALID', 'model.generate', 'INVALID_INPUT'],
+    [
+      'MODEL_PARAMETERS_MISMATCH:opengrid-stackable-cylinder',
+      'model.generate',
+      'INVALID_INPUT',
+    ],
+    [
+      'OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID:stepped-holes',
+      'model.generate',
+      'OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID',
+    ],
     ['MESH_INVALID: empty', 'model.generate', 'MESH_INVALID'],
     ['STEP_METADATA_INVALID', 'export.step', 'STEP_METADATA_INVALID'],
     ['STL_METADATA_INVALID', 'export.stl', 'STL_METADATA_INVALID'],
@@ -62,6 +72,12 @@ describe('CAD Worker error mapping', () => {
       cadErrorStageFor(
         'model.generate',
         'OPENGRID_DIVIDER_QUALITY_INVALID:pegs:missing',
+      ),
+    ).toBe('meshing')
+    expect(
+      cadErrorStageFor(
+        'model.generate',
+        'OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID:brep',
       ),
     ).toBe('meshing')
     expect(cadErrorStageFor('model.commit')).toBe('worker')

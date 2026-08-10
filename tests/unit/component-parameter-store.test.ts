@@ -6,6 +6,7 @@ import {
 import {
   OPENGRID_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
   OPENGRID_SNAP_CONFIGURATION,
   OPENGRID_DIVIDER_CONFIGURATION,
   PILLAR_CONFIGURATION,
@@ -87,6 +88,13 @@ describe('component parameter store', () => {
       height: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHeight,
       fullBottomHoleGrid: false,
     })
+    expect(store.get('opengrid-stackable-cylinder')).toEqual({
+      diameter: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultDiameter,
+      height: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultHeight,
+      thinBottomMode: false,
+      bottomPlateMode: false,
+      bottomHolesEnabled: true,
+    })
     expect(store.get('opengrid-snap')).toEqual(
       OPENGRID_SNAP_CONFIGURATION.defaultParameters,
     )
@@ -123,6 +131,7 @@ describe('component parameter store', () => {
           height: 25,
           fullBottomHoleGrid: true,
         },
+        'opengrid-stackable-cylinder': { diameter: 80, height: 45 },
         'opengrid-snap': { variant: 'Lite', offset: 0.2 },
         'opengrid-divider': { left: 1, right: 1, up: 1.5, down: 0, height: 25 },
         'opengrid-pillar': { length: 12, baseConnection: true },
@@ -174,6 +183,35 @@ describe('component parameter store', () => {
       halfCellY: 'none',
     })
 
+    expect(store.get('opengrid-stackable-cylinder')).toEqual({
+      diameter: 80,
+      height: 45,
+      thinBottomMode: false,
+      bottomPlateMode: false,
+      bottomHolesEnabled: true,
+    })
+
+    expect(
+      store.set('opengrid-stackable-cylinder', {
+        diameter: 80,
+        height: 45,
+        thinBottomMode: false,
+        bottomPlateMode: false,
+        bottomHolesEnabled: true,
+      }),
+    ).toBe(true)
+
+    const persisted = JSON.parse(
+      storage.data.get(COMPONENT_PARAMETER_STORAGE_KEY) ?? '{}',
+    ) as { values?: Record<string, unknown> }
+    expect(persisted.values?.['opengrid-stackable-cylinder']).toEqual({
+      diameter: 80,
+      height: 45,
+      thinBottomMode: false,
+      bottomPlateMode: false,
+      bottomHolesEnabled: true,
+    })
+
     store.dispose()
   })
 
@@ -213,6 +251,34 @@ describe('component parameter store', () => {
     expect(store.get('opengrid-stackable-box')).toMatchObject({
       fullBottomHoleGrid: true,
     })
+    store.dispose()
+  })
+
+  it('persists bottom-plate mode as a separate cylinder profile', () => {
+    const storage = createMemoryStorage()
+    const store = createComponentParameterStore({ storage })
+    const bottomPlateParameters = {
+      diameter: 80,
+      height: 45,
+      thinBottomMode: false,
+      bottomPlateMode: true,
+      bottomHolesEnabled: true,
+    }
+
+    expect(
+      store.set('opengrid-stackable-cylinder', bottomPlateParameters),
+    ).toBe(true)
+    expect(store.get('opengrid-stackable-cylinder')).toEqual(
+      bottomPlateParameters,
+    )
+
+    const persisted = JSON.parse(
+      storage.data.get(COMPONENT_PARAMETER_STORAGE_KEY) ?? '{}',
+    ) as { values?: Record<string, unknown> }
+    expect(persisted.values?.['opengrid-stackable-cylinder']).toEqual(
+      bottomPlateParameters,
+    )
+
     store.dispose()
   })
 

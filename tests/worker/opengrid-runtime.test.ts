@@ -41,6 +41,8 @@ import {
   openGridStlFileName,
   openGridDividerFileName,
   openGridDividerStlFileName,
+  openGridStackableCylinderFileName,
+  openGridStackableCylinderStlFileName,
   type OpenGridParameters,
   type OpenGridStackableBoxParameters,
 } from '../../src/cad-contract/units'
@@ -121,6 +123,29 @@ function dividerGenerateCommand(generation = 1) {
     modelId: 'opengrid-divider' as const,
     parameters: { left: 1, right: 1, up: 2, down: 0, height: 20 },
     previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
+  }
+}
+
+function stackableCylinderGenerateCommand(
+  generation = 1,
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    ...base,
+    requestId: `stackable-cylinder-request-${generation}`,
+    operationId: `stackable-cylinder-operation-${generation}`,
+    kind: 'model.generate' as const,
+    generation,
+    modelId: 'opengrid-stackable-cylinder' as const,
+    parameters: {
+      diameter: 56,
+      height: 30,
+      thinBottomMode: false,
+      bottomPlateMode: false,
+      bottomHolesEnabled: true,
+    },
+    previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
+    ...overrides,
   }
 }
 
@@ -513,6 +538,130 @@ describe('OpenGrid Worker runtime', () => {
     })
     expect(mocks.exportStepBytes).toHaveBeenCalledOnce()
     expect(mocks.exportStlBytes).toHaveBeenCalledOnce()
+  })
+
+  it('routes stackable-cylinder commands and keeps its export names typed', async () => {
+    const events: unknown[] = []
+    const runtime = new CadWorkerRuntime('epoch-stackable-cylinder', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(stackableCylinderGenerateCommand())
+
+    const parameters = {
+      diameter: 56,
+      height: 30,
+      thinBottomMode: false,
+      bottomPlateMode: false,
+      bottomHolesEnabled: true,
+    }
+    expect(mocks.buildModelBRep).toHaveBeenCalledWith(
+      'opengrid-stackable-cylinder',
+      parameters,
+      expect.any(Object),
+    )
+    const candidate = events.find(
+      (event) =>
+        typeof event === 'object' &&
+        event !== null &&
+        'kind' in event &&
+        event.kind === 'model.candidate-ready',
+    ) as { candidateId: string } | undefined
+    expect(candidate).toBeDefined()
+
+    await runtime.handle({
+      ...base,
+      requestId: 'stackable-cylinder-commit-request',
+      operationId: 'stackable-cylinder-operation-1',
+      kind: 'model.commit' as const,
+      generation: 1,
+      candidateId: candidate!.candidateId,
+      workerEpoch: 'epoch-stackable-cylinder',
+    })
+    const ready = events.find(
+      (event) =>
+        typeof event === 'object' &&
+        event !== null &&
+        'kind' in event &&
+        event.kind === 'model.ready',
+    ) as { modelRevision: string; workerEpoch: string }
+
+    await runtime.handle({
+      ...base,
+      requestId: 'stackable-cylinder-export-step-request',
+      operationId: 'stackable-cylinder-export-step-operation',
+      kind: 'export.step' as const,
+      modelRevision: ready.modelRevision,
+      workerEpoch: ready.workerEpoch,
+      file: {
+        name: openGridStackableCylinderFileName(parameters),
+        mime: 'model/step' as const,
+      },
+    })
+    await runtime.handle({
+      ...base,
+      requestId: 'stackable-cylinder-export-stl-request',
+      operationId: 'stackable-cylinder-export-stl-operation',
+      kind: 'export.stl' as const,
+      modelRevision: ready.modelRevision,
+      workerEpoch: ready.workerEpoch,
+      file: {
+        name: openGridStackableCylinderStlFileName(parameters),
+        mime: 'model/stl' as const,
+      },
+    })
+    expect(mocks.exportStepBytes).toHaveBeenCalledOnce()
+    expect(mocks.exportStlBytes).toHaveBeenCalledOnce()
+    expect(
+      events.filter(
+        (event) =>
+          typeof event === 'object' &&
+          event !== null &&
+          'kind' in event &&
+          event.kind === 'export.ready',
+      ),
+    ).toHaveLength(2)
+  })
+
+  it('routes bottom-plate cylinder mode through the typed Worker snapshot', async () => {
+    const events: unknown[] = []
+    const runtime = new CadWorkerRuntime(
+      'epoch-bottom-plate-cylinder',
+      (event) => events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(
+      stackableCylinderGenerateCommand(1, {
+        parameters: {
+          diameter: 56,
+          height: 30,
+          thinBottomMode: false,
+          bottomPlateMode: true,
+          bottomHolesEnabled: false,
+        },
+      }),
+    )
+
+    expect(mocks.buildModelBRep).toHaveBeenCalledWith(
+      'opengrid-stackable-cylinder',
+      {
+        diameter: 56,
+        height: 30,
+        thinBottomMode: false,
+        bottomPlateMode: true,
+        bottomHolesEnabled: false,
+      },
+      expect.any(Object),
+    )
+    expect(
+      events.some(
+        (event) =>
+          typeof event === 'object' &&
+          event !== null &&
+          'kind' in event &&
+          event.kind === 'model.candidate-ready',
+      ),
+    ).toBe(true)
   })
 
   it('keeps latest-wins invalidation for divider generations', async () => {

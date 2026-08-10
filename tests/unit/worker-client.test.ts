@@ -36,4 +36,18 @@ describe('Worker mesh boundary validation', () => {
       false,
     )
   })
+
+  it('validates large transferred meshes without overflowing the call stack', () => {
+    const vertexCount = 50_000
+    const positions = new Float32Array(vertexCount * 3)
+    const normals = new Float32Array(vertexCount * 3)
+
+    expect(
+      validateMeshSnapshot({
+        ...meshSnapshot(),
+        positions: positions.buffer,
+        normals: normals.buffer,
+      }),
+    ).toBe(true)
+  })
 })

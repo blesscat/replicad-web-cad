@@ -28,6 +28,27 @@ import type {
   OpenGridStackableBoxValidationIssue,
 } from './opengrid-stackable-box'
 import {
+  boundsForOpenGridStackableCylinder,
+  isOpenGridStackableCylinderParameters,
+  openGridStackableCylinderDerivedGeometryFor,
+  openGridStackableCylinderFileName,
+  openGridStackableCylinderHoleCentersFor,
+  openGridStackableCylinderOuterHoleIndexFor,
+  openGridStackableCylinderStlFileName,
+  OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
+  OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+  validateOpenGridStackableCylinderParameters,
+} from './opengrid-stackable-cylinder'
+import type {
+  OpenGridStackableCylinderDerivedGeometry,
+  OpenGridStackableCylinderParameterKey,
+  OpenGridStackableCylinderParameters,
+  OpenGridStackableCylinderProfile,
+  OpenGridStackableCylinderPoint2D,
+  OpenGridStackableCylinderValidation,
+  OpenGridStackableCylinderValidationIssue,
+} from './opengrid-stackable-cylinder'
+import {
   boundsForOpenGridSnap,
   isOpenGridSnapParameters,
   openGridSnapFileName,
@@ -127,6 +148,18 @@ export {
   validateOpenGridStackableBoxParameters,
 } from './opengrid-stackable-box'
 export {
+  boundsForOpenGridStackableCylinder,
+  isOpenGridStackableCylinderParameters,
+  openGridStackableCylinderDerivedGeometryFor,
+  openGridStackableCylinderFileName,
+  openGridStackableCylinderHoleCentersFor,
+  openGridStackableCylinderOuterHoleIndexFor,
+  openGridStackableCylinderStlFileName,
+  OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
+  OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+  validateOpenGridStackableCylinderParameters,
+} from './opengrid-stackable-cylinder'
+export {
   boundsForOpenGridSnap,
   isOpenGridSnapParameters,
   openGridSnapFileName,
@@ -166,6 +199,15 @@ export type {
   OpenGridStackableBoxValidation,
   OpenGridStackableBoxValidationIssue,
 } from './opengrid-stackable-box'
+export type {
+  OpenGridStackableCylinderDerivedGeometry,
+  OpenGridStackableCylinderParameterKey,
+  OpenGridStackableCylinderParameters,
+  OpenGridStackableCylinderProfile,
+  OpenGridStackableCylinderPoint2D,
+  OpenGridStackableCylinderValidation,
+  OpenGridStackableCylinderValidationIssue,
+} from './opengrid-stackable-cylinder'
 export type {
   OpenGridBoardConfiguration,
   OpenGridChamferMode,
@@ -302,6 +344,7 @@ export const PROTOTYPE_CONFIGURATION = {
   opengrid: OPENGRID_CONFIGURATION,
   boxNormal: BOX_NORMAL_CONFIGURATION,
   opengridStackableBox: OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  opengridStackableCylinder: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
   opengridDivider: OPENGRID_DIVIDER_CONFIGURATION,
 } as const
 
@@ -317,6 +360,7 @@ export type ModelParameterKey =
   | HexagonalColumnParameterKey
   | OpenGridParameterKey
   | OpenGridStackableBoxParameterKey
+  | OpenGridStackableCylinderParameterKey
   | OpenGridSnapParameterKey
   | OpenGridDividerParameterKey
   | PillarParameterKey
@@ -324,6 +368,7 @@ export type ScalarModelParameterKey =
   | DimensionKey
   | GridParameterKey
   | HexagonalColumnParameterKey
+  | 'diameter'
   | OpenGridDividerParameterKey
   | 'offset'
   | 'length'
@@ -335,6 +380,7 @@ export type ModelId =
   | 'hexagonal-column'
   | 'opengrid'
   | 'opengrid-stackable-box'
+  | 'opengrid-stackable-cylinder'
   | 'opengrid-snap'
   | 'opengrid-snap-remover'
   | 'opengrid-divider'
@@ -373,6 +419,10 @@ export type ModelParameters =
   | {
       modelId: 'opengrid-stackable-box'
       parameters: OpenGridStackableBoxParameters
+    }
+  | {
+      modelId: 'opengrid-stackable-cylinder'
+      parameters: OpenGridStackableCylinderParameters
     }
   | { modelId: 'opengrid-snap'; parameters: OpenGridSnapParameters }
   | {
@@ -422,6 +472,16 @@ export type OpenGridStackableBoxModelValidation =
       value: {
         modelId: 'opengrid-stackable-box'
         parameters: OpenGridStackableBoxParameters
+      }
+    }
+  | { valid: false; issues: ValidationIssue[] }
+
+export type OpenGridStackableCylinderModelValidation =
+  | {
+      valid: true
+      value: {
+        modelId: 'opengrid-stackable-cylinder'
+        parameters: OpenGridStackableCylinderParameters
       }
     }
   | { valid: false; issues: ValidationIssue[] }
@@ -962,6 +1022,20 @@ export function validateModelParameters(
     return { valid: true, value: { modelId, parameters: validation.value } }
   }
 
+  if (modelId === 'opengrid-stackable-cylinder') {
+    const validation = validateOpenGridStackableCylinderParameters(value)
+    if (!validation.valid) {
+      return {
+        valid: false,
+        issues: validation.issues.map((issue) => ({
+          field: issue.field,
+          message: issue.message,
+        })),
+      }
+    }
+    return { valid: true, value: { modelId, parameters: validation.value } }
+  }
+
   if (modelId === 'opengrid-snap') {
     const validation = validateOpenGridSnapParameters(value)
     if (!validation.valid) {
@@ -1267,6 +1341,12 @@ export function isOpenGridStackableBoxModelParameters(
   return isOpenGridStackableBoxParameters(value)
 }
 
+export function isOpenGridStackableCylinderModelParameters(
+  value: unknown,
+): value is OpenGridStackableCylinderParameters {
+  return isOpenGridStackableCylinderParameters(value)
+}
+
 export function isOpenGridSnapModelParameters(
   value: unknown,
 ): value is OpenGridSnapParameters {
@@ -1313,6 +1393,8 @@ export function boundsForModel(model: ModelParameters): ModelBounds {
       return boundsForOpenGrid(model.parameters)
     case 'opengrid-stackable-box':
       return boundsForOpenGridStackableBox(model.parameters)
+    case 'opengrid-stackable-cylinder':
+      return boundsForOpenGridStackableCylinder(model.parameters)
     case 'opengrid-snap':
       return boundsForOpenGridSnap(model.parameters)
     case 'opengrid-snap-remover':
@@ -1340,6 +1422,8 @@ export function modelFileName(model: ModelParameters): string {
       return openGridFileName(model.parameters)
     case 'opengrid-stackable-box':
       return openGridStackableBoxFileName(model.parameters)
+    case 'opengrid-stackable-cylinder':
+      return openGridStackableCylinderFileName(model.parameters)
     case 'opengrid-snap':
       return openGridSnapFileName(model.parameters)
     case 'opengrid-snap-remover':
@@ -1367,6 +1451,8 @@ export function modelStlFileName(model: ModelParameters): string {
       return openGridStlFileName(model.parameters)
     case 'opengrid-stackable-box':
       return openGridStackableBoxStlFileName(model.parameters)
+    case 'opengrid-stackable-cylinder':
+      return openGridStackableCylinderStlFileName(model.parameters)
     case 'opengrid-snap':
       return openGridSnapStlFileName(model.parameters)
     case 'opengrid-snap-remover':

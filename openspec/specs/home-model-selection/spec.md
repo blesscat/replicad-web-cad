@@ -320,3 +320,25 @@ current component defaults.
 - **THEN** the page MUST load the OpenGrid board workspace
 - **AND** the route MUST not initialize the Snap, stackable-box, divider,
   pillar, or another model definition
+### Requirement: OpenGrid stackable-cylinder model selection
+
+The model chooser MUST list `opengrid-stackable-cylinder` in the OpenGrid family using a user-facing display name beginning with `OpenGrid `. Its description MUST identify it as a custom open cylindrical container with 2 mm walls, a 5 mm floor, same-diameter stacking, a stepped `Ø5.05 → Ø7.05 mm` center hole, and four optional outer cardinal holes selected from a 14 mm grid with 2 mm edge clearance. The entry MUST link to `/cad/opengrid-stackable-cylinder` and the chooser MUST remain static without starting the CAD Worker.
+
+#### Scenario: Cylinder appears in the OpenGrid chooser
+
+- **WHEN** a user opens `/models`
+- **THEN** the OpenGrid family MUST include the stackable-cylinder entry
+- **AND** the entry MUST use the stable `opengrid-stackable-cylinder` route
+- **AND** its description MUST distinguish it from the official OpenGrid board generator and the rectangular stackable box
+
+#### Scenario: Selecting the cylinder opens its route
+
+- **WHEN** a user selects the OpenGrid stackable-cylinder entry
+- **THEN** navigation MUST go to `/cad/opengrid-stackable-cylinder`
+- **AND** the CAD workspace MUST initialize with `modelId=opengrid-stackable-cylinder`
+
+#### Scenario: Static chooser rendering
+
+- **WHEN** the model chooser displays the cylinder entry
+- **THEN** it MUST render from catalog metadata
+- **AND** it MUST NOT instantiate the CAD Worker or a CAD viewport merely to display the entry
