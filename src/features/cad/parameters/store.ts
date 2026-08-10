@@ -65,14 +65,6 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
         : true,
     }
   }
-  if (
-    modelId === 'opengrid-stackable-box' &&
-    isRecord(value) &&
-    !Object.prototype.hasOwnProperty.call(value, 'fullBottomHoleGrid')
-  ) {
-    return { ...value, fullBottomHoleGrid: false }
-  }
-
   if (modelId === 'opengrid-divider' && isRecord(value)) {
     if (Object.prototype.hasOwnProperty.call(value, 'wallThickness')) {
       return value

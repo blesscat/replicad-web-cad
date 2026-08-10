@@ -235,7 +235,10 @@ async function buildOpenGridStackableBoxModel(
   if (!context.getOpenGridSnapReference) {
     throw new Error('OPENGRID_SNAP_HOLD_REFERENCE_MISSING')
   }
-  const snapReference = await context.getOpenGridSnapReference('Lite')
+  const snapReference = await context.getOpenGridSnapReference(
+    'Lite',
+    'Standard',
+  )
   assertOpenGridSnapHoldCompatibility(snapReference)
   return buildOpenGridStackableBox(parameters, {
     isGenerationCurrent: context.isGenerationCurrent,
