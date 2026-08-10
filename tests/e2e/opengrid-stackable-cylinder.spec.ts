@@ -33,7 +33,10 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
   page,
 }) => {
   await page.goto('/models')
-  const modelLink = page.getByRole('link', { name: '使用OpenGrid 可堆疊圓柱' })
+  const modelLink = page
+    .getByRole('heading', { name: 'OpenGrid 可堆疊圓柱', exact: true })
+    .locator('..')
+    .getByRole('link', { name: '編輯 OpenGrid 可堆疊圓柱', exact: true })
   await expect(modelLink).toHaveAttribute(
     'href',
     '/cad/opengrid-stackable-cylinder',

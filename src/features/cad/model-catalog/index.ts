@@ -54,11 +54,7 @@ export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   openGridSnapRemoverDefinition,
 ]
 
-export const modelFamilyOrder: ReadonlyArray<ModelFamily> = [
-  'hsw',
-  'opengrid',
-  'other',
-]
+export const modelFamilyOrder: ReadonlyArray<ModelFamily> = ['opengrid', 'hsw']
 
 export const modelFamilyMetadata: Readonly<
   Record<ModelFamily, ModelFamilyMetadata>

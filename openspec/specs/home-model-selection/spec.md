@@ -6,7 +6,7 @@
 
 ### Requirement: 首頁模型選擇
 
-The system MUST provide a static model-selection page at `/models` driven by the registered model catalog. Every currently available model MUST have an understandable display name, a concise description, a summary of its adjustable parameters, and a link to its model-specific CAD route. The chooser MUST include `box`, `box-normal`, `modular-grid-base`, `hsw-cell`, `hexagonal-column`, `opengrid`, `opengrid-stackable-box`, and `opengrid-snap`. The root path `/` MUST remain a separate static product homepage and MUST link to `/models` without rendering the model chooser.
+The system MUST provide a static model-selection page at `/models` driven by the registered model catalog. Every model rendered in the chooser MUST have an understandable display name and a link to its model-specific CAD route. The chooser content MUST NOT render introductory copy, family descriptions, model descriptions, or adjustable-parameter summaries. The chooser MUST display the OpenGrid series before the HSW series, including `opengrid`, `opengrid-pillar`, `opengrid-divider`, `opengrid-stackable-box`, `opengrid-stackable-cylinder`, `opengrid-snap`, `opengrid-snap-remover`, and `hsw-cell`. Registered models outside these visible series MAY remain available through direct CAD routes but MUST NOT be rendered as chooser entries. The root path `/` MUST remain a separate static product homepage and MUST link to `/models` without rendering the model chooser.
 
 #### Scenario: 真正首頁不顯示模型選擇器
 
@@ -18,42 +18,19 @@ The system MUST provide a static model-selection page at `/models` driven by the
 #### Scenario: 模型選擇頁顯示目前模型
 
 - **WHEN** 使用者開啟 `/models`
-- **THEN** 頁面 MUST 顯示 `box`、`box-normal`、`modular-grid-base`、`hsw-cell`、`hexagonal-column`、`opengrid`、`opengrid-stackable-box` 與 `opengrid-snap` 的可理解名稱
-- **AND** 每個模型 MUST 顯示與其參數及用途相符的簡短說明
-- **AND** OpenGrid 描述 MUST 說明 Full/Lite/Heavy 板型、28 mm 網格、rows/columns、螺絲孔與 connector-hole 設定
+- **THEN** 頁面 MUST 依序顯示 OpenGrid 系列與 HSW 系列的可理解模型名稱
+- **AND** OpenGrid 系列 MUST 顯示 `opengrid`、`opengrid-pillar`、`opengrid-divider`、`opengrid-stackable-box`、`opengrid-stackable-cylinder`、`opengrid-snap` 與 `opengrid-snap-remover`
+- **AND** HSW 系列 MUST 顯示 `hsw-cell`
+- **AND** 每個可見模型 MUST 只顯示可理解模型名稱與 `編輯 →` 入口
+- **AND** `box`、`box-normal`、`modular-grid-base` 與 `hexagonal-column` MUST NOT appear as chooser entries
+- **AND** `/models` MUST NOT 顯示模型用途說明、可調整參數摘要、系列說明或選擇頁導言
 - **AND** `/models` MUST NOT 初始化 CAD Worker 或 Svelte CAD workspace
-
-#### Scenario: 選擇方塊
-
-- **WHEN** 使用者在 `/models` 選擇 `box`
-- **THEN** 選擇入口 MUST 導向 `/cad/box`
-- **AND** CAD workspace MUST 以 `modelId=box` 初始化
-
-#### Scenario: 選擇 box-normal
-
-- **WHEN** 使用者在 `/models` 選擇 `box-normal`
-- **THEN** 選擇入口 MUST 導向 `/cad/box-normal`
-- **AND** CAD workspace MUST 以 `modelId=box-normal` 初始化
-- **AND** 模型描述 MUST 說明 X/Y 格數、盒體 height 與可選四角六角定位柱
-
-#### Scenario: 選擇模組化網格底板
-
-- **WHEN** 使用者在 `/models` 選擇 `modular-grid-base`
-- **THEN** 選擇入口 MUST 導向 `/cad/modular-grid-base`
-- **AND** CAD workspace MUST 以 `modelId=modular-grid-base` 初始化
 
 #### Scenario: 選擇 HSW 六角蜂巢
 
 - **WHEN** 使用者在 `/models` 選擇 `hsw-cell`
 - **THEN** 選擇入口 MUST 導向 `/cad/hsw-cell`
 - **AND** CAD workspace MUST 以 `modelId=hsw-cell` 初始化
-
-#### Scenario: 選擇可調高度六角柱
-
-- **WHEN** 使用者在 `/models` 選擇 `hexagonal-column`
-- **THEN** 選擇入口 MUST 導向 `/cad/hexagonal-column`
-- **AND** CAD workspace MUST 以 `modelId=hexagonal-column` 初始化
-- **AND** 模型描述 MUST 說明整體 height、支數 count、預設 1 mm gap 與預設躺下方向
 
 #### Scenario: 選擇 OpenGrid
 
@@ -129,7 +106,7 @@ The system MUST expose one CAD route for each registered model id. The current r
 
 ### Requirement: 從 CAD 返回首頁切換模型
 
-The system MUST provide a clear navigation path from every model-specific CAD workspace back to `/models` for model switching. The CAD workspace MUST identify the currently selected model and MUST NOT provide an in-place model selector.
+The system MUST provide a clear navigation path from every model-specific CAD workspace back to `/models` for model switching. The CAD workspace MUST identify the currently selected model and MUST NOT provide an in-place model selector. The chooser switch target is the currently visible OpenGrid or HSW model set; models hidden from the chooser remain directly routable.
 
 #### Scenario: CAD workspace 鎖定模型
 
@@ -144,7 +121,7 @@ The system MUST provide a clear navigation path from every model-specific CAD wo
 - **GIVEN** 使用者位於任一模型專屬 CAD route
 - **WHEN** 使用者要切換模型
 - **THEN** UI MUST 提供導向 `/models` 的「返回模型選擇」入口
-- **AND** 使用者 MUST 能在 `/models` 選擇另一個模型 route
+- **AND** 使用者 MUST 能在 `/models` 選擇另一個可見模型 route
 
 ### Requirement: 多模型產品文案
 
@@ -165,13 +142,12 @@ The system MUST describe the product and its entry flow as supporting multiple C
 
 ### Requirement: HSW model selection entry
 
-The `/models` chooser MUST include `hsw-cell` as a currently available CAD component with an understandable display name, a description of its adjustable rows/columns honeycomb grid, and a link to `/cad/hsw-cell`. The `/models` page MUST remain static and MUST NOT initialize the CAD Worker merely to display the HSW entry.
+The `/models` chooser MUST include `hsw-cell` as a currently available CAD component with an understandable display name and a link to `/cad/hsw-cell`. The `/models` page MUST remain static and MUST NOT initialize the CAD Worker merely to display the HSW entry.
 
 #### Scenario: Model page lists HSW cell
 
 - **WHEN** a user opens the homepage
 - **THEN** the model chooser MUST display the HSW component in the HSW series
-- **AND** its description MUST identify rows/columns and hexagonal honeycomb placement
 - **AND** the chooser MUST provide a link to `/cad/hsw-cell`
 
 ### Requirement: HSW model-specific route
@@ -187,34 +163,37 @@ The registered model catalog MUST resolve `/cad/hsw-cell` to `modelId=hsw-cell`,
 
 ### Requirement: 模型系列分類
 
-The model-selection page MUST render the registered catalog entries in the three user-facing series `HSW 系列`, `OpenGrid 系列`, and `其他模型`. Each registered model definition MUST declare exactly one series key, and the page MUST derive membership, labels, ordering within a series, and model links from catalog metadata rather than a second hardcoded model-id list.
+The model-selection page MUST render the registered catalog entries in the two visible user-facing series `OpenGrid 系列` and `HSW 系列`, in that order. Each registered model definition MUST declare exactly one series key, and the page MUST derive membership, labels, ordering within a series, and model links from catalog metadata rather than a second hardcoded model-id list. Models in other registered series MUST remain routable but MUST NOT be rendered by the chooser.
 
 #### Scenario: Catalog entries appear in one series
 
 - **WHEN** a user opens `/models`
-- **THEN** every registered model MUST appear exactly once in one of the three series
-- **AND** `hsw-cell` MUST appear in `HSW 系列`
+- **THEN** every model in the visible chooser families MUST appear exactly once in one of the two visible series
 - **AND** `opengrid` MUST appear in `OpenGrid 系列`
 - **AND** `opengrid-pillar` MUST appear in `OpenGrid 系列`
+- **AND** `opengrid-divider` MUST appear in `OpenGrid 系列`
 - **AND** `opengrid-stackable-box` MUST appear in `OpenGrid 系列`
+- **AND** `opengrid-stackable-cylinder` MUST appear in `OpenGrid 系列`
 - **AND** `opengrid-snap` MUST appear in `OpenGrid 系列`
-- **AND** `box`、`box-normal`、`modular-grid-base` 與 `hexagonal-column` MUST appear in `其他模型`
+- **AND** `opengrid-snap-remover` MUST appear in `OpenGrid 系列`
+- **AND** `hsw-cell` MUST appear in `HSW 系列`
+- **AND** `box`、`box-normal`、`modular-grid-base` 與 `hexagonal-column` MUST NOT appear in the chooser
 
 #### Scenario: Series page remains a static chooser
 
 - **WHEN** a user views any series on `/models`
-- **THEN** each model entry MUST expose its display metadata, parameter summary, and model-specific route link
+- **THEN** each model entry MUST expose its display name and model-specific route link
+- **AND** the chooser MUST NOT render family descriptions, model descriptions, or parameter summaries
 - **AND** the series layout MUST NOT instantiate a CAD Worker or CAD workspace
 
 ### Requirement: OpenGrid Snap model selection entry
 
-The registered model catalog and `/models` chooser MUST include `opengrid-snap` as an independent CAD component. The chooser MUST display an understandable OpenGrid Snap name, describe the Full/Lite variants and one shared total X/Y outer-envelope offset, and link to `/cad/opengrid-snap` without starting the CAD Worker.
+The registered model catalog and `/models` chooser MUST include `opengrid-snap` as an independent CAD component. The chooser MUST display an understandable OpenGrid Snap name and link to `/cad/opengrid-snap` without starting the CAD Worker.
 
 #### Scenario: Model selection page lists OpenGrid Snap
 
 - **WHEN** a user opens `/models`
 - **THEN** the model chooser MUST display an OpenGrid Snap entry
-- **AND** its description MUST identify Full/Lite variants and outer width/depth fine-tuning
 - **AND** the chooser MUST provide a link to `/cad/opengrid-snap`
 - **AND** `/models` MUST remain static without initializing the CAD Worker
 
@@ -231,13 +210,12 @@ The model catalog MUST resolve `/cad/opengrid-snap` to `modelId=opengrid-snap`. 
 
 ### Requirement: OpenGrid stackable-box model selection entry
 
-The static `/models` chooser MUST include `opengrid-stackable-box` exactly once in `OpenGrid 系列`. Its entry MUST provide an understandable display name, a concise description of 28 mm and half-cell sizing, same-part stacking, continuous sliding guides, and four-corner Ø5 mm Snap mounting sockets, and a link to `/cad/opengrid-stackable-box`. The chooser MUST remain static and MUST NOT initialize the CAD Worker to display this entry.
+The static `/models` chooser MUST include `opengrid-stackable-box` exactly once in `OpenGrid 系列`. Its entry MUST provide an understandable display name and a link to `/cad/opengrid-stackable-box`. The chooser MUST remain static and MUST NOT initialize the CAD Worker to display this entry.
 
 #### Scenario: Model page lists the stackable box
 
 - **WHEN** a user opens `/models`
 - **THEN** the OpenGrid series MUST show the stackable-box entry
-- **AND** its description MUST distinguish it from the official OpenGrid board generator
 - **AND** the entry MUST link to `/cad/opengrid-stackable-box`
 
 #### Scenario: Select the stackable box
@@ -254,7 +232,7 @@ The static `/models` chooser MUST include `opengrid-stackable-box` exactly once 
 
 ### Requirement: OpenGrid 分隔器模型選擇入口
 
-The static `/models` chooser MUST include `opengrid-divider` as an independent OpenGrid-series model with an understandable display name and concise identity description. Its entry MUST link to `/cad/opengrid-divider` without initializing the CAD Worker on the chooser page.
+The static `/models` chooser MUST include `opengrid-divider` as an independent OpenGrid-series model with an understandable display name. Its entry MUST link to `/cad/opengrid-divider` without initializing the CAD Worker on the chooser page.
 
 #### Scenario: 選擇 OpenGrid 分隔器
 
@@ -262,27 +240,14 @@ The static `/models` chooser MUST include `opengrid-divider` as an independent O
 - **THEN** the entry MUST navigate to `/cad/opengrid-divider`
 - **AND** the CAD workspace MUST initialize with `modelId=opengrid-divider`
 
-#### Scenario: 分隔器入口保持簡潔
-
-- **WHEN** a user views the OpenGrid divider entry
-- **THEN** its description MUST remain concise and identify the custom divider model
-- **AND** the description MUST NOT expose the detailed grid, dimensions, transition, locating-peg, or total-height explanation
-
-#### Scenario: 官方 OpenGrid 與分隔器文案分離
-
-- **WHEN** a user views the OpenGrid-series model descriptions
-- **THEN** the official `opengrid` description MUST remain about the 28 mm official board
-- **AND** the `opengrid-divider` description MUST remain separate from the official model description
-
 ### Requirement: OpenGrid pillar model selection entry and route
 
-The static `/models` chooser MUST include `opengrid-pillar` as an independent entry in `OpenGrid 系列`, with an `OpenGrid `-prefixed display name, a concise description of its Ø5 mm body, 3–500 mm integer length, 1 mm upper chamfer, and optional `連接底版用` Ø7 mm × 0.8 mm base flange. The entry MUST link to `/cad/opengrid-pillar` without initializing the CAD Worker. The model catalog MUST resolve `/cad/opengrid-pillar` to `modelId=opengrid-pillar`, and direct navigation MUST use valid saved pillar parameters or the pillar defaults.
+The static `/models` chooser MUST include `opengrid-pillar` as an independent entry in `OpenGrid 系列`, with an `OpenGrid `-prefixed display name. The entry MUST link to `/cad/opengrid-pillar` without initializing the CAD Worker. The model catalog MUST resolve `/cad/opengrid-pillar` to `modelId=opengrid-pillar`, and direct navigation MUST use valid saved pillar parameters or the pillar defaults.
 
 #### Scenario: Model page lists pillar
 
 - **WHEN** a user opens `/models`
 - **THEN** the chooser MUST display the OpenGrid pillar entry in `OpenGrid 系列`
-- **AND** its description MUST identify the adjustable total length and the optional base-connection mode
 - **AND** the entry MUST provide a link to `/cad/opengrid-pillar`
 - **AND** the chooser MUST remain static without initializing the CAD Worker
 
@@ -302,10 +267,8 @@ The static `/models` chooser MUST include `opengrid-pillar` as an independent en
 ### Requirement: OpenGrid board selection entry
 
 The static /models chooser MUST keep the existing opengrid entry in the
-OpenGrid series. Its display name MUST be understandable, its description
-MUST identify the official Full/Lite/Heavy 28 mm board, and its summary MUST
-mention rows/columns, half-cell, screw, connector, and chamfer controls. The
-entry MUST link to /cad/opengrid without initializing the CAD Worker.
+OpenGrid series. Its display name MUST be understandable. The entry MUST link
+to /cad/opengrid without initializing the CAD Worker.
 
 #### Scenario: Select the official OpenGrid board
 
@@ -328,14 +291,13 @@ current component defaults.
   pillar, or another model definition
 ### Requirement: OpenGrid stackable-cylinder model selection
 
-The model chooser MUST list `opengrid-stackable-cylinder` in the OpenGrid family using a user-facing display name beginning with `OpenGrid `. Its description MUST identify it as a custom open cylindrical container with 2 mm walls, a 5 mm floor, same-diameter stacking, a stepped `Ø5.05 → Ø7.05 mm` center hole, and four optional outer cardinal holes selected from a 14 mm grid with 2 mm edge clearance. The entry MUST link to `/cad/opengrid-stackable-cylinder` and the chooser MUST remain static without starting the CAD Worker.
+The model chooser MUST list `opengrid-stackable-cylinder` in the OpenGrid family using a user-facing display name beginning with `OpenGrid `. The entry MUST link to `/cad/opengrid-stackable-cylinder` and the chooser MUST remain static without starting the CAD Worker.
 
 #### Scenario: Cylinder appears in the OpenGrid chooser
 
 - **WHEN** a user opens `/models`
 - **THEN** the OpenGrid family MUST include the stackable-cylinder entry
 - **AND** the entry MUST use the stable `opengrid-stackable-cylinder` route
-- **AND** its description MUST distinguish it from the official OpenGrid board generator and the rectangular stackable box
 
 #### Scenario: Selecting the cylinder opens its route
 
