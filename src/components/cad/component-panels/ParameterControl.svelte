@@ -39,6 +39,7 @@
         min={field.sliderMin ?? field.min}
         max={field.sliderMax ?? field.max}
         step={field.step}
+        direction={field.sliderDirection}
         {error}
         describedBy={error ? `${field.key}-error` : undefined}
         {onChange}

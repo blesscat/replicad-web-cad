@@ -33,7 +33,10 @@ export function cadErrorCodeFor(
   if (message.includes('OPENGRID_SNAP_QUALITY_INVALID')) {
     return 'OPENGRID_SNAP_QUALITY_INVALID'
   }
-  if (message.includes('OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID')) {
+  if (
+    message.includes('OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID') ||
+    message.includes('OPENGRID_STACKABLE_CYLINDER_OPENINGS_INVALID')
+  ) {
     return 'OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID'
   }
   if (
@@ -85,7 +88,10 @@ export function cadErrorStageFor(
     return 'validation'
   }
   if (message.includes('OPENGRID_SNAP_QUALITY_INVALID')) return 'meshing'
-  if (message.includes('OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID')) {
+  if (
+    message.includes('OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID') ||
+    message.includes('OPENGRID_STACKABLE_CYLINDER_OPENINGS_INVALID')
+  ) {
     return 'meshing'
   }
   if (message.includes('OPENGRID_SNAP_HOLD_REFERENCE_')) {

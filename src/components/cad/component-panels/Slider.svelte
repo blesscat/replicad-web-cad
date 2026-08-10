@@ -5,13 +5,23 @@
     min: string | number
     max: string | number
     step: string | number
+    direction?: 'ltr' | 'rtl'
     error?: string
     describedBy?: string
     onChange: (value: string) => void
   }
 
-  let { value, label, min, max, step, error, describedBy, onChange }: Props =
-    $props()
+  let {
+    value,
+    label,
+    min,
+    max,
+    step,
+    direction,
+    error,
+    describedBy,
+    onChange,
+  }: Props = $props()
 
   function handleInput(event: Event): void {
     if (!(event.currentTarget instanceof HTMLInputElement)) return
@@ -24,6 +34,7 @@
   aria-describedby={describedBy}
   aria-invalid={Boolean(error)}
   aria-label={label}
+  dir={direction}
   type="range"
   {min}
   {max}

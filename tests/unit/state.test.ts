@@ -3,7 +3,7 @@ import { normalizeError } from '../../src/cad-contract/errors'
 import {
   OPENGRID_CONFIGURATION,
   OPENGRID_DIVIDER_CONFIGURATION,
-  OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
+  OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   type OpenGridParameters,
 } from '../../src/cad-contract/units'
 import { cadReducer, initialCadState } from '../../src/features/cad/state'
@@ -168,13 +168,7 @@ describe('CAD state machine', () => {
     const state = initialCadState('opengrid-stackable-cylinder')
 
     expect(state.modelId).toBe('opengrid-stackable-cylinder')
-    expect(state.input).toEqual({
-      diameter: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultDiameter,
-      height: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultHeight,
-      thinBottomMode: false,
-      bottomPlateMode: false,
-      bottomHolesEnabled: true,
-    })
+    expect(state.input).toEqual(OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS)
   })
 
   it('retains OpenGrid committed metadata while marking a newer input stale', () => {

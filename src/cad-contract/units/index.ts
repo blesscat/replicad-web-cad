@@ -35,14 +35,20 @@ import {
   openGridStackableCylinderDerivedGeometryFor,
   openGridStackableCylinderFileName,
   openGridStackableCylinderHoleCentersFor,
+  openGridStackableCylinderOpeningBottomLengthMaximumFor,
   openGridStackableCylinderOuterHoleIndexFor,
   openGridStackableCylinderStlFileName,
   OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+  OPENGRID_STACKABLE_CYLINDER_OPENING_DIRECTIONS,
+  OPENGRID_STACKABLE_CYLINDER_OPENING_PARAMETER_KEYS,
   validateOpenGridStackableCylinderParameters,
 } from './opengrid-stackable-cylinder'
 import type {
+  OpenGridStackableCylinderDerivedOpening,
   OpenGridStackableCylinderDerivedGeometry,
+  OpenGridStackableCylinderOpeningDirection,
+  OpenGridStackableCylinderOpeningParameterKey,
   OpenGridStackableCylinderParameterKey,
   OpenGridStackableCylinderParameters,
   OpenGridStackableCylinderProfile,
@@ -165,10 +171,13 @@ export {
   openGridStackableCylinderDerivedGeometryFor,
   openGridStackableCylinderFileName,
   openGridStackableCylinderHoleCentersFor,
+  openGridStackableCylinderOpeningBottomLengthMaximumFor,
   openGridStackableCylinderOuterHoleIndexFor,
   openGridStackableCylinderStlFileName,
   OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+  OPENGRID_STACKABLE_CYLINDER_OPENING_DIRECTIONS,
+  OPENGRID_STACKABLE_CYLINDER_OPENING_PARAMETER_KEYS,
   validateOpenGridStackableCylinderParameters,
 } from './opengrid-stackable-cylinder'
 export {
@@ -219,7 +228,10 @@ export type {
   OpenGridStackableBoxValidationIssue,
 } from './opengrid-stackable-box'
 export type {
+  OpenGridStackableCylinderDerivedOpening,
   OpenGridStackableCylinderDerivedGeometry,
+  OpenGridStackableCylinderOpeningDirection,
+  OpenGridStackableCylinderOpeningParameterKey,
   OpenGridStackableCylinderParameterKey,
   OpenGridStackableCylinderParameters,
   OpenGridStackableCylinderProfile,

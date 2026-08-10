@@ -7,6 +7,7 @@ import {
   OPENGRID_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
+  OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   OPENGRID_SNAP_CONFIGURATION,
   OPENGRID_DIVIDER_CONFIGURATION,
   PILLAR_CONFIGURATION,
@@ -90,13 +91,9 @@ describe('component parameter store', () => {
       fullBottomHoleGrid: false,
       basePlateMode: false,
     })
-    expect(store.get('opengrid-stackable-cylinder')).toEqual({
-      diameter: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultDiameter,
-      height: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultHeight,
-      thinBottomMode: false,
-      bottomPlateMode: false,
-      bottomHolesEnabled: true,
-    })
+    expect(store.get('opengrid-stackable-cylinder')).toEqual(
+      OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+    )
     expect(store.get('opengrid-snap')).toEqual(
       OPENGRID_SNAP_CONFIGURATION.defaultParameters,
     )
@@ -200,20 +197,16 @@ describe('component parameter store', () => {
     })
 
     expect(store.get('opengrid-stackable-cylinder')).toEqual({
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       diameter: 80,
       height: 45,
-      thinBottomMode: false,
-      bottomPlateMode: false,
-      bottomHolesEnabled: true,
     })
 
     expect(
       store.set('opengrid-stackable-cylinder', {
+        ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
         diameter: 80,
         height: 45,
-        thinBottomMode: false,
-        bottomPlateMode: false,
-        bottomHolesEnabled: true,
       }),
     ).toBe(true)
 
@@ -221,11 +214,9 @@ describe('component parameter store', () => {
       storage.data.get(COMPONENT_PARAMETER_STORAGE_KEY) ?? '{}',
     ) as { values?: Record<string, unknown> }
     expect(persisted.values?.['opengrid-stackable-cylinder']).toEqual({
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       diameter: 80,
       height: 45,
-      thinBottomMode: false,
-      bottomPlateMode: false,
-      bottomHolesEnabled: true,
     })
 
     store.dispose()
@@ -280,6 +271,7 @@ describe('component parameter store', () => {
     const storage = createMemoryStorage()
     const store = createComponentParameterStore({ storage })
     const bottomPlateParameters = {
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       diameter: 80,
       height: 45,
       thinBottomMode: false,
