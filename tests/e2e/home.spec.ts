@@ -9,7 +9,7 @@ test('home, model selection, and docs are static Astro pages', async ({
     page.getByRole('heading', { name: '用瀏覽器建立、調整並匯出 CAD 模型' }),
   ).toBeVisible()
   await expect(
-    page.getByRole('link', { name: 'replicad-web-cad' }),
+    page.getByRole('link', { name: 'Shape Shortcut' }),
   ).toHaveAttribute('aria-current', 'page')
   await expect(
     page.getByRole('link', { name: '選擇模型', exact: true }),
@@ -28,7 +28,7 @@ test('home, model selection, and docs are static Astro pages', async ({
 
   await page.goto('/models')
   await expect(
-    page.getByRole('link', { name: 'replicad-web-cad' }),
+    page.getByRole('link', { name: 'Shape Shortcut' }),
   ).not.toHaveAttribute('aria-current', 'page')
   await expect(
     page.getByRole('link', { name: '選擇模型', exact: true }),

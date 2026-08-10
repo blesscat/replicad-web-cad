@@ -8,7 +8,7 @@ import { getModelDefinition, modelDefinitions } from '../model-catalog'
 import { normalizeOpenGridSnapParameters } from '../../../cad-contract/units'
 
 export const COMPONENT_PARAMETER_STORAGE_KEY =
-  'replicad-web-cad.component-parameters'
+  'shape-shortcut.component-parameters'
 export const COMPONENT_PARAMETER_STORAGE_VERSION = 1 as const
 
 export type ComponentParameterStorage = {
