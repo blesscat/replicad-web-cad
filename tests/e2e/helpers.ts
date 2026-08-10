@@ -159,6 +159,42 @@ export async function expectCadLightingLuminance(
   expect(summary.p95 - summary.p05).toBeGreaterThan(24)
 }
 
+export async function readCadViewportAppearance(
+  page: Page,
+  canvas: Locator,
+): Promise<{ modelPixelCount: number; darkPixelCount: number }> {
+  const screenshot = await canvas.screenshot()
+  return page.evaluate(async (encodedPng) => {
+    const response = await fetch(`data:image/png;base64,${encodedPng}`)
+    const bitmap = await createImageBitmap(await response.blob())
+    const imageCanvas = document.createElement('canvas')
+    imageCanvas.width = bitmap.width
+    imageCanvas.height = bitmap.height
+    const context = imageCanvas.getContext('2d', {
+      willReadFrequently: true,
+    })
+    if (!context) throw new Error('CAD viewport screenshot decoder unavailable')
+
+    context.drawImage(bitmap, 0, 0)
+    const pixels = context.getImageData(0, 0, bitmap.width, bitmap.height).data
+    let modelPixelCount = 0
+    let darkPixelCount = 0
+    for (let index = 0; index < pixels.length; index += 4) {
+      const red = pixels[index]
+      const green = pixels[index + 1]
+      const blue = pixels[index + 2]
+      if (blue > red * 1.15 && blue > green * 1.03 && red > 40) {
+        modelPixelCount += 1
+      }
+      if (red < 90 && green < 100 && blue < 150) {
+        darkPixelCount += 1
+      }
+    }
+
+    return { modelPixelCount, darkPixelCount }
+  }, screenshot.toString('base64'))
+}
+
 export function supportLink(page: Page) {
   return page.getByRole('link', {
     name: '支持這個專案',
