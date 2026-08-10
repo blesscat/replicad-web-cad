@@ -1,11 +1,8 @@
 <script lang="ts">
   import {
-    boundsForOpenGridSnap,
-    halfCellHostPitch,
-    type HalfCellX,
-    type HalfCellY,
     type ModelParameterKey,
     type OpenGridSnapParameters,
+    type OpenGridSnapFootprint,
   } from '../../../../cad-contract/units'
   import {
     displayParameterLabel,
@@ -27,21 +24,13 @@
 
   const offsetField = opengridSnapDefinition.parameterSchema[0]!
 
-  let bounds = $derived(boundsForOpenGridSnap(parameters))
-  let width = $derived(bounds.max[0] - bounds.min[0])
-  let depth = $derived(bounds.max[1] - bounds.min[1])
-  let height = $derived(bounds.max[2] - bounds.min[2])
-  let hostWidth = $derived(halfCellHostPitch(parameters.halfCellX))
-  let hostDepth = $derived(halfCellHostPitch(parameters.halfCellY))
-
   function fieldError(field: ModelParameterKey | 'parameters') {
     return fieldErrors[field]
   }
 
   let rawOffset = $derived(rawParameters.offset ?? String(parameters.offset))
   let rawProfile = $derived(rawParameters.profile ?? parameters.profile)
-  let rawHalfCellX = $derived(rawParameters.halfCellX ?? parameters.halfCellX)
-  let rawHalfCellY = $derived(rawParameters.halfCellY ?? parameters.halfCellY)
+  let rawFootprint = $derived(rawParameters.footprint ?? parameters.footprint)
   let rawFourCornerLocatingHoles = $derived(
     rawParameters.fourCornerLocatingHoles ??
       String(parameters.fourCornerLocatingHoles),
@@ -50,14 +39,12 @@
     rawParameters.centerRemoverHole ?? String(parameters.centerRemoverHole),
   )
 
-  function updateHalfCellX(event: Event): void {
+  function updateFootprint(event: Event): void {
     if (!(event.currentTarget instanceof HTMLSelectElement)) return
-    onInputChange('halfCellX', event.currentTarget.value as HalfCellX)
-  }
-
-  function updateHalfCellY(event: Event): void {
-    if (!(event.currentTarget instanceof HTMLSelectElement)) return
-    onInputChange('halfCellY', event.currentTarget.value as HalfCellY)
+    onInputChange(
+      'footprint',
+      event.currentTarget.value as OpenGridSnapFootprint,
+    )
   }
 
   function updateBoolean(
@@ -89,8 +76,8 @@
         }
       }}
     >
-      <option value="Full">Full（6.8 mm）</option>
       <option value="Lite">Lite（3.4 mm）</option>
+      <option value="Full">Full（6.8 mm）</option>
     </select>
   </ParameterField>
 
@@ -135,90 +122,78 @@
     />
   </ParameterField>
 
-  <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-    <ParameterField
-      label="X 半格方向"
-      error={fieldError('halfCellX')}
-      errorId="opengrid-snap-half-cell-x-error"
-      onRestore={() => onInputChange('halfCellX', 'none')}
+  <ParameterField
+    label="格型"
+    error={fieldError('footprint')}
+    errorId="opengrid-snap-footprint-error"
+    onRestore={() => onInputChange('footprint', 'full')}
+  >
+    <select
+      class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+      aria-label="OpenGrid Snap 格型"
+      aria-describedby={fieldError('footprint')
+        ? 'opengrid-snap-footprint-error'
+        : undefined}
+      aria-invalid={Boolean(fieldError('footprint'))}
+      value={rawFootprint}
+      onchange={updateFootprint}
     >
-      <select
-        class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-        aria-label="OpenGrid Snap X 半格方向"
-        aria-describedby={fieldError('halfCellX')
-          ? 'opengrid-snap-half-cell-x-error'
-          : undefined}
-        aria-invalid={Boolean(fieldError('halfCellX'))}
-        value={rawHalfCellX}
-        onchange={updateHalfCellX}
-      >
-        <option value="none">無</option>
-        <option value="left">左</option>
-        <option value="right">右</option>
-      </select>
-    </ParameterField>
+      <option value="full">Full</option>
+      <option value="half">1/2</option>
+      <option value="quarter">1/4</option>
+    </select>
+    {#if rawFootprint === 'half' || rawFootprint === 'quarter'}
+      <p class="m-0 text-sm text-error" role="status">
+        格型測試中 不保證可使用
+      </p>
+    {/if}
+  </ParameterField>
 
-    <ParameterField
-      label="Y 半格方向"
-      error={fieldError('halfCellY')}
-      errorId="opengrid-snap-half-cell-y-error"
-      onRestore={() => onInputChange('halfCellY', 'none')}
-    >
-      <select
-        class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-        aria-label="OpenGrid Snap Y 半格方向"
-        aria-describedby={fieldError('halfCellY')
-          ? 'opengrid-snap-half-cell-y-error'
-          : undefined}
-        aria-invalid={Boolean(fieldError('halfCellY'))}
-        value={rawHalfCellY}
-        onchange={updateHalfCellY}
-      >
-        <option value="none">無</option>
-        <option value="top">上</option>
-        <option value="bottom">下</option>
-      </select>
-    </ParameterField>
-  </div>
-
-  <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-    <ParameterField
-      label="四周定位孔"
-      error={fieldError('fourCornerLocatingHoles')}
-      errorId="opengrid-snap-four-corner-holes-error"
-      onRestore={() => onInputChange('fourCornerLocatingHoles', 'false')}
-    >
+  <div class="grid grid-cols-2 gap-2">
+    <div class="min-w-0">
       <label class="flex items-center gap-2 text-sm text-ink">
         <input
           type="checkbox"
-          aria-label="OpenGrid Snap 四周定位孔"
+          aria-label="定位孔"
+          aria-describedby={fieldError('fourCornerLocatingHoles')
+            ? 'opengrid-snap-four-corner-holes-error'
+            : undefined}
+          aria-invalid={Boolean(fieldError('fourCornerLocatingHoles'))}
           checked={rawFourCornerLocatingHoles === 'true'}
           onchange={(event) => updateBoolean('fourCornerLocatingHoles', event)}
         />
-        啟用四個定位孔
+        定位孔
       </label>
-    </ParameterField>
+      {#if fieldError('fourCornerLocatingHoles')}
+        <span
+          id="opengrid-snap-four-corner-holes-error"
+          class="text-sm text-error"
+          role="alert">{fieldError('fourCornerLocatingHoles')}</span
+        >
+      {/if}
+    </div>
 
-    <ParameterField
-      label="中心 remover 孔"
-      error={fieldError('centerRemoverHole')}
-      errorId="opengrid-snap-center-remover-hole-error"
-      onRestore={() => onInputChange('centerRemoverHole', 'false')}
-    >
+    <div class="min-w-0">
       <label class="flex items-center gap-2 text-sm text-ink">
         <input
           type="checkbox"
-          aria-label="OpenGrid Snap 中心 remover 孔"
+          aria-label="移除孔"
+          aria-describedby={fieldError('centerRemoverHole')
+            ? 'opengrid-snap-center-remover-hole-error'
+            : undefined}
+          aria-invalid={Boolean(fieldError('centerRemoverHole'))}
           checked={rawCenterRemoverHole === 'true'}
           onchange={(event) => updateBoolean('centerRemoverHole', event)}
         />
-        啟用中心 remover 孔
+        移除孔
       </label>
-    </ParameterField>
+      {#if fieldError('centerRemoverHole')}
+        <span
+          id="opengrid-snap-center-remover-hole-error"
+          class="text-sm text-error"
+          role="alert">{fieldError('centerRemoverHole')}</span
+        >
+      {/if}
+    </div>
   </div>
-
-  <p class="m-0 text-sm text-muted" aria-live="polite">
-    外框總尺寸：{width.toFixed(2)} × {depth.toFixed(2)} × {height.toFixed(2)} mm （宿主格距：X
-    {hostWidth} × Y {hostDepth} mm）
-  </p>
 </fieldset>

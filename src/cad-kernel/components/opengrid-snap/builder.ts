@@ -6,7 +6,6 @@ import {
   makeCompound,
   makeCylinder,
   measureVolume,
-  Sketcher,
   Solid,
   type Shape3D,
 } from 'replicad'
@@ -15,6 +14,7 @@ import {
   boundsForOpenGridSnap,
   isOpenGridSnapParameters,
   OPENGRID_SNAP_CONFIGURATION,
+  openGridSnapCanonicalAxesFor,
   type ModelBounds,
   type OpenGridSnapParameters,
   type OpenGridSnapProfile,
@@ -25,6 +25,7 @@ import {
   openGridSnapProfileFor,
   type OpenGridSnapProfileDefinition,
 } from './profile'
+import { buildOpenGridSnapBoundaryObstacle } from './boundary'
 
 export const OPENGRID_SNAP_REFERENCE_URLS: Readonly<
   Record<OpenGridSnapProfile, Record<OpenGridSnapVariant, URL>>
@@ -41,8 +42,6 @@ export const OPENGRID_SNAP_REFERENCE_URLS: Readonly<
 
 const ASSET_TOLERANCE = 0.05
 const OUTER_TOUCH_TOLERANCE = 0.02
-const HALF_BOUNDARY_LOCK_CORNER = 0.8
-const HALF_BOUNDARY_LOCK_CHAMFER = 0.4
 const FEATURE_CUTTER_MARGIN = 0.2
 
 type PointTuple = [number, number, number]
@@ -646,14 +645,14 @@ function fullAssemblyBoundsBeforeFootprint(
     variant: parameters.variant,
     profile: parameters.profile,
     offset: parameters.offset,
-    halfCellX: 'none' as const,
-    halfCellY: 'none' as const,
+    footprint: 'full' as const,
   }
   const fullBounds = boundsForOpenGridSnap(fullCellParameters)
+  const axes = openGridSnapCanonicalAxesFor(parameters.footprint)
   const selectedAxisExtraX =
-    parameters.halfCellX === 'none' ? 0 : parameters.offset / 2
+    axes.halfCellX === 'none' ? 0 : parameters.offset / 2
   const selectedAxisExtraY =
-    parameters.halfCellY === 'none' ? 0 : parameters.offset / 2
+    axes.halfCellY === 'none' ? 0 : parameters.offset / 2
 
   return {
     min: [
@@ -677,11 +676,12 @@ function footprintClipBounds(
   let maxX = sourceBounds.max[0]
   let minY = sourceBounds.min[1]
   let maxY = sourceBounds.max[1]
+  const axes = openGridSnapCanonicalAxesFor(parameters.footprint)
 
-  if (parameters.halfCellX === 'left') maxX = 0
-  if (parameters.halfCellX === 'right') minX = 0
-  if (parameters.halfCellY === 'bottom') maxY = 0
-  if (parameters.halfCellY === 'top') minY = 0
+  if (axes.halfCellX === 'left') maxX = 0
+  if (axes.halfCellX === 'right') minX = 0
+  if (axes.halfCellY === 'bottom') maxY = 0
+  if (axes.halfCellY === 'top') minY = 0
 
   return {
     min: [minX, minY, sourceBounds.min[2]],
@@ -689,80 +689,11 @@ function footprintClipBounds(
   }
 }
 
-/**
- * Build the shared OpenGrid locking cutter. The octagonal XY profile leaves
- * diagonal locking corners on every selected cut side; the second chamfer
- * adds the insertion bevel along the top and bottom of that same cut face.
- */
-function hostLockingPrism(bounds: ModelBounds): Shape3D {
-  const corner = Math.min(
-    HALF_BOUNDARY_LOCK_CORNER,
-    (bounds.max[0] - bounds.min[0]) / 4,
-    (bounds.max[1] - bounds.min[1]) / 4,
+function hostEnvelope(bounds: ModelBounds): Shape3D {
+  return makeBox(
+    [bounds.min[0], bounds.min[1], bounds.min[2] - 0.1],
+    [bounds.max[0], bounds.max[1], bounds.max[2] + 0.1],
   )
-  const points: Array<[number, number]> = [
-    [bounds.min[0] + corner, bounds.min[1]],
-    [bounds.max[0] - corner, bounds.min[1]],
-    [bounds.max[0], bounds.min[1] + corner],
-    [bounds.max[0], bounds.max[1] - corner],
-    [bounds.max[0] - corner, bounds.max[1]],
-    [bounds.min[0] + corner, bounds.max[1]],
-    [bounds.min[0], bounds.max[1] - corner],
-    [bounds.min[0], bounds.min[1] + corner],
-  ]
-  const sketcher = new Sketcher('XY', [0, 0, bounds.min[2] - 0.1])
-  let sketch: ReturnType<Sketcher['close']> | null = null
-  let prism: Shape3D | null = null
-  try {
-    const first = points[0]
-    if (!first) throw new Error('OPENGRID_SNAP_CLIP_PROFILE_EMPTY')
-    sketcher.movePointerTo(first)
-    for (const point of points.slice(1)) sketcher.lineTo(point)
-    sketch = sketcher.close()
-    prism = sketch.extrude(bounds.max[2] - bounds.min[2] + 0.2)
-    const zMin = bounds.min[2] - 0.1
-    const zMax = bounds.max[2] + 0.1
-    const chamfered = prism.chamfer(HALF_BOUNDARY_LOCK_CHAMFER, (finder) =>
-      finder.when(
-        ({ element }) => edgeIsAtZ(element, zMin) || edgeIsAtZ(element, zMax),
-      ),
-    )
-    if (chamfered !== prism) {
-      deleteShape(prism)
-    }
-    prism = null
-    return chamfered
-  } finally {
-    deleteShape(sketch)
-    if (prism) deleteShape(prism)
-    sketcher.delete()
-  }
-}
-
-type EdgePoint = {
-  x?: number
-  y?: number
-  z?: number
-  delete: () => void
-}
-
-function edgeIsAtZ(
-  edge: { startPoint: EdgePoint; endPoint: EdgePoint },
-  z: number,
-): boolean {
-  const start = edge.startPoint
-  const end = edge.endPoint
-  try {
-    return (
-      start.z !== undefined &&
-      end.z !== undefined &&
-      Math.abs(start.z - z) <= ASSET_TOLERANCE &&
-      Math.abs(end.z - z) <= ASSET_TOLERANCE
-    )
-  } finally {
-    start.delete()
-    end.delete()
-  }
 }
 
 async function clipAssemblyToFootprint(
@@ -776,13 +707,16 @@ async function clipAssemblyToFootprint(
     -(clipBounds.min[0] + clipBounds.max[0]) / 2,
     -(clipBounds.min[1] + clipBounds.max[1]) / 2,
   ]
-  const clippingProfile = hostLockingPrism(clipBounds)
-  const finalProfile = hostLockingPrism(boundsForOpenGridSnap(parameters))
+  const clippingProfile = hostEnvelope(clipBounds)
+  const finalProfile = hostEnvelope(boundsForOpenGridSnap(parameters))
   const source = cloneImportedAssembly(assembly)
   const sourceSolids = extractSolids(source)
   const output: Shape3D[] = []
+  let boundaryObstacle: Shape3D | null = null
+  let succeeded = false
 
   try {
+    boundaryObstacle = buildOpenGridSnapBoundaryObstacle(parameters.footprint)
     for (const solid of sourceSolids) {
       assertGenerationCurrent(context)
       const clipped = solid.intersect(clippingProfile)
@@ -799,7 +733,15 @@ async function clipAssemblyToFootprint(
         deleteShape(bounded)
         continue
       }
-      output.push(bounded)
+      const boundaryCut = boundaryObstacle
+        ? bounded.cut(boundaryObstacle)
+        : bounded
+      if (boundaryCut !== bounded) deleteShape(bounded)
+      if (measureVolume(boundaryCut) <= ASSET_TOLERANCE) {
+        deleteShape(boundaryCut)
+        continue
+      }
+      output.push(boundaryCut)
       await context.yieldToEventLoop?.()
     }
 
@@ -809,14 +751,21 @@ async function clipAssemblyToFootprint(
     if (output.length === 1) {
       const only = output[0]
       if (!only) throw new Error('OPENGRID_SNAP_HALF_ASSEMBLY_EMPTY')
+      succeeded = true
       return only
     }
-    return makeCompound(output).asShape3D()
+    const compound = makeCompound(output).asShape3D()
+    succeeded = true
+    return compound
   } finally {
     deleteShape(clippingProfile)
     deleteShape(finalProfile)
+    deleteShape(boundaryObstacle)
     deleteShape(source)
     for (const solid of sourceSolids) deleteShape(solid)
+    if (!succeeded) {
+      for (const shape of output) deleteShape(shape)
+    }
   }
 }
 
@@ -894,11 +843,14 @@ export async function buildOpenGridSnap(
     )
   }
 
-  const hasHalfCell =
-    parameters.halfCellX !== 'none' || parameters.halfCellY !== 'none'
-  if (!hasHalfCell) return assembly
+  if (parameters.footprint === 'full') return assembly
 
-  const clipped = await clipAssemblyToFootprint(assembly, parameters, context)
-  deleteShape(assembly)
-  return clipped
+  try {
+    const clipped = await clipAssemblyToFootprint(assembly, parameters, context)
+    deleteShape(assembly)
+    return clipped
+  } catch (error) {
+    deleteShape(assembly)
+    throw error
+  }
 }

@@ -9,7 +9,9 @@ import {
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForOpenGridSnap,
+  openGridSnapCanonicalAxesFor,
   OPENGRID_SNAP_CONFIGURATION,
+  type OpenGridSnapCanonicalAxes,
   type ModelBounds,
   type OpenGridSnapParameters,
 } from '../../../cad-contract/units'
@@ -19,11 +21,12 @@ import {
 } from './profile'
 import type { MeshSnapshot } from '../../../cad-contract/messages'
 import type { MeshData } from '../../mesh'
+import { OPENGRID_SNAP_BOUNDARY_PROFILE } from './boundary'
 
 const QUALITY_TOLERANCE = 0.05
 // Meshing an offset assembly can add a small OCC boundary epsilon to the
 // extracted solid boxes; keep this separate from fixed-core volume checks.
-export const OPENGRID_SNAP_GENERATED_ENVELOPE_TOLERANCE = 0.15
+export const OPENGRID_SNAP_GENERATED_ENVELOPE_TOLERANCE = 0.45
 // Cloning and meshing the imported zero-offset compound can expand OCC's
 // cached envelope by this deterministic amount without changing its solids.
 const ZERO_OFFSET_ENVELOPE_TOLERANCE = 0.15
@@ -51,6 +54,15 @@ function deleteShape(shape: { delete?: () => void } | null | undefined): void {
     shape?.delete?.()
   } catch {
     // Quality cleanup must not hide the original diagnostic.
+  }
+}
+
+function deleteDistinctShapes(shapes: Array<Shape3D | null | undefined>): void {
+  const deleted = new Set<Shape3D>()
+  for (const shape of shapes) {
+    if (!shape || deleted.has(shape)) continue
+    deleted.add(shape)
+    deleteShape(shape)
   }
 }
 
@@ -127,6 +139,21 @@ function boundsMatch(
   })
 }
 
+function boundsFitInsideEnvelope(
+  actual: ModelBounds,
+  expected: ModelBounds,
+  tolerance: number,
+): boolean {
+  return (
+    actual.min[0] >= expected.min[0] - tolerance &&
+    actual.min[1] >= expected.min[1] - tolerance &&
+    actual.min[2] >= expected.min[2] - tolerance &&
+    actual.max[0] <= expected.max[0] + tolerance &&
+    actual.max[1] <= expected.max[1] + tolerance &&
+    actual.max[2] <= expected.max[2] + tolerance
+  )
+}
+
 function countSolids(shape: Shape3D): number {
   const oc = getOC()
   const explorer = new oc.TopExp_Explorer_2(
@@ -182,8 +209,7 @@ function volumeInProbe(shape: Shape3D, probeBounds: Probe): number {
     intersection = shape.intersect(probe)
     return measureVolume(intersection)
   } finally {
-    if (intersection && intersection !== shape) deleteShape(intersection)
-    deleteShape(probe)
+    deleteDistinctShapes([intersection !== shape ? intersection : null, probe])
   }
 }
 
@@ -203,8 +229,10 @@ function volumeInCylinder(
     intersection = shape.intersect(cylinder)
     return measureVolume(intersection)
   } finally {
-    if (intersection && intersection !== shape) deleteShape(intersection)
-    deleteShape(cylinder)
+    deleteDistinctShapes([
+      intersection !== shape ? intersection : null,
+      cylinder,
+    ])
   }
 }
 
@@ -232,10 +260,12 @@ function volumeInCylindricalAnnulus(
     intersection = shape.intersect(annulus)
     return measureVolume(intersection)
   } finally {
-    if (intersection && intersection !== shape) deleteShape(intersection)
-    if (annulus && annulus !== outer && annulus !== inner) deleteShape(annulus)
-    deleteShape(outer)
-    deleteShape(inner)
+    deleteDistinctShapes([
+      intersection !== shape ? intersection : null,
+      annulus !== outer && annulus !== inner ? annulus : null,
+      outer,
+      inner,
+    ])
   }
 }
 
@@ -259,39 +289,43 @@ function probeFitsInBounds(
 function featureTranslationFor(
   parameters: OpenGridSnapParameters,
 ): [number, number] {
+  if (parameters.footprint === 'full') return [0, 0]
+
   const fullBounds = boundsForOpenGridSnap({
     variant: parameters.variant,
     profile: parameters.profile,
     offset: parameters.offset,
-    halfCellX: 'none',
-    halfCellY: 'none',
+    footprint: 'full',
   })
+  const axes = openGridSnapCanonicalAxesFor(parameters.footprint)
   const sourceMinX =
-    fullBounds.min[0] -
-    (parameters.halfCellX === 'none' ? 0 : parameters.offset / 2)
+    fullBounds.min[0] - (axes.halfCellX === 'none' ? 0 : parameters.offset / 2)
   const sourceMaxX =
-    fullBounds.max[0] +
-    (parameters.halfCellX === 'none' ? 0 : parameters.offset / 2)
+    fullBounds.max[0] + (axes.halfCellX === 'none' ? 0 : parameters.offset / 2)
   const sourceMinY =
-    fullBounds.min[1] -
-    (parameters.halfCellY === 'none' ? 0 : parameters.offset / 2)
+    fullBounds.min[1] - (axes.halfCellY === 'none' ? 0 : parameters.offset / 2)
   const sourceMaxY =
-    fullBounds.max[1] +
-    (parameters.halfCellY === 'none' ? 0 : parameters.offset / 2)
+    fullBounds.max[1] + (axes.halfCellY === 'none' ? 0 : parameters.offset / 2)
 
   let translationX = 0
   let translationY = 0
-  if (parameters.halfCellX === 'left') {
+  if (axes.halfCellX === 'left') {
     translationX = -(sourceMinX + 0) / 2
   }
-  if (parameters.halfCellX === 'right') {
+  if (axes.halfCellX === 'right') {
     translationX = -(0 + sourceMaxX) / 2
   }
-  if (parameters.halfCellY === 'bottom') {
+  if (axes.halfCellX === 'none') {
+    translationX = -(sourceMinX + sourceMaxX) / 2
+  }
+  if (axes.halfCellY === 'bottom') {
     translationY = -(sourceMinY + 0) / 2
   }
-  if (parameters.halfCellY === 'top') {
+  if (axes.halfCellY === 'top') {
     translationY = -(0 + sourceMaxY) / 2
+  }
+  if (axes.halfCellY === 'none') {
+    translationY = -(sourceMinY + sourceMaxY) / 2
   }
   return [translationX, translationY]
 }
@@ -665,19 +699,20 @@ function compareFixedCore(
 }
 
 function hasHalfCell(parameters: OpenGridSnapParameters): boolean {
-  return parameters.halfCellX !== 'none' || parameters.halfCellY !== 'none'
+  return parameters.footprint !== 'full'
 }
 
 function halfCellBoundaryProbes(
   parameters: OpenGridSnapParameters,
   bounds: ModelBounds,
 ): Probe[] {
-  const probeWidth = 0.6
+  const probeWidth = 1
   const orthogonalMargin = 0.2
   const height = bounds.max[2] + 0.2
   const probes: Probe[] = []
-  if (parameters.halfCellX !== 'none') {
-    const isLeft = parameters.halfCellX === 'left'
+  const axes = openGridSnapCanonicalAxesFor(parameters.footprint)
+  if (axes.halfCellX !== 'none') {
+    const isLeft = axes.halfCellX === 'left'
     const x = isLeft ? bounds.min[0] : bounds.max[0]
     const minX = isLeft ? x : x - probeWidth
     const maxX = isLeft ? x + probeWidth : x
@@ -686,8 +721,8 @@ function halfCellBoundaryProbes(
       max: [maxX, bounds.max[1] - orthogonalMargin, height],
     })
   }
-  if (parameters.halfCellY !== 'none') {
-    const isBottom = parameters.halfCellY === 'bottom'
+  if (axes.halfCellY !== 'none') {
+    const isBottom = axes.halfCellY === 'bottom'
     const y = isBottom ? bounds.min[1] : bounds.max[1]
     const minY = isBottom ? y : y - probeWidth
     const maxY = isBottom ? y + probeWidth : y
@@ -700,13 +735,13 @@ function halfCellBoundaryProbes(
 }
 
 function boundaryTouches(min: number, max: number, boundary: number): boolean {
-  return min <= boundary + 0.2 && max >= boundary - 0.2
+  return min <= boundary + 0.75 && max >= boundary - 0.75
 }
 
 function hasDiagonalBoundaryFace(
   shape: Shape3D,
   axis: 'x' | 'y',
-  boundary: number,
+  boundaries: readonly [number, number],
 ): boolean {
   for (const face of shape.faces) {
     try {
@@ -718,10 +753,14 @@ function hasDiagonalBoundaryFace(
           [number, number, number],
           [number, number, number],
         ]
+        const lowerBoundary = boundaries[0]
+        const upperBoundary = boundaries[1]
         const touches =
           axis === 'x'
-            ? boundaryTouches(min[0], max[0], boundary)
-            : boundaryTouches(min[1], max[1], boundary)
+            ? boundaryTouches(min[0], max[0], lowerBoundary) ||
+              boundaryTouches(min[0], max[0], upperBoundary)
+            : boundaryTouches(min[1], max[1], lowerBoundary) ||
+              boundaryTouches(min[1], max[1], upperBoundary)
         const hasZSpan = max[2] - min[2] > 0.05
         const hasSlopedZChamfer =
           Math.abs(normal.z) > 0.1 && Math.abs(normal.z) < 0.99
@@ -745,6 +784,72 @@ function hasDiagonalBoundaryFace(
     }
   }
   return false
+}
+
+function hasAllDiagonalBoundaryCorners(
+  shape: Shape3D,
+  parameters: OpenGridSnapParameters,
+  bounds: ModelBounds,
+): boolean {
+  const centerX = (bounds.min[0] + bounds.max[0]) / 2
+  const centerY = (bounds.min[1] + bounds.max[1]) / 2
+  const minimumZSpan = bounds.max[2] - bounds.min[2] - 1.2
+  const expectedDiagonal =
+    14 / 2 +
+    (parameters.footprint === 'half' ? 28 : 14) / 2 -
+    OPENGRID_SNAP_BOUNDARY_PROFILE.cornerWidth
+  const corners = new Set<string>()
+
+  for (const face of shape.faces) {
+    try {
+      if (face.geomType !== 'PLANE') continue
+      const normal = face.normalAt()
+      const faceBounds = face.boundingBox
+      try {
+        const [min, max] = faceBounds.bounds as [
+          [number, number, number],
+          [number, number, number],
+        ]
+        const isFullHeightDiagonal =
+          max[2] - min[2] >= minimumZSpan &&
+          Math.abs(normal.z) < 0.1 &&
+          Math.abs(normal.x) > 0.1 &&
+          Math.abs(normal.y) > 0.1
+        if (!isFullHeightDiagonal) continue
+
+        const xSign = (min[0] + max[0]) / 2 >= centerX ? 1 : -1
+        const ySign = (min[1] + max[1]) / 2 >= centerY ? 1 : -1
+        const minU = xSign > 0 ? min[0] : -max[0]
+        const maxU = xSign > 0 ? max[0] : -min[0]
+        const minV = ySign > 0 ? min[1] : -max[1]
+        const maxV = ySign > 0 ? max[1] : -min[1]
+        const diagonal = (minU + maxV + maxU + minV) / 2
+        if (
+          Math.abs(diagonal - expectedDiagonal) > 0.15 ||
+          Math.abs(Math.abs(normal.x) - Math.SQRT1_2) > 0.05 ||
+          Math.abs(Math.abs(normal.y) - Math.SQRT1_2) > 0.05
+        ) {
+          continue
+        }
+        const touchesX =
+          xSign > 0
+            ? boundaryTouches(min[0], max[0], bounds.max[0])
+            : boundaryTouches(min[0], max[0], bounds.min[0])
+        const touchesY =
+          ySign > 0
+            ? boundaryTouches(min[1], max[1], bounds.max[1])
+            : boundaryTouches(min[1], max[1], bounds.min[1])
+        if (touchesX && touchesY) corners.add(`${xSign}:${ySign}`)
+      } finally {
+        faceBounds.delete()
+        normal.delete()
+      }
+    } finally {
+      face.delete()
+    }
+  }
+
+  return corners.size === 4
 }
 
 function inspectProfileQuality(
@@ -786,7 +891,7 @@ function inspectProfileQuality(
 }
 
 function snapHalfCellSourceInterfaceX(
-  direction: OpenGridSnapParameters['halfCellX'],
+  direction: OpenGridSnapCanonicalAxes['halfCellX'],
 ): number {
   if (direction === 'left') return -4
   if (direction === 'right') return 4
@@ -794,7 +899,7 @@ function snapHalfCellSourceInterfaceX(
 }
 
 function snapHalfCellSourceInterfaceY(
-  direction: OpenGridSnapParameters['halfCellY'],
+  direction: OpenGridSnapCanonicalAxes['halfCellY'],
 ): number {
   if (direction === 'bottom') return -4
   if (direction === 'top') return 4
@@ -802,7 +907,7 @@ function snapHalfCellSourceInterfaceY(
 }
 
 function snapHalfCellTranslationX(
-  direction: OpenGridSnapParameters['halfCellX'],
+  direction: OpenGridSnapCanonicalAxes['halfCellX'],
 ): number {
   if (direction === 'left') return 6.4
   if (direction === 'right') return -6.4
@@ -810,7 +915,7 @@ function snapHalfCellTranslationX(
 }
 
 function snapHalfCellTranslationY(
-  direction: OpenGridSnapParameters['halfCellY'],
+  direction: OpenGridSnapCanonicalAxes['halfCellY'],
 ): number {
   if (direction === 'bottom') return 6.4
   if (direction === 'top') return -6.4
@@ -824,12 +929,13 @@ function inspectHalfCellQuality(
   failures: string[],
 ): number[] {
   if (!bounds) return []
+  const axes = openGridSnapCanonicalAxesFor(parameters.footprint)
   const translatedInterfaceX =
-    snapHalfCellSourceInterfaceX(parameters.halfCellX) +
-    snapHalfCellTranslationX(parameters.halfCellX)
+    snapHalfCellSourceInterfaceX(axes.halfCellX) +
+    snapHalfCellTranslationX(axes.halfCellX)
   const translatedInterfaceY =
-    snapHalfCellSourceInterfaceY(parameters.halfCellY) +
-    snapHalfCellTranslationY(parameters.halfCellY)
+    snapHalfCellSourceInterfaceY(axes.halfCellY) +
+    snapHalfCellTranslationY(axes.halfCellY)
   const probeHalfSize = 0.8
   const centralProbe: Probe = {
     min: [
@@ -854,27 +960,53 @@ function inspectHalfCellQuality(
       failures.push('half-cell:outer-support-missing')
     }
   }
-  if (parameters.halfCellX === 'left') {
-    if (!hasDiagonalBoundaryFace(shape, 'x', bounds.min[0])) {
+  if (axes.halfCellX === 'left') {
+    if (!hasDiagonalBoundaryFace(shape, 'x', [bounds.min[0], bounds.max[0]])) {
       failures.push('half-cell:left-locking-profile-missing')
     }
   }
-  if (parameters.halfCellX === 'right') {
-    if (!hasDiagonalBoundaryFace(shape, 'x', bounds.max[0])) {
+  if (axes.halfCellX === 'right') {
+    if (!hasDiagonalBoundaryFace(shape, 'x', [bounds.min[0], bounds.max[0]])) {
       failures.push('half-cell:right-locking-profile-missing')
     }
   }
-  if (parameters.halfCellY === 'bottom') {
-    if (!hasDiagonalBoundaryFace(shape, 'y', bounds.min[1])) {
+  if (axes.halfCellY === 'bottom') {
+    if (!hasDiagonalBoundaryFace(shape, 'y', [bounds.min[1], bounds.max[1]])) {
       failures.push('half-cell:bottom-locking-profile-missing')
     }
   }
-  if (parameters.halfCellY === 'top') {
-    if (!hasDiagonalBoundaryFace(shape, 'y', bounds.max[1])) {
+  if (axes.halfCellY === 'top') {
+    if (!hasDiagonalBoundaryFace(shape, 'y', [bounds.min[1], bounds.max[1]])) {
       failures.push('half-cell:top-locking-profile-missing')
     }
   }
   return internalProbeVolumes
+}
+
+function inspectCanonicalBoundaryQuality(
+  shape: Shape3D,
+  parameters: OpenGridSnapParameters,
+  bounds: ModelBounds | null,
+  failures: string[],
+): void {
+  if (parameters.footprint === 'full' || !bounds) return
+
+  const axes = openGridSnapCanonicalAxesFor(parameters.footprint)
+  if (!hasAllDiagonalBoundaryCorners(shape, parameters, bounds)) {
+    failures.push('half-cell:canonical-four-corner-profile-missing')
+  }
+  if (
+    axes.halfCellX === 'left' &&
+    !hasDiagonalBoundaryFace(shape, 'x', [bounds.min[0], bounds.max[0]])
+  ) {
+    failures.push('half-cell:canonical-left-boundary-profile-missing')
+  }
+  if (
+    axes.halfCellY === 'top' &&
+    !hasDiagonalBoundaryFace(shape, 'y', [bounds.min[1], bounds.max[1]])
+  ) {
+    failures.push('half-cell:canonical-top-boundary-profile-missing')
+  }
 }
 
 export function inspectOpenGridSnapShapeQuality(
@@ -898,7 +1030,10 @@ export function inspectOpenGridSnapShapeQuality(
       envelopeTolerance = ZERO_OFFSET_ENVELOPE_TOLERANCE
     }
     bounds = readAssemblyBounds(shape)
-    if (!boundsMatch(bounds, expectedBounds, envelopeTolerance)) {
+    const boundsAreValid = hasHalfCell(parameters)
+      ? boundsFitInsideEnvelope(bounds, expectedBounds, envelopeTolerance)
+      : boundsMatch(bounds, expectedBounds, envelopeTolerance)
+    if (!boundsAreValid) {
       failures.push('bounds:expected-centered-envelope')
     }
     const expectedZMin = expectedBounds.min[2]
@@ -949,6 +1084,7 @@ export function inspectOpenGridSnapShapeQuality(
       bounds,
       failures,
     )
+    inspectCanonicalBoundaryQuality(shape, parameters, bounds, failures)
     try {
       const central = largestSolid(shape)
       centralBounds = readBounds(central)

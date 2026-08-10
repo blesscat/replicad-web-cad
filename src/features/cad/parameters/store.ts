@@ -141,7 +141,7 @@ function normalizeLegacyHalfCellParameters(
   candidate: unknown,
 ): unknown {
   if (!isRecord(candidate)) return candidate
-  if (modelId !== 'opengrid' && modelId !== 'opengrid-snap') {
+  if (modelId !== 'opengrid') {
     return candidate
   }
   const hasHalfCellX = Object.prototype.hasOwnProperty.call(

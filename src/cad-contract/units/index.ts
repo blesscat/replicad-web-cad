@@ -53,13 +53,18 @@ import type {
 import {
   boundsForOpenGridSnap,
   isOpenGridSnapParameters,
+  isOpenGridSnapFootprint,
   normalizeOpenGridSnapParameters,
+  openGridSnapCanonicalAxesFor,
   openGridSnapFileName,
+  openGridSnapFootprintForLegacyAxes,
   openGridSnapStlFileName,
   OPENGRID_SNAP_CONFIGURATION,
   validateOpenGridSnapParameters,
 } from './opengrid-snap'
 import type {
+  OpenGridSnapCanonicalAxes,
+  OpenGridSnapFootprint,
   OpenGridSnapParameterKey,
   OpenGridSnapParameters,
   OpenGridSnapValidation,
@@ -169,8 +174,11 @@ export {
 export {
   boundsForOpenGridSnap,
   isOpenGridSnapParameters,
+  isOpenGridSnapFootprint,
   normalizeOpenGridSnapParameters,
+  openGridSnapCanonicalAxesFor,
   openGridSnapFileName,
+  openGridSnapFootprintForLegacyAxes,
   openGridSnapStlFileName,
   OPENGRID_SNAP_CONFIGURATION,
   parseOpenGridSnapDecimalInput,
@@ -194,6 +202,8 @@ export {
 export type { HalfCellDirection, HalfCellX, HalfCellY } from './half-cell'
 export type {
   OpenGridSnapBounds,
+  OpenGridSnapCanonicalAxes,
+  OpenGridSnapFootprint,
   OpenGridSnapParameterKey,
   OpenGridSnapParameters,
   OpenGridSnapValidation,

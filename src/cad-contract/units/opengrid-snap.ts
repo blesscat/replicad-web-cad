@@ -11,13 +11,13 @@ import {
 
 export type OpenGridSnapVariant = 'Full' | 'Lite'
 export type OpenGridSnapProfile = 'Standard' | 'Directional'
+export type OpenGridSnapFootprint = 'full' | 'half' | 'quarter'
 
 export type OpenGridSnapParameterKey =
   | 'variant'
   | 'profile'
   | 'offset'
-  | 'halfCellX'
-  | 'halfCellY'
+  | 'footprint'
   | 'fourCornerLocatingHoles'
   | 'centerRemoverHole'
 
@@ -26,10 +26,14 @@ export type OpenGridSnapParameters = {
   profile: OpenGridSnapProfile
   /** Total X and Y envelope increment in millimetres, applied symmetrically. */
   offset: number
-  halfCellX: HalfCellX
-  halfCellY: HalfCellY
+  footprint: OpenGridSnapFootprint
   fourCornerLocatingHoles: boolean
   centerRemoverHole: boolean
+}
+
+export type OpenGridSnapCanonicalAxes = {
+  halfCellX: HalfCellX
+  halfCellY: HalfCellY
 }
 
 export type OpenGridSnapBounds = {
@@ -59,6 +63,15 @@ export const OPENGRID_SNAP_CONFIGURATION = {
   maxOffset: 1,
   offsetStep: 0.05,
   boundsTolerance: 0.05,
+  officialHost: {
+    boardWidth: 70,
+    boardDepth: 70,
+    boardHeight: 4,
+    halfCenter: [-28, 7] as [number, number],
+    quarterCenter: [-28, 28] as [number, number],
+    interferenceTolerance: 0.1,
+    clearanceTolerance: 0.05,
+  },
   variantHeights: {
     Full: 6.8,
     Lite: 3.4,
@@ -77,8 +90,7 @@ export const OPENGRID_SNAP_CONFIGURATION = {
     variant: 'Full' as OpenGridSnapVariant,
     profile: 'Standard' as OpenGridSnapProfile,
     offset: 0,
-    halfCellX: 'none' as HalfCellX,
-    halfCellY: 'none' as HalfCellY,
+    footprint: 'full' as OpenGridSnapFootprint,
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
   } satisfies OpenGridSnapParameters,
@@ -88,8 +100,7 @@ const PARAMETER_KEYS: readonly OpenGridSnapParameterKey[] = [
   'variant',
   'profile',
   'offset',
-  'halfCellX',
-  'halfCellY',
+  'footprint',
   'fourCornerLocatingHoles',
   'centerRemoverHole',
 ]
@@ -116,6 +127,12 @@ function isOpenGridSnapProfile(value: unknown): value is OpenGridSnapProfile {
   return value === 'Standard' || value === 'Directional'
 }
 
+export function isOpenGridSnapFootprint(
+  value: unknown,
+): value is OpenGridSnapFootprint {
+  return value === 'full' || value === 'half' || value === 'quarter'
+}
+
 function formatNumber(value: number): string {
   return String(Object.is(value, -0) ? 0 : value)
 }
@@ -131,6 +148,28 @@ function halfEnvelopeNominalSize(
   if (axis === 'Y' && direction === 'top') return 13.201
   if (axis === 'Y' && direction === 'bottom') return 12.801
   return 12.801
+}
+
+export function openGridSnapCanonicalAxesFor(
+  footprint: OpenGridSnapFootprint,
+): OpenGridSnapCanonicalAxes {
+  if (footprint === 'half') {
+    return { halfCellX: 'left', halfCellY: 'none' }
+  }
+  if (footprint === 'quarter') {
+    return { halfCellX: 'left', halfCellY: 'top' }
+  }
+  return { halfCellX: 'none', halfCellY: 'none' }
+}
+
+export function openGridSnapFootprintForLegacyAxes(
+  halfCellX: unknown,
+  halfCellY: unknown,
+): OpenGridSnapFootprint | null {
+  if (!isHalfCellX(halfCellX) || !isHalfCellY(halfCellY)) return null
+  if (halfCellX === 'none' && halfCellY === 'none') return 'full'
+  if (halfCellX === 'none' || halfCellY === 'none') return 'half'
+  return 'quarter'
 }
 
 export function parseOpenGridSnapDecimalInput(raw: string): number | null {
@@ -160,7 +199,7 @@ export function validateOpenGridSnapParameters(
     issues.push({
       field: 'parameters',
       message:
-        'OpenGrid Snap 只接受 variant、profile、offset、halfCellX、halfCellY、fourCornerLocatingHoles、centerRemoverHole。',
+        'OpenGrid Snap 只接受 variant、profile、offset、footprint、fourCornerLocatingHoles、centerRemoverHole。',
     })
   }
 
@@ -173,17 +212,10 @@ export function validateOpenGridSnapParameters(
       message: '幾何 profile 必須是 Standard 或 Directional。',
     })
   }
-
-  if (!isHalfCellX(value.halfCellX)) {
+  if (!isOpenGridSnapFootprint(value.footprint)) {
     issues.push({
-      field: 'halfCellX',
-      message: 'X 半格方向必須是 none、left 或 right。',
-    })
-  }
-  if (!isHalfCellY(value.halfCellY)) {
-    issues.push({
-      field: 'halfCellY',
-      message: 'Y 半格方向必須是 none、top 或 bottom。',
+      field: 'footprint',
+      message: '格型必須是 full、half 或 quarter。',
     })
   }
   if (typeof value.fourCornerLocatingHoles !== 'boolean') {
@@ -227,41 +259,44 @@ export function validateOpenGridSnapParameters(
       })
     }
 
-    let intrudesIntoFixedCore = false
-    let exceedsHostPitch = false
-    if (isHalfCellX(value.halfCellX) && value.halfCellX !== 'none') {
-      const nominalWidth = halfEnvelopeNominalSize(
-        value.profile as OpenGridSnapProfile,
-        'X',
-        value.halfCellX,
-      )
-      intrudesIntoFixedCore ||=
-        nominalWidth + offset <= snapFixedCoreAxisSize(value.halfCellX)
-      exceedsHostPitch ||=
-        nominalWidth + offset > halfCellHostPitch(value.halfCellX)
-    }
-    if (isHalfCellY(value.halfCellY) && value.halfCellY !== 'none') {
-      const nominalDepth = halfEnvelopeNominalSize(
-        value.profile as OpenGridSnapProfile,
-        'Y',
-        value.halfCellY,
-      )
-      intrudesIntoFixedCore ||=
-        nominalDepth + offset <= snapFixedCoreAxisSize(value.halfCellY)
-      exceedsHostPitch ||=
-        nominalDepth + offset > halfCellHostPitch(value.halfCellY)
-    }
-    if (intrudesIntoFixedCore) {
-      issues.push({
-        field: 'offset',
-        message: '外框增量會侵入中央 Snap 固定區域。',
-      })
-    }
-    if (exceedsHostPitch) {
-      issues.push({
-        field: 'offset',
-        message: '外框增量會超過所選半格的宿主格距。',
-      })
+    if (isOpenGridSnapFootprint(value.footprint)) {
+      const axes = openGridSnapCanonicalAxesFor(value.footprint)
+      let intrudesIntoFixedCore = false
+      let exceedsHostPitch = false
+      if (axes.halfCellX !== 'none') {
+        const nominalWidth = halfEnvelopeNominalSize(
+          value.profile as OpenGridSnapProfile,
+          'X',
+          axes.halfCellX,
+        )
+        intrudesIntoFixedCore ||=
+          nominalWidth + offset <= snapFixedCoreAxisSize(axes.halfCellX)
+        exceedsHostPitch ||=
+          nominalWidth + offset > halfCellHostPitch(axes.halfCellX)
+      }
+      if (axes.halfCellY !== 'none') {
+        const nominalDepth = halfEnvelopeNominalSize(
+          value.profile as OpenGridSnapProfile,
+          'Y',
+          axes.halfCellY,
+        )
+        intrudesIntoFixedCore ||=
+          nominalDepth + offset <= snapFixedCoreAxisSize(axes.halfCellY)
+        exceedsHostPitch ||=
+          nominalDepth + offset > halfCellHostPitch(axes.halfCellY)
+      }
+      if (intrudesIntoFixedCore) {
+        issues.push({
+          field: 'offset',
+          message: '外框增量會侵入中央 Snap 固定區域。',
+        })
+      }
+      if (exceedsHostPitch) {
+        issues.push({
+          field: 'offset',
+          message: '外框增量會超過所選格型的宿主格距。',
+        })
+      }
     }
   }
 
@@ -273,8 +308,7 @@ export function validateOpenGridSnapParameters(
       variant: value.variant as OpenGridSnapVariant,
       profile: value.profile as OpenGridSnapProfile,
       offset: value.offset as number,
-      halfCellX: value.halfCellX as HalfCellX,
-      halfCellY: value.halfCellY as HalfCellY,
+      footprint: value.footprint as OpenGridSnapFootprint,
       fourCornerLocatingHoles: value.fourCornerLocatingHoles as boolean,
       centerRemoverHole: value.centerRemoverHole as boolean,
     },
@@ -296,13 +330,30 @@ export function normalizeOpenGridSnapParameters(value: unknown): unknown {
   if (!Object.prototype.hasOwnProperty.call(normalized, 'centerRemoverHole')) {
     normalized.centerRemoverHole = false
   }
-  if (!Object.prototype.hasOwnProperty.call(normalized, 'halfCellX')) {
-    normalized.halfCellX = 'none'
+  if (Object.prototype.hasOwnProperty.call(normalized, 'footprint')) {
+    return normalized
   }
-  if (!Object.prototype.hasOwnProperty.call(normalized, 'halfCellY')) {
-    normalized.halfCellY = 'none'
-  }
-  return normalized
+
+  const hasHalfCellX = Object.prototype.hasOwnProperty.call(
+    normalized,
+    'halfCellX',
+  )
+  const hasHalfCellY = Object.prototype.hasOwnProperty.call(
+    normalized,
+    'halfCellY',
+  )
+  const legacyFootprint = openGridSnapFootprintForLegacyAxes(
+    hasHalfCellX ? normalized.halfCellX : 'none',
+    hasHalfCellY ? normalized.halfCellY : 'none',
+  )
+  if (legacyFootprint === null) return normalized
+
+  const {
+    halfCellX: _halfCellX,
+    halfCellY: _halfCellY,
+    ...withoutLegacyAxes
+  } = normalized
+  return { ...withoutLegacyAxes, footprint: legacyFootprint }
 }
 
 export function isOpenGridSnapParameters(
@@ -311,18 +362,32 @@ export function isOpenGridSnapParameters(
   return validateOpenGridSnapParameters(value).valid
 }
 
+function snapNominalSizeForFootprint(
+  profile: OpenGridSnapProfile,
+  axis: 'X' | 'Y',
+  footprint: OpenGridSnapFootprint,
+): number {
+  const axes = openGridSnapCanonicalAxesFor(footprint)
+  const direction = axis === 'X' ? axes.halfCellX : axes.halfCellY
+  return halfEnvelopeNominalSize(profile, axis, direction)
+}
+
 export function boundsForOpenGridSnap(
   parameters: Pick<
     OpenGridSnapParameters,
-    'variant' | 'profile' | 'offset' | 'halfCellX' | 'halfCellY'
+    'variant' | 'profile' | 'offset' | 'footprint'
   >,
 ): OpenGridSnapBounds {
   if (parameters.profile === 'Directional') {
     return directionalBoundsFor(parameters)
   }
 
-  const width = snapNominalAxisSize(parameters.halfCellX) + parameters.offset
-  const depth = snapNominalAxisSize(parameters.halfCellY) + parameters.offset
+  const width =
+    snapNominalSizeForFootprint('Standard', 'X', parameters.footprint) +
+    parameters.offset
+  const depth =
+    snapNominalSizeForFootprint('Standard', 'Y', parameters.footprint) +
+    parameters.offset
   return {
     min: [-width / 2, -depth / 2, 0],
     max: [
@@ -334,11 +399,9 @@ export function boundsForOpenGridSnap(
 }
 
 function directionalBoundsFor(
-  parameters: Pick<
-    OpenGridSnapParameters,
-    'variant' | 'offset' | 'halfCellX' | 'halfCellY'
-  >,
+  parameters: Pick<OpenGridSnapParameters, 'variant' | 'offset' | 'footprint'>,
 ): OpenGridSnapBounds {
+  const axes = openGridSnapCanonicalAxesFor(parameters.footprint)
   const baseMinY = -12.801
   const baseMaxY = 13.201
   const baseCenterY = (baseMinY + baseMaxY) / 2
@@ -348,11 +411,11 @@ function directionalBoundsFor(
   let width = fullWidth
   let depth = fullDepth
   let centerY = baseCenterY
-  if (parameters.halfCellX !== 'none') {
+  if (axes.halfCellX !== 'none') {
     width = 12.801 + parameters.offset
   }
-  if (parameters.halfCellY !== 'none') {
-    if (parameters.halfCellY === 'top') {
+  if (axes.halfCellY !== 'none') {
+    if (axes.halfCellY === 'top') {
       depth = 13.201 + parameters.offset
     } else {
       depth = 12.801 + parameters.offset
@@ -373,13 +436,13 @@ function directionalBoundsFor(
 export function openGridSnapFileName(
   parameters: OpenGridSnapParameters,
 ): string {
-  return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-x${parameters.halfCellX}-y${parameters.halfCellY}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}.step`
+  return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-${parameters.footprint}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}.step`
 }
 
 export function openGridSnapStlFileName(
   parameters: OpenGridSnapParameters,
 ): string {
-  return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-x${parameters.halfCellX}-y${parameters.halfCellY}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}.stl`
+  return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-${parameters.footprint}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}.stl`
 }
 
 export function openGridSnapHeightFor(variant: OpenGridSnapVariant): number {

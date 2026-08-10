@@ -341,8 +341,7 @@ describe('CAD component catalog', () => {
       variant: 'Full',
       profile: 'Standard',
       offset: 0,
-      halfCellX: 'none',
-      halfCellY: 'none',
+      footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
     })
@@ -351,8 +350,7 @@ describe('CAD component catalog', () => {
         variant: 'Lite',
         profile: 'Standard',
         offset: 0.2,
-        halfCellX: 'none',
-        halfCellY: 'none',
+        footprint: 'full',
         fourCornerLocatingHoles: false,
         centerRemoverHole: false,
       }),
@@ -365,34 +363,27 @@ describe('CAD component catalog', () => {
         variant: 'Full',
         profile: 'Standard',
         offset: 0.2,
-        halfCellX: 'none',
-        halfCellY: 'none',
+        footprint: 'full',
         fourCornerLocatingHoles: false,
         centerRemoverHole: false,
       }),
-    ).toBe(
-      'opengrid-snap-standard-full-offset0.2-xnone-ynone-corners0-center0.step',
-    )
+    ).toBe('opengrid-snap-standard-full-offset0.2-full-corners0-center0.step')
     expect(
       snap?.stlFileName({
         variant: 'Lite',
         profile: 'Standard',
         offset: 0.15,
-        halfCellX: 'none',
-        halfCellY: 'none',
+        footprint: 'full',
         fourCornerLocatingHoles: false,
         centerRemoverHole: false,
       }),
-    ).toBe(
-      'opengrid-snap-standard-lite-offset0.15-xnone-ynone-corners0-center0.stl',
-    )
+    ).toBe('opengrid-snap-standard-lite-offset0.15-full-corners0-center0.stl')
     expect(
       snap?.validateParameters({
         variant: 'Full',
         profile: 'Directional',
         offset: 0.2,
-        halfCellX: 'none',
-        halfCellY: 'none',
+        footprint: 'full',
         fourCornerLocatingHoles: true,
         centerRemoverHole: true,
       }),
@@ -404,8 +395,7 @@ describe('CAD component catalog', () => {
           variant: 'Full',
           profile: 'Directional',
           offset: 0.2,
-          halfCellX: 'none',
-          halfCellY: 'none',
+          footprint: 'full',
           fourCornerLocatingHoles: true,
           centerRemoverHole: true,
         },

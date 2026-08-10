@@ -51,8 +51,7 @@ const base = {
 function snapParameters(
   variant: 'Full' | 'Lite',
   offset: number,
-  halfCellX: 'none' | 'left' | 'right' = 'none',
-  halfCellY: 'none' | 'top' | 'bottom' = 'none',
+  footprint: 'full' | 'half' | 'quarter' = 'full',
   overrides: Partial<
     Pick<
       OpenGridSnapParameters,
@@ -64,8 +63,7 @@ function snapParameters(
     variant,
     profile: 'Standard',
     offset,
-    halfCellX,
-    halfCellY,
+    footprint,
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
     ...overrides,
@@ -139,7 +137,7 @@ describe('OpenGrid Snap Worker runtime', () => {
     await runtime.handle(generateCommand(snapParameters('Lite', 0), 3))
     await runtime.handle(
       generateCommand(
-        snapParameters('Full', 0, 'none', 'none', {
+        snapParameters('Full', 0, 'full', {
           profile: 'Directional',
         }),
         4,
@@ -258,7 +256,7 @@ describe('OpenGrid Snap Worker runtime', () => {
     )
     await Promise.resolve()
     const second = runtime.handle(
-      generateCommand(snapParameters('Full', 0.3, 'right', 'top'), 2),
+      generateCommand(snapParameters('Full', 0.3, 'quarter'), 2),
     )
     await second
     releaseFirst()
@@ -274,7 +272,7 @@ describe('OpenGrid Snap Worker runtime', () => {
       expect.objectContaining({
         kind: 'model.candidate-ready',
         generation: 2,
-        parameters: snapParameters('Full', 0.3, 'right', 'top'),
+        parameters: snapParameters('Full', 0.3, 'quarter'),
       }),
     )
     expect(generatedShapes).toHaveLength(1)
@@ -287,7 +285,7 @@ describe('OpenGrid Snap Worker runtime', () => {
     )
     await runtime.handle(initCommand())
     await runtime.handle(
-      generateCommand(snapParameters('Lite', 0.2, 'left', 'top')),
+      generateCommand(snapParameters('Lite', 0.2, 'quarter')),
     )
     const candidate = events.find(
       (event) =>
@@ -373,7 +371,7 @@ describe('OpenGrid Snap Worker runtime', () => {
     await runtime.handle(generateCommand(snapParameters('Lite', 0), 2))
     await runtime.handle(
       generateCommand(
-        snapParameters('Full', 0, 'none', 'none', {
+        snapParameters('Full', 0, 'full', {
           profile: 'Directional',
         }),
         3,

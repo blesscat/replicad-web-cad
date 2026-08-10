@@ -194,8 +194,7 @@ describe('component parameter store', () => {
       variant: 'Lite',
       profile: 'Standard',
       offset: 0.2,
-      halfCellX: 'none',
-      halfCellY: 'none',
+      footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
     })
@@ -414,8 +413,7 @@ describe('component parameter store', () => {
         variant: 'Full',
         profile: 'Standard',
         offset: 0.25,
-        halfCellX: 'none',
-        halfCellY: 'none',
+        footprint: 'half',
         fourCornerLocatingHoles: true,
         centerRemoverHole: false,
       }),
@@ -425,15 +423,14 @@ describe('component parameter store', () => {
       variant: 'Full',
       profile: 'Standard',
       offset: 0.25,
-      halfCellX: 'none',
-      halfCellY: 'none',
+      footprint: 'half',
       fourCornerLocatingHoles: true,
       centerRemoverHole: false,
     })
     store.dispose()
   })
 
-  it('persists independent half-cell directions and rejects malformed directions', () => {
+  it('persists canonical footprints and rejects malformed Snap values', () => {
     const storage = createMemoryStorage(
       createPayload({
         opengrid: {
@@ -463,8 +460,7 @@ describe('component parameter store', () => {
       store.set('opengrid-snap', {
         ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
         profile: 'Directional',
-        halfCellX: 'right',
-        halfCellY: 'bottom',
+        footprint: 'quarter',
         fourCornerLocatingHoles: true,
         centerRemoverHole: false,
       }),
@@ -475,8 +471,7 @@ describe('component parameter store', () => {
     })
     expect(store.get('opengrid-snap')).toMatchObject({
       profile: 'Directional',
-      halfCellX: 'right',
-      halfCellY: 'bottom',
+      footprint: 'quarter',
       fourCornerLocatingHoles: true,
     })
     expect(
@@ -491,6 +486,49 @@ describe('component parameter store', () => {
         fourCornerLocatingHoles: 'true' as never,
       }),
     ).toBe(false)
+    store.dispose()
+  })
+
+  it('migrates legacy Snap axes without reading the OpenGrid board entry', () => {
+    const board = opengridParameters({ variant: 'Lite', rows: 2, columns: 2 })
+    const storage = createMemoryStorage(
+      createPayload({
+        opengrid: board,
+        'opengrid-snap': {
+          variant: 'Full',
+          offset: 0.2,
+          halfCellX: 'right',
+          halfCellY: 'none',
+        },
+      }),
+    )
+    const store = createComponentParameterStore({ storage })
+
+    expect(store.get('opengrid')).toEqual(board)
+    expect(store.get('opengrid-snap')).toEqual({
+      variant: 'Full',
+      profile: 'Standard',
+      offset: 0.2,
+      footprint: 'half',
+      fourCornerLocatingHoles: false,
+      centerRemoverHole: false,
+    })
+
+    expect(store.set('opengrid-snap', store.get('opengrid-snap'))).toBe(true)
+    const persisted = JSON.parse(storage.writes.at(-1) ?? '{}') as {
+      values?: Record<string, Record<string, unknown>>
+    }
+    expect(persisted.values?.opengrid).toEqual(board)
+    expect(persisted.values?.['opengrid-snap']).toEqual({
+      variant: 'Full',
+      profile: 'Standard',
+      offset: 0.2,
+      footprint: 'half',
+      fourCornerLocatingHoles: false,
+      centerRemoverHole: false,
+    })
+    expect(persisted.values?.['opengrid-snap']).not.toHaveProperty('halfCellX')
+    expect(persisted.values?.['opengrid-snap']).not.toHaveProperty('halfCellY')
     store.dispose()
   })
 

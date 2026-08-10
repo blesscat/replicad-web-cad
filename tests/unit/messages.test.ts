@@ -108,7 +108,7 @@ describe('Worker contract runtime validation', () => {
     ).toBe(false)
   })
 
-  it('accepts Snap commands only with Full/Lite offsets and axis directions', () => {
+  it('accepts Snap commands only with Full/Lite offsets and footprints', () => {
     const command = {
       version: PROTOCOL_VERSION,
       kind: 'model.generate' as const,
@@ -120,8 +120,7 @@ describe('Worker contract runtime validation', () => {
         variant: 'Full' as const,
         profile: 'Standard' as const,
         offset: 0.2,
-        halfCellX: 'none' as const,
-        halfCellY: 'none' as const,
+        footprint: 'full' as const,
         fourCornerLocatingHoles: false,
         centerRemoverHole: false,
       },
@@ -146,8 +145,7 @@ describe('Worker contract runtime validation', () => {
           variant: 'Full',
           profile: 'Standard',
           offset: 0.2,
-          halfCellX: 'diagonal',
-          halfCellY: 'none',
+          footprint: 'diagonal',
           fourCornerLocatingHoles: false,
           centerRemoverHole: false,
         },

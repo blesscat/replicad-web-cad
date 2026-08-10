@@ -2,6 +2,7 @@ import { normalizeError, type CadError } from '../../../cad-contract/errors'
 import type { WorkerClientError } from '../../../features/cad/worker-client'
 import {
   HEXAGONAL_COLUMN_CONFIGURATION,
+  isOpenGridSnapFootprint,
   parseOpenGridSnapDecimalInput,
   parseDimensionInput,
   validateModelParameters,
@@ -80,8 +81,7 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
       'variant',
       'profile',
       'offset',
-      'halfCellX',
-      'halfCellY',
+      'footprint',
       'fourCornerLocatingHoles',
       'centerRemoverHole',
     ]
@@ -230,8 +230,7 @@ export function rawFromParameters(
       variant: snapParameters.variant,
       profile: snapParameters.profile,
       offset: String(snapParameters.offset),
-      halfCellX: snapParameters.halfCellX,
-      halfCellY: snapParameters.halfCellY,
+      footprint: snapParameters.footprint,
       fourCornerLocatingHoles: String(snapParameters.fourCornerLocatingHoles),
       centerRemoverHole: String(snapParameters.centerRemoverHole),
     }
@@ -320,21 +319,12 @@ export function parseRawParameters(
       }
     }
 
-    const halfCellX = raw.halfCellX ?? 'none'
-    if (halfCellX !== 'none' && halfCellX !== 'left' && halfCellX !== 'right') {
+    const footprint = raw.footprint ?? 'full'
+    if (!isOpenGridSnapFootprint(footprint)) {
       return {
         valid: false,
-        message: 'X 半格方向必須是 none、left 或 right。',
-        field: 'halfCellX',
-      }
-    }
-
-    const halfCellY = raw.halfCellY ?? 'none'
-    if (halfCellY !== 'none' && halfCellY !== 'top' && halfCellY !== 'bottom') {
-      return {
-        valid: false,
-        message: 'Y 半格方向必須是 none、top 或 bottom。',
-        field: 'halfCellY',
+        message: '格型必須是 full、half 或 quarter。',
+        field: 'footprint',
       }
     }
 
@@ -354,8 +344,7 @@ export function parseRawParameters(
       variant,
       profile,
       offset,
-      halfCellX,
-      halfCellY,
+      footprint,
       fourCornerLocatingHoles: fourCornerLocatingHoles.value,
       centerRemoverHole: centerRemoverHole.value,
     } satisfies OpenGridSnapParameters)
