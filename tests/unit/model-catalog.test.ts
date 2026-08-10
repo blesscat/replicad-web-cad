@@ -30,16 +30,24 @@ function opengridParameters(
 }
 
 describe('CAD component catalog', () => {
-  it('orders visible model families and omits other models from chooser groups', () => {
+  it('groups every registered model into one user-facing family', () => {
     const groups = groupModelDefinitions()
 
-    expect(groups.map((group) => group.key)).toEqual(['opengrid', 'hsw'])
+    expect(groups.map((group) => group.key)).toEqual([
+      'hsw',
+      'opengrid',
+      'other',
+    ])
     expect(groups.map((group) => group.label)).toEqual([
-      'OpenGrid 系列',
       'HSW 系列',
+      'OpenGrid 系列',
+      '其他模型',
     ])
 
     expect(groups[0]?.definitions.map((definition) => definition.id)).toEqual([
+      'hsw-cell',
+    ])
+    expect(groups[1]?.definitions.map((definition) => definition.id)).toEqual([
       'opengrid',
       'opengrid-pillar',
       'opengrid-divider',
@@ -48,21 +56,20 @@ describe('CAD component catalog', () => {
       'opengrid-snap',
       'opengrid-snap-remover',
     ])
-    expect(groups[1]?.definitions.map((definition) => definition.id)).toEqual([
-      'hsw-cell',
+    expect(groups[2]?.definitions.map((definition) => definition.id)).toEqual([
+      'box',
+      'box-normal',
+      'modular-grid-base',
+      'hexagonal-column',
     ])
 
     const groupedIds = groups.flatMap((group) =>
       group.definitions.map((definition) => definition.id),
     )
-    expect(groupedIds).not.toEqual(
-      expect.arrayContaining([
-        'box',
-        'box-normal',
-        'modular-grid-base',
-        'hexagonal-column',
-      ]),
+    expect([...groupedIds].sort()).toEqual(
+      modelDefinitions.map((definition) => definition.id).sort(),
     )
+    expect(new Set(groupedIds).size).toBe(modelDefinitions.length)
   })
 
   it('exposes independent model definitions including box-normal and OpenGrid', () => {

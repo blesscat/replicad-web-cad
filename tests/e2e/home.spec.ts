@@ -23,9 +23,7 @@ test('home, model selection, and docs are static Astro pages', async ({
     .getByRole('navigation', { name: '主要導覽' })
     .evaluate((element) => getComputedStyle(element).backgroundColor)
   expect(ctaBackground).not.toBe(navigationBackground)
-  await expect(
-    page.getByRole('link', { name: '編輯 →', exact: true }),
-  ).toHaveCount(0)
+  await expect(page.getByRole('link', { name: '使用方塊' })).toHaveCount(0)
   await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
 
   await page.goto('/models')
@@ -38,67 +36,48 @@ test('home, model selection, and docs are static Astro pages', async ({
   await expect(
     page.getByRole('heading', { name: '選擇 CAD 模型' }),
   ).toBeVisible()
-  await expect(page.getByTestId('model-selection').locator('p')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'HSW 系列' })).toBeVisible()
   await expect(
     page.getByRole('heading', { name: 'OpenGrid 系列' }),
   ).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'HSW 系列' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: '其他模型' })).toHaveCount(0)
-  const familySections = page.locator('[data-testid^="model-family-"]')
-  await expect(familySections).toHaveCount(2)
-  await expect(familySections.nth(0)).toHaveAttribute(
-    'data-testid',
-    'model-family-opengrid',
-  )
-  await expect(familySections.nth(1)).toHaveAttribute(
-    'data-testid',
-    'model-family-hsw',
-  )
-
-  const editLinkFor = (displayName: string) =>
-    page
-      .getByRole('heading', { name: displayName, exact: true })
-      .locator('..')
-      .getByRole('link', { name: `編輯 ${displayName}`, exact: true })
-
-  await expect(editLinkFor('HSW 六角蜂巢')).toHaveAttribute(
+  await expect(page.getByRole('heading', { name: '其他模型' })).toBeVisible()
+  await expect(page.getByRole('link', { name: '使用方塊' })).toHaveAttribute(
     'href',
-    '/cad/hsw-cell',
+    '/cad/box',
   )
-  await expect(editLinkFor('OpenGrid 圓柱支柱')).toHaveAttribute(
-    'href',
-    '/cad/opengrid-pillar',
-  )
-  await expect(editLinkFor('OpenGrid 底板')).toHaveAttribute(
-    'href',
-    '/cad/opengrid',
-  )
-  await expect(editLinkFor('OpenGrid 分隔塊')).toHaveAttribute(
-    'href',
-    '/cad/opengrid-divider',
-  )
-  await expect(editLinkFor('OpenGrid 堆疊盒')).toHaveAttribute(
-    'href',
-    '/cad/opengrid-stackable-box',
-  )
-  await expect(editLinkFor('OpenGrid Snap')).toHaveAttribute(
-    'href',
-    '/cad/opengrid-snap',
-  )
-  await expect(editLinkFor('OpenGrid Snap Remover')).toHaveAttribute(
-    'href',
-    '/cad/opengrid-snap-remover',
-  )
-  for (const displayName of [
-    '方塊',
-    '標準開口盒',
-    '模組化網格底板',
-    '可調六角柱',
-  ]) {
-    await expect(
-      page.getByRole('heading', { name: displayName, exact: true }),
-    ).toHaveCount(0)
-  }
+  await expect(
+    page.getByRole('link', { name: '使用標準開口盒' }),
+  ).toHaveAttribute('href', '/cad/box-normal')
+  await expect(
+    page.getByRole('link', { name: '使用模組化網格底板' }),
+  ).toHaveAttribute('href', '/cad/modular-grid-base')
+  await expect(
+    page.getByRole('link', { name: '使用HSW 六角蜂巢' }),
+  ).toHaveAttribute('href', '/cad/hsw-cell')
+  await expect(
+    page.getByRole('link', { name: '使用可調六角柱' }),
+  ).toHaveAttribute('href', '/cad/hexagonal-column')
+  await expect(
+    page.getByRole('link', { name: '使用OpenGrid 圓柱支柱 →', exact: true }),
+  ).toHaveAttribute('href', '/cad/opengrid-pillar')
+  await expect(
+    page.getByRole('link', { name: '使用OpenGrid 底板' }),
+  ).toHaveAttribute('href', '/cad/opengrid')
+  await expect(
+    page.getByRole('link', { name: '使用OpenGrid 分隔塊' }),
+  ).toHaveAttribute('href', '/cad/opengrid-divider')
+  await expect(
+    page.getByRole('link', { name: '使用OpenGrid 堆疊盒' }),
+  ).toHaveAttribute('href', '/cad/opengrid-stackable-box')
+  await expect(
+    page.getByRole('link', { name: '使用OpenGrid Snap →', exact: true }),
+  ).toHaveAttribute('href', '/cad/opengrid-snap')
+  await expect(
+    page.getByRole('link', {
+      name: '使用OpenGrid Snap Remover →',
+      exact: true,
+    }),
+  ).toHaveAttribute('href', '/cad/opengrid-snap-remover')
   await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
 
   await page.goto('/docs/')
@@ -112,7 +91,7 @@ test('home, model selection, and docs are static Astro pages', async ({
     page.getByText(/OpenGrid 系列提供 Full、Lite、Heavy 三種 28 mm 網格板型/),
   ).toBeVisible()
   await expect(
-    page.getByText(/模型選擇頁目前先顯示 OpenGrid 系列與 HSW 系列/),
+    page.getByText(/HSW 系列、OpenGrid 系列與其他模型分類/),
   ).toBeVisible()
   await expect(
     page.getByRole('link', { name: '返回模型選擇' }),

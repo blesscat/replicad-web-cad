@@ -12,7 +12,8 @@ test('CAD workspace switches to the modular grid component and exports a 2x2 bas
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/modular-grid-base')
+  await page.goto('/models')
+  await page.getByRole('link', { name: '使用模組化網格底板' }).click()
   await waitForCadReady(page)
 
   await expect(page).toHaveURL('/cad/modular-grid-base')
@@ -55,9 +56,7 @@ test('CAD workspace switches to the modular grid component and exports a 2x2 bas
 
   await page.getByRole('link', { name: '返回模型選擇' }).click()
   await expect(page).toHaveURL('/models')
-  await expect(
-    page.getByRole('heading', { name: '選擇 CAD 模型' }),
-  ).toBeVisible()
+  await expect(page.getByRole('link', { name: '使用方塊' })).toBeVisible()
 })
 
 test('modular grid slider drag preserves committed viewport framing before replacement', async ({
@@ -117,7 +116,8 @@ test('modular grid reports cell progress for a larger generation', async ({
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/modular-grid-base')
+  await page.goto('/models')
+  await page.getByRole('link', { name: '使用模組化網格底板' }).click()
   await waitForCadReady(page)
 
   const rows = page.getByRole('slider', { name: 'Y' })
