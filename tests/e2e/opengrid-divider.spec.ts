@@ -6,9 +6,9 @@ test('OpenGrid divider is listed with independent directional controls', async (
 }) => {
   await page.goto('/models')
   const modelLink = page
-    .getByRole('heading', { name: 'OpenGrid 分隔塊', exact: true })
+    .getByRole('heading', { name: '分隔塊', exact: true })
     .locator('..')
-    .getByRole('link', { name: '編輯 OpenGrid 分隔塊', exact: true })
+    .getByRole('link', { name: '編輯 分隔塊', exact: true })
   await expect(modelLink).toHaveAttribute('href', '/cad/opengrid-divider')
   await modelLink.click()
 

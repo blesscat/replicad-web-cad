@@ -61,6 +61,7 @@ export const opengridSnapDefinition: ModelDefinition = {
   buildKey: 'opengrid-snap',
   family: 'opengrid',
   displayName: 'OpenGrid Snap',
+  selectionLabel: 'Snap',
   selectionDescription:
     '提供 Standard 或 Directional 的 Full/Lite Snap，可切換完整、半格或四分之一格，以及四周定位孔與中心 remover 孔。',
   parameterSchema: OPENGRID_SNAP_PARAMETER_SCHEMA,

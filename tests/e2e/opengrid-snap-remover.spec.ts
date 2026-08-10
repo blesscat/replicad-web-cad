@@ -10,9 +10,9 @@ test('OpenGrid Snap Remover previews and exports without parameter controls', as
 
   await page.goto('/models')
   const modelLink = page
-    .getByRole('heading', { name: 'OpenGrid Snap Remover', exact: true })
+    .getByRole('heading', { name: 'Snap Remover', exact: true })
     .locator('..')
-    .getByRole('link', { name: '編輯 OpenGrid Snap Remover', exact: true })
+    .getByRole('link', { name: '編輯 Snap Remover', exact: true })
   await expect(modelLink).toHaveAttribute('href', '/cad/opengrid-snap-remover')
   await modelLink.click()
   await expect(page).toHaveURL('/cad/opengrid-snap-remover')

@@ -166,6 +166,7 @@ export const opengridStackableBoxDefinition: ModelDefinition = {
   buildKey: 'opengrid-stackable-box',
   family: 'opengrid',
   displayName: 'OpenGrid 堆疊盒',
+  selectionLabel: '堆疊盒',
   selectionDescription:
     'OpenGrid 堆疊盒；盒內淨高文字輸入 10–500 mm、slider 10–200 mm，X/Y footprint 上限 500 mm。',
   parameterSchema: OPENGRID_STACKABLE_BOX_PARAMETER_SCHEMA,

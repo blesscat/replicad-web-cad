@@ -46,11 +46,11 @@ export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   hswCellDefinition,
   hexagonalColumnDefinition,
   opengridDefinition,
+  opengridSnapDefinition,
   opengridPillarDefinition,
   opengridDividerDefinition,
   opengridStackableBoxDefinition,
   opengridStackableCylinderDefinition,
-  opengridSnapDefinition,
   openGridSnapRemoverDefinition,
 ]
 
@@ -85,6 +85,10 @@ export function groupModelDefinitions(
       (definition) => definition.family === family,
     ),
   }))
+}
+
+export function modelSelectionLabelFor(definition: ModelDefinition): string {
+  return definition.selectionLabel ?? definition.displayName
 }
 
 export function getModelDefinition(

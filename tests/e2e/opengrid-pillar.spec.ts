@@ -11,9 +11,9 @@ test('OpenGrid pillar is listed in its family and initializes with plain default
   await page.goto('/models')
 
   const modelLink = page
-    .getByRole('heading', { name: 'OpenGrid 圓柱支柱', exact: true })
+    .getByRole('heading', { name: '圓柱支柱', exact: true })
     .locator('..')
-    .getByRole('link', { name: '編輯 OpenGrid 圓柱支柱', exact: true })
+    .getByRole('link', { name: '編輯 圓柱支柱', exact: true })
   await expect(modelLink).toHaveAttribute('href', '/cad/opengrid-pillar')
   await modelLink.click()
 

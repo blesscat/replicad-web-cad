@@ -42,11 +42,11 @@ describe('CAD component catalog', () => {
 
     expect(groups[0]?.definitions.map((definition) => definition.id)).toEqual([
       'opengrid',
+      'opengrid-snap',
       'opengrid-pillar',
       'opengrid-divider',
       'opengrid-stackable-box',
       'opengrid-stackable-cylinder',
-      'opengrid-snap',
       'opengrid-snap-remover',
     ])
     expect(groups[1]?.definitions.map((definition) => definition.id)).toEqual([
@@ -66,6 +66,29 @@ describe('CAD component catalog', () => {
     )
   })
 
+  it('provides family-relative selection labels without changing full names', () => {
+    const expectedLabels = [
+      ['opengrid', '底板'],
+      ['opengrid-snap', 'Snap'],
+      ['opengrid-pillar', '圓柱支柱'],
+      ['opengrid-divider', '分隔塊'],
+      ['opengrid-stackable-box', '堆疊盒'],
+      ['opengrid-stackable-cylinder', '可堆疊圓柱'],
+      ['opengrid-snap-remover', 'Snap Remover'],
+      ['hsw-cell', '六角蜂巢'],
+    ] as const
+
+    for (const [id, selectionLabel] of expectedLabels) {
+      expect(getModelDefinition(id)).toMatchObject({ selectionLabel })
+    }
+
+    expect(getModelDefinition('opengrid')?.displayName).toBe('OpenGrid 底板')
+    expect(getModelDefinition('opengrid-snap')?.displayName).toBe(
+      'OpenGrid Snap',
+    )
+    expect(getModelDefinition('hsw-cell')?.displayName).toBe('HSW 六角蜂巢')
+  })
+
   it('exposes independent model definitions including box-normal and OpenGrid', () => {
     expect(modelDefinitions.map((definition) => definition.id)).toEqual([
       'box',
@@ -74,11 +97,11 @@ describe('CAD component catalog', () => {
       'hsw-cell',
       'hexagonal-column',
       'opengrid',
+      'opengrid-snap',
       'opengrid-pillar',
       'opengrid-divider',
       'opengrid-stackable-box',
       'opengrid-stackable-cylinder',
-      'opengrid-snap',
       'opengrid-snap-remover',
     ])
 

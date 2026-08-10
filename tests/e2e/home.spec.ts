@@ -61,34 +61,52 @@ test('home, model selection, and docs are static Astro pages', async ({
       .locator('..')
       .getByRole('link', { name: `編輯 ${displayName}`, exact: true })
 
-  await expect(editLinkFor('HSW 六角蜂巢')).toHaveAttribute(
-    'href',
-    '/cad/hsw-cell',
-  )
-  await expect(editLinkFor('OpenGrid 圓柱支柱')).toHaveAttribute(
+  await expect(editLinkFor('六角蜂巢')).toHaveAttribute('href', '/cad/hsw-cell')
+  await expect(editLinkFor('圓柱支柱')).toHaveAttribute(
     'href',
     '/cad/opengrid-pillar',
   )
-  await expect(editLinkFor('OpenGrid 底板')).toHaveAttribute(
-    'href',
-    '/cad/opengrid',
-  )
-  await expect(editLinkFor('OpenGrid 分隔塊')).toHaveAttribute(
-    'href',
-    '/cad/opengrid-divider',
-  )
-  await expect(editLinkFor('OpenGrid 堆疊盒')).toHaveAttribute(
-    'href',
-    '/cad/opengrid-stackable-box',
-  )
-  await expect(editLinkFor('OpenGrid Snap')).toHaveAttribute(
+  await expect(editLinkFor('底板')).toHaveAttribute('href', '/cad/opengrid')
+  await expect(editLinkFor('Snap')).toHaveAttribute(
     'href',
     '/cad/opengrid-snap',
   )
-  await expect(editLinkFor('OpenGrid Snap Remover')).toHaveAttribute(
+  await expect(editLinkFor('分隔塊')).toHaveAttribute(
+    'href',
+    '/cad/opengrid-divider',
+  )
+  await expect(editLinkFor('堆疊盒')).toHaveAttribute(
+    'href',
+    '/cad/opengrid-stackable-box',
+  )
+  await expect(editLinkFor('可堆疊圓柱')).toHaveAttribute(
+    'href',
+    '/cad/opengrid-stackable-cylinder',
+  )
+  await expect(editLinkFor('Snap Remover')).toHaveAttribute(
     'href',
     '/cad/opengrid-snap-remover',
   )
+  const openGridCards = page
+    .getByTestId('model-family-opengrid')
+    .locator('[data-model-id]')
+  await expect(openGridCards.nth(0)).toHaveAttribute(
+    'data-model-id',
+    'opengrid',
+  )
+  await expect(openGridCards.nth(1)).toHaveAttribute(
+    'data-model-id',
+    'opengrid-snap',
+  )
+  const bottomCardBounds = await openGridCards.nth(0).boundingBox()
+  const snapCardBounds = await openGridCards.nth(1).boundingBox()
+  expect(bottomCardBounds).not.toBeNull()
+  expect(snapCardBounds).not.toBeNull()
+  if (!bottomCardBounds || !snapCardBounds) {
+    throw new Error('OpenGrid bottom and Snap cards must be laid out')
+  }
+  expect(snapCardBounds.x).toBeGreaterThan(bottomCardBounds.x)
+  expect(snapCardBounds.y).toBeCloseTo(bottomCardBounds.y, 0)
   for (const displayName of [
     '方塊',
     '標準開口盒',
@@ -112,7 +130,7 @@ test('home, model selection, and docs are static Astro pages', async ({
     page.getByText(/OpenGrid 系列提供 Full、Lite、Heavy 三種 28 mm 網格板型/),
   ).toBeVisible()
   await expect(
-    page.getByText(/模型選擇頁目前先顯示 OpenGrid 系列與 HSW 系列/),
+    page.getByText(/模型選擇頁依 HSW 系列、OpenGrid 系列與其他模型分類/),
   ).toBeVisible()
   await expect(
     page.getByRole('link', { name: '返回模型選擇' }),
