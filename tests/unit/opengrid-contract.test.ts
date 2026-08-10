@@ -336,10 +336,67 @@ describe('OpenGrid contract', () => {
       validateOpenGridParameters(
         parameters({ rows: 3, columns: 3, screwCenter: true }),
       ).valid,
-    ).toBe(false)
+    ).toBe(true)
+    expect(
+      validateOpenGridParameters(
+        parameters({ rows: 1, columns: 3, screwCenter: true }),
+      ),
+    ).toMatchObject({
+      valid: false,
+      issues: [
+        {
+          field: 'screwCenter',
+          message: '正中心螺絲孔需要 X、Y 格數都至少為 2。',
+        },
+      ],
+    })
     expect(
       validateOpenGridParameters(parameters({ screwEvery: -1 })).valid,
     ).toBe(false)
+  })
+
+  it('selects the nearest upper-left internal intersection for odd grids', () => {
+    const cases = [
+      {
+        rows: 3,
+        columns: 4,
+        position: { row: 0, column: 1 },
+        center: [0, 14],
+      },
+      {
+        rows: 4,
+        columns: 3,
+        position: { row: 1, column: 0 },
+        center: [-14, 0],
+      },
+      {
+        rows: 5,
+        columns: 5,
+        position: { row: 1, column: 1 },
+        center: [-14, 14],
+      },
+    ] as const
+
+    for (const testCase of cases) {
+      const input = parameters({
+        rows: testCase.rows,
+        columns: testCase.columns,
+        screwMode: 'none',
+        screwCenter: true,
+      })
+      expect(openGridScrewPositionsFor(input)).toEqual([testCase.position])
+      expect(openGridScrewCentersFor(input)).toEqual([testCase.center])
+    }
+
+    const halfCellInput = parameters({
+      rows: 3,
+      columns: 3,
+      halfCellX: 'right',
+      halfCellY: 'top',
+      screwMode: 'none',
+      screwCenter: true,
+    })
+    expect(openGridScrewCentersFor(halfCellInput)).toContainEqual([-21, 7])
   })
 
   it('normalizes custom intersection positions and rejects duplicates or old fields', () => {

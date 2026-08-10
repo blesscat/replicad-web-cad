@@ -110,7 +110,7 @@ test('OpenGrid CAD route exposes typed controls and the custom matrix', async ({
   await centerScrew.check()
   await expect(centerScrew).toBeChecked()
   const centerScrewDescription = page.getByText(
-    '正中心需要 X、Y 格數都是偶數，才會對應到中央格線交界。',
+    '正中心需要 X、Y 格數都至少為 2，才會對應到內部格線交界。',
     { exact: true },
   )
   await expect(centerScrewDescription).toBeVisible()
@@ -133,6 +133,37 @@ test('OpenGrid CAD route exposes typed controls and the custom matrix', async ({
   await expect(
     page.getByRole('button', { name: '內部交界第 1 行第 1 列' }),
   ).toBeVisible()
+})
+
+test('OpenGrid enables the center screw on odd grids using the official corner configuration', async ({
+  page,
+}) => {
+  await page.goto('/cad/opengrid')
+
+  const columns = page.getByRole('slider', { name: 'X' })
+  const rows = page.getByRole('slider', { name: 'Y' })
+  const centerScrew = page.getByRole('checkbox', {
+    name: 'OpenGrid 正中心螺絲孔',
+  })
+
+  await columns.press('ArrowRight')
+  await rows.press('ArrowRight')
+  await expect(columns).toHaveValue('3')
+  await expect(rows).toHaveValue('3')
+  await expect(
+    page.getByRole('combobox', { name: 'OpenGrid 螺絲孔模式' }),
+  ).toHaveValue('corners')
+  await expect(centerScrew).toBeEnabled()
+  await centerScrew.check()
+  await expect(centerScrew).toBeChecked()
+  await expect(
+    page.getByText('奇數格會選擇靠近中心、偏向左上的內部格線交界。', {
+      exact: true,
+    }),
+  ).toBeVisible()
+
+  await columns.fill('1')
+  await expect(centerScrew).toBeDisabled()
 })
 
 test('OpenGrid changed settings can be restored independently', async ({

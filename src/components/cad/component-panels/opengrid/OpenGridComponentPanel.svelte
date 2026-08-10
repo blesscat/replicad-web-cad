@@ -200,7 +200,7 @@
   }
 
   function centerScrewAvailable(rows: number, columns: number): boolean {
-    return rows % 2 === 0 && columns % 2 === 0
+    return rows >= 2 && columns >= 2
   }
 
   type GridAxis = 'x' | 'y'
@@ -848,7 +848,10 @@
         正中心螺絲孔
       </label>
       <p class="m-0 text-muted">
-        正中心需要 X、Y 格數都是偶數，才會對應到中央格線交界。
+        正中心需要 X、Y 格數都至少為 2，才會對應到內部格線交界。
+      </p>
+      <p class="m-0 text-muted">
+        奇數格會選擇靠近中心、偏向左上的內部格線交界。
       </p>
     </div>
     <ParameterField

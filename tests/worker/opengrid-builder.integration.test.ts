@@ -404,6 +404,39 @@ describe('OpenGrid official-profile product builder', () => {
     }
   }, 60_000)
 
+  it.each([
+    { rows: 3, columns: 4, center: [0, 14] as [number, number] },
+    { rows: 5, columns: 5, center: [-14, 14] as [number, number] },
+  ])(
+    'cuts the official center screw on an odd $columns×$rows board',
+    async ({ rows, columns, center }) => {
+      const input = parameters({
+        variant: 'Lite',
+        rows,
+        columns,
+        chamfers: 'none',
+        connectorHoles: 'none',
+        screwKind: 'official-default',
+        screwMode: 'corners',
+        screwCenter: true,
+      })
+      expect(openGridScrewCentersFor(input)).toContainEqual(center)
+
+      const shape = await buildOpenGridBRep(input)
+      try {
+        const [x, y] = center
+        const centerHoleMaterial = measureIntersectionVolume(
+          shape,
+          [x - 0.5, y - 0.5, 0.5],
+          [x + 0.5, y + 0.5, 1.5],
+        )
+        expect(centerHoleMaterial).toBeLessThan(0.01)
+      } finally {
+        shape.delete()
+      }
+    },
+  )
+
   it.each(CAPTURE_LEDGE_CASES)(
     'keeps the inward capture ledge on all four sides for $variant',
     async ({ variant, zMin, zMax }) => {
