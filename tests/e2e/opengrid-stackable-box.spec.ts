@@ -5,7 +5,10 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
   page,
 }) => {
   await page.goto('/models')
-  const modelLink = page.getByRole('link', { name: '使用OpenGrid 堆疊盒' })
+  const modelLink = page
+    .getByRole('heading', { name: 'OpenGrid 堆疊盒', exact: true })
+    .locator('..')
+    .getByRole('link', { name: '編輯 OpenGrid 堆疊盒', exact: true })
   await expect(modelLink).toHaveAttribute('href', '/cad/opengrid-stackable-box')
   await modelLink.click()
 
