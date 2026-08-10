@@ -11,6 +11,10 @@
     type ComponentParameterStore,
   } from '../../features/cad/parameters'
   import CadViewport from '../../features/cad/viewport/CadViewport.svelte'
+  import {
+    viewportPresentationForSearch,
+    type CadViewportPresentation,
+  } from '../../features/cad/viewport/presentation'
   import CadProgressIndicator from './CadProgressIndicator.svelte'
   import CadWorkspacePanel from './CadWorkspacePanel.svelte'
   import {
@@ -26,10 +30,12 @@
   let { modelId }: Props = $props()
   let snapshot = $state<CadWorkspaceControllerSnapshot | null>(null)
   let resetVersion = $state(0)
+  let presentation = $state<CadViewportPresentation>('workspace')
   let controller: CadWorkspaceController | null = null
   let parameterStore: ComponentParameterStore | null = null
 
   onMount(() => {
+    presentation = viewportPresentationForSearch(window.location.search)
     parameterStore = createComponentParameterStore()
     controller = createCadWorkspaceController(
       modelId,
@@ -100,6 +106,7 @@
       modelRevision={snapshot.state.committed?.revision ?? null}
       parameters={snapshot.state.committed?.parameters ?? null}
       stale={snapshot.state.stale}
+      {presentation}
     />
     {#if snapshot.progress}
       <CadProgressIndicator progress={snapshot.progress} />

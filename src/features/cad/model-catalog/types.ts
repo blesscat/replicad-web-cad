@@ -33,6 +33,13 @@ export type ParameterField = {
   sliderDirection?: 'ltr' | 'rtl'
 }
 
+export type ModelPreviewImage = {
+  src: string
+  alt: string
+  width: number
+  height: number
+}
+
 export type ModelDefinition = {
   id: ModelId
   buildKey: ModelId
@@ -43,6 +50,7 @@ export type ModelDefinition = {
   parameterSchema: ReadonlyArray<ParameterField>
   defaultParameters: ModelParameterValues
   previewMetadata: { centeredOnXY: boolean; baseAtZ: number }
+  previewImage?: ModelPreviewImage
   validateParameters: (parameters: unknown) => ModelValidation
   boundsForParameters: (parameters: ModelParameterValues) => ModelBounds
   exportFileName: (parameters: ModelParameterValues) => string

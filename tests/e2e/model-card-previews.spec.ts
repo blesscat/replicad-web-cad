@@ -1,0 +1,168 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import path from 'node:path'
+import { expect, test, type Locator, type Page } from '@playwright/test'
+import {
+  groupModelDefinitions,
+  modelSelectionLabelFor,
+} from '../../src/features/cad/model-catalog'
+import { waitForCadReady } from './helpers'
+
+const PREVIEW_WIDTH = 640
+const PREVIEW_HEIGHT = 400
+const CAPTURE_MODEL_PREVIEWS = process.env.CAPTURE_MODEL_PREVIEWS === '1'
+const PREVIEW_DIRECTORY = path.resolve(process.cwd(), 'public/model-previews')
+const VISIBLE_MODEL_DEFINITIONS = groupModelDefinitions().flatMap(
+  (group) => group.definitions,
+)
+
+function previewAssetPath(
+  definition: (typeof VISIBLE_MODEL_DEFINITIONS)[number],
+) {
+  const preview = definition.previewImage
+  if (!preview) throw new Error(`PREVIEW_METADATA_MISSING:${definition.id}`)
+  return path.resolve(process.cwd(), 'public', preview.src.slice(1))
+}
+
+function readPngDimensions(filePath: string): {
+  width: number
+  height: number
+} {
+  const payload = readFileSync(filePath)
+  const pngSignature = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  ])
+  if (!payload.subarray(0, pngSignature.length).equals(pngSignature)) {
+    throw new Error(`PREVIEW_NOT_PNG:${filePath}`)
+  }
+  return {
+    width: payload.readUInt32BE(16),
+    height: payload.readUInt32BE(20),
+  }
+}
+
+async function resizeScreenshot(
+  page: Page,
+  screenshot: Buffer,
+): Promise<Buffer> {
+  const encoded = screenshot.toString('base64')
+  const resized = await page.evaluate(
+    async ({ encodedScreenshot, width, height }) => {
+      const response = await fetch(`data:image/png;base64,${encodedScreenshot}`)
+      const bitmap = await createImageBitmap(await response.blob())
+      const output = document.createElement('canvas')
+      output.width = width
+      output.height = height
+      const context = output.getContext('2d')
+      if (!context) throw new Error('PREVIEW_CANVAS_CONTEXT_UNAVAILABLE')
+
+      context.fillStyle = '#eef2f8'
+      context.fillRect(0, 0, width, height)
+      const scale = Math.min(width / bitmap.width, height / bitmap.height)
+      const drawWidth = bitmap.width * scale
+      const drawHeight = bitmap.height * scale
+      context.drawImage(
+        bitmap,
+        (width - drawWidth) / 2,
+        (height - drawHeight) / 2,
+        drawWidth,
+        drawHeight,
+      )
+      bitmap.close()
+      return output
+        .toDataURL('image/png')
+        .slice('data:image/png;base64,'.length)
+    },
+    {
+      encodedScreenshot: encoded,
+      width: PREVIEW_WIDTH,
+      height: PREVIEW_HEIGHT,
+    },
+  )
+  return Buffer.from(resized, 'base64')
+}
+
+async function capturePreview(
+  page: Page,
+  canvas: Locator,
+  filePath: string,
+): Promise<void> {
+  mkdirSync(PREVIEW_DIRECTORY, { recursive: true })
+  const screenshot = await canvas.screenshot()
+  writeFileSync(filePath, await resizeScreenshot(page, screenshot))
+}
+
+function assertPreviewAsset(
+  definition: (typeof VISIBLE_MODEL_DEFINITIONS)[number],
+) {
+  const preview = definition.previewImage
+  if (!preview) throw new Error(`PREVIEW_METADATA_MISSING:${definition.id}`)
+  const filePath = previewAssetPath(definition)
+  expect(existsSync(filePath), `Missing preview for ${definition.id}`).toBe(
+    true,
+  )
+  expect(readPngDimensions(filePath)).toEqual({
+    width: preview.width,
+    height: preview.height,
+  })
+  expect({ width: preview.width, height: preview.height }).toEqual({
+    width: PREVIEW_WIDTH,
+    height: PREVIEW_HEIGHT,
+  })
+}
+
+test.describe.configure({ mode: 'serial' })
+
+test('visible model previews are captured from ready generators', async ({
+  page,
+}) => {
+  test.setTimeout(240_000)
+  await page.setViewportSize({ width: 1440, height: 900 })
+
+  for (const definition of VISIBLE_MODEL_DEFINITIONS) {
+    await page.goto('/models')
+    await page.evaluate(() => localStorage.clear())
+    await page.goto(`/cad/${definition.id}?preview=thumbnail`)
+
+    await expect(page.getByTestId('cad-viewport')).toHaveAttribute(
+      'data-presentation',
+      'thumbnail',
+    )
+    await waitForCadReady(page)
+    await page.waitForTimeout(300)
+    const canvas = page.getByTestId('cad-viewport').locator('canvas')
+    await expect(canvas).toBeVisible()
+
+    const filePath = previewAssetPath(definition)
+    if (CAPTURE_MODEL_PREVIEWS) {
+      await capturePreview(page, canvas, filePath)
+    }
+    assertPreviewAsset(definition)
+  }
+})
+
+test('model cards expose static previews and preserve selection on image failure', async ({
+  page,
+}) => {
+  await page.route('**/model-previews/opengrid.png', (route) => route.abort())
+  await page.goto('/models')
+
+  for (const definition of VISIBLE_MODEL_DEFINITIONS) {
+    const preview = definition.previewImage
+    if (!preview) throw new Error(`PREVIEW_METADATA_MISSING:${definition.id}`)
+
+    const card = page.locator(`[data-model-id="${definition.id}"]`)
+    await expect(card.locator('img')).toHaveAttribute('src', preview.src)
+    await expect(card.locator('img')).toHaveAttribute('alt', preview.alt)
+    await expect(
+      card.getByRole('link', {
+        name: `編輯 ${modelSelectionLabelFor(definition)}`,
+      }),
+    ).toHaveAttribute('href', `/cad/${definition.id}`)
+  }
+
+  const failedPreviewCard = page.locator('[data-model-id="opengrid"]')
+  await expect(
+    failedPreviewCard.getByTestId('model-preview-fallback'),
+  ).toBeVisible()
+  await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
+})

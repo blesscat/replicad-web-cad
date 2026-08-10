@@ -71,6 +71,12 @@ export const hswCellDefinition: ModelDefinition = {
   parameterSchema: HSW_PARAMETER_SCHEMA,
   defaultParameters: { rows: 1, columns: 1 },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
+  previewImage: {
+    src: '/model-previews/hsw-cell.png',
+    alt: 'HSW 六角蜂巢預覽',
+    width: 640,
+    height: 400,
+  },
   validateParameters: validateHswCellDefinitionParameters,
   boundsForParameters: boundsForHswCellDefinition,
   exportFileName: exportHswCellFileName,

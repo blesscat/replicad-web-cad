@@ -127,6 +127,12 @@ export const opengridDividerDefinition: ModelDefinition = {
   parameterSchema: OPENGRID_DIVIDER_PARAMETER_SCHEMA,
   defaultParameters: { ...OPENGRID_DIVIDER_CONFIGURATION.defaultParameters },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
+  previewImage: {
+    src: '/model-previews/opengrid-divider.png',
+    alt: 'OpenGrid 分隔塊預覽',
+    width: 640,
+    height: 400,
+  },
   validateParameters: validateDefinitionParameters,
   boundsForParameters: boundsForDefinition,
   exportFileName,

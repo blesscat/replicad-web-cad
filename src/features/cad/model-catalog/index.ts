@@ -24,6 +24,7 @@ export type {
   ModelFamily,
   ModelFamilyGroup,
   ModelFamilyMetadata,
+  ModelPreviewImage,
   ParameterField,
 } from './types'
 export { boxDefinition } from './components/box'

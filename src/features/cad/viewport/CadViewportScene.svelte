@@ -17,12 +17,19 @@
     CAD_VIEWPORT_GRID_ROTATION,
   } from './coordinates'
   import type { CadViewportTheme } from './theme'
+  import type { CadViewportPresentation } from './presentation'
 
   type Props = {
     mesh: MeshSnapshot
     modelRevision: string
     parameters: ModelParameterValues | null
     theme: CadViewportTheme
+    presentation: CadViewportPresentation
+  }
+
+  function boundsMarginFor(presentation: CadViewportPresentation): number {
+    if (presentation === 'thumbnail') return 20
+    return 1.25
   }
 
   type ViewportGizmoHandle = {
@@ -30,7 +37,7 @@
     update: (controls?: boolean) => ViewportGizmoHandle
   }
 
-  let { mesh, modelRevision, parameters, theme }: Props = $props()
+  let { mesh, modelRevision, parameters, theme, presentation }: Props = $props()
   let orbitControls = $state<OrbitControlsInstance | undefined>(undefined)
   let viewportGizmo = $state<ViewportGizmoHandle | undefined>(undefined)
 
@@ -68,19 +75,23 @@
   position={CAD_VIEWPORT_LIGHTING.oppositeFill.position}
   intensity={CAD_VIEWPORT_LIGHTING.oppositeFill.intensity}
 />
-<T.GridHelper
-  args={[1000, 20, theme.gridMajor, theme.gridMinor]}
-  rotation={CAD_VIEWPORT_GRID_ROTATION}
-/>
+{#if presentation === 'workspace'}
+  <T.GridHelper
+    args={[1000, 20, theme.gridMajor, theme.gridMinor]}
+    rotation={CAD_VIEWPORT_GRID_ROTATION}
+  />
+{/if}
 <T.PerspectiveCamera
   makeDefault
   position={CAD_VIEWPORT_CAMERA.position}
   up={CAD_VIEWPORT_CAMERA.up}
   fov={CAD_VIEWPORT_CAMERA.fov}
 >
-  <OrbitControls bind:ref={orbitControls} />
+  {#if presentation === 'workspace'}
+    <OrbitControls bind:ref={orbitControls} />
+  {/if}
 </T.PerspectiveCamera>
-{#if orbitControls}
+{#if presentation === 'workspace' && orbitControls}
   <Gizmo
     bind:ref={viewportGizmo}
     controls={orbitControls}
@@ -88,8 +99,10 @@
   />
 {/if}
 {#key modelRevision}
-  <Bounds margin={1.25} animate={false}>
+  <Bounds margin={boundsMarginFor(presentation)} animate={false}>
     <ModelMesh {mesh} {theme} />
-    <DimensionAnnotations {mesh} {parameters} {theme} />
+    {#if presentation === 'workspace'}
+      <DimensionAnnotations {mesh} {parameters} {theme} />
+    {/if}
   </Bounds>
 {/key}

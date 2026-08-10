@@ -54,6 +54,12 @@ export const openGridSnapRemoverDefinition: ModelDefinition = {
     centeredOnXY: false,
     baseAtZ: -5.005506125135993,
   },
+  previewImage: {
+    src: '/model-previews/opengrid-snap-remover.png',
+    alt: 'OpenGrid Snap Remover 預覽',
+    width: 640,
+    height: 400,
+  },
   validateParameters: validateDefinitionParameters,
   boundsForParameters: boundsForDefinition,
   exportFileName,

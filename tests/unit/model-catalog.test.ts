@@ -31,6 +31,51 @@ function opengridParameters(
 }
 
 describe('CAD component catalog', () => {
+  it('provides static preview metadata for every visible chooser model', () => {
+    const visibleDefinitions = groupModelDefinitions().flatMap(
+      (group) => group.definitions,
+    )
+
+    expect(visibleDefinitions.map((definition) => definition.id)).toEqual([
+      'opengrid',
+      'opengrid-snap',
+      'opengrid-pillar',
+      'opengrid-divider',
+      'opengrid-stackable-box',
+      'opengrid-stackable-cylinder',
+      'opengrid-snap-remover',
+      'hsw-cell',
+    ])
+
+    const previewImages = visibleDefinitions.map(
+      (definition) => definition.previewImage,
+    )
+    expect(previewImages.every((preview) => preview !== undefined)).toBe(true)
+
+    const resolvedPreviewImages = previewImages.filter(
+      (preview): preview is NonNullable<typeof preview> =>
+        preview !== undefined,
+    )
+    expect(
+      new Set(resolvedPreviewImages.map((preview) => preview.src)).size,
+    ).toBe(resolvedPreviewImages.length)
+    expect(
+      resolvedPreviewImages.every(
+        (preview) =>
+          preview.src.startsWith('/model-previews/') &&
+          preview.src.endsWith('.png') &&
+          preview.alt.length > 0 &&
+          preview.width > 0 &&
+          preview.height > 0,
+      ),
+    ).toBe(true)
+    expect(
+      resolvedPreviewImages.every(
+        (preview) => preview.width / preview.height === 16 / 10,
+      ),
+    ).toBe(true)
+  })
+
   it('orders visible model families and omits other models from chooser groups', () => {
     const groups = groupModelDefinitions()
 

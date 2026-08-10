@@ -6,7 +6,7 @@
 
 ### Requirement: 首頁模型選擇
 
-The system MUST provide a static model-selection page at `/models` driven by the registered model catalog. Every model rendered in the chooser MUST have an understandable display name and a link to its model-specific CAD route. The chooser content MUST NOT render introductory copy, family descriptions, model descriptions, or adjustable-parameter summaries. The chooser MUST display the OpenGrid series before the HSW series, including `opengrid`, `opengrid-pillar`, `opengrid-divider`, `opengrid-stackable-box`, `opengrid-stackable-cylinder`, `opengrid-snap`, `opengrid-snap-remover`, and `hsw-cell`. Registered models outside these visible series MAY remain available through direct CAD routes but MUST NOT be rendered as chooser entries. The root path `/` MUST remain a separate static product homepage and MUST link to `/models` without rendering the model chooser.
+The system MUST provide a static model-selection page at `/models` driven by the registered model catalog. Every model rendered in the chooser MUST have an understandable display name, a catalog-provided static preview image, and a link to its model-specific CAD route. The chooser content MUST NOT render introductory copy, family descriptions, model descriptions, or adjustable-parameter summaries. The chooser MUST display the OpenGrid series before the HSW series, including `opengrid`, `opengrid-pillar`, `opengrid-divider`, `opengrid-stackable-box`, `opengrid-stackable-cylinder`, `opengrid-snap`, `opengrid-snap-remover`, and `hsw-cell`. Registered models outside these visible series MAY remain available through direct CAD routes but MUST NOT be rendered as chooser entries. The root path `/` MUST remain a separate static product homepage and MUST link to `/models` without rendering the model chooser.
 
 #### Scenario: 真正首頁不顯示模型選擇器
 
@@ -15,16 +15,25 @@ The system MUST provide a static model-selection page at `/models` driven by the
 - **AND** 首頁 MUST NOT 顯示模型選擇卡片或初始化 CAD Worker、Svelte CAD workspace
 - **AND** 前往模型選擇的入口 MUST 導向 `/models`
 
-#### Scenario: 模型選擇頁顯示目前模型
+#### Scenario: 模型選擇頁顯示目前模型與預覽
 
 - **WHEN** 使用者開啟 `/models`
 - **THEN** 頁面 MUST 依序顯示 OpenGrid 系列與 HSW 系列的可理解模型名稱
 - **AND** OpenGrid 系列 MUST 顯示 `opengrid`、`opengrid-pillar`、`opengrid-divider`、`opengrid-stackable-box`、`opengrid-stackable-cylinder`、`opengrid-snap` 與 `opengrid-snap-remover`
 - **AND** HSW 系列 MUST 顯示 `hsw-cell`
-- **AND** 每個可見模型 MUST 只顯示可理解模型名稱與 `編輯 →` 入口
+- **AND** 每個可見模型 MUST 顯示其 catalog-provided static preview image、可理解模型名稱與 `編輯 →` 入口
+- **AND** 每個 preview image MUST expose alternative text that identifies the model it represents
 - **AND** `box`、`box-normal`、`modular-grid-base` 與 `hexagonal-column` MUST NOT appear as chooser entries
 - **AND** `/models` MUST NOT 顯示模型用途說明、可調整參數摘要、系列說明或選擇頁導言
-- **AND** `/models` MUST NOT 初始化 CAD Worker 或 Svelte CAD workspace
+- **AND** `/models` MUST NOT 初始化 CAD Worker、WebAssembly CAD kernel、WebGL renderer 或 Svelte CAD workspace
+
+#### Scenario: 預覽圖片無法載入時仍可選擇模型
+
+- **GIVEN** 可見模型的 preview image 無法載入
+- **WHEN** 使用者開啟 `/models`
+- **THEN** 該卡片 MUST 顯示可理解的預覽 placeholder 或 fallback
+- **AND** 該卡片 MUST 仍顯示模型名稱與 `編輯 →` 入口
+- **AND** fallback MUST NOT prevent navigation to the model-specific CAD route
 
 #### Scenario: 選擇 HSW 六角蜂巢
 

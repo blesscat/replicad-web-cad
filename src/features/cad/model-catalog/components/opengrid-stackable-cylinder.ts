@@ -264,6 +264,12 @@ export const opengridStackableCylinderDefinition: ModelDefinition = {
   parameterSchema: OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA,
   defaultParameters: { ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
+  previewImage: {
+    src: '/model-previews/opengrid-stackable-cylinder.png',
+    alt: 'OpenGrid 可堆疊圓柱預覽',
+    width: 640,
+    height: 400,
+  },
   validateParameters: validateDefinitionParameters,
   boundsForParameters: boundsForDefinition,
   exportFileName,

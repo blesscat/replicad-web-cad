@@ -73,6 +73,12 @@ export const opengridPillarDefinition: ModelDefinition = {
   parameterSchema: PILLAR_PARAMETER_SCHEMA,
   defaultParameters: { ...PILLAR_CONFIGURATION.defaultParameters },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
+  previewImage: {
+    src: '/model-previews/opengrid-pillar.png',
+    alt: 'OpenGrid 圓柱支柱預覽',
+    width: 640,
+    height: 400,
+  },
   validateParameters: validatePillarDefinitionParameters,
   boundsForParameters: boundsForPillarDefinition,
   exportFileName: exportPillarFileName,
