@@ -234,6 +234,7 @@ describe('OpenGrid stackable-box dimension calculation', () => {
         x: 1,
         y: 1,
         height: 10,
+        cornerBottomHoles: true,
         fullBottomHoleGrid: false,
       }),
     )
@@ -272,6 +273,7 @@ describe('OpenGrid stackable-box dimension calculation', () => {
         x: configuration.gridStep,
         y: configuration.gridStep,
         height: configuration.defaultHeight,
+        cornerBottomHoles: true,
         fullBottomHoleGrid: false,
       }),
     )
@@ -293,6 +295,7 @@ describe('OpenGrid stackable-box dimension calculation', () => {
         x: configuration.maxX,
         y: configuration.minY,
         height: configuration.defaultHeight,
+        cornerBottomHoles: true,
         fullBottomHoleGrid: false,
       }),
     ).x

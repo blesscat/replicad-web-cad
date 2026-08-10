@@ -22,24 +22,32 @@
 </script>
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
-  <p class="m-0 text-sm text-muted">
-    每格 28 mm，X/Y 支援半格尺寸；height 是盒內淨高。底面到盒內底固定 5 mm，
-    其中內層地板 1.2 mm、側壁 1.2 mm。盒頂滑軌由內側開始為 1.75 mm、45° 導角、
-    垂直 1.2 mm、0.8 mm、45° 轉接、垂直 1.8 mm，再以 2 mm、45° 回到側壁； 底部為
-    0.8 mm、45° 落地斜角、垂直 1.8 mm，再以 1.2 mm、45° 導入支撐地板。 每條內部
-    28 mm
-    格線交界採由底面逐段收窄並斜面收進地板的避讓，止於底板下表面並保留連續地板，
-    可與相同盒子堆疊並滑動。底部四角提供 Ø5 mm Snap 固定孔：外側 Ø5.05 mm 深 3
-    mm， 內側 Ø7.05 mm 深 2
-    mm；內側圓柱凸緣裝入後與盒內底面切齊。可另外開啟底部全孔模式，
-    以內縮前名義尺寸產生 14 mm 間距的 Ø5.05 mm 普通通孔。
-  </p>
   <GridDimensionCalculator
     calculate={calculateOpenGridStackableBoxCounts}
-    description="輸入 X/Y 寬度與深度，計算最接近且不小於目標的 0.5 格數。"
+    description=""
     onApply={handleDimensionCalculation}
   />
   <div class="grid gap-2 rounded-lg border border-border-field p-3">
+    <label class="flex min-w-0 items-start gap-2">
+      <input
+        aria-describedby={fieldErrors.cornerBottomHoles
+          ? 'cornerBottomHoles-error'
+          : undefined}
+        aria-invalid={Boolean(fieldErrors.cornerBottomHoles)}
+        aria-label="底部四角孔"
+        class="mt-1 accent-primary"
+        type="checkbox"
+        checked={rawParameters.cornerBottomHoles === 'true'}
+        onchange={(event) => {
+          if (!(event.currentTarget instanceof HTMLInputElement)) return
+          onInputChange(
+            'cornerBottomHoles',
+            String(event.currentTarget.checked),
+          )
+        }}
+      />
+      <span class="font-[650]">底部四角孔</span>
+    </label>
     <label class="flex min-w-0 items-start gap-2">
       <input
         aria-describedby={fieldErrors.fullBottomHoleGrid
@@ -58,15 +66,14 @@
           )
         }}
       />
-      <span class="grid gap-1">
-        <span class="font-[650]">底部全孔模式</span>
-        <span class="text-sm text-muted">
-          增加 14 mm 中心距的 Ø5.05 mm 普通通孔；四角 Snap
-          孔與固定結構永遠保留。
-        </span>
-      </span>
+      <span class="font-[650]">底部全孔模式</span>
     </label>
   </div>
+  {#if fieldErrors.cornerBottomHoles}
+    <span class="text-sm text-error" id="cornerBottomHoles-error" role="alert"
+      >{fieldErrors.cornerBottomHoles}</span
+    >
+  {/if}
   {#if fieldErrors.fullBottomHoleGrid}
     <span class="text-sm text-error" id="fullBottomHoleGrid-error" role="alert"
       >{fieldErrors.fullBottomHoleGrid}</span

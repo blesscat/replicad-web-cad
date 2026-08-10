@@ -6,13 +6,13 @@
 
 ### Requirement: OpenGrid stackable box parameters
 
-The system MUST expose an independently validated OpenGrid stackable-box model with stable `modelId=opengrid-stackable-box`. Its user-facing parameters MUST include `x`, `y`, `height`, and the boolean `fullBottomHoleGrid`; `x` and `y` MUST be positive multiples of 0.5, and the derived footprint MUST remain within the current 500 mm workspace limit. The standard OpenGrid pitch MUST be 28 mm. The generated footprint MUST apply a total 0.15 mm clearance per axis, so the nominal width and depth are `x × 28 − 0.15 mm` and `y × 28 − 0.15 mm`. The `height` control MUST represent the clear internal box height measured from the upper surface of the fixed 5.0 mm bottom assembly to the upper inner-rim datum, rather than the external Z bound. The bottom assembly height and reference-style upper interface height MUST remain fixed independently of `height`; the nominal external height MUST therefore be `height + 5.0 mm + 7.55 mm`, excluding only the small top-edge rounding tolerance. These height semantics MUST remain stable when stacking interfaces or the full bottom hole grid are enabled. `fullBottomHoleGrid` MUST default to `false` so existing stackable-box generation remains corner-socket-only unless the user enables the option.
+The system MUST expose an independently validated OpenGrid stackable-box model with stable `modelId=opengrid-stackable-box`. Its user-facing parameters MUST include `x`, `y`, `height`, the boolean `cornerBottomHoles`, and the boolean `fullBottomHoleGrid`; `x` and `y` MUST be positive multiples of 0.5, and the derived footprint MUST remain within the current 500 mm workspace limit. The standard OpenGrid pitch MUST be 28 mm. The generated footprint MUST apply a total 0.15 mm clearance per axis, so the nominal width and depth are `x × 28 − 0.15 mm` and `y × 28 − 0.15 mm`. The `height` control MUST represent the clear internal box height measured from the upper surface of the fixed 5.0 mm bottom assembly to the upper inner-rim datum, rather than the external Z bound. The bottom assembly height and reference-style upper interface height MUST remain fixed independently of `height`; the nominal external height MUST therefore be `height + 5.0 mm + 7.55 mm`, excluding only the small top-edge rounding tolerance. These height semantics MUST remain stable when stacking interfaces or either bottom-hole option is enabled. `cornerBottomHoles` MUST default to `true` and `fullBottomHoleGrid` MUST default to `false`, preserving the existing corner-socket-only default while allowing either option to be disabled or enabled independently.
 
 The stackable-box parameter panel MUST provide a width/depth calculator that accepts X/Y dimensions in millimetres and chooses the smallest valid X/Y count on the 0.5-cell step whose generated footprint is not smaller than the requested dimensions. The calculator MUST use the same 28 mm pitch and 0.15 mm total per-axis clearance as the generated model.
 
 #### Scenario: Generate a full-cell box
 
-- **WHEN** a valid `x`, `y`, `height`, and `fullBottomHoleGrid` snapshot is submitted with whole-cell dimensions
+- **WHEN** a valid `x`, `y`, `height`, `cornerBottomHoles`, and `fullBottomHoleGrid` snapshot is submitted with whole-cell dimensions
 - **THEN** the generated box MUST use 28 mm per OpenGrid cell before the 0.15 mm total axis clearance
 - **AND** the box MUST remain centered on X/Y with its base aligned to Z=0
 - **AND** the clear internal height MUST equal the requested `height`
@@ -28,7 +28,7 @@ The stackable-box parameter panel MUST provide a width/depth calculator that acc
 
 #### Scenario: Invalid dimensions or grid mode
 
-- **WHEN** `x`, `y`, or `height` is empty, non-finite, negative, zero, not on the permitted step, or outside the workspace limits, or `fullBottomHoleGrid` is not a boolean
+- **WHEN** `x`, `y`, or `height` is empty, non-finite, negative, zero, not on the permitted step, or outside the workspace limits, or `cornerBottomHoles` or `fullBottomHoleGrid` is not a boolean
 - **THEN** the model snapshot MUST be rejected with a field-specific validation error
 - **AND** no invalid shape or export request MUST be committed
 
@@ -37,7 +37,7 @@ The stackable-box parameter panel MUST provide a width/depth calculator that acc
 - **WHEN** a user enters requested X/Y dimensions in millimetres in the stackable-box calculator
 - **THEN** the calculator MUST evaluate candidate counts at 0.5-cell increments
 - **AND** it MUST return the closest counts whose generated X/Y footprints are greater than or equal to the requested dimensions
-- **AND** the returned counts MUST be applied to the stackable-box X/Y parameters without changing height or `fullBottomHoleGrid`
+- **AND** the returned counts MUST be applied to the stackable-box X/Y parameters without changing height, `cornerBottomHoles`, or `fullBottomHoleGrid`
 
 ### Requirement: Identical box-to-box stacking interface
 
@@ -75,21 +75,27 @@ Every generated stackable box MUST have the same box-to-box interface and MUST b
 
 ### Requirement: OpenGrid Snap base mounting sockets
 
-The box MUST retain a fixed 5 mm bottom assembly except for four nominal Ø5 mm base-mounting sockets at the external corner positions used by the OpenGrid Snap interface when `fullBottomHoleGrid` is `false`. When `fullBottomHoleGrid` is `true`, the box bottom MUST retain those same four special Snap sockets and MUST additionally provide the ordinary holes defined by the optional nominal OpenGrid bottom hole grid requirement. For a full-cell axis, the four special socket centers MUST occupy the outermost positions of the nominal 14 mm hole grid, 7 mm from the corresponding pre-clearance nominal box footprint edge. Each special socket MUST have a Ø5.05 mm base-facing bore through the lower/outside 3.0 mm of the fixed bottom assembly followed by a Ø7.05 mm bore through the upper/interior 2.0 mm toward the box interior; the diameter change MUST be a fixed planar retaining shoulder, not a long graduated lead-in, conical chamfer, or overlaid counterbore. The Ø7.05 mm upper opening MUST also serve as the retaining seat for a Ø5 mm shaft with a Ø5.8 mm flange. After insertion from inside the box, the flange's upper surface MUST be flush with the box interior floor and the shaft MUST extend approximately 3 mm below the box's outside bottom surface. The four nominal corner locations MUST be geometrically de-duplicated when a half-cell axis would otherwise cause overlapping Ø5 mm sockets, without removing the corresponding nominal grid position in full-hole mode.
+The box MUST retain a fixed 5 mm bottom assembly. When `cornerBottomHoles` is `true`, it MUST provide nominal Ø5 mm base-mounting sockets at the external corner positions used by the OpenGrid Snap interface. When `cornerBottomHoles` is `false`, it MUST NOT cut those special Snap sockets. When `fullBottomHoleGrid` is `true`, the box MUST additionally provide the ordinary holes defined by the optional nominal OpenGrid bottom hole grid requirement; the ordinary grid holes MUST remain available even when `cornerBottomHoles` is `false`. For a full-cell axis with corner sockets enabled, the four special socket centers MUST occupy the outermost positions of the nominal 14 mm hole grid, 7 mm from the corresponding pre-clearance nominal box footprint edge. Each special socket MUST have a Ø5.05 mm base-facing bore through the lower/outside 3.0 mm of the fixed bottom assembly followed by a Ø7.05 mm bore through the upper/interior 2.0 mm toward the box interior; the diameter change MUST be a fixed planar retaining shoulder, not a long graduated lead-in, conical chamfer, or overlaid counterbore. The Ø7.05 mm upper opening MUST also serve as the retaining seat for a Ø5 mm shaft with a Ø5.8 mm flange. After insertion from inside the box, the flange's upper surface MUST be flush with the box interior floor and the shaft MUST extend approximately 3 mm below the box's outside bottom surface. The four nominal corner locations MUST be geometrically de-duplicated when a half-cell axis would otherwise cause overlapping Ø5 mm sockets, without removing the corresponding nominal grid position in full-hole mode.
 
 #### Scenario: Full-cell base mounting
 
-- **WHEN** a full-cell or multi-cell box is aligned with the supplied OpenGrid Snap base interface and `fullBottomHoleGrid` is `false`
+- **WHEN** a full-cell or multi-cell box is aligned with the supplied OpenGrid Snap base interface, `cornerBottomHoles` is `true`, and `fullBottomHoleGrid` is `false`
 - **THEN** its four external corner sockets MUST align with the corresponding nominal 7 mm-offset Ø5 mm Snap positions
 - **AND** the fixed 5 mm bottom assembly MUST remain closed between those sockets
 - **AND** the socket MUST retain the fixed two-stage bore profile through the 5 mm bottom assembly
 
 #### Scenario: Full grid preserves corner Snap mounting
 
-- **WHEN** a full-cell or multi-cell box is generated with `fullBottomHoleGrid` set to `true`
+- **WHEN** a full-cell or multi-cell box is generated with both `cornerBottomHoles` and `fullBottomHoleGrid` set to `true`
 - **THEN** the four outermost grid positions MUST use the special corner Snap socket profile
 - **AND** the special sockets MUST retain their Ø7.05 mm upper seats, 2 mm shoulders, and captive-cylinder behavior
 - **AND** enabling the full grid MUST NOT remove, resize, or replace the four corner Snap interfaces with ordinary holes
+
+#### Scenario: Full grid without corner Snap mounting
+
+- **WHEN** a full-cell or multi-cell box is generated with `cornerBottomHoles` set to `false` and `fullBottomHoleGrid` set to `true`
+- **THEN** the ordinary nominal grid holes MUST be present
+- **AND** no captive corner Snap socket MUST be generated
 
 #### Scenario: Fixed two-stage mounting-hole profile
 
@@ -122,20 +128,26 @@ The box MUST retain a fixed 5 mm bottom assembly except for four nominal Ø5 mm 
 
 ### Requirement: Optional nominal OpenGrid bottom hole grid
 
-The stackable-box model MUST expose `fullBottomHoleGrid` as an optional bottom-hole mode. When enabled, it MUST generate one ordinary straight Ø5.05 mm through-hole at each intersection of the centered 14 mm OpenGrid hole grid defined from the pre-clearance nominal footprint `x × 28 mm` by `y × 28 mm`. The grid MUST be centered on the model origin and MUST be built from the same nominal outer grid positions that define the four corner Snap sockets, so adjacent hole centers remain exactly 14 mm apart within geometry tolerance. The 0.15 mm total per-axis exterior clearance MUST NOT be used to shift, shorten, or redistribute these hole centers. Ordinary holes MUST pass through the fixed 5 mm bottom assembly, have a different profile from the four special corner sockets, and MUST NOT include the Ø7.05 mm upper retaining seat, flange capture, or Snap-specific underside interface.
+The stackable-box model MUST expose `fullBottomHoleGrid` as an optional bottom-hole mode independent from `cornerBottomHoles`. When enabled, it MUST generate one ordinary straight Ø5.05 mm through-hole at each intersection of the centered 14 mm OpenGrid hole grid defined from the pre-clearance nominal footprint `x × 28 mm` by `y × 28 mm`. The grid MUST be centered on the model origin and MUST use the nominal outer grid positions that define the four corner Snap sockets when `cornerBottomHoles` is enabled, so adjacent hole centers remain exactly 14 mm apart within geometry tolerance. The 0.15 mm total per-axis exterior clearance MUST NOT be used to shift, shorten, or redistribute these hole centers. Ordinary holes MUST pass through the fixed 5 mm bottom assembly, have a different profile from the four special corner sockets, and MUST NOT include the Ø7.05 mm upper retaining seat, flange capture, or Snap-specific underside interface.
 
 #### Scenario: Corner-only mode preserves the existing bottom
 
-- **WHEN** `fullBottomHoleGrid` is `false`
+- **WHEN** `cornerBottomHoles` is `true` and `fullBottomHoleGrid` is `false`
 - **THEN** the bottom MUST contain the four special corner Snap sockets defined by the mounting-socket requirement
 - **AND** it MUST NOT add ordinary 14 mm grid holes between those sockets
 
 #### Scenario: Full mode generates all nominal grid positions
 
-- **WHEN** `fullBottomHoleGrid` is `true` for an accepted X/Y footprint
+- **WHEN** `fullBottomHoleGrid` is `true` and `cornerBottomHoles` is `true` for an accepted X/Y footprint
 - **THEN** the bottom MUST contain ordinary Ø5.05 mm through-holes at every centered nominal 14 mm grid intersection within the footprint
 - **AND** the outer grid positions MUST coincide with the four special corner socket centers
 - **AND** each pair of adjacent ordinary grid centers on either axis MUST be 14 mm apart within geometry tolerance
+
+#### Scenario: Full mode omits corner Snap mounting
+
+- **WHEN** `fullBottomHoleGrid` is `true` and `cornerBottomHoles` is `false` for an accepted X/Y footprint
+- **THEN** the bottom MUST contain ordinary Ø5.05 mm through-holes at every centered nominal 14 mm grid intersection
+- **AND** no special corner socket profile MUST be generated
 
 #### Scenario: Exterior clearance does not alter grid spacing
 
@@ -146,7 +158,7 @@ The stackable-box model MUST expose `fullBottomHoleGrid` as an optional bottom-h
 
 #### Scenario: Ordinary and special holes do not conflict
 
-- **WHEN** an ordinary nominal grid position coincides with a four-corner Snap position
+- **WHEN** an ordinary nominal grid position coincides with a four-corner Snap position while `cornerBottomHoles` is `true`
 - **THEN** the generated bottom MUST expose one opening at that position
 - **AND** that opening MUST retain the special corner socket profile rather than becoming a plain Ø5.05 mm hole
 - **AND** the ordinary-hole operation MUST NOT create a duplicate or enlarge the special socket
@@ -155,12 +167,12 @@ The stackable-box model MUST expose `fullBottomHoleGrid` as an optional bottom-h
 
 - **WHEN** `fullBottomHoleGrid` is `true` for an accepted half-cell X or Y value
 - **THEN** the nominal grid MUST remain centered and use 14 mm spacing on every axis where multiple positions exist
-- **AND** coincident corner positions MUST be represented by one special socket
+- **AND** coincident corner positions MUST be represented by one special socket when `cornerBottomHoles` is `true`
 - **AND** the half-cell footprint MUST remain unchanged
 
 ### Requirement: Full-hole geometry quality and exports
 
-The stackable-box builder MUST validate full-hole mode as part of the accepted parameter snapshot. A valid full-hole result MUST remain watertight, keep the ordinary holes open through the fixed 5 mm bottom assembly without penetrating the integrated guide rim or walls, preserve the special corner retaining seats, and remain previewable and exportable through the existing STEP and STL workflows. Each special corner socket MUST use a Ø5.05 mm opening through the outside/lower 3.0 mm of the bottom assembly and a Ø7.05 mm opening through the inside/upper 2.0 mm.
+The stackable-box builder MUST validate both bottom-hole options as part of the accepted parameter snapshot. A valid full-hole result MUST remain watertight, keep the ordinary holes open through the fixed 5 mm bottom assembly without penetrating the integrated guide rim or walls, preserve the special corner retaining seats when `cornerBottomHoles` is enabled, and remain previewable and exportable through the existing STEP and STL workflows. Each special corner socket MUST use a Ø5.05 mm opening through the outside/lower 3.0 mm of the bottom assembly and a Ø7.05 mm opening through the inside/upper 2.0 mm.
 
 #### Scenario: Full-hole generation succeeds
 

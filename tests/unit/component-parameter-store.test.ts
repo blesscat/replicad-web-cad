@@ -86,6 +86,7 @@ describe('component parameter store', () => {
       x: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultX,
       y: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultY,
       height: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHeight,
+      cornerBottomHoles: true,
       fullBottomHoleGrid: false,
     })
     expect(store.get('opengrid-stackable-cylinder')).toEqual({
@@ -129,6 +130,7 @@ describe('component parameter store', () => {
           x: 0.5,
           y: 1.5,
           height: 25,
+          cornerBottomHoles: true,
           fullBottomHoleGrid: true,
         },
         'opengrid-stackable-cylinder': { diameter: 80, height: 45 },
@@ -170,6 +172,7 @@ describe('component parameter store', () => {
       x: 0.5,
       y: 1.5,
       height: 25,
+      cornerBottomHoles: true,
       fullBottomHoleGrid: true,
     })
     expect(store.get('opengrid-divider')).toEqual({
@@ -235,6 +238,7 @@ describe('component parameter store', () => {
       x: 0.5,
       y: 1.5,
       height: 25,
+      cornerBottomHoles: true,
       fullBottomHoleGrid: false,
     })
     expect(
@@ -242,6 +246,7 @@ describe('component parameter store', () => {
         x: 0.5,
         y: 1.5,
         height: 25,
+        cornerBottomHoles: true,
         fullBottomHoleGrid: true,
       }),
     ).toBe(true)
@@ -253,6 +258,7 @@ describe('component parameter store', () => {
         x: 0.5,
         y: 1.5,
         height: 25,
+        cornerBottomHoles: true,
         fullBottomHoleGrid: 'true' as never,
       }),
     ).toBe(false)

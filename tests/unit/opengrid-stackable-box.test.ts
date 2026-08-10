@@ -22,12 +22,47 @@ function parameters(
     x: 1,
     y: 1,
     height: 10,
+    cornerBottomHoles: true,
     fullBottomHoleGrid: false,
     ...overrides,
   }
 }
 
 describe('OpenGrid stackable-box contract', () => {
+  it('controls corner sockets and the full bottom grid independently', () => {
+    const parametersForHoleMode = (
+      cornerBottomHoles: boolean,
+      fullBottomHoleGrid: boolean,
+    ) =>
+      ({
+        x: 1,
+        y: 1,
+        height: 10,
+        cornerBottomHoles,
+        fullBottomHoleGrid,
+      }) as Parameters<typeof openGridStackableBoxSocketCentersFor>[0]
+
+    const cornersOnly = parametersForHoleMode(true, false)
+    expect(openGridStackableBoxSocketCentersFor(cornersOnly)).toHaveLength(4)
+    expect(
+      openGridStackableBoxOrdinaryBottomHoleCentersFor(cornersOnly),
+    ).toHaveLength(0)
+
+    const noBottomHoles = parametersForHoleMode(false, false)
+    expect(openGridStackableBoxSocketCentersFor(noBottomHoles)).toEqual([])
+    expect(
+      openGridStackableBoxOrdinaryBottomHoleCentersFor(noBottomHoles),
+    ).toEqual([])
+
+    const fullGridWithoutCorners = parametersForHoleMode(false, true)
+    expect(
+      openGridStackableBoxSocketCentersFor(fullGridWithoutCorners),
+    ).toEqual([])
+    expect(
+      openGridStackableBoxOrdinaryBottomHoleCentersFor(fullGridWithoutCorners),
+    ).toHaveLength(4)
+  })
+
   it('uses the printable thick-shell structural baseline', () => {
     expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.floorThickness).toBe(1.2)
     expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight).toBe(5)
@@ -111,6 +146,7 @@ describe('OpenGrid stackable-box contract', () => {
         x: 1,
         y: 1,
         height: 10,
+        cornerBottomHoles: true,
         fullBottomHoleGrid: false,
         rows: 1,
       }),
@@ -123,6 +159,7 @@ describe('OpenGrid stackable-box contract', () => {
     [parameters({ height: 9 }), 'height'],
     [parameters({ x: 18 }), 'x'],
     [parameters({ height: 501 }), 'height'],
+    [parameters({ cornerBottomHoles: 'true' as never }), 'cornerBottomHoles'],
     [parameters({ fullBottomHoleGrid: 'true' as never }), 'fullBottomHoleGrid'],
   ])(
     'rejects invalid %s values with a field-specific issue',

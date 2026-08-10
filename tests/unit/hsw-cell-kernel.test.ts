@@ -182,7 +182,13 @@ describe('HSW kernel model registration', () => {
   it('routes the stackable-box model to its dedicated builder', async () => {
     const shape = await buildModelBRep(
       'opengrid-stackable-box',
-      { x: 0.5, y: 1, height: 20, fullBottomHoleGrid: false },
+      {
+        x: 0.5,
+        y: 1,
+        height: 20,
+        cornerBottomHoles: true,
+        fullBottomHoleGrid: false,
+      },
       context,
     )
 
@@ -192,7 +198,13 @@ describe('HSW kernel model registration', () => {
       expect.anything(),
     )
     expect(mocks.buildOpenGridStackableBox).toHaveBeenCalledWith(
-      { x: 0.5, y: 1, height: 20, fullBottomHoleGrid: false },
+      {
+        x: 0.5,
+        y: 1,
+        height: 20,
+        cornerBottomHoles: true,
+        fullBottomHoleGrid: false,
+      },
       { isGenerationCurrent: undefined },
     )
     expect(mocks.buildOpenGridBRep).not.toHaveBeenCalled()

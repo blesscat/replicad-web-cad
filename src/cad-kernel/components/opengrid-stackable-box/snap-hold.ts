@@ -110,6 +110,7 @@ export function inspectOpenGridSnapHoldCompatibility(
     x: 1,
     y: 1,
     height: 10,
+    cornerBottomHoles: true,
     fullBottomHoleGrid: false,
   },
 ): OpenGridSnapHoldCompatibilityReport {
@@ -170,6 +171,7 @@ export function assertOpenGridSnapHoldCompatibility(
     x: 1,
     y: 1,
     height: 10,
+    cornerBottomHoles: true,
     fullBottomHoleGrid: false,
   },
 ): void {

@@ -60,6 +60,7 @@ function parameters(
     x: overrides.x ?? 2,
     y: overrides.y ?? 2,
     height: overrides.height ?? 10,
+    cornerBottomHoles: overrides.cornerBottomHoles ?? true,
     fullBottomHoleGrid: overrides.fullBottomHoleGrid ?? false,
   }
 }
@@ -208,6 +209,28 @@ describe('OpenGrid stackable-box B-Rep', () => {
       deleteShape(shape)
     }
   }, 120_000)
+
+  it.each([
+    { cornerBottomHoles: false, fullBottomHoleGrid: false },
+    { cornerBottomHoles: false, fullBottomHoleGrid: true },
+  ])(
+    'builds bottom-hole mode with cornerBottomHoles=$cornerBottomHoles and fullBottomHoleGrid=$fullBottomHoleGrid',
+    (holeMode) => {
+      const input = parameters({ x: 1, y: 1, ...holeMode })
+      const shape = buildOpenGridStackableBox(input)
+      try {
+        const report = inspectOpenGridStackableBoxInterface(shape, input)
+        const ordinaryCenters =
+          openGridStackableBoxOrdinaryBottomHoleCentersFor(input)
+
+        expect(report.captiveSocketRecords).toHaveLength(0)
+        expect(report.ordinaryBottomHoleCount).toBe(ordinaryCenters.length)
+      } finally {
+        deleteShape(shape)
+      }
+    },
+    120_000,
+  )
 
   it('keeps a thick supported shell with an integrated self-mating guide', () => {
     const input = parameters({ x: 1, y: 4 })
@@ -704,6 +727,7 @@ describe('OpenGrid stackable-box B-Rep', () => {
             x: 0.5,
             y: 0.5,
             height: 10,
+            cornerBottomHoles: true,
             fullBottomHoleGrid: false,
           }),
         ).toThrow('OPENGRID_SNAP_HOLD_INSERTION_ENVELOPE_MISMATCH')

@@ -106,6 +106,7 @@ function stackableBoxGenerateCommand(
       x: 0.5,
       y: 1.5,
       height: 20,
+      cornerBottomHoles: true,
       fullBottomHoleGrid: false,
     },
     previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
@@ -382,6 +383,7 @@ describe('OpenGrid Worker runtime', () => {
           x: 0.5,
           y: 1.5,
           height: 20,
+          cornerBottomHoles: true,
           fullBottomHoleGrid: true,
         },
       }),
@@ -389,7 +391,13 @@ describe('OpenGrid Worker runtime', () => {
 
     expect(mocks.buildModelBRep).toHaveBeenCalledWith(
       'opengrid-stackable-box',
-      { x: 0.5, y: 1.5, height: 20, fullBottomHoleGrid: true },
+      {
+        x: 0.5,
+        y: 1.5,
+        height: 20,
+        cornerBottomHoles: true,
+        fullBottomHoleGrid: true,
+      },
       expect.any(Object),
     )
     const candidate = events.find(
@@ -422,6 +430,7 @@ describe('OpenGrid Worker runtime', () => {
         x: number
         y: number
         height: number
+        cornerBottomHoles: boolean
         fullBottomHoleGrid: boolean
       }
       workerEpoch: string
@@ -430,6 +439,7 @@ describe('OpenGrid Worker runtime', () => {
       x: 0.5,
       y: 1.5,
       height: 20,
+      cornerBottomHoles: true,
       fullBottomHoleGrid: true,
     })
 
@@ -709,6 +719,7 @@ describe('OpenGrid Worker runtime', () => {
           x: 0.25,
           y: 1.5,
           height: 20,
+          cornerBottomHoles: true,
           fullBottomHoleGrid: false,
         },
       }),
@@ -736,6 +747,7 @@ describe('OpenGrid Worker runtime', () => {
           x: 1,
           y: 1,
           height: 20,
+          cornerBottomHoles: true,
           fullBottomHoleGrid: false,
         },
       }),

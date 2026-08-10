@@ -33,6 +33,7 @@ export const OPENGRID_STACKABLE_BOX_PARAMETER_KEYS: ModelParameterKey[] = [
   'x',
   'y',
   'height',
+  'cornerBottomHoles',
   'fullBottomHoleGrid',
 ]
 export const OPENGRID_STACKABLE_CYLINDER_PARAMETER_KEYS: ModelParameterKey[] = [
@@ -158,18 +159,21 @@ export function rawFromParameters(
     'x' in parameters &&
     'y' in parameters &&
     'height' in parameters &&
+    'cornerBottomHoles' in parameters &&
     'fullBottomHoleGrid' in parameters
   ) {
     const stackableParameters = parameters as {
       x: number
       y: number
       height: number
+      cornerBottomHoles: boolean
       fullBottomHoleGrid: boolean
     }
     return {
       x: String(stackableParameters.x),
       y: String(stackableParameters.y),
       height: String(stackableParameters.height),
+      cornerBottomHoles: String(stackableParameters.cornerBottomHoles),
       fullBottomHoleGrid: String(stackableParameters.fullBottomHoleGrid),
     }
   }
@@ -318,6 +322,7 @@ export function parseRawParameters(
   for (const key of keys) {
     if (
       key === 'cornerPosts' ||
+      key === 'cornerBottomHoles' ||
       key === 'fullBottomHoleGrid' ||
       key === 'baseConnection' ||
       key === 'thinBottomMode' ||

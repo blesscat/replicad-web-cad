@@ -240,12 +240,14 @@ function matingClearanceFixtureFor(height: number): MatingClearanceFixture {
     x: 1,
     y: 4,
     height,
+    cornerBottomHoles: true,
     fullBottomHoleGrid: false,
   }
   const upperParameters: OpenGridStackableBoxParameters = {
     x: 1,
     y: 1,
     height,
+    cornerBottomHoles: true,
     fullBottomHoleGrid: false,
   }
   let lower = makeBoxShell(lowerParameters)
@@ -715,7 +717,6 @@ export function inspectOpenGridStackableBoxInterface(
     topGuideLeadInFaceCount,
     bottomGuideLeadInFaceCount,
     bottomGridSeamSlopeFaceCount,
-    bottomGridSeamClosureFaceCount: grid.bottomGridSeamClosureFaceCount,
     bottomGridSeamCount: grid.bottomGridSeams.length,
     ...grid,
     bearingLandVolumes,

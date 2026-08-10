@@ -28,10 +28,6 @@ function assertExpectedBounds(
 
 function assertSocketLayout(parameters: OpenGridStackableBoxParameters): void {
   const socketCenters = openGridStackableBoxSocketCentersFor(parameters)
-  if (socketCenters.length === 0) {
-    throw new Error('OPENGRID_STACKABLE_BOX_SOCKET_LAYOUT_INVALID')
-  }
-
   if (parameters.fullBottomHoleGrid) assertBottomGridSpacing(parameters)
 
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
