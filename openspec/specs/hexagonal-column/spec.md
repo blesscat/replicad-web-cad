@@ -23,7 +23,7 @@ The system MUST register `hexagonal-column` as an independent component with its
 
 ### Requirement: Height, count, gap, and orientation parameters
 
-The system MUST provide integer `height`, `count`, and `gap` parameters in millimetres. `height` MUST represent the complete end-to-end outer length of every column and MUST be an integer from `1..999 mm`; `count` MUST be an integer from 1 through 20; and `gap` MUST be an integer from `1..99 mm`. The `orientation` parameter MUST be either `lying` or `standing`, where `lying` means the long axis is world X and `standing` means the long axis is world Z. When omitted, `height` MUST default to `8 mm`, `count` MUST default to `1`, `gap` MUST default to `1 mm`, and `orientation` MUST default to `lying`. The catalog MUST expose `height` as both a `1..200 mm` slider and a `1..999 mm` integer input, and MUST expose `gap` as both a `1..10 mm` slider and a `1..99 mm` integer input.
+The system MUST provide integer `height`, `count`, and `gap` parameters in millimetres. `height` MUST represent the complete end-to-end outer length of every column and MUST be an integer from `1..500 mm`; `count` MUST be an integer from 1 through 20; and `gap` MUST be an integer from `1..99 mm`. The `orientation` parameter MUST be either `lying` or `standing`, where `lying` means the long axis is world X and `standing` means the long axis is world Z. When omitted, `height` MUST default to `8 mm`, `count` MUST default to `1`, `gap` MUST default to `1 mm`, and `orientation` MUST default to `lying`. The catalog MUST expose `height` as both a `1..200 mm` slider and a `1..500 mm` integer input, and MUST expose `gap` as both a `1..10 mm` slider and a `1..99 mm` integer input.
 
 #### Scenario: Default parameter values
 
@@ -31,6 +31,19 @@ The system MUST provide integer `height`, `count`, and `gap` parameters in milli
 - **THEN** the component MUST use `height=8 mm`, `count=1`, and `gap=1 mm`
 - **AND** the generated column MUST use an overall height of `8 mm`
 - **AND** its default orientation MUST be `lying` with the long axis along world X
+
+#### Scenario: Maximum manual height is valid
+
+- **WHEN** a valid hexagonal-column snapshot has `height=500`, `count=1`, and `gap=99`
+- **THEN** validation MUST accept the snapshot
+- **AND** the height text input MUST retain `500`
+- **AND** the height slider MUST expose a maximum of `200`
+
+#### Scenario: Height above the manual maximum is rejected
+
+- **WHEN** a hexagonal-column snapshot has `height=501`
+- **THEN** validation MUST reject the snapshot before CAD generation
+- **AND** the existing 500 mm row-envelope validation MUST remain independent of the height control range
 
 #### Scenario: Three columns at height 50
 
@@ -40,9 +53,26 @@ The system MUST provide integer `height`, `count`, and `gap` parameters in milli
 
 #### Scenario: Invalid parameters are rejected before CAD creation
 
-- **WHEN** height is non-integer or outside `1..999`, count is non-integer or outside `1..20`, gap is non-integer or outside `1..99`, or orientation is not `lying` or `standing`
+- **WHEN** height is non-integer or outside `1..500`, count is non-integer or outside `1..20`, gap is non-integer or outside `1..99`, or orientation is not `lying` or `standing`
 - **THEN** generation MUST be rejected before any native prototype, clone, or Compound is created
 - **AND** the caller MUST receive the existing generic `INVALID_INPUT` validation error
+
+### Requirement: Hexagonal-column height control
+
+The existing `hexagonal-column` component MUST remain independently registered with the same model ID, route, geometry profile, orientation behavior, count domain, gap domain, filenames, and 500 mm row-envelope safety check. Its `height` parameter MUST be an integer in the inclusive range 1–500 mm. The catalog MUST expose `height` as a 1–200 mm slider and a 1–500 mm text input. `gap` MUST remain a 1–10 mm slider with a 1–99 mm text-input range.
+
+#### Scenario: Maximum manual height is valid
+
+- **WHEN** a valid hexagonal-column snapshot has `height=500`, `count=1`, and `gap=99`
+- **THEN** validation MUST accept the snapshot
+- **AND** the height text input MUST retain `500`
+- **AND** the height slider MUST expose a maximum of `200`
+
+#### Scenario: Height above the manual maximum is rejected
+
+- **WHEN** a hexagonal-column snapshot has `height=501`
+- **THEN** validation MUST reject the snapshot before CAD generation
+- **AND** the existing 500 mm row-envelope validation MUST remain independent of the height control range
 
 ### Requirement: Reference geometry and fixed sharp chamfers
 

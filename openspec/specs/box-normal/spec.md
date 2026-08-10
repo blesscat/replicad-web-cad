@@ -1,5 +1,9 @@
 # box-normal Specification
 
+## Purpose
+
+Defines the independent box-normal CAD component, including its typed parameters, reference geometry, optional posts, controls, validation, and exports.
+
 ## Requirements
 
 ### Requirement: box-normal parameters and defaults
@@ -17,6 +21,12 @@ The system MUST provide an independent `box-normal` component with exactly four 
 - **WHEN** `x`, `y`, and `height` are supplied as integer values within their configured ranges and `cornerPosts` is boolean
 - **THEN** component validation MUST accept the complete parameter snapshot
 - **AND** the accepted value MUST preserve the typed boolean and integer values without rounding
+
+#### Scenario: Maximum manual height is valid
+
+- **WHEN** a user supplies `height=500` with valid `x`, `y`, and `cornerPosts` values
+- **THEN** component validation MUST accept the snapshot
+- **AND** generation MUST preserve the requested 500 mm body height
 
 #### Scenario: Invalid box-normal parameters
 
@@ -139,15 +149,22 @@ The contract MUST define `BoxNormalParameterKey` as `x | y | height | cornerPost
 
 ### Requirement: box-normal catalog, controls, bounds, and filenames
 
-The system MUST expose `box-normal` through the model catalog and `/cad/box-normal` route with X/Y integer sliders, a height integer slider/text input, and a `cornerPosts` checkbox defaulting to checked. The model definition MUST report centered X/Y bounds and a Z minimum of 0. With posts enabled, the maximum Z bound MUST be `height + 7`; with posts disabled, it MUST be `height`. STEP and STL filenames MUST be deterministic using the pattern `box-normal-{x}x{y}-h{height}-{posts|plain}` with the corresponding extension.
+The system MUST expose `box-normal` through the model catalog and `/cad/box-normal` route with X/Y integer sliders, a height integer slider/text input, and a `cornerPosts` checkbox defaulting to checked. The height text input MUST accept 10–500 mm while the height slider MUST expose 10–200 mm. The model definition MUST report centered X/Y bounds and a Z minimum of 0. With posts enabled, the maximum Z bound MUST be `height + 7`; with posts disabled, it MUST be `height`. STEP and STL filenames MUST be deterministic using the pattern `box-normal-{x}x{y}-h{height}-{posts|plain}` with the corresponding extension.
 
 #### Scenario: Controls expose the confirmed ranges
 
 - **WHEN** a user views the `box-normal` parameter panel
 - **THEN** X MUST expose a 2–40 integer slider
 - **AND** Y MUST expose a 2–35 integer slider
-- **AND** height MUST expose integer values from 10–500 mm through slider/text controls
+- **AND** height MUST expose a 10–200 mm integer slider and a 10–500 mm integer text input
 - **AND** the corner-post checkbox MUST be checked by default
+
+#### Scenario: Manual value above slider maximum generates
+
+- **WHEN** a user enters `height=500` in the text input
+- **THEN** the text input MUST retain `500`
+- **AND** the workspace MUST accept and generate the 500 mm height
+- **AND** the slider MUST retain a maximum of 200 mm
 
 #### Scenario: Deterministic export metadata
 

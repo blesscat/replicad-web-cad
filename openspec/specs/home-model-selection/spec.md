@@ -320,8 +320,6 @@ The model chooser MUST list `opengrid-stackable-cylinder` in the OpenGrid family
 - **THEN** it MUST render from catalog metadata
 - **AND** it MUST NOT instantiate the CAD Worker or a CAD viewport merely to display the entry
 
-## ADDED Requirements
-
 ### Requirement: 系列相對模型選擇名稱
 
 The `/models` chooser MUST use a selection-only label for each visible model card so that a family prefix already represented by the series heading is not repeated. The series headings MUST remain `OpenGrid 系列` and `HSW 系列`. The current visible card labels MUST be:
