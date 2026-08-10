@@ -8,6 +8,7 @@ import type {
 } from '../../src/cad-contract/units'
 import {
   OPENGRID_CONFIGURATION,
+  OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   PROTOTYPE_CONFIGURATION,
 } from '../../src/cad-contract/units'
 import type { CadWorkerClient } from '../../src/features/cad/worker-client'
@@ -48,13 +49,7 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
     }
   }
   if (modelId === 'opengrid-stackable-cylinder') {
-    return {
-      diameter: 56,
-      height: 30,
-      thinBottomMode: false,
-      bottomPlateMode: false,
-      bottomHolesEnabled: true,
-    }
+    return { ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS }
   }
   if (modelId === 'opengrid-snap') {
     return {
@@ -566,11 +561,8 @@ describe('CAD model generation debounce', () => {
         kind: 'model.generate',
         modelId: 'opengrid-stackable-cylinder',
         parameters: {
+          ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
           diameter: 57,
-          height: 30,
-          thinBottomMode: false,
-          bottomPlateMode: false,
-          bottomHolesEnabled: true,
         },
       }),
     )
@@ -631,10 +623,8 @@ describe('CAD model generation debounce', () => {
         kind: 'model.generate',
         modelId: 'opengrid-stackable-cylinder',
         parameters: {
-          diameter: 56,
-          height: 30,
+          ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
           thinBottomMode: true,
-          bottomPlateMode: false,
           bottomHolesEnabled: false,
         },
       }),
@@ -655,11 +645,8 @@ describe('CAD model generation debounce', () => {
         kind: 'model.generate',
         modelId: 'opengrid-stackable-cylinder',
         parameters: {
-          diameter: 56,
-          height: 30,
-          thinBottomMode: false,
+          ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
           bottomPlateMode: true,
-          bottomHolesEnabled: true,
         },
       }),
     )

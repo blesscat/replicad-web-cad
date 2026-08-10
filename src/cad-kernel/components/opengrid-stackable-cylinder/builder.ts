@@ -1,5 +1,6 @@
 import {
   getOC,
+  makeBox,
   makeCylinder,
   measureVolume,
   Sketcher,
@@ -11,8 +12,10 @@ import {
   openGridStackableCylinderDerivedGeometryFor,
   openGridStackableCylinderHoleCentersFor,
   OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
+  OPENGRID_STACKABLE_CYLINDER_OPENING_DIRECTIONS,
   validateOpenGridStackableCylinderParameters,
   type ModelBounds,
+  type OpenGridStackableCylinderOpeningDirection,
   type OpenGridStackableCylinderParameters,
   type OpenGridStackableCylinderPoint2D,
   type OpenGridStackableCylinderProfile,
@@ -35,6 +38,17 @@ export type OpenGridStackableCylinderHoleQuality = {
   sections: OpenGridStackableCylinderHoleSection[]
 }
 
+export type OpenGridStackableCylinderOpeningQuality = {
+  direction: OpenGridStackableCylinderOpeningDirection
+  enabled: boolean
+  bottomZ: number
+  bottomLength: number
+  upperWidth: number
+  bottomBoundaryProbeVolume: number
+  topBoundaryProbeVolume: number
+  valid: boolean
+}
+
 export type OpenGridStackableCylinderInterfaceQualityReport = {
   profile: OpenGridStackableCylinderProfile
   thinBottomMode: boolean
@@ -48,6 +62,9 @@ export type OpenGridStackableCylinderInterfaceQualityReport = {
   brepValid: boolean
   holeRecordCount: number
   holes: OpenGridStackableCylinderHoleQuality[]
+  openings: OpenGridStackableCylinderOpeningQuality[]
+  neighboringOpeningProbeCount: number
+  neighboringOpeningExpectedProbeCount: number
   holeOuterClearances: number[]
   holeFlatFloorClearances: number[]
   bottomProtrusionVolume: number
@@ -169,15 +186,6 @@ function makeCylinderShell(
         derived.matingProtrusionRadius,
         configuration.bottomVerticalHeight,
       ])
-      if (
-        derived.matingProtrusionRadius <
-        derived.outerTransitionStartRadius - 0.0001
-      ) {
-        sketcher.lineTo([
-          derived.outerTransitionStartRadius,
-          derived.outerTransitionStartZ,
-        ])
-      }
       sketcher.lineTo([
         derived.outerTransitionEndRadius,
         derived.outerTransitionEndZ,
@@ -235,12 +243,13 @@ function cutSteppedHole(
     deleteShape(lower)
   }
 
-  const upper = makeCylinder(
-    configuration.innerHoleDiameter / 2,
-    configuration.innerHoleSectionDepth + 0.02,
-    [center[0], center[1], derived.bottomHoleSectionDepth],
-  )
+  let upper: Shape3D | null = null
   try {
+    upper = makeCylinder(
+      configuration.innerHoleDiameter / 2,
+      configuration.innerHoleSectionDepth + 0.02,
+      [center[0], center[1], derived.bottomHoleSectionDepth],
+    )
     if (!lowerCut) throw new Error('OPENGRID_STACKABLE_CYLINDER_HOLE_INVALID')
     const steppedCut = lowerCut.cut(upper)
     deleteShape(lowerCut)
@@ -265,6 +274,211 @@ function addBottomHoles(
     current = cut
   }
   return current
+}
+
+function quarterTurnsForOpening(
+  direction: OpenGridStackableCylinderOpeningDirection,
+): number {
+  if (direction === '+X') return 0
+  if (direction === '+Y') return 1
+  if (direction === '-X') return 2
+  return -1
+}
+
+function makeSideOpeningCutter(
+  parameters: OpenGridStackableCylinderParameters,
+  direction: OpenGridStackableCylinderOpeningDirection,
+): Shape3D {
+  // The cutter is an open-top U/V notch: one flat bottom, two fixed-radius
+  // transition arcs, and straight side walls whose slope is controlled by
+  // the opening angle. It is not a cylindrical or circular-hole cutter.
+  const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
+  const opening = derived.openings[direction]
+  if (!opening.enabled) {
+    throw new Error('OPENGRID_STACKABLE_CYLINDER_OPENING_DISABLED')
+  }
+
+  const halfBottomLength = opening.bottomLength / 2
+  const cornerRadius = opening.arcRadius
+  const bottomZ = opening.bottomZ
+  const topZ = parameters.height
+  const angleRadians = (opening.angle * Math.PI) / 180
+  const rightBottom: [number, number] = [halfBottomLength, bottomZ]
+  const rightTransition: [number, number] = [
+    halfBottomLength + opening.cornerRun,
+    bottomZ + opening.cornerRise,
+  ]
+  const leftTransition: [number, number] = [
+    -rightTransition[0],
+    rightTransition[1],
+  ]
+  const leftBottom: [number, number] = [-halfBottomLength, bottomZ]
+  const rightTopArcStart: [number, number] = [
+    rightTransition[0] + opening.straightSideRun,
+    topZ - opening.cornerRise,
+  ]
+  const leftTopArcStart: [number, number] = [
+    -rightTopArcStart[0],
+    rightTopArcStart[1],
+  ]
+  const rightTopEdge: [number, number] = [
+    rightTopArcStart[0] + opening.cornerRun,
+    topZ,
+  ]
+  const leftTopEdge: [number, number] = [-rightTopEdge[0], topZ]
+  const rightBottomMidpoint: [number, number] = [
+    halfBottomLength + cornerRadius * Math.sin(angleRadians / 2),
+    bottomZ + cornerRadius * (1 - Math.cos(angleRadians / 2)),
+  ]
+  const leftBottomMidpoint: [number, number] = [
+    -rightBottomMidpoint[0],
+    rightBottomMidpoint[1],
+  ]
+  const rightTopMidpoint: [number, number] = [
+    rightTopArcStart[0] +
+      cornerRadius * (Math.sin(angleRadians) - Math.sin(angleRadians / 2)),
+    rightTopArcStart[1] +
+      cornerRadius * (Math.cos(angleRadians / 2) - Math.cos(angleRadians)),
+  ]
+  const leftTopMidpoint: [number, number] = [
+    -rightTopMidpoint[0],
+    rightTopMidpoint[1],
+  ]
+  const topExtension = 0.04
+  const rightTopOuter: [number, number] = [rightTopEdge[0] + topExtension, topZ]
+  const leftTopOuter: [number, number] = [-rightTopOuter[0], topZ]
+  const rightTopOuterAbove: [number, number] = [
+    rightTopOuter[0],
+    topZ + topExtension,
+  ]
+  const leftTopOuterAbove: [number, number] = [
+    leftTopOuter[0],
+    topZ + topExtension,
+  ]
+  const sketcher = new Sketcher('YZ')
+  let sketch: ReturnType<Sketcher['close']> | null = null
+  let current: Shape3D | null = null
+  try {
+    sketcher.movePointerTo(leftBottom)
+    if (halfBottomLength > 0) sketcher.lineTo(rightBottom)
+    sketcher.threePointsArcTo(rightTransition, rightBottomMidpoint)
+    sketcher.lineTo(rightTopArcStart)
+    sketcher.threePointsArcTo(rightTopEdge, rightTopMidpoint)
+    sketcher.lineTo(rightTopOuter)
+    sketcher.lineTo(rightTopOuterAbove)
+    sketcher.lineTo(leftTopOuterAbove)
+    sketcher.lineTo(leftTopOuter)
+    sketcher.lineTo(leftTopEdge)
+    sketcher.threePointsArcTo(leftTopArcStart, leftTopMidpoint)
+    sketcher.lineTo(leftTransition)
+    sketcher.threePointsArcTo(leftBottom, leftBottomMidpoint)
+    sketch = sketcher.close()
+    current = sketch.extrude(parameters.diameter + topExtension, {
+      extrusionDirection: [1, 0, 0],
+    })
+
+    const quarterTurns = quarterTurnsForOpening(direction)
+    if (quarterTurns !== 0) {
+      const rotated = current.rotate(quarterTurns * 90, [0, 0, 0], [0, 0, 1])
+      if (rotated !== current) deleteShape(current)
+      current = rotated
+    }
+
+    const result = current
+    current = null
+    return result
+  } finally {
+    deleteShape(current)
+    deleteShape(sketch)
+    sketcher.delete()
+  }
+}
+
+function addSideOpenings(
+  shape: Shape3D,
+  parameters: OpenGridStackableCylinderParameters,
+  context: OpenGridStackableCylinderBuildContext,
+): Shape3D {
+  const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
+  let current = shape
+  for (const direction of ['+X', '-X', '+Y', '-Y'] as const) {
+    assertGenerationCurrent(context)
+    if (!derived.openings[direction].enabled) continue
+
+    let cutter: Shape3D | null = null
+    try {
+      cutter = makeSideOpeningCutter(parameters, direction)
+      const cut = current.cut(cutter)
+      deleteShape(current)
+      current = cut
+    } finally {
+      deleteShape(cutter)
+    }
+  }
+  return current
+}
+
+function directionalBoxProbe(
+  direction: OpenGridStackableCylinderOpeningDirection,
+  minimumRadius: number,
+  maximumRadius: number,
+  tangentHalfWidth: number,
+  minimumZ: number,
+  maximumZ: number,
+): Shape3D {
+  const probe = makeBox(
+    [minimumRadius, -tangentHalfWidth, minimumZ],
+    [maximumRadius, tangentHalfWidth, maximumZ],
+  )
+  const quarterTurns = quarterTurnsForOpening(direction)
+  if (quarterTurns === 0) return probe
+
+  const rotated = probe.rotate(quarterTurns * 90, [0, 0, 0], [0, 0, 1])
+  if (rotated !== probe) deleteShape(probe)
+  return rotated
+}
+
+function volumeInDirectionalBoxProbe(
+  shape: Shape3D,
+  direction: OpenGridStackableCylinderOpeningDirection,
+  minimumRadius: number,
+  maximumRadius: number,
+  tangentHalfWidth: number,
+  minimumZ: number,
+  maximumZ: number,
+): number {
+  const probe = directionalBoxProbe(
+    direction,
+    minimumRadius,
+    maximumRadius,
+    tangentHalfWidth,
+    minimumZ,
+    maximumZ,
+  )
+  try {
+    return volumeInProbe(shape, probe)
+  } finally {
+    deleteShape(probe)
+  }
+}
+
+function volumeAtRadialProbe(
+  shape: Shape3D,
+  radius: number,
+  angleDegrees: number,
+  z: number,
+): number {
+  const angleRadians = (angleDegrees * Math.PI) / 180
+  const probe = makeCylinder(0.18, 0.04, [
+    radius * Math.cos(angleRadians),
+    radius * Math.sin(angleRadians),
+    z,
+  ])
+  try {
+    return volumeInProbe(shape, probe)
+  } finally {
+    deleteShape(probe)
+  }
 }
 
 function readBounds(shape: Shape3D): Bounds {
@@ -467,6 +681,7 @@ function readHoleQuality(
 function readFloorHoleRecords(
   shape: Shape3D,
   floorThickness: number,
+  holeCenters: OpenGridStackableCylinderPoint2D[],
 ): CylindricalFaceRecord[] {
   const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
   const largestHoleDiameter = Math.max(
@@ -477,7 +692,12 @@ function readFloorHoleRecords(
     (record) =>
       record.diameter <= largestHoleDiameter + 0.2 &&
       record.minZ <= floorThickness + 0.1 &&
-      record.maxZ >= -0.1,
+      record.maxZ >= -0.1 &&
+      holeCenters.some(
+        (center) =>
+          closeEnough(record.center[0], center[0], 0.08) &&
+          closeEnough(record.center[1], center[1], 0.08),
+      ),
   )
 }
 
@@ -697,7 +917,101 @@ export function inspectOpenGridStackableCylinderInterface(
   const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
   const expected = expectedInterfaceProbes(parameters)
   const actualBounds = readBounds(shape)
-  const floorHoleRecords = readFloorHoleRecords(shape, derived.floorThickness)
+  const floorHoleRecords = readFloorHoleRecords(
+    shape,
+    derived.floorThickness,
+    openGridStackableCylinderHoleCentersFor(parameters),
+  )
+  const openingQuality = OPENGRID_STACKABLE_CYLINDER_OPENING_DIRECTIONS.map(
+    (direction): OpenGridStackableCylinderOpeningQuality => {
+      const opening = derived.openings[direction]
+      if (!opening.enabled) {
+        return {
+          direction,
+          enabled: false,
+          bottomZ: opening.bottomZ,
+          bottomLength: opening.bottomLength,
+          upperWidth: opening.upperWidth,
+          bottomBoundaryProbeVolume: 0,
+          topBoundaryProbeVolume: 0,
+          valid: true,
+        }
+      }
+
+      const bottomProbeWidth = Math.min(opening.bottomLength / 4, 0.25)
+      const topProbeWidth = Math.min(opening.upperWidth / 4, 0.25)
+      const radialProbeMinimum =
+        derived.radius - configuration.wallThickness - 0.1
+      const radialProbeMaximum = derived.radius + 0.1
+      const bottomBoundaryProbeVolume = volumeInDirectionalBoxProbe(
+        shape,
+        direction,
+        radialProbeMinimum,
+        radialProbeMaximum,
+        bottomProbeWidth,
+        opening.bottomZ + 0.05,
+        opening.bottomZ + 0.15,
+      )
+      const topBoundaryProbeVolume = volumeInDirectionalBoxProbe(
+        shape,
+        direction,
+        radialProbeMinimum,
+        radialProbeMaximum,
+        topProbeWidth,
+        parameters.height - 0.1,
+        parameters.height + 0.01,
+      )
+      return {
+        direction,
+        enabled: true,
+        bottomZ: opening.bottomZ,
+        bottomLength: opening.bottomLength,
+        upperWidth: opening.upperWidth,
+        bottomBoundaryProbeVolume,
+        topBoundaryProbeVolume,
+        valid:
+          bottomBoundaryProbeVolume < 0.0001 && topBoundaryProbeVolume < 0.0001,
+      }
+    },
+  )
+  const directionAngles: Record<
+    OpenGridStackableCylinderOpeningDirection,
+    number
+  > = {
+    '+X': 0,
+    '+Y': 90,
+    '-X': 180,
+    '-Y': 270,
+  }
+  const adjacentDirections = [
+    ['+X', '+Y'],
+    ['+Y', '-X'],
+    ['-X', '-Y'],
+    ['-Y', '+X'],
+  ] as const
+  let neighboringOpeningProbeCount = 0
+  let neighboringOpeningExpectedProbeCount = 0
+  for (const [firstDirection, secondDirection] of adjacentDirections) {
+    const first = derived.openings[firstDirection]
+    const second = derived.openings[secondDirection]
+    if (!first.enabled || !second.enabled) continue
+    neighboringOpeningExpectedProbeCount += 1
+    const firstAngle =
+      directionAngles[firstDirection] + (first.angularHalfWidth * 180) / Math.PI
+    const secondAngle =
+      directionAngles[secondDirection] -
+      (second.angularHalfWidth * 180) / Math.PI
+    const gapAngle = (firstAngle + secondAngle) / 2
+    const gapVolume = volumeAtRadialProbe(
+      shape,
+      derived.radius - configuration.wallThickness / 2,
+      gapAngle,
+      parameters.height -
+        (configuration.topInnerChamfer - configuration.topInnerChamferLand) -
+        0.08,
+    )
+    if (gapVolume > 0.0000001) neighboringOpeningProbeCount += 1
+  }
   const cavityRadius = derived.innerRadius
   const bottomProtrusionVolume = volumeInCylindricalProbe(
     shape,
@@ -1030,6 +1344,9 @@ export function inspectOpenGridStackableCylinderInterface(
     brepValid: isBRepValid(shape),
     holeRecordCount: floorHoleRecords.length,
     holes: readHoleQuality(parameters, floorHoleRecords),
+    openings: openingQuality,
+    neighboringOpeningProbeCount,
+    neighboringOpeningExpectedProbeCount,
     holeOuterClearances,
     holeFlatFloorClearances,
     bottomProtrusionVolume,
@@ -1084,6 +1401,15 @@ function assertQuality(
   if (!(report.volume > 0)) failures.push('volume')
   if (report.solidCount !== 1) failures.push('single-solid')
   if (!report.brepValid) failures.push('brep')
+  if (report.openings.some((opening) => !opening.valid)) {
+    failures.push('opening-profile')
+  }
+  if (
+    report.neighboringOpeningProbeCount !==
+    report.neighboringOpeningExpectedProbeCount
+  ) {
+    failures.push('opening-neighbor-bridge')
+  }
   if (report.centralFloorBelowVolume <= 0.0001) {
     failures.push('central-floor-thickness')
   }
@@ -1269,6 +1595,11 @@ export function buildOpenGridStackableCylinder(
       shape = addBottomHoles(shape, normalizedParameters, context)
     } catch (error) {
       throwStageError('OPENGRID_STACKABLE_CYLINDER_HOLES_INVALID', error)
+    }
+    try {
+      shape = addSideOpenings(shape, normalizedParameters, context)
+    } catch (error) {
+      throwStageError('OPENGRID_STACKABLE_CYLINDER_OPENINGS_INVALID', error)
     }
     assertGenerationCurrent(context)
     assertQuality(shape, normalizedParameters)

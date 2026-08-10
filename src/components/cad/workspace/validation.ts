@@ -3,6 +3,8 @@ import type { WorkerClientError } from '../../../features/cad/worker-client'
 import {
   HEXAGONAL_COLUMN_CONFIGURATION,
   isOpenGridSnapFootprint,
+  OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+  OPENGRID_STACKABLE_CYLINDER_OPENING_PARAMETER_KEYS,
   parseOpenGridSnapDecimalInput,
   parseDimensionInput,
   validateModelParameters,
@@ -44,6 +46,7 @@ export const OPENGRID_STACKABLE_CYLINDER_PARAMETER_KEYS: ModelParameterKey[] = [
   'thinBottomMode',
   'bottomPlateMode',
   'bottomHolesEnabled',
+  ...OPENGRID_STACKABLE_CYLINDER_OPENING_PARAMETER_KEYS,
 ]
 export const OPENGRID_DIVIDER_PARAMETER_KEYS: ModelParameterKey[] = [
   'left',
@@ -102,7 +105,7 @@ function usesHalfStepInput(modelId: ModelId, key: ModelParameterKey): boolean {
   return false
 }
 
-function legacyBooleanDefault(
+function legacyParameterDefault(
   modelId: ModelId,
   key: ModelParameterKey,
 ): string | undefined {
@@ -110,6 +113,10 @@ function legacyBooleanDefault(
   if (key === 'thinBottomMode') return 'false'
   if (key === 'bottomPlateMode') return 'false'
   if (key === 'bottomHolesEnabled') return 'true'
+  const defaultValue = (
+    OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS as Record<string, unknown>
+  )[key]
+  if (typeof defaultValue === 'number') return String(defaultValue)
   return undefined
 }
 
@@ -135,7 +142,7 @@ export function rawFromParameters(
   if (Object.keys(parameters).length === 0) return {}
 
   if ('diameter' in parameters && 'height' in parameters) {
-    return {
+    const raw: RawParameters = {
       diameter: String(parameters.diameter),
       height: String(parameters.height),
       thinBottomMode: String(
@@ -150,6 +157,14 @@ export function rawFromParameters(
           : true,
       ),
     }
+    for (const key of OPENGRID_STACKABLE_CYLINDER_OPENING_PARAMETER_KEYS) {
+      raw[key] = String(
+        key in parameters
+          ? parameters[key]
+          : OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS[key],
+      )
+    }
+    return raw
   }
 
   if ('width' in parameters) {
@@ -374,7 +389,7 @@ export function parseRawParameters(
       key === 'bottomHolesEnabled' ||
       key === 'basePlateMode'
     ) {
-      const rawValue = raw[key] ?? legacyBooleanDefault(modelId, key)
+      const rawValue = raw[key] ?? legacyParameterDefault(modelId, key)
       if (rawValue !== 'true' && rawValue !== 'false') {
         return {
           valid: false,
@@ -390,7 +405,7 @@ export function parseRawParameters(
         raw[key] ?? HEXAGONAL_COLUMN_CONFIGURATION.defaultOrientation
       continue
     }
-    const rawValue = raw[key] ?? ''
+    const rawValue = raw[key] ?? legacyParameterDefault(modelId, key) ?? ''
     parsed[key] = usesHalfStepInput(modelId, key)
       ? parseHalfStepInput(rawValue)
       : parseDimensionInput(rawValue)

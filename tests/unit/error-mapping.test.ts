@@ -48,6 +48,11 @@ describe('CAD Worker error mapping', () => {
       'model.generate',
       'OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID',
     ],
+    [
+      'OPENGRID_STACKABLE_CYLINDER_OPENINGS_INVALID:opening-profile',
+      'model.generate',
+      'OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID',
+    ],
     ['MESH_INVALID: empty', 'model.generate', 'MESH_INVALID'],
     ['STEP_METADATA_INVALID', 'export.step', 'STEP_METADATA_INVALID'],
     ['STL_METADATA_INVALID', 'export.stl', 'STL_METADATA_INVALID'],

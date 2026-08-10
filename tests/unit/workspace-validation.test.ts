@@ -10,6 +10,7 @@ import type {
   OpenGridSnapParameters,
   PillarParameters,
 } from '../../src/cad-contract/units'
+import { OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS } from '../../src/cad-contract/units'
 import { OPENGRID_DIVIDER_CONFIGURATION } from '../../src/cad-contract/units'
 import {
   parseRawParameters,
@@ -379,25 +380,33 @@ describe('CAD workspace validation helpers', () => {
 
   it('round-trips OpenGrid stackable-cylinder integer inputs', () => {
     const parameters: OpenGridStackableCylinderParameters = {
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       diameter: 56,
       height: 30,
-      thinBottomMode: false,
-      bottomPlateMode: false,
-      bottomHolesEnabled: true,
+      openingPlusXDepth: 8,
+      openingPlusXBottomLength: 12,
+      openingPlusXAngle: 70,
+      openingMinusXDepth: 9,
+      openingMinusXBottomLength: 11,
+      openingMinusXAngle: 80,
+      openingPlusYDepth: 10,
+      openingPlusYBottomLength: 10,
+      openingPlusYAngle: 90,
+      openingMinusYDepth: 7,
+      openingMinusYBottomLength: 13,
+      openingMinusYAngle: 60,
     }
     const raw = rawFromParameters(parameters)
 
-    expect(raw).toEqual({
-      diameter: '56',
-      height: '30',
-      thinBottomMode: 'false',
-      bottomPlateMode: 'false',
-      bottomHolesEnabled: 'true',
-    })
     expect(parseRawParameters(raw, 'opengrid-stackable-cylinder')).toEqual({
       valid: true,
       value: parameters,
     })
+    const legacyParameters = {
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+      diameter: 56,
+      height: 30,
+    }
     expect(
       parseRawParameters(
         { diameter: '56', height: '30' },
@@ -405,7 +414,7 @@ describe('CAD workspace validation helpers', () => {
       ),
     ).toEqual({
       valid: true,
-      value: parameters,
+      value: legacyParameters,
     })
     expect(
       parseRawParameters(

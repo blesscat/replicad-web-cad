@@ -2,7 +2,13 @@ import { createRequire } from 'node:module'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { makeCylinder, measureVolume, setOC, type Shape3D } from 'replicad'
+import {
+  makeBox,
+  makeCylinder,
+  measureVolume,
+  setOC,
+  type Shape3D,
+} from 'replicad'
 import {
   buildOpenGridStackableCylinder,
   inspectOpenGridStackableCylinderInterface,
@@ -12,6 +18,7 @@ import {
   openGridStackableCylinderDerivedGeometryFor,
   openGridStackableCylinderHoleCentersFor,
   OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
+  OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   type OpenGridStackableCylinderParameters,
 } from '../../src/cad-contract/units'
 import { exportStlBytes, exportStepBytes } from '../../src/cad-kernel/export'
@@ -39,11 +46,7 @@ function parameters(
   overrides: Partial<OpenGridStackableCylinderParameters> = {},
 ): OpenGridStackableCylinderParameters {
   return {
-    diameter: 56,
-    height: 30,
-    thinBottomMode: false,
-    bottomPlateMode: false,
-    bottomHolesEnabled: true,
+    ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
     ...overrides,
   }
 }
@@ -53,6 +56,21 @@ function deleteShape(shape: Shape3D | null | undefined): void {
     shape?.delete()
   } catch {
     // Cleanup must not hide the geometry assertion.
+  }
+}
+
+function volumeInBox(
+  shape: Shape3D,
+  minimum: [number, number, number],
+  maximum: [number, number, number],
+): number {
+  const probe = makeBox(minimum, maximum)
+  const intersection = shape.intersect(probe)
+  try {
+    return measureVolume(intersection)
+  } finally {
+    deleteShape(intersection)
+    deleteShape(probe)
   }
 }
 
@@ -247,6 +265,63 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
     120_000,
   )
 
+  it('keeps straight vertical U-opening sides above the rounded corners', () => {
+    const input = parameters({
+      openingPlusXDepth: 12,
+      openingPlusXBottomLength: 12,
+      openingPlusXAngle: 90,
+    })
+    const shape = buildOpenGridStackableCylinder(input)
+    try {
+      expect(
+        volumeInBox(shape, [21.8, 11.5, 24], [24.8, 11.7, 24.5]),
+      ).toBeGreaterThan(0.0001)
+      expect(volumeInBox(shape, [26.5, -3, 22], [28.5, 3, 23])).toBeLessThan(
+        0.001,
+      )
+    } finally {
+      deleteShape(shape)
+    }
+  }, 120_000)
+
+  it('accepts the default-mode height-minus-floor opening depth limit', () => {
+    const input = parameters({
+      openingPlusXDepth: 25,
+      openingPlusXBottomLength: 8,
+      openingPlusXAngle: 90,
+    })
+    const shape = buildOpenGridStackableCylinder(input)
+    try {
+      const report = inspectOpenGridStackableCylinderInterface(shape, input)
+      expect(report.brepValid).toBe(true)
+      expect(report.solidCount).toBe(1)
+      expect(
+        report.openings.find((opening) => opening.direction === '+X'),
+      ).toMatchObject({ enabled: true, bottomZ: 5, valid: true })
+    } finally {
+      deleteShape(shape)
+    }
+  }, 120_000)
+
+  it('opens with outward-sloping V sides at a 45 degree side angle', () => {
+    const input = parameters({
+      openingPlusXDepth: 8,
+      openingPlusXBottomLength: 1,
+      openingPlusXAngle: 45,
+    })
+    const shape = buildOpenGridStackableCylinder(input)
+    try {
+      expect(
+        volumeInBox(shape, [25.5, 7.5, 29.2], [25.9, 8, 29.6]),
+      ).toBeLessThan(0.001)
+      expect(
+        volumeInBox(shape, [25.4, 10.3, 29.2], [25.7, 10.7, 29.6]),
+      ).toBeGreaterThan(0.0001)
+    } finally {
+      deleteShape(shape)
+    }
+  }, 120_000)
+
   it.each([
     { diameter: 20, expectedHoleCount: 1 },
     { diameter: 56, expectedHoleCount: 5 },
@@ -271,7 +346,8 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
 
   it.each([
     { diameter: 47, expectedHoleCount: 1 },
-    { diameter: 48, expectedHoleCount: 5 },
+    { diameter: 48, expectedHoleCount: 1 },
+    { diameter: 49, expectedHoleCount: 5 },
   ])(
     'builds the thin profile at the $diameter mm outer-hole threshold',
     ({ diameter, expectedHoleCount }) => {
@@ -392,6 +468,127 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
       expect(report.internalFilletFaceCount).toBe(0)
       const mesh = meshBRep(shape, { tolerance: 0.01, angularTolerance: 0.1 })
       expect(mesh.triangleCount).toBeGreaterThan(0)
+    } finally {
+      deleteShape(shape)
+    }
+  }, 120_000)
+
+  it.each([
+    {
+      direction: '+X',
+      key: 'openingPlusXDepth',
+      minimum: [26.5, -3, 24] as [number, number, number],
+      maximum: [28.5, 3, 25] as [number, number, number],
+    },
+    {
+      direction: '-X',
+      key: 'openingMinusXDepth',
+      minimum: [-28.5, -3, 24] as [number, number, number],
+      maximum: [-26.5, 3, 25] as [number, number, number],
+    },
+    {
+      direction: '+Y',
+      key: 'openingPlusYDepth',
+      minimum: [-3, 26.5, 24] as [number, number, number],
+      maximum: [3, 28.5, 25] as [number, number, number],
+    },
+    {
+      direction: '-Y',
+      key: 'openingMinusYDepth',
+      minimum: [-3, -28.5, 24] as [number, number, number],
+      maximum: [3, -26.5, 25] as [number, number, number],
+    },
+  ])(
+    'cuts the independently enabled $direction side opening with valid B-Rep',
+    ({ key, minimum, maximum }) => {
+      const input = parameters({
+        [key]: 8,
+        openingPlusXBottomLength: 12,
+        openingPlusXAngle: 90,
+        openingMinusXBottomLength: 12,
+        openingMinusXAngle: 90,
+        openingPlusYBottomLength: 12,
+        openingPlusYAngle: 90,
+        openingMinusYBottomLength: 12,
+        openingMinusYAngle: 90,
+      })
+      const shape = buildOpenGridStackableCylinder(input)
+      try {
+        const report = inspectOpenGridStackableCylinderInterface(shape, input)
+        expect(report.brepValid).toBe(true)
+        expect(report.solidCount).toBe(1)
+        expect(report.straightWallThickness).toBeCloseTo(
+          OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.wallThickness,
+          2,
+        )
+        expect(volumeInBox(shape, minimum, maximum)).toBeLessThan(0.001)
+      } finally {
+        deleteShape(shape)
+      }
+    },
+    120_000,
+  )
+
+  it.each([
+    { thinBottomMode: false, bottomPlateMode: false },
+    { thinBottomMode: true, bottomPlateMode: false },
+    { thinBottomMode: false, bottomPlateMode: true },
+  ])(
+    'keeps four distinct openings compatible with the $thinBottomMode/$bottomPlateMode floor profile',
+    ({ thinBottomMode, bottomPlateMode }) => {
+      const input = parameters({
+        thinBottomMode,
+        bottomPlateMode,
+        openingPlusXDepth: 12,
+        openingPlusXBottomLength: 8,
+        openingPlusXAngle: 90,
+        openingMinusXDepth: 9,
+        openingMinusXBottomLength: 8,
+        openingMinusXAngle: 80,
+        openingPlusYDepth: 10,
+        openingPlusYBottomLength: 8,
+        openingPlusYAngle: 85,
+        openingMinusYDepth: 8,
+        openingMinusYBottomLength: 8,
+        openingMinusYAngle: 70,
+      })
+      const shape = buildOpenGridStackableCylinder(input)
+      try {
+        const report = inspectOpenGridStackableCylinderInterface(shape, input)
+        expect(report.brepValid).toBe(true)
+        expect(report.solidCount).toBe(1)
+        expect(report.bottomHolesEnabled).toBe(true)
+        expect(report.volume).toBeGreaterThan(0)
+      } finally {
+        deleteShape(shape)
+      }
+    },
+    120_000,
+  )
+
+  it('keeps a valid U-opening and stacking interface when all bottom holes are off', () => {
+    const input = parameters({
+      bottomHolesEnabled: false,
+      openingPlusXDepth: 12,
+      openingPlusXBottomLength: 12,
+      openingPlusXAngle: 90,
+    })
+    const shape = buildOpenGridStackableCylinder(input)
+    try {
+      const report = inspectOpenGridStackableCylinderInterface(shape, input)
+      expect(report.brepValid).toBe(true)
+      expect(report.solidCount).toBe(1)
+      expect(report.holeRecordCount).toBe(0)
+      expect(
+        report.openings.find((opening) => opening.direction === '+X'),
+      ).toMatchObject({
+        enabled: true,
+        bottomZ: 18,
+        bottomLength: 12,
+        valid: true,
+      })
+      expect(report.bottomProtrusionVolume).toBeGreaterThan(0)
+      expect(report.matingIntersectionVolume).toBeLessThan(0.01)
     } finally {
       deleteShape(shape)
     }

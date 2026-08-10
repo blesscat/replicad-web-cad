@@ -22,7 +22,7 @@ export type ParameterField = {
   key: ModelParameterKey
   label: string
   axis: string
-  unit: 'mm' | '格' | '支'
+  unit: 'mm' | '°' | '格' | '支'
   control: 'text' | 'range' | 'range-text'
   defaultValue: number
   min: number
@@ -30,6 +30,7 @@ export type ParameterField = {
   step: number
   sliderMin?: number
   sliderMax?: number
+  sliderDirection?: 'ltr' | 'rtl'
 }
 
 export type ModelDefinition = {

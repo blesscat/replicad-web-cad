@@ -43,6 +43,7 @@ import {
   openGridDividerStlFileName,
   openGridStackableCylinderFileName,
   openGridStackableCylinderStlFileName,
+  OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   type OpenGridParameters,
   type OpenGridStackableBoxParameters,
 } from '../../src/cad-contract/units'
@@ -147,11 +148,7 @@ function stackableCylinderGenerateCommand(
     generation,
     modelId: 'opengrid-stackable-cylinder' as const,
     parameters: {
-      diameter: 56,
-      height: 30,
-      thinBottomMode: false,
-      bottomPlateMode: false,
-      bottomHolesEnabled: true,
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
     },
     previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
     ...overrides,
@@ -572,11 +569,7 @@ describe('OpenGrid Worker runtime', () => {
     await runtime.handle(stackableCylinderGenerateCommand())
 
     const parameters = {
-      diameter: 56,
-      height: 30,
-      thinBottomMode: false,
-      bottomPlateMode: false,
-      bottomHolesEnabled: true,
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
     }
     expect(mocks.buildModelBRep).toHaveBeenCalledWith(
       'opengrid-stackable-cylinder',

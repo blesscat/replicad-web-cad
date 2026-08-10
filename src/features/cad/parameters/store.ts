@@ -1,6 +1,7 @@
 import { get as getStoreValue, writable, type Subscriber } from 'svelte/store'
 import {
   OPENGRID_DIVIDER_CONFIGURATION,
+  OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   type ModelId,
   type ModelParameterValues,
 } from '../../../cad-contract/units'
@@ -44,6 +45,7 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
   }
   if (modelId === 'opengrid-stackable-cylinder' && isRecord(value)) {
     return {
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       ...value,
       thinBottomMode: Object.prototype.hasOwnProperty.call(
         value,
