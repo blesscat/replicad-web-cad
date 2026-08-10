@@ -47,7 +47,45 @@ export const CANONICAL_CAD_LIGHTING_VIEWS = [
 type CanonicalCadLightingView = (typeof CANONICAL_CAD_LIGHTING_VIEWS)[number]
 type OrbitCadLightingView = Exclude<CanonicalCadLightingView, 'initial'>
 
+type CanvasBox = {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 type NormalizedCanvasPoint = readonly [number, number]
+
+export type MobileTouchPoint = {
+  x: number
+  y: number
+}
+
+export type MobileTouchFrame = readonly MobileTouchPoint[]
+
+export type MobileTouchEventReport = {
+  pointerDownCount: number
+  pointerMoveCount: number
+  pointerUpCount: number
+  pointerCancelCount: number
+  lastPointerMove: MobileTouchPoint | null
+}
+
+export type MobileTouchDragOptions = {
+  start?: NormalizedCanvasPoint
+  delta?: readonly [number, number]
+  steps?: number
+  delayMs?: number
+}
+
+export type MobileTouchDragReport = MobileTouchEventReport & {
+  start: MobileTouchPoint
+  end: MobileTouchPoint
+}
+
+type MobileTouchWindow = Window & {
+  __cadMobileTouchEventReport?: MobileTouchEventReport
+}
 
 const CANONICAL_CAD_LIGHTING_DRAGS: Record<
   OrbitCadLightingView,
@@ -76,13 +114,164 @@ const CANONICAL_CAD_LIGHTING_DRAGS: Record<
 }
 
 function pointInCanvas(
-  box: { x: number; y: number; width: number; height: number },
+  box: CanvasBox,
   point: NormalizedCanvasPoint,
-): { x: number; y: number } {
+): MobileTouchPoint {
   return {
     x: box.x + box.width * point[0],
     y: box.y + box.height * point[1],
   }
+}
+
+function toCdpTouchPoints(points: MobileTouchFrame) {
+  return points.map((point, index) => ({
+    id: index + 1,
+    x: point.x,
+    y: point.y,
+  }))
+}
+
+async function installMobileTouchEventTracking(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const report: MobileTouchEventReport = {
+      pointerDownCount: 0,
+      pointerMoveCount: 0,
+      pointerUpCount: 0,
+      pointerCancelCount: 0,
+      lastPointerMove: null,
+    }
+    const trackedWindow = window as MobileTouchWindow
+    trackedWindow.__cadMobileTouchEventReport = report
+
+    document.addEventListener(
+      'pointerdown',
+      () => {
+        report.pointerDownCount += 1
+      },
+      true,
+    )
+    document.addEventListener(
+      'pointermove',
+      (event) => {
+        report.pointerMoveCount += 1
+        report.lastPointerMove = {
+          x: event.clientX,
+          y: event.clientY,
+        }
+      },
+      true,
+    )
+    document.addEventListener(
+      'pointerup',
+      () => {
+        report.pointerUpCount += 1
+      },
+      true,
+    )
+    document.addEventListener(
+      'pointercancel',
+      () => {
+        report.pointerCancelCount += 1
+      },
+      true,
+    )
+  })
+}
+
+async function readMobileTouchEventReport(
+  page: Page,
+): Promise<MobileTouchEventReport> {
+  return page.evaluate(() => {
+    const trackedWindow = window as MobileTouchWindow
+    const report = trackedWindow.__cadMobileTouchEventReport
+    if (!report) throw new Error('Mobile touch event tracking is not installed')
+    return report
+  })
+}
+
+export async function dispatchMobileTouchFrames(
+  page: Page,
+  frames: readonly MobileTouchFrame[],
+  delayMs = 16,
+): Promise<MobileTouchEventReport> {
+  const [startFrame, ...moveFrames] = frames
+  if (!startFrame || startFrame.length === 0) {
+    throw new Error('A mobile touch gesture needs a non-empty start frame')
+  }
+  for (const frame of moveFrames) {
+    if (frame.length !== startFrame.length) {
+      throw new Error('A mobile touch gesture must keep its pointer count')
+    }
+  }
+
+  await installMobileTouchEventTracking(page)
+  const client = await page.context().newCDPSession(page)
+  let touchStarted = false
+
+  try {
+    await client.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: toCdpTouchPoints(startFrame),
+    })
+    touchStarted = true
+
+    for (const frame of moveFrames) {
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: toCdpTouchPoints(frame),
+      })
+      if (delayMs > 0) await page.waitForTimeout(delayMs)
+    }
+  } finally {
+    if (touchStarted) {
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchEnd',
+        touchPoints: [],
+      })
+    }
+  }
+
+  await page.waitForTimeout(80)
+  return readMobileTouchEventReport(page)
+}
+
+export async function dispatchMobileTouchDrag(
+  page: Page,
+  target: Locator,
+  options: MobileTouchDragOptions = {},
+): Promise<MobileTouchDragReport> {
+  await target.scrollIntoViewIfNeeded()
+  const box = await target.boundingBox()
+  if (!box) throw new Error('Mobile touch target is not available')
+
+  const defaultStart: NormalizedCanvasPoint = [0.5, 0.45]
+  const defaultDelta: readonly [number, number] = [112, 18]
+  const startRatio = options.start ?? defaultStart
+  const delta = options.delta ?? defaultDelta
+  const steps = options.steps ?? 12
+  const delayMs = options.delayMs ?? 16
+  if (!Number.isSafeInteger(steps) || steps < 1) {
+    throw new Error('Mobile touch drag steps must be a positive integer')
+  }
+
+  const start = pointInCanvas(box, startRatio)
+  const end = {
+    x: start.x + delta[0],
+    y: start.y + delta[1],
+  }
+  const frames: MobileTouchFrame[] = [[start]]
+  for (let step = 1; step <= steps; step += 1) {
+    const progress = step / steps
+    frames.push([
+      {
+        x: start.x + delta[0] * progress,
+        y: start.y + delta[1] * progress,
+      },
+    ])
+  }
+
+  const report = await dispatchMobileTouchFrames(page, frames, delayMs)
+  return { ...report, start, end }
 }
 
 export async function setCadLightingViewport(page: Page): Promise<void> {
