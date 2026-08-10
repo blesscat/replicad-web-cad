@@ -2,10 +2,20 @@
 import SiteLayout from '../layouts/SiteLayout.astro'
 import {
   cadPathForModel,
+  displayParameterLabel,
   groupModelDefinitions,
 } from '../features/cad/model-catalog'
+import type { ModelDefinition } from '../features/cad/model-catalog'
 
 const modelGroups = groupModelDefinitions()
+
+function parameterSummary(definition: ModelDefinition): string {
+  if (definition.id === 'opengrid') {
+    return '板型、X/Y 格數、螺絲種類與孔位、連接孔'
+  }
+
+  return definition.parameterSchema.map(displayParameterLabel).join('、')
+}
 ---
 
 <SiteLayout
@@ -17,12 +27,17 @@ const modelGroups = groupModelDefinitions()
     aria-labelledby="model-selection-title"
     data-testid="model-selection"
   >
+    <p class="mb-4 text-muted">Model catalog</p>
     <h1
-      class="mb-8 text-4xl font-semibold leading-tight"
+      class="mb-4 text-4xl font-semibold leading-tight"
       id="model-selection-title"
     >
       選擇 CAD 模型
     </h1>
+    <p class="mb-8 leading-normal">
+      依照模型系列選擇 component，接著調整參數、查看即時 3D 預覽並匯出 STEP 或
+      STL。
+    </p>
 
     <div class="grid gap-8" aria-label="CAD 模型系列">
       {
@@ -31,12 +46,15 @@ const modelGroups = groupModelDefinitions()
             aria-labelledby={`model-family-${group.key}`}
             data-testid={`model-family-${group.key}`}
           >
-            <h2
-              class="mb-3 text-2xl font-semibold leading-tight"
-              id={`model-family-${group.key}`}
-            >
-              {group.label}
-            </h2>
+            <div class="mb-3">
+              <h2
+                class="mb-1 text-2xl font-semibold leading-tight"
+                id={`model-family-${group.key}`}
+              >
+                {group.label}
+              </h2>
+              <p class="m-0 text-muted">{group.description}</p>
+            </div>
             <div class="grid gap-4 sm:grid-cols-2">
               {group.definitions.map((definition) => (
                 <article
@@ -46,13 +64,26 @@ const modelGroups = groupModelDefinitions()
                   <h3 class="text-2xl font-semibold leading-tight">
                     {definition.displayName}
                   </h3>
-                  <a
-                    class="inline-flex items-center justify-self-start rounded-lg border border-border-card bg-panel px-3 py-2 font-semibold text-ink no-underline shadow-sm hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                    href={cadPathForModel(definition.id)}
-                    aria-label={`編輯 ${definition.displayName}`}
-                  >
-                    編輯 →
-                  </a>
+                  {definition.selectionDescription && (
+                    <p class="m-0 text-muted">
+                      {definition.selectionDescription}
+                    </p>
+                  )}
+                  {(definition.parameterSchema.length > 0 ||
+                    definition.id === 'opengrid') && (
+                    <p class="m-0 text-sm text-muted">
+                      <span class="font-[650] text-ink">可調整：</span>
+                      {parameterSummary(definition)}
+                    </p>
+                  )}
+                  <p class="mb-0">
+                    <a
+                      class="text-ink underline underline-offset-4"
+                      href={cadPathForModel(definition.id)}
+                    >
+                      使用{definition.displayName} →
+                    </a>
+                  </p>
                 </article>
               ))}
             </div>
