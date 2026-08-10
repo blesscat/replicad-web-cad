@@ -137,10 +137,17 @@ function inspectEndProfiles(
   parameters: PillarParameters,
   failures: string[],
 ): void {
-  const lowerChamferZ = 0.1
-  const lowerStraightZ = 1.1
-  const upperStraightZ = parameters.length - 1.1
-  const upperChamferZ = parameters.length - 0.1
+  const lowerChamferZ = PILLAR_CONFIGURATION.lowerChamfer * 0.1
+  const lowerStraightZ = PILLAR_CONFIGURATION.lowerChamfer + 0.1
+  const upperStraightZ =
+    parameters.length - PILLAR_CONFIGURATION.upperChamfer - 0.1
+  const upperChamferZ =
+    parameters.length - PILLAR_CONFIGURATION.upperChamfer / 2
+  const bodyRadius = PILLAR_CONFIGURATION.bodyDiameter / 2
+  const upperChamferBoundaryRadius =
+    bodyRadius - PILLAR_CONFIGURATION.upperChamfer / 2
+  const upperChamferInsideRadius = upperChamferBoundaryRadius - 0.15
+  const upperChamferOutsideRadius = upperChamferBoundaryRadius + 0.15
 
   if (parameters.baseConnection) {
     expectMaterial(shape, failures, 'base-flange-inside', 3.4, 0.4, true)
@@ -224,7 +231,7 @@ function inspectEndProfiles(
     shape,
     failures,
     'upper-chamfer-inside',
-    1.4,
+    upperChamferInsideRadius,
     upperChamferZ,
     true,
   )
@@ -232,7 +239,7 @@ function inspectEndProfiles(
     shape,
     failures,
     'upper-chamfer-outside',
-    1.7,
+    upperChamferOutsideRadius,
     upperChamferZ,
     false,
   )

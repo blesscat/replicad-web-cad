@@ -16,7 +16,8 @@ describe('pillar contract', () => {
       bodyDiameter: 5,
       baseDiameter: 7,
       baseHeight: 0.8,
-      chamfer: 1,
+      lowerChamfer: 1,
+      upperChamfer: 0.5,
       defaultBaseConnection: false,
     })
     expect(

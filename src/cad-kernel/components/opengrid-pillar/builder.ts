@@ -88,10 +88,11 @@ function edgeIsAtAnyStation(
 function chamferAtStations(
   shape: Shape3D,
   stations: readonly number[],
+  distance: number,
 ): Shape3D {
   let chamfered: Shape3D | null = null
   try {
-    chamfered = shape.chamfer(PILLAR_CONFIGURATION.chamfer, (finder) =>
+    chamfered = shape.chamfer(distance, (finder) =>
       finder.when(({ element }) => edgeIsAtAnyStation(element, stations)),
     )
     if (!isShape3D(chamfered)) {
@@ -197,7 +198,16 @@ function buildPlainPillar(parameters: PillarParameters): Shape3D {
     parameters.length,
     [0, 0, 0],
   )
-  return chamferAtStations(cylinder, [0, parameters.length])
+  const lowerChamfered = chamferAtStations(
+    cylinder,
+    [0],
+    PILLAR_CONFIGURATION.lowerChamfer,
+  )
+  return chamferAtStations(
+    lowerChamfered,
+    [parameters.length],
+    PILLAR_CONFIGURATION.upperChamfer,
+  )
 }
 
 function buildBaseConnectionPillar(parameters: PillarParameters): Solid {
@@ -235,7 +245,11 @@ export async function buildPillar(
     await yieldAtSafeBoundary(context)
 
     if (parameters.baseConnection) {
-      shape = chamferAtStations(shape, [parameters.length])
+      shape = chamferAtStations(
+        shape,
+        [parameters.length],
+        PILLAR_CONFIGURATION.upperChamfer,
+      )
     }
 
     assertGenerationCurrent(context)

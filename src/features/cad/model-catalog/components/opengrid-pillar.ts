@@ -68,8 +68,7 @@ export const opengridPillarDefinition: ModelDefinition = {
   buildKey: 'opengrid-pillar',
   family: 'opengrid',
   displayName: 'OpenGrid 圓柱支柱',
-  selectionDescription:
-    'OpenGrid 用 Ø5 mm 圓柱支柱，總長度可調整為 3–500 mm，上端固定 1 mm chamfer，可選擇 Ø7 × 0.8 mm 的連接底版凸台。',
+  selectionDescription: `OpenGrid 用 Ø5 mm 圓柱支柱，總長度可調整為 3–500 mm，上端固定 ${PILLAR_CONFIGURATION.upperChamfer} mm chamfer，可選擇 Ø7 × 0.8 mm 的連接底版凸台。`,
   parameterSchema: PILLAR_PARAMETER_SCHEMA,
   defaultParameters: { ...PILLAR_CONFIGURATION.defaultParameters },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
