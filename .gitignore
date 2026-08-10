@@ -7,5 +7,6 @@ coverage/
 *.local
 .pnpm-store/
 .worktree/
+.worktrees/
 openspec/changes/archive/
 .DS_Store
