@@ -1,6 +1,6 @@
 ## Purpose
 
-讓使用者能從 replicad-web-cad 的主要頁面，以清楚、低摩擦且不需要網站自行處理付款資料的方式支持 CAD 工具後續開發。
+讓使用者能從 Shape Shortcut 的主要頁面，以清楚、低摩擦且不需要網站自行處理付款資料的方式支持 CAD 工具後續開發。
 
 ## Requirements
 
@@ -45,7 +45,7 @@ The system MUST treat the Portaly URL as replaceable public configuration. A con
 
 - **WHEN** a valid Portaly support URL is configured
 - **THEN** the support link MUST be rendered with that URL
-- **AND** the link MUST be available without a separate login to replicad-web-cad
+- **AND** the link MUST be available without a separate login to Shape Shortcut
 
 #### Scenario: Support URL is unavailable
 

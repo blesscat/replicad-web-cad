@@ -1,4 +1,4 @@
-# replicad-web-cad
+# shape-shortcut
 
 瀏覽器端 CAD Prototype：使用者調整 CAD component 的參數，以即時 3D 預覽查看結果，並從精確的 B-Rep 下載 STEP 或 STL 檔案。
 
@@ -194,7 +194,7 @@ Prototype 驗收使用的自動化瀏覽器 binary 為 Chromium `151.0.7922.34` 
 
 ## OpenSpec 文件
 
-- [變更提案](openspec/changes/archive/2026-08-02-replicad-web-cad/proposal.md)：目標、範圍與非目標。
-- [詳細設計](openspec/changes/archive/2026-08-02-replicad-web-cad/design.md)：架構、Worker contract、revision lifetime 與測試策略。
+- [變更提案](openspec/changes/archive/2026-08-02-shape-shortcut/proposal.md)：目標、範圍與非目標。
+- [詳細設計](openspec/changes/archive/2026-08-02-shape-shortcut/design.md)：架構、Worker contract、revision lifetime 與測試策略。
 - [能力規格](openspec/specs/cad-workspace/spec.md)：可觀察行為與驗收情境。
-- [實作任務](openspec/changes/archive/2026-08-02-replicad-web-cad/tasks.md)：實作順序與 quality gates。
+- [實作任務](openspec/changes/archive/2026-08-02-shape-shortcut/tasks.md)：實作順序與 quality gates。

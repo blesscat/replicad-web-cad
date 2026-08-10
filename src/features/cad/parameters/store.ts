@@ -7,7 +7,7 @@ import {
 import { getModelDefinition, modelDefinitions } from '../model-catalog'
 
 export const COMPONENT_PARAMETER_STORAGE_KEY =
-  'replicad-web-cad.component-parameters'
+  'shape-shortcut.component-parameters'
 export const COMPONENT_PARAMETER_STORAGE_VERSION = 1 as const
 
 export type ComponentParameterStorage = {
