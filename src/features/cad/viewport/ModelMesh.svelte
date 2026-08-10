@@ -3,6 +3,10 @@
   import * as THREE from 'three'
   import type { MeshSnapshot } from '../../../cad-contract/messages'
   import { CAD_VIEWPORT_CONFIG } from './config'
+  import {
+    createViewportEdgeGeometry,
+    createViewportEdgeMaterial,
+  } from './edge-lines'
 
   type Props = {
     mesh: MeshSnapshot
@@ -34,11 +38,16 @@
       emissiveIntensity: CAD_VIEWPORT_CONFIG.modelEmissiveIntensity,
       metalness: 0.18,
       roughness: 0.42,
+      polygonOffset: true,
+      polygonOffsetFactor: 1,
+      polygonOffsetUnits: 1,
     })
   }
 
   let geometry = $derived(createGeometry(mesh))
   let material = $derived(createMaterial())
+  let edgeGeometry = $derived(createViewportEdgeGeometry(geometry))
+  let edgeMaterial = $derived(createViewportEdgeMaterial())
 
   $effect(() => {
     const currentGeometry = geometry
@@ -49,6 +58,22 @@
     const currentMaterial = material
     return () => currentMaterial.dispose()
   })
+
+  $effect(() => {
+    const currentEdgeGeometry = edgeGeometry
+    return () => currentEdgeGeometry.dispose()
+  })
+
+  $effect(() => {
+    const currentEdgeMaterial = edgeMaterial
+    return () => currentEdgeMaterial.dispose()
+  })
 </script>
 
 <T.Mesh {geometry} {material} dispose={false} />
+<T.LineSegments
+  geometry={edgeGeometry}
+  material={edgeMaterial}
+  renderOrder={1}
+  dispose={false}
+/>

@@ -507,6 +507,49 @@ The viewport MUST use Threlte with Three.js to display the latest committed mode
 - **And** viewport 不得 crash
 - **And** viewport 不得為該損壞 mesh 顯示尺寸標註或 XYZ 座標方向指示器
 
+### Requirement: Viewport edge-line overlay
+
+The viewport MUST render a restrained edge-line overlay together with every valid committed model mesh. The overlay MUST include geometric boundaries and visually meaningful feature edges while suppressing ordinary triangulation edges that would make smooth or tessellated surfaces appear as a dense wireframe. The overlay MUST preserve the existing model shading and viewport lighting rather than replacing lighting with flat-color rendering.
+
+#### Scenario: Valid committed mesh shows model edges
+
+- **WHEN** a valid committed mesh for any registered model is displayed in the CAD viewport
+- **THEN** the visible outer contour and meaningful hard or recessed feature edges MUST have a clear line treatment
+- **AND** the line treatment MUST use a consistent style across model types and orbit views
+- **AND** the existing model shading, dimensions, grid and XYZ orientation indicator MUST remain visible
+
+#### Scenario: Tessellation edges remain suppressed
+
+- **WHEN** a model contains triangulated planar or smoothly curved faces
+- **THEN** ordinary internal triangle boundaries MUST NOT produce a dense wireframe-like overlay
+- **AND** actual model boundaries and sufficiently pronounced changes in face direction MUST remain represented
+
+#### Scenario: Hidden edges remain occluded
+
+- **WHEN** an edge is behind a visible model surface from the current camera pose
+- **THEN** that edge MUST NOT appear to pass through the surface
+- **AND** rotating the camera to expose the edge MUST make the edge eligible for display without changing the model data
+
+#### Scenario: Edge overlay follows committed revisions
+
+- **WHEN** a new model revision replaces the current committed mesh
+- **THEN** the viewport MUST remove the previous revision's edge overlay
+- **AND** the new revision's overlay MUST correspond only to the new committed mesh
+- **AND** no previous edge lines or line resources MAY remain visible after replacement
+
+#### Scenario: Pending or invalid input preserves the committed overlay
+
+- **WHEN** the user changes parameters while a new generation is pending, stale, invalid, or failed
+- **THEN** the viewport MUST keep the edge overlay associated with the last committed mesh
+- **AND** it MUST NOT derive edge lines from uncommitted input
+- **AND** camera pose, framing, dimensions, stale state and XYZ orientation behavior MUST remain governed by the existing viewport contract
+
+#### Scenario: No committed mesh has no edge overlay
+
+- **WHEN** the workspace has no valid committed mesh or mesh validation fails
+- **THEN** the viewport MUST NOT render edge lines, dimensions or an orientation indicator for that unavailable model
+- **AND** the existing no-model or validation-error behavior MUST remain intact
+
 ### Requirement: STEP 匯出
 
 The system MUST generate STEP from the selected component's existing, pinned committed model revision in the Worker. It MUST never reconstruct STEP from the viewport mesh. Export metadata and filename MUST be supplied by the selected catalog definition; the existing box filename format MUST remain `box-{width}x{depth}x{height}.step`, and modular-grid-base MUST use `modular-grid-base-{columns}x{rows}.step`.

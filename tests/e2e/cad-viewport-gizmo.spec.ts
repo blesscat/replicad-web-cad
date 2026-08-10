@@ -76,6 +76,21 @@ test('CAD viewport shows the XYZ orientation gizmo for box and OpenGrid', async 
   }
 })
 
+test('CAD viewport uses the available desktop width and height', async ({
+  page,
+  browserName,
+}) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/cad/box')
+  await waitForCadReady(page)
+
+  expect((await readRect(page.locator('main'))).width).toBeGreaterThan(1200)
+  expect(
+    (await readRect(page.getByTestId('cad-viewport'))).height,
+  ).toBeGreaterThan(520)
+})
+
 test('XYZ orientation gizmo follows orbit and stays anchored through model updates', async ({
   page,
   browserName,

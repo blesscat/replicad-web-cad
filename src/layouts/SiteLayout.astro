@@ -5,9 +5,10 @@ import { portalySupportUrl } from '../features/support/config'
 interface Props {
   title: string
   description?: string
+  fullWidth?: boolean
 }
 
-const { title, description } = Astro.props
+const { title, description, fullWidth = false } = Astro.props
 const normalizedPath = Astro.url.pathname.replace(/\/+$/, '') || '/'
 const isDocsPage = normalizedPath.startsWith('/docs')
 const isHomePage = normalizedPath === '/'
@@ -57,7 +58,12 @@ const isModelSelectionPage = normalizedPath === '/models'
           }
         </div>
       </nav>
-      <main class="mx-auto max-w-[1200px] p-[clamp(1.5rem,4vw,4rem)]">
+      <main
+        class:list={[
+          'p-[clamp(1.5rem,4vw,4rem)]',
+          !fullWidth && 'mx-auto max-w-[1200px]',
+        ]}
+      >
         <slot />
       </main>
     </div>

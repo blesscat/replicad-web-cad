@@ -3,6 +3,9 @@ import type { ViewportVector } from './coordinates'
 export const CAD_VIEWPORT_CONFIG = {
   modelColor: '#4e7cff',
   modelEmissiveIntensity: 0.2,
+  edgeThresholdAngle: 20,
+  edgeColor: '#1f3b74',
+  edgeOpacity: 0.72,
 } as const
 
 export const CAD_VIEWPORT_GIZMO = {
