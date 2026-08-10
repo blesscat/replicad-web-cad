@@ -3,6 +3,7 @@ import {
   HSW_CELL_CONFIGURATION,
   OPENGRID_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   PROTOTYPE_CONFIGURATION,
   boundsForOpenGrid,
   boundsForOpenGridStackableBox,
@@ -231,6 +232,7 @@ describe('OpenGrid stackable-box dimension calculation', () => {
   it('rounds each target up to the nearest half-cell that contains it', () => {
     const oneCell = sizeOf(
       boundsForOpenGridStackableBox({
+        ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
         x: 1,
         y: 1,
         height: 10,
@@ -271,6 +273,7 @@ describe('OpenGrid stackable-box dimension calculation', () => {
     const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
     const halfCell = sizeOf(
       boundsForOpenGridStackableBox({
+        ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
         x: configuration.gridStep,
         y: configuration.gridStep,
         height: configuration.defaultHeight,
@@ -294,6 +297,7 @@ describe('OpenGrid stackable-box dimension calculation', () => {
     const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
     const maximumWidth = sizeOf(
       boundsForOpenGridStackableBox({
+        ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
         x: configuration.maxX,
         y: configuration.minY,
         height: configuration.defaultHeight,

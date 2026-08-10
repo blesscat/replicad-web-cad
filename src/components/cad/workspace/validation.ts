@@ -7,6 +7,8 @@ import {
   OPENGRID_STACKABLE_CYLINDER_OPENING_PARAMETER_KEYS,
   parseOpenGridSnapDecimalInput,
   parseDimensionInput,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+  OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
   validateModelParameters,
   type HexagonalColumnParameters,
   type ModelId,
@@ -39,6 +41,7 @@ export const OPENGRID_STACKABLE_BOX_PARAMETER_KEYS: ModelParameterKey[] = [
   'cornerBottomHoles',
   'fullBottomHoleGrid',
   'basePlateMode',
+  ...OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
 ]
 export const OPENGRID_STACKABLE_CYLINDER_PARAMETER_KEYS: ModelParameterKey[] = [
   'diameter',
@@ -118,6 +121,25 @@ function legacyParameterDefault(
   )[key]
   if (typeof defaultValue === 'number') return String(defaultValue)
   return undefined
+}
+
+function legacyNumericDefault(
+  modelId: ModelId,
+  key: ModelParameterKey,
+): string | undefined {
+  if (
+    modelId !== 'opengrid-stackable-box' ||
+    !OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS.includes(
+      key as (typeof OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS)[number],
+    )
+  ) {
+    return undefined
+  }
+  const defaultValue =
+    OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS[
+      key as (typeof OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS)[number]
+    ]
+  return String(defaultValue)
 }
 
 function parseBooleanRawParameter(
@@ -203,15 +225,21 @@ export function rawFromParameters(
     'fullBottomHoleGrid' in parameters &&
     'basePlateMode' in parameters
   ) {
-    const stackableParameters = parameters as {
+    const stackableParameters = parameters as Partial<{
       x: number
       y: number
       height: number
       cornerBottomHoles: boolean
       fullBottomHoleGrid: boolean
       basePlateMode: boolean
-    }
-    return {
+    }> &
+      Partial<
+        Record<
+          (typeof OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS)[number],
+          number
+        >
+      >
+    const rawParameters: RawParameters = {
       x: String(stackableParameters.x),
       y: String(stackableParameters.y),
       height: String(stackableParameters.height),
@@ -219,6 +247,13 @@ export function rawFromParameters(
       fullBottomHoleGrid: String(stackableParameters.fullBottomHoleGrid),
       basePlateMode: String(stackableParameters.basePlateMode),
     }
+    for (const key of OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS) {
+      const value =
+        stackableParameters[key] ??
+        OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS[key]
+      rawParameters[key] = String(value)
+    }
+    return rawParameters
   }
 
   if ('x' in parameters && 'y' in parameters && 'height' in parameters) {
@@ -405,7 +440,11 @@ export function parseRawParameters(
         raw[key] ?? HEXAGONAL_COLUMN_CONFIGURATION.defaultOrientation
       continue
     }
-    const rawValue = raw[key] ?? legacyParameterDefault(modelId, key) ?? ''
+    const rawValue =
+      raw[key] ??
+      legacyParameterDefault(modelId, key) ??
+      legacyNumericDefault(modelId, key) ??
+      ''
     parsed[key] = usesHalfStepInput(modelId, key)
       ? parseHalfStepInput(rawValue)
       : parseDimensionInput(rawValue)

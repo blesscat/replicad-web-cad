@@ -5,7 +5,7 @@ import {
   HEXAGONAL_COLUMN_CONFIGURATION,
   OPENGRID_DIVIDER_CONFIGURATION,
   OPENGRID_CONFIGURATION,
-  OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   OPENGRID_SNAP_CONFIGURATION,
   PILLAR_CONFIGURATION,
@@ -78,16 +78,7 @@ function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
     }
   }
   if (modelId === 'opengrid-stackable-box') {
-    return {
-      x: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultX,
-      y: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultY,
-      height: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHeight,
-      cornerBottomHoles:
-        OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultCornerBottomHoles,
-      fullBottomHoleGrid:
-        OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultFullBottomHoleGrid,
-      basePlateMode: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultBasePlateMode,
-    }
+    return { ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS }
   }
   if (modelId === 'opengrid-stackable-cylinder') {
     return { ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS }

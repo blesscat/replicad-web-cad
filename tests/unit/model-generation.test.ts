@@ -8,6 +8,7 @@ import type {
 } from '../../src/cad-contract/units'
 import {
   OPENGRID_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   PROTOTYPE_CONFIGURATION,
 } from '../../src/cad-contract/units'
@@ -40,12 +41,7 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
   }
   if (modelId === 'opengrid-stackable-box') {
     return {
-      x: 2,
-      y: 2,
-      height: 10,
-      cornerBottomHoles: true,
-      fullBottomHoleGrid: false,
-      basePlateMode: false,
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
     }
   }
   if (modelId === 'opengrid-stackable-cylinder') {
@@ -471,6 +467,7 @@ describe('CAD model generation debounce', () => {
         kind: 'model.generate',
         modelId: 'opengrid-stackable-box',
         parameters: {
+          ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
           x: 1.5,
           y: 1,
           height: 10,

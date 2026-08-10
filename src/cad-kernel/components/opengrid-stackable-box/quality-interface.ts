@@ -2,10 +2,13 @@ import { measureVolume, type Shape3D } from 'replicad'
 import {
   externalOpenGridStackableBoxHeightFor,
   nominalOpenGridStackableBoxFootprintFor,
+  openGridStackableBoxDerivedGeometryFor,
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
   openGridStackableBoxSocketCentersFor,
   openGridStackableBoxUpperInnerRimZFor,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+  OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS,
   type OpenGridStackableBoxParameters,
 } from '../../../cad-contract/units'
 import {
@@ -237,20 +240,16 @@ function matingClearanceFixtureFor(height: number): MatingClearanceFixture {
   }
 
   const lowerParameters: OpenGridStackableBoxParameters = {
+    ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
     x: 1,
     y: 4,
     height,
-    cornerBottomHoles: true,
-    fullBottomHoleGrid: false,
-    basePlateMode: false,
   }
   const upperParameters: OpenGridStackableBoxParameters = {
+    ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
     x: 1,
     y: 1,
     height,
-    cornerBottomHoles: true,
-    fullBottomHoleGrid: false,
-    basePlateMode: false,
   }
   let lower = makeBoxShell(lowerParameters)
   let upper = makeBoxShell(upperParameters)
@@ -313,8 +312,23 @@ function chooseSafeCrossCenter(
   seamAxis: 'x' | 'y',
   parameters: OpenGridStackableBoxParameters,
 ): number {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
   const seams = bottomGridSeamsFor(parameters).filter(
     (seam) => seam.axis === seamAxis,
+  )
+  const derived = openGridStackableBoxDerivedGeometryFor(parameters)
+  const openingDirections = OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS.filter(
+    (direction) =>
+      (seamAxis === 'x' && (direction === '+Y' || direction === '-Y')) ||
+      (seamAxis === 'y' && (direction === '+X' || direction === '-X')),
+  )
+  const openings = openingDirections.map(
+    (direction) => derived.openings[direction],
+  )
+  const probeHalfLength = Math.min(2, length / 2)
+  const cornerCandidate = Math.max(
+    0,
+    length / 2 - configuration.outerCornerRadius - probeHalfLength - 0.15,
   )
   const candidates = [
     0,
@@ -322,15 +336,23 @@ function chooseSafeCrossCenter(
     length / 4 - 3.5,
     -length / 2 + 4,
     length / 2 - 4,
+    -cornerCandidate,
+    cornerCandidate,
   ]
   const minimumSeamDistance =
-    OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomGridSeamBedOpeningWidth / 2 +
-    0.25
+    configuration.bottomGridSeamBedOpeningWidth / 2 + 0.25
   return (
-    candidates.find((candidate) =>
-      seams.every(
-        (seam) => Math.abs(candidate - seam.position) > minimumSeamDistance,
-      ),
+    candidates.find(
+      (candidate) =>
+        seams.every(
+          (seam) => Math.abs(candidate - seam.position) > minimumSeamDistance,
+        ) &&
+        openings.every(
+          (opening) =>
+            !opening.enabled ||
+            Math.abs(candidate) - probeHalfLength >
+              opening.upperWidth / 2 + 0.2,
+        ),
     ) ?? 0
   )
 }
@@ -640,6 +662,10 @@ export function inspectOpenGridStackableBoxInterface(
     upperInnerRimZ + configuration.topRailHeight,
     configuration.outerCornerRadius,
   )
+  const railCrossCenters = {
+    x: chooseSafeCrossCenter(width, 'x', parameters),
+    y: chooseSafeCrossCenter(depth, 'y', parameters),
+  }
   const bearingLandVolumes = edgeBandVolumes(
     shape,
     width,
@@ -654,6 +680,7 @@ export function inspectOpenGridStackableBoxInterface(
       configuration.topRailHeight -
       configuration.topRailOuterChamfer -
       0.05,
+    railCrossCenters,
   )
   const topRailProbeVolumes = edgeBandVolumes(
     shape,
@@ -669,6 +696,7 @@ export function inspectOpenGridStackableBoxInterface(
       configuration.topRailHeight -
       configuration.topRailOuterChamfer -
       0.05,
+    railCrossCenters,
   )
   const bottom = inspectBottomSupport(shape, width, depth, parameters)
   const grid = inspectGridSeams(shape, parameters)

@@ -9,6 +9,7 @@ import {
 import {
   OPENGRID_CONFIGURATION,
   OPENGRID_DIVIDER_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   type OpenGridParameters,
 } from '../../src/cad-contract/units'
@@ -412,7 +413,7 @@ describe('CAD component catalog', () => {
       family: 'opengrid',
       displayName: 'OpenGrid 堆疊盒',
     })
-    expect(definition?.parameterSchema).toEqual([
+    expect(definition?.parameterSchema.slice(0, 3)).toEqual([
       expect.objectContaining({ key: 'x', min: 0.5, max: 17.5, step: 0.5 }),
       expect.objectContaining({ key: 'y', min: 0.5, max: 17.5, step: 0.5 }),
       expect.objectContaining({
@@ -425,16 +426,33 @@ describe('CAD component catalog', () => {
         sliderMax: 200,
       }),
     ])
-    expect(definition?.defaultParameters).toEqual({
-      x: 2,
-      y: 2,
-      height: 10,
-      cornerBottomHoles: true,
-      fullBottomHoleGrid: false,
-      basePlateMode: false,
+    expect(
+      definition?.parameterSchema.slice(3).map((field) => field.key),
+    ).toEqual([
+      'openingPlusXDepth',
+      'openingPlusXBottomLength',
+      'openingPlusXAngle',
+      'openingMinusXDepth',
+      'openingMinusXBottomLength',
+      'openingMinusXAngle',
+      'openingPlusYDepth',
+      'openingPlusYBottomLength',
+      'openingPlusYAngle',
+      'openingMinusYDepth',
+      'openingMinusYBottomLength',
+      'openingMinusYAngle',
+    ])
+    expect(definition?.parameterSchema.at(5)).toMatchObject({
+      key: 'openingPlusXAngle',
+      unit: '°',
+      sliderDirection: 'rtl',
     })
+    expect(definition?.defaultParameters).toEqual(
+      OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+    )
     expect(
       definition?.validateParameters({
+        ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
         x: 0.5,
         y: 1,
         height: 20,
@@ -447,6 +465,7 @@ describe('CAD component catalog', () => {
       value: {
         modelId: 'opengrid-stackable-box',
         parameters: {
+          ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
           x: 0.5,
           y: 1,
           height: 20,
@@ -458,6 +477,7 @@ describe('CAD component catalog', () => {
     })
     expect(
       definition?.exportFileName({
+        ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
         x: 1.5,
         y: 2,
         height: 30,
@@ -468,6 +488,7 @@ describe('CAD component catalog', () => {
     ).toBe('opengrid-stackable-box-1.5x2-h30.step')
     expect(
       definition?.stlFileName({
+        ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
         x: 1.5,
         y: 2,
         height: 30,

@@ -10,6 +10,7 @@ import { bottomGridSeamsFor } from './geometry'
 import { inspectOpenGridStackableBoxInterface } from './quality-interface'
 import { countSolids, isBRepValid } from './quality-metrics'
 import { assertBottomGridSpacing } from './quality-seams'
+import { assertOpenGridStackableBoxOpenings } from './quality-openings'
 import type { OpenGridStackableBoxInterfaceQualityReport } from './quality-types'
 import { closeEnough, readBounds } from './shared'
 
@@ -321,6 +322,7 @@ export function assertOpenGridStackableBoxGeometry(
   assertSocketLayout(parameters)
   assertValidShape(shape)
   assertInterfaceConstants()
+  assertOpenGridStackableBoxOpenings(shape, parameters)
 
   if (parameters.basePlateMode) return
 

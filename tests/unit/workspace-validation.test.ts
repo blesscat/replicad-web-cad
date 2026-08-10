@@ -10,8 +10,11 @@ import type {
   OpenGridSnapParameters,
   PillarParameters,
 } from '../../src/cad-contract/units'
-import { OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS } from '../../src/cad-contract/units'
-import { OPENGRID_DIVIDER_CONFIGURATION } from '../../src/cad-contract/units'
+import {
+  OPENGRID_DIVIDER_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+  OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+} from '../../src/cad-contract/units'
 import {
   parseRawParameters,
   rawFromParameters,
@@ -246,6 +249,7 @@ describe('CAD workspace validation helpers', () => {
 
   it('round-trips OpenGrid stackable-box half-cell inputs', () => {
     const parameters: OpenGridStackableBoxParameters = {
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
       x: 0.5,
       y: 1.5,
       height: 25,
@@ -262,8 +266,36 @@ describe('CAD workspace validation helpers', () => {
       cornerBottomHoles: 'true',
       fullBottomHoleGrid: 'true',
       basePlateMode: 'false',
+      openingPlusXDepth: '0',
+      openingPlusXBottomLength: '1',
+      openingPlusXAngle: '90',
+      openingMinusXDepth: '0',
+      openingMinusXBottomLength: '1',
+      openingMinusXAngle: '90',
+      openingPlusYDepth: '0',
+      openingPlusYBottomLength: '1',
+      openingPlusYAngle: '90',
+      openingMinusYDepth: '0',
+      openingMinusYBottomLength: '1',
+      openingMinusYAngle: '90',
     })
     expect(parseRawParameters(raw, 'opengrid-stackable-box')).toEqual({
+      valid: true,
+      value: parameters,
+    })
+    expect(
+      parseRawParameters(
+        {
+          x: '0.5',
+          y: '1.5',
+          height: '25',
+          cornerBottomHoles: 'true',
+          fullBottomHoleGrid: 'true',
+          basePlateMode: 'false',
+        },
+        'opengrid-stackable-box',
+      ),
+    ).toEqual({
       valid: true,
       value: parameters,
     })

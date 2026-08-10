@@ -5,11 +5,13 @@ import {
   openGridStackableBoxFileName,
   openGridStackableBoxStlFileName,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   validateOpenGridStackableBoxParameters,
+  type OpenGridStackableBoxOpeningParameterKey,
 } from '../../../../cad-contract/units'
 import type { ModelDefinition, ParameterField } from '../types'
 
-const OPENGRID_STACKABLE_BOX_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
+const BASE_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
   {
     key: 'x',
     label: 'X 格數',
@@ -45,6 +47,85 @@ const OPENGRID_STACKABLE_BOX_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
     sliderMin: OPENGRID_STACKABLE_BOX_CONFIGURATION.minHeight,
     sliderMax: OPENGRID_STACKABLE_BOX_CONFIGURATION.heightSliderMax,
   },
+]
+
+function openingFieldsFor(
+  direction: string,
+  depthKey: OpenGridStackableBoxOpeningParameterKey,
+  bottomLengthKey: OpenGridStackableBoxOpeningParameterKey,
+  angleKey: OpenGridStackableBoxOpeningParameterKey,
+): ReadonlyArray<ParameterField> {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  return [
+    {
+      key: depthKey,
+      label: '下切深度',
+      axis: direction,
+      unit: 'mm',
+      control: 'range-text',
+      defaultValue: configuration.defaultOpeningDepth,
+      min: configuration.openingDepthMin,
+      max: configuration.openingDepthMax,
+      step: configuration.openingDepthStep,
+      sliderMin: configuration.openingDepthMin,
+      sliderMax: configuration.openingDepthMax,
+    },
+    {
+      key: bottomLengthKey,
+      label: '切口底部長度',
+      axis: direction,
+      unit: 'mm',
+      control: 'range-text',
+      defaultValue: configuration.defaultOpeningBottomLength,
+      min: configuration.openingBottomLengthMin,
+      max: configuration.openingBottomLengthMax,
+      step: configuration.openingBottomLengthStep,
+      sliderMin: configuration.openingBottomLengthMin,
+      sliderMax: configuration.openingBottomLengthMax,
+    },
+    {
+      key: angleKey,
+      label: '側壁角度',
+      axis: direction,
+      unit: '°',
+      control: 'range-text',
+      defaultValue: configuration.defaultOpeningAngle,
+      min: configuration.openingAngleMin,
+      max: configuration.openingAngleMax,
+      step: configuration.openingAngleStep,
+      sliderMin: configuration.openingAngleMin,
+      sliderMax: configuration.openingAngleMax,
+      sliderDirection: 'rtl',
+    },
+  ]
+}
+
+const OPENGRID_STACKABLE_BOX_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
+  ...BASE_PARAMETER_SCHEMA,
+  ...openingFieldsFor(
+    '+X',
+    'openingPlusXDepth',
+    'openingPlusXBottomLength',
+    'openingPlusXAngle',
+  ),
+  ...openingFieldsFor(
+    '-X',
+    'openingMinusXDepth',
+    'openingMinusXBottomLength',
+    'openingMinusXAngle',
+  ),
+  ...openingFieldsFor(
+    '+Y',
+    'openingPlusYDepth',
+    'openingPlusYBottomLength',
+    'openingPlusYAngle',
+  ),
+  ...openingFieldsFor(
+    '-Y',
+    'openingMinusYDepth',
+    'openingMinusYBottomLength',
+    'openingMinusYAngle',
+  ),
 ]
 
 function validateDefinitionParameters(value: unknown) {
@@ -89,14 +170,7 @@ export const opengridStackableBoxDefinition: ModelDefinition = {
     'OpenGrid 堆疊盒；盒內淨高文字輸入 10–500 mm、slider 10–200 mm，X/Y footprint 上限 500 mm。',
   parameterSchema: OPENGRID_STACKABLE_BOX_PARAMETER_SCHEMA,
   defaultParameters: {
-    x: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultX,
-    y: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultY,
-    height: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHeight,
-    cornerBottomHoles:
-      OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultCornerBottomHoles,
-    fullBottomHoleGrid:
-      OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultFullBottomHoleGrid,
-    basePlateMode: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultBasePlateMode,
+    ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   validateParameters: validateDefinitionParameters,

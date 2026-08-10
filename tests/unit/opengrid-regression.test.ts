@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   OPENGRID_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   type OpenGridParameters,
 } from '../../src/cad-contract/units'
 import {
@@ -44,6 +45,7 @@ describe('existing OpenGrid regression contract', () => {
     const stackable = getModelDefinition('opengrid-stackable-box')
     const officialValues = officialParameters()
     const stackableValues = {
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
       x: 0.5,
       y: 1.5,
       height: 20,
@@ -102,6 +104,7 @@ describe('existing OpenGrid regression contract', () => {
     })
     const officialValues = officialParameters()
     const stackableValues = {
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
       x: 1,
       y: 2,
       height: 30,

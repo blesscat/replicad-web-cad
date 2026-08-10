@@ -9,6 +9,10 @@ import {
   nominalOpenGridStackableBoxBottomGridAxisPositionsFor,
   nominalOpenGridStackableBoxBottomGridCentersFor,
   nominalOpenGridStackableBoxFootprintFor,
+  openGridStackableBoxActiveFloorTopZFor,
+  openGridStackableBoxActiveUpperInnerRimZFor,
+  openGridStackableBoxDerivedGeometryFor,
+  openGridStackableBoxOpeningBottomLengthMaximumFor,
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
   openGridStackableBoxSocketCentersFor,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
@@ -26,6 +30,18 @@ function parameters(
     cornerBottomHoles: true,
     fullBottomHoleGrid: false,
     basePlateMode: false,
+    openingPlusXDepth: 0,
+    openingPlusXBottomLength: 1,
+    openingPlusXAngle: 90,
+    openingMinusXDepth: 0,
+    openingMinusXBottomLength: 1,
+    openingMinusXAngle: 90,
+    openingPlusYDepth: 0,
+    openingPlusYBottomLength: 1,
+    openingPlusYAngle: 90,
+    openingMinusYDepth: 0,
+    openingMinusYBottomLength: 1,
+    openingMinusYAngle: 90,
     ...overrides,
   }
 }
@@ -187,6 +203,139 @@ describe('OpenGrid stackable-box contract', () => {
         rows: 1,
       }),
     ).toBe(false)
+  })
+
+  it('normalizes a legacy box snapshot to disabled opening defaults', () => {
+    const legacy = {
+      x: 1,
+      y: 1,
+      height: 10,
+      cornerBottomHoles: true,
+      fullBottomHoleGrid: false,
+      basePlateMode: false,
+    }
+
+    const validation = validateOpenGridStackableBoxParameters(legacy)
+
+    expect(validation.valid).toBe(true)
+    if (!validation.valid) return
+    expect(validation.value.openingPlusXDepth).toBe(0)
+    expect(validation.value.openingMinusYBottomLength).toBe(1)
+    expect(validation.value.openingPlusYAngle).toBe(90)
+  })
+
+  it('keeps four opening triples independent and validates their ranges', () => {
+    const value = parameters({
+      y: 2,
+      openingPlusXDepth: 4,
+      openingPlusXBottomLength: 3,
+      openingPlusXAngle: 45,
+      openingMinusYDepth: 6,
+      openingMinusYBottomLength: 1,
+      openingMinusYAngle: 90,
+    })
+
+    expect(validateOpenGridStackableBoxParameters(value)).toEqual({
+      valid: true,
+      value,
+    })
+
+    for (const [field, invalidValue] of [
+      ['openingPlusXDepth', 4.5],
+      ['openingMinusXBottomLength', -1],
+      ['openingPlusYAngle', 0],
+      ['openingMinusYAngle', 91],
+    ] as const) {
+      const validation = validateOpenGridStackableBoxParameters({
+        ...value,
+        [field]: invalidValue,
+      })
+      expect(validation.valid).toBe(false)
+      if (!validation.valid) expect(validation.issues[0]?.field).toBe(field)
+    }
+  })
+
+  it('derives final floor/rim datums and rectangular wall axes per direction', () => {
+    const normal = parameters({ height: 20 })
+    const basePlate = parameters({ height: 20, basePlateMode: true })
+    const sloped = parameters({
+      y: 2,
+      height: 20,
+      openingPlusXDepth: 4,
+      openingPlusXBottomLength: 8,
+      openingPlusXAngle: 45,
+    })
+
+    expect(openGridStackableBoxActiveFloorTopZFor(normal)).toBe(5)
+    expect(openGridStackableBoxActiveFloorTopZFor(basePlate)).toBe(3)
+    expect(openGridStackableBoxActiveUpperInnerRimZFor(normal)).toBe(25)
+    expect(openGridStackableBoxActiveUpperInnerRimZFor(basePlate)).toBe(23)
+
+    const opening =
+      openGridStackableBoxDerivedGeometryFor(sloped).openings['+X']
+    expect(opening).toMatchObject({
+      normalAxis: 'x',
+      tangentAxis: 'y',
+      normalSign: 1,
+      enabled: true,
+      bottomZ: 21,
+      arcRadius: expect.closeTo(2.5, 5),
+      horizontalRun: expect.closeTo(13.621, 3),
+      upperWidth: expect.closeTo(35.242, 3),
+    })
+    expect(
+      openGridStackableBoxOpeningBottomLengthMaximumFor(sloped, '+X'),
+    ).toBe(17)
+  })
+
+  it('rejects enabled openings that pass the floor or the corner bridge', () => {
+    const belowFloor = validateOpenGridStackableBoxParameters(
+      parameters({ openingPlusXDepth: 11 }),
+    )
+    expect(belowFloor.valid).toBe(false)
+    if (!belowFloor.valid)
+      expect(belowFloor.issues[0]?.field).toBe('openingPlusXDepth')
+
+    const narrowSide = validateOpenGridStackableBoxParameters(
+      parameters({
+        x: 0.5,
+        y: 0.5,
+        openingPlusXDepth: 6,
+        openingPlusXBottomLength: 3,
+      }),
+    )
+    expect(narrowSide.valid).toBe(false)
+    if (!narrowSide.valid) {
+      expect(narrowSide.issues[0]?.field).toBe('openingPlusXBottomLength')
+    }
+  })
+
+  it('derives deterministic names only for enabled openings', () => {
+    const closed = {
+      modelId: 'opengrid-stackable-box' as const,
+      parameters: parameters({
+        openingPlusXBottomLength: 20,
+        openingPlusXAngle: 45,
+      }),
+    }
+    const open = {
+      ...closed,
+      parameters: parameters({ openingPlusXDepth: 4 }),
+    }
+
+    expect(modelFileName(closed)).toBe('opengrid-stackable-box-1x1-h10.step')
+    expect(modelStlFileName(closed)).toBe('opengrid-stackable-box-1x1-h10.stl')
+    expect(modelFileName(open)).not.toBe(modelFileName(closed))
+    expect(modelStlFileName(open)).not.toBe(modelStlFileName(closed))
+    const changedInertValue = {
+      ...open,
+      parameters: parameters({
+        openingPlusXDepth: 4,
+        openingMinusYAngle: 45,
+      }),
+    }
+    expect(modelFileName(changedInertValue)).not.toBe(modelFileName(open))
+    expect(modelStlFileName(changedInertValue)).not.toBe(modelStlFileName(open))
   })
 
   it.each([

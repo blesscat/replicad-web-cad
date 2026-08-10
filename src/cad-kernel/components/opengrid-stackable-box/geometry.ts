@@ -10,10 +10,14 @@ import {
 } from 'replicad'
 import {
   nominalOpenGridStackableBoxFootprintFor,
+  openGridStackableBoxDerivedGeometryFor,
   openGridStackableBoxUpperInnerRimZFor,
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
+  OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS,
   openGridStackableBoxSocketCentersFor,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  type OpenGridStackableBoxOpeningDirection,
+  type OpenGridStackableBoxDerivedOpening,
   type OpenGridStackableBoxParameters,
 } from '../../../cad-contract/units'
 import {
@@ -315,6 +319,256 @@ function extrudeProfile(
     deleteShape(sketch)
     sketcher.delete()
   }
+}
+
+function extrudeSideOpeningProfile(
+  plane: 'YZ' | 'XZ',
+  origin: [number, number, number],
+  opening: OpenGridStackableBoxDerivedOpening,
+  topZ: number,
+  distance: number,
+  direction: [number, number, number],
+): Shape3D {
+  const halfBottomLength = opening.bottomLength / 2
+  const cornerRadius = opening.arcRadius
+  const angleRadians = (opening.angle * Math.PI) / 180
+  const bottomZ = opening.bottomZ
+  const rightBottom: [number, number] = [halfBottomLength, bottomZ]
+  const rightTransition: [number, number] = [
+    halfBottomLength + opening.cornerRun,
+    bottomZ + opening.cornerRise,
+  ]
+  const leftTransition: [number, number] = [
+    -rightTransition[0],
+    rightTransition[1],
+  ]
+  const leftBottom: [number, number] = [-halfBottomLength, bottomZ]
+  const rightTopArcStart: [number, number] = [
+    rightTransition[0] + opening.straightSideRun,
+    topZ - opening.cornerRise,
+  ]
+  const leftTopArcStart: [number, number] = [
+    -rightTopArcStart[0],
+    rightTopArcStart[1],
+  ]
+  const rightTopEdge: [number, number] = [
+    rightTopArcStart[0] + opening.cornerRun,
+    topZ,
+  ]
+  const leftTopEdge: [number, number] = [-rightTopEdge[0], topZ]
+  const rightBottomMidpoint: [number, number] = [
+    halfBottomLength + cornerRadius * Math.sin(angleRadians / 2),
+    bottomZ + cornerRadius * (1 - Math.cos(angleRadians / 2)),
+  ]
+  const leftBottomMidpoint: [number, number] = [
+    -rightBottomMidpoint[0],
+    rightBottomMidpoint[1],
+  ]
+  const rightTopMidpoint: [number, number] = [
+    rightTopArcStart[0] +
+      cornerRadius * (Math.sin(angleRadians) - Math.sin(angleRadians / 2)),
+    rightTopArcStart[1] +
+      cornerRadius * (Math.cos(angleRadians / 2) - Math.cos(angleRadians)),
+  ]
+  const leftTopMidpoint: [number, number] = [
+    -rightTopMidpoint[0],
+    rightTopMidpoint[1],
+  ]
+  const topExtension = 0.04
+  const rightTopOuter: [number, number] = [rightTopEdge[0] + topExtension, topZ]
+  const leftTopOuter: [number, number] = [-rightTopOuter[0], topZ]
+  const rightTopOuterAbove: [number, number] = [
+    rightTopOuter[0],
+    topZ + topExtension,
+  ]
+  const leftTopOuterAbove: [number, number] = [
+    leftTopOuter[0],
+    topZ + topExtension,
+  ]
+  const sketcher = new Sketcher(plane, origin)
+  let sketch: ReturnType<Sketcher['close']> | null = null
+  let current: Shape3D | null = null
+  try {
+    sketcher.movePointerTo(leftBottom)
+    if (halfBottomLength > 0) sketcher.lineTo(rightBottom)
+    sketcher.threePointsArcTo(rightTransition, rightBottomMidpoint)
+    sketcher.lineTo(rightTopArcStart)
+    sketcher.threePointsArcTo(rightTopEdge, rightTopMidpoint)
+    sketcher.lineTo(rightTopOuter)
+    sketcher.lineTo(rightTopOuterAbove)
+    sketcher.lineTo(leftTopOuterAbove)
+    sketcher.lineTo(leftTopOuter)
+    sketcher.lineTo(leftTopEdge)
+    sketcher.threePointsArcTo(leftTopArcStart, leftTopMidpoint)
+    sketcher.lineTo(leftTransition)
+    sketcher.threePointsArcTo(leftBottom, leftBottomMidpoint)
+    sketch = sketcher.close()
+    current = sketch.extrude(distance, { extrusionDirection: direction })
+    const result = current
+    current = null
+    return result
+  } finally {
+    deleteShape(current)
+    deleteShape(sketch)
+    sketcher.delete()
+  }
+}
+
+function fuseSideOpeningCutterParts(
+  plane: 'YZ' | 'XZ',
+  wallOrigin: [number, number, number],
+  railOrigin: [number, number, number],
+  opening: OpenGridStackableBoxDerivedOpening,
+  topZ: number,
+  railStartZ: number,
+  width: number,
+  depth: number,
+  wallDistance: number,
+  railDistance: number,
+  direction: [number, number, number],
+): Shape3D {
+  const wallCutter = extrudeSideOpeningProfile(
+    plane,
+    wallOrigin,
+    opening,
+    topZ,
+    wallDistance,
+    direction,
+  )
+  let railCutter: Shape3D | null = extrudeSideOpeningProfile(
+    plane,
+    railOrigin,
+    opening,
+    topZ,
+    railDistance,
+    direction,
+  )
+  let railClip: Shape3D | null = makeBox(
+    [-width / 2 - 0.04, -depth / 2 - 0.04, railStartZ],
+    [width / 2 + 0.04, depth / 2 + 0.04, topZ + 0.04],
+  )
+  let clippedRailCutter: Shape3D | null = null
+  try {
+    clippedRailCutter = railCutter.intersect(railClip)
+    deleteShape(railCutter)
+    railCutter = null
+    deleteShape(railClip)
+    railClip = null
+    const result = wallCutter.fuse(clippedRailCutter)
+    deleteShape(wallCutter)
+    deleteShape(clippedRailCutter)
+    clippedRailCutter = null
+    return result
+  } catch (error) {
+    deleteShape(wallCutter)
+    deleteShape(railCutter)
+    deleteShape(railClip)
+    deleteShape(clippedRailCutter)
+    throw error
+  }
+}
+
+function makeSideOpeningCutter(
+  parameters: OpenGridStackableBoxParameters,
+  direction: OpenGridStackableBoxOpeningDirection,
+): Shape3D {
+  const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const derived = openGridStackableBoxDerivedGeometryFor(parameters)
+  const opening = derived.openings[direction]
+  const margin = 0.04
+  const upperRailInnerInset =
+    configuration.wallThickness + configuration.topRailInnerChamfer
+  const wallStart = configuration.wallThickness - margin
+  const topZ = derived.activeUpperOuterEdgeZ
+  const railStartZ = derived.activeUpperInnerRimZ - margin
+  const wallDistance = configuration.wallThickness + 2 * margin
+  const railDistance = upperRailInnerInset + 2 * margin
+  const railNormalInset = upperRailInnerInset + margin
+
+  if (direction === '+X') {
+    return fuseSideOpeningCutterParts(
+      'YZ',
+      [width / 2 - wallStart, 0, 0],
+      [width / 2 - railNormalInset, 0, 0],
+      opening,
+      topZ,
+      railStartZ,
+      width,
+      depth,
+      wallDistance,
+      railDistance,
+      [1, 0, 0],
+    )
+  }
+  if (direction === '-X') {
+    return fuseSideOpeningCutterParts(
+      'YZ',
+      [-width / 2 - margin, 0, 0],
+      [-width / 2 - margin, 0, 0],
+      opening,
+      topZ,
+      railStartZ,
+      width,
+      depth,
+      wallDistance,
+      railDistance,
+      [1, 0, 0],
+    )
+  }
+  if (direction === '+Y') {
+    return fuseSideOpeningCutterParts(
+      'XZ',
+      [0, depth / 2 - wallStart, 0],
+      [0, depth / 2 - railNormalInset, 0],
+      opening,
+      topZ,
+      railStartZ,
+      width,
+      depth,
+      wallDistance,
+      railDistance,
+      [0, 1, 0],
+    )
+  }
+  return fuseSideOpeningCutterParts(
+    'XZ',
+    [0, -depth / 2 - margin, 0],
+    [0, -depth / 2 - margin, 0],
+    opening,
+    topZ,
+    railStartZ,
+    width,
+    depth,
+    wallDistance,
+    railDistance,
+    [0, 1, 0],
+  )
+}
+
+export function addSideOpenings(
+  shape: Shape3D,
+  parameters: OpenGridStackableBoxParameters,
+  context: OpenGridStackableBoxBuildContext,
+): Shape3D {
+  const derived = openGridStackableBoxDerivedGeometryFor(parameters)
+  let current = shape
+
+  for (const direction of OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS) {
+    if (!derived.openings[direction].enabled) continue
+    assertGenerationCurrent(context)
+    const cutter = makeSideOpeningCutter(parameters, direction)
+    try {
+      const cut = current.cut(cutter)
+      deleteShape(current)
+      current = cut
+    } finally {
+      deleteShape(cutter)
+    }
+    assertGenerationCurrent(context)
+  }
+
+  return current
 }
 
 export type OpenGridStackableBoxBottomGridSeam = {
