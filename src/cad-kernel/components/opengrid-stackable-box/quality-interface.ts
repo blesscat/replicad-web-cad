@@ -242,6 +242,7 @@ function matingClearanceFixtureFor(height: number): MatingClearanceFixture {
     height,
     cornerBottomHoles: true,
     fullBottomHoleGrid: false,
+    basePlateMode: false,
   }
   const upperParameters: OpenGridStackableBoxParameters = {
     x: 1,
@@ -249,6 +250,7 @@ function matingClearanceFixtureFor(height: number): MatingClearanceFixture {
     height,
     cornerBottomHoles: true,
     fullBottomHoleGrid: false,
+    basePlateMode: false,
   }
   let lower = makeBoxShell(lowerParameters)
   let upper = makeBoxShell(upperParameters)

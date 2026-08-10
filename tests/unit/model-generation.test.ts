@@ -44,6 +44,7 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
       height: 10,
       cornerBottomHoles: true,
       fullBottomHoleGrid: false,
+      basePlateMode: false,
     }
   }
   if (modelId === 'opengrid-stackable-cylinder') {
@@ -428,6 +429,7 @@ describe('CAD model generation debounce', () => {
         height: 10,
         cornerBottomHoles: true,
         fullBottomHoleGrid: false,
+        basePlateMode: false,
       },
     )
     const handlers = createModelGenerationHandlers(context)
@@ -445,6 +447,7 @@ describe('CAD model generation debounce', () => {
           height: 10,
           cornerBottomHoles: true,
           fullBottomHoleGrid: false,
+          basePlateMode: false,
         },
       }),
     )

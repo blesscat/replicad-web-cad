@@ -19,6 +19,11 @@
     onInputChange('x', String(parameters.columns))
     onInputChange('y', String(parameters.rows))
   }
+
+  function handleBasePlateModeChange(event: Event): void {
+    if (!(event.currentTarget instanceof HTMLInputElement)) return
+    onInputChange('basePlateMode', event.currentTarget.value)
+  }
 </script>
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
@@ -27,7 +32,7 @@
     description=""
     onApply={handleDimensionCalculation}
   />
-  <div class="grid gap-2 rounded-lg border border-border-field p-3">
+  <div class="flex flex-wrap items-start gap-x-4 gap-y-2">
     <label class="flex min-w-0 items-start gap-2">
       <input
         aria-describedby={fieldErrors.cornerBottomHoles
@@ -69,6 +74,53 @@
       <span class="font-[650]">底部全孔模式</span>
     </label>
   </div>
+  <div aria-label="盒體模式" class="grid gap-1" role="radiogroup">
+    <div class="flex flex-wrap items-start gap-x-4 gap-y-2">
+      <label class="flex min-w-0 items-start gap-2">
+        <input
+          aria-describedby={fieldErrors.basePlateMode
+            ? 'basePlateMode-error'
+            : undefined}
+          aria-invalid={Boolean(fieldErrors.basePlateMode)}
+          aria-label="預設模式"
+          class="mt-1 accent-primary"
+          data-testid="opengrid-stackable-box-default-mode"
+          name="opengrid-stackable-box-mode"
+          type="radio"
+          value="false"
+          checked={rawParameters.basePlateMode !== 'true'}
+          onchange={handleBasePlateModeChange}
+        />
+        <span class="font-[650]">預設模式</span>
+      </label>
+      <label class="flex min-w-0 items-start gap-2">
+        <input
+          aria-describedby={fieldErrors.basePlateMode
+            ? 'basePlateMode-error'
+            : undefined}
+          aria-invalid={Boolean(fieldErrors.basePlateMode)}
+          aria-label="底版模式"
+          class="mt-1 accent-primary"
+          data-testid="opengrid-stackable-box-base-plate-mode"
+          name="opengrid-stackable-box-mode"
+          type="radio"
+          value="true"
+          checked={rawParameters.basePlateMode === 'true'}
+          onchange={handleBasePlateModeChange}
+        />
+        <span class="font-[650]">底版模式</span>
+      </label>
+    </div>
+    {#if rawParameters.basePlateMode === 'true'}
+      <span class="text-sm text-muted">
+        底版模式：不可堆疊，使用6mm固定柱
+      </span>
+    {:else}
+      <span class="text-sm text-muted">
+        預設模式：可堆疊滑動，使用標準8mm固定柱
+      </span>
+    {/if}
+  </div>
   {#if fieldErrors.cornerBottomHoles}
     <span class="text-sm text-error" id="cornerBottomHoles-error" role="alert"
       >{fieldErrors.cornerBottomHoles}</span
@@ -77,6 +129,11 @@
   {#if fieldErrors.fullBottomHoleGrid}
     <span class="text-sm text-error" id="fullBottomHoleGrid-error" role="alert"
       >{fieldErrors.fullBottomHoleGrid}</span
+    >
+  {/if}
+  {#if fieldErrors.basePlateMode}
+    <span class="text-sm text-error" id="basePlateMode-error" role="alert"
+      >{fieldErrors.basePlateMode}</span
     >
   {/if}
   {#each opengridStackableBoxDefinition.parameterSchema as field (field.key)}

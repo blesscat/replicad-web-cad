@@ -144,6 +144,7 @@ describe('CAD state machine', () => {
       height: 10,
       cornerBottomHoles: true,
       fullBottomHoleGrid: false,
+      basePlateMode: false,
     })
   })
 

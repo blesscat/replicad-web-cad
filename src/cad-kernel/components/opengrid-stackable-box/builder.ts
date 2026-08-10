@@ -5,6 +5,7 @@ import {
 } from '../../../cad-contract/units'
 import {
   addMountingSockets,
+  applyBasePlateMode,
   applyStackingProfile,
   makeBoxShell,
 } from './geometry'
@@ -42,6 +43,7 @@ export function buildOpenGridStackableBox(
   assertGenerationCurrent(context)
   shape = applyStackingProfile(shape, parameters, context)
   shape = addMountingSockets(shape, parameters, context)
+  shape = applyBasePlateMode(shape, parameters)
   assertGenerationCurrent(context)
   assertOpenGridStackableBoxGeometry(shape, parameters)
   return shape

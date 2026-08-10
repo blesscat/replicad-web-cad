@@ -416,6 +416,7 @@ describe('CAD component catalog', () => {
       height: 10,
       cornerBottomHoles: true,
       fullBottomHoleGrid: false,
+      basePlateMode: false,
     })
     expect(
       definition?.validateParameters({
@@ -424,6 +425,7 @@ describe('CAD component catalog', () => {
         height: 20,
         cornerBottomHoles: true,
         fullBottomHoleGrid: false,
+        basePlateMode: false,
       }),
     ).toEqual({
       valid: true,
@@ -435,6 +437,7 @@ describe('CAD component catalog', () => {
           height: 20,
           cornerBottomHoles: true,
           fullBottomHoleGrid: false,
+          basePlateMode: false,
         },
       },
     })
@@ -445,6 +448,7 @@ describe('CAD component catalog', () => {
         height: 30,
         cornerBottomHoles: true,
         fullBottomHoleGrid: false,
+        basePlateMode: false,
       }),
     ).toBe('opengrid-stackable-box-1.5x2-h30.step')
     expect(
@@ -454,6 +458,7 @@ describe('CAD component catalog', () => {
         height: 30,
         cornerBottomHoles: true,
         fullBottomHoleGrid: false,
+        basePlateMode: false,
       }),
     ).toBe('opengrid-stackable-box-1.5x2-h30.stl')
   })

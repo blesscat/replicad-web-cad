@@ -28,6 +28,27 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
   const fullGrid = page.getByRole('checkbox', { name: '底部全孔模式' })
   await expect(fullGrid).toBeVisible()
   await expect(fullGrid).not.toBeChecked()
+  const defaultMode = page.getByRole('radio', { name: '預設模式' })
+  await expect(defaultMode).toBeVisible()
+  await expect(defaultMode).toBeChecked()
+  const basePlate = page.getByRole('radio', { name: '底版模式' })
+  await expect(basePlate).toBeVisible()
+  await expect(basePlate).not.toBeChecked()
+  await expect(
+    page.getByText(/預設模式：可堆疊滑動，使用標準8mm固定柱/),
+  ).toBeVisible()
+  await expect(page.getByText(/底版模式：不可堆疊，使用6mm固定柱/)).toHaveCount(
+    0,
+  )
+  await basePlate.check()
+  await expect(basePlate).toBeChecked()
+  await expect(defaultMode).not.toBeChecked()
+  await expect(
+    page.getByText(/預設模式：可堆疊滑動，使用標準8mm固定柱/),
+  ).toHaveCount(0)
+  await expect(
+    page.getByText(/底版模式：不可堆疊，使用6mm固定柱/),
+  ).toBeVisible()
   await cornerHoles.uncheck()
   await expect(cornerHoles).not.toBeChecked()
   await fullGrid.check()

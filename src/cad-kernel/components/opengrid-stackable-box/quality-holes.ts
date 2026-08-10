@@ -80,22 +80,21 @@ function cylindricalFaceProfileAt(
 export function measureMountingHoleProfiles(
   shape: Shape3D,
   centers: ReadonlyArray<[number, number]>,
+  zRanges: {
+    lower: readonly [number, number]
+    upper: readonly [number, number]
+  } = {
+    lower: [-0.03, OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleStepHeight],
+    upper: [
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleStepHeight,
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight,
+    ],
+  },
 ): OpenGridStackableBoxMountingHoleProfile[] {
-  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
   const records = readFaceQualityRecords(shape)
   return centers.map((center) => {
-    const lower = cylindricalFaceProfileAt(
-      records,
-      center,
-      -0.03,
-      configuration.baseHoleStepHeight,
-    )
-    const upper = cylindricalFaceProfileAt(
-      records,
-      center,
-      configuration.baseHoleStepHeight,
-      configuration.bottomAssemblyHeight,
-    )
+    const lower = cylindricalFaceProfileAt(records, center, ...zRanges.lower)
+    const upper = cylindricalFaceProfileAt(records, center, ...zRanges.upper)
     return {
       center,
       lowerBoreDiameter: lower.diameter,

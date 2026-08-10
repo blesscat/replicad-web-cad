@@ -188,6 +188,7 @@ describe('HSW kernel model registration', () => {
         height: 20,
         cornerBottomHoles: true,
         fullBottomHoleGrid: false,
+        basePlateMode: false,
       },
       context,
     )
@@ -204,6 +205,7 @@ describe('HSW kernel model registration', () => {
         height: 20,
         cornerBottomHoles: true,
         fullBottomHoleGrid: false,
+        basePlateMode: false,
       },
       { isGenerationCurrent: undefined },
     )

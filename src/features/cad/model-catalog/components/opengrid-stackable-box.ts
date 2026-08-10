@@ -95,6 +95,7 @@ export const opengridStackableBoxDefinition: ModelDefinition = {
       OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultCornerBottomHoles,
     fullBottomHoleGrid:
       OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultFullBottomHoleGrid,
+    basePlateMode: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultBasePlateMode,
   },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   validateParameters: validateDefinitionParameters,

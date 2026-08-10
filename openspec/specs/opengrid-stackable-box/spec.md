@@ -6,13 +6,15 @@
 
 ### Requirement: OpenGrid stackable box parameters
 
-The system MUST expose an independently validated OpenGrid stackable-box model with stable `modelId=opengrid-stackable-box`. Its user-facing parameters MUST include `x`, `y`, `height`, the boolean `cornerBottomHoles`, and the boolean `fullBottomHoleGrid`; `x` and `y` MUST be positive multiples of 0.5, and the derived footprint MUST remain within the current 500 mm workspace limit. The standard OpenGrid pitch MUST be 28 mm. The generated footprint MUST apply a total 0.15 mm clearance per axis, so the nominal width and depth are `x × 28 − 0.15 mm` and `y × 28 − 0.15 mm`. The `height` control MUST represent the clear internal box height measured from the upper surface of the fixed 5.0 mm bottom assembly to the upper inner-rim datum, rather than the external Z bound. The bottom assembly height and reference-style upper interface height MUST remain fixed independently of `height`; the nominal external height MUST therefore be `height + 5.0 mm + 7.55 mm`, excluding only the small top-edge rounding tolerance. These height semantics MUST remain stable when stacking interfaces or either bottom-hole option is enabled. `cornerBottomHoles` MUST default to `true` and `fullBottomHoleGrid` MUST default to `false`, preserving the existing corner-socket-only default while allowing either option to be disabled or enabled independently.
+The system MUST expose an independently validated OpenGrid stackable-box model with stable `modelId=opengrid-stackable-box`. Its user-facing parameters MUST include `x`, `y`, `height`, the boolean `cornerBottomHoles`, the boolean `fullBottomHoleGrid`, and the boolean `basePlateMode`; `x` and `y` MUST be positive multiples of 0.5, and the derived footprint MUST remain within the current 500 mm workspace limit. The standard OpenGrid pitch MUST be 28 mm. The generated footprint MUST apply a total 0.15 mm clearance per axis, so the nominal width and depth are `x × 28 − 0.15 mm` and `y × 28 − 0.15 mm`. The `height` control MUST represent the clear internal box height measured from the upper surface of the fixed 5.0 mm bottom assembly to the upper inner-rim datum, rather than the external Z bound. In the normal mode, the bottom assembly height and reference-style upper interface height MUST remain fixed independently of `height`; the nominal external height MUST therefore be `height + 5.0 mm + 7.55 mm`, excluding only the small top-edge rounding tolerance. `cornerBottomHoles` MUST default to `true`, `fullBottomHoleGrid` MUST default to `false`, and `basePlateMode` MUST default to `false`, preserving the existing default while allowing the three boolean modes to be selected independently.
+
+The parameter panel MUST present the normal `預設模式` and `底版模式` choices as mutually exclusive radio options. The selected normal-mode description MUST read `預設模式：可堆疊滑動，使用標準8mm固定柱` The selected base-plate-mode description MUST read `底版模式：不可堆疊，使用6mm固定柱`
 
 The stackable-box parameter panel MUST provide a width/depth calculator that accepts X/Y dimensions in millimetres and chooses the smallest valid X/Y count on the 0.5-cell step whose generated footprint is not smaller than the requested dimensions. The calculator MUST use the same 28 mm pitch and 0.15 mm total per-axis clearance as the generated model.
 
 #### Scenario: Generate a full-cell box
 
-- **WHEN** a valid `x`, `y`, `height`, `cornerBottomHoles`, and `fullBottomHoleGrid` snapshot is submitted with whole-cell dimensions
+- **WHEN** a valid `x`, `y`, `height`, `cornerBottomHoles`, `fullBottomHoleGrid`, and `basePlateMode=false` snapshot is submitted with whole-cell dimensions
 - **THEN** the generated box MUST use 28 mm per OpenGrid cell before the 0.15 mm total axis clearance
 - **AND** the box MUST remain centered on X/Y with its base aligned to Z=0
 - **AND** the clear internal height MUST equal the requested `height`
@@ -28,7 +30,7 @@ The stackable-box parameter panel MUST provide a width/depth calculator that acc
 
 #### Scenario: Invalid dimensions or grid mode
 
-- **WHEN** `x`, `y`, or `height` is empty, non-finite, negative, zero, not on the permitted step, or outside the workspace limits, or `cornerBottomHoles` or `fullBottomHoleGrid` is not a boolean
+- **WHEN** `x`, `y`, or `height` is empty, non-finite, negative, zero, not on the permitted step, or outside the workspace limits, or `cornerBottomHoles`, `fullBottomHoleGrid`, or `basePlateMode` is not a boolean
 - **THEN** the model snapshot MUST be rejected with a field-specific validation error
 - **AND** no invalid shape or export request MUST be committed
 
@@ -37,7 +39,17 @@ The stackable-box parameter panel MUST provide a width/depth calculator that acc
 - **WHEN** a user enters requested X/Y dimensions in millimetres in the stackable-box calculator
 - **THEN** the calculator MUST evaluate candidate counts at 0.5-cell increments
 - **AND** it MUST return the closest counts whose generated X/Y footprints are greater than or equal to the requested dimensions
-- **AND** the returned counts MUST be applied to the stackable-box X/Y parameters without changing height, `cornerBottomHoles`, or `fullBottomHoleGrid`
+- **AND** the returned counts MUST be applied to the stackable-box X/Y parameters without changing height, `cornerBottomHoles`, `fullBottomHoleGrid`, or `basePlateMode`
+
+#### Scenario: Printable base-plate mode
+
+- **WHEN** a valid snapshot has `basePlateMode=true`
+- **THEN** the generator MUST keep the upper box body, open interior, and independent stepped top sliding rail
+- **AND** it MUST remove all geometry below the fixed 2.0 mm plane, leaving a 3.0 mm bottom shell to the fixed 5.0 mm interior-floor datum
+- **AND** the remaining cut face MUST be translated to `Z=0` and form a continuous printable base plate
+- **AND** the external height MUST be reduced by exactly 2.0 mm while the requested clear internal height and upper rail dimensions remain unchanged
+- **AND** the four corner sockets MUST use an outside/lower Ø5.05 mm bore for 2.0 mm followed by an inside/upper Ø7.05 mm retaining seat for 1.0 mm
+- **AND** the base-plate export MUST use a mode-specific filename so it cannot overwrite the normal stackable-box export
 
 ### Requirement: Identical box-to-box stacking interface
 
@@ -75,7 +87,7 @@ Every generated stackable box MUST have the same box-to-box interface and MUST b
 
 ### Requirement: OpenGrid Snap base mounting sockets
 
-The box MUST retain a fixed 5 mm bottom assembly. When `cornerBottomHoles` is `true`, it MUST provide nominal Ø5 mm base-mounting sockets at the external corner positions used by the OpenGrid Snap interface. When `cornerBottomHoles` is `false`, it MUST NOT cut those special Snap sockets. When `fullBottomHoleGrid` is `true`, the box MUST additionally provide the ordinary holes defined by the optional nominal OpenGrid bottom hole grid requirement; the ordinary grid holes MUST remain available even when `cornerBottomHoles` is `false`. For a full-cell axis with corner sockets enabled, the four special socket centers MUST occupy the outermost positions of the nominal 14 mm hole grid, 7 mm from the corresponding pre-clearance nominal box footprint edge. Each special socket MUST have a Ø5.05 mm base-facing bore through the lower/outside 3.0 mm of the fixed bottom assembly followed by a Ø7.05 mm bore through the upper/interior 2.0 mm toward the box interior; the diameter change MUST be a fixed planar retaining shoulder, not a long graduated lead-in, conical chamfer, or overlaid counterbore. The Ø7.05 mm upper opening MUST also serve as the retaining seat for a Ø5 mm shaft with a Ø5.8 mm flange. After insertion from inside the box, the flange's upper surface MUST be flush with the box interior floor and the shaft MUST extend approximately 3 mm below the box's outside bottom surface. The four nominal corner locations MUST be geometrically de-duplicated when a half-cell axis would otherwise cause overlapping Ø5 mm sockets, without removing the corresponding nominal grid position in full-hole mode.
+The box MUST retain a fixed 5 mm bottom assembly in normal mode. When `cornerBottomHoles` is `true`, it MUST provide nominal Ø5 mm base-mounting sockets at the external corner positions used by the OpenGrid Snap interface. When `cornerBottomHoles` is `false`, it MUST NOT cut those special Snap sockets. When `fullBottomHoleGrid` is `true`, the box MUST additionally provide the ordinary holes defined by the optional nominal OpenGrid bottom hole grid requirement; the ordinary grid holes MUST remain available even when `cornerBottomHoles` is `false`. For a full-cell axis with corner sockets enabled, the four special socket centers MUST occupy the outermost positions of the nominal 14 mm hole grid, 7 mm from the corresponding pre-clearance nominal box footprint edge. In normal mode, each special socket MUST have a Ø5.05 mm base-facing bore through the lower/outside 3.0 mm of the fixed bottom assembly followed by a Ø7.05 mm bore through the upper/interior 2.0 mm toward the box interior. In base-plate mode, each retained 3.0 mm base plate socket MUST instead have a Ø5.05 mm outside/lower bore for 2.0 mm followed by a Ø7.05 mm inside/upper retaining seat for 1.0 mm. In both modes, the diameter change MUST be a fixed planar retaining shoulder, not a long graduated lead-in, conical chamfer, or overlaid counterbore. The Ø7.05 mm upper opening MUST also serve as the retaining seat for a Ø5 mm shaft with a Ø5.8 mm flange. After insertion from inside the box, the flange's upper surface MUST be flush with the box interior floor and the shaft MUST extend approximately 3 mm below the box's outside bottom surface. The four nominal corner locations MUST be geometrically de-duplicated when a half-cell axis would otherwise cause overlapping Ø5 mm sockets, without removing the corresponding nominal grid position in full-hole mode.
 
 #### Scenario: Full-cell base mounting
 
@@ -189,7 +201,7 @@ The stackable-box builder MUST validate both bottom-hole options as part of the 
 
 ### Requirement: Stackable-box geometry quality and exports
 
-The stackable-box builder MUST produce a valid CAD result for every accepted parameter snapshot, including its open top, fixed 5 mm bottom assembly with a nominal 1.2 mm interior floor, nominal 1.2 mm side wall, fused reference-style stepped top rail with the fixed 1.75 / 1.2 / 0.8 / 1.8 / 2.0 mm upper sequence, fixed printable bottom guide with a 0.8 mm foot chamfer, 1.8 mm vertical support segment, and 1.2 mm 45° transition, retaining sockets, and supported half-cell layout. A successful result MUST be previewable and exportable through the existing STEP and STL workflows, while an invalid or failed mating/geometry validation MUST keep the result stale or invalid and MUST NOT enable export for that snapshot.
+The stackable-box builder MUST produce a valid CAD result for every accepted parameter snapshot. In normal mode this includes its open top, fixed 5 mm bottom assembly with a nominal 1.2 mm interior floor, nominal 1.2 mm side wall, fused reference-style stepped top rail with the fixed 1.75 / 1.2 / 0.8 / 1.8 / 2.0 mm upper sequence, fixed printable bottom guide with a 0.8 mm foot chamfer, 1.8 mm vertical support segment, and 1.2 mm 45° transition, retaining sockets, and supported half-cell layout. In base-plate mode the lower guide is intentionally removed by the fixed 3.8 mm clipping plane and the resulting plate is validated as one solid. A successful result MUST be previewable and exportable through the existing STEP and STL workflows, while an invalid or failed mating/geometry validation MUST keep the result stale or invalid and MUST NOT enable export for that snapshot.
 
 #### Scenario: Successful stackable-box generation
 
@@ -200,6 +212,13 @@ The stackable-box builder MUST produce a valid CAD result for every accepted par
 - **AND** every internal 28 mm grid seam MUST use the reference-style supported relief and MUST retain solid floor material above the relief instead of cutting into the box interior
 - **AND** the stepped top rail MUST be fused to the side wall and remain inside the requested external bounds
 - **AND** STEP and STL export MUST be available for the committed revision
+
+#### Scenario: Successful base-plate generation
+
+- **WHEN** a valid snapshot with `basePlateMode=true` completes generation and validation
+- **THEN** the workspace MUST commit a non-empty single solid whose minimum Z bound is 0
+- **AND** the bottom surface MUST be continuous at the clipped base-plate plane without the lower guide feet or seam relief below it
+- **AND** the upper stepped sliding rail MUST remain present and exportable
 
 #### Scenario: Failed geometry validation
 

@@ -1,4 +1,5 @@
 import {
+  makeBox,
   loft,
   makeCompound,
   makeCylinder,
@@ -9,6 +10,7 @@ import {
 } from 'replicad'
 import {
   nominalOpenGridStackableBoxFootprintFor,
+  openGridStackableBoxUpperInnerRimZFor,
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
   openGridStackableBoxSocketCentersFor,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
@@ -221,6 +223,43 @@ export function makeBoxShell(
   }
 }
 
+function originalExternalHeight(
+  parameters: OpenGridStackableBoxParameters,
+): number {
+  return (
+    openGridStackableBoxUpperInnerRimZFor(parameters) +
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailHeight
+  )
+}
+
+export function applyBasePlateMode(
+  shape: Shape3D,
+  parameters: OpenGridStackableBoxParameters,
+): Shape3D {
+  if (!parameters.basePlateMode) return shape
+
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
+  const cutoffHeight = configuration.basePlateCutoffHeight
+  const clippingBox = makeBox(
+    [-width / 2 - 1, -depth / 2 - 1, cutoffHeight],
+    [width / 2 + 1, depth / 2 + 1, originalExternalHeight(parameters) + 1],
+  )
+  let clipped: Shape3D | null = null
+  try {
+    clipped = shape.intersect(clippingBox)
+    deleteShape(shape)
+    const result = clipped.translateZ(-cutoffHeight)
+    clipped = null
+    return result
+  } catch (error) {
+    deleteShape(clipped)
+    throw error
+  } finally {
+    deleteShape(clippingBox)
+  }
+}
+
 export function bottomStackingSupportTopZ(): number {
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
   return (
@@ -403,7 +442,7 @@ function addIntegratedStackingProfile(
   return current
 }
 
-function makeMountingHoleCutter(): Shape3D {
+function makeStandardMountingHoleCutter(): Shape3D {
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
   const bottomSection = makeCylinder(
     configuration.baseHoleBottomOpeningDiameter / 2,
@@ -423,6 +462,36 @@ function makeMountingHoleCutter(): Shape3D {
   return cutter
 }
 
+function makeBasePlateMountingHoleCutter(): Shape3D {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const lowerSection = makeCylinder(
+    configuration.baseHoleBottomOpeningDiameter / 2,
+    configuration.basePlateHoleBottomDepth + 0.02,
+    [0, 0, configuration.basePlateCutoffHeight - 0.01],
+  )
+  const upperSection = makeCylinder(
+    configuration.baseHoleTopOpeningDiameter / 2,
+    configuration.basePlateHoleTopDepth + 0.02,
+    [
+      0,
+      0,
+      configuration.basePlateCutoffHeight +
+        configuration.basePlateHoleBottomDepth,
+    ],
+  )
+  const cutter = lowerSection.fuse(upperSection)
+  deleteShape(lowerSection)
+  deleteShape(upperSection)
+  return cutter
+}
+
+function makeMountingHoleCutter(
+  parameters: OpenGridStackableBoxParameters,
+): Shape3D {
+  if (parameters.basePlateMode) return makeBasePlateMountingHoleCutter()
+  return makeStandardMountingHoleCutter()
+}
+
 function makeOrdinaryBottomHoleCutter(): Shape3D {
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
   return makeCylinder(
@@ -439,7 +508,7 @@ export function addMountingSockets(
 ): Shape3D {
   const centers = openGridStackableBoxSocketCentersFor(parameters)
   const socketCutters = centers.map(([x, y]) =>
-    makeMountingHoleCutter().translate(x, y, 0),
+    makeMountingHoleCutter(parameters).translate(x, y, 0),
   )
   assertGenerationCurrent(context)
   let current = cutWithToolBatch(shape, socketCutters)

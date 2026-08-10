@@ -118,6 +118,21 @@ function assertInterfaceConstants(): void {
       configuration.bottomGridSeamOpeningWidth ||
     configuration.bottomGridSeamBedOpeningWidth <=
       configuration.bottomGridSeamSupportOpeningWidth ||
+    configuration.basePlateThickness <= 0 ||
+    configuration.basePlateCutoffHeight <= 0 ||
+    !closeEnough(
+      configuration.basePlateThickness + configuration.basePlateCutoffHeight,
+      configuration.bottomAssemblyHeight,
+      0.001,
+    ) ||
+    configuration.basePlateHoleBottomDepth <= 0 ||
+    configuration.basePlateHoleTopDepth <= 0 ||
+    !closeEnough(
+      configuration.basePlateHoleBottomDepth +
+        configuration.basePlateHoleTopDepth,
+      configuration.basePlateThickness,
+      0.001,
+    ) ||
     configuration.wallThickness - configuration.stackingClearance <= 0 ||
     configuration.stackingBearingLand <= 0 ||
     configuration.stackingBearingLand >= configuration.topRailWidth
@@ -306,6 +321,8 @@ export function assertOpenGridStackableBoxGeometry(
   assertSocketLayout(parameters)
   assertValidShape(shape)
   assertInterfaceConstants()
+
+  if (parameters.basePlateMode) return
 
   let quality: OpenGridStackableBoxInterfaceQualityReport
   try {

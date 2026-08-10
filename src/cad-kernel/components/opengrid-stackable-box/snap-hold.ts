@@ -112,6 +112,7 @@ export function inspectOpenGridSnapHoldCompatibility(
     height: 10,
     cornerBottomHoles: true,
     fullBottomHoleGrid: false,
+    basePlateMode: false,
   },
 ): OpenGridSnapHoldCompatibilityReport {
   assertReferenceBounds(reference)
@@ -173,6 +174,7 @@ export function assertOpenGridSnapHoldCompatibility(
     height: 10,
     cornerBottomHoles: true,
     fullBottomHoleGrid: false,
+    basePlateMode: false,
   },
 ): void {
   const report = inspectOpenGridSnapHoldCompatibility(reference, parameters)

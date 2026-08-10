@@ -47,7 +47,9 @@ describe('existing OpenGrid regression contract', () => {
       x: 0.5,
       y: 1.5,
       height: 20,
+      cornerBottomHoles: true,
       fullBottomHoleGrid: false,
+      basePlateMode: false,
     }
 
     expect(cadPathForModel('opengrid')).toBe('/cad/opengrid')
@@ -103,7 +105,9 @@ describe('existing OpenGrid regression contract', () => {
       x: 1,
       y: 2,
       height: 30,
+      cornerBottomHoles: true,
       fullBottomHoleGrid: false,
+      basePlateMode: false,
     }
 
     expect(store.set('opengrid', officialValues)).toBe(true)

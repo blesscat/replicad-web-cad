@@ -236,6 +236,7 @@ describe('OpenGrid stackable-box dimension calculation', () => {
         height: 10,
         cornerBottomHoles: true,
         fullBottomHoleGrid: false,
+        basePlateMode: false,
       }),
     )
     const result = calculateOpenGridStackableBoxCounts({
@@ -275,6 +276,7 @@ describe('OpenGrid stackable-box dimension calculation', () => {
         height: configuration.defaultHeight,
         cornerBottomHoles: true,
         fullBottomHoleGrid: false,
+        basePlateMode: false,
       }),
     )
     const result = calculateOpenGridStackableBoxCounts({
@@ -297,6 +299,7 @@ describe('OpenGrid stackable-box dimension calculation', () => {
         height: configuration.defaultHeight,
         cornerBottomHoles: true,
         fullBottomHoleGrid: false,
+        basePlateMode: false,
       }),
     ).x
     const result = calculateOpenGridStackableBoxCounts({

@@ -108,6 +108,7 @@ function stackableBoxGenerateCommand(
       height: 20,
       cornerBottomHoles: true,
       fullBottomHoleGrid: false,
+      basePlateMode: false,
     },
     previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
     ...overrides,
@@ -385,6 +386,7 @@ describe('OpenGrid Worker runtime', () => {
           height: 20,
           cornerBottomHoles: true,
           fullBottomHoleGrid: true,
+          basePlateMode: false,
         },
       }),
     )
@@ -397,6 +399,7 @@ describe('OpenGrid Worker runtime', () => {
         height: 20,
         cornerBottomHoles: true,
         fullBottomHoleGrid: true,
+        basePlateMode: false,
       },
       expect.any(Object),
     )
@@ -432,6 +435,7 @@ describe('OpenGrid Worker runtime', () => {
         height: number
         cornerBottomHoles: boolean
         fullBottomHoleGrid: boolean
+        basePlateMode: boolean
       }
       workerEpoch: string
     }
@@ -441,6 +445,7 @@ describe('OpenGrid Worker runtime', () => {
       height: 20,
       cornerBottomHoles: true,
       fullBottomHoleGrid: true,
+      basePlateMode: false,
     })
 
     await runtime.handle({
@@ -721,6 +726,7 @@ describe('OpenGrid Worker runtime', () => {
           height: 20,
           cornerBottomHoles: true,
           fullBottomHoleGrid: false,
+          basePlateMode: false,
         },
       }),
     )
@@ -749,6 +755,7 @@ describe('OpenGrid Worker runtime', () => {
           height: 20,
           cornerBottomHoles: true,
           fullBottomHoleGrid: false,
+          basePlateMode: false,
         },
       }),
     )

@@ -35,6 +35,7 @@ export const OPENGRID_STACKABLE_BOX_PARAMETER_KEYS: ModelParameterKey[] = [
   'height',
   'cornerBottomHoles',
   'fullBottomHoleGrid',
+  'basePlateMode',
 ]
 export const OPENGRID_STACKABLE_CYLINDER_PARAMETER_KEYS: ModelParameterKey[] = [
   'diameter',
@@ -160,7 +161,8 @@ export function rawFromParameters(
     'y' in parameters &&
     'height' in parameters &&
     'cornerBottomHoles' in parameters &&
-    'fullBottomHoleGrid' in parameters
+    'fullBottomHoleGrid' in parameters &&
+    'basePlateMode' in parameters
   ) {
     const stackableParameters = parameters as {
       x: number
@@ -168,6 +170,7 @@ export function rawFromParameters(
       height: number
       cornerBottomHoles: boolean
       fullBottomHoleGrid: boolean
+      basePlateMode: boolean
     }
     return {
       x: String(stackableParameters.x),
@@ -175,6 +178,7 @@ export function rawFromParameters(
       height: String(stackableParameters.height),
       cornerBottomHoles: String(stackableParameters.cornerBottomHoles),
       fullBottomHoleGrid: String(stackableParameters.fullBottomHoleGrid),
+      basePlateMode: String(stackableParameters.basePlateMode),
     }
   }
 
@@ -327,7 +331,8 @@ export function parseRawParameters(
       key === 'baseConnection' ||
       key === 'thinBottomMode' ||
       key === 'bottomPlateMode' ||
-      key === 'bottomHolesEnabled'
+      key === 'bottomHolesEnabled' ||
+      key === 'basePlateMode'
     ) {
       const rawValue = raw[key] ?? legacyBooleanDefault(modelId, key)
       if (rawValue !== 'true' && rawValue !== 'false') {

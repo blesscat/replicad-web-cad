@@ -1,5 +1,10 @@
 export type OpenGridStackableBoxParameterKey =
-  'x' | 'y' | 'height' | 'cornerBottomHoles' | 'fullBottomHoleGrid'
+  | 'x'
+  | 'y'
+  | 'height'
+  | 'cornerBottomHoles'
+  | 'fullBottomHoleGrid'
+  | 'basePlateMode'
 
 export type OpenGridStackableBoxParameters = {
   x: number
@@ -7,6 +12,7 @@ export type OpenGridStackableBoxParameters = {
   height: number
   cornerBottomHoles: boolean
   fullBottomHoleGrid: boolean
+  basePlateMode: boolean
 }
 
 export type OpenGridStackableBoxValidationIssue = {
@@ -29,6 +35,7 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   defaultHeight: 10,
   defaultCornerBottomHoles: true,
   defaultFullBottomHoleGrid: false,
+  defaultBasePlateMode: false,
   minX: 0.5,
   maxX: 17.5,
   minY: 0.5,
@@ -58,12 +65,16 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   bottomGridSeamOpeningWidth: 1.6,
   bottomGridSeamBedOpeningWidth: 5.6,
   bottomGridSeamSupportOpeningWidth: 4,
+  basePlateThickness: 3,
+  basePlateCutoffHeight: 2,
   baseHoleDiameter: 5,
   baseHoleClearance: 0.25,
   baseHoleOffset: 7,
   baseHoleBottomOpeningDiameter: 5.05,
   baseHoleTopOpeningDiameter: 7.05,
   baseHoleStepHeight: 3,
+  basePlateHoleBottomDepth: 2,
+  basePlateHoleTopDepth: 1,
   bottomHoleGridPitch: 14,
   bottomHoleGridEdgeOffset: 7,
   bottomGridHoleDiameter: 5.05,
@@ -160,6 +171,18 @@ function validateFullBottomHoleGrid(
   }
 }
 
+function validateBasePlateMode(
+  value: unknown,
+  issues: OpenGridStackableBoxValidationIssue[],
+): void {
+  if (typeof value !== 'boolean') {
+    issues.push({
+      field: 'basePlateMode',
+      message: '底版模式必須是布林值。',
+    })
+  }
+}
+
 export function nominalOpenGridStackableBoxFootprintFor(
   parameters: OpenGridStackableBoxParameters,
 ): [number, number] {
@@ -183,9 +206,13 @@ export function openGridStackableBoxUpperInnerRimZFor(
 export function externalOpenGridStackableBoxHeightFor(
   parameters: OpenGridStackableBoxParameters,
 ): number {
+  const basePlateCutoff = parameters.basePlateMode
+    ? OPENGRID_STACKABLE_BOX_CONFIGURATION.basePlateCutoffHeight
+    : 0
   return (
     openGridStackableBoxUpperInnerRimZFor(parameters) +
-    OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailHeight
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailHeight -
+    basePlateCutoff
   )
 }
 
@@ -212,6 +239,7 @@ export function validateOpenGridStackableBoxParameters(
       'height',
       'cornerBottomHoles',
       'fullBottomHoleGrid',
+      'basePlateMode',
     ])
   ) {
     issues.push({ field: 'parameters', message: '包含不支援的參數欄位。' })
@@ -234,6 +262,7 @@ export function validateOpenGridStackableBoxParameters(
   validateHeight(value.height, issues)
   validateCornerBottomHoles(value.cornerBottomHoles, issues)
   validateFullBottomHoleGrid(value.fullBottomHoleGrid, issues)
+  validateBasePlateMode(value.basePlateMode, issues)
 
   if (issues.length > 0) return { valid: false, issues }
 
@@ -243,6 +272,7 @@ export function validateOpenGridStackableBoxParameters(
     height: value.height as number,
     cornerBottomHoles: value.cornerBottomHoles as boolean,
     fullBottomHoleGrid: value.fullBottomHoleGrid as boolean,
+    basePlateMode: value.basePlateMode as boolean,
   }
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
   if (width > OPENGRID_STACKABLE_BOX_CONFIGURATION.workspaceMaxDimension) {
@@ -402,11 +432,13 @@ export function boundsForOpenGridStackableBox(
 export function openGridStackableBoxFileName(
   parameters: OpenGridStackableBoxParameters,
 ): string {
-  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}.step`
+  const modeSuffix = parameters.basePlateMode ? '-base-plate' : ''
+  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${modeSuffix}.step`
 }
 
 export function openGridStackableBoxStlFileName(
   parameters: OpenGridStackableBoxParameters,
 ): string {
-  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}.stl`
+  const modeSuffix = parameters.basePlateMode ? '-base-plate' : ''
+  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${modeSuffix}.stl`
 }

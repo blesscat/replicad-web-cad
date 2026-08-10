@@ -85,7 +85,13 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
     value,
     'fullBottomHoleGrid',
   )
-  if (hasCornerBottomHoles && hasFullBottomHoleGrid) return value
+  const hasBasePlateMode = Object.prototype.hasOwnProperty.call(
+    value,
+    'basePlateMode',
+  )
+  if (hasCornerBottomHoles && hasFullBottomHoleGrid && hasBasePlateMode) {
+    return value
+  }
 
   return {
     ...value,
@@ -93,6 +99,7 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
     fullBottomHoleGrid: hasFullBottomHoleGrid
       ? value.fullBottomHoleGrid
       : false,
+    basePlateMode: hasBasePlateMode ? value.basePlateMode : false,
   }
 }
 

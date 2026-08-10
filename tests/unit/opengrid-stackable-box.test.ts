@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   boundsForModel,
   boundsForOpenGridStackableBox,
+  externalOpenGridStackableBoxHeightFor,
   isOpenGridStackableBoxParameters,
   modelFileName,
   modelStlFileName,
@@ -24,6 +25,7 @@ function parameters(
     height: 10,
     cornerBottomHoles: true,
     fullBottomHoleGrid: false,
+    basePlateMode: false,
     ...overrides,
   }
 }
@@ -107,6 +109,30 @@ describe('OpenGrid stackable-box contract', () => {
       OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleTopOpeningDiameter,
     ).toBe(7.05)
     expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleStepHeight).toBe(3)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.basePlateThickness).toBe(3)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.basePlateCutoffHeight).toBe(2)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.basePlateHoleTopDepth).toBe(1)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.basePlateHoleBottomDepth).toBe(
+      2,
+    )
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultBasePlateMode).toBe(
+      false,
+    )
+  })
+
+  it('shortens the exported envelope when the base-plate mode is enabled', () => {
+    const normal = parameters({ height: 20 })
+    const basePlate = parameters({ height: 20, basePlateMode: true })
+
+    expect(externalOpenGridStackableBoxHeightFor(normal)).toBeCloseTo(32.55, 3)
+    expect(externalOpenGridStackableBoxHeightFor(basePlate)).toBeCloseTo(
+      30.55,
+      3,
+    )
+    expect(boundsForOpenGridStackableBox(basePlate)).toMatchObject({
+      min: [-13.925, -13.925, 0],
+      max: [13.925, 13.925, expect.closeTo(30.55, 5)],
+    })
   })
 
   it('derives centered 28 mm footprints with total 0.15 mm clearance', () => {
@@ -161,6 +187,7 @@ describe('OpenGrid stackable-box contract', () => {
     [parameters({ height: 501 }), 'height'],
     [parameters({ cornerBottomHoles: 'true' as never }), 'cornerBottomHoles'],
     [parameters({ fullBottomHoleGrid: 'true' as never }), 'fullBottomHoleGrid'],
+    [parameters({ basePlateMode: 'true' as never }), 'basePlateMode'],
   ])(
     'rejects invalid %s values with a field-specific issue',
     (value, field) => {
@@ -254,5 +281,21 @@ describe('OpenGrid stackable-box contract', () => {
 
     expect(modelFileName(model)).toBe('opengrid-stackable-box-1.5x2-h30.step')
     expect(modelStlFileName(model)).toBe('opengrid-stackable-box-1.5x2-h30.stl')
+
+    const basePlateModel = {
+      modelId: 'opengrid-stackable-box' as const,
+      parameters: parameters({
+        x: 1.5,
+        y: 2,
+        height: 30,
+        basePlateMode: true,
+      }),
+    }
+    expect(modelFileName(basePlateModel)).toBe(
+      'opengrid-stackable-box-1.5x2-h30-base-plate.step',
+    )
+    expect(modelStlFileName(basePlateModel)).toBe(
+      'opengrid-stackable-box-1.5x2-h30-base-plate.stl',
+    )
   })
 })

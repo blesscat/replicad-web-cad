@@ -30,6 +30,7 @@ import {
 import { exportStlBytes, exportStepBytes } from '../../src/cad-kernel/export'
 import { meshBRep } from '../../src/cad-kernel/mesh'
 import { bottomStackingProfileTopZ } from '../../src/cad-kernel/components/opengrid-stackable-box/geometry'
+import { measureMountingHoleProfiles } from '../../src/cad-kernel/components/opengrid-stackable-box/quality-holes'
 
 ;(globalThis as typeof globalThis & { __dirname?: string }).__dirname = dirname(
   fileURLToPath(import.meta.url),
@@ -62,6 +63,7 @@ function parameters(
     height: overrides.height ?? 10,
     cornerBottomHoles: overrides.cornerBottomHoles ?? true,
     fullBottomHoleGrid: overrides.fullBottomHoleGrid ?? false,
+    basePlateMode: overrides.basePlateMode ?? false,
   }
 }
 
@@ -205,6 +207,53 @@ describe('OpenGrid stackable-box B-Rep', () => {
       const report = inspectOpenGridStackableBoxInterface(shape, input)
       expect(report.floorProbeVolumes[0]).toBeGreaterThan(0.01)
       expect(report.floorProbeThicknesses[0]).toBeCloseTo(1.2, 1)
+    } finally {
+      deleteShape(shape)
+    }
+  }, 120_000)
+
+  it('cuts the lower guide into a printable flat base-plate mode', () => {
+    const input = parameters({
+      x: 1,
+      y: 1,
+      height: 20,
+      basePlateMode: true,
+    })
+    const shape = buildOpenGridStackableBox(input)
+    const edgeProbe = makeBox([10, -1, 0.01], [11, -0.5, 0.11])
+    try {
+      const actual = boundsOf(shape)
+      const expected = boundsForOpenGridStackableBox(input)
+      expect(actual[0]?.[2]).toBeCloseTo(expected.min[2], 3)
+      expect(actual[1]?.[2]).toBeCloseTo(expected.max[2], 3)
+      expect(measureVolume(shape.intersect(edgeProbe))).toBeGreaterThan(0.01)
+    } finally {
+      edgeProbe.delete()
+      deleteShape(shape)
+    }
+  }, 120_000)
+
+  it('uses a 3 mm base plate with a 2 mm lower bore and 1 mm upper seat', () => {
+    const input = parameters({
+      x: 1,
+      y: 1,
+      height: 20,
+      basePlateMode: true,
+    })
+    const shape = buildOpenGridStackableBox(input)
+    const [center] = openGridStackableBoxSocketCentersFor(input)
+    if (!center) throw new Error('MISSING_SOCKET_CENTER')
+    try {
+      const [profile] = measureMountingHoleProfiles(shape, [center], {
+        lower: [-0.03, 2],
+        upper: [2, 3],
+      })
+      expect(profile).toMatchObject({
+        lowerBoreDiameter: expect.closeTo(5.05, 2),
+        lowerBoreDepth: expect.closeTo(2, 2),
+        upperBoreDiameter: expect.closeTo(7.05, 2),
+        upperBoreDepth: expect.closeTo(1, 2),
+      })
     } finally {
       deleteShape(shape)
     }
@@ -729,6 +778,7 @@ describe('OpenGrid stackable-box B-Rep', () => {
             height: 10,
             cornerBottomHoles: true,
             fullBottomHoleGrid: false,
+            basePlateMode: false,
           }),
         ).toThrow('OPENGRID_SNAP_HOLD_INSERTION_ENVELOPE_MISMATCH')
       } finally {
