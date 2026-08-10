@@ -292,3 +292,31 @@ The static `/models` chooser MUST include `opengrid-pillar` as an independent en
 - **THEN** the page MUST load the OpenGrid pillar-specific CAD workspace
 - **AND** initial generation MUST use the valid saved pillar snapshot when available, otherwise `{ length: 5, baseConnection: false }`
 - **AND** the route MUST NOT silently substitute another component
+
+### Requirement: OpenGrid board selection entry
+
+The static /models chooser MUST keep the existing opengrid entry in the
+OpenGrid series. Its display name MUST be understandable, its description
+MUST identify the official Full/Lite/Heavy 28 mm board, and its summary MUST
+mention rows/columns, half-cell, screw, connector, and chamfer controls. The
+entry MUST link to /cad/opengrid without initializing the CAD Worker.
+
+#### Scenario: Select the official OpenGrid board
+
+- **WHEN** a user selects opengrid from /models
+- **THEN** navigation MUST go to /cad/opengrid
+- **AND** the CAD workspace MUST initialize with modelId=opengrid
+
+### Requirement: OpenGrid board direct route
+
+Direct navigation to /cad/opengrid MUST resolve to the existing official
+OpenGrid board definition and MUST NOT silently substitute another component.
+Initial generation MUST use the valid persisted OpenGrid snapshot or the
+current component defaults.
+
+#### Scenario: Open the OpenGrid board route directly
+
+- **WHEN** a user opens /cad/opengrid directly
+- **THEN** the page MUST load the OpenGrid board workspace
+- **AND** the route MUST not initialize the Snap, stackable-box, divider,
+  pillar, or another model definition

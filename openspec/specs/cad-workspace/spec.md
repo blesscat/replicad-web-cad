@@ -188,6 +188,66 @@ The workspace MUST parse X/Y/height as safe integers, parse `cornerPosts` as a b
 - **AND** only the latest valid candidate MUST be eligible for commit
 - **AND** the committed mesh bounds MUST match the box-normal contract within tolerance
 
+### Requirement: OpenGrid board workspace integration
+
+The runtime-validated catalog MUST keep the existing opengrid model id and
+route /cad/opengrid bound to the official OpenGrid board definition. The route
+MUST use the board's normalized parameter validator and component-local
+builder, and MUST preserve the existing candidate, commit, preview, STEP, and
+binary STL lifecycle.
+
+#### Scenario: OpenGrid route initial generation
+
+- **GIVEN** a user opens /cad/opengrid with browser CAD prerequisites
+- **WHEN** the Worker reports engine.ready
+- **THEN** the workspace MUST send generation 1 with modelId=opengrid and a
+  valid saved snapshot, or the current OpenGrid defaults when no valid entry
+  exists
+- **AND** the Worker MUST route the request to the OpenGrid board builder
+- **AND** the committed revision, bounds, preview, and exports MUST belong to
+  opengrid
+
+#### Scenario: OpenGrid model contract
+
+- **GIVEN** the Worker receives model.generate with modelId=opengrid
+- **WHEN** the parameters contain a valid normalized OpenGrid snapshot
+- **THEN** the Worker MUST validate the variant, grid, half-cell, chamfer,
+  connector, screw, and custom-position fields together
+- **AND** a mismatched or invalid snapshot MUST be rejected with a diagnostic
+  validation error
+
+### Requirement: OpenGrid board controls
+
+The /cad/opengrid workspace MUST expose Full/Lite/Heavy variant, rows,
+columns, X/Y half-cell directions, chamfer mode and corner flags, connector
+enable and side flags, generic screw dimensions, screw mode, center/interval
+modifiers, and an internal-intersection custom screw matrix. It MUST display
+derived width, depth, and variant thickness in millimetres.
+
+#### Scenario: Configure current OpenGrid controls
+
+- **WHEN** a user changes variant, grid, half-cell, chamfer, connector, screw,
+  or custom-intersection values
+- **THEN** the pending typed snapshot MUST contain those normalized fields
+- **AND** derived dimensions MUST use the final half-cell envelope
+- **AND** the settled input MUST use the existing debounce and Worker lifecycle
+
+### Requirement: OpenGrid board persistence and stale preview
+
+The OpenGrid workspace MUST use the existing per-component persistence and
+latest-wins behavior. Invalid input MUST invalidate a newer generation rather
+than generating native geometry, and a stale or invalid generation MUST NOT
+replace the last committed OpenGrid revision or enable exports.
+
+#### Scenario: OpenGrid invalidation
+
+- **WHEN** a newer OpenGrid draft is invalid or supersedes a running
+  generation
+- **THEN** the workspace MUST send parameter-free model.invalidate with the
+  newer generation
+- **AND** the older candidate MUST not commit
+- **AND** the last committed preview MAY remain visible but MUST be stale
+
 ### Requirement: box-normal reference cache and disposal
 
 The Worker MUST load and validate the component-local `box-normal.step` reference at most once per Worker epoch, cache it independently from every other component reference/template, reuse it for later `box-normal` generations, and release it during Worker disposal. The box-normal builder MUST NOT delete or own the cached reference. A failed or missing reference MUST invalidate the cache and return a diagnosable asset error; pending cache cleanup MUST remain safe if disposal races asset loading.

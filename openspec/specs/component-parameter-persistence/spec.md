@@ -268,6 +268,44 @@ The versioned browser persistence MUST store valid OpenGrid board half-cell dire
 - **THEN** the reader MUST normalize it to `halfCellX=none` and `halfCellY=none` before validation
 - **AND** it MUST preserve the other valid OpenGrid parameters
 
+### Requirement: OpenGrid board snapshot persistence
+
+The versioned browser persistence MUST store valid OpenGrid board snapshots
+under the stable opengrid model id. The entry MUST contain typed normalized
+variant, rows, columns, half-cell, chamfer, connector, generic screw, and
+custom-intersection values, and MUST remain isolated from every other
+component entry.
+
+#### Scenario: Restore an OpenGrid board snapshot
+
+- **GIVEN** persistence contains a valid normalized opengrid entry
+- **WHEN** the user opens /cad/opengrid
+- **THEN** the workspace MUST restore the saved typed values
+- **AND** the first generation MUST use those values
+
+#### Scenario: Persist an accepted OpenGrid update
+
+- **WHEN** an OpenGrid snapshot passes the current validator
+- **THEN** only the opengrid persistence entry MUST be updated
+- **AND** raw strings, derived labels, duplicate positions, and incomplete
+  values MUST NOT be persisted
+
+### Requirement: Incompatible OpenGrid persistence fallback
+
+The persistence reader MUST reject the former OpenGrid flat-plate snapshot
+shape, including 16 mm opening, four-slot, small/large connector, or
+M3/M4/M5-only fields. A rejected entry MUST fall back to the current OpenGrid
+definition defaults without changing entries for other components. A valid
+pre-half-cell OpenGrid entry MAY normalize missing half-cell fields to none.
+
+#### Scenario: Legacy OpenGrid entry
+
+- **GIVEN** persistence contains an old or malformed OpenGrid snapshot
+- **WHEN** the OpenGrid workspace initializes
+- **THEN** it MUST use the current OpenGrid defaults
+- **AND** it MUST not merge rejected fields into the accepted snapshot
+- **AND** other component entries MUST remain unchanged
+
 #### Scenario: Invalid OpenGrid half-cell persistence is isolated
 
 - **GIVEN** an OpenGrid entry contains an invalid direction, `allowHalfCell`, or an unsupported half-cell field
