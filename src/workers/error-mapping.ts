@@ -24,12 +24,17 @@ export function cadErrorCodeFor(
   }
   if (
     message.includes('OPENGRID_SNAP_PARAMETERS_INVALID') ||
-    message.includes('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
+    message.includes('MODEL_PARAMETERS_MISMATCH:opengrid-snap') ||
+    message.includes('OPENGRID_STACKABLE_CYLINDER_PARAMETERS_INVALID') ||
+    message.includes('MODEL_PARAMETERS_MISMATCH:opengrid-stackable-cylinder')
   ) {
     return 'INVALID_INPUT'
   }
   if (message.includes('OPENGRID_SNAP_QUALITY_INVALID')) {
     return 'OPENGRID_SNAP_QUALITY_INVALID'
+  }
+  if (message.includes('OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID')) {
+    return 'OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID'
   }
   if (
     message.includes('OPENGRID_QUALITY_INVALID') ||
@@ -70,6 +75,9 @@ export function cadErrorStageFor(
     return 'validation'
   }
   if (message.includes('OPENGRID_SNAP_QUALITY_INVALID')) return 'meshing'
+  if (message.includes('OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID')) {
+    return 'meshing'
+  }
   if (
     message.includes('OPENGRID_QUALITY_INVALID') ||
     message.includes('OPENGRID_STACKABLE_BOX_BOTTOM_GRID_')

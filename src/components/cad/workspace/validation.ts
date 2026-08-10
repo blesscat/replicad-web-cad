@@ -5,6 +5,7 @@ import {
   parseOpenGridSnapDecimalInput,
   parseDimensionInput,
   validateModelParameters,
+  type HexagonalColumnParameters,
   type ModelId,
   type ModelParameterKey,
   type ModelParameterValues,
@@ -34,6 +35,13 @@ export const OPENGRID_STACKABLE_BOX_PARAMETER_KEYS: ModelParameterKey[] = [
   'height',
   'fullBottomHoleGrid',
 ]
+export const OPENGRID_STACKABLE_CYLINDER_PARAMETER_KEYS: ModelParameterKey[] = [
+  'diameter',
+  'height',
+  'thinBottomMode',
+  'bottomPlateMode',
+  'bottomHolesEnabled',
+]
 export const OPENGRID_DIVIDER_PARAMETER_KEYS: ModelParameterKey[] = [
   'left',
   'right',
@@ -61,6 +69,9 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'opengrid-stackable-box') {
     return OPENGRID_STACKABLE_BOX_PARAMETER_KEYS
   }
+  if (modelId === 'opengrid-stackable-cylinder') {
+    return OPENGRID_STACKABLE_CYLINDER_PARAMETER_KEYS
+  }
   if (modelId === 'opengrid-snap') {
     return ['variant', 'offset', 'halfCellX', 'halfCellY']
   }
@@ -80,10 +91,39 @@ function usesHalfStepInput(modelId: ModelId, key: ModelParameterKey): boolean {
   return false
 }
 
+function legacyBooleanDefault(
+  modelId: ModelId,
+  key: ModelParameterKey,
+): string | undefined {
+  if (modelId !== 'opengrid-stackable-cylinder') return undefined
+  if (key === 'thinBottomMode') return 'false'
+  if (key === 'bottomPlateMode') return 'false'
+  if (key === 'bottomHolesEnabled') return 'true'
+  return undefined
+}
+
 export function rawFromParameters(
   parameters: ModelParameterValues,
 ): RawParameters {
   if (Object.keys(parameters).length === 0) return {}
+
+  if ('diameter' in parameters && 'height' in parameters) {
+    return {
+      diameter: String(parameters.diameter),
+      height: String(parameters.height),
+      thinBottomMode: String(
+        'thinBottomMode' in parameters ? parameters.thinBottomMode : false,
+      ),
+      bottomPlateMode: String(
+        'bottomPlateMode' in parameters ? parameters.bottomPlateMode : false,
+      ),
+      bottomHolesEnabled: String(
+        'bottomHolesEnabled' in parameters
+          ? parameters.bottomHolesEnabled
+          : true,
+      ),
+    }
+  }
 
   if ('width' in parameters) {
     return {
@@ -142,17 +182,12 @@ export function rawFromParameters(
   }
 
   if ('orientation' in parameters) {
-    const columnParameters = parameters as {
-      height: number
-      count: number
-      gap: number
-      orientation: string
-    }
+    const hexagonalParameters = parameters as HexagonalColumnParameters
     return {
-      height: String(columnParameters.height),
-      count: String(columnParameters.count),
-      gap: String(columnParameters.gap),
-      orientation: columnParameters.orientation,
+      height: String(hexagonalParameters.height),
+      count: String(hexagonalParameters.count),
+      gap: String(hexagonalParameters.gap),
+      orientation: hexagonalParameters.orientation,
     }
   }
 
@@ -281,9 +316,12 @@ export function parseRawParameters(
     if (
       key === 'cornerPosts' ||
       key === 'fullBottomHoleGrid' ||
-      key === 'baseConnection'
+      key === 'baseConnection' ||
+      key === 'thinBottomMode' ||
+      key === 'bottomPlateMode' ||
+      key === 'bottomHolesEnabled'
     ) {
-      const rawValue = raw[key]
+      const rawValue = raw[key] ?? legacyBooleanDefault(modelId, key)
       if (rawValue !== 'true' && rawValue !== 'false') {
         return {
           valid: false,

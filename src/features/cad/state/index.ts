@@ -6,6 +6,7 @@ import {
   OPENGRID_DIVIDER_CONFIGURATION,
   OPENGRID_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
   OPENGRID_SNAP_CONFIGURATION,
   PILLAR_CONFIGURATION,
   PROTOTYPE_CONFIGURATION,
@@ -83,6 +84,15 @@ function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
       height: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHeight,
       fullBottomHoleGrid:
         OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultFullBottomHoleGrid,
+    }
+  }
+  if (modelId === 'opengrid-stackable-cylinder') {
+    return {
+      diameter: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultDiameter,
+      height: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultHeight,
+      thinBottomMode: false,
+      bottomPlateMode: false,
+      bottomHolesEnabled: true,
     }
   }
   if (modelId === 'opengrid-snap') {

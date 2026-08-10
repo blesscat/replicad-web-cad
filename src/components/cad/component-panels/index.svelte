@@ -13,6 +13,7 @@
   import OpenGridComponentPanel from './opengrid/OpenGridComponentPanel.svelte'
   import OpenGridDividerComponentPanel from './opengrid-divider/OpenGridDividerComponentPanel.svelte'
   import OpenGridStackableBoxComponentPanel from './opengrid-stackable-box/OpenGridStackableBoxComponentPanel.svelte'
+  import OpenGridStackableCylinderComponentPanel from './opengrid-stackable-cylinder/OpenGridStackableCylinderComponentPanel.svelte'
   import OpenGridSnapComponentPanel from './opengrid-snap/OpenGridSnapComponentPanel.svelte'
   import OpenGridPillarComponentPanel from './opengrid-pillar/OpenGridPillarComponentPanel.svelte'
   import type { ComponentPanelProps } from './types'
@@ -70,6 +71,12 @@
   />
 {:else if modelId === 'opengrid-stackable-box'}
   <OpenGridStackableBoxComponentPanel
+    {rawParameters}
+    {fieldErrors}
+    {onInputChange}
+  />
+{:else if modelId === 'opengrid-stackable-cylinder'}
+  <OpenGridStackableCylinderComponentPanel
     {rawParameters}
     {fieldErrors}
     {onInputChange}

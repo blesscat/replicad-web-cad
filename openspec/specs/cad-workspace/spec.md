@@ -1062,6 +1062,49 @@ The runtime-validated component catalog MUST register `opengrid-pillar` as an in
 - **AND** it MUST send `model.invalidate` rather than `model.generate` for that invalid snapshot
 - **AND** export MUST remain disabled while the input is invalid or stale
 
+- **AND** the downloaded model MUST contain the complete Snap assembly rather than only its central body
+
+### Requirement: OpenGrid stackable-cylinder workspace integration
+
+The CAD workspace MUST bind `/cad/opengrid-stackable-cylinder` exclusively to `modelId=opengrid-stackable-cylinder`. The catalog entry MUST expose only the typed diameter and height fields, with both controls using 1 mm slider increments and direct numeric input. The Worker MUST route this model ID to the independent cylinder builder and MUST NOT fall through to `box`, `opengrid-stackable-box`, or another component.
+
+#### Scenario: Cylinder route initializes
+
+- **WHEN** a user opens `/cad/opengrid-stackable-cylinder`
+- **THEN** the workspace MUST initialize with `modelId=opengrid-stackable-cylinder`
+- **AND** the first valid generation MUST use the cylinder defaults or valid saved cylinder parameters
+
+#### Scenario: Cylinder panel exposes only cylinder fields
+
+- **WHEN** the user views the cylinder parameter panel
+- **THEN** it MUST show outer diameter and height controls
+- **AND** both controls MUST use a 1 mm step
+- **AND** it MUST NOT show rectangular X/Y cell, OpenGrid board, or stackable-box full-grid controls
+
+#### Scenario: Worker dispatch is component-specific
+
+- **WHEN** the Worker receives a model-generation request with `modelId=opengrid-stackable-cylinder`
+- **THEN** it MUST validate the cylinder parameter shape and invoke the cylinder builder
+- **AND** a mismatched parameter shape MUST be rejected with a diagnosable validation error
+
+### Requirement: Cylinder workspace lifecycle and export gates
+
+The new cylinder route MUST use the existing debounce, latest-wins, candidate-ready, commit/discard, invalid-input, stale-preview, Worker recovery, preview mesh, STEP export, and STL export lifecycle. A failed or stale cylinder generation MUST NOT replace the latest committed revision or enable export.
+
+#### Scenario: Valid cylinder update commits
+
+- **WHEN** a valid diameter or height update settles after the existing input debounce
+- **THEN** the workspace MUST request a newer cylinder generation
+- **AND** only the latest valid candidate MUST be eligible for commit
+- **AND** the committed bounds MUST match the typed parameters within tolerance
+
+#### Scenario: Invalid or stale cylinder update
+
+- **WHEN** a cylinder input is invalid or its candidate becomes stale because a newer generation exists
+- **THEN** the workspace MUST invalidate or discard that snapshot according to the existing lifecycle
+- **AND** the previous committed preview MAY remain visible as stale
+- **AND** STEP/STL export MUST remain disabled for the invalid or stale snapshot
+
 ## 可追溯性
 
 - 變更動機、Prototype 範圍與後續演進：../../proposal.md

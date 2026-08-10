@@ -121,7 +121,9 @@ export function validateMeshSnapshot(mesh: MeshSnapshot): boolean {
     )
       return false
     if (mesh.triangleCount !== indices.length / 3) return false
-    if (![...positions, ...normals].every(Number.isFinite)) return false
+    if (!positions.every(Number.isFinite) || !normals.every(Number.isFinite)) {
+      return false
+    }
     if (!indices.every((index) => index < positions.length / 3)) return false
     return (
       [...mesh.bounds.min, ...mesh.bounds.max].every(Number.isFinite) &&

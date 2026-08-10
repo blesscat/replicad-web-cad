@@ -83,6 +83,27 @@ function makeError(
   return { stage, code, userMessage, recoverable }
 }
 
+function cylinderQualityContext(command: WorkerCommand): string {
+  if (
+    command.kind !== 'model.generate' ||
+    command.modelId !== 'opengrid-stackable-cylinder'
+  ) {
+    return ''
+  }
+
+  let profile = '預設'
+  if (command.parameters.bottomPlateMode === true) {
+    profile = '底板'
+  } else if (command.parameters.thinBottomMode === true) {
+    profile = '薄底'
+  }
+  const holeState =
+    command.parameters.bottomHolesEnabled === false
+      ? '底部孔洞關閉'
+      : '底部孔洞開啟'
+  return `（${profile}模式、${holeState}）`
+}
+
 function yieldToWorkerEventLoop(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0))
 }
@@ -961,11 +982,30 @@ export class CadWorkerRuntime {
         true,
       )
     }
+    if (
+      code === 'INVALID_INPUT' &&
+      message.includes('opengrid-stackable-cylinder')
+    ) {
+      return makeError(
+        'validation',
+        code,
+        'OpenGrid 可堆疊圓柱參數無效，外徑與高度必須是範圍內的 1 mm 整數。',
+        true,
+      )
+    }
     if (code === 'OPENGRID_QUALITY_INVALID') {
       return makeError(
         'meshing',
         code,
         'OpenGrid 幾何未通過品質檢查，請調整參數後重試。',
+        true,
+      )
+    }
+    if (code === 'OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID') {
+      return makeError(
+        'meshing',
+        code,
+        `OpenGrid 可堆疊圓柱${cylinderQualityContext(command)}的底部輪廓、階梯孔或堆疊介面未通過品質檢查，請調整參數後重試。`,
         true,
       )
     }

@@ -9,6 +9,7 @@ import {
   isOpenGridDividerModelParameters,
   isOpenGridParameters,
   isOpenGridStackableBoxParameters,
+  isOpenGridStackableCylinderParameters,
   isOpenGridSnapParameters,
   isOpenGridSnapRemoverParameters,
   isPillarParameters,
@@ -30,6 +31,7 @@ import { buildModularGridBase } from '../components/modular-grid-base/builder'
 import { buildOpenGridBRep } from '../components/opengrid/builder'
 import { buildOpenGridDivider } from '../components/opengrid-divider/builder'
 import { buildOpenGridStackableBox } from '../components/opengrid-stackable-box/builder'
+import { buildOpenGridStackableCylinder } from '../components/opengrid-stackable-cylinder/builder'
 import { buildOpenGridSnap } from '../components/opengrid-snap/builder'
 import { buildOpenGridSnapRemover } from '../components/opengrid-snap-remover/builder'
 import { buildPillar } from '../components/opengrid-pillar/builder'
@@ -230,6 +232,18 @@ function buildOpenGridStackableBoxModel(
   })
 }
 
+function buildOpenGridStackableCylinderModel(
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Shape3D {
+  if (!isOpenGridStackableCylinderParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-stackable-cylinder')
+  }
+  return buildOpenGridStackableCylinder(parameters, {
+    isGenerationCurrent: context.isGenerationCurrent,
+  })
+}
+
 async function buildOpenGridSnapRemoverModel(
   parameters: ModelParameterValues,
   context: KernelBuildContext,
@@ -293,6 +307,12 @@ export const opengridStackableBoxKernelDefinition: KernelModelDefinition = {
   build: buildOpenGridStackableBoxModel,
 }
 
+export const opengridStackableCylinderKernelDefinition: KernelModelDefinition =
+  {
+    id: 'opengrid-stackable-cylinder',
+    build: buildOpenGridStackableCylinderModel,
+  }
+
 export const openGridSnapRemoverKernelDefinition: KernelModelDefinition = {
   id: 'opengrid-snap-remover',
   build: buildOpenGridSnapRemoverModel,
@@ -312,6 +332,7 @@ export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   pillarKernelDefinition,
   opengridKernelDefinition,
   opengridStackableBoxKernelDefinition,
+  opengridStackableCylinderKernelDefinition,
   opengridSnapKernelDefinition,
   openGridSnapRemoverKernelDefinition,
   opengridDividerKernelDefinition,

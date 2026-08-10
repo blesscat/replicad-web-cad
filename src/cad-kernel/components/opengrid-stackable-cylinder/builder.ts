@@ -1,0 +1,1280 @@
+import {
+  getOC,
+  makeCylinder,
+  measureVolume,
+  Sketcher,
+  type Shape3D,
+} from 'replicad'
+import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
+import {
+  boundsForOpenGridStackableCylinder,
+  openGridStackableCylinderDerivedGeometryFor,
+  openGridStackableCylinderHoleCentersFor,
+  OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
+  validateOpenGridStackableCylinderParameters,
+  type ModelBounds,
+  type OpenGridStackableCylinderParameters,
+  type OpenGridStackableCylinderPoint2D,
+  type OpenGridStackableCylinderProfile,
+} from '../../../cad-contract/units'
+
+export type OpenGridStackableCylinderBuildContext = {
+  isGenerationCurrent?: () => boolean
+}
+
+type Bounds = [[number, number, number], [number, number, number]]
+
+export type OpenGridStackableCylinderHoleSection = {
+  diameter: number
+  minZ: number
+  maxZ: number
+}
+
+export type OpenGridStackableCylinderHoleQuality = {
+  center: OpenGridStackableCylinderPoint2D
+  sections: OpenGridStackableCylinderHoleSection[]
+}
+
+export type OpenGridStackableCylinderInterfaceQualityReport = {
+  profile: OpenGridStackableCylinderProfile
+  thinBottomMode: boolean
+  bottomPlateMode: boolean
+  bottomHolesEnabled: boolean
+  floorThickness: number
+  bottomHoleSectionDepth: number
+  bounds: ModelBounds
+  volume: number
+  solidCount: number
+  brepValid: boolean
+  holeRecordCount: number
+  holes: OpenGridStackableCylinderHoleQuality[]
+  holeOuterClearances: number[]
+  holeFlatFloorClearances: number[]
+  bottomProtrusionVolume: number
+  bottomGrooveResidualVolume: number
+  topOuterConicalFaceCount: number
+  topInnerChamferFaceCount: number
+  topInnerChamferHeight: number
+  bottomFootChamferFaceCount: number
+  bottomFootChamferHeight: number
+  bottomOuterChamferFaceCount: number
+  bottomOuterChamferHeight: number
+  bottomOuterFilletFaceCount: number
+  lowerUnexpectedConicalFaceCount: number
+  centralFloorBelowVolume: number
+  centralFloorAboveVolume: number
+  straightWallThickness: number
+  straightWallBoundaryProbeCount: number
+  innerRampFaceCount: number
+  innerRampHeight: number
+  innerRampAngleDegrees: number
+  innerRampNormalThickness: number
+  innerRampBoundaryProbeCount: number
+  bottomMatingClearance: number
+  bottomMatingBoundaryProbeCount: number
+  matingIntersectionVolume: number
+  internalFilletFaceCount: number
+  internalFilletHeight: number
+}
+
+function deleteShape(shape: { delete?: () => void } | null | undefined): void {
+  try {
+    shape?.delete?.()
+  } catch {
+    // Cleanup must not replace the original geometry error.
+  }
+}
+
+function edgeIsNearZ(
+  edge: {
+    startPoint: { z?: number; delete: () => void }
+    endPoint: { z?: number; delete: () => void }
+  },
+  z: number,
+  tolerance = 0.02,
+): boolean {
+  const start = edge.startPoint
+  const end = edge.endPoint
+  try {
+    return (
+      start.z !== undefined &&
+      end.z !== undefined &&
+      Math.abs(start.z - z) <= tolerance &&
+      Math.abs(end.z - z) <= tolerance
+    )
+  } finally {
+    start.delete()
+    end.delete()
+  }
+}
+
+function assertGenerationCurrent(
+  context: OpenGridStackableCylinderBuildContext,
+): void {
+  if (context.isGenerationCurrent && !context.isGenerationCurrent()) {
+    throw new Error('STALE_GENERATION')
+  }
+}
+
+function throwStageError(prefix: string, error: unknown): never {
+  if (error instanceof Error && error.message === 'STALE_GENERATION') {
+    throw error
+  }
+  const message = error instanceof Error ? error.message : String(error)
+  throw new Error(`${prefix}:${message}`)
+}
+
+function makeAnnularRing(
+  outerRadius: number,
+  innerRadius: number,
+  height: number,
+  z: number,
+): Shape3D {
+  const outer = makeCylinder(outerRadius, height, [0, 0, z])
+  const inner = makeCylinder(innerRadius, height + 0.04, [0, 0, z - 0.02])
+  try {
+    const ring = outer.cut(inner)
+    return ring
+  } finally {
+    deleteShape(outer)
+    deleteShape(inner)
+  }
+}
+
+function makeCylinderShell(
+  parameters: OpenGridStackableCylinderParameters,
+): Shape3D {
+  const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
+  const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
+  const effectiveTopInnerChamfer =
+    configuration.topInnerChamfer - configuration.topInnerChamferLand
+  const topInnerChamferRadius = derived.innerRadius + effectiveTopInnerChamfer
+  const sketcher = new Sketcher('XZ')
+  let sketch: ReturnType<Sketcher['close']> | null = null
+  try {
+    sketcher.movePointerTo([0, 0])
+    if (derived.profile === 'bottom-plate') {
+      sketcher.lineTo([derived.lowerFootRadius, 0])
+      sketcher.lineTo([
+        derived.outerTransitionEndRadius,
+        derived.outerTransitionEndZ,
+      ])
+    } else {
+      sketcher.lineTo([derived.lowerFootRadius, 0])
+      sketcher.lineTo([
+        derived.matingProtrusionRadius,
+        configuration.bottomFootBevel,
+      ])
+      sketcher.lineTo([
+        derived.matingProtrusionRadius,
+        configuration.bottomVerticalHeight,
+      ])
+      if (
+        derived.matingProtrusionRadius <
+        derived.outerTransitionStartRadius - 0.0001
+      ) {
+        sketcher.lineTo([
+          derived.outerTransitionStartRadius,
+          derived.outerTransitionStartZ,
+        ])
+      }
+      sketcher.lineTo([
+        derived.outerTransitionEndRadius,
+        derived.outerTransitionEndZ,
+      ])
+    }
+    sketcher.lineTo([derived.radius, parameters.height])
+    if (topInnerChamferRadius < derived.radius - 0.0001) {
+      sketcher.lineTo([topInnerChamferRadius, parameters.height])
+    }
+    sketcher.lineTo([
+      derived.innerRadius,
+      parameters.height - effectiveTopInnerChamfer,
+    ])
+    if (derived.profile === 'thin') {
+      sketcher.lineTo([derived.innerRampEndRadius, derived.innerRampEndZ])
+      sketcher.lineTo([derived.flatFloorRadius, derived.flatFloorZ])
+    } else {
+      sketcher.lineTo([derived.innerRadius, derived.flatFloorZ])
+    }
+    sketcher.lineTo([0, derived.flatFloorZ])
+    sketch = sketcher.close()
+    const revolved = sketch.revolve([0, 0, 1])
+    if (derived.profile === 'thin') return revolved
+    const filleted = revolved.fillet(derived.innerFloorFilletRadius, (finder) =>
+      finder.when(({ element }) =>
+        edgeIsNearZ(element, derived.floorThickness),
+      ),
+    )
+    deleteShape(revolved)
+    const simplified = filleted.simplify()
+    if (simplified !== filleted) deleteShape(filleted)
+    return simplified
+  } finally {
+    deleteShape(sketch)
+    sketcher.delete()
+  }
+}
+
+function cutSteppedHole(
+  shape: Shape3D,
+  parameters: OpenGridStackableCylinderParameters,
+  center: OpenGridStackableCylinderPoint2D,
+): Shape3D {
+  const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
+  const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
+  const lower = makeCylinder(
+    configuration.bottomHoleDiameter / 2,
+    derived.bottomHoleSectionDepth + 0.02,
+    [center[0], center[1], -0.01],
+  )
+  let lowerCut: Shape3D | null = null
+  try {
+    lowerCut = shape.cut(lower)
+  } finally {
+    deleteShape(lower)
+  }
+
+  const upper = makeCylinder(
+    configuration.innerHoleDiameter / 2,
+    configuration.innerHoleSectionDepth + 0.02,
+    [center[0], center[1], derived.bottomHoleSectionDepth],
+  )
+  try {
+    if (!lowerCut) throw new Error('OPENGRID_STACKABLE_CYLINDER_HOLE_INVALID')
+    const steppedCut = lowerCut.cut(upper)
+    deleteShape(lowerCut)
+    lowerCut = null
+    return steppedCut
+  } finally {
+    deleteShape(lowerCut)
+    deleteShape(upper)
+  }
+}
+
+function addBottomHoles(
+  shape: Shape3D,
+  parameters: OpenGridStackableCylinderParameters,
+  context: OpenGridStackableCylinderBuildContext,
+): Shape3D {
+  let current = shape
+  for (const center of openGridStackableCylinderHoleCentersFor(parameters)) {
+    assertGenerationCurrent(context)
+    const cut = cutSteppedHole(current, parameters, center)
+    deleteShape(current)
+    current = cut
+  }
+  return current
+}
+
+function readBounds(shape: Shape3D): Bounds {
+  const boundingBox = shape.boundingBox
+  try {
+    return boundingBox.bounds as Bounds
+  } finally {
+    boundingBox.delete()
+  }
+}
+
+function countSolids(shape: Shape3D): number {
+  const oc = getOC()
+  const solidType = oc.TopAbs_ShapeEnum
+    .TopAbs_SOLID as unknown as TopAbs_ShapeEnum
+  const shapeType = oc.TopAbs_ShapeEnum
+    .TopAbs_SHAPE as unknown as TopAbs_ShapeEnum
+  const explorer = new oc.TopExp_Explorer_2(shape.wrapped, solidType, shapeType)
+  let count = 0
+  try {
+    while (explorer.More()) {
+      count += 1
+      explorer.Next()
+    }
+    return count
+  } finally {
+    explorer.delete()
+  }
+}
+
+function isBRepValid(shape: Shape3D): boolean {
+  const oc = getOC()
+  const analyzer = new oc.BRepCheck_Analyzer(shape.wrapped, true, true)
+  try {
+    return analyzer.IsValid_2()
+  } finally {
+    analyzer.delete()
+  }
+}
+
+function closeEnough(first: number, second: number, tolerance = 0.05): boolean {
+  return Math.abs(first - second) <= tolerance
+}
+
+function normalizeParameters(
+  parameters: OpenGridStackableCylinderParameters,
+): OpenGridStackableCylinderParameters {
+  const validation = validateOpenGridStackableCylinderParameters(parameters)
+  if (!validation.valid) {
+    throw new Error('OPENGRID_STACKABLE_CYLINDER_PARAMETERS_INVALID')
+  }
+  return validation.value
+}
+
+function volumeInProbe(shape: Shape3D, probe: Shape3D): number {
+  const intersection = shape.intersect(probe)
+  try {
+    return measureVolume(intersection)
+  } finally {
+    deleteShape(intersection)
+  }
+}
+
+function volumeInAnnularProbe(
+  shape: Shape3D,
+  outerRadius: number,
+  innerRadius: number,
+  height: number,
+  z: number,
+): number {
+  const probe = makeAnnularRing(outerRadius, innerRadius, height, z)
+  try {
+    return volumeInProbe(shape, probe)
+  } finally {
+    deleteShape(probe)
+  }
+}
+
+function volumeInCylindricalProbe(
+  shape: Shape3D,
+  radius: number,
+  height: number,
+  z: number,
+): number {
+  const probe = makeCylinder(radius, height, [0, 0, z])
+  try {
+    return volumeInProbe(shape, probe)
+  } finally {
+    deleteShape(probe)
+  }
+}
+
+function volumeInOffsetCylindricalProbe(
+  shape: Shape3D,
+  radius: number,
+  height: number,
+  x: number,
+  y: number,
+  z: number,
+): number {
+  const probe = makeCylinder(radius, height, [x, y, z])
+  try {
+    return volumeInProbe(shape, probe)
+  } finally {
+    deleteShape(probe)
+  }
+}
+
+type RadialBoundaryProbe = {
+  insideVolume: number
+  outsideVolume: number
+  valid: boolean
+}
+
+function inspectRadialBoundaryAtZ(
+  shape: Shape3D,
+  radius: number,
+  z: number,
+  solidInside: boolean,
+): RadialBoundaryProbe {
+  const probeHeight = 0.04
+  const insideVolume = volumeInAnnularProbe(
+    shape,
+    radius - 0.02,
+    radius - 0.08,
+    probeHeight,
+    z - probeHeight / 2,
+  )
+  const outsideVolume = volumeInAnnularProbe(
+    shape,
+    radius + 0.08,
+    radius + 0.02,
+    probeHeight,
+    z - probeHeight / 2,
+  )
+  const volumeThreshold = 0.0001
+  const insideMatches = solidInside
+    ? insideVolume > volumeThreshold
+    : insideVolume < volumeThreshold
+  const outsideMatches = solidInside
+    ? outsideVolume < volumeThreshold
+    : outsideVolume > volumeThreshold
+
+  return {
+    insideVolume,
+    outsideVolume,
+    valid: insideMatches && outsideMatches,
+  }
+}
+
+type CylindricalFaceRecord = {
+  center: [number, number]
+  diameter: number
+  minZ: number
+  maxZ: number
+}
+
+function readCylindricalFaceRecords(shape: Shape3D): CylindricalFaceRecord[] {
+  const records: CylindricalFaceRecord[] = []
+  for (const face of shape.faces) {
+    const boundingBox = face.boundingBox
+    try {
+      if (face.surface.surfaceType !== 'CYLINDRE') continue
+      const [min, max] = boundingBox.bounds as Bounds
+      records.push({
+        center: [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2],
+        diameter: Math.max(max[0] - min[0], max[1] - min[1]),
+        minZ: min[2],
+        maxZ: max[2],
+      })
+    } finally {
+      boundingBox.delete()
+      face.delete()
+    }
+  }
+  return records
+}
+
+function readHoleQuality(
+  parameters: OpenGridStackableCylinderParameters,
+  records: CylindricalFaceRecord[],
+): OpenGridStackableCylinderHoleQuality[] {
+  return openGridStackableCylinderHoleCentersFor(parameters).map((center) => ({
+    center,
+    sections: records
+      .filter(
+        (record) =>
+          closeEnough(record.center[0], center[0], 0.08) &&
+          closeEnough(record.center[1], center[1], 0.08),
+      )
+      .map((record) => ({
+        diameter: record.diameter,
+        minZ: record.minZ,
+        maxZ: record.maxZ,
+      }))
+      .sort((first, second) => first.minZ - second.minZ),
+  }))
+}
+
+function readFloorHoleRecords(
+  shape: Shape3D,
+  floorThickness: number,
+): CylindricalFaceRecord[] {
+  const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
+  const largestHoleDiameter = Math.max(
+    configuration.bottomHoleDiameter,
+    configuration.innerHoleDiameter,
+  )
+  return readCylindricalFaceRecords(shape).filter(
+    (record) =>
+      record.diameter <= largestHoleDiameter + 0.2 &&
+      record.minZ <= floorThickness + 0.1 &&
+      record.maxZ >= -0.1,
+  )
+}
+
+function countConicalFacesInRadialBand(
+  shape: Shape3D,
+  minZ: number,
+  maxZ: number,
+  minRadius: number,
+  maxRadius = Number.POSITIVE_INFINITY,
+): number {
+  let count = 0
+  for (const face of shape.faces) {
+    const boundingBox = face.boundingBox
+    try {
+      if (face.surface.surfaceType !== 'CONE') continue
+      const [min, max] = boundingBox.bounds as Bounds
+      const radialExtent = Math.max(
+        Math.abs(min[0]),
+        Math.abs(max[0]),
+        Math.abs(min[1]),
+        Math.abs(max[1]),
+      )
+      const zRangeMatches = min[2] >= minZ - 0.05 && max[2] <= maxZ + 0.05
+      if (
+        zRangeMatches &&
+        radialExtent >= minRadius - 0.05 &&
+        radialExtent <= maxRadius + 0.05
+      ) {
+        count += 1
+      }
+    } finally {
+      boundingBox.delete()
+      face.delete()
+    }
+  }
+  return count
+}
+
+function maxConicalFaceHeightInRadialBand(
+  shape: Shape3D,
+  minZ: number,
+  maxZ: number,
+  minRadius: number,
+  maxRadius = Number.POSITIVE_INFINITY,
+): number {
+  let maximumHeight = 0
+  for (const face of shape.faces) {
+    const boundingBox = face.boundingBox
+    try {
+      if (face.surface.surfaceType !== 'CONE') continue
+      const [min, max] = boundingBox.bounds as Bounds
+      const radialExtent = Math.max(
+        Math.abs(min[0]),
+        Math.abs(max[0]),
+        Math.abs(min[1]),
+        Math.abs(max[1]),
+      )
+      const zRangeMatches = min[2] >= minZ - 0.05 && max[2] <= maxZ + 0.05
+      if (
+        zRangeMatches &&
+        radialExtent >= minRadius - 0.05 &&
+        radialExtent <= maxRadius + 0.05
+      ) {
+        maximumHeight = Math.max(maximumHeight, max[2] - min[2])
+      }
+    } finally {
+      boundingBox.delete()
+      face.delete()
+    }
+  }
+  return maximumHeight
+}
+
+function conicalFaceAngleDegreesInRadialBand(
+  shape: Shape3D,
+  minZ: number,
+  maxZ: number,
+  minRadius: number,
+  maxRadius: number,
+): number {
+  for (const face of shape.faces) {
+    const boundingBox = face.boundingBox
+    let surface: { surfaceType: string; delete: () => void } | null = null
+    let normal: ReturnType<typeof face.normalAt> | null = null
+    try {
+      surface = face.surface
+      if (surface.surfaceType !== 'CONE') continue
+      const [min, max] = boundingBox.bounds as Bounds
+      const radialExtent = Math.max(
+        Math.abs(min[0]),
+        Math.abs(max[0]),
+        Math.abs(min[1]),
+        Math.abs(max[1]),
+      )
+      const zRangeMatches = min[2] >= minZ - 0.05 && max[2] <= maxZ + 0.05
+      if (
+        !zRangeMatches ||
+        radialExtent < minRadius - 0.05 ||
+        radialExtent > maxRadius + 0.05
+      ) {
+        continue
+      }
+      normal = face.normalAt()
+      const radialNormal = Math.hypot(normal.x, normal.y)
+      if (radialNormal <= 0.0001) continue
+      return (Math.atan2(Math.abs(normal.z), radialNormal) * 180) / Math.PI
+    } finally {
+      normal?.delete()
+      surface?.delete()
+      boundingBox.delete()
+      face.delete()
+    }
+  }
+  return 0
+}
+
+function countSurfaceFacesInZBand(
+  shape: Shape3D,
+  surfaceType: string,
+  minZ: number,
+  maxZ: number,
+  minRadius: number,
+  maxRadius: number,
+): number {
+  let count = 0
+  for (const face of shape.faces) {
+    const boundingBox = face.boundingBox
+    try {
+      if (face.surface.surfaceType !== surfaceType) continue
+      const [min, max] = boundingBox.bounds as Bounds
+      const radialExtent = Math.max(
+        Math.abs(min[0]),
+        Math.abs(max[0]),
+        Math.abs(min[1]),
+        Math.abs(max[1]),
+      )
+      const zRangeMatches = min[2] >= minZ - 0.05 && max[2] <= maxZ + 0.05
+      if (
+        zRangeMatches &&
+        radialExtent >= minRadius - 0.05 &&
+        radialExtent <= maxRadius + 0.05
+      ) {
+        count += 1
+      }
+    } finally {
+      boundingBox.delete()
+      face.delete()
+    }
+  }
+  return count
+}
+
+function maxSurfaceHeightInZBand(
+  shape: Shape3D,
+  surfaceType: string,
+  minZ: number,
+  maxZ: number,
+  minRadius: number,
+  maxRadius: number,
+): number {
+  let maximumHeight = 0
+  for (const face of shape.faces) {
+    const boundingBox = face.boundingBox
+    try {
+      if (face.surface.surfaceType !== surfaceType) continue
+      const [min, max] = boundingBox.bounds as Bounds
+      const radialExtent = Math.max(
+        Math.abs(min[0]),
+        Math.abs(max[0]),
+        Math.abs(min[1]),
+        Math.abs(max[1]),
+      )
+      const zRangeMatches = min[2] >= minZ - 0.05 && max[2] <= maxZ + 0.05
+      if (
+        zRangeMatches &&
+        radialExtent >= minRadius - 0.05 &&
+        radialExtent <= maxRadius + 0.05
+      ) {
+        maximumHeight = Math.max(maximumHeight, max[2] - min[2])
+      }
+    } finally {
+      boundingBox.delete()
+      face.delete()
+    }
+  }
+  return maximumHeight
+}
+
+function expectedInterfaceProbes(
+  parameters: OpenGridStackableCylinderParameters,
+): {
+  protrusionRadius: number
+  grooveOuterRadius: number
+} {
+  const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
+  const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
+  return {
+    protrusionRadius: derived.matingProtrusionRadius,
+    grooveOuterRadius: derived.radius + configuration.stackFitClearance,
+  }
+}
+
+function expectedLowerConicalFaceCount(
+  profile: OpenGridStackableCylinderProfile,
+): number {
+  if (profile === 'thin') return 3
+  if (profile === 'bottom-plate') return 1
+  return 2
+}
+
+export function inspectOpenGridStackableCylinderInterface(
+  shape: Shape3D,
+  parameters: OpenGridStackableCylinderParameters,
+): OpenGridStackableCylinderInterfaceQualityReport {
+  parameters = normalizeParameters(parameters)
+  const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
+  const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
+  const expected = expectedInterfaceProbes(parameters)
+  const actualBounds = readBounds(shape)
+  const floorHoleRecords = readFloorHoleRecords(shape, derived.floorThickness)
+  const cavityRadius = derived.innerRadius
+  const bottomProtrusionVolume = volumeInCylindricalProbe(
+    shape,
+    expected.protrusionRadius - 0.02,
+    Math.max(configuration.bottomVerticalHeight - 0.08, 0.1),
+    0.04,
+  )
+  const bottomGrooveResidualVolume =
+    derived.profile === 'bottom-plate'
+      ? volumeInAnnularProbe(
+          shape,
+          expected.grooveOuterRadius + 0.02,
+          expected.protrusionRadius + 0.01,
+          0.01,
+          0,
+        )
+      : volumeInAnnularProbe(
+          shape,
+          expected.grooveOuterRadius + 0.02,
+          expected.protrusionRadius + 0.02,
+          0.2,
+          0.05,
+        )
+  const topOuterConicalFaceCount = countConicalFacesInRadialBand(
+    shape,
+    parameters.height - 0.05,
+    parameters.height + 0.05,
+    parameters.diameter / 2 - 0.01,
+  )
+  const topInnerChamferFaceCount = countConicalFacesInRadialBand(
+    shape,
+    parameters.height -
+      (configuration.topInnerChamfer - configuration.topInnerChamferLand) -
+      0.05,
+    parameters.height + 0.05,
+    cavityRadius - 0.2,
+    cavityRadius +
+      configuration.topInnerChamfer -
+      configuration.topInnerChamferLand +
+      0.2,
+  )
+  const topInnerChamferHeight = maxConicalFaceHeightInRadialBand(
+    shape,
+    parameters.height -
+      (configuration.topInnerChamfer - configuration.topInnerChamferLand) -
+      0.05,
+    parameters.height + 0.05,
+    cavityRadius - 0.2,
+    cavityRadius +
+      configuration.topInnerChamfer -
+      configuration.topInnerChamferLand +
+      0.2,
+  )
+  const bottomFootChamferFaceCount =
+    derived.profile === 'bottom-plate'
+      ? 0
+      : countConicalFacesInRadialBand(
+          shape,
+          -0.05,
+          configuration.bottomFootBevel + 0.05,
+          derived.lowerFootRadius - 0.2,
+          expected.protrusionRadius + 0.2,
+        )
+  const bottomFootChamferHeight =
+    derived.profile === 'bottom-plate'
+      ? 0
+      : maxConicalFaceHeightInRadialBand(
+          shape,
+          -0.05,
+          configuration.bottomFootBevel + 0.05,
+          derived.lowerFootRadius - 0.2,
+          expected.protrusionRadius + 0.2,
+        )
+  const bottomOuterChamferFaceCount = countConicalFacesInRadialBand(
+    shape,
+    derived.outerTransitionStartZ - 0.05,
+    derived.outerTransitionEndZ + 0.05,
+    derived.outerTransitionStartRadius - 0.2,
+    parameters.diameter / 2 + 0.2,
+  )
+  const bottomOuterChamferHeight = maxConicalFaceHeightInRadialBand(
+    shape,
+    derived.outerTransitionStartZ - 0.05,
+    derived.outerTransitionEndZ + 0.05,
+    derived.outerTransitionStartRadius - 0.2,
+    parameters.diameter / 2 + 0.2,
+  )
+  const innerRampFaceCount =
+    derived.profile === 'thin'
+      ? countConicalFacesInRadialBand(
+          shape,
+          derived.flatFloorZ - 0.05,
+          derived.innerRampEndZ + 0.05,
+          derived.flatFloorRadius - 0.2,
+          derived.innerRampEndRadius + 0.2,
+        )
+      : 0
+  const innerRampHeight =
+    derived.profile === 'thin'
+      ? maxConicalFaceHeightInRadialBand(
+          shape,
+          derived.flatFloorZ - 0.05,
+          derived.innerRampEndZ + 0.05,
+          derived.flatFloorRadius - 0.2,
+          derived.innerRampEndRadius + 0.2,
+        )
+      : 0
+  const largestHoleRadius =
+    Math.max(
+      configuration.bottomHoleDiameter,
+      configuration.innerHoleDiameter,
+    ) / 2
+  const outerHoleCenters =
+    openGridStackableCylinderHoleCentersFor(parameters).slice(1)
+  const holeOuterClearances = outerHoleCenters.map(
+    (center) =>
+      derived.radius - Math.hypot(center[0], center[1]) - largestHoleRadius,
+  )
+  const holeFlatFloorClearances =
+    derived.profile === 'thin'
+      ? outerHoleCenters.map(
+          (center) =>
+            derived.flatFloorRadius -
+            Math.hypot(center[0], center[1]) -
+            largestHoleRadius,
+        )
+      : []
+  const floorProbeRadius = Math.min(
+    derived.flatFloorRadius - 0.4,
+    largestHoleRadius + 0.5,
+  )
+  const centralFloorBelowVolume = volumeInOffsetCylindricalProbe(
+    shape,
+    0.1,
+    0.04,
+    floorProbeRadius,
+    0,
+    derived.flatFloorZ - 0.04,
+  )
+  const centralFloorAboveVolume = volumeInOffsetCylindricalProbe(
+    shape,
+    0.1,
+    0.04,
+    floorProbeRadius,
+    0,
+    derived.flatFloorZ + 0.04,
+  )
+
+  const effectiveTopInnerChamfer =
+    configuration.topInnerChamfer - configuration.topInnerChamferLand
+  const straightWallProbeZ = parameters.height - effectiveTopInnerChamfer - 0.5
+  const straightWallInnerProbe = inspectRadialBoundaryAtZ(
+    shape,
+    derived.innerRadius,
+    straightWallProbeZ,
+    false,
+  )
+  const straightWallOuterProbe = inspectRadialBoundaryAtZ(
+    shape,
+    derived.radius,
+    straightWallProbeZ,
+    true,
+  )
+  const straightWallBoundaryProbeCount =
+    Number(straightWallInnerProbe.valid) + Number(straightWallOuterProbe.valid)
+  const straightWallThickness = derived.radius - derived.innerRadius
+
+  let innerRampBoundaryProbeCount = 0
+  if (derived.profile === 'thin') {
+    const rampSampleZs = [
+      derived.flatFloorZ + 0.25,
+      derived.flatFloorZ + 0.75,
+      derived.flatFloorZ + 1.25,
+    ]
+    for (const sampleZ of rampSampleZs) {
+      const innerRampRadius =
+        derived.flatFloorRadius + (sampleZ - derived.flatFloorZ)
+      const outerTransitionRadius =
+        sampleZ >= derived.outerTransitionEndZ
+          ? derived.outerTransitionEndRadius
+          : derived.outerTransitionStartRadius +
+            (sampleZ - derived.outerTransitionStartZ)
+      const innerProbe = inspectRadialBoundaryAtZ(
+        shape,
+        innerRampRadius,
+        sampleZ,
+        false,
+      )
+      const outerProbe = inspectRadialBoundaryAtZ(
+        shape,
+        outerTransitionRadius,
+        sampleZ,
+        true,
+      )
+      innerRampBoundaryProbeCount += Number(innerProbe.valid)
+      innerRampBoundaryProbeCount += Number(outerProbe.valid)
+    }
+  }
+  const innerRampAngleDegrees =
+    derived.profile === 'thin'
+      ? conicalFaceAngleDegreesInRadialBand(
+          shape,
+          derived.flatFloorZ - 0.05,
+          derived.innerRampEndZ + 0.05,
+          derived.flatFloorRadius - 0.2,
+          derived.innerRampEndRadius + 0.2,
+        )
+      : 0
+  const innerRampNormalThickness =
+    derived.profile === 'thin'
+      ? (() => {
+          const rampMidpointZ = derived.flatFloorZ + 0.75
+          const rampMidpointInnerRadius =
+            derived.flatFloorRadius + (rampMidpointZ - derived.flatFloorZ)
+          const rampMidpointOuterRadius =
+            rampMidpointZ >= derived.outerTransitionEndZ
+              ? derived.outerTransitionEndRadius
+              : derived.outerTransitionStartRadius +
+                (rampMidpointZ - derived.outerTransitionStartZ)
+          return (
+            (rampMidpointOuterRadius - rampMidpointInnerRadius) / Math.SQRT2
+          )
+        })()
+      : 0
+
+  const bottomMatingProbeZ =
+    derived.profile === 'bottom-plate'
+      ? 0.05
+      : configuration.bottomFootBevel + 0.2
+  const bottomMatingProbeRadius =
+    derived.profile === 'bottom-plate'
+      ? derived.outerTransitionStartRadius +
+        (bottomMatingProbeZ - derived.outerTransitionStartZ)
+      : expected.protrusionRadius
+  const bottomMatingProbe = inspectRadialBoundaryAtZ(
+    shape,
+    bottomMatingProbeRadius,
+    bottomMatingProbeZ,
+    true,
+  )
+  const bottomMatingClearance = derived.innerRadius - expected.protrusionRadius
+  const bottomMatingBoundaryProbeCount = Number(bottomMatingProbe.valid)
+
+  const positionedMating = shape
+    .clone()
+    .translate(0, 0, parameters.height - configuration.stackGrooveDepth)
+  let matingIntersection: Shape3D | null = null
+  let matingIntersectionVolume = 0
+  try {
+    matingIntersection = shape.intersect(positionedMating)
+    matingIntersectionVolume = measureVolume(matingIntersection)
+  } finally {
+    deleteShape(matingIntersection)
+    deleteShape(positionedMating)
+  }
+
+  const lowerConicalFaceCount = countConicalFacesInRadialBand(
+    shape,
+    -0.05,
+    derived.innerRampEndZ + 0.05,
+    derived.lowerFootRadius - 0.2,
+    derived.radius + 0.2,
+  )
+  const expectedLowerConicalFaces = expectedLowerConicalFaceCount(
+    derived.profile,
+  )
+  const lowerUnexpectedConicalFaceCount = Math.max(
+    0,
+    lowerConicalFaceCount - expectedLowerConicalFaces,
+  )
+  const bottomOuterFilletFaceCount = countSurfaceFacesInZBand(
+    shape,
+    'TORUS',
+    -0.05,
+    derived.outerTransitionEndZ + 0.05,
+    derived.outerTransitionStartRadius + 0.1,
+    derived.radius + 0.2,
+  )
+  const internalFilletFaceCount = countSurfaceFacesInZBand(
+    shape,
+    'TORUS',
+    derived.flatFloorZ - 0.05,
+    derived.floorThickness + derived.innerFloorFilletRadius + 0.05,
+    0,
+    Number.POSITIVE_INFINITY,
+  )
+  const internalFilletHeight = maxSurfaceHeightInZBand(
+    shape,
+    'TORUS',
+    derived.flatFloorZ - 0.05,
+    derived.floorThickness + derived.innerFloorFilletRadius + 0.05,
+    0,
+    Number.POSITIVE_INFINITY,
+  )
+  // OpenCascade can expose the full underlying fillet torus in its bounds.
+  // Normalize that representation only after an outside-radius probe confirms
+  // that the physical solid still ends at the requested outer radius.
+  const reportBounds =
+    derived.profile !== 'thin' &&
+    volumeInAnnularProbe(
+      shape,
+      derived.radius + 0.12,
+      derived.radius + 0.02,
+      0.04,
+      derived.floorThickness + 0.3,
+    ) < 0.0001
+      ? {
+          min: [-derived.radius, -derived.radius, 0] as [
+            number,
+            number,
+            number,
+          ],
+          max: [derived.radius, derived.radius, parameters.height] as [
+            number,
+            number,
+            number,
+          ],
+        }
+      : { min: actualBounds[0], max: actualBounds[1] }
+  return {
+    profile: derived.profile,
+    thinBottomMode: parameters.thinBottomMode,
+    bottomPlateMode: parameters.bottomPlateMode,
+    bottomHolesEnabled: parameters.bottomHolesEnabled,
+    floorThickness: derived.floorThickness,
+    bottomHoleSectionDepth: derived.bottomHoleSectionDepth,
+    bounds: reportBounds,
+    volume: measureVolume(shape),
+    solidCount: countSolids(shape),
+    brepValid: isBRepValid(shape),
+    holeRecordCount: floorHoleRecords.length,
+    holes: readHoleQuality(parameters, floorHoleRecords),
+    holeOuterClearances,
+    holeFlatFloorClearances,
+    bottomProtrusionVolume,
+    bottomGrooveResidualVolume,
+    topOuterConicalFaceCount,
+    topInnerChamferFaceCount,
+    topInnerChamferHeight,
+    bottomFootChamferFaceCount,
+    bottomFootChamferHeight,
+    bottomOuterChamferFaceCount,
+    bottomOuterChamferHeight,
+    bottomOuterFilletFaceCount,
+    lowerUnexpectedConicalFaceCount,
+    centralFloorBelowVolume,
+    centralFloorAboveVolume,
+    straightWallThickness,
+    straightWallBoundaryProbeCount,
+    innerRampFaceCount,
+    innerRampHeight,
+    innerRampAngleDegrees,
+    innerRampNormalThickness,
+    innerRampBoundaryProbeCount,
+    bottomMatingClearance,
+    bottomMatingBoundaryProbeCount,
+    matingIntersectionVolume,
+    internalFilletFaceCount,
+    internalFilletHeight,
+  }
+}
+
+function assertQuality(
+  shape: Shape3D,
+  parameters: OpenGridStackableCylinderParameters,
+): OpenGridStackableCylinderInterfaceQualityReport {
+  parameters = normalizeParameters(parameters)
+  const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
+  const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
+  const report = inspectOpenGridStackableCylinderInterface(shape, parameters)
+  const expectedBounds = boundsForOpenGridStackableCylinder(parameters)
+  const failures: string[] = []
+  const actualCoordinates = [...report.bounds.min, ...report.bounds.max]
+  const expectedCoordinates = [...expectedBounds.min, ...expectedBounds.max]
+
+  if (
+    actualCoordinates.some(
+      (coordinate, index) =>
+        !closeEnough(coordinate, expectedCoordinates[index]),
+    )
+  ) {
+    failures.push('bounds')
+  }
+  if (!(report.volume > 0)) failures.push('volume')
+  if (report.solidCount !== 1) failures.push('single-solid')
+  if (!report.brepValid) failures.push('brep')
+  if (report.centralFloorBelowVolume <= 0.0001) {
+    failures.push('central-floor-thickness')
+  }
+  if (report.centralFloorAboveVolume > 0.0001) {
+    failures.push('central-floor-surface')
+  }
+  if (
+    !closeEnough(report.straightWallThickness, configuration.wallThickness) ||
+    report.straightWallBoundaryProbeCount !== 2
+  ) {
+    failures.push('straight-wall-thickness')
+  }
+  const expectedHoleCenters =
+    openGridStackableCylinderHoleCentersFor(parameters)
+  const expectedHoleSectionCount = expectedHoleCenters.length * 2
+  if (report.holeRecordCount !== expectedHoleSectionCount) {
+    failures.push('hole-layout')
+  }
+  for (const hole of report.holes) {
+    if (hole.sections.length !== 2) {
+      failures.push('stepped-holes')
+      continue
+    }
+    const [lower, upper] = hole.sections
+    if (
+      !lower ||
+      !upper ||
+      !closeEnough(lower.diameter, configuration.bottomHoleDiameter) ||
+      !closeEnough(lower.minZ, 0) ||
+      !closeEnough(lower.maxZ, derived.bottomHoleSectionDepth) ||
+      !closeEnough(upper.diameter, configuration.innerHoleDiameter) ||
+      !closeEnough(upper.minZ, derived.bottomHoleSectionDepth) ||
+      !closeEnough(
+        upper.maxZ,
+        derived.bottomHoleSectionDepth + configuration.innerHoleSectionDepth,
+      )
+    ) {
+      failures.push('stepped-hole-profile')
+    }
+  }
+  const largestHoleRadius =
+    Math.max(
+      configuration.bottomHoleDiameter,
+      configuration.innerHoleDiameter,
+    ) / 2
+  for (const center of expectedHoleCenters.slice(1)) {
+    const centerRadius = Math.hypot(center[0], center[1])
+    const clearance = derived.radius - centerRadius - largestHoleRadius
+    if (clearance < configuration.outerEdgeClearance - 0.05) {
+      failures.push('hole-edge-clearance')
+    }
+    if (derived.profile === 'thin') {
+      const flatFloorClearance =
+        derived.flatFloorRadius - centerRadius - largestHoleRadius
+      if (flatFloorClearance < configuration.flatFloorClearance - 0.05) {
+        failures.push('hole-flat-floor-clearance')
+      }
+    }
+  }
+  if (report.bottomProtrusionVolume <= 0) failures.push('bottom-protrusion')
+  if (report.bottomGrooveResidualVolume > 0.01) {
+    failures.push('bottom-groove')
+  }
+  if (report.topOuterConicalFaceCount > 0) {
+    failures.push('top-outer-interface')
+  }
+  if (report.topInnerChamferFaceCount === 0) {
+    failures.push('top-inner-chamfer')
+  }
+  if (report.topInnerChamferHeight < configuration.topInnerChamfer - 0.05) {
+    failures.push('top-inner-chamfer-height')
+  }
+  if (derived.profile === 'bottom-plate') {
+    if (
+      report.bottomFootChamferFaceCount !== 0 ||
+      report.bottomFootChamferHeight > 0.05
+    ) {
+      failures.push('bottom-foot-present')
+    }
+  } else {
+    if (report.bottomFootChamferFaceCount === 0) {
+      failures.push('bottom-foot-bevel')
+    }
+    if (report.bottomFootChamferHeight < configuration.bottomFootBevel - 0.05) {
+      failures.push('bottom-foot-bevel-height')
+    }
+  }
+  if (report.bottomOuterChamferFaceCount === 0) {
+    failures.push('bottom-outer-slope')
+  }
+  if (
+    report.bottomOuterChamferHeight <
+    derived.outerTransitionEndZ - derived.outerTransitionStartZ - 0.05
+  ) {
+    failures.push('bottom-outer-slope-height')
+  }
+  if (derived.profile === 'thin') {
+    if (report.innerRampFaceCount === 0) {
+      failures.push('inner-ramp')
+    }
+    if (
+      report.innerRampHeight <
+      derived.innerRampEndZ - derived.flatFloorZ - 0.05
+    ) {
+      failures.push('inner-ramp-height')
+    }
+    if (
+      !closeEnough(report.innerRampAngleDegrees, 45, 0.1) ||
+      (derived.profile === 'thin' &&
+        !closeEnough(
+          report.innerRampNormalThickness,
+          configuration.wallThickness,
+          0.05,
+        )) ||
+      report.innerRampBoundaryProbeCount !== 6
+    ) {
+      failures.push('inner-ramp-profile')
+    }
+  } else if (
+    report.internalFilletFaceCount !== 1 ||
+    report.internalFilletHeight < configuration.innerFloorFilletRadius - 0.05
+  ) {
+    failures.push('internal-floor-fillet')
+  }
+  if (report.lowerUnexpectedConicalFaceCount !== 0) {
+    failures.push('lower-filler')
+  }
+  if (
+    !closeEnough(
+      report.bottomMatingClearance,
+      configuration.stackFitClearance,
+    ) ||
+    report.bottomMatingBoundaryProbeCount !== 1
+  ) {
+    failures.push('bottom-mating-clearance')
+  }
+  if (report.matingIntersectionVolume > 0.01) {
+    failures.push('same-diameter-interference')
+  }
+  if (report.bottomOuterFilletFaceCount !== 0) {
+    failures.push('bottom-outer-fillet-present')
+  }
+  if (
+    derived.profile === 'thin' &&
+    (report.internalFilletFaceCount !== 0 || report.internalFilletHeight > 0.05)
+  ) {
+    failures.push('internal-fillet-present')
+  }
+  if (failures.length > 0) {
+    throw new Error(
+      `OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID:${failures.join(';')}`,
+    )
+  }
+  return report
+}
+
+export function assertOpenGridStackableCylinderQuality(
+  shape: Shape3D,
+  parameters: OpenGridStackableCylinderParameters,
+): OpenGridStackableCylinderInterfaceQualityReport {
+  return assertQuality(shape, parameters)
+}
+
+export function buildOpenGridStackableCylinder(
+  parameters: OpenGridStackableCylinderParameters,
+  context: OpenGridStackableCylinderBuildContext = {},
+): Shape3D {
+  const validation = validateOpenGridStackableCylinderParameters(parameters)
+  if (!validation.valid) {
+    throw new Error('OPENGRID_STACKABLE_CYLINDER_PARAMETERS_INVALID')
+  }
+  const normalizedParameters = validation.value
+
+  assertGenerationCurrent(context)
+  let shape: Shape3D
+  try {
+    shape = makeCylinderShell(normalizedParameters)
+  } catch (error) {
+    throwStageError('OPENGRID_STACKABLE_CYLINDER_SHELL_INVALID', error)
+  }
+  try {
+    try {
+      shape = addBottomHoles(shape, normalizedParameters, context)
+    } catch (error) {
+      throwStageError('OPENGRID_STACKABLE_CYLINDER_HOLES_INVALID', error)
+    }
+    assertGenerationCurrent(context)
+    assertQuality(shape, normalizedParameters)
+    return shape
+  } catch (error) {
+    deleteShape(shape)
+    throw error
+  }
+}

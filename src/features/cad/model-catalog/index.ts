@@ -7,6 +7,7 @@ import { modularGridBaseDefinition } from './components/modular-grid-base'
 import { opengridDefinition } from './components/opengrid'
 import { opengridDividerDefinition } from './components/opengrid-divider'
 import { opengridStackableBoxDefinition } from './components/opengrid-stackable-box'
+import { opengridStackableCylinderDefinition } from './components/opengrid-stackable-cylinder'
 import { opengridSnapDefinition } from './components/opengrid-snap'
 import { openGridSnapRemoverDefinition } from './components/opengrid-snap-remover'
 import { opengridPillarDefinition } from './components/opengrid-pillar'
@@ -33,6 +34,7 @@ export { modularGridBaseDefinition } from './components/modular-grid-base'
 export { opengridDefinition } from './components/opengrid'
 export { opengridDividerDefinition } from './components/opengrid-divider'
 export { opengridStackableBoxDefinition } from './components/opengrid-stackable-box'
+export { opengridStackableCylinderDefinition } from './components/opengrid-stackable-cylinder'
 export { opengridSnapDefinition } from './components/opengrid-snap'
 export { openGridSnapRemoverDefinition } from './components/opengrid-snap-remover'
 export { opengridPillarDefinition } from './components/opengrid-pillar'
@@ -47,6 +49,7 @@ export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   opengridPillarDefinition,
   opengridDividerDefinition,
   opengridStackableBoxDefinition,
+  opengridStackableCylinderDefinition,
   opengridSnapDefinition,
   openGridSnapRemoverDefinition,
 ]
@@ -68,7 +71,7 @@ export const modelFamilyMetadata: Readonly<
   opengrid: {
     key: 'opengrid',
     label: 'OpenGrid 系列',
-    description: '官方 OpenGrid 模型與自製底座配件。',
+    description: '包含官方 OpenGrid 網格模型與自製相容配件。',
   },
   other: {
     key: 'other',

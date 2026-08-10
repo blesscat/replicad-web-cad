@@ -42,6 +42,30 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
     return { ...value, fullBottomHoleGrid: false }
   }
 
+  if (modelId === 'opengrid-stackable-cylinder' && isRecord(value)) {
+    return {
+      ...value,
+      thinBottomMode: Object.prototype.hasOwnProperty.call(
+        value,
+        'thinBottomMode',
+      )
+        ? value.thinBottomMode
+        : false,
+      bottomPlateMode: Object.prototype.hasOwnProperty.call(
+        value,
+        'bottomPlateMode',
+      )
+        ? value.bottomPlateMode
+        : false,
+      bottomHolesEnabled: Object.prototype.hasOwnProperty.call(
+        value,
+        'bottomHolesEnabled',
+      )
+        ? value.bottomHolesEnabled
+        : true,
+    }
+  }
+
   return value
 }
 

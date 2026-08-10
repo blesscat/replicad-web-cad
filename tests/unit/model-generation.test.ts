@@ -40,6 +40,15 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
   if (modelId === 'opengrid-stackable-box') {
     return { x: 2, y: 2, height: 10, fullBottomHoleGrid: false }
   }
+  if (modelId === 'opengrid-stackable-cylinder') {
+    return {
+      diameter: 56,
+      height: 30,
+      thinBottomMode: false,
+      bottomPlateMode: false,
+      bottomHolesEnabled: true,
+    }
+  }
   if (modelId === 'opengrid-snap') {
     return {
       variant: 'Full',
@@ -114,7 +123,9 @@ function createRuntimeContext(
     clearTimer: vi.fn(),
     setOperationTimeout: vi.fn(),
     recoverWorker: vi.fn(),
-  } as unknown as RuntimeContext
+  } as unknown as RuntimeContext & {
+    setOperationTimeout: ReturnType<typeof vi.fn>
+  }
 
   return { client, send, context }
 }
@@ -469,6 +480,40 @@ describe('CAD model generation debounce', () => {
     )
   })
 
+  it('debounces OpenGrid stackable-cylinder 1 mm input through its own model id', () => {
+    const { client, send, context } = createRuntimeContext(
+      'opengrid-stackable-cylinder',
+      {
+        diameter: 56,
+        height: 30,
+        thinBottomMode: false,
+        bottomPlateMode: false,
+        bottomHolesEnabled: true,
+      },
+    )
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('diameter', '57')
+    vi.advanceTimersByTime(500)
+
+    expect(send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.generate',
+        modelId: 'opengrid-stackable-cylinder',
+        parameters: {
+          diameter: 57,
+          height: 30,
+          thinBottomMode: false,
+          bottomPlateMode: false,
+          bottomHolesEnabled: true,
+        },
+      }),
+    )
+    expect(client.send).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'model.invalidate', generation: 1 }),
+    )
+  })
+
   it('registers divider generation timeout recovery for the current operation', () => {
     const { client, send, context } = createRuntimeContext('opengrid-divider', {
       left: 1,
@@ -502,6 +547,55 @@ describe('CAD model generation debounce', () => {
         operationId: generateCommand?.operationId,
       }),
       client,
+    )
+  })
+
+  it('keeps cylinder mode and all-hole toggles in the generation snapshot', () => {
+    const { send, context } = createRuntimeContext(
+      'opengrid-stackable-cylinder',
+    )
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('thinBottomMode', 'true')
+    handlers.handleInputChange('bottomHolesEnabled', 'false')
+    vi.advanceTimersByTime(500)
+
+    expect(send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.generate',
+        modelId: 'opengrid-stackable-cylinder',
+        parameters: {
+          diameter: 56,
+          height: 30,
+          thinBottomMode: true,
+          bottomPlateMode: false,
+          bottomHolesEnabled: false,
+        },
+      }),
+    )
+  })
+
+  it('keeps bottom-plate mode mutually exclusive in the generation snapshot', () => {
+    const { send, context } = createRuntimeContext(
+      'opengrid-stackable-cylinder',
+    )
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('bottomPlateMode', 'true')
+    vi.advanceTimersByTime(500)
+
+    expect(send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.generate',
+        modelId: 'opengrid-stackable-cylinder',
+        parameters: {
+          diameter: 56,
+          height: 30,
+          thinBottomMode: false,
+          bottomPlateMode: true,
+          bottomHolesEnabled: true,
+        },
+      }),
     )
   })
 

@@ -312,3 +312,34 @@ pre-half-cell OpenGrid entry MAY normalize missing half-cell fields to none.
 - **WHEN** persistence is read
 - **THEN** that OpenGrid entry MUST fall back to the OpenGrid definition defaults
 - **AND** the `opengrid-snap` entry and all other model entries MUST remain unchanged
+### Requirement: Stackable-cylinder parameters are persisted independently
+
+The versioned browser persistence MUST store valid `opengrid-stackable-cylinder` parameters under that stable model ID. The entry MUST contain typed integer `diameter` and `height` values accepted by the current cylinder validator, and MUST remain independent from `opengrid`, `opengrid-stackable-box`, and every other component entry. Invalid, incomplete, malformed, legacy, or out-of-range cylinder values MUST NOT overwrite the last accepted cylinder snapshot.
+
+#### Scenario: Restore valid cylinder parameters
+
+- **GIVEN** browser persistence contains a valid `opengrid-stackable-cylinder` entry
+- **WHEN** the user opens `/cad/opengrid-stackable-cylinder`
+- **THEN** the controls MUST display the saved typed diameter and height
+- **AND** the first generation MUST use those values
+
+#### Scenario: Missing or invalid cylinder entry uses defaults
+
+- **GIVEN** the cylinder entry is missing or fails the current exact parameter validator
+- **WHEN** the cylinder workspace initializes
+- **THEN** the workspace MUST use the cylinder definition defaults
+- **AND** it MUST NOT merge values from `opengrid` or `opengrid-stackable-box`
+
+#### Scenario: Valid cylinder updates are persisted
+
+- **GIVEN** a cylinder snapshot passes component validation
+- **WHEN** the workspace accepts the update
+- **THEN** persistence MUST update only the `opengrid-stackable-cylinder` entry
+- **AND** diameter and height MUST be stored as typed integers rather than raw input strings
+
+#### Scenario: Invalid cylinder input does not overwrite persistence
+
+- **GIVEN** a previously accepted cylinder snapshot exists
+- **WHEN** the user enters an invalid, incomplete, fractional, or out-of-range diameter or height
+- **THEN** the previous accepted cylinder entry MUST remain unchanged
+- **AND** the invalid snapshot MUST NOT be used for initialization or sent to the Worker

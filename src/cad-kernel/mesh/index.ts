@@ -21,6 +21,10 @@ type TriangulationData = FaceMeshData | null
 
 const MAX_GLOBAL_MESH_FACE_COUNT = 512
 
+function appendNumbers(target: number[], source: number[]): void {
+  for (const value of source) target.push(value)
+}
+
 function countFaces(shape: Shape3D): number {
   const oc = getOC()
   const explorer = new oc.TopExp_Explorer_2(
@@ -84,9 +88,9 @@ function collectFaceMeshData(
           throw new Error(`MESH_FACE_TRIANGULATION_INVALID:${index}:${message}`)
         }
         if (triangulation) {
-          triangles.push(...triangulation.triangles)
-          vertices.push(...triangulation.vertices)
-          normals.push(...triangulation.normals)
+          appendNumbers(triangles, triangulation.triangles)
+          appendNumbers(vertices, triangulation.vertices)
+          appendNumbers(normals, triangulation.normals)
         }
       } finally {
         try {

@@ -6,6 +6,7 @@ import type {
   HswCellParameters,
   OpenGridDividerParameters,
   OpenGridStackableBoxParameters,
+  OpenGridStackableCylinderParameters,
   OpenGridSnapParameters,
   PillarParameters,
 } from '../../src/cad-contract/units'
@@ -306,6 +307,53 @@ describe('CAD workspace validation helpers', () => {
       valid: false,
       message: '總長度必須是有限的整數 mm。',
       field: 'length',
+    })
+  })
+
+  it('round-trips OpenGrid stackable-cylinder integer inputs', () => {
+    const parameters: OpenGridStackableCylinderParameters = {
+      diameter: 56,
+      height: 30,
+      thinBottomMode: false,
+      bottomPlateMode: false,
+      bottomHolesEnabled: true,
+    }
+    const raw = rawFromParameters(parameters)
+
+    expect(raw).toEqual({
+      diameter: '56',
+      height: '30',
+      thinBottomMode: 'false',
+      bottomPlateMode: 'false',
+      bottomHolesEnabled: 'true',
+    })
+    expect(parseRawParameters(raw, 'opengrid-stackable-cylinder')).toEqual({
+      valid: true,
+      value: parameters,
+    })
+    expect(
+      parseRawParameters(
+        { diameter: '56', height: '30' },
+        'opengrid-stackable-cylinder',
+      ),
+    ).toEqual({
+      valid: true,
+      value: parameters,
+    })
+    expect(
+      parseRawParameters(
+        {
+          diameter: '56.5',
+          height: '30',
+          thinBottomMode: 'false',
+          bottomHolesEnabled: 'true',
+        },
+        'opengrid-stackable-cylinder',
+      ),
+    ).toEqual({
+      valid: false,
+      message: '必須是有限的整數。',
+      field: 'diameter',
     })
   })
 })

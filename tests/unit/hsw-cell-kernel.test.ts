@@ -33,6 +33,10 @@ const mocks = vi.hoisted(() => ({
     model: 'opengrid-divider',
     delete: vi.fn(),
   })),
+  buildOpenGridStackableCylinder: vi.fn(() => ({
+    model: 'opengrid-stackable-cylinder',
+    delete: vi.fn(),
+  })),
 }))
 
 vi.mock('../../src/cad-kernel/components/box/builder', () => ({
@@ -69,6 +73,12 @@ vi.mock(
     buildOpenGridStackableBox: mocks.buildOpenGridStackableBox,
   }),
 )
+vi.mock(
+  '../../src/cad-kernel/components/opengrid-stackable-cylinder/builder',
+  () => ({
+    buildOpenGridStackableCylinder: mocks.buildOpenGridStackableCylinder,
+  }),
+)
 
 vi.mock('../../src/cad-kernel/components/opengrid-divider/builder', () => ({
   buildOpenGridDivider: mocks.buildOpenGridDivider,
@@ -102,6 +112,7 @@ describe('HSW kernel model registration', () => {
       'opengrid-pillar',
       'opengrid',
       'opengrid-stackable-box',
+      'opengrid-stackable-cylinder',
       'opengrid-snap',
       'opengrid-snap-remover',
       'opengrid-divider',
@@ -205,6 +216,33 @@ describe('HSW kernel model registration', () => {
     expect(mocks.buildOpenGridBRep).not.toHaveBeenCalled()
   })
 
+  it('routes the stackable-cylinder model to its dedicated builder', async () => {
+    const shape = await buildModelBRep(
+      'opengrid-stackable-cylinder',
+      {
+        diameter: 56,
+        height: 30,
+        thinBottomMode: false,
+        bottomPlateMode: false,
+        bottomHolesEnabled: true,
+      },
+      context,
+    )
+
+    expect(shape).toMatchObject({ model: 'opengrid-stackable-cylinder' })
+    expect(mocks.buildOpenGridStackableCylinder).toHaveBeenCalledWith(
+      {
+        diameter: 56,
+        height: 30,
+        thinBottomMode: false,
+        bottomPlateMode: false,
+        bottomHolesEnabled: true,
+      },
+      { isGenerationCurrent: undefined },
+    )
+    expect(mocks.buildOpenGridStackableBox).not.toHaveBeenCalled()
+    expect(mocks.buildOpenGridBRep).not.toHaveBeenCalled()
+  })
   it('routes hexagonal-column only to its own reference and builder', async () => {
     const shape = await buildModelBRep(
       'hexagonal-column',
@@ -221,7 +259,6 @@ describe('HSW kernel model registration', () => {
     expect(mocks.buildHswCell).not.toHaveBeenCalled()
     expect(mocks.buildModularGridBase).not.toHaveBeenCalled()
   })
-
   it('routes pillar directly to its asset-free builder', async () => {
     const shape = await buildModelBRep(
       'opengrid-pillar',

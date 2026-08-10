@@ -68,10 +68,10 @@ describe('existing OpenGrid regression contract', () => {
       },
     })
     expect(official?.exportFileName(officialValues)).toBe(
-      'opengrid-lite-2x2-official-default-corners-corners-enabled.step',
+      'opengrid-lite-2x2-xnone-ynone-official-default-corners-corners-enabled.step',
     )
     expect(official?.stlFileName(officialValues)).toBe(
-      'opengrid-lite-2x2-official-default-corners-corners-enabled.stl',
+      'opengrid-lite-2x2-xnone-ynone-official-default-corners-corners-enabled.stl',
     )
     expect(stackable?.exportFileName(stackableValues)).toBe(
       'opengrid-stackable-box-0.5x1.5-h20.step',
