@@ -46,6 +46,7 @@ import {
   normalizeOpenGridParameters,
   PROTOTYPE_CONFIGURATION,
   type ModelParameterValues,
+  type OpenGridSnapParameters,
   type OpenGridVariant,
   type OpenGridSnapVariant,
   isOpenGridSnapParameters,
@@ -126,7 +127,7 @@ export class CadWorkerRuntime {
     Promise<import('replicad').Shape3D>
   >()
   private readonly openGridSnapReferences = new Map<
-    OpenGridSnapVariant,
+    string,
     Promise<import('replicad').Shape3D>
   >()
   private openGridSnapRemoverAsset: Promise<import('replicad').Shape3D> | null =
@@ -313,8 +314,8 @@ export class CadWorkerRuntime {
         getBoxNormalReference: () => this.getBoxNormalReference(),
         getHexagonalColumnReference: () => this.getHexagonalColumnReference(),
         getOpenGridPrototype: (variant) => this.getOpenGridPrototype(variant),
-        getOpenGridSnapReference: (variant) =>
-          this.getOpenGridSnapReference(variant),
+        getOpenGridSnapReference: (variant, profile) =>
+          this.getOpenGridSnapReference(variant, profile),
         getOpenGridSnapRemoverAsset: () => this.getOpenGridSnapRemoverAsset(),
         yieldToEventLoop: yieldToWorkerEventLoop,
         isGenerationCurrent: () => this.isGenerationCurrent(command.generation),
@@ -368,6 +369,7 @@ export class CadWorkerRuntime {
         }
         const reference = await this.getOpenGridSnapReference(
           generationParameters.variant,
+          generationParameters.profile,
         )
         assertOpenGridSnapShapeQuality(
           shape,
@@ -835,22 +837,26 @@ export class CadWorkerRuntime {
 
   private getOpenGridSnapReference(
     variant: OpenGridSnapVariant,
+    profile: OpenGridSnapParameters['profile'],
   ): Promise<import('replicad').Shape3D> {
-    const cached = this.openGridSnapReferences.get(variant)
+    const cacheKey = `${profile}:${variant}`
+    const cached = this.openGridSnapReferences.get(cacheKey)
     if (cached) return cached
 
-    const reference = loadOpenGridSnapReference(variant).then((shape) => {
-      if (this.disposed) {
-        shape.delete()
-        throw new Error('WORKER_TERMINATED')
-      }
-      return shape
-    })
+    const reference = loadOpenGridSnapReference(variant, profile).then(
+      (shape) => {
+        if (this.disposed) {
+          shape.delete()
+          throw new Error('WORKER_TERMINATED')
+        }
+        return shape
+      },
+    )
     const recoverable = reference.catch((error) => {
-      this.openGridSnapReferences.delete(variant)
+      this.openGridSnapReferences.delete(cacheKey)
       throw error
     })
-    this.openGridSnapReferences.set(variant, recoverable)
+    this.openGridSnapReferences.set(cacheKey, recoverable)
     return recoverable
   }
 

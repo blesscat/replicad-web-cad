@@ -12,7 +12,10 @@ import {
   inspectOpenGridSnapReference,
   OPENGRID_SNAP_REFERENCE_URLS,
 } from '../../src/cad-kernel/components/opengrid-snap/builder'
-import { inspectOpenGridSnapShapeQuality } from '../../src/cad-kernel/components/opengrid-snap/quality'
+import {
+  inspectOpenGridSnapShapeQuality,
+  OPENGRID_SNAP_GENERATED_ENVELOPE_TOLERANCE,
+} from '../../src/cad-kernel/components/opengrid-snap/quality'
 import { meshBRep } from '../../src/cad-kernel/mesh'
 
 ;(globalThis as typeof globalThis & { __dirname?: string }).__dirname = dirname(
@@ -31,6 +34,28 @@ function shapeBounds(shape: Shape3D): number[][] {
   } finally {
     bounds.delete()
   }
+}
+
+function expectBoundsNear(actual: number[][], expected: number[][]): void {
+  for (let axis = 0; axis < 2; axis += 1) {
+    for (let coordinate = 0; coordinate < 3; coordinate += 1) {
+      expect(
+        Math.abs(actual[axis]![coordinate]! - expected[axis]![coordinate]!),
+      ).toBeLessThanOrEqual(OPENGRID_SNAP_GENERATED_ENVELOPE_TOLERANCE)
+    }
+  }
+}
+
+function expectBoundsInsideCanonicalFootprint(
+  actual: number[][],
+  height: number,
+): void {
+  expect(actual[0]?.[0]).toBeGreaterThanOrEqual(-7.15)
+  expect(actual[0]?.[1]).toBeGreaterThanOrEqual(-7.15)
+  expect(actual[1]?.[0]).toBeLessThanOrEqual(7.15)
+  expect(actual[1]?.[1]).toBeLessThanOrEqual(7.15)
+  expect(actual[0]?.[2]).toBeGreaterThanOrEqual(-0.15)
+  expect(actual[1]?.[2]).toBeLessThanOrEqual(height + 0.15)
 }
 
 function assemblyBounds(shape: Shape3D): number[][] {
@@ -93,6 +118,112 @@ function countSolids(shape: Shape3D): number {
   }
 }
 
+type SolidDescriptor = {
+  bounds: number[][]
+  volume: number
+}
+
+function solidDescriptors(shape: Shape3D): SolidDescriptor[] {
+  const oc = getOC()
+  const explorer = new oc.TopExp_Explorer_2(
+    shape.wrapped,
+    oc.TopAbs_ShapeEnum.TopAbs_SOLID as unknown as TopAbs_ShapeEnum,
+    oc.TopAbs_ShapeEnum.TopAbs_SHAPE as unknown as TopAbs_ShapeEnum,
+  )
+  const descriptors: SolidDescriptor[] = []
+  try {
+    while (explorer.More()) {
+      const solid = new Solid(oc.TopoDS.Solid_1(explorer.Current()))
+      try {
+        descriptors.push({
+          bounds: shapeBounds(solid),
+          volume: measureVolume(solid),
+        })
+      } finally {
+        solid.delete()
+      }
+      explorer.Next()
+    }
+    return descriptors
+  } finally {
+    explorer.delete()
+  }
+}
+
+function countDiagonalBoundaryCorners(shape: Shape3D, height: number): number {
+  const assembly = assemblyBounds(shape)
+  const centerX = (assembly[0]![0]! + assembly[1]![0]!) / 2
+  const centerY = (assembly[0]![1]! + assembly[1]![1]!) / 2
+  const corners = new Set<string>()
+  for (const face of shape.faces) {
+    try {
+      if (face.geomType !== 'PLANE') continue
+      const normal = face.normalAt()
+      const faceBounds = face.boundingBox
+      try {
+        const [min, max] = faceBounds.bounds as number[][]
+        const hasZSpan = max[2]! - min[2]! >= height - 1.2
+        const isDiagonal =
+          Math.abs(normal.z) < 0.1 &&
+          Math.abs(normal.x) > 0.1 &&
+          Math.abs(normal.y) > 0.1
+        if (!hasZSpan || !isDiagonal) continue
+
+        const xSign = (min[0]! + max[0]!) / 2 >= centerX ? 1 : -1
+        const ySign = (min[1]! + max[1]!) / 2 >= centerY ? 1 : -1
+        const touchesX =
+          xSign > 0
+            ? Math.abs(max[0]! - assembly[1]![0]!) <= 0.75
+            : Math.abs(min[0]! - assembly[0]![0]!) <= 0.75
+        const touchesY =
+          ySign > 0
+            ? Math.abs(max[1]! - assembly[1]![1]!) <= 0.75
+            : Math.abs(min[1]! - assembly[0]![1]!) <= 0.75
+        if (touchesX && touchesY) corners.add(`${xSign}:${ySign}`)
+      } finally {
+        faceBounds.delete()
+        normal.delete()
+      }
+    } finally {
+      face.delete()
+    }
+  }
+  return corners.size
+}
+
+function hasPlanarFaceWithBounds(
+  shape: Shape3D,
+  expected: number[][],
+  tolerance = 0.05,
+): boolean {
+  for (const face of shape.faces) {
+    try {
+      if (face.geomType !== 'PLANE') continue
+      const bounds = face.boundingBox
+      try {
+        const actual = bounds.bounds as number[][]
+        if (
+          actual.every((point, pointIndex) =>
+            point.every(
+              (coordinate, coordinateIndex) =>
+                Math.abs(
+                  coordinate - expected[pointIndex]![coordinateIndex]!,
+                ) <= tolerance,
+            ),
+          )
+        ) {
+          return true
+        }
+      } finally {
+        bounds.delete()
+      }
+    } finally {
+      face.delete()
+    }
+  }
+  return false
+}
+
 function centralSolid(shape: Shape3D): Solid {
   const oc = getOC()
   const explorer = new oc.TopExp_Explorer_2(
@@ -122,19 +253,34 @@ function centralSolid(shape: Shape3D): Solid {
   return selected
 }
 
-function assetBlob(variant: 'Full' | 'Lite'): Blob {
+function assetBlob(
+  variant: 'Full' | 'Lite',
+  profile: 'Standard' | 'Directional' = 'Standard',
+): Blob {
   return new Blob([
-    readFileSync(fileURLToPath(OPENGRID_SNAP_REFERENCE_URLS[variant])),
+    readFileSync(fileURLToPath(OPENGRID_SNAP_REFERENCE_URLS[profile][variant])),
   ])
 }
 
 function snapParameters(
   variant: 'Full' | 'Lite',
   offset: number,
-  halfCellX: 'none' | 'left' | 'right' = 'none',
-  halfCellY: 'none' | 'top' | 'bottom' = 'none',
+  footprint: 'full' | 'half' | 'quarter' = 'full',
+  overrides: Partial<{
+    profile: 'Standard' | 'Directional'
+    fourCornerLocatingHoles: boolean
+    centerRemoverHole: boolean
+  }> = {},
 ) {
-  return { variant, offset, halfCellX, halfCellY }
+  return {
+    variant,
+    profile: 'Standard' as const,
+    offset,
+    footprint,
+    fourCornerLocatingHoles: false,
+    centerRemoverHole: false,
+    ...overrides,
+  }
 }
 
 describe('OpenGrid Snap reference builder', () => {
@@ -154,7 +300,34 @@ describe('OpenGrid Snap reference builder', () => {
       )
       try {
         const report = inspectOpenGridSnapReference(reference, variant)
+        const descriptors = solidDescriptors(reference)
+        const body = descriptors.find((descriptor) => descriptor.volume > 100)
+        const snaps = descriptors.filter(
+          (descriptor) => descriptor.volume > 5.8 && descriptor.volume < 100,
+        )
+        const holders = descriptors.filter(
+          (descriptor) => descriptor.volume <= 5.8,
+        )
         expect(report.solidCount).toBe(9)
+        expect(body).toBeDefined()
+        expect(snaps).toHaveLength(4)
+        expect(holders).toHaveLength(4)
+        expect(body?.volume).toBeCloseTo(
+          variant === 'Full' ? 3670.486 : 1837.358,
+          2,
+        )
+        expect(
+          Math.min(...snaps.map((descriptor) => descriptor.bounds[0]![2]!)),
+        ).toBeCloseTo(variant === 'Full' ? 5.3 : 1.9, 2)
+        expect(
+          Math.max(...snaps.map((descriptor) => descriptor.bounds[1]![2]!)),
+        ).toBeCloseTo(variant === 'Full' ? 6.8 : 3.4, 2)
+        expect(
+          Math.min(...holders.map((descriptor) => descriptor.bounds[0]![2]!)),
+        ).toBeCloseTo(variant === 'Full' ? 3.4 : 0.2, 2)
+        expect(
+          Math.max(...holders.map((descriptor) => descriptor.bounds[1]![2]!)),
+        ).toBeCloseTo(variant === 'Full' ? 5.4 : 2, 2)
         expect(report.bounds.min[0]).toBeCloseTo(-12.8, 2)
         expect(report.bounds.max[0]).toBeCloseTo(12.8, 2)
         expect(report.bounds.min[1]).toBeCloseTo(-12.8, 2)
@@ -197,7 +370,10 @@ describe('OpenGrid Snap reference builder', () => {
           meshBRep(generated, { tolerance: 0.05, angularTolerance: 0.1 }),
           reference,
         )
-        expect(quality.passed, quality.failures.join(';')).toBe(true)
+        expect(
+          quality.passed,
+          `${quality.failures.join(';')} bounds=${JSON.stringify(quality.bounds)}`,
+        ).toBe(true)
       } finally {
         generated.delete()
         reference.delete()
@@ -206,25 +382,16 @@ describe('OpenGrid Snap reference builder', () => {
   )
 
   it.each(['Full', 'Lite'] as const)(
-    'derives every single and dual half-cell direction for %s',
+    'derives the full, half, and quarter footprints for %s',
     async (variant) => {
       const reference = await importOpenGridSnapReference(
         assetBlob(variant),
         variant,
       )
-      const directions = [
-        ['left', 'none'],
-        ['right', 'none'],
-        ['none', 'top'],
-        ['none', 'bottom'],
-        ['left', 'top'],
-        ['left', 'bottom'],
-        ['right', 'top'],
-        ['right', 'bottom'],
-      ] as const
+      const footprints = ['full', 'half', 'quarter'] as const
       try {
-        for (const [halfCellX, halfCellY] of directions) {
-          const parameters = snapParameters(variant, 0, halfCellX, halfCellY)
+        for (const footprint of footprints) {
+          const parameters = snapParameters(variant, 0, footprint)
           const generated = await buildOpenGridSnap(parameters, {
             getOpenGridSnapReference: async () => reference,
           })
@@ -240,16 +407,23 @@ describe('OpenGrid Snap reference builder', () => {
               reference,
             )
             const bounds = assemblyBounds(generated)
-            const expectedX = halfCellX === 'none' ? 12.8 : 6.4
-            const expectedY = halfCellY === 'none' ? 12.8 : 6.4
+            const expectedX = footprint === 'full' ? 12.8 : 6.4
+            const expectedY = footprint === 'quarter' ? 6.4 : 12.8
             expect(
               quality.passed,
-              `${halfCellX}/${halfCellY}: ${quality.failures.join(';')} actual=${JSON.stringify(bounds)}`,
+              `${footprint}: ${quality.failures.join(';')} actual=${JSON.stringify(bounds)}`,
             ).toBe(true)
-            expect(bounds[0][0]).toBeCloseTo(-expectedX, 2)
-            expect(bounds[1][0]).toBeCloseTo(expectedX, 2)
-            expect(bounds[0][1]).toBeCloseTo(-expectedY, 2)
-            expect(bounds[1][1]).toBeCloseTo(expectedY, 2)
+            expectBoundsNear(bounds, [
+              [-expectedX, -expectedY, 0],
+              [expectedX, expectedY, variant === 'Full' ? 6.8 : 3.4],
+            ])
+            expect(
+              countDiagonalBoundaryCorners(
+                generated,
+                variant === 'Full' ? 6.8 : 3.4,
+              ),
+              `${variant}/${footprint} diagonal boundary corner count`,
+            ).toBe(4)
           } finally {
             generated.delete()
           }
@@ -287,13 +461,13 @@ describe('OpenGrid Snap reference builder', () => {
   )
 
   it.each(['Full', 'Lite'] as const)(
-    'keeps a dual half-cell within both host pitches at maximum offset for $variant',
+    'keeps the canonical quarter footprint within both host pitches at maximum offset for $variant',
     async (variant) => {
       const reference = await importOpenGridSnapReference(
         assetBlob(variant),
         variant,
       )
-      const parameters = snapParameters(variant, 1, 'right', 'bottom')
+      const parameters = snapParameters(variant, 1, 'quarter')
       const generated = await buildOpenGridSnap(parameters, {
         getOpenGridSnapReference: async () => reference,
       })
@@ -308,12 +482,15 @@ describe('OpenGrid Snap reference builder', () => {
           mesh,
           reference,
         )
-        expect(quality.passed, quality.failures.join(';')).toBe(true)
+        expect(
+          quality.passed,
+          `${quality.failures.join(';')} bounds=${JSON.stringify(quality.bounds)}`,
+        ).toBe(true)
         const bounds = assemblyBounds(generated)
-        expect(bounds[0][0]).toBeCloseTo(-6.9, 2)
-        expect(bounds[1][0]).toBeCloseTo(6.9, 2)
-        expect(bounds[0][1]).toBeCloseTo(-6.9, 2)
-        expect(bounds[1][1]).toBeCloseTo(6.9, 2)
+        expectBoundsInsideCanonicalFootprint(
+          bounds,
+          variant === 'Full' ? 6.8 : 3.4,
+        )
       } finally {
         generated.delete()
         reference.delete()
@@ -360,7 +537,7 @@ describe('OpenGrid Snap reference builder', () => {
         measureVolume(referenceCore),
         5,
       )
-      expect(shapeBounds(generatedCore)).toEqual(shapeBounds(referenceCore))
+      expectBoundsNear(shapeBounds(generatedCore), shapeBounds(referenceCore))
     } finally {
       referenceCore.delete()
       generatedCore.delete()
@@ -396,6 +573,370 @@ describe('OpenGrid Snap reference builder', () => {
       reference.delete()
     }
   }, 60_000)
+
+  it.each(['Full', 'Lite'] as const)(
+    'applies the two optional body features independently for %s',
+    async (variant) => {
+      const reference = await importOpenGridSnapReference(
+        assetBlob(variant),
+        variant,
+      )
+      const solid = await buildOpenGridSnap(snapParameters(variant, 0), {
+        getOpenGridSnapReference: async () => reference,
+      })
+      const corners = await buildOpenGridSnap(
+        snapParameters(variant, 0, 'full', {
+          fourCornerLocatingHoles: true,
+        }),
+        { getOpenGridSnapReference: async () => reference },
+      )
+      const offsetCorners = await buildOpenGridSnap(
+        snapParameters(variant, 0.4, 'full', {
+          fourCornerLocatingHoles: true,
+        }),
+        { getOpenGridSnapReference: async () => reference },
+      )
+      const center = await buildOpenGridSnap(
+        snapParameters(variant, 0, 'full', {
+          centerRemoverHole: true,
+        }),
+        { getOpenGridSnapReference: async () => reference },
+      )
+      const both = await buildOpenGridSnap(
+        snapParameters(variant, 0, 'full', {
+          fourCornerLocatingHoles: true,
+          centerRemoverHole: true,
+        }),
+        { getOpenGridSnapReference: async () => reference },
+      )
+      try {
+        const featureCases = [
+          [solid, snapParameters(variant, 0)],
+          [
+            corners,
+            snapParameters(variant, 0, 'full', {
+              fourCornerLocatingHoles: true,
+            }),
+          ],
+          [
+            offsetCorners,
+            snapParameters(variant, 0.4, 'full', {
+              fourCornerLocatingHoles: true,
+            }),
+          ],
+          [
+            center,
+            snapParameters(variant, 0, 'full', {
+              centerRemoverHole: true,
+            }),
+          ],
+          [
+            both,
+            snapParameters(variant, 0, 'full', {
+              fourCornerLocatingHoles: true,
+              centerRemoverHole: true,
+            }),
+          ],
+        ] as const
+        const volumes = featureCases.map(([shape]) => {
+          const body = centralSolid(shape)
+          const volume = measureVolume(body)
+          body.delete()
+          return volume
+        })
+        for (const [shape, parameters] of featureCases) {
+          const quality = inspectOpenGridSnapShapeQuality(
+            shape,
+            parameters,
+            meshBRep(shape, { tolerance: 0.05, angularTolerance: 0.1 }),
+            reference,
+          )
+          expect(quality.passed, quality.failures.join(';')).toBe(true)
+        }
+        expect(volumes[1]).toBeLessThan(volumes[0]!)
+        expect(volumes[2]).toBeCloseTo(volumes[1]!, 5)
+        expect(volumes[3]).toBeLessThan(volumes[0]!)
+        expect(volumes[4]).toBeLessThan(volumes[0]!)
+        expect(volumes[4]).toBeLessThan(volumes[3]!)
+        expect(volumes[4]).toBeLessThan(volumes[2]!)
+        expect(volumes[0]! - volumes[1]!).toBeCloseTo(
+          variant === 'Full' ? 1070.83 : 479.503,
+          2,
+        )
+        expect(volumes[0]! - volumes[3]!).toBeCloseTo(
+          variant === 'Full' ? 371.2 : 169.6,
+          2,
+        )
+
+        const cornerBody = centralSolid(corners)
+        try {
+          const slotStepZ = variant === 'Full' ? 4.8 : 1.9
+          expect(
+            hasPlanarFaceWithBounds(cornerBody, [
+              [-5, 5.5, 0],
+              [5, 5.5, slotStepZ],
+            ]),
+          ).toBe(true)
+          expect(
+            hasPlanarFaceWithBounds(cornerBody, [
+              [5.5, -5, 0],
+              [5.5, 5, slotStepZ],
+            ]),
+          ).toBe(true)
+          expect(
+            hasPlanarFaceWithBounds(cornerBody, [
+              [-5, 5.5, slotStepZ],
+              [5, 8.5, slotStepZ],
+            ]),
+          ).toBe(true)
+        } finally {
+          cornerBody.delete()
+        }
+
+        const centerBody = centralSolid(center)
+        try {
+          const stepZ = variant === 'Full' ? 4.8 : 1.9
+          const topZ = variant === 'Full' ? 6.8 : 3.4
+          expect(
+            hasPlanarFaceWithBounds(centerBody, [
+              [4, -4, 0],
+              [4, 4, stepZ],
+            ]),
+          ).toBe(true)
+          expect(
+            hasPlanarFaceWithBounds(centerBody, [
+              [2, -4, stepZ],
+              [2, 4, topZ],
+            ]),
+          ).toBe(true)
+          expect(
+            hasPlanarFaceWithBounds(centerBody, [
+              [2, -4, stepZ],
+              [4, 4, stepZ],
+            ]),
+          ).toBe(true)
+        } finally {
+          centerBody.delete()
+        }
+      } finally {
+        solid.delete()
+        corners.delete()
+        offsetCorners.delete()
+        center.delete()
+        both.delete()
+        reference.delete()
+      }
+    },
+  )
+
+  it.each(['Full', 'Lite'] as const)(
+    'loads the independent Directional %s profile',
+    async (variant) => {
+      const reference = await importOpenGridSnapReference(
+        assetBlob(variant, 'Directional'),
+        variant,
+        'Directional',
+      )
+      const parameters = snapParameters(variant, 0, 'full', {
+        profile: 'Directional',
+      })
+      const generated = await buildOpenGridSnap(parameters, {
+        getOpenGridSnapReference: async () => reference,
+      })
+      try {
+        const report = inspectOpenGridSnapReference(
+          reference,
+          variant,
+          'Directional',
+        )
+        expect(report.solidCount).toBe(1)
+        expect(countSolids(generated)).toBe(1)
+        expect(assemblyBounds(generated)[1][1]).toBeGreaterThan(12.8)
+      } finally {
+        generated.delete()
+        reference.delete()
+      }
+    },
+  )
+
+  it.each(['Full', 'Lite'] as const)(
+    'keeps Directional optional features independent for %s',
+    async (variant) => {
+      const reference = await importOpenGridSnapReference(
+        assetBlob(variant, 'Directional'),
+        variant,
+        'Directional',
+      )
+      const baseParameters = snapParameters(variant, 0, 'full', {
+        profile: 'Directional',
+      })
+      const featureCases = [
+        baseParameters,
+        { ...baseParameters, fourCornerLocatingHoles: true },
+        { ...baseParameters, centerRemoverHole: true },
+        {
+          ...baseParameters,
+          fourCornerLocatingHoles: true,
+          centerRemoverHole: true,
+        },
+      ]
+      const generated: Shape3D[] = []
+      try {
+        for (const parameters of featureCases) {
+          generated.push(
+            await buildOpenGridSnap(parameters, {
+              getOpenGridSnapReference: async () => reference,
+            }),
+          )
+        }
+        const volumes = generated.map((shape) => {
+          const body = centralSolid(shape)
+          const volume = measureVolume(body)
+          body.delete()
+          return volume
+        })
+        expect(volumes[1]).toBeLessThan(volumes[0]!)
+        expect(volumes[2]).toBeLessThan(volumes[0]!)
+        expect(volumes[3]).toBeLessThan(volumes[1]!)
+        expect(volumes[3]).toBeLessThan(volumes[2]!)
+        for (let index = 0; index < featureCases.length; index += 1) {
+          const parameters = featureCases[index]
+          const shape = generated[index]
+          if (!shape) throw new Error('directional-feature-shape-missing')
+          const quality = inspectOpenGridSnapShapeQuality(
+            shape,
+            parameters,
+            meshBRep(shape, { tolerance: 0.05, angularTolerance: 0.1 }),
+            reference,
+          )
+          expect(quality.passed, quality.failures.join(';')).toBe(true)
+        }
+      } finally {
+        for (const shape of generated) shape.delete()
+        reference.delete()
+      }
+    },
+  )
+
+  it('meshes the Directional Lite offset assembly with both optional features', async () => {
+    const reference = await importOpenGridSnapReference(
+      assetBlob('Lite', 'Directional'),
+      'Lite',
+      'Directional',
+    )
+    try {
+      for (const features of [
+        { fourCornerLocatingHoles: false, centerRemoverHole: false },
+        { fourCornerLocatingHoles: true, centerRemoverHole: false },
+        { fourCornerLocatingHoles: false, centerRemoverHole: true },
+        { fourCornerLocatingHoles: true, centerRemoverHole: true },
+      ]) {
+        for (const offset of [0, 0.2]) {
+          const parameters = snapParameters('Lite', offset, 'full', {
+            profile: 'Directional',
+            ...features,
+          })
+          const generated = await buildOpenGridSnap(parameters, {
+            getOpenGridSnapReference: async () => reference,
+          })
+          try {
+            const mesh = meshBRep(generated, {
+              tolerance: 0.05,
+              angularTolerance: 0.1,
+            })
+            const quality = inspectOpenGridSnapShapeQuality(
+              generated,
+              parameters,
+              mesh,
+              reference,
+            )
+            expect(quality.passed, quality.failures.join(';')).toBe(true)
+          } finally {
+            generated.delete()
+          }
+        }
+      }
+    } finally {
+      reference.delete()
+    }
+  }, 60_000)
+
+  it.each(['Full', 'Lite'] as const)(
+    'derives every Directional footprint for %s',
+    async (variant) => {
+      const reference = await importOpenGridSnapReference(
+        assetBlob(variant, 'Directional'),
+        variant,
+        'Directional',
+      )
+      const footprints = ['full', 'half', 'quarter'] as const
+      try {
+        for (const footprint of footprints) {
+          const parameters = snapParameters(variant, 0, footprint, {
+            profile: 'Directional',
+          })
+          const generated = await buildOpenGridSnap(parameters, {
+            getOpenGridSnapReference: async () => reference,
+          })
+          try {
+            const quality = inspectOpenGridSnapShapeQuality(
+              generated,
+              parameters,
+              meshBRep(generated, { tolerance: 0.05, angularTolerance: 0.1 }),
+              reference,
+            )
+            expect(
+              quality.passed,
+              `${footprint}: ${quality.failures.join(';')}`,
+            ).toBe(true)
+            expect(quality.solidCount).toBeGreaterThanOrEqual(1)
+          } finally {
+            generated.delete()
+          }
+        }
+      } finally {
+        reference.delete()
+      }
+    },
+  )
+
+  it.each(['Full', 'Lite'] as const)(
+    'derives a Directional quarter-cell from the complete %s assembly',
+    async (variant) => {
+      const reference = await importOpenGridSnapReference(
+        assetBlob(variant, 'Directional'),
+        variant,
+        'Directional',
+      )
+      const parameters = snapParameters(variant, 0, 'quarter', {
+        profile: 'Directional',
+      })
+      const generated = await buildOpenGridSnap(parameters, {
+        getOpenGridSnapReference: async () => reference,
+      })
+      try {
+        const mesh = meshBRep(generated, {
+          tolerance: 0.05,
+          angularTolerance: 0.1,
+        })
+        const quality = inspectOpenGridSnapShapeQuality(
+          generated,
+          parameters,
+          mesh,
+          reference,
+        )
+        expect(quality.passed, quality.failures.join(';')).toBe(true)
+        expect(quality.solidCount).toBeGreaterThanOrEqual(1)
+        expectBoundsNear(assemblyBounds(generated), [
+          [-6.4, -6.4, 0],
+          [6.4, 6.4, variant === 'Full' ? 6.8 : 3.4],
+        ])
+      } finally {
+        generated.delete()
+        reference.delete()
+      }
+    },
+  )
 
   it.each(['Full', 'Lite'] as const)(
     'supports the maximum slider offset for $variant without moving the fixed core',

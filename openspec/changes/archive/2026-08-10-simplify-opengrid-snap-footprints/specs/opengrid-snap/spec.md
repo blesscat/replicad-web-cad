@@ -1,8 +1,4 @@
-## Purpose
-
-定義 OpenGrid Snap 元件的參數契約、參考幾何、profile 與 footprint 衍生幾何、品質驗證、生命週期與匯出一致性。
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: OpenGrid Snap model contract
 
@@ -37,7 +33,7 @@ The system MUST register the independent `opengrid-snap` model with `Full` and `
 
 ### Requirement: Complete reference assembly preservation
 
-For a full-footprint Standard snapshot, the generated Snap result MUST preserve the complete reference assembly, including one Body, four Side Holder solids, and four Snap solids, for a total of nine solids. It MUST remain centered on X/Y and based at Z=0, with the variant-specific Z profile from the Bare Standard reference. Half and quarter snapshots MUST instead satisfy the project-owned footprint-fit quality requirement and MUST NOT be required to retain nine solids after explicit clipping/recomposition. A full-footprint Directional snapshot MUST preserve the topology permitted by its Directional profile, including a valid fused B-Rep when the source profile is fused, and MUST preserve its canonical asymmetric directional envelope.
+For a full-footprint Standard snapshot, the generated Snap result MUST preserve the complete reference assembly, including one Body, four Side Holder solids, and four Snap solids, for a total of nine solids. It MUST remain centered on X/Y and based at Z=0, with the variant-specific Z profile from the Bare Standard reference. Half and quarter snapshots MUST instead satisfy the project-owned footprint-fit quality requirement and MUST NOT be required to retain nine solids after explicit clipping/recomposition.
 
 #### Scenario: Zero-offset Full Standard assembly
 
@@ -53,16 +49,9 @@ For a full-footprint Standard snapshot, the generated Snap result MUST preserve 
 - **AND** its XY envelope MUST match the Lite Bare Standard reference within the documented CAD tolerance
 - **AND** its Z bounds MUST match approximately 0 through 3.4 mm within tolerance
 
-#### Scenario: Directional assembly preserves its profile
-
-- **WHEN** Full or Lite Directional is generated with `footprint=full`
-- **THEN** the candidate MUST match the selected Directional profile's documented topology and Z bounds
-- **AND** its canonical directional asymmetry MUST remain visible in the expected boundary probes
-- **AND** it MUST NOT be accepted merely because a rotated Standard assembly has a similar volume
-
 #### Scenario: Central-only full-footprint output is rejected
 
-- **WHEN** a full-footprint generated result contains only the central Body or has lost the required profile assembly members
+- **WHEN** a full-footprint generated result contains only the central Body or has fewer than nine reference solids
 - **THEN** the Snap quality gate MUST reject the candidate
 - **AND** the candidate MUST NOT become the committed model
 
@@ -91,57 +80,11 @@ For a full-footprint Standard snapshot, the generated Snap result MUST preserve 
 - **AND** the central interface MUST remain valid
 - **AND** no hole diameter or center MAY change
 
-#### Scenario: Fixed holes do not scale with offset
-
-- **WHEN** the same profile and feature selection is generated at two valid offsets
-- **THEN** every uncut locating hole MUST retain its configured diameter and center
-- **AND** the center remover profile MUST retain its configured dimensions
-- **AND** only the permitted outer/frame geometry MAY change
-
 #### Scenario: Invalid or intrusive offset
 
 - **WHEN** an offset is non-finite, outside the configured range, off-step, or would make the selected footprint exceed its 14 mm host pitch or intrude into fixed geometry
 - **THEN** validation or the geometry gate MUST reject the request with a diagnosable field-specific error
 - **AND** no invalid candidate MAY be committed or exported
-
-### Requirement: Reference asset loading and disposal
-
-The Worker MUST resolve each selected `profile` and `variant` through repository-owned OpenGrid Snap assets or profile definitions under the `opengrid-snap` component directory. Standard may use a programmatic baseline, while Directional may use a bundled source-backed reference or an equivalent repository-owned profile definition, but production generation MUST NOT read `/Users/.../Downloads` or any other developer-local path. Any imported reference MUST be cached at most once per Worker epoch for its profile/variant key, failed cache promises MUST be removed so a later generation can retry, and loaded references MUST be released during disposal.
-
-#### Scenario: Profile/variant reference cache reuse
-
-- **WHEN** multiple generations use the same profile and variant in one Worker epoch
-- **THEN** the corresponding asset or validated profile reference MUST be initialized only once
-- **AND** it MUST NOT be shared with a different profile or variant
-
-#### Scenario: Reference load retry
-
-- **WHEN** a source-backed reference import or profile validation fails
-- **THEN** the failed promise MUST be removed from the matching cache entry
-- **AND** a later generation MUST be able to retry the load
-
-#### Scenario: Worker disposal
-
-- **WHEN** the Worker is disposed while a Snap profile reference is loaded or loading
-- **THEN** the reference MUST be released exactly once when available
-- **AND** no later request MAY use the disposed reference
-
-### Requirement: Snap quality and committed exports
-
-Before candidate registration, the Worker MUST verify the requested host envelope, selected profile's Z bounds and directional probes, valid B-Rep, finite non-empty mesh, fixed central/internal geometry, and the selected optional-hole state. Standard full-footprint snapshots MUST pass the nine-solid topology check; Directional snapshots MUST pass their profile-specific topology check. Half and quarter snapshots MUST pass the project-owned footprint quality requirements instead of the Standard nine-solid check. STEP and binary STL exports MUST use the same committed Snap revision that the viewport displays.
-
-#### Scenario: Valid feature/profile candidate becomes exportable
-
-- **WHEN** a Standard or Directional candidate passes its applicable envelope, topology, B-Rep, mesh, fixed-geometry, feature-state, and generation checks
-- **THEN** it MAY be committed
-- **AND** the viewport and STEP/STL export MUST refer to that same committed revision
-
-#### Scenario: Quality failure keeps the old preview stale
-
-- **WHEN** a new Snap generation fails an applicable hole, profile, outer-envelope, topology, or footprint quality check
-- **THEN** the new candidate MUST be discarded
-- **AND** the previous committed preview MAY remain visible but MUST be marked stale
-- **AND** STEP/STL export MUST remain disabled for the failed generation
 
 ### Requirement: Project-owned half-cell Snap derivation
 
@@ -185,56 +128,7 @@ Deterministic Snap STEP and STL filenames MUST include the variant, profile, off
 - **THEN** their generated filenames MUST be distinct
 - **AND** neither export MAY overwrite the other through the filename helper
 
-### Requirement: Optional body feature controls
-
-The generated Body MUST start from the selected Bare Standard or Directional baseline. `fourCornerLocatingHoles=true` MUST add exactly four fixed-profile locating-hole cutters at the selected profile's documented centers, with the documented underside elastic slots connected to those holes. `centerRemoverHole=true` MUST add the selected profile's documented center-remover cutter, which MAY be non-circular. The two cutters MUST be independent, MUST NOT change diameter or profile dimensions when the assembly is offset or resized for a host footprint, and MUST NOT duplicate an intrinsic Directional feature already present in the selected source profile.
-
-#### Scenario: Solid body with all optional features disabled
-
-- **WHEN** both optional feature fields are `false`
-- **THEN** the output Body MUST match the selected Bare baseline without either optional cut
-- **AND** the surrounding Side Holder and Snap assembly MUST remain unchanged
-
-#### Scenario: Four locating holes only
-
-- **WHEN** `fourCornerLocatingHoles=true` and `centerRemoverHole=false`
-- **THEN** the Body MUST contain four locating holes with fixed diameter 5.0 mm at centers `(±7.0, ±7.0)` mm
-- **AND** the Body MUST contain four 3.0 mm-wide underside elastic slots, opening from Z=0 through the profile's documented slot-step height
-- **AND** it MUST NOT contain the optional center-remover cut
-
-#### Scenario: Center remover only
-
-- **WHEN** `fourCornerLocatingHoles=false` and `centerRemoverHole=true`
-- **THEN** the Body MUST contain the configured center-remover profile
-- **AND** it MUST NOT contain optional locating holes
-
-#### Scenario: Both optional features
-
-- **WHEN** both optional feature fields are `true`
-- **THEN** the Body MUST contain both the four locating holes and the center-remover profile
-- **AND** each feature MUST be independently probeable
-
-### Requirement: Directional Snap profile selection
-
-When `profile=Directional`, generation MUST use the repository-owned Directional Full or Directional Lite profile in its canonical orientation. Directional MUST be modeled or imported as its own profile and MUST NOT be produced by rotating, uniformly scaling, or otherwise substituting the Standard assembly. The profile registry MUST document its asymmetric boundary, variant-specific details, Z bounds, and which features are intrinsic versus optional.
-
-#### Scenario: Full Directional selection
-
-- **WHEN** `variant=Full` and `profile=Directional`
-- **THEN** generation MUST use the Directional Full profile
-- **AND** its directional boundary and fixed features MUST match the Directional Full fixture within tolerance
-
-#### Scenario: Lite Directional selection
-
-- **WHEN** `variant=Lite` and `profile=Directional`
-- **THEN** generation MUST use the Directional Lite profile
-- **AND** its directional boundary and fixed features MUST match the Directional Lite fixture within tolerance
-
-#### Scenario: Standard geometry is not rotated into Directional
-
-- **WHEN** a Directional snapshot is generated
-- **THEN** the quality gate MUST compare against Directional-specific boundary and feature probes
-- **AND** a rotated Standard candidate MUST fail unless it independently satisfies the Directional profile contract
+## ADDED Requirements
 
 ### Requirement: OpenGrid Snap footprint control
 
@@ -273,17 +167,3 @@ The project MUST keep a repository-owned copy of `opengrid-lite-2x2-xleft-ytop-o
 - **WHEN** Snap generation runs in the Worker or browser
 - **THEN** it MUST resolve only repository-owned assets or programmatic boundary profiles
 - **AND** it MUST NOT access `/Users/blesscat/Downloads` or another developer-local absolute path
-
-### Requirement: Experimental footprint notice
-
-The Snap panel MUST display the red warning `格型測試中 不保證可使用` below the footprint control whenever `footprint=half` or `footprint=quarter` is selected. The warning MUST NOT be displayed for `footprint=full`.
-
-#### Scenario: Experimental footprint warning
-
-- **WHEN** the user selects 1/2 or 1/4 in the Snap footprint control
-- **THEN** the panel MUST show `格型測試中 不保證可使用` in the warning color below that control
-
-#### Scenario: Full footprint has no experimental warning
-
-- **WHEN** the user selects Full in the Snap footprint control
-- **THEN** the experimental footprint warning MUST not be shown

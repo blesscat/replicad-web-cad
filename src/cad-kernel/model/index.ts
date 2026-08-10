@@ -18,6 +18,7 @@ import {
   type ModelId,
   type ModelParameterValues,
   type OpenGridVariant,
+  type OpenGridSnapProfile,
   type OpenGridSnapVariant,
 } from '../../cad-contract/units'
 import { buildBoxBRep } from '../components/box/builder'
@@ -43,7 +44,10 @@ export type KernelBuildContext = {
   getBoxNormalReference?: () => Promise<Shape3D>
   getHexagonalColumnReference?: () => Promise<Shape3D>
   getOpenGridPrototype?: (variant: OpenGridVariant) => Promise<Shape3D>
-  getOpenGridSnapReference?: (variant: OpenGridSnapVariant) => Promise<Shape3D>
+  getOpenGridSnapReference?: (
+    variant: OpenGridSnapVariant,
+    profile: OpenGridSnapProfile,
+  ) => Promise<Shape3D>
   getOpenGridSnapRemoverAsset?: () => Promise<Shape3D>
   yieldToEventLoop?: () => Promise<void>
   isGenerationCurrent?: () => boolean
@@ -231,7 +235,10 @@ async function buildOpenGridStackableBoxModel(
   if (!context.getOpenGridSnapReference) {
     throw new Error('OPENGRID_SNAP_HOLD_REFERENCE_MISSING')
   }
-  const snapReference = await context.getOpenGridSnapReference('Lite')
+  const snapReference = await context.getOpenGridSnapReference(
+    'Lite',
+    'Standard',
+  )
   assertOpenGridSnapHoldCompatibility(snapReference)
   return buildOpenGridStackableBox(parameters, {
     isGenerationCurrent: context.isGenerationCurrent,

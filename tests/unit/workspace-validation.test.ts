@@ -153,17 +153,21 @@ describe('CAD workspace validation helpers', () => {
   it('parses decimal OpenGrid Snap offsets without accepting board fields', () => {
     const parameters: OpenGridSnapParameters = {
       variant: 'Lite',
+      profile: 'Standard',
       offset: 0.2,
-      halfCellX: 'none',
-      halfCellY: 'none',
+      footprint: 'half',
+      fourCornerLocatingHoles: false,
+      centerRemoverHole: false,
     }
     const raw = rawFromParameters(parameters)
 
     expect(raw).toEqual({
       variant: 'Lite',
+      profile: 'Standard',
       offset: '0.2',
-      halfCellX: 'none',
-      halfCellY: 'none',
+      footprint: 'half',
+      fourCornerLocatingHoles: 'false',
+      centerRemoverHole: 'false',
     })
     expect(parseRawParameters(raw, 'opengrid-snap')).toEqual({
       valid: true,
@@ -195,6 +199,47 @@ describe('CAD workspace validation helpers', () => {
       valid: false,
       message: '外框增量必須以 0.05 mm 為步進。',
       field: 'offset',
+    })
+    expect(
+      parseRawParameters({ variant: 'Lite', offset: '0.2' }, 'opengrid-snap'),
+    ).toEqual({
+      valid: true,
+      value: {
+        variant: 'Lite',
+        profile: 'Standard',
+        offset: 0.2,
+        footprint: 'full',
+        fourCornerLocatingHoles: false,
+        centerRemoverHole: false,
+      },
+    })
+    expect(
+      parseRawParameters(
+        {
+          variant: 'Lite',
+          profile: 'Other',
+          offset: '0.2',
+        },
+        'opengrid-snap',
+      ),
+    ).toEqual({
+      valid: false,
+      message: '幾何 profile 必須是 Standard 或 Directional。',
+      field: 'profile',
+    })
+    expect(
+      parseRawParameters(
+        {
+          variant: 'Lite',
+          offset: '0.2',
+          fourCornerLocatingHoles: 'yes',
+        },
+        'opengrid-snap',
+      ),
+    ).toEqual({
+      valid: false,
+      message: '必須是 true 或 false。',
+      field: 'fourCornerLocatingHoles',
     })
   })
 

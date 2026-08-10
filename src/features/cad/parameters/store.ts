@@ -5,6 +5,7 @@ import {
   type ModelParameterValues,
 } from '../../../cad-contract/units'
 import { getModelDefinition, modelDefinitions } from '../model-catalog'
+import { normalizeOpenGridSnapParameters } from '../../../cad-contract/units'
 
 export const COMPONENT_PARAMETER_STORAGE_KEY =
   'replicad-web-cad.component-parameters'
@@ -38,6 +39,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
+  if (modelId === 'opengrid-snap') {
+    return normalizeOpenGridSnapParameters(value)
+  }
   if (modelId === 'opengrid-stackable-cylinder' && isRecord(value)) {
     return {
       ...value,
@@ -61,7 +65,6 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
         : true,
     }
   }
-
   if (modelId === 'opengrid-divider' && isRecord(value)) {
     if (Object.prototype.hasOwnProperty.call(value, 'wallThickness')) {
       return value
@@ -130,7 +133,7 @@ function normalizeLegacyHalfCellParameters(
   candidate: unknown,
 ): unknown {
   if (!isRecord(candidate)) return candidate
-  if (modelId !== 'opengrid' && modelId !== 'opengrid-snap') {
+  if (modelId !== 'opengrid') {
     return candidate
   }
   const hasHalfCellX = Object.prototype.hasOwnProperty.call(

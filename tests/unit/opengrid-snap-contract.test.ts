@@ -12,16 +12,20 @@ describe('OpenGrid Snap contract', () => {
   function parameters(
     overrides: Partial<{
       variant: 'Full' | 'Lite'
+      profile: 'Standard' | 'Directional'
       offset: number
-      halfCellX: 'none' | 'left' | 'right'
-      halfCellY: 'none' | 'top' | 'bottom'
+      footprint: 'full' | 'half' | 'quarter'
+      fourCornerLocatingHoles: boolean
+      centerRemoverHole: boolean
     }> = {},
   ) {
     return {
       variant: 'Full' as const,
+      profile: 'Standard' as const,
       offset: 0,
-      halfCellX: 'none' as const,
-      halfCellY: 'none' as const,
+      footprint: 'full' as const,
+      fourCornerLocatingHoles: false,
+      centerRemoverHole: false,
       ...overrides,
     }
   }
@@ -32,7 +36,7 @@ describe('OpenGrid Snap contract', () => {
     expect(OPENGRID_SNAP_CONFIGURATION.offsetStep).toBe(0.05)
   })
 
-  it('accepts one shared total envelope offset for both axes', () => {
+  it('accepts only the typed footprint contract and preserves defaults', () => {
     const full = parameters({ variant: 'Full', offset: 0.2 })
     const lite = parameters({ variant: 'Lite', offset: 0.4 })
 
@@ -45,15 +49,13 @@ describe('OpenGrid Snap contract', () => {
       value: lite,
     })
     expect(isOpenGridSnapParameters(full)).toBe(true)
-    expect(OPENGRID_SNAP_CONFIGURATION.defaultParameters).toEqual({
-      variant: 'Full',
-      offset: 0,
-      halfCellX: 'none',
-      halfCellY: 'none',
-    })
+    expect(OPENGRID_SNAP_CONFIGURATION.defaultParameters).toEqual(parameters())
+    expect(
+      validateOpenGridSnapParameters({ ...full, halfCellX: 'left' }),
+    ).toMatchObject({ valid: false })
   })
 
-  it('treats the shared offset as a centered total envelope delta', () => {
+  it('treats offset as a centered total envelope delta', () => {
     const input = parameters({ variant: 'Full', offset: 0.2 })
     const width = OPENGRID_SNAP_CONFIGURATION.nominalWidth + input.offset
     const depth = OPENGRID_SNAP_CONFIGURATION.nominalDepth + input.offset
@@ -68,29 +70,91 @@ describe('OpenGrid Snap contract', () => {
     })
   })
 
-  it('keeps deterministic variant-aware export filenames', () => {
-    const input = parameters({ variant: 'Lite', offset: 0.15 })
+  it('maps canonical footprint sizes without changing the hole contract', () => {
+    const half = parameters({ footprint: 'half' })
+    const quarter = parameters({ footprint: 'quarter' })
+
+    expect(boundsForOpenGridSnap(half)).toEqual({
+      min: [-6.4, -12.8, 0],
+      max: [6.4, 12.8, 6.8],
+    })
+    expect(boundsForOpenGridSnap(quarter)).toEqual({
+      min: [-6.4, -6.4, 0],
+      max: [6.4, 6.4, 6.8],
+    })
+    expect(
+      validateOpenGridSnapParameters({
+        ...quarter,
+        footprint: 'quarter',
+        fourCornerLocatingHoles: true,
+        centerRemoverHole: true,
+      }),
+    ).toMatchObject({ valid: true })
+  })
+
+  it('keeps Directional asymmetry for the canonical quarter footprint', () => {
+    const full = boundsForOpenGridSnap(parameters({ profile: 'Directional' }))
+    const quarter = boundsForOpenGridSnap(
+      parameters({ profile: 'Directional', footprint: 'quarter' }),
+    )
+
+    expect(full.min).toEqual([
+      expect.closeTo(-12.801, 10),
+      expect.closeTo(-12.801, 10),
+      expect.closeTo(-0.001, 10),
+    ])
+    expect(full.max).toEqual([
+      expect.closeTo(12.801, 10),
+      expect.closeTo(13.201, 10),
+      expect.closeTo(6.801, 10),
+    ])
+    expect(quarter.min).toEqual([
+      expect.closeTo(-6.4005, 10),
+      expect.closeTo(-6.6005, 10),
+      expect.closeTo(-0.001, 10),
+    ])
+    expect(quarter.max).toEqual([
+      expect.closeTo(6.4005, 10),
+      expect.closeTo(6.6005, 10),
+      expect.closeTo(6.801, 10),
+    ])
+    expect(
+      validateOpenGridSnapParameters(
+        parameters({
+          profile: 'Directional',
+          footprint: 'quarter',
+          offset: 1,
+        }),
+      ).valid,
+    ).toBe(false)
+  })
+
+  it('keeps deterministic footprint-aware export filenames', () => {
+    const input = parameters({
+      variant: 'Lite',
+      profile: 'Directional',
+      offset: 0.15,
+      footprint: 'quarter',
+      fourCornerLocatingHoles: true,
+      centerRemoverHole: true,
+    })
 
     expect(openGridSnapFileName(input)).toBe(
-      'opengrid-snap-lite-offset0.15-xnone-ynone.step',
+      'opengrid-snap-directional-lite-offset0.15-quarter-corners1-center1.step',
     )
     expect(openGridSnapStlFileName(input)).toBe(
-      'opengrid-snap-lite-offset0.15-xnone-ynone.stl',
+      'opengrid-snap-directional-lite-offset0.15-quarter-corners1-center1.stl',
     )
   })
 
-  it('rejects board-only fields, separate axes, and invalid offsets', () => {
+  it('rejects board-only fields, arbitrary axes, and invalid offsets', () => {
     const defaults = parameters()
 
     expect(
       validateOpenGridSnapParameters({ ...defaults, rows: 2 }),
     ).toMatchObject({ valid: false })
     expect(
-      validateOpenGridSnapParameters({
-        variant: 'Full',
-        offsetX: 0.2,
-        offsetY: 0.2,
-      }),
+      validateOpenGridSnapParameters({ ...defaults, halfCellX: 'left' }),
     ).toMatchObject({ valid: false })
     expect(
       validateOpenGridSnapParameters({ ...defaults, offset: Number.NaN }),
@@ -102,55 +166,10 @@ describe('OpenGrid Snap contract', () => {
       }),
     ).toMatchObject({ valid: false })
     expect(
-      validateOpenGridSnapParameters({
-        ...defaults,
-        offset: OPENGRID_SNAP_CONFIGURATION.minOffset - 0.1,
-      }),
-    ).toMatchObject({ valid: false })
-    expect(
       validateOpenGridSnapParameters({ ...defaults, offset: 0.03 }),
     ).toMatchObject({ valid: false })
     expect(
       validateOpenGridSnapParameters({ ...defaults, allowHalfCell: true }),
     ).toMatchObject({ valid: false })
-    expect(
-      validateOpenGridSnapParameters({ ...defaults, diagonal: 'left-top' }),
-    ).toMatchObject({ valid: false })
-  })
-
-  it('supports single and dual half-cell envelopes', () => {
-    const single = parameters({ halfCellX: 'left' })
-    const dual = parameters({ halfCellX: 'right', halfCellY: 'top' })
-
-    expect(validateOpenGridSnapParameters(single)).toEqual({
-      valid: true,
-      value: single,
-    })
-    expect(boundsForOpenGridSnap(single)).toEqual({
-      min: [-6.4, -12.8, 0],
-      max: [6.4, 12.8, 6.8],
-    })
-    expect(boundsForOpenGridSnap(dual)).toEqual({
-      min: [-6.4, -6.4, 0],
-      max: [6.4, 6.4, 6.8],
-    })
-  })
-
-  it('keeps every axis direction mutually exclusive and host-compatible', () => {
-    for (const halfCellX of ['none', 'left', 'right'] as const) {
-      expect(validateOpenGridSnapParameters(parameters({ halfCellX }))).toEqual(
-        { valid: true, value: parameters({ halfCellX }) },
-      )
-    }
-    for (const halfCellY of ['none', 'top', 'bottom'] as const) {
-      expect(validateOpenGridSnapParameters(parameters({ halfCellY }))).toEqual(
-        { valid: true, value: parameters({ halfCellY }) },
-      )
-    }
-    expect(
-      validateOpenGridSnapParameters(
-        parameters({ halfCellX: 'right', halfCellY: 'bottom', offset: 1 }),
-      ).valid,
-    ).toBe(true)
   })
 })
