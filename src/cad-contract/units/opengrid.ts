@@ -509,15 +509,16 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     : null
   const rowsAreValid = rowCount !== null && rowCount >= 1
   const columnsAreValid = columnCount !== null && columnCount >= 1
+  const rowsHaveInternalIntersections = rowCount !== null && rowCount >= 2
+  const columnsHaveInternalIntersections =
+    columnCount !== null && columnCount >= 2
   if (
     value.screwCenter === true &&
-    rowsAreValid &&
-    columnsAreValid &&
-    ((rowCount as number) % 2 !== 0 || (columnCount as number) % 2 !== 0)
+    (!rowsHaveInternalIntersections || !columnsHaveInternalIntersections)
   ) {
     issues.push({
       field: 'screwCenter',
-      message: '正中心螺絲孔需要 X、Y 格數都是偶數。',
+      message: '正中心螺絲孔需要 X、Y 格數都至少為 2。',
     })
   }
   const screwDiameter = isFiniteNumber(value.screwDiameter)
@@ -810,11 +811,11 @@ function allInternalScrewPositions(
 function centeredScrewPosition(
   parameters: Pick<OpenGridParameters, 'rows' | 'columns'>,
 ): OpenGridScrewPosition | null {
-  if (parameters.rows % 2 !== 0 || parameters.columns % 2 !== 0) return null
   const lattice = openGridScrewLatticeDimensions(parameters)
+  if (lattice.rows < 1 || lattice.columns < 1) return null
   return {
-    row: (lattice.rows - 1) / 2,
-    column: (lattice.columns - 1) / 2,
+    row: Math.floor((lattice.rows - 1) / 2),
+    column: Math.floor((lattice.columns - 1) / 2),
   }
 }
 

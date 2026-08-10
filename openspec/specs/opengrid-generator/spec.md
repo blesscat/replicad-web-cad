@@ -135,6 +135,14 @@ MUST behave as follows:
 - by-row-column applies the requested intervals; and
 - custom uses exactly the validated custom positions.
 
+The `screwCenter` modifier MUST add one de-duplicated internal lattice position
+when both grid axes contain at least two cells. For each even cell-count axis,
+it MUST select the exact central lattice coordinate. For each odd cell-count
+axis, it MUST select the nearest central lattice coordinate with a stable
+upper-left bias: negative X for columns and positive Y for rows in the
+centered board coordinate system. A one-cell axis MUST keep the center
+modifier invalid because no internal intersection exists on that axis.
+
 Center and interval modifiers MUST add de-duplicated lattice positions.
 Custom positions MUST be sorted and de-duplicated by normalization rather than
 silently moved into cells.
@@ -146,6 +154,40 @@ silently moved into cells.
 - **THEN** the normalized snapshot MUST contain generic screw dimensions and
   validated lattice positions
 - **AND** generated cutters MUST use those dimensions and positions
+
+#### Scenario: Center screw on an even-by-even board
+
+- **WHEN** `screwCenter=true` is selected for a board with even `rows` and
+  even `columns`, including the official 2 by 2 board
+- **THEN** the center modifier MUST resolve to the exact central internal
+  intersection
+- **AND** existing `Corners` positions MUST remain de-duplicated with the
+  center position
+
+#### Scenario: Center screw on an odd grid
+
+- **WHEN** `screwCenter=true` is selected with `rows >= 2` and `columns >= 2`
+  and either axis has an odd cell count
+- **THEN** validation MUST accept the snapshot
+- **AND** the center modifier MUST resolve to the nearest internal intersection
+  using the upper-left tie-breaker
+- **AND** the board-level cutter MUST remove a screw hole at that resolved
+  position using the selected screw dimensions
+
+#### Scenario: Center screw with an official corner configuration
+
+- **WHEN** `screwKind=official-default`, `screwMode=corners`, and
+  `screwCenter=true` are selected on a valid odd-grid board
+- **THEN** the official screw dimensions and corner holes MUST remain unchanged
+- **AND** the resolved upper-left center-adjacent hole MUST be added to the
+  effective screw centers
+
+#### Scenario: Center screw on a one-cell axis
+
+- **WHEN** `screwCenter=true` is selected while `rows < 2` or `columns < 2`
+- **THEN** validation MUST reject the snapshot with an internal-intersection
+  availability error
+- **AND** the UI MUST keep the center control disabled
 
 ### Requirement: Half-cell board extension
 
