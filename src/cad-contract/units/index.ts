@@ -71,6 +71,7 @@ import {
   openGridDividerPegCentersFor,
   openGridDividerPlanDimensionsFor,
   openGridDividerStlFileName,
+  openGridDividerTransitionHeightFor,
   OPENGRID_DIVIDER_CONFIGURATION,
   validateOpenGridDividerParameters,
 } from './opengrid-divider'
@@ -131,6 +132,7 @@ export {
   openGridDividerPegCentersFor,
   openGridDividerPlanDimensionsFor,
   openGridDividerStlFileName,
+  openGridDividerTransitionHeightFor,
   OPENGRID_DIVIDER_CONFIGURATION,
   validateOpenGridDividerParameters,
 } from './opengrid-divider'

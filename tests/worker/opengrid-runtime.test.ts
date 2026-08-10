@@ -121,7 +121,14 @@ function dividerGenerateCommand(generation = 1) {
     kind: 'model.generate' as const,
     generation,
     modelId: 'opengrid-divider' as const,
-    parameters: { left: 1, right: 1, up: 2, down: 0, height: 20 },
+    parameters: {
+      left: 1,
+      right: 1,
+      up: 2,
+      down: 0,
+      height: 20,
+      wallThickness: 2,
+    },
     previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
   }
 }
@@ -477,6 +484,7 @@ describe('OpenGrid Worker runtime', () => {
       up: 2,
       down: 0,
       height: 20,
+      wallThickness: 2,
     }
     expect(mocks.buildModelBRep).toHaveBeenCalledWith(
       'opengrid-divider',

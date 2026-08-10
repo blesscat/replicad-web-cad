@@ -115,6 +115,7 @@ describe('existing OpenGrid regression contract', () => {
         up: 2,
         down: 0,
         height: 25,
+        wallThickness: 3,
       }),
     ).toBe(true)
 
@@ -126,6 +127,7 @@ describe('existing OpenGrid regression contract', () => {
       up: 2,
       down: 0,
       height: 25,
+      wallThickness: 3,
     })
     store.dispose()
   })

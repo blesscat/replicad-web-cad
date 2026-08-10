@@ -30,6 +30,7 @@
       up: Number(rawParameters.up),
       down: Number(rawParameters.down),
       height: Number(rawParameters.height),
+      wallThickness: Number(rawParameters.wallThickness),
     }
     const validation = validateOpenGridDividerParameters(candidate)
     if (!validation.valid) return null
@@ -40,15 +41,19 @@
       shapeLabel: shapeLabels[shape],
       axis: openGridDividerAxisFor(validation.value),
       dimensions,
+      transitionLabel:
+        validation.value.wallThickness < dimensions.baseWallWidth
+          ? '底部 5 mm 以名義 45° 斜角過渡'
+          : '厚度一致，不需額外過渡',
     }
   })
 </script>
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
   <p class="m-0 text-sm text-muted">
-    自製底座半格 7 mm、整格 14 mm；牆寬固定 5 mm，底部自動加入 Ø5 × 3 mm 定位柱
-    （中心距 28 mm），側邊做 2.5 mm 圓角、頂部做 1 mm 圓角。每次可調整 0.5
-    格，至少開啟兩個方向。
+    自製底座半格 7 mm、整格 14 mm；上方牆厚可調 1–5 mm（預設 2 mm），底部保留 5
+    mm 支撐並以名義 45° 斜角過渡，自動加入 Ø5 × 3 mm 定位柱（中心距 28 mm）。
+    每次可調整 0.5 格，至少開啟兩個方向。
   </p>
 
   {#if preview}
@@ -67,6 +72,9 @@
       <span>
         平面 {preview.dimensions.width} × {preview.dimensions.depth} mm，高度
         {preview.dimensions.wallHeight} mm
+      </span>
+      <span>
+        上方牆厚 {preview.dimensions.wallThickness} mm，{preview.transitionLabel}
       </span>
       <span>含定位柱後總高 {preview.dimensions.totalHeight} mm</span>
     </div>

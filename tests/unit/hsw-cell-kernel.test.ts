@@ -188,13 +188,13 @@ describe('HSW kernel model registration', () => {
   it('routes the custom divider to its independent builder', async () => {
     const shape = await buildModelBRep(
       'opengrid-divider',
-      { left: 1, right: 1, up: 2, down: 0, height: 20 },
+      { left: 1, right: 1, up: 2, down: 0, height: 20, wallThickness: 2 },
       context,
     )
 
     expect(shape).toMatchObject({ model: 'opengrid-divider' })
     expect(mocks.buildOpenGridDivider).toHaveBeenCalledWith(
-      { left: 1, right: 1, up: 2, down: 0, height: 20 },
+      { left: 1, right: 1, up: 2, down: 0, height: 20, wallThickness: 2 },
       expect.objectContaining({
         isGenerationCurrent: undefined,
         yieldToEventLoop: undefined,

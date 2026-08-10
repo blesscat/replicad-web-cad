@@ -201,7 +201,14 @@ describe('Worker contract runtime validation', () => {
       operationId: 'operation-divider-1',
       generation: 1,
       modelId: 'opengrid-divider' as const,
-      parameters: { left: 1, right: 1, up: 2, down: 0, height: 20 },
+      parameters: {
+        left: 1,
+        right: 1,
+        up: 2,
+        down: 0,
+        height: 20,
+        wallThickness: 2,
+      },
       previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
     }
 
@@ -209,13 +216,27 @@ describe('Worker contract runtime validation', () => {
     expect(
       isWorkerCommand({
         ...command,
-        parameters: { left: 1, right: 0, up: 0, down: 0, height: 20 },
+        parameters: {
+          left: 1,
+          right: 0,
+          up: 0,
+          down: 0,
+          height: 20,
+          wallThickness: 2,
+        },
       }),
     ).toBe(false)
     expect(
       isWorkerCommand({
         ...command,
-        parameters: { left: 1.25, right: 1, up: 0, down: 0, height: 20 },
+        parameters: {
+          left: 1.25,
+          right: 1,
+          up: 0,
+          down: 0,
+          height: 20,
+          wallThickness: 2,
+        },
       }),
     ).toBe(false)
     expect(
@@ -227,6 +248,7 @@ describe('Worker contract runtime validation', () => {
           up: 0,
           down: 0,
           height: 20,
+          wallThickness: 2,
           rows: 1,
         },
       }),

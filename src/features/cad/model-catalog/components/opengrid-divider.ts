@@ -67,6 +67,20 @@ const OPENGRID_DIVIDER_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
     sliderMin: OPENGRID_DIVIDER_CONFIGURATION.minHeight,
     sliderMax: OPENGRID_DIVIDER_CONFIGURATION.maxHeight,
   },
+  {
+    key: 'wallThickness',
+    label: '上方牆厚',
+    axis: 'Z',
+    unit: 'mm',
+    control: 'range-text',
+    defaultValue:
+      OPENGRID_DIVIDER_CONFIGURATION.defaultParameters.wallThickness,
+    min: OPENGRID_DIVIDER_CONFIGURATION.minWallThickness,
+    max: OPENGRID_DIVIDER_CONFIGURATION.maxWallThickness,
+    step: 1,
+    sliderMin: OPENGRID_DIVIDER_CONFIGURATION.minWallThickness,
+    sliderMax: OPENGRID_DIVIDER_CONFIGURATION.maxWallThickness,
+  },
 ]
 
 function validateDefinitionParameters(value: unknown) {
@@ -108,7 +122,7 @@ export const opengridDividerDefinition: ModelDefinition = {
   family: 'opengrid',
   displayName: 'OpenGrid 分隔塊',
   selectionDescription:
-    '適用於自製 14 mm 整格（7 mm 半格）底座的分隔牆產生器，可用 0.5 格步進設定上下左右格數與高度，並自動加入 Ø5 × 3 mm、28 mm 中心距定位柱、2.5 mm 側邊圓角與 1 mm 頂部圓角。',
+    '適用於自製 14 mm 整格（7 mm 半格）底座的分隔牆產生器，可用 0.5 格步進設定上下左右格數、可調 1–5 mm 上方牆厚（預設 2 mm）與高度；底部保留 5 mm 支撐並以名義 45° 斜角過渡，保留穩定側邊圓角與 1 mm 頂部圓角，另自動加入 Ø5 × 3 mm、28 mm 中心距定位柱。',
   parameterSchema: OPENGRID_DIVIDER_PARAMETER_SCHEMA,
   defaultParameters: { ...OPENGRID_DIVIDER_CONFIGURATION.defaultParameters },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },

@@ -2,7 +2,7 @@ export type OpenGridDividerShape = 'straight' | 'L' | 'T' | 'cross'
 export type OpenGridDividerAxis = 'horizontal' | 'vertical' | null
 
 export type OpenGridDividerParameterKey =
-  'left' | 'right' | 'up' | 'down' | 'height'
+  'left' | 'right' | 'up' | 'down' | 'height' | 'wallThickness'
 
 export type OpenGridDividerParameters = {
   left: number
@@ -10,6 +10,7 @@ export type OpenGridDividerParameters = {
   up: number
   down: number
   height: number
+  wallThickness: number
 }
 
 export type OpenGridDividerPoint2D = [number, number]
@@ -19,6 +20,8 @@ export type OpenGridDividerPlanDimensions = {
   depth: number
   wallHeight: number
   totalHeight: number
+  wallThickness: number
+  baseWallWidth: number
 }
 
 export type OpenGridDividerValidationIssue = {
@@ -36,6 +39,7 @@ const DIVIDER_PARAMETER_KEYS: readonly OpenGridDividerParameterKey[] = [
   'up',
   'down',
   'height',
+  'wallThickness',
 ]
 
 export const OPENGRID_DIVIDER_CONFIGURATION = {
@@ -43,6 +47,10 @@ export const OPENGRID_DIVIDER_CONFIGURATION = {
   halfGridPitch: 7,
   gridStep: 0.5,
   wallWidth: 5,
+  minWallThickness: 1,
+  maxWallThickness: 5,
+  transitionChamferAngle: 45,
+  geometrySafetyMargin: 0.1,
   pegDiameter: 5,
   pegLength: 3,
   pegCenterSpacing: 28,
@@ -58,6 +66,7 @@ export const OPENGRID_DIVIDER_CONFIGURATION = {
     up: 0,
     down: 0,
     height: 20,
+    wallThickness: 2,
   } satisfies OpenGridDividerParameters,
 } as const
 
@@ -90,6 +99,14 @@ function isSafeHeight(value: unknown): value is number {
     Number.isSafeInteger(value) &&
     (value as number) >= OPENGRID_DIVIDER_CONFIGURATION.minHeight &&
     (value as number) <= OPENGRID_DIVIDER_CONFIGURATION.maxHeight
+  )
+}
+
+function isSafeWallThickness(value: unknown): value is number {
+  return (
+    Number.isSafeInteger(value) &&
+    (value as number) >= OPENGRID_DIVIDER_CONFIGURATION.minWallThickness &&
+    (value as number) <= OPENGRID_DIVIDER_CONFIGURATION.maxWallThickness
   )
 }
 
@@ -148,7 +165,7 @@ function rawPlanBoundsFor(
 export function openGridDividerPlanDimensionsFor(
   parameters: Pick<
     OpenGridDividerParameters,
-    'left' | 'right' | 'up' | 'down' | 'height'
+    'left' | 'right' | 'up' | 'down' | 'height' | 'wallThickness'
   >,
 ): OpenGridDividerPlanDimensions {
   const bounds = rawPlanBoundsFor(parameters)
@@ -157,7 +174,20 @@ export function openGridDividerPlanDimensionsFor(
     depth: bounds.maxY - bounds.minY,
     wallHeight: parameters.height,
     totalHeight: parameters.height + OPENGRID_DIVIDER_CONFIGURATION.pegLength,
+    wallThickness: parameters.wallThickness,
+    baseWallWidth: OPENGRID_DIVIDER_CONFIGURATION.wallWidth,
   }
+}
+
+export function openGridDividerTransitionHeightFor(
+  parameters: Pick<OpenGridDividerParameters, 'wallThickness' | 'height'>,
+): number {
+  const { geometrySafetyMargin, wallWidth } = OPENGRID_DIVIDER_CONFIGURATION
+  const halfWidthDifference = (wallWidth - parameters.wallThickness) / 2
+  return Math.max(
+    0,
+    Math.min(halfWidthDifference, parameters.height - geometrySafetyMargin * 2),
+  )
 }
 
 export function validateOpenGridDividerParameters(
@@ -192,6 +222,13 @@ export function validateOpenGridDividerParameters(
     issues.push({
       field: 'height',
       message: `高度必須是 ${OPENGRID_DIVIDER_CONFIGURATION.minHeight}–${OPENGRID_DIVIDER_CONFIGURATION.maxHeight} mm 的安全整數。`,
+    })
+  }
+
+  if (!isSafeWallThickness(value.wallThickness)) {
+    issues.push({
+      field: 'wallThickness',
+      message: `牆厚必須是 ${OPENGRID_DIVIDER_CONFIGURATION.minWallThickness}–${OPENGRID_DIVIDER_CONFIGURATION.maxWallThickness} mm 的安全整數。`,
     })
   }
 
@@ -234,6 +271,7 @@ export function validateOpenGridDividerParameters(
       up: value.up as number,
       down: value.down as number,
       height: value.height as number,
+      wallThickness: value.wallThickness as number,
     },
   }
 }
@@ -299,11 +337,11 @@ export function boundsForOpenGridDivider(
 export function openGridDividerFileName(
   parameters: OpenGridDividerParameters,
 ): string {
-  return `opengrid-divider-l${parameters.left}-r${parameters.right}-u${parameters.up}-d${parameters.down}-h${parameters.height}.step`
+  return `opengrid-divider-l${parameters.left}-r${parameters.right}-u${parameters.up}-d${parameters.down}-t${parameters.wallThickness}-h${parameters.height}.step`
 }
 
 export function openGridDividerStlFileName(
   parameters: OpenGridDividerParameters,
 ): string {
-  return `opengrid-divider-l${parameters.left}-r${parameters.right}-u${parameters.up}-d${parameters.down}-h${parameters.height}.stl`
+  return `opengrid-divider-l${parameters.left}-r${parameters.right}-u${parameters.up}-d${parameters.down}-t${parameters.wallThickness}-h${parameters.height}.stl`
 }

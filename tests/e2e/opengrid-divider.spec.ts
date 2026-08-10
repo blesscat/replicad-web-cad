@@ -18,6 +18,12 @@ test('OpenGrid divider is listed with independent directional controls', async (
   await expect(page.getByTestId('opengrid-divider-summary')).toContainText(
     '一字型',
   )
+  await expect(page.getByTestId('opengrid-divider-summary')).toContainText(
+    '上方牆厚 2 mm',
+  )
+  await expect(page.getByTestId('opengrid-divider-summary')).toContainText(
+    '45° 斜角過渡',
+  )
   await expect(page.getByRole('checkbox')).toHaveCount(0)
   await expect(page.getByText(/Full|Lite|Heavy|螺絲|接頭孔/)).toHaveCount(0)
 
@@ -35,6 +41,15 @@ test('OpenGrid divider is listed with independent directional controls', async (
   const height = page.getByRole('textbox', { name: '分隔牆高度（Z）' })
   await expect(height).toHaveAttribute('min', '2')
   await expect(height).toHaveAttribute('max', '500')
+  const wallThickness = page.getByRole('textbox', { name: '上方牆厚（Z）' })
+  await expect(wallThickness).toHaveAttribute('min', '1')
+  await expect(wallThickness).toHaveAttribute('max', '5')
+  await expect(wallThickness).toHaveValue('2')
+
+  await wallThickness.fill('4')
+  await expect(page.getByTestId('opengrid-divider-summary')).toContainText(
+    '上方牆厚 4 mm',
+  )
 
   await page.getByRole('slider', { name: '上臂（Y）' }).press('ArrowRight')
   await expect(page.getByTestId('opengrid-divider-summary')).toContainText(
@@ -61,6 +76,6 @@ test('OpenGrid divider exports the committed normalized shape', async ({
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-divider-l1-r1-u0-d0-h24.step',
+    'opengrid-divider-l1-r1-u0-d0-t2-h24.step',
   )
 })

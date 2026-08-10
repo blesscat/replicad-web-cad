@@ -1,5 +1,9 @@
 import { get as getStoreValue, writable, type Subscriber } from 'svelte/store'
-import type { ModelId, ModelParameterValues } from '../../../cad-contract/units'
+import {
+  OPENGRID_DIVIDER_CONFIGURATION,
+  type ModelId,
+  type ModelParameterValues,
+} from '../../../cad-contract/units'
 import { getModelDefinition, modelDefinitions } from '../model-catalog'
 
 export const COMPONENT_PARAMETER_STORAGE_KEY =
@@ -63,6 +67,18 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
       )
         ? value.bottomHolesEnabled
         : true,
+    }
+  }
+
+  if (
+    modelId === 'opengrid-divider' &&
+    isRecord(value) &&
+    !Object.prototype.hasOwnProperty.call(value, 'wallThickness')
+  ) {
+    return {
+      ...value,
+      wallThickness:
+        OPENGRID_DIVIDER_CONFIGURATION.defaultParameters.wallThickness,
     }
   }
 

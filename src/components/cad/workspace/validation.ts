@@ -48,6 +48,7 @@ export const OPENGRID_DIVIDER_PARAMETER_KEYS: ModelParameterKey[] = [
   'up',
   'down',
   'height',
+  'wallThickness',
 ]
 export const HEXAGONAL_COLUMN_PARAMETER_KEYS: ScalarModelParameterKey[] = [
   'height',
@@ -216,6 +217,7 @@ export function rawFromParameters(
       up: number
       down: number
       height: number
+      wallThickness: number
     }
     return {
       left: String(dividerParameters.left),
@@ -223,6 +225,7 @@ export function rawFromParameters(
       up: String(dividerParameters.up),
       down: String(dividerParameters.down),
       height: String(dividerParameters.height),
+      wallThickness: String(dividerParameters.wallThickness),
     }
   }
 

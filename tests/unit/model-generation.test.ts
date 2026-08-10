@@ -58,7 +58,14 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
     }
   }
   if (modelId === 'opengrid-divider') {
-    return { left: 1, right: 1, up: 0, down: 0, height: 20 }
+    return {
+      left: 1,
+      right: 1,
+      up: 0,
+      down: 0,
+      height: 20,
+      wallThickness: 2,
+    }
   }
   throw new Error(`Unknown model: ${modelId}`)
 }
@@ -462,6 +469,7 @@ describe('CAD model generation debounce', () => {
       up: 0,
       down: 0,
       height: 20,
+      wallThickness: 2,
     })
     const handlers = createModelGenerationHandlers(context)
 
@@ -472,7 +480,14 @@ describe('CAD model generation debounce', () => {
       expect.objectContaining({
         kind: 'model.generate',
         modelId: 'opengrid-divider',
-        parameters: { left: 1, right: 1, up: 1.5, down: 0, height: 20 },
+        parameters: {
+          left: 1,
+          right: 1,
+          up: 1.5,
+          down: 0,
+          height: 20,
+          wallThickness: 2,
+        },
       }),
     )
     expect(client.send).toHaveBeenCalledWith(
@@ -521,6 +536,7 @@ describe('CAD model generation debounce', () => {
       up: 0,
       down: 0,
       height: 20,
+      wallThickness: 2,
     })
     const handlers = createModelGenerationHandlers(context)
 
