@@ -991,26 +991,26 @@ The Snap workspace MUST use the existing debounce, latest-wins, candidate commit
 
 ### Requirement: OpenGrid 分隔器 CAD workspace
 
-The system MUST register `opengrid-divider` as an independent model definition and MUST route `/cad/opengrid-divider` to that definition. The route MUST expose only the divider's `left`, `right`, `up`, `down`, and `height` controls, plus the derived shape label and dimensions. It MUST NOT show the official OpenGrid Full/Lite/Heavy, connector, or screw controls.
+The system MUST register `opengrid-divider` as an independent model definition and MUST route `/cad/opengrid-divider` to that definition. The route MUST expose only the divider's `left`, `right`, `up`, `down`, `height`, and `wallThickness` controls without a detailed derived geometry summary. It MUST NOT show the official OpenGrid Full/Lite/Heavy, connector, or screw controls.
 
 #### Scenario: 直接開啟分隔器 route
 
 - **WHEN** a user opens `/cad/opengrid-divider`
 - **THEN** the page MUST resolve the route to `modelId=opengrid-divider`
-- **AND** the first generation MUST use valid saved divider parameters or the divider definition defaults
+- **AND** the first generation MUST use valid saved divider parameters or the divider definition defaults, including default `wallThickness=2`
 - **AND** the Worker MUST dispatch the request to the divider builder
 
 #### Scenario: 分隔器控制面板
 
 - **WHEN** the divider workspace is rendered
-- **THEN** it MUST display four directional grid-count controls and a configurable height in millimetres
-- **AND** it MUST display the derived line/L/T/cross shape
-- **AND** it MUST display the derived 14 mm full-grid/7 mm half-grid footprint and total Z bounds including the 3 mm peg length
+- **THEN** it MUST display four directional grid-count controls, a configurable height in millimetres, and a wall-thickness control with values from 1 through 5 mm
+- **AND** the thickness control MUST identify 2 mm as the default
+- **AND** it MUST NOT display a separate technical summary for the 14 mm/7 mm footprint, shape, plane dimensions, chamfer, locating pegs, or total Z bounds
 - **AND** it MUST NOT display controls belonging to another model
 
 ### Requirement: 分隔器輸入生命週期
 
-The divider workspace MUST use the existing typed generation, debounce, latest-wins, invalidation, candidate, commit, stale-preview, and export gates for its component-specific parameters.
+The divider workspace MUST use the existing typed generation, debounce, latest-wins, invalidation, candidate, commit, stale-preview, and export gates for its component-specific parameters, including `wallThickness`.
 
 #### Scenario: 合法輸入建模
 
@@ -1021,14 +1021,14 @@ The divider workspace MUST use the existing typed generation, debounce, latest-w
 
 #### Scenario: 非法輸入失效化
 
-- **WHEN** any directional count or height is empty, fractional, non-finite, negative, or outside its supported range
+- **WHEN** any directional count, height, or `wallThickness` is empty, fractional where integer input is required, non-finite, negative, or outside its supported range
 - **THEN** the workspace MUST show a field-specific validation error
 - **AND** it MUST send `model.invalidate` instead of `model.generate`
 - **AND** export MUST remain disabled for the invalid or stale generation
 
 ### Requirement: OpenGrid pillar workspace integration
 
-The runtime-validated component catalog MUST register `opengrid-pillar` as an independent OpenGrid model definition and MUST route `/cad/opengrid-pillar` to it. The definition MUST expose the integer `length` field from 3–500 mm and a default-off checkbox labeled `連接底版用`, with defaults of 5 mm and unchecked. The Worker MUST dispatch `modelId=opengrid-pillar` to the pillar builder, and the CAD workspace MUST not fall through to another component or expose another component's parameters.
+The runtime-validated component catalog MUST register `opengrid-pillar` as an independent OpenGrid model definition and MUST route `/cad/opengrid-pillar` to it. The definition MUST expose the integer `length` field from 3–500 mm and a default-off checkbox labeled `連接底版用`, with defaults of 5 mm and unchecked. The length controls MUST additionally expose clearly labeled common quick options for 6 mm and 8 mm. The Worker MUST dispatch `modelId=opengrid-pillar` to the pillar builder, and the CAD workspace MUST not fall through to another component or expose another component's parameters.
 
 #### Scenario: Pillar initial generation
 
@@ -1043,9 +1043,19 @@ The runtime-validated component catalog MUST register `opengrid-pillar` as an in
 - **GIVEN** a user views the `/cad/opengrid-pillar` workspace
 - **WHEN** the parameter panel is rendered
 - **THEN** it MUST expose an integer length control labeled in mm with range 3–500
+- **AND** it MUST expose clearly labeled 6 mm and 8 mm common length quick options
 - **AND** it MUST expose a checkbox labeled `連接底版用`
 - **AND** the checkbox MUST be unchecked by default
 - **AND** it MUST NOT expose adjustable diameter or chamfer fields
+
+#### Scenario: Common length quick option updates the existing input
+
+- **GIVEN** a user views the `/cad/opengrid-pillar` workspace with either base mode
+- **WHEN** the user activates the 6 mm or 8 mm quick option
+- **THEN** the existing length input MUST display the selected integer value in mm
+- **AND** the workspace MUST validate and generate the same pillar model as entering that value manually
+- **AND** the accepted typed `length` snapshot MUST be persisted under `opengrid-pillar`
+- **AND** the quick option MUST NOT remove support for other valid integer lengths from 3 through 500 mm
 
 #### Scenario: Pillar route isolation
 
@@ -1061,8 +1071,6 @@ The runtime-validated component catalog MUST register `opengrid-pillar` as an in
 - **THEN** the workspace MUST show a diagnosable field error
 - **AND** it MUST send `model.invalidate` rather than `model.generate` for that invalid snapshot
 - **AND** export MUST remain disabled while the input is invalid or stale
-
-- **AND** the downloaded model MUST contain the complete Snap assembly rather than only its central body
 
 ### Requirement: OpenGrid stackable-cylinder workspace integration
 
