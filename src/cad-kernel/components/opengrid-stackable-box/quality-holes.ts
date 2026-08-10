@@ -1,0 +1,229 @@
+import { makeCylinder, measureVolume, type Shape3D } from 'replicad'
+import { OPENGRID_STACKABLE_BOX_CONFIGURATION } from '../../../cad-contract/units'
+import type {
+  OpenGridStackableBoxCaptiveSocketRecord,
+  OpenGridStackableBoxMountingHoleProfile,
+} from './quality-types'
+import {
+  readFaceQualityRecords,
+  type FaceQualityRecord,
+} from './quality-metrics'
+import { closeEnough, deleteShape, readBounds } from './shared'
+
+export function measureMountingHoleStepVolumes(
+  shape: Shape3D,
+  centers: ReadonlyArray<[number, number]>,
+): number[] {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  return centers.map(([centerX, centerY]) => {
+    const outer = makeCylinder(
+      configuration.baseHoleTopOpeningDiameter / 2 + 0.05,
+      0.04,
+      [centerX, centerY, configuration.baseHoleStepHeight - 0.02],
+    )
+    const inner = makeCylinder(
+      configuration.baseHoleBottomOpeningDiameter / 2 - 0.05,
+      0.04,
+      [centerX, centerY, configuration.baseHoleStepHeight - 0.02],
+    )
+    const ring = outer.cut(inner)
+    deleteShape(outer)
+    deleteShape(inner)
+    let intersection: Shape3D | null = null
+    try {
+      intersection = shape.intersect(ring)
+      return measureVolume(intersection)
+    } finally {
+      if (intersection && intersection !== shape) deleteShape(intersection)
+      deleteShape(ring)
+    }
+  })
+}
+
+function cylindricalFaceProfileAt(
+  records: FaceQualityRecord[],
+  center: [number, number],
+  zMin: number,
+  zMax: number,
+): { diameter: number; depth: number } {
+  const record = records
+    .filter((candidate) => {
+      if (candidate.surfaceType !== 'CYLINDRE') return false
+      const candidateCenter = [
+        (candidate.min[0] + candidate.max[0]) / 2,
+        (candidate.min[1] + candidate.max[1]) / 2,
+      ]
+      const depth = candidate.max[2] - candidate.min[2]
+      return (
+        closeEnough(candidateCenter[0], center[0], 0.04) &&
+        closeEnough(candidateCenter[1], center[1], 0.04) &&
+        candidate.min[2] >= zMin - 0.03 &&
+        candidate.max[2] <= zMax + 0.03 &&
+        depth >= 0.5
+      )
+    })
+    .sort(
+      (first, second) =>
+        second.max[2] - second.min[2] - (first.max[2] - first.min[2]),
+    )[0]
+
+  if (!record) return { diameter: Number.NaN, depth: Number.NaN }
+  return {
+    diameter: Math.max(
+      record.max[0] - record.min[0],
+      record.max[1] - record.min[1],
+    ),
+    depth: record.max[2] - record.min[2],
+  }
+}
+
+export function measureMountingHoleProfiles(
+  shape: Shape3D,
+  centers: ReadonlyArray<[number, number]>,
+  zRanges: {
+    lower: readonly [number, number]
+    upper: readonly [number, number]
+  } = {
+    lower: [-0.03, OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleStepHeight],
+    upper: [
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleStepHeight,
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight,
+    ],
+  },
+): OpenGridStackableBoxMountingHoleProfile[] {
+  const records = readFaceQualityRecords(shape)
+  return centers.map((center) => {
+    const lower = cylindricalFaceProfileAt(records, center, ...zRanges.lower)
+    const upper = cylindricalFaceProfileAt(records, center, ...zRanges.upper)
+    return {
+      center,
+      lowerBoreDiameter: lower.diameter,
+      lowerBoreDepth: lower.depth,
+      upperBoreDiameter: upper.diameter,
+      upperBoreDepth: upper.depth,
+    }
+  })
+}
+
+export function countOrdinaryBottomHoleFaces(
+  shape: Shape3D,
+  centers: ReadonlyArray<[number, number]>,
+): number {
+  if (centers.length === 0) return 0
+
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const records = readFaceQualityRecords(shape)
+  let count = 0
+
+  for (const [centerX, centerY] of centers) {
+    const hasThroughHole = records.some((record) => {
+      if (record.surfaceType !== 'CYLINDRE') return false
+      const center = [
+        (record.min[0] + record.max[0]) / 2,
+        (record.min[1] + record.max[1]) / 2,
+      ]
+      const diameter = Math.max(
+        record.max[0] - record.min[0],
+        record.max[1] - record.min[1],
+      )
+      return (
+        closeEnough(center[0], centerX, 0.04) &&
+        closeEnough(center[1], centerY, 0.04) &&
+        closeEnough(diameter, configuration.bottomGridHoleDiameter, 0.04) &&
+        record.min[2] >= -0.03 &&
+        record.max[2] >= configuration.bottomAssemblyHeight - 0.03
+      )
+    })
+
+    if (hasThroughHole) count += 1
+  }
+
+  return count
+}
+
+function makeFlangedSocketInsert(center: [number, number]): Shape3D {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const shaft = makeCylinder(
+    configuration.baseHoleDiameter / 2,
+    configuration.bottomAssemblyHeight + configuration.baseShaftExposure,
+    [center[0], center[1], -configuration.baseShaftExposure],
+  )
+  const flange = makeCylinder(
+    configuration.baseFlangeDiameter / 2,
+    configuration.baseFlangeThickness,
+    [
+      center[0],
+      center[1],
+      configuration.bottomAssemblyHeight - configuration.baseFlangeThickness,
+    ],
+  )
+  const insert = shaft.fuse(flange)
+  deleteShape(shaft)
+  deleteShape(flange)
+  return insert
+}
+
+function volumeAtBottomOpeningBoundary(
+  shape: Shape3D,
+  center: [number, number],
+): number {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const outer = makeCylinder(
+    configuration.baseHoleBottomOpeningDiameter / 2 + 0.2,
+    0.1,
+    [center[0], center[1], -0.02],
+  )
+  const inner = makeCylinder(
+    configuration.baseHoleBottomOpeningDiameter / 2 + 0.1,
+    0.1,
+    [center[0], center[1], -0.02],
+  )
+  const ring = outer.cut(inner)
+  deleteShape(outer)
+  deleteShape(inner)
+  let intersection: Shape3D | null = null
+  try {
+    intersection = shape.intersect(ring)
+    return measureVolume(intersection)
+  } finally {
+    if (intersection && intersection !== shape) deleteShape(intersection)
+    deleteShape(ring)
+  }
+}
+
+export function inspectCaptiveSocketInterface(
+  shape: Shape3D,
+  center: [number, number],
+): OpenGridStackableBoxCaptiveSocketRecord {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const insert = makeFlangedSocketInsert(center)
+  let seatedIntersection: Shape3D | null = null
+  let loweredInsert: Shape3D | null = null
+  let loweredIntersection: Shape3D | null = null
+  try {
+    seatedIntersection = shape.intersect(insert)
+    const retentionProbeOffset = Math.max(
+      0.2,
+      configuration.bottomAssemblyHeight -
+        configuration.baseHoleStepHeight +
+        0.2,
+    )
+    loweredInsert = insert.clone().translateZ(-retentionProbeOffset)
+    loweredIntersection = shape.intersect(loweredInsert)
+    return {
+      seatedIntersectionVolume: measureVolume(seatedIntersection),
+      loweredIntersectionVolume: measureVolume(loweredIntersection),
+      bottomOpeningBoundaryVolume: volumeAtBottomOpeningBoundary(shape, center),
+      shaftBounds: readBounds(insert),
+    }
+  } finally {
+    if (seatedIntersection && seatedIntersection !== shape) {
+      deleteShape(seatedIntersection)
+    }
+    if (loweredIntersection && loweredIntersection !== shape) {
+      deleteShape(loweredIntersection)
+    }
+    deleteShape(loweredInsert)
+    deleteShape(insert)
+  }
+}

@@ -38,14 +38,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
-  if (
-    modelId === 'opengrid-stackable-box' &&
-    isRecord(value) &&
-    !Object.prototype.hasOwnProperty.call(value, 'fullBottomHoleGrid')
-  ) {
-    return { ...value, fullBottomHoleGrid: false }
-  }
-
   if (modelId === 'opengrid-stackable-cylinder' && isRecord(value)) {
     return {
       ...value,
@@ -70,11 +62,10 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
     }
   }
 
-  if (
-    modelId === 'opengrid-divider' &&
-    isRecord(value) &&
-    !Object.prototype.hasOwnProperty.call(value, 'wallThickness')
-  ) {
+  if (modelId === 'opengrid-divider' && isRecord(value)) {
+    if (Object.prototype.hasOwnProperty.call(value, 'wallThickness')) {
+      return value
+    }
     return {
       ...value,
       wallThickness:
@@ -82,7 +73,34 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
     }
   }
 
-  return value
+  if (modelId !== 'opengrid-stackable-box' || !isRecord(value)) {
+    return value
+  }
+
+  const hasCornerBottomHoles = Object.prototype.hasOwnProperty.call(
+    value,
+    'cornerBottomHoles',
+  )
+  const hasFullBottomHoleGrid = Object.prototype.hasOwnProperty.call(
+    value,
+    'fullBottomHoleGrid',
+  )
+  const hasBasePlateMode = Object.prototype.hasOwnProperty.call(
+    value,
+    'basePlateMode',
+  )
+  if (hasCornerBottomHoles && hasFullBottomHoleGrid && hasBasePlateMode) {
+    return value
+  }
+
+  return {
+    ...value,
+    cornerBottomHoles: hasCornerBottomHoles ? value.cornerBottomHoles : true,
+    fullBottomHoleGrid: hasFullBottomHoleGrid
+      ? value.fullBottomHoleGrid
+      : false,
+    basePlateMode: hasBasePlateMode ? value.basePlateMode : false,
+  }
 }
 
 function cloneParameters(

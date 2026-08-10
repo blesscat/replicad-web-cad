@@ -9,10 +9,12 @@ import {
 import type { OpenGridParameterKey, OpenGridParameters } from './opengrid'
 import {
   boundsForOpenGridStackableBox,
+  externalOpenGridStackableBoxHeightFor,
   isOpenGridStackableBoxParameters,
   nominalOpenGridStackableBoxFootprintFor,
   nominalOpenGridStackableBoxBottomGridAxisPositionsFor,
   nominalOpenGridStackableBoxBottomGridCentersFor,
+  openGridStackableBoxUpperInnerRimZFor,
   openGridStackableBoxFileName,
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
   openGridStackableBoxSocketCentersFor,
@@ -138,10 +140,12 @@ export {
 } from './opengrid-divider'
 export {
   boundsForOpenGridStackableBox,
+  externalOpenGridStackableBoxHeightFor,
   isOpenGridStackableBoxParameters,
   nominalOpenGridStackableBoxFootprintFor,
   nominalOpenGridStackableBoxBottomGridAxisPositionsFor,
   nominalOpenGridStackableBoxBottomGridCentersFor,
+  openGridStackableBoxUpperInnerRimZFor,
   openGridStackableBoxFileName,
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
   openGridStackableBoxSocketCentersFor,

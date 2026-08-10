@@ -167,7 +167,9 @@ describe('Worker contract runtime validation', () => {
         x: 0.5,
         y: 1.5,
         height: 25,
+        cornerBottomHoles: true,
         fullBottomHoleGrid: false,
+        basePlateMode: false,
       },
       previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
     }
@@ -180,7 +182,9 @@ describe('Worker contract runtime validation', () => {
           x: 0.25,
           y: 1.5,
           height: 25,
+          cornerBottomHoles: true,
           fullBottomHoleGrid: false,
+          basePlateMode: false,
         },
       }),
     ).toBe(false)

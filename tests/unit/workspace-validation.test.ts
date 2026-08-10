@@ -203,7 +203,9 @@ describe('CAD workspace validation helpers', () => {
       x: 0.5,
       y: 1.5,
       height: 25,
+      cornerBottomHoles: true,
       fullBottomHoleGrid: true,
+      basePlateMode: false,
     }
     const raw = rawFromParameters(parameters)
 
@@ -211,7 +213,9 @@ describe('CAD workspace validation helpers', () => {
       x: '0.5',
       y: '1.5',
       height: '25',
+      cornerBottomHoles: 'true',
       fullBottomHoleGrid: 'true',
+      basePlateMode: 'false',
     })
     expect(parseRawParameters(raw, 'opengrid-stackable-box')).toEqual({
       valid: true,
@@ -223,7 +227,9 @@ describe('CAD workspace validation helpers', () => {
           x: '0.25',
           y: '1',
           height: '25',
+          cornerBottomHoles: 'true',
           fullBottomHoleGrid: 'true',
+          basePlateMode: 'false',
         },
         'opengrid-stackable-box',
       ),

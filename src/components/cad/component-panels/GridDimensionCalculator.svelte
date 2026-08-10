@@ -75,7 +75,9 @@
 >
   <div>
     <h3 class="m-0 text-base font-semibold">用尺寸計算格數</h3>
-    <p class="mt-1 mb-0 text-sm text-muted">{description}</p>
+    {#if description}
+      <p class="mt-1 mb-0 text-sm text-muted">{description}</p>
+    {/if}
   </div>
 
   <div

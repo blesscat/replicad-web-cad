@@ -1,11 +1,18 @@
 export type OpenGridStackableBoxParameterKey =
-  'x' | 'y' | 'height' | 'fullBottomHoleGrid'
+  | 'x'
+  | 'y'
+  | 'height'
+  | 'cornerBottomHoles'
+  | 'fullBottomHoleGrid'
+  | 'basePlateMode'
 
 export type OpenGridStackableBoxParameters = {
   x: number
   y: number
   height: number
+  cornerBottomHoles: boolean
   fullBottomHoleGrid: boolean
+  basePlateMode: boolean
 }
 
 export type OpenGridStackableBoxValidationIssue = {
@@ -26,7 +33,9 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   defaultX: 2,
   defaultY: 2,
   defaultHeight: 10,
+  defaultCornerBottomHoles: true,
   defaultFullBottomHoleGrid: false,
+  defaultBasePlateMode: false,
   minX: 0.5,
   maxX: 17.5,
   minY: 0.5,
@@ -34,21 +43,38 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   minHeight: 10,
   maxHeight: 500,
   clearanceTotal: 0.15,
-  wallThickness: 1,
-  floorThickness: 1,
-  outerCornerRadius: 1,
-  topRailHeight: 1,
-  topRailWidth: 1.4,
-  topRailBottomChamfer: 0.5,
-  stackingLeadIn: 0.6,
-  bottomGrooveDepth: 0.8,
-  bottomGrooveWidth: 1.8,
+  wallThickness: 1.2,
+  floorThickness: 1.2,
+  bottomAssemblyHeight: 5,
+  outerCornerRadius: 3.75,
+  topRailOuterInset: 0.1,
+  topRailHeight: 7.55,
+  topRailWidth: 2,
+  topRailInnerChamfer: 1.75,
+  topRailInnerVerticalHeight: 1.2,
+  topRailMiddleChamfer: 0.8,
+  topRailOuterVerticalHeight: 1.8,
+  topRailOuterChamfer: 2,
+  stackingLeadIn: 1.75,
+  bottomStackingLeadIn: 1.2,
+  bottomFootChamferHeight: 0.8,
+  bottomSupportBandHeight: 1.8,
+  stackingClearance: 0.25,
+  stackingBearingLand: 0.8,
+  bottomGrooveDepth: 1.2,
+  bottomGridSeamOpeningWidth: 1.6,
+  bottomGridSeamBedOpeningWidth: 5.6,
+  bottomGridSeamSupportOpeningWidth: 4,
+  basePlateThickness: 3,
+  basePlateCutoffHeight: 2,
   baseHoleDiameter: 5,
   baseHoleClearance: 0.25,
   baseHoleOffset: 7,
   baseHoleBottomOpeningDiameter: 5.05,
-  baseHoleTopOpeningDiameter: 6.05,
-  baseHoleChamferDepth: 0.5,
+  baseHoleTopOpeningDiameter: 7.05,
+  baseHoleStepHeight: 3,
+  basePlateHoleBottomDepth: 2,
+  basePlateHoleTopDepth: 1,
   bottomHoleGridPitch: 14,
   bottomHoleGridEdgeOffset: 7,
   bottomGridHoleDiameter: 5.05,
@@ -121,6 +147,18 @@ function validateHeight(
   }
 }
 
+function validateCornerBottomHoles(
+  value: unknown,
+  issues: OpenGridStackableBoxValidationIssue[],
+): void {
+  if (typeof value !== 'boolean') {
+    issues.push({
+      field: 'cornerBottomHoles',
+      message: '底部四角孔必須是布林值。',
+    })
+  }
+}
+
 function validateFullBottomHoleGrid(
   value: unknown,
   issues: OpenGridStackableBoxValidationIssue[],
@@ -129,6 +167,18 @@ function validateFullBottomHoleGrid(
     issues.push({
       field: 'fullBottomHoleGrid',
       message: '底部全孔模式必須是布林值。',
+    })
+  }
+}
+
+function validateBasePlateMode(
+  value: unknown,
+  issues: OpenGridStackableBoxValidationIssue[],
+): void {
+  if (typeof value !== 'boolean') {
+    issues.push({
+      field: 'basePlateMode',
+      message: '底版模式必須是布林值。',
     })
   }
 }
@@ -142,6 +192,28 @@ export function nominalOpenGridStackableBoxFootprintFor(
     parameters.y * OPENGRID_STACKABLE_BOX_CONFIGURATION.gridPitch -
       OPENGRID_STACKABLE_BOX_CONFIGURATION.clearanceTotal,
   ]
+}
+
+export function openGridStackableBoxUpperInnerRimZFor(
+  parameters: OpenGridStackableBoxParameters,
+): number {
+  return (
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight +
+    parameters.height
+  )
+}
+
+export function externalOpenGridStackableBoxHeightFor(
+  parameters: OpenGridStackableBoxParameters,
+): number {
+  const basePlateCutoff = parameters.basePlateMode
+    ? OPENGRID_STACKABLE_BOX_CONFIGURATION.basePlateCutoffHeight
+    : 0
+  return (
+    openGridStackableBoxUpperInnerRimZFor(parameters) +
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailHeight -
+    basePlateCutoff
+  )
 }
 
 export function validateOpenGridStackableBoxParameters(
@@ -160,7 +232,16 @@ export function validateOpenGridStackableBoxParameters(
   }
 
   const issues: OpenGridStackableBoxValidationIssue[] = []
-  if (!hasExactKeys(value, ['x', 'y', 'height', 'fullBottomHoleGrid'])) {
+  if (
+    !hasExactKeys(value, [
+      'x',
+      'y',
+      'height',
+      'cornerBottomHoles',
+      'fullBottomHoleGrid',
+      'basePlateMode',
+    ])
+  ) {
     issues.push({ field: 'parameters', message: '包含不支援的參數欄位。' })
   }
 
@@ -179,7 +260,9 @@ export function validateOpenGridStackableBoxParameters(
     issues,
   )
   validateHeight(value.height, issues)
+  validateCornerBottomHoles(value.cornerBottomHoles, issues)
   validateFullBottomHoleGrid(value.fullBottomHoleGrid, issues)
+  validateBasePlateMode(value.basePlateMode, issues)
 
   if (issues.length > 0) return { valid: false, issues }
 
@@ -187,7 +270,9 @@ export function validateOpenGridStackableBoxParameters(
     x: value.x as number,
     y: value.y as number,
     height: value.height as number,
+    cornerBottomHoles: value.cornerBottomHoles as boolean,
     fullBottomHoleGrid: value.fullBottomHoleGrid as boolean,
+    basePlateMode: value.basePlateMode as boolean,
   }
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
   if (width > OPENGRID_STACKABLE_BOX_CONFIGURATION.workspaceMaxDimension) {
@@ -280,7 +365,9 @@ export function openGridStackableBoxOrdinaryBottomHoleCentersFor(
 ): OpenGridStackableBoxPoint2D[] {
   if (!parameters.fullBottomHoleGrid) return []
 
-  const specialCenters = openGridStackableBoxSocketCentersFor(parameters)
+  const specialCenters = parameters.cornerBottomHoles
+    ? openGridStackableBoxSocketCentersFor(parameters)
+    : []
   const gridCenters =
     nominalOpenGridStackableBoxBottomGridCentersFor(parameters)
   const pitchTolerance = 0.001
@@ -298,6 +385,8 @@ export function openGridStackableBoxOrdinaryBottomHoleCentersFor(
 export function openGridStackableBoxSocketCentersFor(
   parameters: OpenGridStackableBoxParameters,
 ): OpenGridStackableBoxPoint2D[] {
+  if (!parameters.cornerBottomHoles) return []
+
   if (parameters.fullBottomHoleGrid) {
     const xPositions = uniqueGridEndpointPositions(
       nominalOpenGridStackableBoxBottomGridAxisPositionsFor(parameters.x),
@@ -314,9 +403,11 @@ export function openGridStackableBoxSocketCentersFor(
     return centers
   }
 
-  const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
-  const xPositions = uniqueSocketAxisPositions(width / 2)
-  const yPositions = uniqueSocketAxisPositions(depth / 2)
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const nominalWidth = parameters.x * configuration.gridPitch
+  const nominalDepth = parameters.y * configuration.gridPitch
+  const xPositions = uniqueSocketAxisPositions(nominalWidth / 2)
+  const yPositions = uniqueSocketAxisPositions(nominalDepth / 2)
   const centers: OpenGridStackableBoxPoint2D[] = []
   for (const x of xPositions) {
     for (const y of yPositions) centers.push([x, y])
@@ -330,18 +421,24 @@ export function boundsForOpenGridStackableBox(
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
   return {
     min: [-width / 2, -depth / 2, 0] as [number, number, number],
-    max: [width / 2, depth / 2, parameters.height] as [number, number, number],
+    max: [
+      width / 2,
+      depth / 2,
+      externalOpenGridStackableBoxHeightFor(parameters),
+    ] as [number, number, number],
   }
 }
 
 export function openGridStackableBoxFileName(
   parameters: OpenGridStackableBoxParameters,
 ): string {
-  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}.step`
+  const modeSuffix = parameters.basePlateMode ? '-base-plate' : ''
+  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${modeSuffix}.step`
 }
 
 export function openGridStackableBoxStlFileName(
   parameters: OpenGridStackableBoxParameters,
 ): string {
-  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}.stl`
+  const modeSuffix = parameters.basePlateMode ? '-base-plate' : ''
+  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${modeSuffix}.stl`
 }

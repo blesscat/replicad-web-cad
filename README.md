@@ -100,7 +100,9 @@ pages/
 
 ## 使用 Prototype
 
-先在首頁選擇模型，再進入對應的 CAD workspace：`box` 使用 `/cad/box`、`box-normal` 使用 `/cad/box-normal`、`modular-grid-base` 使用 `/cad/modular-grid-base`、`hsw-cell` 使用 `/cad/hsw-cell`、`hexagonal-column` 使用 `/cad/hexagonal-column`、`opengrid` 使用 `/cad/opengrid`、`opengrid-stackable-box` 使用 `/cad/opengrid-stackable-box`。CAD workspace 只調整目前 route 的 component；要切換模型必須返回模型選擇頁。`box-normal` 的 `x`、`y`、`height` 是整數，合法範圍為 `2–40`、`2–35` 格與 `10–500 mm`；預設為 `2 × 2 × 10` 且啟用四角定位柱。OpenGrid 堆疊盒的 `x`、`y` 支援 `0.5` 格步進，外部 footprint 為 `x × 28 − 0.15 mm`、`y × 28 − 0.15 mm`，並以同一個連續凸導軌／底部 45° 導角凹槽在盒體之間堆疊；四角 Snap 固定孔為 nominal Ø5 mm、距邊 7 mm，底部入口 Ø5.05 mm 以固定 0.5 mm、45° 斜角過渡至內側 Ø6.05 mm。輸入停止 500 ms 後才會送出建模；每個新 snapshot 會先使舊 generation 失效，連續 slider 變更只會對最後合法值送出建模；無效外部 snapshot 不會送出 `model.generate` 或匯出 request。
+先在首頁選擇模型，再進入對應的 CAD workspace：`box` 使用 `/cad/box`、`box-normal` 使用 `/cad/box-normal`、`modular-grid-base` 使用 `/cad/modular-grid-base`、`hsw-cell` 使用 `/cad/hsw-cell`、`hexagonal-column` 使用 `/cad/hexagonal-column`、`opengrid` 使用 `/cad/opengrid`、`opengrid-stackable-box` 使用 `/cad/opengrid-stackable-box`。CAD workspace 只調整目前 route 的 component；要切換模型必須返回模型選擇頁。`box-normal` 的 `x`、`y`、`height` 是整數，合法範圍為 `2–40`、`2–35` 格與 `10–500 mm`；預設為 `2 × 2 × 10` 且啟用四角定位柱。OpenGrid 堆疊盒的 `x`、`y` 支援 `0.5` 格步進，外部 footprint 為 `x × 28 − 0.15 mm`、`y × 28 − 0.15 mm`；`height` 是盒內淨高，外部 Z 高度為 `height + 5 + 7.55 mm`。固定底部總高 5 mm（內層地板 1.2 mm）、主側壁 1.2 mm，盒頂階梯滑軌依序為 1.75／45°、垂直 1.2、0.8／45°、垂直 1.8、2／45°；底部依序為 0.8／45°、垂直 1.8、1.2／45° 導入支撐地板。每條內部 28 mm 格線交界採逐段收窄、斜面收進地板的可列印避讓，止於底板下表面並保留連續內部地板；0.25 mm 名義滑動間隙讓相同盒體可以堆疊並滑動。四角 Snap 固定孔為距名義邊 7 mm 的兩段階梯孔：外側 Ø5.05 mm 深 3 mm，內側 Ø7.05 mm 深 2 mm。輸入停止 500 ms 後才會送出建模；每個新 snapshot 會先使舊 generation 失效，連續 slider 變更只會對最後合法值送出建模；無效外部 snapshot 不會送出 `model.generate` 或匯出 request。
+
+輸入高度直接控制盒內淨高；5 mm 底部與 7.55 mm 上部堆疊介面固定加在外部高度，外部 footprint、參數快照與匯出檔名維持不變。
 
 建模期間可以保留上一個成功 revision 的預覽，但它會標示為 stale，且 STEP/STL 下載會停用；只有新的 B-Rep candidate 完成 commit 並進入「模型已就緒」後，預覽與匯出才會重新同步。WASM 載入、建模、mesh 與匯出都有狀態提示；Worker 或操作失敗時可修改參數或按「重試」，Worker recovery 最多自動重建一次。
 

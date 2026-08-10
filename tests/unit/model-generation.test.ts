@@ -38,7 +38,14 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
     return opengridParameters()
   }
   if (modelId === 'opengrid-stackable-box') {
-    return { x: 2, y: 2, height: 10, fullBottomHoleGrid: false }
+    return {
+      x: 2,
+      y: 2,
+      height: 10,
+      cornerBottomHoles: true,
+      fullBottomHoleGrid: false,
+      basePlateMode: false,
+    }
   }
   if (modelId === 'opengrid-stackable-cylinder') {
     return {
@@ -416,7 +423,14 @@ describe('CAD model generation debounce', () => {
   it('debounces OpenGrid stackable-box half-cell input through its own model id', () => {
     const { client, send, context } = createRuntimeContext(
       'opengrid-stackable-box',
-      { x: 0.5, y: 1, height: 10, fullBottomHoleGrid: false },
+      {
+        x: 0.5,
+        y: 1,
+        height: 10,
+        cornerBottomHoles: true,
+        fullBottomHoleGrid: false,
+        basePlateMode: false,
+      },
     )
     const handlers = createModelGenerationHandlers(context)
 
@@ -431,7 +445,9 @@ describe('CAD model generation debounce', () => {
           x: 1.5,
           y: 1,
           height: 10,
+          cornerBottomHoles: true,
           fullBottomHoleGrid: false,
+          basePlateMode: false,
         },
       }),
     )

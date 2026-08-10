@@ -13,27 +13,51 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
   await expect(
     page.getByRole('heading', { name: '目前編輯：OpenGrid 堆疊盒' }),
   ).toBeVisible()
-  await expect(page.getByText(/每格 28 mm，X\/Y 支援半格尺寸/)).toBeVisible()
-
   const x = page.getByRole('slider', { name: 'X' })
   const y = page.getByRole('slider', { name: 'Y' })
-  const height = page.getByRole('textbox', { name: '盒體高度（Z）' })
+  const height = page.getByRole('textbox', { name: '盒內淨高（Z）' })
   await expect(x).toHaveAttribute('min', '0.5')
   await expect(x).toHaveAttribute('step', '0.5')
   await expect(y).toHaveAttribute('min', '0.5')
   await expect(y).toHaveAttribute('step', '0.5')
   await expect(height).toHaveAttribute('min', '10')
   await expect(height).toHaveAttribute('max', '500')
+  const cornerHoles = page.getByRole('checkbox', { name: '底部四角孔' })
+  await expect(cornerHoles).toBeVisible()
+  await expect(cornerHoles).toBeChecked()
   const fullGrid = page.getByRole('checkbox', { name: '底部全孔模式' })
   await expect(fullGrid).toBeVisible()
   await expect(fullGrid).not.toBeChecked()
+  const defaultMode = page.getByRole('radio', { name: '預設模式' })
+  await expect(defaultMode).toBeVisible()
+  await expect(defaultMode).toBeChecked()
+  const basePlate = page.getByRole('radio', { name: '底版模式' })
+  await expect(basePlate).toBeVisible()
+  await expect(basePlate).not.toBeChecked()
+  await expect(
+    page.getByText(/預設模式：可堆疊滑動，使用標準8mm固定柱/),
+  ).toBeVisible()
+  await expect(page.getByText(/底版模式：不可堆疊，使用6mm固定柱/)).toHaveCount(
+    0,
+  )
+  await basePlate.check()
+  await expect(basePlate).toBeChecked()
+  await expect(defaultMode).not.toBeChecked()
+  await expect(
+    page.getByText(/預設模式：可堆疊滑動，使用標準8mm固定柱/),
+  ).toHaveCount(0)
+  await expect(
+    page.getByText(/底版模式：不可堆疊，使用6mm固定柱/),
+  ).toBeVisible()
+  await cornerHoles.uncheck()
+  await expect(cornerHoles).not.toBeChecked()
   await fullGrid.check()
   await expect(fullGrid).toBeChecked()
-  await expect(page.getByText(/上方是連續凸導軌/)).toBeVisible()
+  await expect(page.getByText(/增加 14 mm 中心距/)).toHaveCount(0)
 
   const targetX = page.getByRole('textbox', { name: 'X（mm）' })
   const targetY = page.getByRole('textbox', { name: 'Y（mm）' })
-  await targetX.fill('28')
+  await targetX.fill('41.85')
   await targetY.fill('27.85')
   await page.getByRole('button', { name: '計算格數' }).click()
   await expect(x).toHaveValue('1.5')
@@ -50,7 +74,7 @@ test('OpenGrid stackable-box keeps half-cell dimensions in export metadata', asy
 
   const x = page.getByRole('slider', { name: 'X' })
   const y = page.getByRole('slider', { name: 'Y' })
-  const height = page.getByRole('textbox', { name: '盒體高度（Z）' })
+  const height = page.getByRole('textbox', { name: '盒內淨高（Z）' })
   await x.press('ArrowLeft')
   await y.press('ArrowLeft')
   await height.fill('20')

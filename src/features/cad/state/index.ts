@@ -82,8 +82,11 @@ function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
       x: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultX,
       y: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultY,
       height: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHeight,
+      cornerBottomHoles:
+        OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultCornerBottomHoles,
       fullBottomHoleGrid:
         OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultFullBottomHoleGrid,
+      basePlateMode: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultBasePlateMode,
     }
   }
   if (modelId === 'opengrid-stackable-cylinder') {
