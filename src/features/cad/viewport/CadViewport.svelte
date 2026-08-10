@@ -4,6 +4,11 @@
   import type { MeshSnapshot } from '../../../cad-contract/messages'
   import type { ModelParameterValues } from '../../../cad-contract/units'
   import CadViewportScene from './CadViewportScene.svelte'
+  import {
+    observeCadViewportTheme,
+    readCadViewportTheme,
+    type CadViewportTheme,
+  } from './theme'
 
   type Props = {
     mesh: MeshSnapshot | null
@@ -14,6 +19,7 @@
 
   let { mesh, modelRevision, parameters, stale }: Props = $props()
   let webglSupported = $state(true)
+  let viewportTheme = $state<CadViewportTheme>(readCadViewportTheme())
 
   function canCreateWebGLContext(): boolean {
     if (typeof document === 'undefined') return false
@@ -25,6 +31,9 @@
 
   onMount(() => {
     webglSupported = canCreateWebGLContext()
+    return observeCadViewportTheme((nextTheme) => {
+      viewportTheme = nextTheme
+    })
   })
 </script>
 
@@ -34,7 +43,7 @@
   role="img"
   aria-label="3D CAD 預覽"
 >
-  <div class="viewport-surface">
+  <div id="cad-viewport-surface" class="viewport-surface">
     {#if !webglSupported}
       <div
         class="flex h-full items-center justify-center text-muted"
@@ -45,7 +54,12 @@
     {:else if mesh && modelRevision}
       <!-- Threlte owns the canvas lifecycle and Three.js render loop. -->
       <Canvas>
-        <CadViewportScene {mesh} {modelRevision} {parameters} />
+        <CadViewportScene
+          {mesh}
+          {modelRevision}
+          {parameters}
+          theme={viewportTheme}
+        />
       </Canvas>
     {:else}
       <div class="flex h-full items-center justify-center text-muted">

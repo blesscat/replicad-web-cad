@@ -5,6 +5,7 @@ import {
   createViewportEdgeMaterial,
 } from '../../src/features/cad/viewport/edge-lines'
 import { CAD_VIEWPORT_CONFIG } from '../../src/features/cad/viewport/config'
+import { CAD_VIEWPORT_THEME_FALLBACK } from '../../src/features/cad/viewport/theme'
 
 function createTriangulatedSquare(): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry()
@@ -35,7 +36,7 @@ describe('CAD viewport edge geometry', () => {
     expect(CAD_VIEWPORT_CONFIG.edgeThresholdAngle).toBeLessThan(90)
     expect(CAD_VIEWPORT_CONFIG.edgeOpacity).toBeGreaterThan(0)
     expect(CAD_VIEWPORT_CONFIG.edgeOpacity).toBeLessThanOrEqual(1)
-    expect(CAD_VIEWPORT_CONFIG.edgeColor).toMatch(/^#[0-9a-f]{6}$/i)
+    expect(CAD_VIEWPORT_THEME_FALLBACK.edge).toMatch(/^#[0-9a-f]{6}$/i)
   })
 
   it('keeps the square boundary while suppressing a coplanar triangulation diagonal', () => {
@@ -59,7 +60,8 @@ describe('CAD viewport edge geometry', () => {
   })
 
   it('creates a depth-tested, non-depth-writing line material', () => {
-    const material = createViewportEdgeMaterial()
+    const edgeColor = '#c0d0ff'
+    const material = createViewportEdgeMaterial(edgeColor)
 
     expect(material.depthTest).toBe(true)
     expect(material.depthWrite).toBe(false)
@@ -69,6 +71,7 @@ describe('CAD viewport edge geometry', () => {
     expect(material.transparent).toBe(true)
     expect(material.opacity).toBeGreaterThan(0)
     expect(material.opacity).toBeLessThanOrEqual(1)
+    expect(material.color.getHexString()).toBe(edgeColor.slice(1))
 
     material.dispose()
   })

@@ -55,11 +55,9 @@
   function getMarkerClassName(
     progressStage: CadProgress['stage'],
     currentStage: CadProgress['stage'],
-    isComplete: boolean,
   ): string {
     if (progressStage === currentStage) return 'bg-primary text-white'
-    if (isComplete) return 'bg-primary/20 text-primary'
-    return 'bg-border-card text-muted'
+    return 'bg-border-card text-ink'
   }
 </script>
 
@@ -80,12 +78,12 @@
     aria-valuemin={valueMin}
     aria-valuenow={valueNow}
     aria-valuetext={valueText}
-    class="h-2 overflow-hidden rounded-full bg-border-card"
+    class="h-2 overflow-hidden rounded-full bg-progress-track"
     role="progressbar"
   >
     <div
       aria-hidden="true"
-      class="h-full rounded-full bg-primary transition-[width] duration-300"
+      class="h-full rounded-full bg-progress-fill transition-[width] duration-300"
       style:width={`${completion}%`}
     ></div>
   </div>
@@ -97,7 +95,6 @@
       {@const markerClassName = getMarkerClassName(
         progressStage,
         current.stage,
-        isComplete,
       )}
       <li
         aria-current={isCurrent ? 'step' : undefined}

@@ -54,7 +54,7 @@
     onRestore={() => onInputChange('orientation', defaultOrientation)}
   >
     <select
-      class="w-full min-w-0 rounded border border-surface-300 bg-surface-50 px-2 py-1.5 text-sm text-surface-900 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-50"
+      class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
       aria-label="擺放方向"
       value={rawParameters.orientation ?? defaultOrientation}
       onchange={handleOrientationChange}

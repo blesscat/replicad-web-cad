@@ -14,8 +14,13 @@
   --color-stale-background: #fff4d6;
   --color-stale-text: #69470d;
   --color-primary: #2457d6;
+  --color-focus: #2457d6;
   --color-disabled: #aeb8ca;
   --color-status: #3d485d;
+  --color-progress-track: #dfe4ee;
+  --color-progress-fill: #2457d6;
+  --color-nav: #172033;
+  --color-nav-foreground: #ffffff;
   --color-viewport: #eef2f8;
   --shadow-card: 0 1rem 3rem rgb(23 32 51 / 7%);
   --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
@@ -25,8 +30,55 @@
 
 :root {
   color-scheme: light;
+  --cad-viewport-grid-major: #b9c4d7;
+  --cad-viewport-grid-minor: #d8deea;
+  --cad-viewport-gizmo-background: #eef2f8;
+  --cad-viewport-edge: #1f3b74;
+  --cad-viewport-annotation: #8d98a3;
+  --cad-viewport-annotation-label: #7f8a95;
+  --cad-viewport-light-sky: #ffffff;
+  --cad-viewport-light-ground: #c5cfdf;
+  --cad-viewport-light-key: #ffffff;
+  --cad-viewport-light-fill: #dbe7ff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-ink: #edf2fb;
+    --color-muted: #a9b5c7;
+    --color-page: #0c121d;
+    --color-panel: #161f2e;
+    --color-border-card: #5b6b85;
+    --color-border-field: #6a7b98;
+    --color-error: #ff9d9d;
+    --color-error-border: #e16b73;
+    --color-stale: #f5c96b;
+    --color-stale-background: #493812;
+    --color-stale-text: #ffe4a4;
+    --color-primary: #3b70de;
+    --color-focus: #6a7b98;
+    --color-disabled: #5d6a80;
+    --color-status: #c5d0e2;
+    --color-progress-track: #5b6b85;
+    --color-progress-fill: #edf2fb;
+    --color-nav: #080d17;
+    --color-nav-foreground: #f3f7ff;
+    --color-viewport: #101827;
+    --shadow-card: 0 1rem 3rem rgb(0 0 0 / 35%);
+    --cad-viewport-grid-major: #53637d;
+    --cad-viewport-grid-minor: #303d54;
+    --cad-viewport-gizmo-background: #202b3d;
+    --cad-viewport-edge: #c0d0ff;
+    --cad-viewport-annotation: #d9e1f0;
+    --cad-viewport-annotation-label: #c8d3e7;
+    --cad-viewport-light-sky: #d8e2f2;
+    --cad-viewport-light-ground: #56647b;
+    --cad-viewport-light-key: #f2f6ff;
+    --cad-viewport-light-fill: #a9c1f2;
+  }
 }
 
 * {

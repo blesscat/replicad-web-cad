@@ -7,7 +7,7 @@
 </script>
 
 <button
-  class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-field bg-panel px-3 py-2 text-sm font-semibold text-ink hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+  class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-field bg-panel px-3 py-2 text-sm font-semibold text-ink hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
   type="button"
   aria-label="全部恢復預設"
   onclick={onRestore}

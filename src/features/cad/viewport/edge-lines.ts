@@ -10,9 +10,11 @@ export function createViewportEdgeGeometry(
   )
 }
 
-export function createViewportEdgeMaterial(): THREE.LineBasicMaterial {
+export function createViewportEdgeMaterial(
+  color: string,
+): THREE.LineBasicMaterial {
   return new THREE.LineBasicMaterial({
-    color: CAD_VIEWPORT_CONFIG.edgeColor,
+    color,
     opacity: CAD_VIEWPORT_CONFIG.edgeOpacity,
     transparent: true,
     depthTest: true,
