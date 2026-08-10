@@ -20,14 +20,6 @@
 </script>
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
-  <p class="m-0 text-sm text-muted">
-    主體固定 Ø{PILLAR_CONFIGURATION.bodyDiameter} mm，頂端為
-    {PILLAR_CONFIGURATION.upperChamfer} mm、45° chamfer；總長度只接受
-    {PILLAR_CONFIGURATION.minLength}–{PILLAR_CONFIGURATION.maxLength} mm 整數。開啟「連接底版用」後，底端改為
-    Ø{PILLAR_CONFIGURATION.baseDiameter} mm × {PILLAR_CONFIGURATION.baseHeight} mm
-    的銳角凸台。
-  </p>
-
   {#each opengridPillarDefinition.parameterSchema as field (field.key)}
     {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
     <ParameterField

@@ -14,6 +14,14 @@ test('OpenGrid CAD route exposes typed controls and the custom matrix', async ({
   await expect(
     page.getByRole('combobox', { name: 'OpenGrid 板型' }),
   ).toBeVisible()
+  expect(
+    await page
+      .getByRole('combobox', { name: 'OpenGrid 板型' })
+      .locator('option')
+      .evaluateAll((options) =>
+        options.map((option) => (option as HTMLOptionElement).value),
+      ),
+  ).toEqual(['Lite', 'Full', 'Heavy'])
   const rows = page.getByRole('slider', { name: 'Y' })
   const columns = page.getByRole('slider', { name: 'X' })
   await expect(rows).toHaveValue('2')

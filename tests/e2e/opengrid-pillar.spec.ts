@@ -21,7 +21,6 @@ test('OpenGrid pillar is listed in its family and initializes with plain default
   await expect(
     page.getByRole('heading', { name: '目前編輯：OpenGrid 圓柱支柱' }),
   ).toBeVisible()
-  await expect(page.getByText(/固定 Ø5 mm/)).toBeVisible()
 
   const length = page.getByRole('textbox', { name: '總長度（Z）' })
   const lengthSlider = page.getByRole('slider', { name: '總長度（Z）' })
@@ -31,6 +30,8 @@ test('OpenGrid pillar is listed in its family and initializes with plain default
     exact: true,
   })
   const baseConnection = page.getByRole('checkbox', { name: '連接底版用' })
+  await expect(length).toBeVisible()
+  await expect(page.getByText(/固定 Ø5 mm/)).toHaveCount(0)
   await expect(length).toHaveValue('5')
   await expect(length).toHaveAttribute('min', '3')
   await expect(length).toHaveAttribute('max', '500')

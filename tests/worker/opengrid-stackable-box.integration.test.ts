@@ -20,6 +20,10 @@ import {
   inspectOpenGridSnapHoldCompatibility,
 } from '../../src/cad-kernel/components/opengrid-stackable-box/builder'
 import {
+  buildModelBRep,
+  type KernelBuildContext,
+} from '../../src/cad-kernel/model'
+import {
   boundsForOpenGridStackableBox,
   externalOpenGridStackableBoxHeightFor,
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
@@ -147,6 +151,33 @@ describe('OpenGrid stackable-box B-Rep', () => {
     },
     120_000,
   )
+
+  it('builds through kernel dispatch without a Snap reference loader', async () => {
+    const input = parameters({ x: 1, y: 1 })
+    let snapReferenceLoadAttempts = 0
+    const context: KernelBuildContext = {
+      getModularGridBaseTemplate: async () => {
+        throw new Error('UNEXPECTED_MODULAR_GRID_TEMPLATE_LOAD')
+      },
+      getHswCellTemplate: async () => {
+        throw new Error('UNEXPECTED_HSW_TEMPLATE_LOAD')
+      },
+      getOpenGridSnapReference: async () => {
+        snapReferenceLoadAttempts += 1
+        throw new Error('SNAP_REFERENCE_MUST_NOT_BE_LOADED')
+      },
+    }
+    const shape = await buildModelBRep('opengrid-stackable-box', input, context)
+    try {
+      expect(measureVolume(shape)).toBeGreaterThan(0)
+      expect(cylindricalFaceCount(shape)).toBeGreaterThanOrEqual(
+        openGridStackableBoxSocketCentersFor(input).length,
+      )
+      expect(snapReferenceLoadAttempts).toBe(0)
+    } finally {
+      deleteShape(shape)
+    }
+  }, 120_000)
 
   it.each([
     { x: 1, y: 1 },
