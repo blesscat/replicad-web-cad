@@ -20,6 +20,12 @@ The system MUST expose an independent OpenGrid component with stable `modelId=op
 - **THEN** validation MUST reject the snapshot with a field-specific diagnostic
 - **AND** the snapshot MUST NOT be sent as a valid model-generation request
 
+#### Scenario: Maximum manual length is valid
+
+- **WHEN** a pillar snapshot contains `length=500` and a boolean `baseConnection`
+- **THEN** validation MUST accept the snapshot
+- **AND** the generated Z span MUST equal 500 mm
+
 #### Scenario: Boolean base connection validation
 
 - **WHEN** a pillar snapshot contains a value other than a typed boolean for `baseConnection`

@@ -4,7 +4,7 @@
 ## Requirements
 ### Requirement: OpenGrid stackable box parameters
 
-The system MUST expose an independently validated OpenGrid stackable-box model with stable `modelId=opengrid-stackable-box`. Its user-facing parameters MUST include `x`, `y`, `height`, the boolean `cornerBottomHoles`, the boolean `fullBottomHoleGrid`, the boolean `basePlateMode`, and three typed opening fields for each of `+X`, `-X`, `+Y`, and `-Y`: `openingPlusXDepth`, `openingPlusXBottomLength`, `openingPlusXAngle`, `openingMinusXDepth`, `openingMinusXBottomLength`, `openingMinusXAngle`, `openingPlusYDepth`, `openingPlusYBottomLength`, `openingPlusYAngle`, `openingMinusYDepth`, `openingMinusYBottomLength`, and `openingMinusYAngle`. `x` and `y` MUST be positive multiples of 0.5, and the derived footprint MUST remain within the current 500 mm workspace limit. The standard OpenGrid pitch MUST be 28 mm. The generated footprint MUST apply a total 0.15 mm clearance per axis, so the nominal width and depth are `x × 28 − 0.15 mm` and `y × 28 − 0.15 mm`. The `height` control MUST represent the clear internal box height measured from the upper surface of the fixed 5.0 mm bottom assembly to the upper inner-rim datum, rather than the external Z bound. In the normal mode, the bottom assembly height and reference-style upper interface height MUST remain fixed independently of `height`; the nominal external height MUST therefore be `height + 5.0 mm + 7.55 mm`, excluding only the small top-edge rounding tolerance. `cornerBottomHoles` MUST default to `true`, `fullBottomHoleGrid` MUST default to `false`, and `basePlateMode` MUST default to `false`, preserving the existing default while allowing the three boolean modes to be selected independently.
+The system MUST expose an independently validated OpenGrid stackable-box model with stable `modelId=opengrid-stackable-box`. Its user-facing parameters MUST include `x`, `y`, `height`, the boolean `cornerBottomHoles`, the boolean `fullBottomHoleGrid`, the boolean `basePlateMode`, and three typed opening fields for each of `+X`, `-X`, `+Y`, and `-Y`: `openingPlusXDepth`, `openingPlusXBottomLength`, `openingPlusXAngle`, `openingMinusXDepth`, `openingMinusXBottomLength`, `openingMinusXAngle`, `openingPlusYDepth`, `openingPlusYBottomLength`, `openingPlusYAngle`, `openingMinusYDepth`, `openingMinusYBottomLength`, and `openingMinusYAngle`. `x` and `y` MUST be positive multiples of 0.5, and the derived footprint MUST remain within the current 500 mm workspace limit. The standard OpenGrid pitch MUST be 28 mm. The generated footprint MUST apply a total 0.15 mm clearance per axis, so the nominal width and depth are `x × 28 − 0.15 mm` and `y × 28 − 0.15 mm`. The `height` control MUST be a safe integer in the inclusive range 10–500 mm and MUST represent the clear internal box height measured from the upper surface of the fixed 5.0 mm bottom assembly to the upper inner-rim datum, rather than the external Z bound. In the normal mode, the bottom assembly height and reference-style upper interface height MUST remain fixed independently of `height`; the nominal external height MUST therefore be `height + 5.0 mm + 7.55 mm`, excluding only the small top-edge rounding tolerance. `cornerBottomHoles` MUST default to `true`, `fullBottomHoleGrid` MUST default to `false`, and `basePlateMode` MUST default to `false`, preserving the existing default while allowing the three boolean modes to be selected independently.
 
 The four opening triples MUST use the same normalized names and semantics as the stackable-cylinder opening interface. Each depth and flat-bottom length MUST be a finite non-negative integer millimetre value with a 1 mm step. Every bottom-length control MUST default to 1 mm, every depth MUST default to 0 mm, and every angle MUST default to 90 degrees. An opening depth of zero MUST disable that direction, so its default bottom length MUST NOT create geometry. For an enabled direction, the live depth maximum MUST be the clear internal `height` after accounting for the active bottom floor, capped by the configured global maximum; the exact floor boundary MUST be accepted and deeper values MUST be rejected. The live bottom-length maximum MUST be the largest integer that fits the selected rectangular side's straight run while preserving the required corner and neighboring-opening structure, capped by the configured global maximum. An enabled angle MUST be an integer degree from 1 through 90, measured from the flat bottom; 90 degrees MUST produce vertical side walls and 45 degrees MUST produce outward-sloping side walls. The existing model identity, route, footprint calculator, and height semantics MUST remain unchanged.
 
@@ -22,6 +22,12 @@ The stackable-box parameter panel MUST provide a width/depth calculator that acc
 - **AND** zero-depth opening defaults MUST preserve the no-opening geometry
 - **AND** the result MUST expose a non-empty preview and exportable CAD shape
 
+#### Scenario: Generate a maximum manual-height box
+
+- **WHEN** a valid snapshot has `height=500` and an X/Y footprint within the existing 500 mm workspace limit
+- **THEN** the clear internal height MUST equal 500 mm
+- **AND** the external Z bound MUST include the fixed bottom and upper-interface heights without clamping the requested height
+
 #### Scenario: Generate a half-cell box
 
 - **WHEN** a valid snapshot contains `x=0.5` or `y=0.5` and a complete four-direction opening snapshot
@@ -31,7 +37,7 @@ The stackable-box parameter panel MUST provide a width/depth calculator that acc
 
 #### Scenario: Invalid dimensions or grid mode
 
-- **WHEN** `x`, `y`, or `height` is empty, non-finite, negative, zero, not on the permitted step, or outside the workspace limits, or `cornerBottomHoles`, `fullBottomHoleGrid`, or `basePlateMode` is not a boolean
+- **WHEN** `x`, `y`, or `height` is empty, non-finite, negative, zero, not on the permitted step, or outside its declared input range or workspace limits, or `cornerBottomHoles`, `fullBottomHoleGrid`, or `basePlateMode` is not a boolean
 - **THEN** the model snapshot MUST be rejected with a field-specific validation error
 - **AND** no invalid shape or export request MUST be committed
 - **WHEN** any opening depth or bottom length is fractional, negative, non-finite, or geometrically unsupported, or any opening angle is fractional or outside 1–90 degrees
@@ -144,6 +150,12 @@ The box MUST retain a fixed 5 mm bottom assembly in normal mode. When `cornerBot
 - **THEN** a compatible reference MUST pass the dedicated mating-interface validation
 - **AND** an incompatible, malformed, or insufficient reference MUST fail with a diagnosable mating-interface error
 - **AND** a reference mismatch MUST NOT cause the normal Stackable Box runtime model build to scale or move the box footprint
+
+#### Scenario: Snap reference mismatch
+
+- **WHEN** the bundled module-relative `opengrid-bare-lite-snap.step` reference cannot be reconciled with the generated nominal Ø5 mm mounting interface within the declared fit tolerance
+- **THEN** geometry validation MUST report a diagnosable mating-interface failure
+- **AND** the normal kernel model build path MUST NOT silently scale or move the box footprint to hide the mismatch
 
 #### Scenario: Runtime generation without a Snap reference
 
@@ -338,4 +350,3 @@ The catalog MUST provide deterministic filenames that include the model slug, X/
 - **WHEN** two valid boxes have identical dimensions and bottom settings but different enabled opening values
 - **THEN** their suggested STEP and STL filenames MUST have different deterministic opening identities
 - **AND** equivalent typed values entered with different raw formatting MUST produce the same filename
-

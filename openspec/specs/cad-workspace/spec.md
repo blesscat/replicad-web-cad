@@ -138,8 +138,8 @@ The system MUST expose a runtime-validated component catalog. Each catalog entry
 
 - **Given** 使用者位於 `/cad/box`、`/cad/box-normal` 或 `/cad/modular-grid-base`
 - **When** 使用者查看或修改參數
-- **Then** box MUST 提供 width、depth、height 欄位並明示 mm
-- **And** box-normal MUST 提供 X=2–40、Y=2–35 格數、height=10–500 mm 欄位，以及預設勾選的 cornerPosts checkbox
+        - **Then** box MUST 提供 width、depth、height 欄位並明示 mm，且每個文字輸入 MUST 接受 1–500 mm
+        - **And** box-normal MUST 提供 X=2–40、Y=2–35 格數、height 文字輸入=10–500 mm 並搭配 height slider=10–200 mm，以及預設勾選的 cornerPosts checkbox
 - **And** modular-grid-base MUST 提供 rows、columns 欄位，並明示合法範圍 1–20 格、每格 20 × 20 mm 及固定高度 5 mm
 - **And** UI MUST NOT 顯示另一個 component 的參數欄位
 
@@ -272,17 +272,18 @@ The Worker MUST load and validate the component-local `box-normal.step` referenc
 
 ### Requirement: box-normal documentation
 
-The Prototype documentation page MUST list `box-normal` as an available component and describe its X/Y grid ranges, 10–500 mm body height, total 0.15 mm X/Y clearance, default four 7 mm corner posts, localStorage persistence, and STEP/STL export behavior.
+The Prototype documentation page MUST list `box-normal` as an available component and describe its X/Y grid ranges, 10–500 mm manual body-height input, 10–200 mm body-height slider, total 0.15 mm X/Y clearance, default four 7 mm corner posts, localStorage persistence, and STEP/STL export behavior.
 
 #### Scenario: Documentation describes box-normal
 
 - **WHEN** a user opens the Prototype documentation page
 - **THEN** the page MUST mention `box-normal` and its confirmed controls and geometry behavior
+- **AND** the page MUST describe the distinct 10–200 mm slider range and 10–500 mm manual input range
 - **AND** the page MUST NOT describe `box` as the only available solid model
 
 ### Requirement: 參數驗證與 generation
 
-The system MUST validate the selected `modelId` and its component-specific parameters before sending any model request to the Worker. Shared dimensional parameters MUST be finite, positive integer millimetres within the confirmed workspace range; modular-grid-base `rows` and `columns` MUST be integers from 1 through 20 whose derived width and depth do not exceed 400 mm. Decimal values MUST be rejected without rounding. Every parameter snapshot, including an invalid snapshot, MUST receive a new generation; a valid snapshot MUST send `model.generate` only after all fields stop changing for 150 ms.
+The system MUST validate the selected `modelId` and its component-specific parameters before sending any model request to the Worker. Basic `box` dimensional parameters MUST be finite, positive integer millimetres in the inclusive range 1–500. Component-specific validators MUST enforce their own input ranges, including each 500 mm height or length range covered by this change. The hexagonal-column height MUST be an integer in the inclusive range 1–500 while its row-envelope safety check remains 500 mm. `modular-grid-base` `rows` and `columns` MUST be integers from 1 through 20 whose derived width and depth do not exceed 400 mm, and all grid/OpenGrid planar footprint safety limits MUST remain unchanged at their existing 500 mm bounds. Decimal values MUST be rejected without rounding. Every parameter snapshot, including an invalid snapshot, MUST receive a new generation; a valid snapshot MUST send `model.generate` only after all fields stop changing for 150 ms.
 
 #### Scenario: 合法方塊參數變更
 
@@ -316,6 +317,37 @@ The system MUST validate the selected `modelId` and its component-specific param
 - **And** 不得為該 snapshot 送出 model.generate 或匯出 request
 - **And** UI 必須立即進入 invalid-input、停用匯出，並送出 model.invalidate 使較舊 generation 失效
 - **And** 既有成功預覽可以保留，但必須標示為 stale
+
+#### Scenario: 500 mm 手動輸入
+
+- **Given** 使用者在支援 500 mm 的長度／高度文字欄位輸入合法整數 `500`
+- **When** 輸入完成且 debounce 結束
+- **Then** 該 snapshot MUST 通過數值範圍驗證並送出 model.generate
+- **And** 對應模型的生成 bounds MUST 使用 500 mm 的請求尺寸
+- **And** slider MUST 仍然把可拖曳的最大值限制在 200 mm
+
+### Requirement: Separate slider and manual-input limits
+
+For a numeric field that exposes both a slider and a text input, the workspace MUST treat the slider maximum as a navigation aid rather than the component's validation maximum. Fields targeted by this change MUST expose a 200 mm slider maximum while retaining their component-specific manual-input maximum of 500 mm; fields with a smaller existing domain MUST retain that smaller domain. The `box` text-only dimensions MUST expose their 500 mm manual-input maximum without requiring a slider.
+
+#### Scenario: Slider and text input expose distinct limits
+
+- **WHEN** a user views a targeted height or length field
+- **THEN** the range input MUST expose a maximum of 200 mm
+- **AND** the text input MUST expose a maximum of 500 mm
+- **AND** entering a valid value above 200 mm through the text input MUST remain possible
+
+#### Scenario: Smaller domains remain bounded
+
+- **WHEN** a numeric control has an existing maximum below 200 mm
+- **THEN** its slider and manual input MUST retain the component's existing smaller maximum
+- **AND** this change MUST NOT create new values outside that component's declared domain
+
+#### Scenario: Planar workspace limits remain unchanged
+
+- **WHEN** a user enters a height or length of 500 mm for a component whose X/Y footprint remains within its existing workspace limit
+- **THEN** the component MUST be eligible for generation
+- **AND** entering a planar footprint beyond the existing 500 mm safety limit MUST still be rejected independently of the height or length input range
 
 ### Requirement: Worker 初始化與 CAD 所有權
 The system MUST satisfy the following behavior:

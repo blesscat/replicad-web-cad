@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Defines the preview-only OpenGrid catalog component, its fixed component-local STEP asset, zero-parameter workspace behavior, and compatibility with existing models.
+
+## Requirements
 
 ### Requirement: OpenGrid preview-only catalog component
 
