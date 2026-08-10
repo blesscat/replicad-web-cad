@@ -39,10 +39,15 @@ describe('OpenGrid Snap profile registry', () => {
     for (const profile of ['Standard', 'Directional'] as const) {
       for (const variant of ['Full', 'Lite'] as const) {
         const definition = openGridSnapProfileFor(profile, variant)
-        const distance = variant === 'Full' ? 7.474 : 7.346
+        const distance = 7
 
         expect(definition.locatingHoleRadius).toBe(2.5)
         expect(definition.locatingHoleCenter).toBe(distance)
+        expect(definition.locatingHoleSlotHalfWidth).toBe(1.5)
+        expect(definition.locatingHoleSlotInnerHalfSpan).toBe(5)
+        expect(definition.locatingHoleSlotStepZ).toBe(
+          variant === 'Full' ? 4.8 : 1.9,
+        )
         expect(openGridSnapLocatingHoleCentersFor(definition)).toEqual([
           [-distance, -distance],
           [-distance, distance],

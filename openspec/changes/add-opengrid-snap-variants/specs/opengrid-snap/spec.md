@@ -161,7 +161,7 @@ For any snapshot with a non-`none` half-cell direction, the Worker MUST first bu
 
 ### Requirement: Optional body feature controls
 
-The generated Body MUST start from the selected Bare Standard or Directional baseline. `fourCornerLocatingHoles=true` MUST add exactly four fixed-profile locating-hole cutters at the selected profile's documented centers. `centerRemoverHole=true` MUST add the selected profile's documented center-remover cutter, which MAY be non-circular. The two cutters MUST be independent, MUST NOT change diameter or profile dimensions when the assembly is offset or resized for a host footprint, and MUST NOT duplicate an intrinsic Directional feature already present in the selected source profile.
+The generated Body MUST start from the selected Bare Standard or Directional baseline. `fourCornerLocatingHoles=true` MUST add exactly four fixed-profile locating-hole cutters at the selected profile's documented centers, with the documented underside elastic slots connected to those holes. `centerRemoverHole=true` MUST add the selected profile's documented center-remover cutter, which MAY be non-circular. The two cutters MUST be independent, MUST NOT change diameter or profile dimensions when the assembly is offset or resized for a host footprint, and MUST NOT duplicate an intrinsic Directional feature already present in the selected source profile.
 
 #### Scenario: Solid body with all optional features disabled
 
@@ -172,7 +172,8 @@ The generated Body MUST start from the selected Bare Standard or Directional bas
 #### Scenario: Four locating holes only
 
 - **WHEN** `fourCornerLocatingHoles=true` and `centerRemoverHole=false`
-- **THEN** the Body MUST contain four locating holes with the configured fixed diameter
+- **THEN** the Body MUST contain four locating holes with fixed diameter 5.0 mm at centers `(±7.0, ±7.0)` mm
+- **AND** the Body MUST contain four 3.0 mm-wide underside elastic slots, opening from Z=0 through the profile's documented slot-step height
 - **AND** it MUST NOT contain the optional center-remover cut
 
 #### Scenario: Center remover only

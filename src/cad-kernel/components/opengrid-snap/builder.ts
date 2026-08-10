@@ -215,6 +215,13 @@ function cutShape(source: Shape3D, cutter: Shape3D): Shape3D {
   return result
 }
 
+function fuseCutter(current: Shape3D, extension: Shape3D): Shape3D {
+  const fused = current.fuse(extension, { optimisation: 'none' })
+  if (fused !== current) deleteShape(current)
+  deleteShape(extension)
+  return fused
+}
+
 function featureCutterHeight(
   definition: OpenGridSnapProfileDefinition,
 ): number {
@@ -256,6 +263,53 @@ function makeCenterRemoverCutter(
   return cutter
 }
 
+function makeLocatingHolesCutter(
+  definition: OpenGridSnapProfileDefinition,
+): Shape3D {
+  const baseZ = definition.expectedBounds.min[2] - 1
+  const holeHeight = featureCutterHeight(definition)
+  const halfSpan = definition.locatingHoleSlotInnerHalfSpan
+  const slotHalfWidth = definition.locatingHoleSlotHalfWidth
+  const slotStepZ = definition.locatingHoleSlotStepZ
+  const holeCenter = definition.locatingHoleCenter
+  const centers = openGridSnapLocatingHoleCentersFor(definition)
+  const firstCenter = centers[0]
+  if (!firstCenter)
+    throw new Error('OPENGRID_SNAP_LOCATING_HOLE_CENTER_MISSING')
+
+  let cutter: Shape3D = makeCylinder(
+    definition.locatingHoleRadius,
+    holeHeight,
+    [firstCenter[0], firstCenter[1], baseZ],
+  )
+  for (const [x, y] of centers.slice(1)) {
+    cutter = fuseCutter(
+      cutter,
+      makeCylinder(definition.locatingHoleRadius, holeHeight, [x, y, baseZ]),
+    )
+  }
+
+  for (const sign of [-1, 1] as const) {
+    const bandCenter = sign * holeCenter
+    cutter = fuseCutter(
+      cutter,
+      makeBox(
+        [-halfSpan, bandCenter - slotHalfWidth, baseZ],
+        [halfSpan, bandCenter + slotHalfWidth, slotStepZ],
+      ),
+    )
+    cutter = fuseCutter(
+      cutter,
+      makeBox(
+        [bandCenter - slotHalfWidth, -halfSpan, baseZ],
+        [bandCenter + slotHalfWidth, halfSpan, slotStepZ],
+      ),
+    )
+  }
+
+  return cutter
+}
+
 function applyBodyFeatures(
   body: Shape3D,
   parameters: OpenGridSnapParameters,
@@ -282,18 +336,9 @@ function applyBodyFeatures(
   }
 
   let result = body
-  const height = featureCutterHeight(definition)
-  const baseZ = definition.expectedBounds.min[2] - 1
 
   if (parameters.fourCornerLocatingHoles) {
-    for (const [x, y] of openGridSnapLocatingHoleCentersFor(definition)) {
-      const cutter = makeCylinder(definition.locatingHoleRadius, height, [
-        x,
-        y,
-        baseZ,
-      ])
-      result = cutShape(result, cutter)
-    }
+    result = cutShape(result, makeLocatingHolesCutter(definition))
   }
 
   if (parameters.centerRemoverHole) {

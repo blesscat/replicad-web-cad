@@ -53,7 +53,7 @@ Standard 的第一階段實作優先將 Body、Side Holder 與可參數化的外
 2. center remover cutter（若啟用）；
 3. 固定 body 細節與 B-Rep 驗證。
 
-四周孔的直徑與中心由 profile 常數定義，center remover 使用原始 hole fixture 量測出的 Z-stepped rectangular profile，不假設它是圓孔：下段為 8 × 8 mm、上段為 4 × 8 mm，Full 在 Z=4.8 mm 變階，Lite 在 Z=1.9 mm 變階。這樣可以保證「無孔」真的回到實心 Bare body，也避免把孔徑或階梯輪廓誤放進 scaling 或 offset 流程。
+四周孔依原始 hole fixture 定義為四個直徑 5.0 mm、中心位於 (±7.0, ±7.0) mm 的固定圓孔；每個孔在 Body 底部再與 3.0 mm 寬的十字環形彈性槽相接。彈性槽的四個臂位於 `x∈[-5,5], y∈[±5.5,±8.5]` 與 `x∈[±5.5,±8.5], y∈[-5,5]`，Full 開到 Z=4.8 mm，Lite 開到 Z=1.9 mm。center remover 使用原始 hole fixture 量測出的 Z-stepped rectangular profile，不假設它是圓孔：下段為 8 × 8 mm、上段為 4 × 8 mm，Full 在 Z=4.8 mm 變階，Lite 在 Z=1.9 mm 變階。這樣可以保證「無孔」真的回到實心 Bare body，也避免把孔徑、彈性槽或階梯輪廓誤放進 scaling 或 offset 流程。
 
 替代方案是繼續以已挖孔 STEP 作為母體再用填補幾何復原實心 body；這會依賴不可逆的拓撲假設，且容易留下錯誤面，故不採用。
 

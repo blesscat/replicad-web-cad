@@ -19,6 +19,9 @@ export type OpenGridSnapProfileDefinition = {
   snapLayerMinZ: number
   locatingHoleRadius: number
   locatingHoleCenter: number
+  locatingHoleSlotHalfWidth: number
+  locatingHoleSlotInnerHalfSpan: number
+  locatingHoleSlotStepZ: number
   centerRemoverLowerHalfWidth: number
   centerRemoverUpperHalfWidth: number
   centerRemoverHalfDepth: number
@@ -77,8 +80,7 @@ function makeDefinition(
     expectedBounds = directionalBounds(variant)
   }
 
-  let locatingHoleCenter = 7.474
-  if (variant === 'Lite') locatingHoleCenter = 7.346
+  const locatingHoleCenter = 7
 
   let expectedSolidCount = 1
   let assemblyKind: OpenGridSnapProfileDefinition['assemblyKind'] =
@@ -119,6 +121,9 @@ function makeDefinition(
     snapLayerMinZ,
     locatingHoleRadius: 2.5,
     locatingHoleCenter,
+    locatingHoleSlotHalfWidth: 1.5,
+    locatingHoleSlotInnerHalfSpan: 5,
+    locatingHoleSlotStepZ: centerRemoverStepZ,
     centerRemoverLowerHalfWidth: 4,
     centerRemoverUpperHalfWidth: 2,
     centerRemoverHalfDepth: 4,

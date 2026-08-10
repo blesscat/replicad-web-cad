@@ -303,6 +303,60 @@ function translateFeaturePoint(
   return [point[0] + translation[0], point[1] + translation[1]]
 }
 
+function locatingHoleElasticSlotProbes(
+  definition: ReturnType<typeof openGridSnapProfileFor>,
+  translation: [number, number],
+  zMin: number,
+  zMax: number,
+): Probe[] {
+  const margin = 0.2
+  const halfWidth = definition.locatingHoleSlotHalfWidth - margin
+  const halfSpan = definition.locatingHoleSlotInnerHalfSpan - margin
+  const center = definition.locatingHoleCenter
+  const probes: Probe[] = []
+  for (const sign of [-1, 1] as const) {
+    const bandCenter = sign * center
+    probes.push(
+      {
+        min: [
+          -halfSpan + translation[0],
+          bandCenter - halfWidth + translation[1],
+          zMin,
+        ],
+        max: [
+          halfSpan + translation[0],
+          bandCenter + halfWidth + translation[1],
+          zMax,
+        ],
+      },
+      {
+        min: [
+          bandCenter - halfWidth + translation[0],
+          -halfSpan + translation[1],
+          zMin,
+        ],
+        max: [
+          bandCenter + halfWidth + translation[0],
+          halfSpan + translation[1],
+          zMax,
+        ],
+      },
+    )
+  }
+  return probes
+}
+
+function probeFitsInBoundsBox(probe: Probe, bounds: ModelBounds): boolean {
+  return (
+    probe.min[0] >= bounds.min[0] &&
+    probe.min[1] >= bounds.min[1] &&
+    probe.min[2] >= bounds.min[2] &&
+    probe.max[0] <= bounds.max[0] &&
+    probe.max[1] <= bounds.max[1] &&
+    probe.max[2] <= bounds.max[2]
+  )
+}
+
 function centerRemoverProbe(
   definition: ReturnType<typeof openGridSnapProfileFor>,
   center: [number, number],
@@ -389,6 +443,38 @@ function inspectOptionalFeatureProbes(
         }
         if (annulusVolume <= QUALITY_TOLERANCE) {
           failures.push('features:locating-hole-diameter-or-center-invalid')
+        }
+      }
+      const lowerSlotProbes = locatingHoleElasticSlotProbes(
+        definition,
+        translation,
+        bounds.min[2] + 0.05,
+        definition.locatingHoleSlotStepZ - 0.05,
+      )
+      const upperSlotProbes = locatingHoleElasticSlotProbes(
+        definition,
+        translation,
+        definition.locatingHoleSlotStepZ + 0.05,
+        bounds.max[2] - 0.05,
+      )
+      for (let index = 0; index < lowerSlotProbes.length; index += 1) {
+        const lowerProbe = lowerSlotProbes[index]
+        const upperProbe = upperSlotProbes[index]
+        if (!lowerProbe || !upperProbe) continue
+        if (
+          !probeFitsInBoundsBox(lowerProbe, bounds) ||
+          !probeFitsInBoundsBox(upperProbe, bounds)
+        ) {
+          continue
+        }
+        const lowerSlotVolume = volumeInBoxProbe(central, lowerProbe)
+        const upperSlotVolume = volumeInBoxProbe(central, upperProbe)
+        probeVolumes.push(lowerSlotVolume, upperSlotVolume)
+        if (
+          lowerSlotVolume > QUALITY_TOLERANCE ||
+          upperSlotVolume <= QUALITY_TOLERANCE
+        ) {
+          failures.push('features:locating-hole-elastic-slot-missing')
         }
       }
     } else {

@@ -642,10 +642,39 @@ describe('OpenGrid Snap reference builder', () => {
         expect(volumes[4]).toBeLessThan(volumes[0]!)
         expect(volumes[4]).toBeLessThan(volumes[3]!)
         expect(volumes[4]).toBeLessThan(volumes[2]!)
+        expect(volumes[0]! - volumes[1]!).toBeCloseTo(
+          variant === 'Full' ? 1070.83 : 479.503,
+          2,
+        )
         expect(volumes[0]! - volumes[3]!).toBeCloseTo(
           variant === 'Full' ? 371.2 : 169.6,
           2,
         )
+
+        const cornerBody = centralSolid(corners)
+        try {
+          const slotStepZ = variant === 'Full' ? 4.8 : 1.9
+          expect(
+            hasPlanarFaceWithBounds(cornerBody, [
+              [-5, 5.5, 0],
+              [5, 5.5, slotStepZ],
+            ]),
+          ).toBe(true)
+          expect(
+            hasPlanarFaceWithBounds(cornerBody, [
+              [5.5, -5, 0],
+              [5.5, 5, slotStepZ],
+            ]),
+          ).toBe(true)
+          expect(
+            hasPlanarFaceWithBounds(cornerBody, [
+              [-5, 5.5, slotStepZ],
+              [5, 8.5, slotStepZ],
+            ]),
+          ).toBe(true)
+        } finally {
+          cornerBody.delete()
+        }
 
         const centerBody = centralSolid(center)
         try {
