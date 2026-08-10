@@ -48,8 +48,13 @@ function shapeBounds(shape: Shape3D): number[][] {
   }
 }
 
-function probeVolumeAt(shape: Shape3D, x: number, z: number): number {
-  const probe = makeCylinder(0.05, 0.02, [x, 0, z])
+function probeVolumeAt(
+  shape: Shape3D,
+  x: number,
+  z: number,
+  probeRadius = 0.05,
+): number {
+  const probe = makeCylinder(probeRadius, 0.02, [x, 0, z])
   let intersection: Shape3D | null = null
   try {
     intersection = shape.intersect(probe)
@@ -116,16 +121,49 @@ describe('OpenGrid pillar CAD kernel integration', () => {
     180_000,
   )
 
-  it('keeps both 1 mm chamfers in plain mode', async () => {
+  it('keeps a 1 mm lower and 0.5 mm upper chamfer in plain mode', async () => {
     const parameters = { length: 5, baseConnection: false }
     const shape = await buildPillar(parameters)
     try {
       expect(probeVolumeAt(shape, 1.4, 0.1)).toBeGreaterThan(0)
       expect(probeVolumeAt(shape, 1.7, 0.1)).toBeLessThan(1e-8)
-      expect(probeVolumeAt(shape, 2.4, 1.1)).toBeGreaterThan(0)
-      expect(probeVolumeAt(shape, 1.4, 4.9)).toBeGreaterThan(0)
-      expect(probeVolumeAt(shape, 1.7, 4.9)).toBeLessThan(1e-8)
-      expect(probeVolumeAt(shape, 2.4, 3.9)).toBeGreaterThan(0)
+      expect(
+        probeVolumeAt(shape, 2.4, PILLAR_CONFIGURATION.lowerChamfer + 0.1),
+      ).toBeGreaterThan(0)
+      const straightStart = PILLAR_CONFIGURATION.lowerChamfer
+      const straightEnd = parameters.length - PILLAR_CONFIGURATION.upperChamfer
+      expect(straightEnd - straightStart).toBe(3.5)
+      const nearBodyEdge = PILLAR_CONFIGURATION.bodyDiameter / 2 - 0.01
+      expect(
+        probeVolumeAt(shape, nearBodyEdge, straightStart - 0.05, 0.005),
+      ).toBeLessThan(1e-8)
+      expect(
+        probeVolumeAt(shape, nearBodyEdge, straightStart + 0.05, 0.005),
+      ).toBeGreaterThan(0)
+      const upperChamferZ =
+        parameters.length - PILLAR_CONFIGURATION.upperChamfer / 2
+      const upperChamferBoundaryRadius =
+        PILLAR_CONFIGURATION.bodyDiameter / 2 -
+        PILLAR_CONFIGURATION.upperChamfer / 2
+      expect(
+        probeVolumeAt(shape, upperChamferBoundaryRadius - 0.15, upperChamferZ),
+      ).toBeGreaterThan(0)
+      expect(
+        probeVolumeAt(shape, upperChamferBoundaryRadius + 0.15, upperChamferZ),
+      ).toBeLessThan(1e-8)
+      expect(
+        probeVolumeAt(
+          shape,
+          2.4,
+          parameters.length - PILLAR_CONFIGURATION.upperChamfer - 0.1,
+        ),
+      ).toBeGreaterThan(0)
+      expect(
+        probeVolumeAt(shape, nearBodyEdge, straightEnd - 0.05, 0.005),
+      ).toBeGreaterThan(0)
+      expect(
+        probeVolumeAt(shape, nearBodyEdge, straightEnd + 0.05, 0.005),
+      ).toBeLessThan(1e-8)
     } finally {
       deleteShape(shape)
     }
@@ -140,8 +178,30 @@ describe('OpenGrid pillar CAD kernel integration', () => {
       const upperFlangeProbeZ = PILLAR_CONFIGURATION.baseHeight + 0.05
       expect(probeVolumeAt(shape, 2.4, upperFlangeProbeZ)).toBeGreaterThan(0)
       expect(probeVolumeAt(shape, 2.6, upperFlangeProbeZ)).toBeLessThan(1e-8)
-      expect(probeVolumeAt(shape, 1.4, 4.9)).toBeGreaterThan(0)
-      expect(probeVolumeAt(shape, 1.7, 4.9)).toBeLessThan(1e-8)
+      const straightStart = PILLAR_CONFIGURATION.baseHeight
+      const straightEnd = parameters.length - PILLAR_CONFIGURATION.upperChamfer
+      expect(straightEnd - straightStart).toBe(3.7)
+      const nearBodyEdge = PILLAR_CONFIGURATION.bodyDiameter / 2 - 0.01
+      expect(
+        probeVolumeAt(shape, nearBodyEdge, straightStart + 0.05, 0.005),
+      ).toBeGreaterThan(0)
+      const upperChamferZ =
+        parameters.length - PILLAR_CONFIGURATION.upperChamfer / 2
+      const upperChamferBoundaryRadius =
+        PILLAR_CONFIGURATION.bodyDiameter / 2 -
+        PILLAR_CONFIGURATION.upperChamfer / 2
+      expect(
+        probeVolumeAt(shape, upperChamferBoundaryRadius - 0.15, upperChamferZ),
+      ).toBeGreaterThan(0)
+      expect(
+        probeVolumeAt(shape, upperChamferBoundaryRadius + 0.15, upperChamferZ),
+      ).toBeLessThan(1e-8)
+      expect(
+        probeVolumeAt(shape, nearBodyEdge, straightEnd - 0.05, 0.005),
+      ).toBeGreaterThan(0)
+      expect(
+        probeVolumeAt(shape, nearBodyEdge, straightEnd + 0.05, 0.005),
+      ).toBeLessThan(1e-8)
     } finally {
       deleteShape(shape)
     }

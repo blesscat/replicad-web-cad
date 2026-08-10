@@ -218,11 +218,42 @@ describe('CAD model generation debounce', () => {
     )
   })
 
-  it('invalidates a fractional pillar length without generating a snapshot', () => {
+  it.each([
+    ['empty', ''],
+    ['fractional', '5.5'],
+    ['non-finite', 'Infinity'],
+    ['below the minimum', '2'],
+    ['above the maximum', '501'],
+  ])(
+    'invalidates a pillar length that is %s without generating a snapshot',
+    (_label, value) => {
+      const { client, send, context } = createRuntimeContext('opengrid-pillar')
+      const handlers = createModelGenerationHandlers(context)
+
+      handlers.handleInputChange('length', value)
+      vi.advanceTimersByTime(500)
+
+      expect(context.dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'input-invalid' }),
+      )
+      expect(client.send).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          kind: 'model.invalidate',
+          reason: 'invalid-input',
+        }),
+      )
+      expect(
+        send.mock.calls.some(([command]) => command.kind === 'model.generate'),
+      ).toBe(false)
+      expect(context.setPersistedParameters).not.toHaveBeenCalled()
+    },
+  )
+
+  it('invalidates a non-boolean pillar base mode without generating a snapshot', () => {
     const { client, send, context } = createRuntimeContext('opengrid-pillar')
     const handlers = createModelGenerationHandlers(context)
 
-    handlers.handleInputChange('length', '5.5')
+    handlers.handleInputChange('baseConnection', 'yes')
     vi.advanceTimersByTime(500)
 
     expect(context.dispatch).toHaveBeenCalledWith(
@@ -237,6 +268,7 @@ describe('CAD model generation debounce', () => {
     expect(
       send.mock.calls.some(([command]) => command.kind === 'model.generate'),
     ).toBe(false)
+    expect(context.setPersistedParameters).not.toHaveBeenCalled()
   })
 
   it('invalidates each rapid snapshot but generates only the final legal value', () => {

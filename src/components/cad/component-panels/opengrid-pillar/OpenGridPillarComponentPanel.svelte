@@ -8,6 +8,8 @@
   import ParameterField from '../ParameterField.svelte'
   import type { ComponentPanelProps } from '../types'
 
+  const COMMON_PILLAR_LENGTHS = [6, 8] as const
+
   let { rawParameters, fieldErrors, onInputChange }: ComponentPanelProps =
     $props()
 
@@ -19,7 +21,8 @@
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
   <p class="m-0 text-sm text-muted">
-    主體固定 Ø{PILLAR_CONFIGURATION.bodyDiameter} mm，頂端為 1 mm、45° chamfer；總長度只接受
+    主體固定 Ø{PILLAR_CONFIGURATION.bodyDiameter} mm，頂端為
+    {PILLAR_CONFIGURATION.upperChamfer} mm、45° chamfer；總長度只接受
     {PILLAR_CONFIGURATION.minLength}–{PILLAR_CONFIGURATION.maxLength} mm 整數。開啟「連接底版用」後，底端改為
     Ø{PILLAR_CONFIGURATION.baseDiameter} mm × {PILLAR_CONFIGURATION.baseHeight} mm
     的銳角凸台。
@@ -41,6 +44,28 @@
         error={fieldErrors[field.key]}
         onChange={(nextValue) => onInputChange(field.key, nextValue)}
       />
+      {#if field.key === 'length'}
+        <div class="grid gap-1">
+          <span class="text-sm text-muted">常用長度</span>
+          <div class="flex flex-wrap gap-2">
+            {#each COMMON_PILLAR_LENGTHS as commonLength}
+              {@const isSelected = value === String(commonLength)}
+              <button
+                class="cursor-pointer rounded-lg border border-border-field bg-panel px-3 py-1.5 text-sm font-semibold text-ink hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                class:border-primary={isSelected}
+                class:bg-primary={isSelected}
+                class:text-white={isSelected}
+                aria-pressed={isSelected}
+                data-testid={`opengrid-pillar-length-${commonLength}`}
+                type="button"
+                onclick={() => onInputChange('length', String(commonLength))}
+              >
+                {commonLength} mm
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/if}
     </ParameterField>
   {/each}
 
