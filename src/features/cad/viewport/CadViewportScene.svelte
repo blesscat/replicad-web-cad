@@ -18,6 +18,7 @@
   } from './coordinates'
   import type { CadViewportTheme } from './theme'
   import type { CadViewportPresentation } from './presentation'
+  import type { ViewportGeometryTiming } from './geometry-timing'
 
   type Props = {
     mesh: MeshSnapshot
@@ -25,6 +26,7 @@
     parameters: ModelParameterValues | null
     theme: CadViewportTheme
     presentation: CadViewportPresentation
+    onPreparationTiming?: (timing: ViewportGeometryTiming) => void
   }
 
   function boundsMarginFor(presentation: CadViewportPresentation): number {
@@ -37,7 +39,14 @@
     update: (controls?: boolean) => ViewportGizmoHandle
   }
 
-  let { mesh, modelRevision, parameters, theme, presentation }: Props = $props()
+  let {
+    mesh,
+    modelRevision,
+    parameters,
+    theme,
+    presentation,
+    onPreparationTiming,
+  }: Props = $props()
   let orbitControls = $state<OrbitControlsInstance | undefined>(undefined)
   let viewportGizmo = $state<ViewportGizmoHandle | undefined>(undefined)
 
@@ -100,7 +109,7 @@
 {/if}
 {#key modelRevision}
   <Bounds margin={boundsMarginFor(presentation)} animate={false}>
-    <ModelMesh {mesh} {theme} />
+    <ModelMesh {mesh} {theme} {onPreparationTiming} />
     {#if presentation === 'workspace'}
       <DimensionAnnotations {mesh} {parameters} {theme} />
     {/if}

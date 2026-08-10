@@ -10,6 +10,10 @@
     type CadViewportTheme,
   } from './theme'
   import type { CadViewportPresentation } from './presentation'
+  import {
+    CAD_VIEWPORT_TIMING_EVENT,
+    type ViewportGeometryTiming,
+  } from './geometry-timing'
 
   type Props = {
     mesh: MeshSnapshot | null
@@ -17,11 +21,30 @@
     parameters: ModelParameterValues | null
     stale: boolean
     presentation: CadViewportPresentation
+    onPreparationTiming?: (timing: ViewportGeometryTiming) => void
   }
 
-  let { mesh, modelRevision, parameters, stale, presentation }: Props = $props()
+  let {
+    mesh,
+    modelRevision,
+    parameters,
+    stale,
+    presentation,
+    onPreparationTiming,
+  }: Props = $props()
   let webglSupported = $state(true)
   let viewportTheme = $state<CadViewportTheme>(readCadViewportTheme())
+
+  function reportPreparationTiming(timing: ViewportGeometryTiming): void {
+    onPreparationTiming?.(timing)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent(CAD_VIEWPORT_TIMING_EVENT, {
+          detail: { ...timing, modelRevision },
+        }),
+      )
+    }
+  }
 
   function canCreateWebGLContext(): boolean {
     if (typeof document === 'undefined') return false
@@ -63,6 +86,7 @@
           {parameters}
           theme={viewportTheme}
           {presentation}
+          onPreparationTiming={reportPreparationTiming}
         />
       </Canvas>
     {:else}

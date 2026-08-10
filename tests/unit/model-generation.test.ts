@@ -9,6 +9,7 @@ import type {
 import {
   OPENGRID_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+  OPENGRID_PREVIEW_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   PROTOTYPE_CONFIGURATION,
 } from '../../src/cad-contract/units'
@@ -731,6 +732,28 @@ describe('CAD model generation debounce', () => {
         parameters: input,
       }),
     )
+  })
+
+  it('uses an independent OpenGrid preview mesh configuration', () => {
+    const { send, context } = createRuntimeContext('opengrid')
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleOpenGridParametersChange(opengridParameters())
+    vi.advanceTimersByTime(500)
+
+    const command = send.mock.calls.find(
+      ([value]) => value.kind === 'model.generate',
+    )?.[0]
+    expect(command).toEqual(
+      expect.objectContaining({
+        previewConfig: OPENGRID_PREVIEW_CONFIGURATION,
+      }),
+    )
+    if (!command || command.kind !== 'model.generate') {
+      throw new Error('MODEL_GENERATE_COMMAND_MISSING')
+    }
+    command.previewConfig.tolerance = 0.05
+    expect(OPENGRID_PREVIEW_CONFIGURATION.tolerance).toBe(0.01)
   })
 
   it('debounces decimal OpenGrid Snap offsets and invalidates incomplete input', () => {

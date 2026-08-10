@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { MeshSnapshot } from '../../src/cad-contract/messages'
 import { initialCadState } from '../../src/features/cad/state'
 import { rawFromParameters } from '../../src/components/cad/workspace/validation'
 import { createWorkerEventHandler } from '../../src/components/cad/workspace/runtime/events'
@@ -228,5 +229,56 @@ describe('CAD Worker progress lifecycle', () => {
 
     expect(setProgress).toHaveBeenCalledTimes(callsBeforeOlderTerminals)
     expect(refs.activeProgressOperationId.current).toBe('operation-2')
+  })
+
+  it('reuses the candidate mesh when model.ready only transfers the revision', () => {
+    const { context, refs } = createContext()
+    const send = vi.fn()
+    refs.client.current = { send } as never
+    const handle = createWorkerEventHandler(context)
+    const mesh: MeshSnapshot = {
+      positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]).buffer,
+      normals: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]).buffer,
+      indices: new Uint32Array([0, 1, 2]).buffer,
+      bounds: { min: [0, 0, 0], max: [1, 1, 0] },
+      triangleCount: 1,
+    }
+
+    handle({
+      version: 1,
+      kind: 'model.candidate-ready',
+      requestId: 'candidate-response',
+      operationId: 'operation-2',
+      generation: 2,
+      candidateId: 'candidate-1',
+      workerEpoch: 'epoch-test',
+      modelId: 'box',
+      parameters: { width: 20, depth: 30, height: 40 },
+      mesh,
+    })
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'model.commit' }),
+    )
+    expect(refs.operations.current.get('operation-2')?.candidateMesh).toBe(mesh)
+
+    handle({
+      version: 1,
+      kind: 'model.ready',
+      requestId: 'ready-response',
+      operationId: 'operation-2',
+      generation: 2,
+      modelRevision: 'revision-1',
+      workerEpoch: 'epoch-test',
+      modelId: 'box',
+      parameters: { width: 20, depth: 30, height: 40 },
+      bounds: { min: [0, 0, 0], max: [1, 1, 0] },
+    })
+
+    expect(context.dispatch).toHaveBeenCalledWith({
+      type: 'model-ready',
+      model: expect.objectContaining({ mesh }),
+    })
+    expect(refs.operations.current.has('operation-2')).toBe(false)
   })
 })

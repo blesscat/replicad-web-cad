@@ -2,35 +2,30 @@
   import { T } from '@threlte/core'
   import * as THREE from 'three'
   import type { MeshSnapshot } from '../../../cad-contract/messages'
+  import { createViewportBaseGeometry } from './base-geometry'
   import { CAD_VIEWPORT_CONFIG } from './config'
   import type { CadViewportTheme } from './theme'
+  import { createViewportEdgeMaterial } from './edge-lines'
+  import { ViewportEdgePreparation } from './edge-preparation'
   import {
-    createViewportEdgeGeometry,
-    createViewportEdgeMaterial,
-  } from './edge-lines'
+    measureViewportGeometry,
+    type ViewportGeometryTiming,
+  } from './geometry-timing'
 
   type Props = {
     mesh: MeshSnapshot
     theme: CadViewportTheme
+    onPreparationTiming?: (timing: ViewportGeometryTiming) => void
   }
 
-  let { mesh, theme }: Props = $props()
+  let { mesh, theme, onPreparationTiming }: Props = $props()
 
   function createGeometry(snapshot: MeshSnapshot): THREE.BufferGeometry {
-    const nextGeometry = new THREE.BufferGeometry()
-    nextGeometry.setAttribute(
-      'position',
-      new THREE.BufferAttribute(new Float32Array(snapshot.positions), 3),
+    return measureViewportGeometry(
+      'base-geometry',
+      () => createViewportBaseGeometry(snapshot),
+      onPreparationTiming,
     )
-    nextGeometry.setAttribute(
-      'normal',
-      new THREE.BufferAttribute(new Float32Array(snapshot.normals), 3),
-    )
-    nextGeometry.setIndex(
-      new THREE.BufferAttribute(new Uint32Array(snapshot.indices), 1),
-    )
-    nextGeometry.computeBoundingSphere()
-    return nextGeometry
   }
 
   function createMaterial(): THREE.MeshStandardMaterial {
@@ -48,8 +43,11 @@
 
   let geometry = $derived(createGeometry(mesh))
   let material = $derived(createMaterial())
-  let edgeGeometry = $derived(createViewportEdgeGeometry(geometry))
+  let edgeGeometry = $state<THREE.EdgesGeometry | null>(null)
   let edgeMaterial = $derived(createViewportEdgeMaterial(theme.edge))
+  let edgePreparation = new ViewportEdgePreparation({
+    onTiming: onPreparationTiming,
+  })
 
   $effect(() => {
     const currentGeometry = geometry
@@ -62,8 +60,15 @@
   })
 
   $effect(() => {
-    const currentEdgeGeometry = edgeGeometry
-    return () => currentEdgeGeometry.dispose()
+    const currentGeometry = geometry
+    edgePreparation.prepare(currentGeometry, mesh.triangleCount, (prepared) => {
+      edgeGeometry = prepared
+    })
+
+    return () => {
+      edgePreparation.dispose()
+      edgeGeometry = null
+    }
   })
 
   $effect(() => {
@@ -73,9 +78,11 @@
 </script>
 
 <T.Mesh {geometry} {material} dispose={false} />
-<T.LineSegments
-  geometry={edgeGeometry}
-  material={edgeMaterial}
-  renderOrder={1}
-  dispose={false}
-/>
+{#if edgeGeometry}
+  <T.LineSegments
+    geometry={edgeGeometry}
+    material={edgeMaterial}
+    renderOrder={1}
+    dispose={false}
+  />
+{/if}

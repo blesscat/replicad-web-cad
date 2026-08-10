@@ -12,16 +12,19 @@ import {
 import {
   buildOpenGridBRep,
   buildOpenGridBRepWithStrategy,
+  buildOpenGridCanonicalTile,
   importOpenGridPrototypeTemplate,
   OPENGRID_PROTOTYPE_TEMPLATE_URLS,
 } from '../../src/cad-kernel/components/opengrid/builder'
 import { meshBRep, serializeMesh } from '../../src/cad-kernel/mesh'
+import { PreviewTimingRecorder } from '../../src/cad-contract/preview-timing'
 import {
   boundsForOpenGrid,
   cellCenterForOpenGrid,
   deterministicOpenGridCustomScrewPositions,
   normalizeOpenGridParameters,
   OPENGRID_CONFIGURATION,
+  OPENGRID_PREVIEW_CONFIGURATION,
   openGridScrewCentersFor,
   type OpenGridParameters,
 } from '../../src/cad-contract/units'
@@ -102,6 +105,17 @@ function readShapeBounds(shape: Shape3D): {
   } finally {
     boundingBox.delete()
   }
+}
+
+function expectFiniteMesh(mesh: ReturnType<typeof meshBRep>): void {
+  expect(mesh.positions.length).toBeGreaterThan(0)
+  expect(mesh.normals.length).toBe(mesh.positions.length)
+  expect(mesh.indices.length % 3).toBe(0)
+  expect(mesh.triangleCount).toBeGreaterThan(0)
+  for (const value of mesh.positions) expect(Number.isFinite(value)).toBe(true)
+  for (const value of mesh.normals) expect(Number.isFinite(value)).toBe(true)
+  for (const value of mesh.indices)
+    expect(Number.isSafeInteger(value)).toBe(true)
 }
 
 function expectHalfCellBoundaryStrips(
@@ -214,6 +228,92 @@ describe('OpenGrid official-profile product builder', () => {
     }
   }, 15_000)
 
+  it('keeps preview tolerance independent from B-Rep quality and export precision', async () => {
+    const input = parameters({
+      variant: 'Full',
+      rows: 1,
+      columns: 1,
+      chamfers: 'none',
+      connectorHoles: 'none',
+      screwMode: 'none',
+    })
+    const firstShape = await buildOpenGridBRep(input)
+    const secondShape = await buildOpenGridBRep(input)
+    try {
+      const firstMesh = meshBRep(firstShape, OPENGRID_PREVIEW_CONFIGURATION)
+      const secondMesh = meshBRep(secondShape, {
+        ...OPENGRID_PREVIEW_CONFIGURATION,
+        tolerance: 0.05,
+      })
+      const firstQuality = inspectOpenGridShapeQuality(
+        firstShape,
+        input,
+        firstMesh,
+      )
+      const secondQuality = inspectOpenGridShapeQuality(
+        secondShape,
+        input,
+        secondMesh,
+      )
+      expect(firstQuality.passed).toBe(true)
+      expect(secondQuality.passed).toBe(true)
+      expect(secondMesh.triangleCount).toBe(firstMesh.triangleCount)
+      expect(secondQuality.bounds).toEqual(firstQuality.bounds)
+      expect(measureVolume(secondShape)).toBeCloseTo(
+        measureVolume(firstShape),
+        6,
+      )
+
+      const [firstStep, secondStep, firstStl, secondStl] = await Promise.all([
+        exportStepBytes(firstShape),
+        exportStepBytes(secondShape),
+        exportStlBytes(firstShape, { tolerance: 0.001, angularTolerance: 0.1 }),
+        exportStlBytes(secondShape, {
+          tolerance: 0.001,
+          angularTolerance: 0.1,
+        }),
+      ])
+      expect(firstStep.byteLength).toBe(secondStep.byteLength)
+      expect(firstStl.byteLength).toBe(secondStl.byteLength)
+      expect(new DataView(firstStl).getUint32(80, true)).toBe(
+        new DataView(secondStl).getUint32(80, true),
+      )
+      expect(normalizeOpenGridParameters(input)).toEqual(input)
+    } finally {
+      firstShape.delete()
+      secondShape.delete()
+    }
+  }, 60_000)
+
+  it('keeps global and individual face meshing finite with equivalent bounds', async () => {
+    for (const variant of ['Lite', 'Full', 'Heavy'] as const) {
+      const input = parameters({
+        variant,
+        rows: 1,
+        columns: 1,
+        chamfers: 'none',
+        connectorHoles: 'none',
+        screwMode: 'none',
+      })
+      const shape = await buildOpenGridBRep(input)
+      try {
+        const individual = meshBRep(shape, {
+          ...OPENGRID_PREVIEW_CONFIGURATION,
+          faceMeshingThreshold: 1,
+        })
+        const global = meshBRep(shape, OPENGRID_PREVIEW_CONFIGURATION)
+        expectFiniteMesh(individual)
+        expectFiniteMesh(global)
+        expect(global.bounds).toEqual(individual.bounds)
+        expect(inspectOpenGridShapeQuality(shape, input, global).passed).toBe(
+          true,
+        )
+      } finally {
+        shape.delete()
+      }
+    }
+  }, 60_000)
+
   it('builds centered single and dual half-cell envelopes for every Full direction', async () => {
     const directions = [
       { halfCellX: 'left' as const, halfCellY: 'none' as const },
@@ -305,6 +405,72 @@ describe('OpenGrid official-profile product builder', () => {
       expect(halfCornerMaterial).toBeLessThan(0.01)
     } finally {
       shape.delete()
+    }
+  }, 60_000)
+
+  it('keeps the screw through-hole and countersink open on a full cell', async () => {
+    const input = parameters({
+      variant: 'Full',
+      rows: 1,
+      columns: 1,
+      chamfers: 'none',
+      connectorHoles: 'none',
+      screwMode: 'corners',
+    })
+    const center = openGridScrewCentersFor(input)[0]
+    expect(center).toBeDefined()
+    if (!center) throw new Error('TEST_SCREW_CENTER_MISSING')
+
+    const shape = await buildOpenGridBRep(input)
+    const referenceShape = await buildOpenGridBRep({
+      ...input,
+      screwMode: 'none',
+    })
+    try {
+      const [x, y] = center
+      const thickness = OPENGRID_CONFIGURATION.variants[input.variant].thickness
+      const shaftMaterial = measureIntersectionVolume(
+        shape,
+        [x - input.screwDiameter / 4, y - input.screwDiameter / 4, -0.1],
+        [
+          x + input.screwDiameter / 4,
+          y + input.screwDiameter / 4,
+          thickness + 0.1,
+        ],
+      )
+      const countersinkAxisOffset =
+        (input.screwDiameter + input.screwHeadDiameter) / 4 / Math.sqrt(2)
+      const countersinkProbeMinimum: Point3D = [
+        x - countersinkAxisOffset - 0.2,
+        y - countersinkAxisOffset - 0.2,
+        thickness - input.screwHeadInset - 0.01,
+      ]
+      const countersinkProbeMaximum: Point3D = [
+        x - countersinkAxisOffset + 0.2,
+        y - countersinkAxisOffset + 0.2,
+        thickness + 0.1,
+      ]
+      const countersinkMaterial = measureIntersectionVolume(
+        shape,
+        countersinkProbeMinimum,
+        countersinkProbeMaximum,
+      )
+      const referenceCountersinkMaterial = measureIntersectionVolume(
+        referenceShape,
+        countersinkProbeMinimum,
+        countersinkProbeMaximum,
+      )
+      expect(shaftMaterial).toBeLessThan(0.01)
+      expect(referenceCountersinkMaterial).toBeGreaterThan(0.01)
+      expect(countersinkMaterial).toBeLessThan(0.01)
+      const previewMesh = meshBRep(shape, OPENGRID_PREVIEW_CONFIGURATION)
+      expectFiniteMesh(previewMesh)
+      expect(
+        inspectOpenGridShapeQuality(shape, input, previewMesh).passed,
+      ).toBe(true)
+    } finally {
+      shape.delete()
+      referenceShape.delete()
     }
   }, 60_000)
 
@@ -493,6 +659,181 @@ describe('OpenGrid official-profile product builder', () => {
     }
     expect(prototypeRequested).toBe(false)
   }, 60_000)
+
+  it('reuses retained canonical and half-cell prototypes without sharing result ownership', async () => {
+    const input = parameters({
+      variant: 'Full',
+      rows: 2,
+      columns: 2,
+      halfCellX: 'left',
+      halfCellY: 'none',
+      chamfers: 'none',
+      connectorHoles: 'none',
+      screwMode: 'none',
+    })
+    const canonical = new Map<string, Promise<Shape3D>>()
+    const halfCell = new Map<string, Promise<Shape3D>>()
+    let halfCellFactoryCalls = 0
+    const context = {
+      getOpenGridCanonicalTile: (variant: 'Full' | 'Lite' | 'Heavy') => {
+        const key = `${variant}:${OPENGRID_CONFIGURATION.variants.Full.thickness}`
+        const cached = canonical.get(key)
+        if (cached) return cached
+        const next = buildOpenGridCanonicalTile(variant)
+        canonical.set(key, next)
+        return next
+      },
+      getOpenGridHalfCellPrototype: (
+        key: string,
+        factory: () => Promise<Shape3D> | Shape3D,
+      ) => {
+        const cached = halfCell.get(key)
+        if (cached) return cached
+        halfCellFactoryCalls += 1
+        const next = Promise.resolve().then(factory)
+        halfCell.set(key, next)
+        return next
+      },
+    }
+
+    const first = await buildOpenGridBRep(input, context)
+    const firstHalfCellFactoryCalls = halfCellFactoryCalls
+    try {
+      expect(firstHalfCellFactoryCalls).toBeGreaterThan(0)
+      expect(
+        inspectOpenGridShapeQuality(
+          first,
+          input,
+          meshBRep(first, OPENGRID_PREVIEW_CONFIGURATION),
+        ).passed,
+      ).toBe(true)
+    } finally {
+      first.delete()
+    }
+
+    const second = await buildOpenGridBRep(input, context)
+    try {
+      expect(halfCellFactoryCalls).toBe(firstHalfCellFactoryCalls)
+      expect(
+        inspectOpenGridShapeQuality(
+          second,
+          input,
+          meshBRep(second, OPENGRID_PREVIEW_CONFIGURATION),
+        ).passed,
+      ).toBe(true)
+    } finally {
+      second.delete()
+    }
+
+    for (const prototype of [...canonical.values(), ...halfCell.values()]) {
+      await prototype.then((shape) => shape.delete())
+    }
+  }, 60_000)
+
+  it('releases the source when the retained half-cell fallback becomes stale', async () => {
+    const input = parameters({
+      variant: 'Lite',
+      rows: 2,
+      columns: 2,
+      halfCellX: 'right',
+      halfCellY: 'none',
+      chamfers: 'none',
+      connectorHoles: 'none',
+      screwMode: 'none',
+    })
+    let failExtension = true
+    const context = {
+      fuseHalfCellExtensionsIntoAssembly: false,
+      getOpenGridHalfCellPrototype: (
+        key: string,
+        factory: () => Promise<Shape3D> | Shape3D,
+      ) => {
+        if (failExtension && key.startsWith('boundary:'))
+          return Promise.reject(new Error('TEST_HALF_CELL_EXTENSION_STALE'))
+        return Promise.resolve().then(factory)
+      },
+    }
+
+    await expect(buildOpenGridBRep(input, context)).rejects.toThrow(
+      'TEST_HALF_CELL_EXTENSION_STALE',
+    )
+
+    failExtension = false
+    const shape = await buildOpenGridBRep(input, context)
+    try {
+      expect(
+        inspectOpenGridShapeQuality(
+          shape,
+          input,
+          meshBRep(shape, OPENGRID_PREVIEW_CONFIGURATION),
+        ).passed,
+      ).toBe(true)
+    } finally {
+      shape.delete()
+    }
+  }, 60_000)
+
+  it.skipIf(process.env.RUN_OPENGRID_LIFECYCLE_REGRESSION !== '1')(
+    'releases repeated large half-cell assemblies in one native epoch',
+    async () => {
+      const input = parameters({
+        variant: 'Lite',
+        rows: 5,
+        columns: 5,
+        halfCellX: 'right',
+        halfCellY: 'top',
+      })
+      const canonical = new Map<'Full' | 'Lite' | 'Heavy', Promise<Shape3D>>()
+      const halfCell = new Map<string, Promise<Shape3D>>()
+      const context = {
+        useCompoundChamferCutters: true,
+        useCompoundScrewParts: true,
+        fuseHalfCellExtensionsIntoAssembly: true,
+        balancedFuseBatchSize: 2,
+        getOpenGridCanonicalTile: (variant: 'Full' | 'Lite' | 'Heavy') => {
+          const cached = canonical.get(variant)
+          if (cached) return cached
+          const next = buildOpenGridCanonicalTile(variant, {
+            balancedFuseBatchSize: 2,
+          })
+          canonical.set(variant, next)
+          return next
+        },
+        getOpenGridHalfCellPrototype: (
+          key: string,
+          factory: () => Promise<Shape3D> | Shape3D,
+        ) => {
+          const cached = halfCell.get(key)
+          if (cached) return cached
+          const next = Promise.resolve().then(factory)
+          halfCell.set(key, next)
+          return next
+        },
+      }
+
+      try {
+        for (let sample = 1; sample <= 5; sample += 1) {
+          const shape = await buildOpenGridBRep(input, context)
+          try {
+            const bounds = shape.boundingBox
+            bounds.delete()
+            const mesh = meshBRep(shape, OPENGRID_PREVIEW_CONFIGURATION)
+            expect(mesh.triangleCount).toBeGreaterThan(0)
+            expect(inspectOpenGridShapeQuality(shape, input, mesh).passed).toBe(
+              true,
+            )
+          } finally {
+            shape.delete()
+          }
+        }
+      } finally {
+        for (const prototype of [...canonical.values(), ...halfCell.values()]) {
+          await prototype.then((shape) => shape.delete())
+        }
+      }
+    },
+    120_000,
+  )
 
   it('keeps the official Lite profile across a multi-cell board', async () => {
     const input = parameters({
@@ -803,16 +1144,69 @@ describe('OpenGrid official-profile product builder', () => {
         halfCellX: 'left',
         halfCellY: 'none',
       })
-      const startedAt = performance.now()
-      const shape = await buildOpenGridBRep(input)
+      const tolerance = Number(
+        process.env.OPENGRID_PERFORMANCE_TOLERANCE ?? '0.05',
+      )
+      const faceMeshingThreshold = Number(
+        process.env.OPENGRID_PERFORMANCE_FACE_THRESHOLD ??
+          OPENGRID_PREVIEW_CONFIGURATION.faceMeshingThreshold,
+      )
+      const timing = new PreviewTimingRecorder()
+      const batchSize = Number(
+        process.env.OPENGRID_PERFORMANCE_BATCH_SIZE ??
+          OPENGRID_CONFIGURATION.balancedFuseBatchSize,
+      )
+      const useCompoundChamferCutters =
+        process.env.OPENGRID_PERFORMANCE_COMPOUND_CUTTERS !== '0'
+      const fuseHalfCellExtensionsIntoAssembly =
+        process.env.OPENGRID_PERFORMANCE_INTEGRATED_HALF_CELLS !== '0'
+      const useCompoundScrewParts =
+        process.env.OPENGRID_PERFORMANCE_COMPOUND_SCREW_PARTS !== '0'
+      const assemblyFuseDurations: number[] = []
+      const shape = await timing.measure('build', () =>
+        buildOpenGridBRep(input, {
+          balancedFuseBatchSize: batchSize,
+          useCompoundChamferCutters,
+          useCompoundScrewParts,
+          fuseHalfCellExtensionsIntoAssembly,
+          reportPhase: (phase, durationMs) => {
+            if (phase === 'assembly-fuse')
+              assemblyFuseDurations.push(durationMs)
+          },
+        }),
+      )
       try {
-        const mesh = meshBRep(shape, {
-          tolerance: 0.05,
-          angularTolerance: 0.1,
-        })
-        assertOpenGridShapeQuality(shape, input, mesh)
-        serializeMesh(mesh)
-        const elapsedMs = performance.now() - startedAt
+        const mesh = timing.measureSync('mesh', () =>
+          meshBRep(shape, {
+            tolerance,
+            angularTolerance: 0.1,
+            faceMeshingThreshold,
+          }),
+        )
+        const quality = timing.measureSync('quality', () =>
+          assertOpenGridShapeQuality(shape, input, mesh),
+        )
+        timing.measureSync('serialization', () => serializeMesh(mesh))
+        const snapshot = timing.snapshot()
+        console.log(
+          JSON.stringify({
+            fixture: 'Full-5x3-half-cell-x-left',
+            tolerance,
+            faceMeshingThreshold,
+            batchSize,
+            useCompoundChamferCutters,
+            useCompoundScrewParts,
+            fuseHalfCellExtensionsIntoAssembly,
+            assemblyFuseMs: assemblyFuseDurations.reduce(
+              (total, durationMs) => total + durationMs,
+              0,
+            ),
+            timing: snapshot,
+            triangleCount: mesh.triangleCount,
+            volume: quality.volume,
+          }),
+        )
+        const elapsedMs = snapshot.totalMs
         expect(elapsedMs).toBeLessThan(12_000)
       } finally {
         shape.delete()

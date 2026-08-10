@@ -1,4 +1,5 @@
 import type { CadError, CadErrorCode, CadErrorStage } from '../errors'
+import type { PreviewTiming } from '../preview-timing'
 import {
   PROTOTYPE_CONFIGURATION,
   validateModelParameters,
@@ -35,11 +36,17 @@ export type EngineInitCommand = Envelope<'engine.init'> & {
   asset: AssetMetadata
 }
 
+export type PreviewConfig = {
+  tolerance: number
+  angularTolerance: number
+  faceMeshingThreshold?: number
+}
+
 export type ModelGenerateCommand = Envelope<'model.generate'> &
   ModelParameters & {
     operationId: string
     generation: number
-    previewConfig: { tolerance: number; angularTolerance: number }
+    previewConfig: PreviewConfig
   }
 
 export type ModelInvalidateCommand = Envelope<'model.invalidate'> & {
@@ -141,6 +148,7 @@ export type ModelCandidateReadyEvent = Envelope<'model.candidate-ready'> & {
   modelId: ModelId
   parameters: ModelParameterValues
   mesh: MeshSnapshot
+  previewTiming?: PreviewTiming
 }
 
 export type ModelReadyEvent = Envelope<'model.ready'> & {
@@ -150,8 +158,9 @@ export type ModelReadyEvent = Envelope<'model.ready'> & {
   workerEpoch: string
   modelId: ModelId
   parameters: ModelParameterValues
-  mesh: MeshSnapshot
+  mesh?: MeshSnapshot
   bounds: BoxBounds
+  previewTiming?: PreviewTiming
 }
 
 export type ExportAcceptedEvent = Envelope<'export.accepted'> & {
@@ -343,6 +352,28 @@ function isMesh(value: unknown): value is MeshSnapshot {
   )
 }
 
+function isPreviewTiming(value: unknown): value is PreviewTiming {
+  if (!isRecord(value)) return false
+  const durationKeys = [
+    'buildMs',
+    'meshMs',
+    'qualityMs',
+    'candidateMs',
+    'serializationMs',
+  ] as const
+  const validDuration = (duration: unknown): boolean =>
+    duration === null || (isFiniteNumber(duration) && duration >= 0)
+  return (
+    durationKeys.every((key) => validDuration(value[key])) &&
+    isFiniteNumber(value.totalMs) &&
+    value.totalMs >= 0
+  )
+}
+
+function isOptionalPreviewTiming(value: unknown): boolean {
+  return value === undefined || isPreviewTiming(value)
+}
+
 const CAD_ERROR_STAGES: readonly CadErrorStage[] = [
   'protocol',
   'initializing',
@@ -421,7 +452,9 @@ export function isWorkerCommand(value: unknown): value is WorkerCommand {
         isFiniteNumber(value.previewConfig.tolerance) &&
         value.previewConfig.tolerance >= 0 &&
         isFiniteNumber(value.previewConfig.angularTolerance) &&
-        value.previewConfig.angularTolerance > 0
+        value.previewConfig.angularTolerance > 0 &&
+        (value.previewConfig.faceMeshingThreshold === undefined ||
+          isPositiveInteger(value.previewConfig.faceMeshingThreshold))
       )
     case 'model.invalidate':
       return (
@@ -496,7 +529,8 @@ export function isWorkerEvent(value: unknown): value is WorkerEvent {
         isNonEmptyString(value.candidateId) &&
         isNonEmptyString(value.workerEpoch) &&
         validateModelParameters(value.modelId, value.parameters).valid &&
-        isMesh(value.mesh)
+        isMesh(value.mesh) &&
+        isOptionalPreviewTiming(value.previewTiming)
       )
     case 'model.ready':
       return (
@@ -506,8 +540,9 @@ export function isWorkerEvent(value: unknown): value is WorkerEvent {
         isNonEmptyString(value.modelRevision) &&
         isNonEmptyString(value.workerEpoch) &&
         validateModelParameters(value.modelId, value.parameters).valid &&
-        isMesh(value.mesh) &&
-        isBounds(value.bounds)
+        (value.mesh === undefined || isMesh(value.mesh)) &&
+        isBounds(value.bounds) &&
+        isOptionalPreviewTiming(value.previewTiming)
       )
     case 'export.accepted':
       return (
@@ -552,6 +587,7 @@ export function isWorkerEvent(value: unknown): value is WorkerEvent {
 
 export function transferablesForEvent(event: WorkerEvent): Transferable[] {
   if (event.kind === 'model.candidate-ready' || event.kind === 'model.ready') {
+    if (!event.mesh) return []
     return [event.mesh.positions, event.mesh.normals, event.mesh.indices]
   }
   if (event.kind === 'export.ready') return [event.bytes]

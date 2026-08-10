@@ -13,15 +13,20 @@ import {
 } from '../cad-kernel/components/box-normal/builder'
 import { loadHexagonalColumnReference } from '../cad-kernel/components/hexagonal-column/builder'
 import { loadModularGridBaseTemplate } from '../cad-kernel/components/modular-grid-base/builder'
-import { loadOpenGridPrototypeTemplate } from '../cad-kernel/components/opengrid/builder'
+import {
+  buildOpenGridCanonicalTile,
+  loadOpenGridPrototypeTemplate,
+  type OpenGridBuildContext,
+} from '../cad-kernel/components/opengrid/builder'
 import { loadOpenGridSnapReference } from '../cad-kernel/components/opengrid-snap/builder'
 import { loadOpenGridSnapRemoverAsset } from '../cad-kernel/components/opengrid-snap-remover/builder'
-import { buildModelBRep } from '../cad-kernel/model'
+import { buildModelBRep, type KernelBuildContext } from '../cad-kernel/model'
 import { assertOpenGridShapeQuality } from '../cad-kernel/components/opengrid/quality'
 import { assertOpenGridSnapShapeQuality } from '../cad-kernel/components/opengrid-snap/quality'
 import { assertOpenGridDividerShapeQuality } from '../cad-kernel/components/opengrid-divider/quality'
 import { assertPillarShapeQuality } from '../cad-kernel/components/opengrid-pillar/quality'
 import { meshBRep, serializeMesh, type MeshData } from '../cad-kernel/mesh'
+import { PreviewTimingRecorder } from '../cad-contract/preview-timing'
 import {
   errorEvent,
   isWorkerCommand,
@@ -57,6 +62,17 @@ import {
 import { cadErrorCodeFor, cadErrorStageFor } from './error-mapping'
 
 type EventSink = (event: WorkerEvent, transfer?: Transferable[]) => void
+
+export type CadWorkerBuildOptions = Pick<
+  OpenGridBuildContext,
+  | 'useCompoundChamferCutters'
+  | 'useCompoundScrewParts'
+  | 'fuseHalfCellExtensionsIntoAssembly'
+  | 'balancedFuseBatchSize'
+> & {
+  useOpenGridCanonicalTileCache?: boolean
+  useOpenGridHalfCellPrototypeCache?: boolean
+}
 
 type SupersededReason =
   | 'STALE_GENERATION'
@@ -126,6 +142,14 @@ export class CadWorkerRuntime {
     OpenGridVariant,
     Promise<import('replicad').Shape3D>
   >()
+  private readonly openGridCanonicalTiles = new Map<
+    OpenGridVariant,
+    Promise<import('replicad').Shape3D>
+  >()
+  private readonly openGridHalfCellPrototypes = new Map<
+    string,
+    Promise<import('replicad').Shape3D>
+  >()
   private readonly openGridSnapReferences = new Map<
     string,
     Promise<import('replicad').Shape3D>
@@ -144,6 +168,7 @@ export class CadWorkerRuntime {
   constructor(
     private readonly epoch: string = `epoch-${id()}`,
     private readonly emit: EventSink = () => undefined,
+    private readonly openGridBuildOptions: CadWorkerBuildOptions = {},
   ) {
     this.lifetime = new RevisionLifetime(
       epoch,
@@ -217,6 +242,8 @@ export class CadWorkerRuntime {
           this.disposeBoxNormalReference()
           this.disposeHexagonalColumnReference()
           this.disposeOpenGridPrototypes()
+          this.disposeOpenGridCanonicalTiles()
+          this.disposeOpenGridHalfCellPrototypes()
           this.disposeOpenGridSnapReferences()
           this.disposeOpenGridSnapRemoverAsset()
           this.lastBoxNormalOperationCounts = null
@@ -283,6 +310,7 @@ export class CadWorkerRuntime {
     this.latestInputGeneration = command.generation
     this.invalidatedGeneration = 0
     this.lifetime.pruneCommitsBeforeGeneration(this.latestInputGeneration)
+    const timing = new PreviewTimingRecorder()
     let generationParameters: ModelParameterValues = command.parameters
     if (command.modelId === 'opengrid') {
       const normalizedParameters = normalizeOpenGridParameters(
@@ -308,7 +336,13 @@ export class CadWorkerRuntime {
     this.emitProgress(command, 'building', undefined, hswProgress)
     let shape: Shape3D
     try {
-      shape = await buildModelBRep(command.modelId, generationParameters, {
+      const {
+        useOpenGridCanonicalTileCache = true,
+        useOpenGridHalfCellPrototypeCache = true,
+        ...openGridBuildOptions
+      } = this.openGridBuildOptions
+      const buildContext: KernelBuildContext = {
+        ...openGridBuildOptions,
         getModularGridBaseTemplate: () => this.getModularGridBaseTemplate(),
         getHswCellTemplate: () => this.getHswCellTemplate(),
         getBoxNormalReference: () => this.getBoxNormalReference(),
@@ -331,7 +365,18 @@ export class CadWorkerRuntime {
                 this.lastBoxNormalOperationCounts = { ...counts }
               }
             : undefined,
-      })
+      }
+      if (useOpenGridCanonicalTileCache) {
+        buildContext.getOpenGridCanonicalTile = (variant, thickness) =>
+          this.getOpenGridCanonicalTile(variant, thickness, command.generation)
+      }
+      if (useOpenGridHalfCellPrototypeCache) {
+        buildContext.getOpenGridHalfCellPrototype = (key, factory) =>
+          this.getOpenGridHalfCellPrototype(key, factory)
+      }
+      shape = await timing.measure('build', () =>
+        buildModelBRep(command.modelId, generationParameters, buildContext),
+      )
     } catch (error) {
       if (error instanceof Error && error.message === 'STALE_GENERATION') {
         this.superseded(command, 'STALE_GENERATION')
@@ -350,7 +395,9 @@ export class CadWorkerRuntime {
     let mesh: MeshData
     try {
       this.emitProgress(command, 'meshing')
-      mesh = meshBRep(shape, command.previewConfig)
+      mesh = timing.measureSync('mesh', () =>
+        meshBRep(shape, command.previewConfig),
+      )
       if (command.modelId === 'opengrid-snap') {
         if (!isOpenGridSnapParameters(generationParameters)) {
           throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
@@ -361,7 +408,9 @@ export class CadWorkerRuntime {
         if (!isOpenGridParameters(generationParameters)) {
           throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid')
         }
-        assertOpenGridShapeQuality(shape, generationParameters, mesh)
+        timing.measureSync('quality', () =>
+          assertOpenGridShapeQuality(shape, generationParameters, mesh),
+        )
       }
       if (command.modelId === 'opengrid-snap') {
         if (!isOpenGridSnapParameters(generationParameters)) {
@@ -371,11 +420,13 @@ export class CadWorkerRuntime {
           generationParameters.variant,
           generationParameters.profile,
         )
-        assertOpenGridSnapShapeQuality(
-          shape,
-          generationParameters,
-          mesh,
-          reference,
+        timing.measureSync('quality', () =>
+          assertOpenGridSnapShapeQuality(
+            shape,
+            generationParameters,
+            mesh,
+            reference,
+          ),
         )
       }
 
@@ -383,13 +434,17 @@ export class CadWorkerRuntime {
         if (!isOpenGridDividerModelParameters(generationParameters)) {
           throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-divider')
         }
-        assertOpenGridDividerShapeQuality(shape, generationParameters, mesh)
+        timing.measureSync('quality', () =>
+          assertOpenGridDividerShapeQuality(shape, generationParameters, mesh),
+        )
       }
       if (command.modelId === 'opengrid-pillar') {
         if (!isPillarParameters(generationParameters)) {
           throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-pillar')
         }
-        assertPillarShapeQuality(shape, generationParameters, mesh)
+        timing.measureSync('quality', () =>
+          assertPillarShapeQuality(shape, generationParameters, mesh),
+        )
       }
     } catch (error) {
       try {
@@ -409,26 +464,32 @@ export class CadWorkerRuntime {
       parameters: generationParameters,
       shape,
       mesh,
+      previewTiming: timing.snapshot(),
       createdAt: Date.now(),
     }
 
-    const evicted = this.lifetime.addCandidate(candidate)
-    for (const old of evicted) this.finalizeCandidate(old, 'CANDIDATE_CAPACITY')
-    const expired = this.lifetime.cleanupExpired(this.latestInputGeneration)
-    for (const old of expired) {
-      this.finalizeCandidate(
-        old,
-        old.generation < this.latestInputGeneration
-          ? 'STALE_GENERATION'
-          : 'CANDIDATE_EXPIRED',
-      )
-    }
+    timing.measureSync('candidate', () => {
+      const evicted = this.lifetime.addCandidate(candidate)
+      for (const old of evicted)
+        this.finalizeCandidate(old, 'CANDIDATE_CAPACITY')
+      const expired = this.lifetime.cleanupExpired(this.latestInputGeneration)
+      for (const old of expired) {
+        this.finalizeCandidate(
+          old,
+          old.generation < this.latestInputGeneration
+            ? 'STALE_GENERATION'
+            : 'CANDIDATE_EXPIRED',
+        )
+      }
 
-    this.scheduleCandidateCleanup(candidate)
-
+      this.scheduleCandidateCleanup(candidate)
+    })
     let meshSnapshot: ReturnType<typeof serializeMesh>
     try {
-      meshSnapshot = serializeMesh(mesh)
+      meshSnapshot = timing.measureSync('serialization', () =>
+        serializeMesh(mesh),
+      )
+      candidate.previewTiming = timing.snapshot()
     } catch (error) {
       this.lifetime.discardCandidate(candidate.candidateId)
       throw error
@@ -445,6 +506,7 @@ export class CadWorkerRuntime {
         modelId: candidate.modelId,
         parameters: candidate.parameters,
         mesh: meshSnapshot,
+        previewTiming: candidate.previewTiming,
       },
       [meshSnapshot.positions, meshSnapshot.normals, meshSnapshot.indices],
     )
@@ -546,23 +608,19 @@ export class CadWorkerRuntime {
     command: Extract<WorkerCommand, { kind: 'model.commit' }>,
     revision: RevisionRecord,
   ): void {
-    const mesh = serializeMesh(revision.mesh)
-    this.emit(
-      {
-        version: PROTOCOL_VERSION,
-        kind: 'model.ready',
-        requestId: id(),
-        operationId: command.operationId,
-        generation: revision.generation,
-        modelRevision: revision.modelRevision,
-        workerEpoch: this.epoch,
-        modelId: revision.modelId,
-        parameters: revision.parameters,
-        mesh,
-        bounds: mesh.bounds,
-      },
-      [mesh.positions, mesh.normals, mesh.indices],
-    )
+    this.emit({
+      version: PROTOCOL_VERSION,
+      kind: 'model.ready',
+      requestId: id(),
+      operationId: command.operationId,
+      generation: revision.generation,
+      modelRevision: revision.modelRevision,
+      workerEpoch: this.epoch,
+      modelId: revision.modelId,
+      parameters: revision.parameters,
+      bounds: revision.mesh.bounds,
+      previewTiming: revision.previewTiming,
+    })
   }
 
   private discard(
@@ -835,6 +893,44 @@ export class CadWorkerRuntime {
     return recoverable
   }
 
+  private getOpenGridCanonicalTile(
+    variant: OpenGridVariant,
+    _thickness: number,
+    generation: number,
+  ): Promise<import('replicad').Shape3D> {
+    const cached = this.openGridCanonicalTiles.get(variant)
+    if (cached) return cached
+
+    const canonical = buildOpenGridCanonicalTile(variant, {
+      balancedFuseBatchSize: this.openGridBuildOptions.balancedFuseBatchSize,
+      yieldToEventLoop: yieldToWorkerEventLoop,
+      isGenerationCurrent: () => this.isGenerationCurrent(generation),
+    })
+    const recoverable = canonical.catch((error) => {
+      this.openGridCanonicalTiles.delete(variant)
+      throw error
+    })
+    this.openGridCanonicalTiles.set(variant, recoverable)
+    return recoverable
+  }
+
+  private getOpenGridHalfCellPrototype(
+    key: string,
+    factory: () =>
+      Promise<import('replicad').Shape3D> | import('replicad').Shape3D,
+  ): Promise<import('replicad').Shape3D> {
+    const cached = this.openGridHalfCellPrototypes.get(key)
+    if (cached) return cached
+
+    const prototype = Promise.resolve().then(factory)
+    const recoverable = prototype.catch((error) => {
+      this.openGridHalfCellPrototypes.delete(key)
+      throw error
+    })
+    this.openGridHalfCellPrototypes.set(key, recoverable)
+    return recoverable
+  }
+
   private getOpenGridSnapReference(
     variant: OpenGridSnapVariant,
     profile: OpenGridSnapParameters['profile'],
@@ -940,6 +1036,22 @@ export class CadWorkerRuntime {
   private disposeOpenGridPrototypes(): void {
     const prototypes = [...this.openGridPrototypes.values()]
     this.openGridPrototypes.clear()
+    for (const prototype of prototypes) {
+      void prototype.then((shape) => shape.delete()).catch(() => undefined)
+    }
+  }
+
+  private disposeOpenGridCanonicalTiles(): void {
+    const tiles = [...this.openGridCanonicalTiles.values()]
+    this.openGridCanonicalTiles.clear()
+    for (const tile of tiles) {
+      void tile.then((shape) => shape.delete()).catch(() => undefined)
+    }
+  }
+
+  private disposeOpenGridHalfCellPrototypes(): void {
+    const prototypes = [...this.openGridHalfCellPrototypes.values()]
+    this.openGridHalfCellPrototypes.clear()
     for (const prototype of prototypes) {
       void prototype.then((shape) => shape.delete()).catch(() => undefined)
     }

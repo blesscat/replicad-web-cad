@@ -1,5 +1,6 @@
 import { normalizeError } from '../../../../cad-contract/errors'
 import {
+  OPENGRID_PREVIEW_CONFIGURATION,
   PROTOTYPE_CONFIGURATION,
   isOpenGridParameters,
   validateOpenGridGenerationSupport,
@@ -12,6 +13,16 @@ import {
 import { newOperationId } from '../../../../features/cad/worker-client'
 import { errorForInput, parseRawParameters } from '../validation'
 import type { ModelGenerationHandlers, RuntimeContext } from './types'
+
+function previewConfigForModel(modelId: ModelId) {
+  if (modelId === 'opengrid') {
+    return { ...OPENGRID_PREVIEW_CONFIGURATION }
+  }
+  return {
+    tolerance: PROTOTYPE_CONFIGURATION.boundsTolerance,
+    angularTolerance: 0.1,
+  }
+}
 
 export function createModelGenerationHandlers(
   context: RuntimeContext,
@@ -73,10 +84,7 @@ export function createModelGenerationHandlers(
       generation,
       modelId,
       parameters,
-      previewConfig: {
-        tolerance: PROTOTYPE_CONFIGURATION.boundsTolerance,
-        angularTolerance: 0.1,
-      },
+      previewConfig: previewConfigForModel(modelId),
     })
     context.refs.operations.current.set(operationId, {
       kind: 'model',

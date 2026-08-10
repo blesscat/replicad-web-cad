@@ -5,6 +5,16 @@ import {
   type CandidateRecord,
 } from '../../src/cad-kernel/lifetime'
 import type { MeshData } from '../../src/cad-kernel/mesh'
+import type { PreviewTiming } from '../../src/cad-contract/preview-timing'
+
+const EMPTY_PREVIEW_TIMING: PreviewTiming = {
+  buildMs: null,
+  meshMs: null,
+  qualityMs: null,
+  candidateMs: null,
+  serializationMs: null,
+  totalMs: 0,
+}
 
 function candidate(
   id: string,
@@ -28,6 +38,7 @@ function candidate(
     parameters: { width: 20, depth: 30, height: 40 },
     shape,
     mesh,
+    previewTiming: EMPTY_PREVIEW_TIMING,
     createdAt: generation,
   }
 }

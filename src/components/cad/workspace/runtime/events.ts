@@ -164,6 +164,7 @@ export function createWorkerEventHandler(
         )
         const commitOrDiscard =
           currentOperation && event.workerEpoch === workerEpoch && validMesh
+        if (commitOrDiscard) operation.candidateMesh = event.mesh
         client.send({
           kind: commitOrDiscard ? 'model.commit' : 'model.discard',
           operationId: event.operationId,
@@ -221,7 +222,8 @@ export function createWorkerEventHandler(
           context.refs.operations.current.delete(event.operationId)
           return
         }
-        if (!validateMeshSnapshot(event.mesh)) {
+        const mesh = event.mesh ?? operation.candidateMesh
+        if (!mesh || !validateMeshSnapshot(mesh)) {
           context.clearOperationProgress(event.operationId)
           context.refs.operations.current.delete(event.operationId)
           context.recoverWorker(
@@ -238,6 +240,7 @@ export function createWorkerEventHandler(
         }
         context.clearOperationProgress(event.operationId)
         context.refs.operations.current.delete(event.operationId)
+        delete operation.candidateMesh
         if (event.operationId === 'initial-model')
           context.refs.autoRecoveryAttempts.current = 0
         context.dispatch({
@@ -248,7 +251,7 @@ export function createWorkerEventHandler(
             generation: event.generation,
             modelId: operation.modelId ?? event.modelId,
             parameters: operation.parameters ?? event.parameters,
-            mesh: event.mesh,
+            mesh,
           },
         })
         return
