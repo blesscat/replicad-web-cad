@@ -28,6 +28,52 @@ function parameters(
 }
 
 describe('OpenGrid stackable-box contract', () => {
+  it('uses the printable thick-shell structural baseline', () => {
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.floorThickness).toBe(1.2)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight).toBe(5)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.wallThickness).toBe(1.2)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailHeight).toBe(7.55)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailWidth).toBe(2)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailOuterInset).toBe(0.1)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.outerCornerRadius).toBe(3.75)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailInnerChamfer).toBe(1.75)
+    expect(
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailInnerVerticalHeight,
+    ).toBe(1.2)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailMiddleChamfer).toBe(0.8)
+    expect(
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailOuterVerticalHeight,
+    ).toBe(1.8)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailOuterChamfer).toBe(2)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.stackingLeadIn).toBe(1.75)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomStackingLeadIn).toBe(1.2)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomFootChamferHeight).toBe(
+      0.8,
+    )
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomSupportBandHeight).toBe(
+      1.8,
+    )
+    expect(
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomFootChamferHeight +
+        OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomSupportBandHeight +
+        OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomStackingLeadIn +
+        OPENGRID_STACKABLE_BOX_CONFIGURATION.floorThickness,
+    ).toBe(5)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.stackingClearance).toBe(0.25)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.stackingBearingLand).toBe(0.8)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomGrooveDepth).toBe(1.2)
+    expect(
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomGridSeamOpeningWidth,
+    ).toBe(1.6)
+    expect(
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleBottomOpeningDiameter,
+    ).toBe(5.05)
+    expect(
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleTopOpeningDiameter,
+    ).toBe(7.05)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleStepHeight).toBe(3)
+  })
+
   it('derives centered 28 mm footprints with total 0.15 mm clearance', () => {
     const value = parameters({ x: 1, y: 4, height: 25 })
 
@@ -36,7 +82,7 @@ describe('OpenGrid stackable-box contract', () => {
     ])
     expect(boundsForOpenGridStackableBox(value)).toEqual({
       min: [-13.925, -55.925, 0],
-      max: [13.925, 55.925, 25],
+      max: [13.925, 55.925, 37.55],
     })
     expect(
       boundsForModel({ modelId: 'opengrid-stackable-box', parameters: value }),
@@ -89,12 +135,20 @@ describe('OpenGrid stackable-box contract', () => {
   )
 
   it('de-duplicates existing corner sockets only on half-cell axes', () => {
+    expect(
+      openGridStackableBoxSocketCentersFor(parameters({ x: 1, y: 1 })),
+    ).toEqual([
+      [-7, -7],
+      [-7, 7],
+      [7, -7],
+      [7, 7],
+    ])
     expect(openGridStackableBoxSocketCentersFor(parameters())).toHaveLength(4)
     expect(
       openGridStackableBoxSocketCentersFor(parameters({ x: 0.5, y: 1 })),
     ).toEqual([
-      [0, expect.closeTo(-6.925, 5)],
-      [0, expect.closeTo(6.925, 5)],
+      [0, expect.closeTo(-7, 5)],
+      [0, expect.closeTo(7, 5)],
     ])
     expect(
       openGridStackableBoxSocketCentersFor(parameters({ x: 0.5, y: 0.5 })),

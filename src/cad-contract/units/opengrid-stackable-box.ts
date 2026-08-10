@@ -34,21 +34,34 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   minHeight: 10,
   maxHeight: 500,
   clearanceTotal: 0.15,
-  wallThickness: 1,
-  floorThickness: 1,
-  outerCornerRadius: 1,
-  topRailHeight: 1,
-  topRailWidth: 1.4,
-  topRailBottomChamfer: 0.5,
-  stackingLeadIn: 0.6,
-  bottomGrooveDepth: 0.8,
-  bottomGrooveWidth: 1.8,
+  wallThickness: 1.2,
+  floorThickness: 1.2,
+  bottomAssemblyHeight: 5,
+  outerCornerRadius: 3.75,
+  topRailOuterInset: 0.1,
+  topRailHeight: 7.55,
+  topRailWidth: 2,
+  topRailInnerChamfer: 1.75,
+  topRailInnerVerticalHeight: 1.2,
+  topRailMiddleChamfer: 0.8,
+  topRailOuterVerticalHeight: 1.8,
+  topRailOuterChamfer: 2,
+  stackingLeadIn: 1.75,
+  bottomStackingLeadIn: 1.2,
+  bottomFootChamferHeight: 0.8,
+  bottomSupportBandHeight: 1.8,
+  stackingClearance: 0.25,
+  stackingBearingLand: 0.8,
+  bottomGrooveDepth: 1.2,
+  bottomGridSeamOpeningWidth: 1.6,
+  bottomGridSeamBedOpeningWidth: 5.6,
+  bottomGridSeamSupportOpeningWidth: 4,
   baseHoleDiameter: 5,
   baseHoleClearance: 0.25,
   baseHoleOffset: 7,
   baseHoleBottomOpeningDiameter: 5.05,
-  baseHoleTopOpeningDiameter: 6.05,
-  baseHoleChamferDepth: 0.5,
+  baseHoleTopOpeningDiameter: 7.05,
+  baseHoleStepHeight: 3,
   bottomHoleGridPitch: 14,
   bottomHoleGridEdgeOffset: 7,
   bottomGridHoleDiameter: 5.05,
@@ -142,6 +155,24 @@ export function nominalOpenGridStackableBoxFootprintFor(
     parameters.y * OPENGRID_STACKABLE_BOX_CONFIGURATION.gridPitch -
       OPENGRID_STACKABLE_BOX_CONFIGURATION.clearanceTotal,
   ]
+}
+
+export function openGridStackableBoxUpperInnerRimZFor(
+  parameters: OpenGridStackableBoxParameters,
+): number {
+  return (
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight +
+    parameters.height
+  )
+}
+
+export function externalOpenGridStackableBoxHeightFor(
+  parameters: OpenGridStackableBoxParameters,
+): number {
+  return (
+    openGridStackableBoxUpperInnerRimZFor(parameters) +
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailHeight
+  )
 }
 
 export function validateOpenGridStackableBoxParameters(
@@ -314,9 +345,11 @@ export function openGridStackableBoxSocketCentersFor(
     return centers
   }
 
-  const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
-  const xPositions = uniqueSocketAxisPositions(width / 2)
-  const yPositions = uniqueSocketAxisPositions(depth / 2)
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const nominalWidth = parameters.x * configuration.gridPitch
+  const nominalDepth = parameters.y * configuration.gridPitch
+  const xPositions = uniqueSocketAxisPositions(nominalWidth / 2)
+  const yPositions = uniqueSocketAxisPositions(nominalDepth / 2)
   const centers: OpenGridStackableBoxPoint2D[] = []
   for (const x of xPositions) {
     for (const y of yPositions) centers.push([x, y])
@@ -330,7 +363,11 @@ export function boundsForOpenGridStackableBox(
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
   return {
     min: [-width / 2, -depth / 2, 0] as [number, number, number],
-    max: [width / 2, depth / 2, parameters.height] as [number, number, number],
+    max: [
+      width / 2,
+      depth / 2,
+      externalOpenGridStackableBoxHeightFor(parameters),
+    ] as [number, number, number],
   }
 }
 

@@ -37,9 +37,19 @@ export function cadErrorCodeFor(
     return 'OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID'
   }
   if (
+    message.includes('OPENGRID_SNAP_HOLD_REFERENCE_MISSING') ||
+    message.includes('OPENGRID_SNAP_HOLD_REFERENCE_INVALID') ||
+    message.includes('OPENGRID_SNAP_HOLD_REFERENCE_LOAD_FAILED')
+  ) {
+    return 'MODEL_ASSET_INVALID'
+  }
+  if (message.includes('OPENGRID_SNAP_HOLD_')) {
+    return 'OPENGRID_QUALITY_INVALID'
+  }
+  if (
     message.includes('OPENGRID_QUALITY_INVALID') ||
     message.includes('OPENGRID_BREP_INVALID') ||
-    message.includes('OPENGRID_STACKABLE_BOX_BOTTOM_GRID_')
+    message.includes('OPENGRID_STACKABLE_BOX_')
   ) {
     return 'OPENGRID_QUALITY_INVALID'
   }
@@ -78,9 +88,13 @@ export function cadErrorStageFor(
   if (message.includes('OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID')) {
     return 'meshing'
   }
+  if (message.includes('OPENGRID_SNAP_HOLD_REFERENCE_')) {
+    return 'initializing'
+  }
+  if (message.includes('OPENGRID_SNAP_HOLD_')) return 'meshing'
   if (
     message.includes('OPENGRID_QUALITY_INVALID') ||
-    message.includes('OPENGRID_STACKABLE_BOX_BOTTOM_GRID_')
+    message.includes('OPENGRID_STACKABLE_BOX_')
   ) {
     return 'meshing'
   }

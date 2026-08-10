@@ -7,6 +7,7 @@ import {
   getOC,
   makeBox,
   makeCylinder,
+  measureDistanceBetween,
   measureVolume,
   setOC,
   type Shape3D,
@@ -20,6 +21,7 @@ import {
 } from '../../src/cad-kernel/components/opengrid-stackable-box/builder'
 import {
   boundsForOpenGridStackableBox,
+  externalOpenGridStackableBoxHeightFor,
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
   openGridStackableBoxSocketCentersFor,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
@@ -27,6 +29,7 @@ import {
 } from '../../src/cad-contract/units'
 import { exportStlBytes, exportStepBytes } from '../../src/cad-kernel/export'
 import { meshBRep } from '../../src/cad-kernel/mesh'
+import { bottomStackingProfileTopZ } from '../../src/cad-kernel/components/opengrid-stackable-box/geometry'
 
 ;(globalThis as typeof globalThis & { __dirname?: string }).__dirname = dirname(
   fileURLToPath(import.meta.url),
@@ -39,7 +42,7 @@ const initialiseOpenCascade = require('replicad-opencascadejs')
 const WASM_PATH =
   require.resolve('replicad-opencascadejs/src/replicad_single.wasm')
 const SNAP_REFERENCE_PATH = new URL(
-  '../../public/openGrid Bare Lite Snap hold.step',
+  '../../src/cad-kernel/components/opengrid-snap/assets/opengrid-bare-lite-snap.step',
   import.meta.url,
 )
 
@@ -59,6 +62,16 @@ function parameters(
     height: overrides.height ?? 10,
     fullBottomHoleGrid: overrides.fullBottomHoleGrid ?? false,
   }
+}
+
+function captureProbeStackZ(height: number): number {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  return (
+    height +
+    configuration.bottomAssemblyHeight +
+    configuration.topRailInnerChamfer +
+    configuration.topRailInnerVerticalHeight
+  )
 }
 
 function boundsOf(shape: Shape3D): number[][] {
@@ -180,7 +193,23 @@ describe('OpenGrid stackable-box B-Rep', () => {
     120_000,
   )
 
-  it('keeps the top rail and underside groove as continuous non-post interfaces', () => {
+  it('keeps the floor quality probe clear of seams and full-hole cutters', () => {
+    const input = parameters({
+      x: 8,
+      y: 1.5,
+      fullBottomHoleGrid: true,
+    })
+    const shape = buildOpenGridStackableBox(input)
+    try {
+      const report = inspectOpenGridStackableBoxInterface(shape, input)
+      expect(report.floorProbeVolumes[0]).toBeGreaterThan(0.01)
+      expect(report.floorProbeThicknesses[0]).toBeCloseTo(1.2, 1)
+    } finally {
+      deleteShape(shape)
+    }
+  }, 120_000)
+
+  it('keeps a thick supported shell with an integrated self-mating guide', () => {
     const input = parameters({ x: 1, y: 4 })
     const shape = buildOpenGridStackableBox(input)
     try {
@@ -188,45 +217,272 @@ describe('OpenGrid stackable-box B-Rep', () => {
         shape,
         input,
       )
-      expect(interfaceQuality.topRailVolumes).toHaveLength(4)
+      expect(interfaceQuality.floorProbeVolumes[0]).toBeGreaterThan(0.5)
+      expect(interfaceQuality.floorProbeThicknesses[0]).toBeCloseTo(1.2, 1)
+      expect(interfaceQuality.measuredExternalHeight).toBeCloseTo(22.55, 2)
       expect(
-        interfaceQuality.topRailVolumes.every((volume) => volume > 0.01),
+        interfaceQuality.sideWallProbeThicknesses.every(
+          (thickness) => thickness >= 1.1 && thickness <= 1.3,
+        ),
       ).toBe(true)
-      expect(interfaceQuality.bottomGrooveVolumes).toHaveLength(4)
+      expect(interfaceQuality.externalHeight).toBeCloseTo(
+        externalOpenGridStackableBoxHeightFor(input),
+        2,
+      )
+      expect(interfaceQuality.upperInnerRimZ).toBeCloseTo(15, 2)
+      expect(interfaceQuality.bottomAssemblyHeight).toBeCloseTo(5, 2)
+      expect(interfaceQuality.topRailProfileHeight).toBeCloseTo(7.55, 2)
+      expect(interfaceQuality.bottomGuideProfileHeight).toBeCloseTo(4.75, 2)
       expect(
-        interfaceQuality.bottomGrooveVolumes.every((volume) => volume <= 0.01),
-      ).toBe(true)
-      expect(interfaceQuality.topRailLeadInFaceCount).toBeGreaterThanOrEqual(4)
-      expect(
-        interfaceQuality.topRailBottomChamferFaceCount,
-      ).toBeGreaterThanOrEqual(4)
-      expect(
-        interfaceQuality.topRailBottomResidualVolumes.every(
-          (volume) => volume <= 0.0025,
+        Object.values(interfaceQuality.topRailProfileSegmentFaceCounts).every(
+          (faceCount) => faceCount > 0,
         ),
       ).toBe(true)
       expect(
-        interfaceQuality.bottomGrooveLeadInFaceCount,
+        Object.values(
+          interfaceQuality.bottomGuideProfileSegmentFaceCounts,
+        ).every((faceCount) => faceCount > 0),
+      ).toBe(true)
+      expect(interfaceQuality.topGuideLeadInFaceCount).toBeGreaterThanOrEqual(4)
+      expect(
+        interfaceQuality.topRailCornerContinuationFaceCount,
       ).toBeGreaterThanOrEqual(4)
       expect(
-        interfaceQuality.mountingHoleChamferFaceCount,
+        interfaceQuality.topRailInnerCornerRadiusFaceCount,
       ).toBeGreaterThanOrEqual(4)
+      expect(
+        interfaceQuality.topRailOuterCornerRadiusFaceCount,
+      ).toBeGreaterThanOrEqual(4)
+      expect(
+        interfaceQuality.bottomGuideLeadInFaceCount,
+      ).toBeGreaterThanOrEqual(4)
+      expect(
+        interfaceQuality.topRailProbeVolumes.every((volume) => volume > 0.001),
+      ).toBe(true)
+      expect(
+        interfaceQuality.bottomGridSeamSlopeFaceCount,
+      ).toBeGreaterThanOrEqual(interfaceQuality.bottomGridSeamCount * 2)
+      expect(
+        interfaceQuality.bottomGridSeamSlopeFaceCounts.every(
+          (faceCount) => faceCount >= 2,
+        ),
+      ).toBe(true)
+      expect(
+        interfaceQuality.bottomGridSeamApexFaceCounts.every(
+          (faceCount) => faceCount >= 2,
+        ),
+      ).toBe(true)
+      expect(interfaceQuality.bottomGridSeamCount).toBe(3)
+      expect(interfaceQuality.bottomGridSeams).toEqual([
+        { axis: 'y', position: expect.closeTo(-27.925, 3) },
+        { axis: 'y', position: expect.closeTo(0.075, 3) },
+        { axis: 'y', position: expect.closeTo(28.075, 3) },
+      ])
+      expect(
+        interfaceQuality.bottomGridSeamClearanceVolumes.every(
+          (volume) => volume <= 0.05,
+        ),
+      ).toBe(true)
+      expect(
+        interfaceQuality.bottomGridSeamSupportVolumes.every(
+          (volume) => volume > 0.001,
+        ),
+      ).toBe(true)
+      expect(
+        interfaceQuality.bottomGridSeamSupportThicknesses.every(
+          (thickness) => thickness >= 3,
+        ),
+      ).toBe(true)
+      expect(
+        interfaceQuality.bearingLandVolumes.every((volume) => volume > 0.001),
+      ).toBe(true)
+      expect(
+        interfaceQuality.bottomGuideProtrusionVolumes.every(
+          (volume) => volume > 0.001,
+        ),
+      ).toBe(true)
+      expect(
+        interfaceQuality.bottomFootChamferVolumes.every(
+          (volume) => volume > 0.001,
+        ),
+      ).toBe(true)
+      expect(
+        interfaceQuality.bottomSupportBandVolumes.every(
+          (volume) => volume > 0.001,
+        ),
+      ).toBe(true)
+      expect(
+        interfaceQuality.bottomSupportVolumes.every((volume) => volume > 0.25),
+      ).toBe(true)
+      expect(
+        interfaceQuality.bottomPerimeterResidualVolumes.every(
+          (volume) => volume > 0.001,
+        ),
+      ).toBe(true)
+      expect(
+        interfaceQuality.bottomSupportFloorThicknesses.every(
+          (thickness) => thickness >= 1.1 && thickness <= 1.3,
+        ),
+      ).toBe(true)
+      expect(
+        interfaceQuality.bottomTransitionSupportThicknesses.every(
+          (thickness) => thickness >= 1.1,
+        ),
+      ).toBe(true)
+      expect(
+        interfaceQuality.mountingHoleStepVolumes.every(
+          (volume) => volume > 0.001,
+        ),
+      ).toBe(true)
+      expect(
+        interfaceQuality.mountingHoleProfiles.every((profile) => {
+          expect(profile.lowerBoreDiameter).toBeCloseTo(5.05, 2)
+          expect(profile.lowerBoreDepth).toBeCloseTo(3, 2)
+          expect(profile.upperBoreDiameter).toBeCloseTo(7.05, 2)
+          expect(profile.upperBoreDepth).toBeCloseTo(2, 2)
+          return true
+        }),
+      ).toBe(true)
       expect(interfaceQuality.captiveSocketRecords).toHaveLength(4)
+      expect(interfaceQuality.bottomGridSeamClosureFaceCount).toBe(0)
+      expect(
+        interfaceQuality.bottomGridSeamFloorVolumes.every(
+          (volume) => volume > 0.001,
+        ),
+      ).toBe(true)
       expect(
         interfaceQuality.captiveSocketRecords.every(
           (record) => record.bottomOpeningBoundaryVolume > 0.001,
         ),
       ).toBe(true)
-      const topProbe = makeCylinder(14, 0.2, [0, 0, 9.8])
-      const grooveProbe = makeCylinder(14, 0.2, [0, 0, 0.1])
+      const topProbe = makeCylinder(14, 0.2, [0, 0, 22.2])
+      const bottomProbe = makeCylinder(14, 0.2, [0, 0, 0.1])
       try {
         expect(measureVolume(shape.intersect(topProbe))).toBeGreaterThan(0)
-        expect(measureVolume(shape.intersect(grooveProbe))).toBeGreaterThan(0)
+        expect(measureVolume(shape.intersect(bottomProbe))).toBeGreaterThan(0)
       } finally {
         topProbe.delete()
-        grooveProbe.delete()
+        bottomProbe.delete()
       }
       expect(shape.faces.length).toBeGreaterThan(0)
+    } finally {
+      deleteShape(shape)
+    }
+  }, 120_000)
+
+  it('places supported printable relief at every internal 28 mm grid seam', () => {
+    const cases = [
+      { x: 1, y: 1, seams: [] },
+      {
+        x: 1.5,
+        y: 1.5,
+        seams: [
+          { axis: 'x', position: 7.075 },
+          { axis: 'y', position: 7.075 },
+        ],
+      },
+      {
+        x: 2,
+        y: 2,
+        seams: [
+          { axis: 'x', position: 0.075 },
+          { axis: 'y', position: 0.075 },
+        ],
+      },
+      { x: 0.5, y: 1, seams: [] },
+    ] as const
+
+    for (const testCase of cases) {
+      const input = parameters(testCase)
+      const shape = buildOpenGridStackableBox(input)
+      try {
+        const report = inspectOpenGridStackableBoxInterface(shape, input)
+        expect(report.bottomGridSeamCount).toBe(testCase.seams.length)
+        expect(report.bottomGridSeams).toEqual(
+          testCase.seams.map((seam) => ({
+            ...seam,
+            position: expect.closeTo(seam.position, 3),
+          })),
+        )
+      } finally {
+        deleteShape(shape)
+      }
+    }
+  }, 120_000)
+
+  it('keeps the 2×2 grid-seam relief open beneath the supported floor', () => {
+    const input = parameters({ x: 2, y: 2 })
+    const shape = buildOpenGridStackableBox(input)
+    const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+    const transitionProbeBottom =
+      configuration.bottomFootChamferHeight +
+      configuration.bottomSupportBandHeight +
+      0.1
+    const verticalSeamProbe = makeBox(
+      [-0.25, -10, 0.2],
+      [0.25, 10, configuration.bottomFootChamferHeight],
+    )
+    const horizontalSeamProbe = makeBox(
+      [-10, -0.25, 0.2],
+      [10, 0.25, configuration.bottomFootChamferHeight],
+    )
+    const verticalSlopeProbe = makeBox(
+      [1.9, -10, transitionProbeBottom],
+      [2.1, 10, transitionProbeBottom + 0.5],
+    )
+    const horizontalSlopeProbe = makeBox(
+      [-10, 1.9, transitionProbeBottom],
+      [10, 2.1, transitionProbeBottom + 0.5],
+    )
+    const verticalFloorProbe = makeBox(
+      [-0.25, -10, bottomStackingProfileTopZ() + 0.05],
+      [0.25, 10, configuration.bottomAssemblyHeight - 0.05],
+    )
+    const horizontalFloorProbe = makeBox(
+      [-10, -0.25, bottomStackingProfileTopZ() + 0.05],
+      [10, 0.25, configuration.bottomAssemblyHeight - 0.05],
+    )
+    try {
+      expect(measureVolume(shape.intersect(verticalSeamProbe))).toBeLessThan(
+        0.01,
+      )
+      expect(measureVolume(shape.intersect(horizontalSeamProbe))).toBeLessThan(
+        0.01,
+      )
+      expect(
+        measureVolume(shape.intersect(verticalSlopeProbe)),
+      ).toBeGreaterThan(0.01)
+      expect(
+        measureVolume(shape.intersect(horizontalSlopeProbe)),
+      ).toBeGreaterThan(0.01)
+      expect(
+        measureVolume(shape.intersect(verticalFloorProbe)),
+      ).toBeGreaterThan(0.01)
+      expect(
+        measureVolume(shape.intersect(horizontalFloorProbe)),
+      ).toBeGreaterThan(0.01)
+    } finally {
+      verticalSeamProbe.delete()
+      horizontalSeamProbe.delete()
+      verticalSlopeProbe.delete()
+      horizontalSlopeProbe.delete()
+      verticalFloorProbe.delete()
+      horizontalFloorProbe.delete()
+      deleteShape(shape)
+    }
+  }, 120_000)
+
+  it('enforces the fixed 0.25 mm stacking clearance datum', () => {
+    const input = parameters({ x: 1, y: 4 })
+    const shape = buildOpenGridStackableBox(input)
+    try {
+      const report = inspectOpenGridStackableBoxInterface(shape, input)
+      expect(report.stackingClearanceNominalIntersectionVolume).toBeLessThan(
+        0.01,
+      )
+      expect(
+        report.stackingClearanceBelowNominalIntersectionVolume,
+      ).toBeGreaterThan(0.01)
     } finally {
       deleteShape(shape)
     }
@@ -236,8 +492,53 @@ describe('OpenGrid stackable-box B-Rep', () => {
     const lower = buildOpenGridStackableBox(parameters({ x: 1, y: 4 }))
     const upper = buildOpenGridStackableBox(parameters({ x: 1, y: 1 }))
     try {
-      for (const offset of [-42, -14, 14, 42]) {
-        const positioned = upper.clone().translate(0, offset, 10)
+      const seatedZ =
+        captureProbeStackZ(10) +
+        OPENGRID_STACKABLE_BOX_CONFIGURATION.stackingClearance
+      const clearanceZ =
+        seatedZ +
+        OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomStackingLeadIn +
+        OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomSupportBandHeight
+      const lowered = upper.clone().translate(0, 0, seatedZ)
+      try {
+        expect(measureVolume(lower.intersect(lowered))).toBeLessThan(0.01)
+        expect(measureDistanceBetween(lower, lowered)).toBeLessThan(0.15)
+      } finally {
+        deleteShape(lowered)
+      }
+
+      const clearancePositioned = upper
+        .clone()
+        .translate(
+          OPENGRID_STACKABLE_BOX_CONFIGURATION.stackingClearance,
+          0,
+          clearanceZ,
+        )
+      try {
+        expect(
+          measureVolume(lower.intersect(clearancePositioned)),
+        ).toBeLessThan(0.01)
+      } finally {
+        deleteShape(clearancePositioned)
+      }
+
+      const loweredBeyondClearance = upper
+        .clone()
+        .translate(
+          OPENGRID_STACKABLE_BOX_CONFIGURATION.stackingClearance + 0.75,
+          0,
+          captureProbeStackZ(10) - 0.05,
+        )
+      try {
+        expect(
+          measureVolume(lower.intersect(loweredBeyondClearance)),
+        ).toBeGreaterThan(0.01)
+      } finally {
+        deleteShape(loweredBeyondClearance)
+      }
+
+      for (const offset of [-28, -21, -14, -7, 0, 7, 14, 21, 28]) {
+        const positioned = upper.clone().translate(0, offset, seatedZ)
         try {
           expect(measureVolume(lower.intersect(positioned))).toBeLessThan(0.01)
         } finally {
@@ -260,7 +561,16 @@ describe('OpenGrid stackable-box B-Rep', () => {
     deleteShape(leftPositioned)
     deleteShape(rightPositioned)
     try {
-      const positionedUpper = upper.clone().translate(0, 0, 10)
+      const positionedUpper = upper
+        .clone()
+        .translate(
+          0,
+          0,
+          captureProbeStackZ(10) +
+            OPENGRID_STACKABLE_BOX_CONFIGURATION.stackingClearance +
+            OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomStackingLeadIn +
+            OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomSupportBandHeight,
+        )
       try {
         expect(
           measureVolume(lowerPair.intersect(positionedUpper)),
@@ -268,25 +578,39 @@ describe('OpenGrid stackable-box B-Rep', () => {
       } finally {
         deleteShape(positionedUpper)
       }
+      const loweredUpper = upper
+        .clone()
+        .translate(0, 0, captureProbeStackZ(10) - 0.05)
+      try {
+        expect(
+          measureVolume(lowerPair.intersect(loweredUpper)),
+        ).toBeGreaterThan(0.01)
+      } finally {
+        deleteShape(loweredUpper)
+      }
     } finally {
       deleteShape(lowerPair)
       deleteShape(upper)
     }
   }, 120_000)
 
-  it('retains a flanged Ø5 shaft flush with the interior floor', () => {
+  it('retains a flanged Ø5 shaft with the two-stage corner socket', () => {
     const input = parameters({ x: 1, y: 1 })
     const box = buildOpenGridStackableBox(input)
     const [center] = openGridStackableBoxSocketCentersFor(input)
     if (!center) throw new Error('MISSING_SOCKET_CENTER')
-    const shaft = makeCylinder(2.5, 4, [center[0], center[1], -3])
+    const shaft = makeCylinder(
+      2.5,
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight + 3,
+      [center[0], center[1], -3],
+    )
     const flange = makeCylinder(
       OPENGRID_STACKABLE_BOX_CONFIGURATION.baseFlangeDiameter / 2,
       OPENGRID_STACKABLE_BOX_CONFIGURATION.baseFlangeThickness,
       [
         center[0],
         center[1],
-        OPENGRID_STACKABLE_BOX_CONFIGURATION.floorThickness -
+        OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight -
           OPENGRID_STACKABLE_BOX_CONFIGURATION.baseFlangeThickness,
       ],
     )
@@ -295,7 +619,7 @@ describe('OpenGrid stackable-box B-Rep', () => {
       const insertBounds = boundsOf(insert)
       expect(insertBounds[0]?.[2]).toBeCloseTo(-3, 2)
       expect(insertBounds[1]?.[2]).toBeCloseTo(
-        OPENGRID_STACKABLE_BOX_CONFIGURATION.floorThickness,
+        OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight,
         2,
       )
       const seated = box.intersect(insert)
@@ -304,7 +628,13 @@ describe('OpenGrid stackable-box B-Rep', () => {
       } finally {
         deleteShape(seated)
       }
-      const loweredInsert = insert.clone().translateZ(-0.2)
+      const retentionProbeOffset = Math.max(
+        0.2,
+        OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight -
+          OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleStepHeight +
+          0.2,
+      )
+      const loweredInsert = insert.clone().translateZ(-retentionProbeOffset)
       try {
         expect(measureVolume(box.intersect(loweredInsert))).toBeGreaterThan(0)
       } finally {

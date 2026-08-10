@@ -17,7 +17,7 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
 
   const x = page.getByRole('slider', { name: 'X' })
   const y = page.getByRole('slider', { name: 'Y' })
-  const height = page.getByRole('textbox', { name: '盒體高度（Z）' })
+  const height = page.getByRole('textbox', { name: '盒內淨高（Z）' })
   await expect(x).toHaveAttribute('min', '0.5')
   await expect(x).toHaveAttribute('step', '0.5')
   await expect(y).toHaveAttribute('min', '0.5')
@@ -29,11 +29,11 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
   await expect(fullGrid).not.toBeChecked()
   await fullGrid.check()
   await expect(fullGrid).toBeChecked()
-  await expect(page.getByText(/上方是連續凸導軌/)).toBeVisible()
+  await expect(page.getByText(/增加 14 mm 中心距/)).toBeVisible()
 
   const targetX = page.getByRole('textbox', { name: 'X（mm）' })
   const targetY = page.getByRole('textbox', { name: 'Y（mm）' })
-  await targetX.fill('28')
+  await targetX.fill('41.85')
   await targetY.fill('27.85')
   await page.getByRole('button', { name: '計算格數' }).click()
   await expect(x).toHaveValue('1.5')
@@ -50,7 +50,7 @@ test('OpenGrid stackable-box keeps half-cell dimensions in export metadata', asy
 
   const x = page.getByRole('slider', { name: 'X' })
   const y = page.getByRole('slider', { name: 'Y' })
-  const height = page.getByRole('textbox', { name: '盒體高度（Z）' })
+  const height = page.getByRole('textbox', { name: '盒內淨高（Z）' })
   await x.press('ArrowLeft')
   await y.press('ArrowLeft')
   await height.fill('20')

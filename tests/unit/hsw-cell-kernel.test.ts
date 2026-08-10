@@ -37,6 +37,7 @@ const mocks = vi.hoisted(() => ({
     model: 'opengrid-stackable-cylinder',
     delete: vi.fn(),
   })),
+  assertOpenGridSnapHoldCompatibility: vi.fn(),
 }))
 
 vi.mock('../../src/cad-kernel/components/box/builder', () => ({
@@ -83,6 +84,13 @@ vi.mock(
 vi.mock('../../src/cad-kernel/components/opengrid-divider/builder', () => ({
   buildOpenGridDivider: mocks.buildOpenGridDivider,
 }))
+vi.mock(
+  '../../src/cad-kernel/components/opengrid-stackable-box/snap-hold',
+  () => ({
+    assertOpenGridSnapHoldCompatibility:
+      mocks.assertOpenGridSnapHoldCompatibility,
+  }),
+)
 
 import {
   buildModelBRep,
@@ -95,6 +103,7 @@ const context = {
   getHswCellTemplate: vi.fn(async () => ({ delete: vi.fn() })),
   getBoxNormalReference: vi.fn(async () => ({ delete: vi.fn() })),
   getHexagonalColumnReference: vi.fn(async () => ({ delete: vi.fn() })),
+  getOpenGridSnapReference: vi.fn(async () => ({ delete: vi.fn() })),
 } as unknown as KernelBuildContext
 
 describe('HSW kernel model registration', () => {
@@ -178,6 +187,10 @@ describe('HSW kernel model registration', () => {
     )
 
     expect(shape).toMatchObject({ model: 'opengrid-stackable-box' })
+    expect(context.getOpenGridSnapReference).toHaveBeenCalledWith('Lite')
+    expect(mocks.assertOpenGridSnapHoldCompatibility).toHaveBeenCalledWith(
+      expect.anything(),
+    )
     expect(mocks.buildOpenGridStackableBox).toHaveBeenCalledWith(
       { x: 0.5, y: 1, height: 20, fullBottomHoleGrid: false },
       { isGenerationCurrent: undefined },

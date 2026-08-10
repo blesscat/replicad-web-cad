@@ -34,7 +34,7 @@ const OPENGRID_STACKABLE_BOX_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
   },
   {
     key: 'height',
-    label: '盒體高度',
+    label: '盒內淨高',
     axis: 'Z',
     unit: 'mm',
     control: 'range-text',
@@ -86,7 +86,7 @@ export const opengridStackableBoxDefinition: ModelDefinition = {
   family: 'opengrid',
   displayName: 'OpenGrid 堆疊盒',
   selectionDescription:
-    '依 28 mm OpenGrid 格線建立可堆疊開口盒，支援半格尺寸、連續滑動導軌、四角 Ø5 mm Snap 固定孔與可選的 14 mm Ø5.05 mm 底部全孔網格。',
+    '依 28 mm OpenGrid 格線建立可堆疊開口盒，支援半格尺寸；height 代表盒內淨高，底面到盒內底固定 5 mm（內層地板 1.2 mm），側壁 1.2 mm。盒頂獨立階梯滑軌依序為 1.75 mm／45°、垂直 1.2 mm、0.8 mm／45°、垂直 1.8 mm、2 mm／45°；底部為 0.8 mm／45° 落地斜角、垂直 1.8 mm、1.2 mm／45° 導入支撐地板。內部 28 mm 格線交界採逐段收窄的可列印避讓，止於底板下表面並保留連續內部地板；四角保留 Ø5.05 mm × 3 mm、Ø7.05 mm × 2 mm 的 Snap 階梯孔，並可選 14 mm Ø5.05 mm 全孔網格。',
   parameterSchema: OPENGRID_STACKABLE_BOX_PARAMETER_SCHEMA,
   defaultParameters: {
     x: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultX,

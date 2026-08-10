@@ -878,7 +878,7 @@ The runtime-validated catalog MUST register `opengrid-stackable-box` as an indep
 
 - **WHEN** a user views `/cad/opengrid-stackable-box`
 - **THEN** the panel MUST expose the stackable box's X, Y, and height controls with OpenGrid 28 mm and half-cell semantics
-- **AND** it MUST describe the fixed top guide, bottom receiving groove, and four-corner Snap mounting interface
+- **AND** it MUST describe the integrated side guide, centered per-cell bottom receiving grooves, and four-corner Snap mounting interface
 - **AND** it MUST NOT expose an upper-box/lower-box variant selector or a permanently protruding stacking-post toggle
 
 #### Scenario: Stackable-box export
