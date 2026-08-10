@@ -3,6 +3,7 @@ import {
   isWorkerCommand,
   isWorkerEvent,
   PROTOCOL_VERSION,
+  transferablesForEvent,
 } from '../../src/cad-contract/messages'
 
 describe('Worker contract runtime validation', () => {
@@ -457,6 +458,12 @@ describe('Worker contract runtime validation', () => {
     expect(
       isWorkerEvent({ ...event, mesh: { ...event.mesh, triangleCount: 0 } }),
     ).toBe(false)
+    const readyWithoutMesh = { ...event, mesh: undefined }
+    expect(isWorkerEvent(readyWithoutMesh)).toBe(true)
+    if (!isWorkerEvent(readyWithoutMesh)) {
+      throw new Error('MODEL_READY_WITHOUT_MESH_REJECTED')
+    }
+    expect(transferablesForEvent(readyWithoutMesh)).toEqual([])
   })
 
   it('accepts valid progress counters and rejects incomplete or invalid counters', () => {

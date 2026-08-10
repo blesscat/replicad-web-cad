@@ -19,7 +19,13 @@ type FaceMeshData = {
 
 type TriangulationData = FaceMeshData | null
 
-const MAX_GLOBAL_MESH_FACE_COUNT = 512
+export const MAX_GLOBAL_MESH_FACE_COUNT = 512
+
+export type MeshOptions = {
+  tolerance: number
+  angularTolerance: number
+  faceMeshingThreshold?: number
+}
 
 function appendNumbers(target: number[], source: number[]): void {
   for (const value of source) target.push(value)
@@ -46,14 +52,14 @@ function countFaces(shape: Shape3D): number {
 
 function meshFacesIndividually(
   shape: Shape3D,
-  options: { tolerance: number; angularTolerance: number },
+  options: MeshOptions,
 ): FaceMeshData {
   return collectFaceMeshData(shape, options, true)
 }
 
 function collectFaceMeshData(
   shape: Shape3D,
-  options: { tolerance: number; angularTolerance: number },
+  options: MeshOptions,
   meshEachFace: boolean,
 ): FaceMeshData {
   const oc = getOC()
@@ -109,10 +115,7 @@ function collectFaceMeshData(
   return { triangles, vertices, normals }
 }
 
-function meshShapeGlobally(
-  shape: Shape3D,
-  options: { tolerance: number; angularTolerance: number },
-): FaceMeshData {
+function meshShapeGlobally(shape: Shape3D, options: MeshOptions): FaceMeshData {
   const oc = getOC()
   const mesher = new oc.BRepMesh_IncrementalMesh_2(
     shape.wrapped,
@@ -257,10 +260,7 @@ function boundsFromPositions(positions: Float32Array): BoxBounds {
   }
 }
 
-function meshFace(
-  face: Face,
-  options: { tolerance: number; angularTolerance: number },
-): void {
+function meshFace(face: Face, options: MeshOptions): void {
   const oc = getOC()
   const mesher = new oc.BRepMesh_IncrementalMesh_2(
     face.wrapped,
@@ -272,10 +272,7 @@ function meshFace(
   mesher.delete()
 }
 
-export function meshBRep(
-  shape: Shape3D,
-  options: { tolerance: number; angularTolerance: number },
-): MeshData {
+export function meshBRep(shape: Shape3D, options: MeshOptions): MeshData {
   try {
     let faceCount: number | null = null
     try {
@@ -284,7 +281,9 @@ export function meshBRep(
       // Keep the normal adapter path usable for lightweight test doubles.
     }
     let mesh: FaceMeshData
-    if (faceCount !== null && faceCount > MAX_GLOBAL_MESH_FACE_COUNT) {
+    const faceMeshingThreshold =
+      options.faceMeshingThreshold ?? MAX_GLOBAL_MESH_FACE_COUNT
+    if (faceCount !== null && faceCount > faceMeshingThreshold) {
       mesh = meshFacesIndividually(shape, options)
     } else if (faceCount !== null) {
       mesh = meshShapeGlobally(shape, options)

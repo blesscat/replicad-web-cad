@@ -39,8 +39,20 @@ import {
 
 export type OpenGridBuildContext = {
   getOpenGridPrototype?: (variant: OpenGridVariant) => Promise<Shape3D>
+  getOpenGridCanonicalTile?: (
+    variant: OpenGridVariant,
+    thickness: number,
+  ) => Promise<Shape3D>
+  getOpenGridHalfCellPrototype?: (
+    key: string,
+    factory: () => Promise<Shape3D> | Shape3D,
+  ) => Promise<Shape3D>
   yieldToEventLoop?: () => Promise<void>
   isGenerationCurrent?: () => boolean
+  useCompoundChamferCutters?: boolean
+  useCompoundScrewParts?: boolean
+  fuseHalfCellExtensionsIntoAssembly?: boolean
+  balancedFuseBatchSize?: number
   reportProgress?: (progress: {
     stage: 'building'
     completed?: number
@@ -201,19 +213,18 @@ async function fuseBalanced(
   if (input.length === 0) throw new Error('OPENGRID_SHAPE_EMPTY')
   const owned = new Set(input)
   let current = input
+  const batchSize =
+    context.balancedFuseBatchSize ??
+    OPENGRID_CONFIGURATION.balancedFuseBatchSize
+  if (!Number.isSafeInteger(batchSize) || batchSize < 2) {
+    throw new Error('OPENGRID_FUSE_BATCH_SIZE_INVALID')
+  }
   try {
     while (current.length > 1) {
       assertGenerationCurrent(context)
       const next: Shape3D[] = []
-      for (
-        let index = 0;
-        index < current.length;
-        index += OPENGRID_CONFIGURATION.balancedFuseBatchSize
-      ) {
-        const batch = current.slice(
-          index,
-          index + OPENGRID_CONFIGURATION.balancedFuseBatchSize,
-        )
+      for (let index = 0; index < current.length; index += batchSize) {
+        const batch = current.slice(index, index + batchSize)
         let combined = batch[0]
         if (!combined) throw new Error('OPENGRID_SHAPE_EMPTY')
         for (const shape of batch.slice(1)) {
@@ -347,6 +358,17 @@ async function buildCanonicalTile(
   }
   const canonical = await fuseBalanced(parts, context)
   return canonical
+}
+
+export function buildOpenGridCanonicalTile(
+  variant: OpenGridVariant,
+  context: OpenGridBuildContext = {},
+): Promise<Shape3D> {
+  const thickness =
+    variant === 'Lite'
+      ? OPENGRID_CONFIGURATION.variants.Lite.thickness
+      : OPENGRID_CONFIGURATION.variants.Full.thickness
+  return buildCanonicalTile(variant, thickness, context)
 }
 
 type HalfExtensionTileSpec = {
@@ -562,15 +584,46 @@ async function addOfficialHalfCellExtensions(
   context: OpenGridBuildContext,
 ): Promise<Shape3D> {
   if (!hasOpenGridHalfCell(parameters)) return source
+  try {
+    const extensionPieces = await buildOfficialHalfCellExtensionPieces(
+      parameters,
+      variant,
+      thickness,
+      zOffset,
+      mirrorWithinLayer,
+      context,
+    )
+    return await fuseBalanced([source, ...extensionPieces], context)
+  } catch (error) {
+    deleteShape(source)
+    throw error
+  }
+}
 
+async function buildOfficialHalfCellExtensionPieces(
+  parameters: OpenGridParameters,
+  variant: 'Full' | 'Lite' | 'Heavy',
+  thickness: number,
+  zOffset: number,
+  mirrorWithinLayer: boolean,
+  context: OpenGridBuildContext,
+): Promise<Shape3D[]> {
   let rail: Shape3D | null = null
   let corner: Shape3D | null = null
+  const cachePrototype = context.getOpenGridHalfCellPrototype
   try {
-    rail = buildRail(variant, thickness)
-    corner = buildCornerNode(variant, thickness)
+    rail = cachePrototype
+      ? await cachePrototype(`rail:${variant}:${thickness}`, () =>
+          buildRail(variant, thickness),
+        )
+      : buildRail(variant, thickness)
+    corner = cachePrototype
+      ? await cachePrototype(`corner:${variant}:${thickness}`, () =>
+          buildCornerNode(variant, thickness),
+        )
+      : buildCornerNode(variant, thickness)
     const tileSource: HalfBoundaryTileSource = { rail, corner }
-    return await addHalfCellExtensions(
-      source,
+    return await buildHalfCellExtensionPieces(
       parameters,
       (spec) =>
         buildHalfBoundaryTile(
@@ -582,40 +635,44 @@ async function addOfficialHalfCellExtensions(
           spec.interfaceY,
           context,
         ),
+      `boundary:${variant}:${thickness}`,
       thickness,
       zOffset,
       mirrorWithinLayer,
       context,
     )
-  } catch (error) {
-    deleteShape(source)
-    throw error
   } finally {
-    deleteShape(rail)
-    deleteShape(corner)
+    if (!cachePrototype) {
+      deleteShape(rail)
+      deleteShape(corner)
+    }
   }
 }
 
-async function addHalfCellExtensions(
-  source: Shape3D,
+async function buildHalfCellExtensionPieces(
   parameters: OpenGridParameters,
   tileFactory: HalfExtensionTileFactory,
+  prototypeKeyPrefix: string,
   thickness: number,
   zOffset: number,
   mirrorWithinLayer: boolean,
   context: OpenGridBuildContext,
-): Promise<Shape3D> {
-  if (!hasOpenGridHalfCell(parameters)) return source
+): Promise<Shape3D[]> {
+  if (!hasOpenGridHalfCell(parameters)) return []
 
-  const pieces: Shape3D[] = [source]
+  const pieces: Shape3D[] = []
   const prototypes = new Map<string, Shape3D>()
   try {
     for (const spec of halfExtensionTileSpecs(parameters)) {
       assertGenerationCurrent(context)
-      const prototypeKey = `${spec.width}:${spec.depth}:${spec.interfaceX ?? 'none'}:${spec.interfaceY ?? 'none'}`
+      const prototypeKey = `${prototypeKeyPrefix}:${spec.width}:${spec.depth}:${spec.interfaceX ?? 'none'}:${spec.interfaceY ?? 'none'}`
       let prototype = prototypes.get(prototypeKey)
       if (!prototype) {
-        prototype = await tileFactory(spec)
+        prototype = context.getOpenGridHalfCellPrototype
+          ? await context.getOpenGridHalfCellPrototype(prototypeKey, () =>
+              tileFactory(spec),
+            )
+          : await tileFactory(spec)
         prototypes.set(prototypeKey, prototype)
       }
       let piece = prototype.clone()
@@ -629,12 +686,41 @@ async function addHalfCellExtensions(
       )
       await yieldAtSafeBoundary(context)
     }
-    return await fuseBalanced(pieces, context)
+    return pieces
   } catch (error) {
     for (const piece of pieces) deleteShape(piece)
     throw error
   } finally {
-    for (const prototype of prototypes.values()) deleteShape(prototype)
+    if (!context.getOpenGridHalfCellPrototype) {
+      for (const prototype of prototypes.values()) deleteShape(prototype)
+    }
+  }
+}
+
+async function addHalfCellExtensions(
+  source: Shape3D,
+  parameters: OpenGridParameters,
+  tileFactory: HalfExtensionTileFactory,
+  thickness: number,
+  zOffset: number,
+  mirrorWithinLayer: boolean,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  if (!hasOpenGridHalfCell(parameters)) return source
+  try {
+    const extensionPieces = await buildHalfCellExtensionPieces(
+      parameters,
+      tileFactory,
+      'heavy-bridge',
+      thickness,
+      zOffset,
+      mirrorWithinLayer,
+      context,
+    )
+    return await fuseBalanced([source, ...extensionPieces], context)
+  } catch (error) {
+    deleteShape(source)
+    throw error
   }
 }
 
@@ -675,6 +761,7 @@ async function buildGridSurface(
     )
   }
   const canonicalByPattern = new Map<string, Shape3D>()
+  const ownedCanonical = new Set<Shape3D>()
   const rows: Shape3D[][] = []
   const totalCells = parameters.rows * parameters.columns
   let completed = 0
@@ -693,8 +780,11 @@ async function buildGridSurface(
         const patternKey = 'default'
         let canonical = canonicalByPattern.get(patternKey)
         if (!canonical) {
-          canonical = await buildCanonicalTile(variant, thickness, context)
+          canonical = context.getOpenGridCanonicalTile
+            ? await context.getOpenGridCanonicalTile(variant, thickness)
+            : await buildCanonicalTile(variant, thickness, context)
           canonicalByPattern.set(patternKey, canonical)
+          if (!context.getOpenGridCanonicalTile) ownedCanonical.add(canonical)
         }
         let piece = canonical.clone()
         if (mirrorWithinLayer) {
@@ -710,8 +800,20 @@ async function buildGridSurface(
         await yieldAtSafeBoundary(context)
       }
     }
+    if (context.fuseHalfCellExtensionsIntoAssembly !== false) {
+      const extensionPieces = await buildOfficialHalfCellExtensionPieces(
+        parameters,
+        variant,
+        thickness,
+        zOffset,
+        mirrorWithinLayer,
+        context,
+      )
+      if (extensionPieces.length > 0) rows.push(extensionPieces)
+    }
     const result = await fuseByStrategy(rows, strategy, context)
-    for (const canonical of canonicalByPattern.values()) deleteShape(canonical)
+    for (const canonical of ownedCanonical) deleteShape(canonical)
+    if (context.fuseHalfCellExtensionsIntoAssembly !== false) return result
     return addOfficialHalfCellExtensions(
       result,
       parameters,
@@ -725,7 +827,7 @@ async function buildGridSurface(
     for (const row of rows) {
       for (const piece of row) deleteShape(piece)
     }
-    for (const canonical of canonicalByPattern.values()) deleteShape(canonical)
+    for (const canonical of ownedCanonical) deleteShape(canonical)
     throw error
   }
 }
@@ -1129,7 +1231,32 @@ async function buildHeavyBridge(
         await yieldAtSafeBoundary(context)
       }
     }
+    if (context.fuseHalfCellExtensionsIntoAssembly !== false) {
+      const extensionPieces = await buildHalfCellExtensionPieces(
+        parameters,
+        (spec) =>
+          fuseBalanced(
+            buildHalfFlatBridgeTile(
+              0,
+              0,
+              0,
+              spec.width,
+              spec.depth,
+              spec.interfaceX,
+              spec.interfaceY,
+            ),
+            context,
+          ),
+        'heavy-bridge',
+        OPENGRID_CONFIGURATION.heavyGap,
+        zOffset,
+        false,
+        context,
+      )
+      if (extensionPieces.length > 0) rows.push(extensionPieces)
+    }
     const result = await fuseByStrategy(rows, strategy, context)
+    if (context.fuseHalfCellExtensionsIntoAssembly !== false) return result
     return addHalfCellExtensions(
       result,
       parameters,
@@ -1248,13 +1375,17 @@ function combineCutterGroups(groups: CutterGroup[]): CutterGroup[] {
     // Let the final source cut process every solid together. Fusing separate
     // cutters first adds expensive cutter-to-cutter booleans without changing
     // the material removed from the board.
-    const compound = makeCompound(
-      groups.map((group) => group.shape),
-    ).asShape3D()
+    // Flatten the owned parts before making the final cutter; nested
+    // compounds are not reliably processed by the native boolean cut.
+    const compoundParts = groups.flatMap((group) => group.parts)
+    const compound = makeCompound(compoundParts).asShape3D()
+    const ownedParts = [
+      ...new Set(groups.flatMap((group) => [group.shape, ...group.parts])),
+    ]
     return [
       {
         shape: compound,
-        parts: groups.map((group) => group.shape),
+        parts: ownedParts,
       },
     ]
   } catch (error) {
@@ -1317,6 +1448,21 @@ function createChamferCutters(
     groups.push({ shape: translated, parts: [translated] })
   }
   return groups
+}
+
+function chamferCutterGroups(
+  parameters: OpenGridParameters,
+  context: OpenGridBuildContext,
+  zOffset = 0,
+  layerHeight = openGridBoardConfiguration(parameters).height,
+): CutterGroup[] {
+  const groups = createChamferCutters(parameters, zOffset, layerHeight)
+  if (
+    context.useCompoundChamferCutters === false ||
+    parameters.chamfers === 'everywhere'
+  )
+    return groups
+  return combineCutterGroups(groups)
 }
 
 const OPENGRID_SCREW_SIDES = 30
@@ -1419,7 +1565,7 @@ function screwHeadCutters(
   ]
 }
 
-function fuseCutterParts(parts: Shape3D[]): Shape3D {
+function fuseCutterParts(parts: Shape3D[]): CutterGroup {
   const first = parts[0]
   if (!first) throw new Error('OPENGRID_CUTTER_EMPTY')
   const owned = new Set(parts)
@@ -1439,7 +1585,7 @@ function fuseCutterParts(parts: Shape3D[]): Shape3D {
       combined = fused
     }
     owned.delete(combined)
-    return combined
+    return { shape: combined, parts: [combined] }
   } catch (error) {
     for (const part of owned) deleteShape(part)
     throw error
@@ -1466,8 +1612,10 @@ function createScrewCutterGroupsForLayer(
         ),
         ...screwHeadCutters(x, y, layerHeight, parameters, outward, zOffset),
       ]
-      const cutter = fuseCutterParts(parts)
-      groups.push({ shape: cutter, parts: [cutter] })
+      // The shaft and head cutters overlap. They must be fused per screw
+      // before any optional board-level compound is made; a native cut of a
+      // compound containing overlapping solids can leave the hole material.
+      groups.push(fuseCutterParts(parts))
     }
     return groups
   } catch (error) {
@@ -1693,8 +1841,7 @@ function createBoardScrewCutterGroups(
         ...screwHeadCutters(x, y, board.height, parameters, 'top'),
         ...screwHeadCutters(x, y, board.height, parameters, 'bottom'),
       ]
-      const cutter = fuseCutterParts(parts)
-      groups.push({ shape: cutter, parts: [cutter] })
+      groups.push(fuseCutterParts(parts))
     }
     return groups
   } catch (error) {
@@ -1751,21 +1898,55 @@ async function applyBoardFeatures(
   parameters: OpenGridParameters,
   context: OpenGridBuildContext,
 ): Promise<Shape3D> {
-  const groups: CutterGroup[] = []
+  return applyBoardFeatureCuts(source, parameters, context, true)
+}
+
+async function applyBoardFeatureCuts(
+  source: Shape3D,
+  parameters: OpenGridParameters,
+  context: OpenGridBuildContext,
+  includeChamfers: boolean,
+): Promise<Shape3D> {
+  const chamferGroups: CutterGroup[] = []
+  const connectorGroups: CutterGroup[] = []
+  const screwGroups: CutterGroup[] = []
   try {
-    groups.push(
-      ...combineCutterGroups(createBoardConnectorCutterGroups(parameters)),
-    )
-    groups.push(...createChamferCutters(parameters))
-    // Screw holes are deliberately the final board-level operation. This
-    // lets a half-cell extension participate in the same cutter as its
-    // complete-cell region instead of leaving a partial hole at the seam.
-    groups.push(
-      ...combineCutterGroups(createBoardScrewCutterGroups(parameters)),
-    )
-    return await applyCutterGroups(source, groups, context)
+    if (includeChamfers) chamferGroups.push(...createChamferCutters(parameters))
+    connectorGroups.push(...createBoardConnectorCutterGroups(parameters))
+    screwGroups.push(...createBoardScrewCutterGroups(parameters))
+    const useCompoundScrewParts = context.useCompoundScrewParts !== false
+    const useCompoundChamfers =
+      context.useCompoundChamferCutters !== false &&
+      parameters.chamfers !== 'everywhere'
+    let combinedGroups: CutterGroup[]
+    if (useCompoundChamfers && useCompoundScrewParts) {
+      combinedGroups = combineCutterGroups([
+        ...chamferGroups,
+        ...connectorGroups,
+        ...screwGroups,
+      ])
+    } else if (useCompoundChamfers) {
+      combinedGroups = [
+        ...combineCutterGroups([...chamferGroups, ...connectorGroups]),
+        ...screwGroups,
+      ]
+    } else {
+      let combinedScrewGroups: CutterGroup[]
+      if (useCompoundScrewParts) {
+        combinedScrewGroups = combineCutterGroups(screwGroups)
+      } else {
+        combinedScrewGroups = screwGroups
+      }
+      combinedGroups = [
+        ...chamferGroups,
+        ...combineCutterGroups(connectorGroups),
+        ...combinedScrewGroups,
+      ]
+    }
+    return await applyCutterGroups(source, combinedGroups, context)
   } catch (error) {
-    for (const group of groups) disposeCutter(group)
+    for (const group of [...chamferGroups, ...connectorGroups, ...screwGroups])
+      disposeCutter(group)
     throw error
   }
 }
@@ -1775,7 +1956,13 @@ async function applyBoardScrewCuts(
   parameters: OpenGridParameters,
   context: OpenGridBuildContext,
 ): Promise<Shape3D> {
-  const groups = combineCutterGroups(createBoardScrewCutterGroups(parameters))
+  const screwGroups = createBoardScrewCutterGroups(parameters)
+  let groups: CutterGroup[]
+  if (context.useCompoundScrewParts === false) {
+    groups = screwGroups
+  } else {
+    groups = combineCutterGroups(screwGroups)
+  }
   return applyCutterGroups(source, groups, context)
 }
 
@@ -1827,8 +2014,7 @@ async function applyBatchedCuts(
   parameters: OpenGridParameters,
   context: OpenGridBuildContext,
 ): Promise<Shape3D> {
-  const groups: CutterGroup[] = []
-  groups.push(...createChamferCutters(parameters))
+  const groups = chamferCutterGroups(parameters, context)
   return applyCutterGroups(source, groups, context)
 }
 
@@ -1838,13 +2024,11 @@ async function applyHeavyBridgeFeatures(
   zOffset: number,
   context: OpenGridBuildContext,
 ): Promise<Shape3D> {
-  const groups: CutterGroup[] = []
-  groups.push(
-    ...createChamferCutters(
-      parameters,
-      zOffset,
-      OPENGRID_CONFIGURATION.heavyGap,
-    ),
+  const groups = chamferCutterGroups(
+    parameters,
+    context,
+    zOffset,
+    OPENGRID_CONFIGURATION.heavyGap,
   )
   return applyCutterGroups(source, groups, context)
 }
@@ -1869,11 +2053,12 @@ export async function buildOpenGridBRepWithStrategy(
     if (strategy === 'prototype-template') {
       base = await applyBoardFeatures(base, parameters, context)
     } else {
-      if (parameters.variant !== 'Heavy') {
-        base = await applyBatchedCuts(base, parameters, context)
-      }
-      base = await applyBoardConnectorCuts(base, parameters, context)
-      base = await applyBoardScrewCuts(base, parameters, context)
+      base = await applyBoardFeatureCuts(
+        base,
+        parameters,
+        context,
+        parameters.variant !== 'Heavy',
+      )
     }
     assertGenerationCurrent(context)
     return base

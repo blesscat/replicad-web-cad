@@ -4,6 +4,7 @@ export const CAD_VIEWPORT_CONFIG = {
   modelColor: '#4e7cff',
   modelEmissiveIntensity: 0.2,
   edgeThresholdAngle: 20,
+  largePreviewTriangleThreshold: 5_000,
   edgeOpacity: 0.72,
 } as const
 

@@ -1,5 +1,6 @@
 import type { Shape3D } from 'replicad'
 import type { MeshData } from '../mesh'
+import type { PreviewTiming } from '../../cad-contract/preview-timing'
 import type { ModelId, ModelParameterValues } from '../../cad-contract/units'
 
 export type CandidateRecord = {
@@ -12,6 +13,7 @@ export type CandidateRecord = {
   parameters: ModelParameterValues
   shape: Shape3D
   mesh: MeshData
+  previewTiming: PreviewTiming
   createdAt: number
 }
 
@@ -24,6 +26,7 @@ export type RevisionRecord = {
   parameters: ModelParameterValues
   shape: Shape3D
   mesh: MeshData
+  previewTiming: PreviewTiming
   exportPins: number
 }
 
@@ -119,6 +122,7 @@ export class RevisionLifetime {
       parameters: candidate.parameters,
       shape: candidate.shape,
       mesh: candidate.mesh,
+      previewTiming: candidate.previewTiming,
       exportPins: 0,
     }
     this.revisions.set(revision.modelRevision, revision)

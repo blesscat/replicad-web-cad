@@ -35,6 +35,7 @@ vi.mock('../../src/cad-kernel/components/opengrid-pillar/quality', () => ({
 
 import { CadWorkerRuntime } from '../../src/workers/cad.worker'
 import { assertPillarShapeQuality } from '../../src/cad-kernel/components/opengrid-pillar/quality'
+import { serializeMesh } from '../../src/cad-kernel/mesh'
 
 const base = {
   version: 1 as const,
@@ -204,12 +205,13 @@ describe('CAD Worker candidate terminal lifecycle', () => {
       workerEpoch: 'epoch-pillar',
     })
 
-    expect(events).toContainEqual(
-      expect.objectContaining({
-        kind: 'model.ready',
-        modelId: 'opengrid-pillar',
-        parameters: { length: 12, baseConnection: true },
-      }),
-    )
+    const ready = events.find((event) => event.kind === 'model.ready')
+    expect(ready).toMatchObject({
+      kind: 'model.ready',
+      modelId: 'opengrid-pillar',
+      parameters: { length: 12, baseConnection: true },
+    })
+    expect(ready).not.toHaveProperty('mesh')
+    expect(serializeMesh).toHaveBeenCalledTimes(1)
   })
 })

@@ -103,6 +103,12 @@ export type OpenGridBoardConfiguration = {
 export type OpenGridPoint2D = [number, number]
 export type OpenGridDirection3D = [number, number, number]
 
+export type OpenGridPreviewConfiguration = {
+  tolerance: number
+  angularTolerance: number
+  faceMeshingThreshold: number
+}
+
 export type OpenGridConnectorLocation = {
   side: OpenGridConnectorSide
   center: OpenGridPoint2D
@@ -191,7 +197,7 @@ export const OPENGRID_CONFIGURATION = {
     cutoutHeight: 2.4,
     liteCutoutDistanceFromTop: 1,
   },
-  balancedFuseBatchSize: 4,
+  balancedFuseBatchSize: 2,
   variants: {
     Full: { thickness: 6.8 },
     Lite: { thickness: 4 },
@@ -223,6 +229,12 @@ export const OPENGRID_CONFIGURATION = {
     customScrewPositions: [] as OpenGridScrewPosition[],
   },
 } as const
+
+export const OPENGRID_PREVIEW_CONFIGURATION: OpenGridPreviewConfiguration = {
+  tolerance: 0.01,
+  angularTolerance: 0.1,
+  faceMeshingThreshold: 512,
+}
 
 export const OPENGRID_CONNECTOR_SIDES: readonly OpenGridConnectorSide[] = [
   'top',

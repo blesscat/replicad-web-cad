@@ -1,5 +1,6 @@
 import {
   OPENGRID_CONFIGURATION,
+  OPENGRID_PREVIEW_CONFIGURATION,
   boundsForOpenGrid,
   openGridFileName,
   openGridStlFileName,
@@ -128,6 +129,7 @@ import type {
 
 export {
   OPENGRID_CONFIGURATION,
+  OPENGRID_PREVIEW_CONFIGURATION,
   OPENGRID_CONNECTOR_SIDES,
   boundsForOpenGrid,
   cellCenterForOpenGrid,

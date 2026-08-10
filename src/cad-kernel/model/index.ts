@@ -43,6 +43,18 @@ export type KernelBuildContext = {
   getBoxNormalReference?: () => Promise<Shape3D>
   getHexagonalColumnReference?: () => Promise<Shape3D>
   getOpenGridPrototype?: (variant: OpenGridVariant) => Promise<Shape3D>
+  getOpenGridCanonicalTile?: (
+    variant: OpenGridVariant,
+    thickness: number,
+  ) => Promise<Shape3D>
+  getOpenGridHalfCellPrototype?: (
+    key: string,
+    factory: () => Promise<Shape3D> | Shape3D,
+  ) => Promise<Shape3D>
+  useCompoundChamferCutters?: boolean
+  useCompoundScrewParts?: boolean
+  fuseHalfCellExtensionsIntoAssembly?: boolean
+  balancedFuseBatchSize?: number
   getOpenGridSnapReference?: (
     variant: OpenGridSnapVariant,
     profile: OpenGridSnapProfile,
@@ -187,6 +199,13 @@ async function buildOpenGridModel(
     yieldToEventLoop: context.yieldToEventLoop,
     isGenerationCurrent: context.isGenerationCurrent,
     getOpenGridPrototype: context.getOpenGridPrototype,
+    getOpenGridCanonicalTile: context.getOpenGridCanonicalTile,
+    getOpenGridHalfCellPrototype: context.getOpenGridHalfCellPrototype,
+    useCompoundChamferCutters: context.useCompoundChamferCutters,
+    useCompoundScrewParts: context.useCompoundScrewParts,
+    fuseHalfCellExtensionsIntoAssembly:
+      context.fuseHalfCellExtensionsIntoAssembly,
+    balancedFuseBatchSize: context.balancedFuseBatchSize,
     reportProgress: context.reportProgress,
     reportPhase: (phase, durationMs) => {
       if (phase === 'assembly-fuse' || phase === 'prototype-build') {

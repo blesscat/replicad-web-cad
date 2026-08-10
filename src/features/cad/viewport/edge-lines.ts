@@ -1,6 +1,10 @@
 import * as THREE from 'three'
 import { CAD_VIEWPORT_CONFIG } from './config'
 
+export function shouldDeferViewportEdges(triangleCount: number): boolean {
+  return triangleCount >= CAD_VIEWPORT_CONFIG.largePreviewTriangleThreshold
+}
+
 export function createViewportEdgeGeometry(
   geometry: THREE.BufferGeometry,
 ): THREE.EdgesGeometry {
