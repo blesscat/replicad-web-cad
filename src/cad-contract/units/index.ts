@@ -229,6 +229,7 @@ export {
   snapNominalAxisSize,
 } from './half-cell'
 export { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
+export { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from './opengrid-locating-assembly'
 export type { HalfCellDirection, HalfCellX, HalfCellY } from './half-cell'
 export type {
   OpenGridSnapBounds,

@@ -17,6 +17,7 @@ import {
   openGridStackableBoxSocketCentersFor,
   openGridStackableBoxUpperInnerRimZFor,
   OPENGRID_GRID_CONFIGURATION,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   validateModelParameters,
   validateOpenGridStackableBoxParameters,
@@ -133,10 +134,10 @@ describe('OpenGrid stackable-box contract', () => {
     ).toBe(1.6)
     expect(
       OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleBottomOpeningDiameter,
-    ).toBe(5.05)
+    ).toBe(OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.assemblyOpeningDiameter)
     expect(
       OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleTopOpeningDiameter,
-    ).toBe(7.05)
+    ).toBe(OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter)
     expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleStepHeight).toBe(3)
     expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.basePlateThickness).toBe(3)
     expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.basePlateCutoffHeight).toBe(2)
@@ -424,6 +425,19 @@ describe('OpenGrid stackable-box contract', () => {
     expect(validation.valid).toBe(false)
     if (!validation.valid)
       expect(validation.issues[0]?.field).toBe('thinShellMode')
+  })
+
+  it('keeps nominal de-duplication separate from the flange envelope', () => {
+    const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+    expect(configuration.socketDeduplicationDistance).toBe(
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter,
+    )
+    expect(
+      configuration.baseFlangeDiameter + configuration.baseHoleClearance,
+    ).toBeGreaterThan(configuration.socketDeduplicationDistance)
+    expect(
+      openGridStackableBoxSocketCentersFor(parameters({ x: 0.5, y: 1 })),
+    ).toHaveLength(2)
   })
 
   it('builds full-hole coordinates from the nominal footprint before clearance', () => {

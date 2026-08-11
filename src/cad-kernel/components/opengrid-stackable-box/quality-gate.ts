@@ -1,6 +1,8 @@
 import { measureVolume, type Shape3D } from 'replicad'
 import {
   boundsForOpenGridStackableBox,
+  openGridStackableBoxActiveFloorTopZFor,
+  openGridStackableBoxOrdinaryBottomHoleCentersFor,
   nominalOpenGridStackableBoxFootprintFor,
   openGridStackableBoxSocketCentersFor,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
@@ -8,6 +10,11 @@ import {
 } from '../../../cad-contract/units'
 import { bottomGridSeamsFor } from './geometry'
 import { inspectOpenGridStackableBoxInterface } from './quality-interface'
+import {
+  inspectCaptiveSocketInterface,
+  measureMountingHoleProfiles,
+  countOrdinaryBottomHoleFaces,
+} from './quality-holes'
 import { countSolids, isBRepValid } from './quality-metrics'
 import { assertBottomGridSpacing } from './quality-seams'
 import { assertOpenGridStackableBoxOpenings } from './quality-openings'
@@ -15,7 +22,10 @@ import {
   inspectOpenGridStackableBoxThinShell,
   type OpenGridStackableBoxThinShellQualityReport,
 } from './quality-thin'
-import type { OpenGridStackableBoxInterfaceQualityReport } from './quality-types'
+import type {
+  OpenGridStackableBoxCaptiveSocketRecord,
+  OpenGridStackableBoxInterfaceQualityReport,
+} from './quality-types'
 import { closeEnough, readBounds } from './shared'
 
 function assertExpectedBounds(
@@ -92,7 +102,8 @@ function assertInterfaceConstants(): void {
     configuration.floorThickness
   if (
     configuration.baseFlangeThickness > configuration.floorThickness ||
-    configuration.baseShaftExposure <= 0 ||
+    configuration.snapReferenceShaftExposure <= 0 ||
+    configuration.baseFixtureShaftExposure <= 0 ||
     configuration.floorThickness <= 0 ||
     configuration.wallThickness <= 0 ||
     configuration.bottomAssemblyHeight <= configuration.floorThickness ||
@@ -295,10 +306,11 @@ function assertMountingHoleGeometry(
 }
 
 function assertCaptiveSockets(
-  quality: OpenGridStackableBoxInterfaceQualityReport,
+  records: ReadonlyArray<OpenGridStackableBoxCaptiveSocketRecord>,
+  floorThickness: number = OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight,
 ): void {
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
-  for (const record of quality.captiveSocketRecords) {
+  for (const record of records) {
     if (record.bottomOpeningBoundaryVolume <= 0.001) {
       throw new Error('OPENGRID_STACKABLE_BOX_BOTTOM_OPENING_INVALID')
     }
@@ -310,8 +322,11 @@ function assertCaptiveSockets(
     }
     const [shaftMin, shaftMax] = record.shaftBounds
     if (
-      !closeEnough(shaftMin[2], -configuration.baseShaftExposure) ||
-      !closeEnough(shaftMax[2], configuration.bottomAssemblyHeight)
+      !closeEnough(shaftMin[2], -configuration.baseFixtureShaftExposure) ||
+      !closeEnough(
+        shaftMax[2],
+        floorThickness + configuration.baseFlangeThickness,
+      )
     ) {
       throw new Error('OPENGRID_STACKABLE_BOX_SHAFT_EXPOSURE_INVALID')
     }
@@ -370,26 +385,69 @@ function assertThinShellQuality(
   ) {
     throw new Error('OPENGRID_STACKABLE_BOX_MOUNTING_HOLE_PROFILE_INVALID')
   }
-  for (const record of quality.captiveSocketRecords) {
-    if (record.bottomOpeningBoundaryVolume <= 0.001) {
-      throw new Error('OPENGRID_STACKABLE_BOX_BOTTOM_OPENING_INVALID')
-    }
-    if (record.seatedIntersectionVolume > 0.01) {
-      throw new Error('OPENGRID_STACKABLE_BOX_FLANGE_NOT_FLUSH')
-    }
-    if (record.loweredIntersectionVolume <= 0.001) {
-      throw new Error('OPENGRID_STACKABLE_BOX_FLANGE_NOT_RETAINED')
-    }
-    const [shaftMin, shaftMax] = record.shaftBounds
-    if (
-      !closeEnough(shaftMin[2], -configuration.baseShaftExposure) ||
-      !closeEnough(shaftMax[2], configuration.thinShellFloorThickness)
-    ) {
-      throw new Error('OPENGRID_STACKABLE_BOX_SHAFT_EXPOSURE_INVALID')
-    }
-  }
+  assertCaptiveSockets(
+    quality.captiveSocketRecords,
+    configuration.thinShellFloorThickness,
+  )
   if (
     quality.ordinaryBottomHoleCount !== quality.expectedOrdinaryBottomHoleCount
+  ) {
+    throw new Error('OPENGRID_STACKABLE_BOX_BOTTOM_GRID_HOLES_INVALID')
+  }
+}
+
+function assertBasePlateMountingInterface(
+  shape: Shape3D,
+  parameters: OpenGridStackableBoxParameters,
+): void {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const socketCenters = openGridStackableBoxSocketCentersFor(parameters)
+  const profiles = measureMountingHoleProfiles(shape, socketCenters, {
+    lower: [-0.03, configuration.basePlateHoleBottomDepth],
+    upper: [
+      configuration.basePlateHoleBottomDepth,
+      configuration.basePlateThickness,
+    ],
+  })
+  if (
+    profiles.some(
+      (profile) =>
+        !closeEnough(
+          profile.lowerBoreDiameter,
+          configuration.baseHoleBottomOpeningDiameter,
+          0.03,
+        ) ||
+        !closeEnough(
+          profile.lowerBoreDepth,
+          configuration.basePlateHoleBottomDepth,
+          0.03,
+        ) ||
+        !closeEnough(
+          profile.upperBoreDiameter,
+          configuration.baseHoleTopOpeningDiameter,
+          0.03,
+        ) ||
+        !closeEnough(
+          profile.upperBoreDepth,
+          configuration.basePlateHoleTopDepth,
+          0.03,
+        ),
+    )
+  ) {
+    throw new Error('OPENGRID_STACKABLE_BOX_MOUNTING_HOLE_PROFILE_INVALID')
+  }
+
+  const activeFloorTopZ = openGridStackableBoxActiveFloorTopZFor(parameters)
+  const captiveSocketRecords = socketCenters.map((center) =>
+    inspectCaptiveSocketInterface(shape, center, parameters),
+  )
+  assertCaptiveSockets(captiveSocketRecords, activeFloorTopZ)
+
+  const ordinaryCenters =
+    openGridStackableBoxOrdinaryBottomHoleCentersFor(parameters)
+  if (
+    countOrdinaryBottomHoleFaces(shape, ordinaryCenters, parameters) !==
+    ordinaryCenters.length
   ) {
     throw new Error('OPENGRID_STACKABLE_BOX_BOTTOM_GRID_HOLES_INVALID')
   }
@@ -419,7 +477,17 @@ export function assertOpenGridStackableBoxGeometry(
     return
   }
 
-  if (parameters.basePlateMode) return
+  if (parameters.basePlateMode) {
+    try {
+      assertBasePlateMountingInterface(shape, parameters)
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('OPENGRID_')) {
+        throw error
+      }
+      throw new Error('OPENGRID_STACKABLE_BOX_INTERFACE_GEOMETRY_INVALID')
+    }
+    return
+  }
 
   let quality: OpenGridStackableBoxInterfaceQualityReport
   try {
@@ -437,5 +505,5 @@ export function assertOpenGridStackableBoxGeometry(
   ) {
     throw new Error('OPENGRID_STACKABLE_BOX_BOTTOM_GRID_HOLES_INVALID')
   }
-  assertCaptiveSockets(quality)
+  assertCaptiveSockets(quality.captiveSocketRecords)
 }

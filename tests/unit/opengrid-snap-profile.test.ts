@@ -6,6 +6,7 @@ import {
 } from '../../src/cad-kernel/components/opengrid-snap/profile'
 import {
   halfCellHostPitch,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_GRID_CONFIGURATION,
 } from '../../src/cad-contract/units'
 
@@ -54,7 +55,9 @@ describe('OpenGrid Snap profile registry', () => {
         const definition = openGridSnapProfileFor(profile, variant)
         const distance = 7
 
-        expect(definition.locatingHoleRadius).toBe(2.5)
+        expect(definition.locatingHoleRadius).toBe(
+          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter / 2,
+        )
         expect(definition.locatingHoleCenter).toBe(distance)
         expect(definition.locatingHoleSlotHalfWidth).toBe(1.5)
         expect(definition.locatingHoleSlotInnerHalfSpan).toBe(5)

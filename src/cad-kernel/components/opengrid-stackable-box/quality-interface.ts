@@ -723,12 +723,13 @@ export function inspectOpenGridStackableBoxInterface(
   const mountingHoleStepVolumes = measureMountingHoleStepVolumes(
     shape,
     socketCenters,
+    parameters,
   )
   const mountingHoleProfiles = measureMountingHoleProfiles(shape, socketCenters)
   const ordinaryBottomHoleCenters =
     openGridStackableBoxOrdinaryBottomHoleCentersFor(parameters)
   const captiveSocketRecords = socketCenters.map((center) =>
-    inspectCaptiveSocketInterface(shape, center),
+    inspectCaptiveSocketInterface(shape, center, parameters),
   )
 
   return {
@@ -758,6 +759,7 @@ export function inspectOpenGridStackableBoxInterface(
     ordinaryBottomHoleCount: countOrdinaryBottomHoleFaces(
       shape,
       ordinaryBottomHoleCenters,
+      parameters,
     ),
     expectedOrdinaryBottomHoleCount: ordinaryBottomHoleCenters.length,
   }

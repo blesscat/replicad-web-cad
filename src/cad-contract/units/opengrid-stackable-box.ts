@@ -1,4 +1,5 @@
 import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
+import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from './opengrid-locating-assembly'
 
 export type OpenGridStackableBoxParameterKey =
   | 'x'
@@ -157,11 +158,13 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   bottomGridSeamSupportOpeningWidth: 4,
   basePlateThickness: 3,
   basePlateCutoffHeight: 2,
-  baseHoleDiameter: 5,
+  baseHoleDiameter: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter,
   baseHoleClearance: 0.25,
   baseHoleOffset: 7,
-  baseHoleBottomOpeningDiameter: 5.05,
-  baseHoleTopOpeningDiameter: 7.05,
+  baseHoleBottomOpeningDiameter:
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.assemblyOpeningDiameter,
+  baseHoleTopOpeningDiameter:
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
   baseHoleStepHeight: 3,
   basePlateHoleBottomDepth: 2,
   basePlateHoleTopDepth: 1,
@@ -175,11 +178,17 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   thinShellBottomHoleTopDepth: 1,
   bottomHoleGridPitch: OPENGRID_GRID_CONFIGURATION.halfPitch,
   bottomHoleGridEdgeOffset: 7,
-  bottomGridHoleDiameter: 5.05,
-  baseFlangeDiameter: 5.8,
-  baseFlangeThickness: 0.5,
-  baseShaftExposure: 3,
-  socketDeduplicationDistance: 5,
+  bottomGridHoleDiameter:
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.assemblyOpeningDiameter,
+  baseFlangeDiameter:
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testFlangeDiameter,
+  baseFlangeThickness:
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testFlangeHeight,
+  baseFixtureShaftExposure:
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftExposure,
+  snapReferenceShaftExposure: 3,
+  socketDeduplicationDistance:
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter,
   openingDepthMin: 0,
   openingDepthMax: 500,
   openingBottomLengthMin: 1,

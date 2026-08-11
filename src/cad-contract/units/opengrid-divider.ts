@@ -1,4 +1,5 @@
 import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
+import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from './opengrid-locating-assembly'
 
 export type OpenGridDividerShape = 'straight' | 'L' | 'T' | 'cross'
 export type OpenGridDividerAxis = 'horizontal' | 'vertical' | null
@@ -62,7 +63,7 @@ export const OPENGRID_DIVIDER_CONFIGURATION = {
   transitionChamferAngle: 45,
   transitionFilletRadius: 0.4,
   geometrySafetyMargin: 0.1,
-  pegDiameter: 5,
+  pegDiameter: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter,
   pegLength: 3,
   pegCenterSpacing: OPENGRID_GRID_CONFIGURATION.fullPitch,
   sideFilletRadius: 2.5,

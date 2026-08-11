@@ -3,6 +3,7 @@ import {
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   type OpenGridStackableBoxParameters,
 } from '../../../cad-contract/units'
+import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from '../../../cad-contract/units/opengrid-locating-assembly'
 import type {
   OpenGridStackableBoxCaptiveSocketRecord,
   OpenGridStackableBoxMountingHoleProfile,
@@ -42,12 +43,12 @@ export function measureMountingHoleStepVolumes(
   const stepHeight = mountingHoleStepHeightFor(parameters)
   return centers.map(([centerX, centerY]) => {
     const outer = makeCylinder(
-      configuration.baseHoleTopOpeningDiameter / 2 + 0.05,
+      configuration.baseHoleBottomOpeningDiameter / 2 + 0.05,
       0.04,
       [centerX, centerY, stepHeight - 0.02],
     )
     const inner = makeCylinder(
-      configuration.baseHoleBottomOpeningDiameter / 2 - 0.05,
+      configuration.baseHoleTopOpeningDiameter / 2 - 0.05,
       0.04,
       [centerX, centerY, stepHeight - 0.02],
     )
@@ -172,17 +173,17 @@ function makeFlangedSocketInsert(
   center: [number, number],
   parameters?: OpenGridStackableBoxParameters,
 ): Shape3D {
-  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
   const bottomThickness = activeBottomThicknessFor(parameters)
+  const interfaceConfiguration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
   const shaft = makeCylinder(
-    configuration.baseHoleDiameter / 2,
-    bottomThickness + configuration.baseShaftExposure,
-    [center[0], center[1], -configuration.baseShaftExposure],
+    interfaceConfiguration.testShaftDiameter / 2,
+    interfaceConfiguration.testShaftLengthForFloor(bottomThickness),
+    [center[0], center[1], -interfaceConfiguration.testShaftExposure],
   )
   const flange = makeCylinder(
-    configuration.baseFlangeDiameter / 2,
-    configuration.baseFlangeThickness,
-    [center[0], center[1], bottomThickness - configuration.baseFlangeThickness],
+    interfaceConfiguration.testFlangeDiameter / 2,
+    interfaceConfiguration.testFlangeHeight,
+    [center[0], center[1], bottomThickness],
   )
   const insert = shaft.fuse(flange)
   deleteShape(shaft)
@@ -223,7 +224,6 @@ export function inspectCaptiveSocketInterface(
   center: [number, number],
   parameters?: OpenGridStackableBoxParameters,
 ): OpenGridStackableBoxCaptiveSocketRecord {
-  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
   const bottomThickness = activeBottomThicknessFor(parameters)
   const stepHeight = mountingHoleStepHeightFor(parameters)
   const insert = makeFlangedSocketInsert(center, parameters)
