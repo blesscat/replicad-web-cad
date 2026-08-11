@@ -16,6 +16,8 @@ import {
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
   openGridStackableBoxSocketCentersFor,
   openGridStackableBoxUpperInnerRimZFor,
+  OPENGRID_GRID_CONFIGURATION,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   validateModelParameters,
   validateOpenGridStackableBoxParameters,
@@ -132,10 +134,10 @@ describe('OpenGrid stackable-box contract', () => {
     ).toBe(1.6)
     expect(
       OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleBottomOpeningDiameter,
-    ).toBe(5.05)
+    ).toBe(OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.assemblyOpeningDiameter)
     expect(
       OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleTopOpeningDiameter,
-    ).toBe(7.05)
+    ).toBe(OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter)
     expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleStepHeight).toBe(3)
     expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.basePlateThickness).toBe(3)
     expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.basePlateCutoffHeight).toBe(2)
@@ -410,7 +412,9 @@ describe('OpenGrid stackable-box contract', () => {
     expect(
       openGridStackableBoxSocketCentersFor(parameters({ x: 0.5, y: 0.5 })),
     ).toEqual([[0, 0]])
-    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.gridPitch).toBe(28)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.gridPitch).toBe(
+      OPENGRID_GRID_CONFIGURATION.fullPitch,
+    )
   })
 
   it('rejects selecting thin-shell and base-plate modes together', () => {
@@ -423,11 +427,24 @@ describe('OpenGrid stackable-box contract', () => {
       expect(validation.issues[0]?.field).toBe('thinShellMode')
   })
 
+  it('keeps nominal de-duplication separate from the flange envelope', () => {
+    const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+    expect(configuration.socketDeduplicationDistance).toBe(
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter,
+    )
+    expect(
+      configuration.baseFlangeDiameter + configuration.baseHoleClearance,
+    ).toBeGreaterThan(configuration.socketDeduplicationDistance)
+    expect(
+      openGridStackableBoxSocketCentersFor(parameters({ x: 0.5, y: 1 })),
+    ).toHaveLength(2)
+  })
+
   it('builds full-hole coordinates from the nominal footprint before clearance', () => {
     const pitch = OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomHoleGridPitch
     const full = parameters({ fullBottomHoleGrid: true })
 
-    expect(pitch).toBe(14)
+    expect(pitch).toBe(OPENGRID_GRID_CONFIGURATION.halfPitch)
     expect(nominalOpenGridStackableBoxBottomGridAxisPositionsFor(0.5)).toEqual([
       0,
     ])

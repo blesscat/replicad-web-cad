@@ -9,6 +9,8 @@ import {
   openGridStackableCylinderOpeningBottomLengthMaximumFor,
   openGridStackableCylinderOuterHoleIndexFor,
   openGridStackableCylinderStlFileName,
+  OPENGRID_GRID_CONFIGURATION,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   validateOpenGridStackableCylinderParameters,
@@ -454,7 +456,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
   })
 
   it.each([
-    [39, 0],
+    [39, 4],
     [40, 4],
     [47, 4],
     [48, 4],
@@ -482,8 +484,8 @@ describe('OpenGrid stackable-cylinder contract', () => {
   it.each([
     [39, 0],
     [40, 0],
-    [47, 0],
-    [48, 0],
+    [47, 4],
+    [48, 4],
     [49, 4],
   ])(
     'selects the thin-mode outer layer at diameter %s',
@@ -629,14 +631,16 @@ describe('OpenGrid stackable-cylinder contract', () => {
       defaultFloorThickness: 5,
       thinFloorThickness: 3,
       floorThickness: 3,
-      bottomHoleDiameter: 5.05,
-      innerHoleDiameter: 7.05,
+      bottomHoleDiameter:
+        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.assemblyOpeningDiameter,
+      innerHoleDiameter:
+        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
       defaultBottomHoleSectionDepth: 4,
       thinBottomHoleSectionDepth: 2,
       bottomHoleSectionDepth: 2,
       innerHoleSectionDepth: 1,
       innerFloorFilletRadius: 0.6,
-      holeGridPitch: 14,
+      holeGridPitch: OPENGRID_GRID_CONFIGURATION.halfPitch,
       outerEdgeClearance: 2,
       flatFloorClearance: 2,
       bottomProtrusionInset: 2,

@@ -194,7 +194,7 @@ export function assertOpenGridSnapHoldCompatibility(
   }
   if (
     report.minimumAxialSpan <
-    configuration.baseShaftExposure - configuration.baseHoleClearance
+    configuration.snapReferenceShaftExposure - configuration.baseHoleClearance
   ) {
     throw new Error('OPENGRID_SNAP_HOLD_INSERTION_ENVELOPE_MISMATCH')
   }

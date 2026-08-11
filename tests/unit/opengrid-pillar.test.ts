@@ -4,6 +4,7 @@ import {
   pillarFileName,
   pillarStlFileName,
   PILLAR_CONFIGURATION,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   validatePillarParameters,
 } from '../../src/cad-contract/units'
 
@@ -14,7 +15,7 @@ describe('pillar contract', () => {
       minLength: 3,
       maxLength: 500,
       lengthSliderMax: 200,
-      bodyDiameter: 5,
+      bodyDiameter: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter,
       baseDiameter: 7,
       baseHeight: 0.8,
       lowerChamfer: 1,

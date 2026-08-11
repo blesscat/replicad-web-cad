@@ -11,6 +11,7 @@ import {
   boundsForOpenGridStackableCylinder,
   openGridStackableCylinderDerivedGeometryFor,
   openGridStackableCylinderHoleCentersFor,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_OPENING_DIRECTIONS,
   validateOpenGridStackableCylinderParameters,
@@ -161,6 +162,46 @@ function makeAnnularRing(
   } finally {
     deleteShape(outer)
     deleteShape(inner)
+  }
+}
+
+function compatibilityFixturePasses(
+  shape: Shape3D,
+  floorThickness: number,
+): boolean {
+  const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
+  const shaft = makeCylinder(
+    configuration.testShaftDiameter / 2,
+    configuration.testShaftLengthForFloor(floorThickness),
+    [0, 0, -configuration.testShaftExposure],
+  )
+  const flange = makeCylinder(
+    configuration.testFlangeDiameter / 2,
+    configuration.testFlangeHeight,
+    [0, 0, floorThickness],
+  )
+  const fixture = shaft.fuse(flange)
+  deleteShape(shaft)
+  deleteShape(flange)
+
+  let seatedIntersection: Shape3D | null = null
+  let loweredFixture: Shape3D | null = null
+  let loweredIntersection: Shape3D | null = null
+  try {
+    seatedIntersection = shape.intersect(fixture)
+    loweredFixture = fixture.clone().translateZ(-0.2)
+    loweredIntersection = shape.intersect(loweredFixture)
+    return (
+      measureVolume(seatedIntersection) <= 0.01 &&
+      measureVolume(loweredIntersection) > 0.01
+    )
+  } catch {
+    return false
+  } finally {
+    deleteShape(seatedIntersection)
+    deleteShape(loweredIntersection)
+    deleteShape(loweredFixture)
+    deleteShape(fixture)
   }
 }
 
@@ -1474,6 +1515,12 @@ function assertQuality(
     ) {
       failures.push('stepped-hole-profile')
     }
+  }
+  if (
+    parameters.bottomHolesEnabled &&
+    !compatibilityFixturePasses(shape, derived.floorThickness)
+  ) {
+    failures.push('compatibility-fixture')
   }
   const largestHoleRadius =
     Math.max(

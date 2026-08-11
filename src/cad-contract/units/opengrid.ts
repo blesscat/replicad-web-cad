@@ -8,6 +8,7 @@ import {
   type HalfCellX,
   type HalfCellY,
 } from './half-cell'
+import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
 
 export type OpenGridVariant = 'Full' | 'Lite' | 'Heavy'
 export type OpenGridChamferMode = 'none' | 'corners' | 'everywhere'
@@ -178,10 +179,14 @@ const DEFAULT_CONNECTOR_SIDES: OpenGridSideFlags = {
   left: true,
 }
 
+const OPENGRID_WORKSPACE_MAX_DIMENSION = 500
+
 export const OPENGRID_CONFIGURATION = {
-  gridPitch: 28,
-  workspaceMaxDimension: 500,
-  maxGridCount: Math.floor(500 / 28),
+  gridPitch: OPENGRID_GRID_CONFIGURATION.fullPitch,
+  workspaceMaxDimension: OPENGRID_WORKSPACE_MAX_DIMENSION,
+  maxGridCount: Math.floor(
+    OPENGRID_WORKSPACE_MAX_DIMENSION / OPENGRID_GRID_CONFIGURATION.fullPitch,
+  ),
   tileInnerSize: 25,
   outsideExtrusion: 0.8,
   insideGridTopChamfer: 0.4,

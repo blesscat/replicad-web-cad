@@ -1,3 +1,6 @@
+import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
+import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from './opengrid-locating-assembly'
+
 export type OpenGridDividerShape = 'straight' | 'L' | 'T' | 'cross'
 export type OpenGridDividerAxis = 'horizontal' | 'vertical' | null
 
@@ -42,23 +45,31 @@ const DIVIDER_PARAMETER_KEYS: readonly OpenGridDividerParameterKey[] = [
   'wallThickness',
 ]
 
+const DIVIDER_GRID_STEP = 0.5
+const DIVIDER_MAX_DIMENSION = 500
+const DIVIDER_MAX_ARM_COUNT =
+  Math.floor(
+    DIVIDER_MAX_DIMENSION /
+      (OPENGRID_GRID_CONFIGURATION.fullPitch * DIVIDER_GRID_STEP),
+  ) * DIVIDER_GRID_STEP
+
 export const OPENGRID_DIVIDER_CONFIGURATION = {
-  gridPitch: 14,
-  halfGridPitch: 7,
-  gridStep: 0.5,
+  gridPitch: OPENGRID_GRID_CONFIGURATION.fullPitch,
+  halfGridPitch: OPENGRID_GRID_CONFIGURATION.halfPitch,
+  gridStep: DIVIDER_GRID_STEP,
   wallWidth: 5,
   minWallThickness: 1,
   maxWallThickness: 5,
   transitionChamferAngle: 45,
   transitionFilletRadius: 0.4,
   geometrySafetyMargin: 0.1,
-  pegDiameter: 5,
+  pegDiameter: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter,
   pegLength: 3,
-  pegCenterSpacing: 28,
+  pegCenterSpacing: OPENGRID_GRID_CONFIGURATION.fullPitch,
   sideFilletRadius: 2.5,
   topFilletRadius: 1,
-  maxDimension: 500,
-  maxArmCount: 35.5,
+  maxDimension: DIVIDER_MAX_DIMENSION,
+  maxArmCount: DIVIDER_MAX_ARM_COUNT,
   minHeight: 2,
   maxHeight: 500,
   heightSliderMax: 200,

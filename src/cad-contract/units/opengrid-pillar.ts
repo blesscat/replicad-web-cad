@@ -1,3 +1,5 @@
+import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from './opengrid-locating-assembly'
+
 export type PillarParameterKey = 'length' | 'baseConnection'
 
 export type PillarParameters = {
@@ -24,7 +26,7 @@ export const PILLAR_CONFIGURATION = {
   minLength: 3,
   maxLength: 500,
   lengthSliderMax: 200,
-  bodyDiameter: 5,
+  bodyDiameter: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter,
   baseDiameter: 7,
   baseHeight: 0.8,
   lowerChamfer: 1,

@@ -3,6 +3,7 @@ import type {
   OpenGridSnapProfile,
   OpenGridSnapVariant,
 } from '../../../cad-contract/units'
+import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from '../../../cad-contract/units/opengrid-locating-assembly'
 
 export type OpenGridSnapProfileDefinition = {
   profile: OpenGridSnapProfile
@@ -10,7 +11,6 @@ export type OpenGridSnapProfileDefinition = {
   assetUrl: URL
   expectedBounds: ModelBounds
   expectedSolidCount: number
-  hostPitch: readonly [number, number]
   canonicalOrientation: 'source'
   assemblyKind: 'body-side-holder-snap' | 'fused-directional'
   intrinsicFeatures: readonly string[]
@@ -112,14 +112,14 @@ function makeDefinition(
     assetUrl,
     expectedBounds,
     expectedSolidCount,
-    hostPitch: [14, 14],
     canonicalOrientation: 'source',
     assemblyKind,
     intrinsicFeatures,
     optionalFeatures: ['fourCornerLocatingHoles', 'centerRemoverHole'],
     sideHolderLayerMinZ,
     snapLayerMinZ,
-    locatingHoleRadius: 2.5,
+    locatingHoleRadius:
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter / 2,
     locatingHoleCenter,
     locatingHoleSlotHalfWidth: 1.5,
     locatingHoleSlotInnerHalfSpan: 5,

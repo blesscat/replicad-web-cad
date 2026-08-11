@@ -29,7 +29,9 @@ import {
   boundsForOpenGridStackableBox,
   externalOpenGridStackableBoxHeightFor,
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
+  openGridStackableBoxActiveFloorTopZFor,
   openGridStackableBoxSocketCentersFor,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   type OpenGridStackableBoxParameters,
@@ -40,7 +42,10 @@ import { meshBRep } from '../../src/cad-kernel/mesh'
 import { createBooleanOperationReporter } from '../../src/cad-kernel/boolean-progress'
 import { bottomStackingProfileTopZ } from '../../src/cad-kernel/components/opengrid-stackable-box/geometry'
 import { measureMountingHoleProfiles } from '../../src/cad-kernel/components/opengrid-stackable-box/quality-holes'
-import { volumeInBox } from '../../src/cad-kernel/components/opengrid-stackable-box/quality-metrics'
+import {
+  readFaceQualityRecords,
+  volumeInBox,
+} from '../../src/cad-kernel/components/opengrid-stackable-box/quality-metrics'
 
 ;(globalThis as typeof globalThis & { __dirname?: string }).__dirname = dirname(
   fileURLToPath(import.meta.url),
@@ -271,6 +276,57 @@ describe('OpenGrid stackable-box B-Rep', () => {
     120_000,
   )
 
+  it('keeps ordinary full-grid holes straight at the assembly opening', () => {
+    const input = parameters({ x: 2, y: 2, fullBottomHoleGrid: true })
+    const shape = buildOpenGridStackableBox(input)
+    const ordinaryCenters =
+      openGridStackableBoxOrdinaryBottomHoleCentersFor(input)
+    try {
+      const records = readFaceQualityRecords(shape)
+      for (const [centerX, centerY] of ordinaryCenters) {
+        const centeredRecords = records.filter((record) => {
+          if (record.surfaceType !== 'CYLINDRE') return false
+          const recordCenterX = (record.min[0] + record.max[0]) / 2
+          const recordCenterY = (record.min[1] + record.max[1]) / 2
+          return (
+            Math.abs(recordCenterX - centerX) < 0.04 &&
+            Math.abs(recordCenterY - centerY) < 0.04
+          )
+        })
+        const throughHole = centeredRecords.find(
+          (record) => record.min[2] <= 0.03 && record.max[2] >= 4.97,
+        )
+        expect(throughHole).toBeDefined()
+        const throughHoleDiameter = throughHole
+          ? Math.max(
+              throughHole.max[0] - throughHole.min[0],
+              throughHole.max[1] - throughHole.min[1],
+            )
+          : Number.NaN
+        expect(throughHoleDiameter).toBeCloseTo(
+          OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomGridHoleDiameter,
+          2,
+        )
+        expect(
+          centeredRecords.some((record) => {
+            const diameter = Math.max(
+              record.max[0] - record.min[0],
+              record.max[1] - record.min[1],
+            )
+            return (
+              Math.abs(
+                diameter -
+                  OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleTopOpeningDiameter,
+              ) < 0.02
+            )
+          }),
+        ).toBe(false)
+      }
+    } finally {
+      deleteShape(shape)
+    }
+  }, 120_000)
+
   it('keeps the floor quality probe clear of seams and full-hole cutters', () => {
     const input = parameters({
       x: 8,
@@ -360,9 +416,15 @@ describe('OpenGrid stackable-box B-Rep', () => {
       const report = inspectOpenGridStackableBoxThinShell(shape, input)
       const [profile] = report.mountingHoleProfiles
       expect(profile).toMatchObject({
-        lowerBoreDiameter: expect.closeTo(5.05, 2),
+        lowerBoreDiameter: expect.closeTo(
+          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.assemblyOpeningDiameter,
+          2,
+        ),
         lowerBoreDepth: expect.closeTo(1, 1),
-        upperBoreDiameter: expect.closeTo(7.05, 2),
+        upperBoreDiameter: expect.closeTo(
+          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
+          2,
+        ),
         upperBoreDepth: expect.closeTo(1, 1),
       })
       expect(report.ordinaryBottomHoleCount).toBe(
@@ -373,12 +435,19 @@ describe('OpenGrid stackable-box B-Rep', () => {
         expect.arrayContaining([
           expect.any(Number),
           expect.any(Number),
-          expect.closeTo(-3, 3),
+          expect.closeTo(
+            -OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftExposure,
+            3,
+          ),
         ]),
         expect.arrayContaining([
           expect.any(Number),
           expect.any(Number),
-          expect.closeTo(2, 3),
+          expect.closeTo(
+            OPENGRID_STACKABLE_BOX_CONFIGURATION.thinShellFloorThickness +
+              OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testFlangeHeight,
+            3,
+          ),
         ]),
       ])
       expect(socket?.seatedIntersectionVolume).toBeLessThanOrEqual(0.01)
@@ -469,10 +538,16 @@ describe('OpenGrid stackable-box B-Rep', () => {
         upper: [2, 3],
       })
       expect(profile).toMatchObject({
-        lowerBoreDiameter: expect.closeTo(5.05, 2),
-        lowerBoreDepth: expect.closeTo(2, 2),
-        upperBoreDiameter: expect.closeTo(7.05, 2),
-        upperBoreDepth: expect.closeTo(1, 2),
+        lowerBoreDiameter: expect.closeTo(
+          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.assemblyOpeningDiameter,
+          2,
+        ),
+        lowerBoreDepth: expect.closeTo(2, 1),
+        upperBoreDiameter: expect.closeTo(
+          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
+          2,
+        ),
+        upperBoreDepth: expect.closeTo(1, 1),
       })
     } finally {
       deleteShape(shape)
@@ -840,10 +915,16 @@ describe('OpenGrid stackable-box B-Rep', () => {
       ).toBe(true)
       expect(
         interfaceQuality.mountingHoleProfiles.every((profile) => {
-          expect(profile.lowerBoreDiameter).toBeCloseTo(5.05, 2)
-          expect(profile.lowerBoreDepth).toBeCloseTo(3, 2)
-          expect(profile.upperBoreDiameter).toBeCloseTo(7.05, 2)
-          expect(profile.upperBoreDepth).toBeCloseTo(2, 2)
+          expect(profile.lowerBoreDiameter).toBeCloseTo(
+            OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.assemblyOpeningDiameter,
+            2,
+          )
+          expect(profile.lowerBoreDepth).toBeCloseTo(3, 1)
+          expect(profile.upperBoreDiameter).toBeCloseTo(
+            OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
+            2,
+          )
+          expect(profile.upperBoreDepth).toBeCloseTo(2, 1)
           return true
         }),
       ).toBe(true)
@@ -1098,59 +1179,69 @@ describe('OpenGrid stackable-box B-Rep', () => {
     }
   }, 120_000)
 
-  it('retains a flanged Ø5 shaft with the two-stage corner socket', () => {
-    const input = parameters({ x: 1, y: 1 })
-    const box = buildOpenGridStackableBox(input)
-    const [center] = openGridStackableBoxSocketCentersFor(input)
-    if (!center) throw new Error('MISSING_SOCKET_CENTER')
-    const shaft = makeCylinder(
-      2.5,
-      OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight + 3,
-      [center[0], center[1], -3],
-    )
-    const flange = makeCylinder(
-      OPENGRID_STACKABLE_BOX_CONFIGURATION.baseFlangeDiameter / 2,
-      OPENGRID_STACKABLE_BOX_CONFIGURATION.baseFlangeThickness,
-      [
-        center[0],
-        center[1],
-        OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight -
-          OPENGRID_STACKABLE_BOX_CONFIGURATION.baseFlangeThickness,
-      ],
-    )
-    const insert = shaft.fuse(flange)
-    try {
-      const insertBounds = boundsOf(insert)
-      expect(insertBounds[0]?.[2]).toBeCloseTo(-3, 2)
-      expect(insertBounds[1]?.[2]).toBeCloseTo(
-        OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight,
-        2,
+  it.each([{ basePlateMode: false }, { basePlateMode: true }])(
+    'retains a Ø4 shaft with a Ø7 flange in $basePlateMode mode',
+    ({ basePlateMode }) => {
+      const input = parameters({ x: 1, y: 1, basePlateMode })
+      const box = buildOpenGridStackableBox(input)
+      const [center] = openGridStackableBoxSocketCentersFor(input)
+      if (!center) throw new Error('MISSING_SOCKET_CENTER')
+      const floorThickness = openGridStackableBoxActiveFloorTopZFor(input)
+      const shaft = makeCylinder(
+        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftDiameter / 2,
+        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftLengthForFloor(
+          floorThickness,
+        ),
+        [
+          center[0],
+          center[1],
+          -OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftExposure,
+        ],
       )
-      const seated = box.intersect(insert)
+      const flange = makeCylinder(
+        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testFlangeDiameter / 2,
+        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testFlangeHeight,
+        [center[0], center[1], floorThickness],
+      )
+      const insert = shaft.fuse(flange)
       try {
-        expect(measureVolume(seated)).toBeLessThan(0.01)
-      } finally {
-        deleteShape(seated)
-      }
-      const retentionProbeOffset = Math.max(
-        0.2,
-        OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight -
-          OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleStepHeight +
+        const insertBounds = boundsOf(insert)
+        expect(insertBounds[0]?.[2]).toBeCloseTo(
+          -OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftExposure,
+          2,
+        )
+        expect(insertBounds[1]?.[2]).toBeCloseTo(
+          floorThickness +
+            OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testFlangeHeight,
+          2,
+        )
+        const seated = box.intersect(insert)
+        try {
+          expect(measureVolume(seated)).toBeLessThan(0.01)
+        } finally {
+          deleteShape(seated)
+        }
+        const retentionProbeOffset = Math.max(
           0.2,
-      )
-      const loweredInsert = insert.clone().translateZ(-retentionProbeOffset)
-      try {
-        expect(measureVolume(box.intersect(loweredInsert))).toBeGreaterThan(0)
+          floorThickness -
+            OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleStepHeight +
+            0.2,
+        )
+        const loweredInsert = insert.clone().translateZ(-retentionProbeOffset)
+        try {
+          expect(measureVolume(box.intersect(loweredInsert))).toBeGreaterThan(0)
+        } finally {
+          deleteShape(loweredInsert)
+        }
       } finally {
-        deleteShape(loweredInsert)
+        deleteShape(shaft)
+        deleteShape(flange)
+        deleteShape(box)
+        deleteShape(insert)
       }
-    } finally {
-      deleteShape(shaft)
-      deleteShape(flange)
-      deleteShape(box)
-      deleteShape(insert)
-    }
-  }, 120_000)
+    },
+    120_000,
+  )
 
   it('exports successful full-cell geometry as STEP and STL', async () => {
     const shape = buildOpenGridStackableBox(

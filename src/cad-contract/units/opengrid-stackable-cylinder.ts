@@ -1,3 +1,6 @@
+import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
+import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from './opengrid-locating-assembly'
+
 export type OpenGridStackableCylinderParameterKey =
   | 'diameter'
   | 'height'
@@ -101,14 +104,16 @@ export const OPENGRID_STACKABLE_CYLINDER_CONFIGURATION = {
   defaultFloorThickness: 5,
   thinFloorThickness: 3,
   floorThickness: 3,
-  bottomHoleDiameter: 5.05,
-  innerHoleDiameter: 7.05,
+  bottomHoleDiameter:
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.assemblyOpeningDiameter,
+  innerHoleDiameter:
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
   defaultBottomHoleSectionDepth: 4,
   thinBottomHoleSectionDepth: 2,
   bottomHoleSectionDepth: 2,
   innerHoleSectionDepth: 1,
   innerFloorFilletRadius: 0.6,
-  holeGridPitch: 14,
+  holeGridPitch: OPENGRID_GRID_CONFIGURATION.halfPitch,
   outerEdgeClearance: 2,
   flatFloorClearance: 2,
   stackGrooveDepth: 0.8,
