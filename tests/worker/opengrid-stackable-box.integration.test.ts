@@ -18,6 +18,7 @@ import {
   assertOpenGridSnapHoldCompatibility,
   inspectOpenGridStackableBoxInterface,
   inspectOpenGridStackableBoxOpenings,
+  inspectOpenGridStackableBoxThinShell,
   inspectOpenGridSnapHoldCompatibility,
 } from '../../src/cad-kernel/components/opengrid-stackable-box/builder'
 import {
@@ -32,6 +33,7 @@ import {
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   type OpenGridStackableBoxParameters,
+  validateOpenGridStackableBoxParameters,
 } from '../../src/cad-contract/units'
 import { exportStlBytes, exportStepBytes } from '../../src/cad-kernel/export'
 import { meshBRep } from '../../src/cad-kernel/mesh'
@@ -302,6 +304,151 @@ describe('OpenGrid stackable-box B-Rep', () => {
       expect(measureVolume(shape.intersect(edgeProbe))).toBeGreaterThan(0.01)
     } finally {
       edgeProbe.delete()
+      deleteShape(shape)
+    }
+  }, 120_000)
+
+  it.each([
+    { x: 1, y: 1 },
+    { x: 2, y: 2 },
+    { x: 0.5, y: 0.5 },
+  ])(
+    'builds the non-stackable thin-shell profile at $x×$y',
+    ({ x, y }) => {
+      const input = parameters({
+        x,
+        y,
+        height: 20,
+        thinShellMode: true,
+      })
+      const shape = buildOpenGridStackableBox(input)
+      try {
+        const report = inspectOpenGridStackableBoxThinShell(shape, input)
+        const expected = boundsForOpenGridStackableBox(input)
+        const actual = boundsOf(shape)
+        expect(actual[0]?.[2]).toBeCloseTo(0, 3)
+        expect(actual[1]?.[2]).toBeCloseTo(expected.max[2], 3)
+        expect(report.floorProbeThicknesses[0]).toBeCloseTo(2, 1)
+        expect(
+          report.sideWallProbeThicknesses.every(
+            (thickness) => thickness >= 1.5 && thickness <= 1.7,
+          ),
+        ).toBe(true)
+        expect(report.bottomChamferFaceCount).toBeGreaterThanOrEqual(4)
+        expect(report.topChamferFaceCount).toBeGreaterThanOrEqual(4)
+        expect(report.innerFloorFilletFaceCount).toBeGreaterThanOrEqual(4)
+        expect(report.topRimHorizontalPlanarFaceCount).toBe(0)
+      } finally {
+        deleteShape(shape)
+      }
+    },
+    120_000,
+  )
+
+  it('uses the thin-shell two-stage sockets and ordinary through holes', async () => {
+    const input = parameters({
+      x: 1,
+      y: 1,
+      height: 20,
+      thinShellMode: true,
+      fullBottomHoleGrid: true,
+    })
+    const shape = buildOpenGridStackableBox(input)
+    const [center] = openGridStackableBoxSocketCentersFor(input)
+    if (!center) throw new Error('MISSING_SOCKET_CENTER')
+    try {
+      const report = inspectOpenGridStackableBoxThinShell(shape, input)
+      const [profile] = report.mountingHoleProfiles
+      expect(profile).toMatchObject({
+        lowerBoreDiameter: expect.closeTo(5.05, 2),
+        lowerBoreDepth: expect.closeTo(1, 1),
+        upperBoreDiameter: expect.closeTo(7.05, 2),
+        upperBoreDepth: expect.closeTo(1, 1),
+      })
+      expect(report.ordinaryBottomHoleCount).toBe(
+        openGridStackableBoxOrdinaryBottomHoleCentersFor(input).length,
+      )
+      const [socket] = report.captiveSocketRecords
+      expect(socket?.shaftBounds).toEqual([
+        expect.arrayContaining([
+          expect.any(Number),
+          expect.any(Number),
+          expect.closeTo(-3, 3),
+        ]),
+        expect.arrayContaining([
+          expect.any(Number),
+          expect.any(Number),
+          expect.closeTo(2, 3),
+        ]),
+      ])
+      expect(socket?.seatedIntersectionVolume).toBeLessThanOrEqual(0.01)
+      expect(socket?.loweredIntersectionVolume).toBeGreaterThan(0.001)
+      const [step, stl] = await Promise.all([
+        exportStepBytes(shape),
+        exportStlBytes(shape),
+      ])
+      expect(step.byteLength).toBeGreaterThan(0)
+      expect(stl.byteLength).toBeGreaterThan(84)
+    } finally {
+      deleteShape(shape)
+    }
+  }, 120_000)
+
+  it('keeps all four box-native opening modes on the thin-shell datum', () => {
+    const input = parameters({
+      x: 2,
+      y: 2,
+      height: 20,
+      thinShellMode: true,
+      openingPlusXDepth: 4,
+      openingPlusXBottomLength: 8,
+      openingPlusXAngle: 45,
+      openingMinusXDepth: 8,
+      openingMinusXBottomLength: 8,
+      openingMinusXAngle: 90,
+      openingPlusYDepth: 4,
+      openingPlusYBottomLength: 8,
+      openingPlusYAngle: 45,
+      openingMinusYDepth: 8,
+      openingMinusYBottomLength: 8,
+      openingMinusYAngle: 90,
+    })
+    const validation = validateOpenGridStackableBoxParameters(input)
+    expect(validation.valid).toBe(true)
+    const shape = buildOpenGridStackableBox(input)
+    try {
+      const quality = inspectOpenGridStackableBoxOpenings(shape, input)
+      expect(quality).toHaveLength(4)
+      expect(quality.every((record) => record.cutProbeVolume <= 0.01)).toBe(
+        true,
+      )
+      expect(quality.every((record) => record.planarSillFaceCount >= 1)).toBe(
+        true,
+      )
+      expect(quality.every((record) => record.planarSideFaceCount >= 2)).toBe(
+        true,
+      )
+    } finally {
+      deleteShape(shape)
+    }
+  }, 120_000)
+
+  it('keeps ordinary thin-shell grid holes when corner sockets are disabled', () => {
+    const input = parameters({
+      x: 1,
+      y: 1,
+      thinShellMode: true,
+      cornerBottomHoles: false,
+      fullBottomHoleGrid: true,
+    })
+    const shape = buildOpenGridStackableBox(input)
+    try {
+      const report = inspectOpenGridStackableBoxThinShell(shape, input)
+      expect(report.captiveSocketRecords).toHaveLength(0)
+      expect(report.ordinaryBottomHoleCount).toBe(
+        openGridStackableBoxOrdinaryBottomHoleCentersFor(input).length,
+      )
+    } finally {
       deleteShape(shape)
     }
   }, 120_000)

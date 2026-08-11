@@ -37,6 +37,9 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
   const defaultMode = page.getByRole('radio', { name: '預設模式' })
   await expect(defaultMode).toBeVisible()
   await expect(defaultMode).toBeChecked()
+  const thinShell = page.getByRole('radio', { name: '薄殼模式' })
+  await expect(thinShell).toBeVisible()
+  await expect(thinShell).not.toBeChecked()
   const basePlate = page.getByRole('radio', { name: '底版模式' })
   await expect(basePlate).toBeVisible()
   await expect(basePlate).not.toBeChecked()
@@ -46,6 +49,15 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
   await expect(page.getByText(/底版模式：不可堆疊，使用6mm固定柱/)).toHaveCount(
     0,
   )
+  await thinShell.check()
+  await expect(thinShell).toBeChecked()
+  await expect(defaultMode).not.toBeChecked()
+  await expect(basePlate).not.toBeChecked()
+  await expect(
+    page.getByText(/薄殼模式：不可堆疊，2mm 平底、1.6mm 薄壁/),
+  ).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('radio', { name: '薄殼模式' })).toBeChecked()
   await basePlate.check()
   await expect(basePlate).toBeChecked()
   await expect(defaultMode).not.toBeChecked()
@@ -91,5 +103,14 @@ test('OpenGrid stackable-box keeps half-cell dimensions in export metadata', asy
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
     'opengrid-stackable-box-1.5x1.5-h20.step',
+  )
+
+  await page.getByRole('radio', { name: '薄殼模式' }).check()
+  await waitForCadReady(page)
+  const thinDownloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '下載 STEP' }).click()
+  const thinDownload = await thinDownloadPromise
+  expect(thinDownload.suggestedFilename()).toBe(
+    'opengrid-stackable-box-1.5x1.5-h20-thin-shell.step',
   )
 })

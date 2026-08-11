@@ -11,6 +11,10 @@ import { inspectOpenGridStackableBoxInterface } from './quality-interface'
 import { countSolids, isBRepValid } from './quality-metrics'
 import { assertBottomGridSpacing } from './quality-seams'
 import { assertOpenGridStackableBoxOpenings } from './quality-openings'
+import {
+  inspectOpenGridStackableBoxThinShell,
+  type OpenGridStackableBoxThinShellQualityReport,
+} from './quality-thin'
 import type { OpenGridStackableBoxInterfaceQualityReport } from './quality-types'
 import { closeEnough, readBounds } from './shared'
 
@@ -314,6 +318,83 @@ function assertCaptiveSockets(
   }
 }
 
+function assertThinShellQuality(
+  quality: OpenGridStackableBoxThinShellQualityReport,
+): void {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  if (
+    quality.floorProbeVolumes.some((volume) => volume <= 0.01) ||
+    quality.floorProbeThicknesses.some(
+      (thickness) =>
+        !closeEnough(thickness, configuration.thinShellFloorThickness, 0.1),
+    ) ||
+    quality.sideWallProbeThicknesses.some(
+      (thickness) =>
+        !closeEnough(thickness, configuration.thinShellWallThickness, 0.1),
+    ) ||
+    quality.bottomChamferFaceCount < 4 ||
+    quality.topChamferFaceCount < 4 ||
+    quality.topRimHorizontalPlanarFaceCount !== 0 ||
+    quality.innerFloorFilletFaceCount < 4
+  ) {
+    throw new Error('OPENGRID_STACKABLE_BOX_THIN_SHELL_PROFILE_INVALID')
+  }
+
+  if (quality.mountingHoleStepVolumes.some((volume) => volume <= 0.001)) {
+    throw new Error('OPENGRID_STACKABLE_BOX_MOUNTING_HOLE_STEP_INVALID')
+  }
+  if (
+    quality.mountingHoleProfiles.some(
+      (profile) =>
+        !closeEnough(
+          profile.lowerBoreDiameter,
+          configuration.baseHoleBottomOpeningDiameter,
+          0.03,
+        ) ||
+        !closeEnough(
+          profile.lowerBoreDepth,
+          configuration.thinShellBottomHoleStepHeight,
+          0.03,
+        ) ||
+        !closeEnough(
+          profile.upperBoreDiameter,
+          configuration.baseHoleTopOpeningDiameter,
+          0.03,
+        ) ||
+        !closeEnough(
+          profile.upperBoreDepth,
+          configuration.thinShellBottomHoleTopDepth,
+          0.03,
+        ),
+    )
+  ) {
+    throw new Error('OPENGRID_STACKABLE_BOX_MOUNTING_HOLE_PROFILE_INVALID')
+  }
+  for (const record of quality.captiveSocketRecords) {
+    if (record.bottomOpeningBoundaryVolume <= 0.001) {
+      throw new Error('OPENGRID_STACKABLE_BOX_BOTTOM_OPENING_INVALID')
+    }
+    if (record.seatedIntersectionVolume > 0.01) {
+      throw new Error('OPENGRID_STACKABLE_BOX_FLANGE_NOT_FLUSH')
+    }
+    if (record.loweredIntersectionVolume <= 0.001) {
+      throw new Error('OPENGRID_STACKABLE_BOX_FLANGE_NOT_RETAINED')
+    }
+    const [shaftMin, shaftMax] = record.shaftBounds
+    if (
+      !closeEnough(shaftMin[2], -configuration.baseShaftExposure) ||
+      !closeEnough(shaftMax[2], configuration.thinShellFloorThickness)
+    ) {
+      throw new Error('OPENGRID_STACKABLE_BOX_SHAFT_EXPOSURE_INVALID')
+    }
+  }
+  if (
+    quality.ordinaryBottomHoleCount !== quality.expectedOrdinaryBottomHoleCount
+  ) {
+    throw new Error('OPENGRID_STACKABLE_BOX_BOTTOM_GRID_HOLES_INVALID')
+  }
+}
+
 export function assertOpenGridStackableBoxGeometry(
   shape: Shape3D,
   parameters: OpenGridStackableBoxParameters,
@@ -323,6 +404,20 @@ export function assertOpenGridStackableBoxGeometry(
   assertValidShape(shape)
   assertInterfaceConstants()
   assertOpenGridStackableBoxOpenings(shape, parameters)
+
+  if (parameters.thinShellMode) {
+    try {
+      assertThinShellQuality(
+        inspectOpenGridStackableBoxThinShell(shape, parameters),
+      )
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('OPENGRID_')) {
+        throw error
+      }
+      throw new Error('OPENGRID_STACKABLE_BOX_THIN_SHELL_GEOMETRY_INVALID')
+    }
+    return
+  }
 
   if (parameters.basePlateMode) return
 

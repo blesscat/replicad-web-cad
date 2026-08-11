@@ -1,5 +1,8 @@
 import { makeCylinder, measureVolume, type Shape3D } from 'replicad'
-import { OPENGRID_STACKABLE_BOX_CONFIGURATION } from '../../../cad-contract/units'
+import {
+  OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  type OpenGridStackableBoxParameters,
+} from '../../../cad-contract/units'
 import type {
   OpenGridStackableBoxCaptiveSocketRecord,
   OpenGridStackableBoxMountingHoleProfile,
@@ -10,21 +13,43 @@ import {
 } from './quality-metrics'
 import { closeEnough, deleteShape, readBounds } from './shared'
 
+function activeBottomThicknessFor(
+  parameters?: OpenGridStackableBoxParameters,
+): number {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  if (parameters?.thinShellMode) return configuration.thinShellFloorThickness
+  if (parameters?.basePlateMode) return configuration.basePlateThickness
+  return configuration.bottomAssemblyHeight
+}
+
+function mountingHoleStepHeightFor(
+  parameters?: OpenGridStackableBoxParameters,
+): number {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  if (parameters?.thinShellMode) {
+    return configuration.thinShellBottomHoleStepHeight
+  }
+  if (parameters?.basePlateMode) return configuration.basePlateHoleBottomDepth
+  return configuration.baseHoleStepHeight
+}
+
 export function measureMountingHoleStepVolumes(
   shape: Shape3D,
   centers: ReadonlyArray<[number, number]>,
+  parameters?: OpenGridStackableBoxParameters,
 ): number[] {
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const stepHeight = mountingHoleStepHeightFor(parameters)
   return centers.map(([centerX, centerY]) => {
     const outer = makeCylinder(
       configuration.baseHoleTopOpeningDiameter / 2 + 0.05,
       0.04,
-      [centerX, centerY, configuration.baseHoleStepHeight - 0.02],
+      [centerX, centerY, stepHeight - 0.02],
     )
     const inner = makeCylinder(
       configuration.baseHoleBottomOpeningDiameter / 2 - 0.05,
       0.04,
-      [centerX, centerY, configuration.baseHoleStepHeight - 0.02],
+      [centerX, centerY, stepHeight - 0.02],
     )
     const ring = outer.cut(inner)
     deleteShape(outer)
@@ -108,10 +133,12 @@ export function measureMountingHoleProfiles(
 export function countOrdinaryBottomHoleFaces(
   shape: Shape3D,
   centers: ReadonlyArray<[number, number]>,
+  parameters?: OpenGridStackableBoxParameters,
 ): number {
   if (centers.length === 0) return 0
 
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const bottomThickness = activeBottomThicknessFor(parameters)
   const records = readFaceQualityRecords(shape)
   let count = 0
 
@@ -131,7 +158,7 @@ export function countOrdinaryBottomHoleFaces(
         closeEnough(center[1], centerY, 0.04) &&
         closeEnough(diameter, configuration.bottomGridHoleDiameter, 0.04) &&
         record.min[2] >= -0.03 &&
-        record.max[2] >= configuration.bottomAssemblyHeight - 0.03
+        record.max[2] >= bottomThickness - 0.03
       )
     })
 
@@ -141,21 +168,21 @@ export function countOrdinaryBottomHoleFaces(
   return count
 }
 
-function makeFlangedSocketInsert(center: [number, number]): Shape3D {
+function makeFlangedSocketInsert(
+  center: [number, number],
+  parameters?: OpenGridStackableBoxParameters,
+): Shape3D {
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const bottomThickness = activeBottomThicknessFor(parameters)
   const shaft = makeCylinder(
     configuration.baseHoleDiameter / 2,
-    configuration.bottomAssemblyHeight + configuration.baseShaftExposure,
+    bottomThickness + configuration.baseShaftExposure,
     [center[0], center[1], -configuration.baseShaftExposure],
   )
   const flange = makeCylinder(
     configuration.baseFlangeDiameter / 2,
     configuration.baseFlangeThickness,
-    [
-      center[0],
-      center[1],
-      configuration.bottomAssemblyHeight - configuration.baseFlangeThickness,
-    ],
+    [center[0], center[1], bottomThickness - configuration.baseFlangeThickness],
   )
   const insert = shaft.fuse(flange)
   deleteShape(shaft)
@@ -194,9 +221,12 @@ function volumeAtBottomOpeningBoundary(
 export function inspectCaptiveSocketInterface(
   shape: Shape3D,
   center: [number, number],
+  parameters?: OpenGridStackableBoxParameters,
 ): OpenGridStackableBoxCaptiveSocketRecord {
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
-  const insert = makeFlangedSocketInsert(center)
+  const bottomThickness = activeBottomThicknessFor(parameters)
+  const stepHeight = mountingHoleStepHeightFor(parameters)
+  const insert = makeFlangedSocketInsert(center, parameters)
   let seatedIntersection: Shape3D | null = null
   let loweredInsert: Shape3D | null = null
   let loweredIntersection: Shape3D | null = null
@@ -204,9 +234,7 @@ export function inspectCaptiveSocketInterface(
     seatedIntersection = shape.intersect(insert)
     const retentionProbeOffset = Math.max(
       0.2,
-      configuration.bottomAssemblyHeight -
-        configuration.baseHoleStepHeight +
-        0.2,
+      bottomThickness - stepHeight + 0.2,
     )
     loweredInsert = insert.clone().translateZ(-retentionProbeOffset)
     loweredIntersection = shape.intersect(loweredInsert)

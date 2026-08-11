@@ -110,6 +110,10 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
     value,
     'basePlateMode',
   )
+  const hasThinShellMode = Object.prototype.hasOwnProperty.call(
+    value,
+    'thinShellMode',
+  )
   const normalized: Record<string, unknown> = {
     ...value,
     cornerBottomHoles: hasCornerBottomHoles ? value.cornerBottomHoles : true,
@@ -117,6 +121,7 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
       ? value.fullBottomHoleGrid
       : false,
     basePlateMode: hasBasePlateMode ? value.basePlateMode : false,
+    thinShellMode: hasThinShellMode ? value.thinShellMode : false,
   }
   for (const key of OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS) {
     if (Object.prototype.hasOwnProperty.call(value, key)) continue

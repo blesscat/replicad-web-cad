@@ -78,12 +78,20 @@ function sideProbeBounds(
   return [min, max]
 }
 
+function wallThicknessFor(parameters: OpenGridStackableBoxParameters): number {
+  if (parameters.thinShellMode) {
+    return OPENGRID_STACKABLE_BOX_CONFIGURATION.thinShellWallThickness
+  }
+  return OPENGRID_STACKABLE_BOX_CONFIGURATION.wallThickness
+}
+
 function openingFaceEnvelope(
   direction: OpenGridStackableBoxOpeningDirection,
   width: number,
   depth: number,
   opening: OpenGridStackableBoxDerivedOpening,
   upperEdgeZ: number,
+  wallThickness: number,
 ): Bounds {
   const tangentHalf = opening.upperWidth / 2 + 0.15
   return sideProbeBounds(
@@ -94,6 +102,7 @@ function openingFaceEnvelope(
     tangentHalf,
     opening.bottomZ - 0.05,
     upperEdgeZ + 0.12,
+    wallThickness - 0.05,
   )
 }
 
@@ -118,6 +127,7 @@ function openingQualityFor(
   const derived = openGridStackableBoxDerivedGeometryFor(parameters)
   const opening = derived.openings[direction]
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
+  const wallThickness = wallThicknessFor(parameters)
   const probeHalf = Math.max(0.08, Math.min(0.25, opening.bottomLength / 4))
   const cutProbeBounds = sideProbeBounds(
     direction,
@@ -127,6 +137,7 @@ function openingQualityFor(
     probeHalf,
     opening.bottomZ + 0.05,
     derived.activeUpperInnerRimZ - 0.05,
+    wallThickness - 0.05,
   )
   const cutProbeVolume = volumeInBox(shape, ...cutProbeBounds)
   const topEdgeProbeVolume = volumeInBox(
@@ -139,11 +150,14 @@ function openingQualityFor(
       probeHalf,
       derived.activeUpperOuterEdgeZ - 1.5,
       derived.activeUpperOuterEdgeZ - 0.1,
+      wallThickness - 0.05,
     ),
   )
   const upperRailInnerInset =
-    OPENGRID_STACKABLE_BOX_CONFIGURATION.wallThickness +
-    OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailInnerChamfer
+    wallThickness +
+    (parameters.thinShellMode
+      ? OPENGRID_STACKABLE_BOX_CONFIGURATION.thinShellTopChamfer
+      : OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailInnerChamfer)
   const topRailProbeVolume = volumeInBox(
     shape,
     ...sideProbeBounds(
@@ -176,6 +190,7 @@ function openingQualityFor(
             probeHalf,
             sillProbeMin,
             sillProbeMax,
+            wallThickness - 0.05,
           ),
         )
       : null
@@ -198,6 +213,7 @@ function openingQualityFor(
               bridgeHalfEnd,
               bridgeZMin,
               bridgeZMax,
+              wallThickness - 0.05,
             ),
           ),
           volumeInBox(
@@ -210,6 +226,7 @@ function openingQualityFor(
               -bridgeHalfStart,
               bridgeZMin,
               bridgeZMax,
+              wallThickness - 0.05,
             ),
           ),
         ]
@@ -222,6 +239,7 @@ function openingQualityFor(
     depth,
     opening,
     derived.activeUpperOuterEdgeZ,
+    wallThickness,
   )
   const tangentAxis = tangentAxisFor(direction)
   const normalAxis = normalAxisFor(direction)
@@ -310,6 +328,7 @@ export function assertOpenGridStackableBoxOpenings(
 ): void {
   const derived = openGridStackableBoxDerivedGeometryFor(parameters)
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
+  const wallThickness = wallThicknessFor(parameters)
   for (const direction of OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS) {
     if (derived.openings[direction].enabled) continue
     const closedWallVolume = volumeInBox(
@@ -322,6 +341,7 @@ export function assertOpenGridStackableBoxOpenings(
         0.25,
         derived.activeFloorTopZ + 0.05,
         derived.activeUpperInnerRimZ - 0.05,
+        wallThickness - 0.05,
       ),
     )
     if (closedWallVolume <= 0.001) {

@@ -266,6 +266,7 @@ describe('CAD workspace validation helpers', () => {
       cornerBottomHoles: 'true',
       fullBottomHoleGrid: 'true',
       basePlateMode: 'false',
+      thinShellMode: 'false',
       openingPlusXDepth: '0',
       openingPlusXBottomLength: '1',
       openingPlusXAngle: '90',
@@ -315,6 +316,31 @@ describe('CAD workspace validation helpers', () => {
       valid: false,
       message: '格數必須是 0.5 的倍數。',
       field: 'x',
+    })
+  })
+
+  it('round-trips the mutually exclusive thin-shell mode flag', () => {
+    const parameters: OpenGridStackableBoxParameters = {
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+      thinShellMode: true,
+      basePlateMode: false,
+    }
+    const raw = rawFromParameters(parameters)
+
+    expect(raw.thinShellMode).toBe('true')
+    expect(parseRawParameters(raw, 'opengrid-stackable-box')).toEqual({
+      valid: true,
+      value: parameters,
+    })
+    expect(
+      parseRawParameters(
+        { ...raw, basePlateMode: 'true' },
+        'opengrid-stackable-box',
+      ),
+    ).toEqual({
+      valid: false,
+      message: '薄殼模式與底版模式不可同時開啟。',
+      field: 'thinShellMode',
     })
   })
 
