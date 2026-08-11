@@ -54,6 +54,22 @@ test('home, model selection, and docs are static Astro pages', async ({
     'data-testid',
     'model-family-hsw',
   )
+  const openGridFamily = page.getByTestId('model-family-opengrid')
+  const openGridSubgroups = page.getByTestId('model-subgroups-opengrid')
+  await expect(
+    openGridFamily.locator(':scope > [data-testid="model-subgroups-opengrid"]'),
+  ).toHaveCount(1)
+  await expect(
+    openGridSubgroups.locator(':scope > [data-testid^="model-subgroup-"]'),
+  ).toHaveCount(2)
+  const openGridFamilyBounds = await openGridFamily.boundingBox()
+  const openGridSubgroupsBounds = await openGridSubgroups.boundingBox()
+  expect(openGridFamilyBounds).not.toBeNull()
+  expect(openGridSubgroupsBounds).not.toBeNull()
+  if (!openGridFamilyBounds || !openGridSubgroupsBounds) {
+    throw new Error('OpenGrid subgroups must be nested inside the family')
+  }
+  expect(openGridSubgroupsBounds.x).toBeGreaterThan(openGridFamilyBounds.x)
 
   const editLinkFor = (
     container: ReturnType<typeof page.locator>,
