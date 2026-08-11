@@ -297,8 +297,8 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
     {
       name: 'thin',
       overrides: { thinBottomMode: true },
-      lowerSectionDepth: 2,
-      floorThickness: 3,
+      lowerSectionDepth: 1,
+      floorThickness: 2,
     },
     {
       name: 'bottom-plate',
@@ -464,8 +464,8 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
       try {
         const report = inspectOpenGridStackableCylinderInterface(shape, input)
         expect(report.profile).toBe('thin')
-        expect(report.floorThickness).toBe(3)
-        expect(report.bottomHoleSectionDepth).toBe(2)
+        expect(report.floorThickness).toBe(2)
+        expect(report.bottomHoleSectionDepth).toBe(1)
         expect(report.holes).toHaveLength(expectedHoleCount)
       } finally {
         deleteShape(shape)
@@ -493,11 +493,11 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
     120_000,
   )
 
-  it('keeps the central flat floor at 3 mm', () => {
+  it('keeps the central flat floor at 2 mm', () => {
     const input = parameters({ diameter: 56, thinBottomMode: true })
     const shape = buildOpenGridStackableCylinder(input)
-    const belowCavity = makeCylinder(0.5, 0.1, [10, 0, 2.9])
-    const insideCavity = makeCylinder(0.5, 0.1, [10, 0, 3.01])
+    const belowCavity = makeCylinder(0.5, 0.1, [10, 0, 1.9])
+    const insideCavity = makeCylinder(0.5, 0.1, [10, 0, 2.01])
     const belowIntersection = shape.intersect(belowCavity)
     const insideIntersection = shape.intersect(insideCavity)
     try {
@@ -557,6 +557,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
 
   it('keeps the reference-inspired profile valid after a dimension update', () => {
     const input = parameters({ diameter: 57, height: 31, thinBottomMode: true })
+    const derived = openGridStackableCylinderDerivedGeometryFor(input)
     const shape = buildOpenGridStackableCylinder(input)
     try {
       const report = inspectOpenGridStackableCylinderInterface(shape, input)
@@ -564,28 +565,23 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
       expect(report.solidCount).toBe(1)
       expect(report.centralFloorBelowVolume).toBeGreaterThan(0.0001)
       expect(report.centralFloorAboveVolume).toBeLessThan(0.0001)
-      expect(report.straightWallThickness).toBeCloseTo(
-        OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.wallThickness,
-        2,
-      )
+      expect(report.straightWallThickness).toBeCloseTo(derived.wallThickness, 2)
       expect(report.straightWallBoundaryProbeCount).toBe(2)
       expect(report.topOuterConicalFaceCount).toBe(0)
       expect(report.topInnerChamferFaceCount).toBeGreaterThan(0)
       expect(report.topInnerChamferHeight).toBeGreaterThanOrEqual(
-        OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.topInnerChamfer - 0.05,
+        derived.topInnerChamfer - 0.05,
       )
       expect(report.bottomFootChamferFaceCount).toBeGreaterThan(0)
       expect(report.bottomOuterFilletFaceCount).toBe(0)
       expect(report.lowerUnexpectedConicalFaceCount).toBe(0)
       expect(report.innerRampFaceCount).toBeGreaterThan(0)
       expect(report.innerRampHeight).toBeGreaterThanOrEqual(
-        openGridStackableCylinderDerivedGeometryFor(input).innerRampEndZ -
-          openGridStackableCylinderDerivedGeometryFor(input).flatFloorZ -
-          0.05,
+        derived.innerRampEndZ - derived.flatFloorZ - 0.05,
       )
       expect(report.innerRampAngleDegrees).toBeCloseTo(45, 2)
       expect(report.innerRampNormalThickness).toBeCloseTo(
-        OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.wallThickness,
+        derived.wallThickness,
         2,
       )
       expect(report.innerRampBoundaryProbeCount).toBe(6)
@@ -648,7 +644,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
         expect(report.brepValid).toBe(true)
         expect(report.solidCount).toBe(1)
         expect(report.straightWallThickness).toBeCloseTo(
-          OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.wallThickness,
+          openGridStackableCylinderDerivedGeometryFor(input).wallThickness,
           2,
         )
         expect(volumeInBox(shape, minimum, maximum)).toBeLessThan(0.001)
@@ -732,6 +728,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
         height: 30,
         thinBottomMode,
       })
+      const derived = openGridStackableCylinderDerivedGeometryFor(input)
       const lower = buildOpenGridStackableCylinder(input)
       const upper = buildOpenGridStackableCylinder(input)
       const positionedUpper = upper.translate(
@@ -747,11 +744,11 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
         expect(report.topOuterConicalFaceCount).toBe(0)
         expect(report.topInnerChamferFaceCount).toBeGreaterThan(0)
         expect(report.topInnerChamferHeight).toBeGreaterThanOrEqual(
-          OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.topInnerChamfer - 0.05,
+          derived.topInnerChamfer - 0.05,
         )
         expect(report.bottomOuterChamferFaceCount).toBeGreaterThan(0)
         expect(report.bottomOuterChamferHeight).toBeGreaterThanOrEqual(
-          OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.bottomOuterChamfer - 0.05,
+          derived.outerTransitionEndZ - derived.outerTransitionStartZ - 0.05,
         )
         expect(report.bottomFootChamferFaceCount).toBeGreaterThan(0)
         expect(report.bottomFootChamferHeight).toBeGreaterThanOrEqual(

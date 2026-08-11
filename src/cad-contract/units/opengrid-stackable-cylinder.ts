@@ -102,14 +102,15 @@ export const OPENGRID_STACKABLE_CYLINDER_CONFIGURATION = {
   inputStep: 1,
   wallThickness: 2,
   defaultFloorThickness: 5,
-  thinFloorThickness: 3,
+  thinWallThickness: 1.6,
+  thinFloorThickness: 2,
   floorThickness: 3,
   bottomHoleDiameter:
     OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
   innerHoleDiameter:
     OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.retainingOpeningDiameter,
   defaultBottomHoleSectionDepth: 4,
-  thinBottomHoleSectionDepth: 2,
+  thinBottomHoleSectionDepth: 1,
   bottomHoleSectionDepth: 2,
   innerHoleSectionDepth: 1,
   innerFloorFilletRadius: 0.6,
@@ -122,6 +123,7 @@ export const OPENGRID_STACKABLE_CYLINDER_CONFIGURATION = {
   bottomFootBevel: 0.8,
   bottomVerticalHeight: 2.6,
   topInnerChamfer: 2,
+  thinTopInnerChamfer: 1.6,
   topInnerChamferLand: 0,
   bottomOuterChamfer: 2,
   openingDepthMin: 0,
@@ -489,8 +491,10 @@ export function boundsForOpenGridStackableCylinder(
 
 export type OpenGridStackableCylinderDerivedGeometry = {
   profile: OpenGridStackableCylinderProfile
+  wallThickness: number
   floorThickness: number
   bottomHoleSectionDepth: number
+  topInnerChamfer: number
   innerFloorFilletRadius: number
   radius: number
   innerRadius: number
@@ -581,6 +585,48 @@ function profileForParameters(
   return 'default'
 }
 
+function wallThicknessForProfile(
+  profile: OpenGridStackableCylinderProfile,
+): number {
+  if (profile === 'thin') {
+    return OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.thinWallThickness
+  }
+  return OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.wallThickness
+}
+
+function topInnerChamferForProfile(
+  profile: OpenGridStackableCylinderProfile,
+): number {
+  if (profile === 'thin') {
+    return OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.thinTopInnerChamfer
+  }
+  return OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.topInnerChamfer
+}
+
+function floorThicknessForProfile(
+  profile: OpenGridStackableCylinderProfile,
+): number {
+  if (profile === 'default') {
+    return OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultFloorThickness
+  }
+  if (profile === 'thin') {
+    return OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.thinFloorThickness
+  }
+  return OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.floorThickness
+}
+
+function bottomHoleSectionDepthForProfile(
+  profile: OpenGridStackableCylinderProfile,
+): number {
+  if (profile === 'default') {
+    return OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultBottomHoleSectionDepth
+  }
+  if (profile === 'thin') {
+    return OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.thinBottomHoleSectionDepth
+  }
+  return OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.bottomHoleSectionDepth
+}
+
 function openingGeometryForDirection(
   parameters: OpenGridStackableCylinderParameters,
   direction: OpenGridStackableCylinderOpeningDirection,
@@ -668,7 +714,9 @@ export function openGridStackableCylinderDerivedGeometryFor(
   const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
   const profile = profileForParameters(parameters)
   const radius = parameters.diameter / 2
-  const innerRadius = radius - configuration.wallThickness
+  const wallThickness = wallThicknessForProfile(profile)
+  const topInnerChamfer = topInnerChamferForProfile(profile)
+  const innerRadius = radius - wallThickness
   const matingProtrusionRadius = innerRadius - configuration.stackFitClearance
   const isBottomPlate = profile === 'bottom-plate'
   const outerTransitionStartRadius = matingProtrusionRadius
@@ -679,19 +727,13 @@ export function openGridStackableCylinderDerivedGeometryFor(
   const outerTransitionEndZ =
     outerTransitionStartZ +
     (outerTransitionEndRadius - outerTransitionStartRadius)
-  const floorThickness =
-    profile === 'default'
-      ? configuration.defaultFloorThickness
-      : configuration.thinFloorThickness
-  const bottomHoleSectionDepth =
-    profile === 'default'
-      ? configuration.defaultBottomHoleSectionDepth
-      : configuration.thinBottomHoleSectionDepth
+  const floorThickness = floorThicknessForProfile(profile)
+  const bottomHoleSectionDepth = bottomHoleSectionDepthForProfile(profile)
   const innerFloorFilletRadius =
     profile === 'thin' ? 0 : configuration.innerFloorFilletRadius
   const innerRampEndRadius = innerRadius
   const innerRampStartRadius =
-    outerTransitionStartRadius - configuration.wallThickness * Math.SQRT2
+    outerTransitionStartRadius - wallThickness * Math.SQRT2
   const innerRampEndZ =
     profile === 'thin'
       ? outerTransitionStartZ + (innerRadius - innerRampStartRadius)
@@ -707,8 +749,10 @@ export function openGridStackableCylinderDerivedGeometryFor(
 
   return {
     profile,
+    wallThickness,
     floorThickness,
     bottomHoleSectionDepth,
+    topInnerChamfer,
     innerFloorFilletRadius,
     radius,
     innerRadius,
