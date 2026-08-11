@@ -33,4 +33,4 @@
 - [x] 5.2 Run `openspec validate update-opengrid-pillar-interface --type change --strict` and confirm every requirement scenario is covered by implementation or behavior-focused tests.
 - [x] 5.3 Perform an independent read-only compliance review against proposal, design, delta specs, tasks, and acceptance criteria; fix any findings and rerun affected checks.
 - [x] 5.4 Synchronize accepted delta requirements into the main `openspec/specs/` files, archive the completed change under the current date, and rerun strict OpenSpec validation.
-- [ ] 5.5 Commit the scoped implementation/spec archive, push `agent/update-opengrid-pillar-interface`, and open a draft PR targeting `main` with verification results.
+- [x] 5.5 Commit the scoped implementation/spec archive, push `agent/update-opengrid-pillar-interface`, and open a draft PR targeting `main` with verification results.
