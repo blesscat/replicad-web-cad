@@ -13,8 +13,11 @@ import {
   HSW_CELL_CONFIGURATION,
   type HswCellParameters,
 } from '../../../cad-contract/units'
-import type { BooleanOperationReporter } from '../../boolean-progress'
-import { measureBoolean } from '../../boolean-progress'
+import {
+  measureBooleanInScope,
+  type BooleanOperationReporter,
+  type BooleanOperationScope,
+} from '../../boolean-progress'
 
 export const hswCellTemplateUrl = new URL('./hsw-cell.step', import.meta.url)
 
@@ -143,13 +146,14 @@ async function fuseOwnedShapes(
   second: Shape3D,
   owned: OwnedShapeGroup,
   context: HswCellBuildContext,
+  fuseScope: BooleanOperationScope | undefined,
   simplifyResult: boolean,
 ): Promise<Shape3D> {
   let fused: Shape3D | null = null
 
   try {
     assertGenerationCurrent(context)
-    fused = measureBoolean(context.booleanOperations, 'fuse', () =>
+    fused = measureBooleanInScope(fuseScope, 'fuse', () =>
       fuseShapes(first, second, simplifyResult),
     )
     assertGenerationCurrent(context)
@@ -173,6 +177,10 @@ async function fuseBalanced(
   simplifyResult: boolean,
 ): Promise<Shape3D> {
   let current = shapes
+  const fuseScope =
+    shapes.length > 1
+      ? context.booleanOperations?.createScope(shapes.length - 1)
+      : undefined
 
   while (current.length > 1) {
     assertGenerationCurrent(context)
@@ -188,7 +196,14 @@ async function fuseBalanced(
 
       const fuseStartedAt = performance.now()
       next.push(
-        await fuseOwnedShapes(first, second, owned, context, simplifyResult),
+        await fuseOwnedShapes(
+          first,
+          second,
+          owned,
+          context,
+          fuseScope,
+          simplifyResult,
+        ),
       )
       timings.fuseMs += performance.now() - fuseStartedAt
     }
@@ -274,6 +289,10 @@ async function buildSequentialAssembly(
   const timings: AssemblyTimings = { cloneTranslateMs: 0, fuseMs: 0 }
   let combined: Shape3D | null = null
   let completedCells = 0
+  const fuseScope =
+    offsets.length > 1
+      ? context.booleanOperations?.createScope(offsets.length - 1)
+      : undefined
 
   try {
     reportCellProgress(context, 0, offsets.length)
@@ -290,7 +309,14 @@ async function buildSequentialAssembly(
       }
 
       const fuseStartedAt = performance.now()
-      combined = await fuseOwnedShapes(combined, cell, owned, context, true)
+      combined = await fuseOwnedShapes(
+        combined,
+        cell,
+        owned,
+        context,
+        fuseScope,
+        true,
+      )
       timings.fuseMs += performance.now() - fuseStartedAt
     }
 

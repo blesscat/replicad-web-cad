@@ -30,6 +30,7 @@ import { transformShapeXY, type XYScaleTransform } from '../../transform'
 import {
   measureBoolean,
   measureBooleanInScope,
+  type BooleanOperationScope,
   type BooleanOperationReporter,
 } from '../../boolean-progress'
 
@@ -260,9 +261,9 @@ function cloneImportedAssembly(shape: Shape3D): Shape3D {
 function cutShape(
   source: Shape3D,
   cutter: Shape3D,
-  reporter: BooleanOperationReporter | undefined,
+  scope: BooleanOperationScope | undefined,
 ): Shape3D {
-  const result = measureBoolean(reporter, 'cut', () => source.cut(cutter))
+  const result = measureBooleanInScope(scope, 'cut', () => source.cut(cutter))
   if (result !== source) deleteShape(source)
   deleteShape(cutter)
   return result
@@ -289,7 +290,7 @@ function featureCutterHeight(
 
 function makeCenterRemoverCutter(
   definition: OpenGridSnapProfileDefinition,
-  reporter: BooleanOperationReporter | undefined,
+  scope: BooleanOperationScope | undefined,
 ): Shape3D {
   const baseZ = definition.expectedBounds.min[2] - 1
   const topZ = definition.expectedBounds.max[2] + 1
@@ -317,7 +318,7 @@ function makeCenterRemoverCutter(
       topZ,
     ],
   )
-  const cutter = measureBoolean(reporter, 'fuse', () => lower.fuse(upper))
+  const cutter = measureBooleanInScope(scope, 'fuse', () => lower.fuse(upper))
   if (cutter !== lower) deleteShape(lower)
   deleteShape(upper)
   return cutter
@@ -403,23 +404,28 @@ function applyBodyFeatures(
   }
 
   let result = body
+  const appliesLocatingHoles =
+    parameters.fourCornerLocatingHoles && options.applyLocatingHoles !== false
+  const appliesCenterRemover = parameters.centerRemoverHole
+  const cutTotal = Number(appliesLocatingHoles) + Number(appliesCenterRemover)
+  const cutScope = cutTotal > 0 ? reporter?.createScope(cutTotal) : undefined
+  const centerRemoverFuseScope = appliesCenterRemover
+    ? reporter?.createScope(1)
+    : undefined
 
-  if (
-    parameters.fourCornerLocatingHoles &&
-    options.applyLocatingHoles !== false
-  ) {
+  if (appliesLocatingHoles) {
     result = cutShape(
       result,
       makeLocatingHolesCutter(definition, reporter),
-      reporter,
+      cutScope,
     )
   }
 
-  if (parameters.centerRemoverHole) {
+  if (appliesCenterRemover) {
     result = cutShape(
       result,
-      makeCenterRemoverCutter(definition, reporter),
-      reporter,
+      makeCenterRemoverCutter(definition, centerRemoverFuseScope),
+      cutScope,
     )
   }
 

@@ -10,8 +10,8 @@ import {
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import type { BOPAlgo_GlueEnum } from 'replicad-opencascadejs'
 import {
-  measureBoolean,
   measureBooleanInScope,
+  type BooleanOperationScope,
   type BooleanOperationReporter,
 } from '../../boolean-progress'
 import {
@@ -141,6 +141,7 @@ async function fuseOwnedShapes(
   second: Shape3D,
   owned: OwnedShapeGroup,
   context: ModularGridBaseBuildContext,
+  fuseScope: BooleanOperationScope | undefined,
   simplifyResult = true,
 ): Promise<Shape3D> {
   let fused: Shape3D | null = null
@@ -148,11 +149,11 @@ async function fuseOwnedShapes(
   try {
     assertGenerationCurrent(context)
     if (simplifyResult) {
-      fused = measureBoolean(context.booleanOperations, 'fuse', () =>
+      fused = measureBooleanInScope(fuseScope, 'fuse', () =>
         first.fuse(second, { optimisation: 'sameFace' }),
       )
     } else {
-      fused = measureBoolean(context.booleanOperations, 'fuse', () =>
+      fused = measureBooleanInScope(fuseScope, 'fuse', () =>
         fusePairWithoutSimplifying(first, second),
       )
     }
@@ -176,6 +177,10 @@ async function fuseBalanced(
   simplifyResult = true,
 ): Promise<Shape3D> {
   let current = shapes
+  const fuseScope =
+    shapes.length > 1
+      ? context.booleanOperations?.createScope(shapes.length - 1)
+      : undefined
 
   while (current.length > 1) {
     assertGenerationCurrent(context)
@@ -190,7 +195,14 @@ async function fuseBalanced(
 
       const fuseStartedAt = performance.now()
       next.push(
-        await fuseOwnedShapes(first, second, owned, context, simplifyResult),
+        await fuseOwnedShapes(
+          first,
+          second,
+          owned,
+          context,
+          fuseScope,
+          simplifyResult,
+        ),
       )
       timings.fuseMs += performance.now() - fuseStartedAt
     }
@@ -211,10 +223,14 @@ async function fuseSequential(
   const first = shapes[0]
   if (!first) throw new Error('GRID_TEMPLATE_EMPTY')
   let combined = first
+  const fuseScope =
+    shapes.length > 1
+      ? context.booleanOperations?.createScope(shapes.length - 1)
+      : undefined
 
   for (const shape of shapes.slice(1)) {
     const fuseStartedAt = performance.now()
-    combined = await fuseOwnedShapes(combined, shape, owned, context)
+    combined = await fuseOwnedShapes(combined, shape, owned, context, fuseScope)
     timings.fuseMs += performance.now() - fuseStartedAt
   }
   return combined
@@ -317,6 +333,10 @@ async function buildSequentialAssembly(
   const timings: AssemblyTimings = { cloneTranslateMs: 0, fuseMs: 0 }
   let combined: Shape3D | null = null
   let completedCells = 0
+  const fuseScope =
+    offsets.length > 1
+      ? context.booleanOperations?.createScope(offsets.length - 1)
+      : undefined
 
   try {
     for (const offset of offsets) {
@@ -332,7 +352,13 @@ async function buildSequentialAssembly(
       }
 
       const fuseStartedAt = performance.now()
-      combined = await fuseOwnedShapes(combined, cell, owned, context)
+      combined = await fuseOwnedShapes(
+        combined,
+        cell,
+        owned,
+        context,
+        fuseScope,
+      )
       timings.fuseMs += performance.now() - fuseStartedAt
     }
 

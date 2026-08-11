@@ -29,3 +29,9 @@
 
 - [x] 5.1 Show the remaining count for known boolean-operation scopes while retaining indeterminate wording for unknown totals.
 - [x] 5.2 Replace per-operation elapsed text in the progress indicator with one cumulative timer for the current `building` session, correlate timer resets to the operation identity, and add behavior coverage.
+
+## 6. Known-scope coverage refinement
+
+- [x] 6.1 Give fixed single-call builders and deterministic feature/cutter loops explicit totals, using separate scopes for independent fuse, cut, and intersect counts.
+- [x] 6.2 Thread `shapes.length - 1` fuse scopes through modular-grid-base and hsw-cell balanced/sequential assemblies without changing geometry or assembly strategy.
+- [x] 6.3 Preserve indeterminate progress for geometry-dependent Snap filtering, add representative known/unknown scope tests, and rerun focused validation.

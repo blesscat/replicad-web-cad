@@ -14,7 +14,8 @@ import {
   type PillarParameters,
 } from '../../../cad-contract/units'
 import {
-  measureBoolean,
+  measureBooleanInScope,
+  type BooleanOperationScope,
   type BooleanOperationReporter,
 } from '../../boolean-progress'
 
@@ -144,12 +145,12 @@ function asSingleSolid(shape: Shape3D): Solid {
 function fusePartsAsSingleSolid(
   first: Shape3D,
   second: Shape3D,
-  reporter: BooleanOperationReporter | undefined,
+  scope: BooleanOperationScope | undefined,
 ): Solid {
   let fused: Shape3D | null = null
   let solid: Solid | null = null
   try {
-    fused = measureBoolean(reporter, 'fuse', () => first.fuse(second))
+    fused = measureBooleanInScope(scope, 'fuse', () => first.fuse(second))
     if (!isShape3D(fused)) throw new Error('PILLAR_FUSE_RESULT_NOT_3D')
     solid = asSingleSolid(fused)
     return solid
@@ -221,7 +222,7 @@ function buildPlainPillar(parameters: PillarParameters): Shape3D {
 
 function buildBaseConnectionPillar(
   parameters: PillarParameters,
-  reporter: BooleanOperationReporter | undefined,
+  scope: BooleanOperationScope | undefined,
 ): Solid {
   const flange = makeCylinder(
     PILLAR_CONFIGURATION.baseDiameter / 2,
@@ -233,7 +234,7 @@ function buildBaseConnectionPillar(
     parameters.length - PILLAR_CONFIGURATION.baseHeight,
     [0, 0, PILLAR_CONFIGURATION.baseHeight],
   )
-  return fusePartsAsSingleSolid(flange, body, reporter)
+  return fusePartsAsSingleSolid(flange, body, scope)
 }
 
 export async function buildPillar(
@@ -248,9 +249,12 @@ export async function buildPillar(
 
   let shape: Shape3D | null = null
   let finalSolid: Solid | null = null
+  const fuseScope = parameters.baseConnection
+    ? context.booleanOperations?.createScope(1)
+    : undefined
   try {
     shape = parameters.baseConnection
-      ? buildBaseConnectionPillar(parameters, context.booleanOperations)
+      ? buildBaseConnectionPillar(parameters, fuseScope)
       : buildPlainPillar(parameters)
 
     assertGenerationCurrent(context)

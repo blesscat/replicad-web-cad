@@ -20,7 +20,6 @@ import {
 } from '../../../cad-contract/units'
 import { buildHexagonalColumnPrototype } from '../hexagonal-column/builder'
 import {
-  measureBoolean,
   measureBooleanInScope,
   type BooleanOperationReporter,
 } from '../../boolean-progress'
@@ -634,7 +633,8 @@ function buildBoxNormalBody(
     bodyBaseZ + parameters.height,
   )
 
-  return measureBoolean(reporter, 'cut', () => outer.cut(cavity))
+  const cutScope = reporter?.createScope(1)
+  return measureBooleanInScope(cutScope, 'cut', () => outer.cut(cavity))
 }
 
 function makePostConnector(x: number, y: number): Shape3D {

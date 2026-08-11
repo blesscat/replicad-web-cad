@@ -46,6 +46,12 @@ An active operation MUST expose elapsed time that is monotonic for the lifetime 
 - **THEN** the UI shows the operation kind and elapsed time without a determinate percentage
 - **AND** the progress contract does not report a misleading total
 
+#### Scenario: Total is derived from build inputs
+
+- **WHEN** a builder can derive a boolean scope total from input arrays, feature flags, or a fixed operation shape without executing extra geometry
+- **THEN** the builder reports that total and the UI shows the remaining count while the scope is active
+- **AND** the builder keeps separate scopes when fuse, cut, or intersect counts have different meanings
+
 #### Scenario: Native operation has no inner callback
 
 - **WHEN** a native boolean call takes several seconds and exposes no reliable inner progress callback

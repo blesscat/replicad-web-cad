@@ -37,6 +37,8 @@ Add a small shared reporting helper that builders use around boolean calls. A sc
 
 Each builder remains responsible for placing the hook around its own semantically relevant fuse, cut, and intersect calls. The common helper owns event shape, count validation, elapsed measurement, and cancellation/yield integration. This keeps component-specific operation grouping correct and avoids monkey-patching or wrapping every kernel method globally.
 
+Known totals should be derived from control data already required by the build, such as `shapes.length - 1`, enabled feature counts, or a fixed single call. Separate scopes should be used for different boolean kinds when their counts are independent. A total must remain unknown when determining it would require executing or preflighting geometry, such as a later cut that only runs for solids surviving an earlier intersection.
+
 Alternative considered: instrument every kernel `.fuse()`/`.cut()` method centrally. That would obscure nested operations, make totals impossible to interpret, and risk changing geometry or performance-sensitive behavior.
 
 ### Keep operation-boundary progress honest

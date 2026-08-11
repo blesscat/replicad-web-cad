@@ -16,6 +16,7 @@ import {
 } from '../../src/cad-kernel/components/hsw-cell/builder'
 import { exportStlBytes, exportStepBytes } from '../../src/cad-kernel/export'
 import { meshBRep } from '../../src/cad-kernel/mesh'
+import { createBooleanOperationReporter } from '../../src/cad-kernel/boolean-progress'
 
 ;(globalThis as typeof globalThis & { __dirname?: string }).__dirname = dirname(
   fileURLToPath(import.meta.url),
@@ -169,12 +170,21 @@ describe('hsw-cell B-Rep integration', () => {
       total?: number
       unit?: string
     }> = []
+    const booleanProgress: Array<{
+      kind: string
+      state: string
+      total?: number
+    }> = []
+    const reporter = createBooleanOperationReporter((event) =>
+      booleanProgress.push(event),
+    )
     const shape = await buildHswCellWithStrategy(
       parameters,
       template,
       'column',
       {
         reportProgress: (event) => progress.push(event),
+        booleanOperations: reporter,
       },
     )
     try {
@@ -196,6 +206,16 @@ describe('hsw-cell B-Rep integration', () => {
         total: 100,
         unit: 'cells',
       })
+      expect(
+        booleanProgress.some(
+          (event) => event.state === 'completed' && event.total === 9,
+        ),
+      ).toBe(true)
+      expect(
+        booleanProgress
+          .filter((event) => event.state === 'completed')
+          .every((event) => event.total !== undefined),
+      ).toBe(true)
     } finally {
       deleteShape(shape)
     }

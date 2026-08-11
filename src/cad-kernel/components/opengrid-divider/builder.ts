@@ -8,7 +8,8 @@ import {
   type OpenGridDividerParameters,
 } from '../../../cad-contract/units'
 import {
-  measureBoolean,
+  measureBooleanInScope,
+  type BooleanOperationScope,
   type BooleanOperationReporter,
 } from '../../boolean-progress'
 
@@ -337,9 +338,9 @@ function asSingleSolid(shape: Shape3D): Solid {
 function fuseAsSingleSolid(
   first: Shape3D,
   second: Shape3D,
-  reporter: BooleanOperationReporter | undefined,
+  scope: BooleanOperationScope | undefined,
 ): Solid {
-  const fused = measureBoolean(reporter, 'fuse', () =>
+  const fused = measureBooleanInScope(scope, 'fuse', () =>
     fuseShapes(first, second),
   )
   let solid: Solid | null = null
@@ -405,6 +406,12 @@ async function makeContinuousWall(
 ): Promise<Shape3D> {
   const horizontalActive = parameters.left > 0 || parameters.right > 0
   const verticalActive = parameters.up > 0 || parameters.down > 0
+  const fuseTotal =
+    pegCenters.length + (horizontalActive && verticalActive ? 1 : 0)
+  const fuseScope =
+    fuseTotal > 0
+      ? context.booleanOperations?.createScope(fuseTotal)
+      : undefined
 
   let horizontal: Solid | null = null
   let vertical: Solid | null = null
@@ -427,14 +434,10 @@ async function makeContinuousWall(
       try {
         if (armAxisForPeg(center, horizontalActive) === 'x') {
           if (!horizontal) throw new Error('OPENGRID_DIVIDER_WALL_EMPTY')
-          horizontal = fuseAsSingleSolid(
-            horizontal,
-            peg,
-            context.booleanOperations,
-          )
+          horizontal = fuseAsSingleSolid(horizontal, peg, fuseScope)
         } else {
           if (!vertical) throw new Error('OPENGRID_DIVIDER_WALL_EMPTY')
-          vertical = fuseAsSingleSolid(vertical, peg, context.booleanOperations)
+          vertical = fuseAsSingleSolid(vertical, peg, fuseScope)
         }
       } catch (error) {
         deleteShape(peg)
@@ -447,11 +450,7 @@ async function makeContinuousWall(
 
     if (!horizontal) return vertical as Shape3D
     if (!vertical) return horizontal
-    const fused = fuseAsSingleSolid(
-      horizontal,
-      vertical,
-      context.booleanOperations,
-    )
+    const fused = fuseAsSingleSolid(horizontal, vertical, fuseScope)
     horizontal = null
     vertical = null
     return fused

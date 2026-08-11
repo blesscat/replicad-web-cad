@@ -21,8 +21,8 @@ import {
   type OpenGridStackableBoxParameters,
 } from '../../../cad-contract/units'
 import {
-  measureBoolean,
   measureBooleanInScope,
+  type BooleanOperationScope,
   type BooleanOperationReporter,
 } from '../../boolean-progress'
 import {
@@ -223,7 +223,10 @@ export function makeBoxShell(
   try {
     cavity = loftRoundedSections(innerCavitySections(parameters))
     const activeCavity = cavity
-    const shell = measureBoolean(reporter, 'cut', () => outer.cut(activeCavity))
+    const cutScope = reporter?.createScope(1)
+    const shell = measureBooleanInScope(cutScope, 'cut', () =>
+      outer.cut(activeCavity),
+    )
     deleteShape(outer)
     deleteShape(cavity)
     return shell
@@ -259,7 +262,8 @@ export function applyBasePlateMode(
   )
   let clipped: Shape3D | null = null
   try {
-    clipped = measureBoolean(reporter, 'intersect', () =>
+    const intersectScope = reporter?.createScope(1)
+    clipped = measureBooleanInScope(intersectScope, 'intersect', () =>
       shape.intersect(clippingBox),
     )
     deleteShape(shape)
@@ -436,7 +440,10 @@ function fuseSideOpeningCutterParts(
   wallDistance: number,
   railDistance: number,
   direction: [number, number, number],
-  reporter: BooleanOperationReporter | undefined,
+  scopes: {
+    fuse?: BooleanOperationScope
+    intersect?: BooleanOperationScope
+  },
 ): Shape3D {
   const wallCutter = extrudeSideOpeningProfile(
     plane,
@@ -462,15 +469,17 @@ function fuseSideOpeningCutterParts(
   try {
     const activeRailCutter = railCutter
     const activeRailClip = railClip
-    clippedRailCutter = measureBoolean(reporter, 'intersect', () =>
-      activeRailCutter.intersect(activeRailClip),
+    clippedRailCutter = measureBooleanInScope(
+      scopes.intersect,
+      'intersect',
+      () => activeRailCutter.intersect(activeRailClip),
     )
     deleteShape(railCutter)
     railCutter = null
     deleteShape(railClip)
     railClip = null
     const activeClippedRailCutter = clippedRailCutter
-    const result = measureBoolean(reporter, 'fuse', () =>
+    const result = measureBooleanInScope(scopes.fuse, 'fuse', () =>
       wallCutter.fuse(activeClippedRailCutter),
     )
     deleteShape(wallCutter)
@@ -489,7 +498,10 @@ function fuseSideOpeningCutterParts(
 function makeSideOpeningCutter(
   parameters: OpenGridStackableBoxParameters,
   direction: OpenGridStackableBoxOpeningDirection,
-  reporter: BooleanOperationReporter | undefined,
+  scopes: {
+    fuse?: BooleanOperationScope
+    intersect?: BooleanOperationScope
+  },
 ): Shape3D {
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
@@ -518,7 +530,7 @@ function makeSideOpeningCutter(
       wallDistance,
       railDistance,
       [1, 0, 0],
-      reporter,
+      scopes,
     )
   }
   if (direction === '-X') {
@@ -534,7 +546,7 @@ function makeSideOpeningCutter(
       wallDistance,
       railDistance,
       [1, 0, 0],
-      reporter,
+      scopes,
     )
   }
   if (direction === '+Y') {
@@ -550,7 +562,7 @@ function makeSideOpeningCutter(
       wallDistance,
       railDistance,
       [0, 1, 0],
-      reporter,
+      scopes,
     )
   }
   return fuseSideOpeningCutterParts(
@@ -565,7 +577,7 @@ function makeSideOpeningCutter(
     wallDistance,
     railDistance,
     [0, 1, 0],
-    reporter,
+    scopes,
   )
 }
 
@@ -580,14 +592,14 @@ export function addSideOpenings(
     (direction) => derived.openings[direction].enabled,
   )
   const cutScope = context.booleanOperations?.createScope(directions.length)
+  const cutterScopes = {
+    fuse: context.booleanOperations?.createScope(directions.length),
+    intersect: context.booleanOperations?.createScope(directions.length),
+  }
 
   for (const direction of directions) {
     assertGenerationCurrent(context)
-    const cutter = makeSideOpeningCutter(
-      parameters,
-      direction,
-      context.booleanOperations,
-    )
+    const cutter = makeSideOpeningCutter(parameters, direction, cutterScopes)
     try {
       const cut = measureBooleanInScope(cutScope, 'cut', () =>
         current.cut(cutter),
@@ -700,7 +712,7 @@ function makeBottomGridSeamTools(
 function cutWithToolBatch(
   shape: Shape3D,
   tools: Shape3D[],
-  reporter: BooleanOperationReporter | undefined,
+  scope: BooleanOperationScope | undefined,
 ): Shape3D {
   if (tools.length === 0) return shape
 
@@ -708,7 +720,7 @@ function cutWithToolBatch(
   if (!tool) return shape
 
   try {
-    const cut = measureBoolean(reporter, 'cut', () => shape.cut(tool))
+    const cut = measureBooleanInScope(scope, 'cut', () => shape.cut(tool))
     deleteShape(shape)
     return cut
   } finally {
@@ -722,18 +734,24 @@ function addIntegratedStackingProfile(
   context: OpenGridStackableBoxBuildContext,
 ): Shape3D {
   let current = shape
+  const seams = bottomGridSeamsFor(parameters)
+  const cutTotal = (['x', 'y'] as const).filter((axis) =>
+    seams.some((seam) => seam.axis === axis),
+  ).length
+  const cutScope =
+    cutTotal > 0 ? context.booleanOperations?.createScope(cutTotal) : undefined
   for (const axis of ['x', 'y'] as const) {
     const cutters = makeBottomGridSeamTools(parameters, context, axis)
     if (cutters.length === 0) continue
 
     assertGenerationCurrent(context)
-    current = cutWithToolBatch(current, cutters, context.booleanOperations)
+    current = cutWithToolBatch(current, cutters, cutScope)
   }
   return current
 }
 
 function makeStandardMountingHoleCutter(
-  reporter: BooleanOperationReporter | undefined,
+  scope: BooleanOperationScope | undefined,
 ): Shape3D {
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
   const bottomSection = makeCylinder(
@@ -748,7 +766,7 @@ function makeStandardMountingHoleCutter(
       0.02,
     [0, 0, configuration.baseHoleStepHeight],
   )
-  const cutter = measureBoolean(reporter, 'fuse', () =>
+  const cutter = measureBooleanInScope(scope, 'fuse', () =>
     bottomSection.fuse(upperSection),
   )
   deleteShape(bottomSection)
@@ -757,7 +775,7 @@ function makeStandardMountingHoleCutter(
 }
 
 function makeBasePlateMountingHoleCutter(
-  reporter: BooleanOperationReporter | undefined,
+  scope: BooleanOperationScope | undefined,
 ): Shape3D {
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
   const lowerSection = makeCylinder(
@@ -775,7 +793,7 @@ function makeBasePlateMountingHoleCutter(
         configuration.basePlateHoleBottomDepth,
     ],
   )
-  const cutter = measureBoolean(reporter, 'fuse', () =>
+  const cutter = measureBooleanInScope(scope, 'fuse', () =>
     lowerSection.fuse(upperSection),
   )
   deleteShape(lowerSection)
@@ -785,12 +803,12 @@ function makeBasePlateMountingHoleCutter(
 
 function makeMountingHoleCutter(
   parameters: OpenGridStackableBoxParameters,
-  reporter: BooleanOperationReporter | undefined,
+  scope: BooleanOperationScope | undefined,
 ): Shape3D {
   if (parameters.basePlateMode) {
-    return makeBasePlateMountingHoleCutter(reporter)
+    return makeBasePlateMountingHoleCutter(scope)
   }
-  return makeStandardMountingHoleCutter(reporter)
+  return makeStandardMountingHoleCutter(scope)
 }
 
 function makeOrdinaryBottomHoleCutter(): Shape3D {
@@ -808,31 +826,27 @@ export function addMountingSockets(
   context: OpenGridStackableBoxBuildContext,
 ): Shape3D {
   const centers = openGridStackableBoxSocketCentersFor(parameters)
+  const fuseScope =
+    centers.length > 0
+      ? context.booleanOperations?.createScope(centers.length)
+      : undefined
   const socketCutters = centers.map(([x, y]) =>
-    makeMountingHoleCutter(parameters, context.booleanOperations).translate(
-      x,
-      y,
-      0,
-    ),
+    makeMountingHoleCutter(parameters, fuseScope).translate(x, y, 0),
   )
-  assertGenerationCurrent(context)
-  let current = cutWithToolBatch(
-    shape,
-    socketCutters,
-    context.booleanOperations,
-  )
-
   const ordinaryCenters =
     openGridStackableBoxOrdinaryBottomHoleCentersFor(parameters)
+  const cutTotal =
+    Number(socketCutters.length > 0) + Number(ordinaryCenters.length > 0)
+  const cutScope =
+    cutTotal > 0 ? context.booleanOperations?.createScope(cutTotal) : undefined
+  assertGenerationCurrent(context)
+  let current = cutWithToolBatch(shape, socketCutters, cutScope)
+
   const ordinaryCutters = ordinaryCenters.map(([x, y]) =>
     makeOrdinaryBottomHoleCutter().translate(x, y, 0),
   )
   assertGenerationCurrent(context)
-  current = cutWithToolBatch(
-    current,
-    ordinaryCutters,
-    context.booleanOperations,
-  )
+  current = cutWithToolBatch(current, ordinaryCutters, cutScope)
 
   return current
 }
