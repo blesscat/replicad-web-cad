@@ -26,6 +26,7 @@ import {
   type OpenGridSnapProfileDefinition,
 } from './profile'
 import { buildOpenGridSnapBoundaryObstacle } from './boundary'
+import { transformShapeXY, type XYScaleTransform } from '../../transform'
 
 export const OPENGRID_SNAP_REFERENCE_URLS: Readonly<
   Record<OpenGridSnapProfile, Record<OpenGridSnapVariant, URL>>
@@ -41,8 +42,6 @@ export const OPENGRID_SNAP_REFERENCE_URLS: Readonly<
 }
 
 const ASSET_TOLERANCE = 0.05
-const OUTER_TOUCH_TOLERANCE = 0.02
-const FEATURE_CUTTER_MARGIN = 0.2
 
 type PointTuple = [number, number, number]
 type BoundsTuple = [PointTuple, PointTuple]
@@ -203,6 +202,51 @@ function centralSolidIndex(solids: readonly Solid[]): number {
   return centralIndex
 }
 
+function axisSpan(bounds: ModelBounds, axis: 0 | 1): number {
+  return bounds.max[axis] - bounds.min[axis]
+}
+
+function canonicalCenter(
+  definition: OpenGridSnapProfileDefinition,
+): [number, number] {
+  return [
+    (definition.expectedBounds.min[0] + definition.expectedBounds.max[0]) / 2,
+    (definition.expectedBounds.min[1] + definition.expectedBounds.max[1]) / 2,
+  ]
+}
+
+function xyScaleTransformFor(
+  source: Shape3D,
+  targetBounds: ModelBounds,
+  definition: OpenGridSnapProfileDefinition,
+): XYScaleTransform {
+  const sourceBounds = readBounds(source)
+  const sourceSpanX = axisSpan(sourceBounds, 0)
+  const sourceSpanY = axisSpan(sourceBounds, 1)
+  const targetSpanX = axisSpan(targetBounds, 0)
+  const targetSpanY = axisSpan(targetBounds, 1)
+  if (
+    !Number.isFinite(sourceSpanX) ||
+    !Number.isFinite(sourceSpanY) ||
+    !Number.isFinite(targetSpanX) ||
+    !Number.isFinite(targetSpanY) ||
+    sourceSpanX <= 0 ||
+    sourceSpanY <= 0 ||
+    targetSpanX <= 0 ||
+    targetSpanY <= 0
+  ) {
+    throw new Error('OPENGRID_SNAP_XY_SCALE_BOUNDS_INVALID')
+  }
+
+  const [centerX, centerY] = canonicalCenter(definition)
+  return {
+    scaleX: targetSpanX / sourceSpanX,
+    scaleY: targetSpanY / sourceSpanY,
+    centerX,
+    centerY,
+  }
+}
+
 function cloneImportedAssembly(shape: Shape3D): Shape3D {
   return deserializeShape(shape.serialize()).asShape3D()
 }
@@ -313,6 +357,7 @@ function applyBodyFeatures(
   body: Shape3D,
   parameters: OpenGridSnapParameters,
   definition: OpenGridSnapProfileDefinition,
+  options: { applyLocatingHoles?: boolean } = {},
 ): Shape3D {
   const supportsCornerHoles = definition.optionalFeatures.includes(
     'fourCornerLocatingHoles',
@@ -336,7 +381,10 @@ function applyBodyFeatures(
 
   let result = body
 
-  if (parameters.fourCornerLocatingHoles) {
+  if (
+    parameters.fourCornerLocatingHoles &&
+    options.applyLocatingHoles !== false
+  ) {
     result = cutShape(result, makeLocatingHolesCutter(definition))
   }
 
@@ -390,12 +438,45 @@ function buildStandardAssemblyParts(
   }
 }
 
+function transformStandardAssemblyParts(
+  parts: StandardAssemblyParts,
+  transform: XYScaleTransform,
+): StandardAssemblyParts {
+  const sourceSolids = [parts.body, ...parts.sideHolders, ...parts.snaps]
+  const transformedSolids: Solid[] = []
+
+  try {
+    for (const solid of sourceSolids) {
+      const transformed = transformShapeXY(solid, transform)
+      transformedSolids.push(transformed)
+    }
+  } catch (error) {
+    for (const solid of transformedSolids) deleteShape(solid)
+    throw error
+  } finally {
+    for (const solid of sourceSolids) deleteShape(solid)
+  }
+
+  const body = transformedSolids[0]
+  const sideHolders = transformedSolids.slice(1, 5)
+  const snaps = transformedSolids.slice(5)
+  if (!body || sideHolders.length !== 4 || snaps.length !== 4) {
+    for (const solid of transformedSolids) deleteShape(solid)
+    throw new Error('OPENGRID_SNAP_STANDARD_TRANSFORM_PARTS_INVALID')
+  }
+
+  return { body, sideHolders, snaps }
+}
+
 function composeStandardAssembly(
   parts: StandardAssemblyParts,
   parameters: OpenGridSnapParameters,
   definition: OpenGridSnapProfileDefinition,
+  applyOptionalFeatures: boolean,
 ): Shape3D {
-  const body = applyBodyFeatures(parts.body, parameters, definition)
+  const body = applyOptionalFeatures
+    ? applyBodyFeatures(parts.body, parameters, definition)
+    : parts.body
   const output: Shape3D[] = [body, ...parts.sideHolders, ...parts.snaps]
   try {
     return makeCompound(output).asShape3D()
@@ -407,10 +488,23 @@ function composeStandardAssembly(
 
 function buildDirectionalAssembly(
   reference: Shape3D,
+  transform: XYScaleTransform | null,
+): Shape3D {
+  const assembly = cloneImportedAssembly(reference)
+  if (!transform) {
+    return assembly
+  }
+
+  const transformed = transformShapeXY(assembly, transform)
+  deleteShape(assembly)
+  return transformed
+}
+
+function applyDirectionalFeatures(
+  assembly: Shape3D,
   parameters: OpenGridSnapParameters,
   definition: OpenGridSnapProfileDefinition,
 ): Shape3D {
-  const assembly = cloneImportedAssembly(reference)
   if (!parameters.fourCornerLocatingHoles && !parameters.centerRemoverHole) {
     return assembly
   }
@@ -426,6 +520,7 @@ function buildDirectionalAssembly(
     deleteShape(assembly)
     throw new Error('OPENGRID_SNAP_SOLID_MISSING')
   }
+  for (const extraSolid of solids.slice(1)) deleteShape(extraSolid)
   deleteShape(assembly)
   return applyBodyFeatures(solid, parameters, definition)
 }
@@ -433,212 +528,37 @@ function buildDirectionalAssembly(
 function buildFeatureAssembly(
   reference: Shape3D,
   parameters: OpenGridSnapParameters,
+  targetBounds: ModelBounds,
 ): Shape3D {
   const definition = openGridSnapProfileFor(
     parameters.profile,
     parameters.variant,
   )
+  const transform =
+    parameters.offset > 0
+      ? xyScaleTransformFor(reference, targetBounds, definition)
+      : null
+
   if (parameters.profile === 'Directional') {
-    return buildDirectionalAssembly(reference, parameters, definition)
+    const assembly = buildDirectionalAssembly(reference, transform)
+    return parameters.footprint === 'full'
+      ? applyDirectionalFeatures(assembly, parameters, definition)
+      : assembly
   }
 
-  const parts = buildStandardAssemblyParts(reference, definition)
-  return composeStandardAssembly(parts, parameters, definition)
+  let parts = buildStandardAssemblyParts(reference, definition)
+  if (transform) {
+    parts = transformStandardAssemblyParts(parts, transform)
+  }
+  return composeStandardAssembly(
+    parts,
+    parameters,
+    definition,
+    parameters.footprint === 'full',
+  )
 }
 
-function touchesMinimum(value: number, source: number): boolean {
-  return Math.abs(value - source) <= OUTER_TOUCH_TOLERANCE
-}
-
-function touchesMaximum(value: number, source: number): boolean {
-  return Math.abs(value - source) <= OUTER_TOUCH_TOLERANCE
-}
-
-function fuseExtension(current: Shape3D, extension: Shape3D): Shape3D {
-  const fused = current.fuse(extension, { optimisation: 'none' })
-  if (fused !== current) deleteShape(current)
-  deleteShape(extension)
-  return fused
-}
-
-function extendOuterSolid(
-  solid: Solid,
-  sourceBounds: ModelBounds,
-  targetBounds: ModelBounds,
-): Shape3D {
-  let result: Shape3D = solid
-  const currentBounds = readBounds(solid)
-  const zMin = currentBounds.min[2] + OUTER_TOUCH_TOLERANCE
-  const zMax = currentBounds.max[2] - OUTER_TOUCH_TOLERANCE
-  if (zMax <= zMin) return result
-
-  if (
-    targetBounds.min[0] < sourceBounds.min[0] &&
-    touchesMinimum(currentBounds.min[0], sourceBounds.min[0])
-  ) {
-    result = fuseExtension(
-      result,
-      makeBox(
-        [targetBounds.min[0], currentBounds.min[1], zMin],
-        [
-          currentBounds.min[0] + OUTER_TOUCH_TOLERANCE,
-          currentBounds.max[1],
-          zMax,
-        ],
-      ),
-    )
-  }
-  if (
-    targetBounds.max[0] > sourceBounds.max[0] &&
-    touchesMaximum(currentBounds.max[0], sourceBounds.max[0])
-  ) {
-    result = fuseExtension(
-      result,
-      makeBox(
-        [
-          currentBounds.max[0] - OUTER_TOUCH_TOLERANCE,
-          currentBounds.min[1],
-          zMin,
-        ],
-        [targetBounds.max[0], currentBounds.max[1], zMax],
-      ),
-    )
-  }
-  if (
-    targetBounds.min[1] < sourceBounds.min[1] &&
-    touchesMinimum(currentBounds.min[1], sourceBounds.min[1])
-  ) {
-    result = fuseExtension(
-      result,
-      makeBox(
-        [currentBounds.min[0], targetBounds.min[1], zMin],
-        [
-          currentBounds.max[0],
-          currentBounds.min[1] + OUTER_TOUCH_TOLERANCE,
-          zMax,
-        ],
-      ),
-    )
-  }
-  if (
-    targetBounds.max[1] > sourceBounds.max[1] &&
-    touchesMaximum(currentBounds.max[1], sourceBounds.max[1])
-  ) {
-    result = fuseExtension(
-      result,
-      makeBox(
-        [
-          currentBounds.min[0],
-          currentBounds.max[1] - OUTER_TOUCH_TOLERANCE,
-          zMin,
-        ],
-        [currentBounds.max[0], targetBounds.max[1], zMax],
-      ),
-    )
-  }
-  return result
-}
-
-function extendDirectionalAssembly(
-  assembly: Shape3D,
-  sourceBounds: ModelBounds,
-  targetBounds: ModelBounds,
-): Shape3D {
-  let result = assembly
-  const zMin = sourceBounds.min[2]
-  const zMax = sourceBounds.max[2]
-  if (targetBounds.min[0] < sourceBounds.min[0]) {
-    result = fuseExtension(
-      result,
-      makeBox(
-        [targetBounds.min[0], sourceBounds.min[1], zMin],
-        [
-          sourceBounds.min[0] + FEATURE_CUTTER_MARGIN,
-          sourceBounds.max[1],
-          zMax,
-        ],
-      ),
-    )
-  }
-  if (targetBounds.max[0] > sourceBounds.max[0]) {
-    result = fuseExtension(
-      result,
-      makeBox(
-        [
-          sourceBounds.max[0] - FEATURE_CUTTER_MARGIN,
-          sourceBounds.min[1],
-          zMin,
-        ],
-        [targetBounds.max[0], sourceBounds.max[1], zMax],
-      ),
-    )
-  }
-  if (targetBounds.min[1] < sourceBounds.min[1]) {
-    result = fuseExtension(
-      result,
-      makeBox(
-        [sourceBounds.min[0], targetBounds.min[1], zMin],
-        [
-          sourceBounds.max[0],
-          sourceBounds.min[1] + FEATURE_CUTTER_MARGIN,
-          zMax,
-        ],
-      ),
-    )
-  }
-  if (targetBounds.max[1] > sourceBounds.max[1]) {
-    result = fuseExtension(
-      result,
-      makeBox(
-        [
-          sourceBounds.min[0],
-          sourceBounds.max[1] - FEATURE_CUTTER_MARGIN,
-          zMin,
-        ],
-        [sourceBounds.max[0], targetBounds.max[1], zMax],
-      ),
-    )
-  }
-  return result
-}
-
-function resizeAssembly(
-  assembly: Shape3D,
-  parameters: OpenGridSnapParameters,
-  targetBounds: ModelBounds = boundsForOpenGridSnap(parameters),
-): Shape3D {
-  if (parameters.offset === 0) return assembly
-
-  const sourceBounds = readBounds(assembly)
-  if (parameters.profile === 'Directional') {
-    return extendDirectionalAssembly(assembly, sourceBounds, targetBounds)
-  }
-
-  const solids = extractSolids(assembly)
-  const centralIndex = centralSolidIndex(solids)
-  const output: Shape3D[] = []
-  try {
-    for (let index = 0; index < solids.length; index += 1) {
-      const solid = solids[index]
-      if (!solid) throw new Error('OPENGRID_SNAP_SOLID_MISSING')
-      output.push(
-        index === centralIndex
-          ? solid
-          : extendOuterSolid(solid, sourceBounds, targetBounds),
-      )
-    }
-    const result = makeCompound(output).asShape3D()
-    deleteShape(assembly)
-    return result
-  } catch (error) {
-    deleteShape(assembly)
-    for (const shape of output) deleteShape(shape)
-    for (const solid of solids) deleteShape(solid)
-    throw error
-  }
-}
-
-function fullAssemblyBoundsBeforeFootprint(
+export function openGridSnapPreFootprintBoundsFor(
   parameters: OpenGridSnapParameters,
 ): ModelBounds {
   const fullCellParameters = {
@@ -711,13 +631,19 @@ async function clipAssemblyToFootprint(
   const finalProfile = hostEnvelope(boundsForOpenGridSnap(parameters))
   const source = cloneImportedAssembly(assembly)
   const sourceSolids = extractSolids(source)
+  const definition = openGridSnapProfileFor(
+    parameters.profile,
+    parameters.variant,
+  )
+  const centralIndex =
+    parameters.profile === 'Directional' ? 0 : centralSolidIndex(sourceSolids)
   const output: Shape3D[] = []
   let boundaryObstacle: Shape3D | null = null
   let succeeded = false
 
   try {
     boundaryObstacle = buildOpenGridSnapBoundaryObstacle(parameters.footprint)
-    for (const solid of sourceSolids) {
+    for (const [sourceIndex, solid] of sourceSolids.entries()) {
       assertGenerationCurrent(context)
       const clipped = solid.intersect(clippingProfile)
       if (clipped !== solid) deleteShape(solid)
@@ -727,11 +653,19 @@ async function clipAssemblyToFootprint(
       }
       const translated = clipped.translate(translation[0], translation[1], 0)
       if (translated !== clipped) deleteShape(clipped)
-      const bounded = translated.intersect(finalProfile)
+      let bounded = translated.intersect(finalProfile)
       if (bounded !== translated) deleteShape(translated)
       if (measureVolume(bounded) <= ASSET_TOLERANCE) {
         deleteShape(bounded)
         continue
+      }
+      if (sourceIndex === centralIndex) {
+        bounded = applyBodyFeatures(bounded, parameters, definition, {
+          // A half/quarter envelope cannot contain a complete fixed ±7 mm
+          // locating hole. Keep the fixed feature out instead of producing a
+          // translated or partial hole at the new boundary.
+          applyLocatingHoles: false,
+        })
       }
       const boundaryCut = boundaryObstacle
         ? bounded.cut(boundaryObstacle)
@@ -834,14 +768,11 @@ export async function buildOpenGridSnap(
   )
   assertGenerationCurrent(context)
 
-  let assembly = buildFeatureAssembly(reference, parameters)
-  if (parameters.offset > 0) {
-    assembly = resizeAssembly(
-      assembly,
-      parameters,
-      fullAssemblyBoundsBeforeFootprint(parameters),
-    )
-  }
+  const assembly = buildFeatureAssembly(
+    reference,
+    parameters,
+    openGridSnapPreFootprintBoundsFor(parameters),
+  )
 
   if (parameters.footprint === 'full') return assembly
 

@@ -1,0 +1,11 @@
+{
+  "name": "replicad-opencascadejs",
+  "version": "0.23.0",
+  "description": "Project-owned Replicad OpenCascade build with general transform support",
+  "author": "Steve Genoud <steve@sgenoud.com>",
+  "license": "MIT",
+  "main": "src/replicad_single.js",
+  "files": [
+    "src"
+  ]
+}
