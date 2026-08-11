@@ -164,6 +164,8 @@ describe('OpenGrid divider CAD kernel integration', () => {
     { left: 1, right: 0, up: 2, down: 0, height: 20, wallThickness: 2 },
     { left: 1, right: 1, up: 2, down: 1, height: 20, wallThickness: 2 },
     { left: 1.5, right: 2, up: 0, down: 0, height: 35, wallThickness: 2 },
+    { left: 0.5, right: 0, up: 0.5, down: 0, height: 20, wallThickness: 2 },
+    { left: 17.5, right: 0, up: 0.5, down: 0, height: 500, wallThickness: 2 },
   ])(
     'builds a centered one-solid divider for %#',
     async (parameters) => {

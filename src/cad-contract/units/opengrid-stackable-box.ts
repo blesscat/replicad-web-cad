@@ -1,3 +1,5 @@
+import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
+
 export type OpenGridStackableBoxParameterKey =
   | 'x'
   | 'y'
@@ -113,7 +115,7 @@ export type OpenGridStackableBoxValidation =
 export type OpenGridStackableBoxPoint2D = [number, number]
 
 export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
-  gridPitch: 28,
+  gridPitch: OPENGRID_GRID_CONFIGURATION.fullPitch,
   gridStep: 0.5,
   workspaceMaxDimension: 500,
   defaultX: 2,
@@ -171,7 +173,7 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   thinShellBottomAssemblyHeight: 2,
   thinShellBottomHoleStepHeight: 1,
   thinShellBottomHoleTopDepth: 1,
-  bottomHoleGridPitch: 14,
+  bottomHoleGridPitch: OPENGRID_GRID_CONFIGURATION.halfPitch,
   bottomHoleGridEdgeOffset: 7,
   bottomGridHoleDiameter: 5.05,
   baseFlangeDiameter: 5.8,

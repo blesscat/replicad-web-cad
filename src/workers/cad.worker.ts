@@ -1184,7 +1184,7 @@ export class CadWorkerRuntime {
       return makeError(
         'meshing',
         code,
-        '自製 14 mm 整格／7 mm 半格 OpenGrid 分隔器幾何未通過品質檢查，請調整參數後重試。',
+        '官方 28 mm 整格／14 mm 半格 OpenGrid 分隔器幾何未通過品質檢查，請調整參數後重試。',
         true,
       )
     }

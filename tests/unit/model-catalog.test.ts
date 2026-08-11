@@ -610,6 +610,9 @@ describe('CAD component catalog', () => {
       sliderMin: 2,
       sliderMax: 200,
     })
+    expect(definition?.selectionDescription).toContain(
+      '官方 OpenGrid 28 mm 整格／14 mm 半格',
+    )
     expect(definition?.selectionDescription).toContain('高度文字輸入 2–500 mm')
     expect(definition?.selectionDescription).toContain('slider 2–200 mm')
     expect(definition?.defaultParameters).toEqual({

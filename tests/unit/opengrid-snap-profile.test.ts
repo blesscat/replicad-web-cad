@@ -4,6 +4,10 @@ import {
   openGridSnapProfileFor,
   OPENGRID_SNAP_PROFILE_DEFINITIONS,
 } from '../../src/cad-kernel/components/opengrid-snap/profile'
+import {
+  halfCellHostPitch,
+  OPENGRID_GRID_CONFIGURATION,
+} from '../../src/cad-contract/units'
 
 describe('OpenGrid Snap profile registry', () => {
   it('registers every independent profile and variant with its source geometry', () => {
@@ -17,7 +21,7 @@ describe('OpenGrid Snap profile registry', () => {
           '/src/cad-kernel/components/opengrid-snap/assets/',
         )
         expect(definition.assetUrl.pathname).not.toContain('/Downloads/')
-        expect(definition.hostPitch).toEqual([14, 14])
+        expect('hostPitch' in definition).toBe(false)
         expect(definition.canonicalOrientation).toBe('source')
         expect(definition.expectedSolidCount).toBe(
           profile === 'Standard' ? 9 : 1,
@@ -33,6 +37,15 @@ describe('OpenGrid Snap profile registry', () => {
       'Standard',
       'Directional',
     ])
+  })
+
+  it('uses the shared official pitch for full and half host footprints', () => {
+    expect(halfCellHostPitch('none')).toBe(
+      OPENGRID_GRID_CONFIGURATION.fullPitch,
+    )
+    expect(halfCellHostPitch('left')).toBe(
+      OPENGRID_GRID_CONFIGURATION.halfPitch,
+    )
   })
 
   it('keeps locating-hole and center-remover dimensions fixed per profile', () => {

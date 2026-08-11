@@ -10,7 +10,6 @@ export type OpenGridSnapProfileDefinition = {
   assetUrl: URL
   expectedBounds: ModelBounds
   expectedSolidCount: number
-  hostPitch: readonly [number, number]
   canonicalOrientation: 'source'
   assemblyKind: 'body-side-holder-snap' | 'fused-directional'
   intrinsicFeatures: readonly string[]
@@ -112,7 +111,6 @@ function makeDefinition(
     assetUrl,
     expectedBounds,
     expectedSolidCount,
-    hostPitch: [14, 14],
     canonicalOrientation: 'source',
     assemblyKind,
     intrinsicFeatures,

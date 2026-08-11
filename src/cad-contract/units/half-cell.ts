@@ -1,11 +1,13 @@
+import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
+
 export type HalfCellX = 'none' | 'left' | 'right'
 export type HalfCellY = 'none' | 'top' | 'bottom'
 
 export type HalfCellDirection = HalfCellX | HalfCellY
 
 export const HALF_CELL_CONFIGURATION = {
-  halfPitch: 14,
-  fullPitch: 28,
+  halfPitch: OPENGRID_GRID_CONFIGURATION.halfPitch,
+  fullPitch: OPENGRID_GRID_CONFIGURATION.fullPitch,
   fullSnapNominalSize: 25.6,
   halfSnapNominalSize: 12.8,
   fullSnapFixedCoreSize: 24.8,

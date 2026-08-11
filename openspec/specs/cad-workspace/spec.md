@@ -1037,7 +1037,7 @@ The system MUST register `opengrid-divider` as an independent model definition a
 - **WHEN** the divider workspace is rendered
 - **THEN** it MUST display four directional grid-count controls, a configurable height in millimetres, and a wall-thickness control with values from 1 through 5 mm
 - **AND** the thickness control MUST identify 2 mm as the default
-- **AND** it MUST NOT display a separate technical summary for the 14 mm/7 mm footprint, shape, plane dimensions, chamfer, locating pegs, or total Z bounds
+- **AND** it MUST NOT display a separate technical summary for the official 28 mm/14 mm footprint, shape, plane dimensions, chamfer, locating pegs, or total Z bounds
 - **AND** it MUST NOT display controls belonging to another model
 
 ### Requirement: 分隔器輸入生命週期

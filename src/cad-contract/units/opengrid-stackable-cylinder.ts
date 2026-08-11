@@ -1,3 +1,5 @@
+import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
+
 export type OpenGridStackableCylinderParameterKey =
   | 'diameter'
   | 'height'
@@ -108,7 +110,7 @@ export const OPENGRID_STACKABLE_CYLINDER_CONFIGURATION = {
   bottomHoleSectionDepth: 2,
   innerHoleSectionDepth: 1,
   innerFloorFilletRadius: 0.6,
-  holeGridPitch: 14,
+  holeGridPitch: OPENGRID_GRID_CONFIGURATION.halfPitch,
   outerEdgeClearance: 2,
   flatFloorClearance: 2,
   stackGrooveDepth: 0.8,

@@ -1,5 +1,6 @@
 import { makeBox, Sketcher, type Shape3D } from 'replicad'
 import {
+  OPENGRID_GRID_CONFIGURATION,
   OPENGRID_CONFIGURATION,
   type OpenGridSnapFootprint,
 } from '../../../cad-contract/units'
@@ -32,12 +33,12 @@ type BoundaryTile = {
  * loading the full board STEP at runtime.
  */
 export const OPENGRID_SNAP_BOUNDARY_PROFILE = {
-  pitch: OPENGRID_CONFIGURATION.gridPitch,
-  halfPitch: OPENGRID_CONFIGURATION.gridPitch / 2,
+  pitch: OPENGRID_GRID_CONFIGURATION.fullPitch,
+  halfPitch: OPENGRID_GRID_CONFIGURATION.halfPitch,
   liteThickness: OPENGRID_CONFIGURATION.variants.Lite.thickness,
   boundaryHeight: OPENGRID_CONFIGURATION.variants.Full.thickness,
   cornerWidth: openGridProfileConstants(
-    OPENGRID_CONFIGURATION.gridPitch,
+    OPENGRID_GRID_CONFIGURATION.fullPitch,
     OPENGRID_CONFIGURATION.variants.Lite.thickness,
   ).cornerWidth,
   diagonalCornerInset: OPENGRID_CONFIGURATION.intersectionDistance,

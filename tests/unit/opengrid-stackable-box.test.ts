@@ -16,6 +16,7 @@ import {
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
   openGridStackableBoxSocketCentersFor,
   openGridStackableBoxUpperInnerRimZFor,
+  OPENGRID_GRID_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   validateModelParameters,
   validateOpenGridStackableBoxParameters,
@@ -410,7 +411,9 @@ describe('OpenGrid stackable-box contract', () => {
     expect(
       openGridStackableBoxSocketCentersFor(parameters({ x: 0.5, y: 0.5 })),
     ).toEqual([[0, 0]])
-    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.gridPitch).toBe(28)
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.gridPitch).toBe(
+      OPENGRID_GRID_CONFIGURATION.fullPitch,
+    )
   })
 
   it('rejects selecting thin-shell and base-plate modes together', () => {
@@ -427,7 +430,7 @@ describe('OpenGrid stackable-box contract', () => {
     const pitch = OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomHoleGridPitch
     const full = parameters({ fullBottomHoleGrid: true })
 
-    expect(pitch).toBe(14)
+    expect(pitch).toBe(OPENGRID_GRID_CONFIGURATION.halfPitch)
     expect(nominalOpenGridStackableBoxBottomGridAxisPositionsFor(0.5)).toEqual([
       0,
     ])

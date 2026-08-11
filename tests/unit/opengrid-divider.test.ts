@@ -149,6 +149,7 @@ describe('OpenGrid divider contract', () => {
   })
 
   it('rejects incomplete, off-step, negative, and oversized snapshots', () => {
+    expect(OPENGRID_DIVIDER_CONFIGURATION.maxArmCount).toBe(17.5)
     expect(
       validateOpenGridDividerParameters({
         left: 1,
@@ -188,6 +189,26 @@ describe('OpenGrid divider contract', () => {
     ).toBe(true)
     expect(
       validateOpenGridDividerParameters({
+        left: 17.5,
+        right: 0,
+        up: 0.5,
+        down: 0,
+        height: 20,
+        wallThickness: 2,
+      }).valid,
+    ).toBe(true)
+    expect(
+      validateOpenGridDividerParameters({
+        left: 18,
+        right: 0,
+        up: 0.5,
+        down: 0,
+        height: 20,
+        wallThickness: 2,
+      }).valid,
+    ).toBe(false)
+    expect(
+      validateOpenGridDividerParameters({
         left: OPENGRID_DIVIDER_CONFIGURATION.maxArmCount,
         right: OPENGRID_DIVIDER_CONFIGURATION.maxArmCount,
         up: 0,
@@ -208,7 +229,7 @@ describe('OpenGrid divider contract', () => {
     ).toBe(false)
   })
 
-  it('uses 14 mm full-grid lengths and sparse deterministic peg centers', () => {
+  it('uses official 28 mm full-grid lengths and sparse deterministic peg centers', () => {
     const parameters = normalizeOpenGridDividerParameters({
       left: 1.5,
       right: 2.5,
@@ -219,8 +240,8 @@ describe('OpenGrid divider contract', () => {
     })
 
     expect(openGridDividerPlanDimensionsFor(parameters)).toMatchObject({
-      width: 56,
-      depth: 65.5,
+      width: 112,
+      depth: 128.5,
       wallHeight: 20,
       totalHeight: 23,
     })
@@ -228,9 +249,13 @@ describe('OpenGrid divider contract', () => {
     const { pegCenterSpacing } = OPENGRID_DIVIDER_CONFIGURATION
     expect(centers).toEqual([
       [0, 0],
+      [-pegCenterSpacing, 0],
       [pegCenterSpacing, 0],
+      [pegCenterSpacing * 2, 0],
       [0, pegCenterSpacing],
       [0, pegCenterSpacing * 2],
+      [0, pegCenterSpacing * 3],
+      [0, pegCenterSpacing * 4],
     ])
     expect(new Set(centers.map(([x, y]) => `${x},${y}`)).size).toBe(
       centers.length,
@@ -259,8 +284,8 @@ describe('OpenGrid divider contract', () => {
     })
 
     expect(bounds).toEqual({
-      min: [-14, -2.5, -3],
-      max: [14, 2.5, 20],
+      min: [-28, -2.5, -3],
+      max: [28, 2.5, 20],
     })
   })
 
