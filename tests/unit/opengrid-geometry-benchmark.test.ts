@@ -71,9 +71,9 @@ describe('OpenGrid geometry benchmark contract', () => {
   it('exposes every required variant and scale without exceeding the workspace', () => {
     const fixtures = createOpenGridBenchmarkFixtures()
     expect(new Set(fixtures.map((fixture) => fixture.variant))).toEqual(
-      new Set(['Full', 'Lite', 'Heavy']),
+      new Set(['Full', 'Lite', 'Heavy', 'Hybrid']),
     )
-    for (const variant of ['Full', 'Lite', 'Heavy'] as const) {
+    for (const variant of ['Full', 'Lite', 'Heavy', 'Hybrid'] as const) {
       expect(
         fixtures
           .filter((fixture) => fixture.variant === variant)
@@ -144,6 +144,7 @@ describe('OpenGrid geometry benchmark contract', () => {
     expect(report.selectedStrategies.Full).toBeDefined()
     expect(report.selectedStrategies.Lite).toBeNull()
     expect(report.selectedStrategies.Heavy).toBeNull()
+    expect(report.selectedStrategies.Hybrid).toBeNull()
   })
 
   it('retains failed samples while allowing independent strategies to finish', async () => {

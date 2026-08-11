@@ -462,6 +462,9 @@
       <option value="Lite">Lite（4 mm）</option>
       <option value="Full">Full（6.8 mm）</option>
       <option value="Heavy">Heavy（13.8 mm，雙面）</option>
+      <option value="Hybrid"
+        >Hybrid（13.8 mm max，外圍 Heavy／內部 Full）</option
+      >
     </select>
   </ParameterField>
 
@@ -571,6 +574,11 @@
   <p class="m-0 text-sm text-muted">
     尺寸：{width} × {depth} × {thickness} mm（官方 28 mm pitch；內部淨空 25 mm）
   </p>
+  {#if parameters.variant === 'Hybrid'}
+    <p class="m-0 text-sm text-muted" data-testid="opengrid-hybrid-description">
+      Hybrid：13.8 mm 最大包絡；外圍使用 Heavy 雙層，內部保留標準 Full 介面。
+    </p>
+  {/if}
 
   <ParameterField
     label="倒角模式"

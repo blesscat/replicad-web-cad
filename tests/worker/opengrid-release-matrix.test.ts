@@ -29,7 +29,7 @@ const runReleaseMatrix = process.env.RUN_OPENGRID_RELEASE_MATRIX === '1'
 const selectedFixtureIds = process.env.RUN_OPENGRID_RELEASE_FIXTURES?.split(',')
   .map((value) => value.trim())
   .filter(Boolean)
-const variants: readonly OpenGridVariant[] = ['Full', 'Lite', 'Heavy']
+const variants: readonly OpenGridVariant[] = ['Full', 'Lite', 'Heavy', 'Hybrid']
 const selectedVariants = process.env.RUN_OPENGRID_RELEASE_VARIANTS?.split(',')
   .map((value) => value.trim())
   .filter((value): value is OpenGridVariant =>
@@ -108,7 +108,7 @@ beforeAll(async () => {
 })
 
 describe.skipIf(!runReleaseMatrix)('OpenGrid official release matrix', () => {
-  it('passes every official fixture for Full, Lite, and Heavy', async () => {
+  it('passes every official fixture for Full, Lite, Heavy, and Hybrid', async () => {
     for (const variant of variantsToRun) {
       const selectedFixtures = selectedFixtureIds
         ? fixtures.filter((fixture) => selectedFixtureIds.includes(fixture.id))

@@ -23,6 +23,8 @@ const initialiseOpenCascade = require('replicad-opencascadejs')
 const WASM_PATH =
   require.resolve('replicad-opencascadejs/src/replicad_single.wasm')
 const referenceDirectory = process.env.OPENGRID_OFFICIAL_REFERENCE_DIR
+const includeHybridReferenceFixtures =
+  process.env.OPENGRID_HYBRID_REFERENCE_FIXTURES === '1'
 
 type ReferenceFixture = {
   id: string
@@ -40,7 +42,7 @@ type StlMetrics = {
   volume: number
 }
 
-const REFERENCE_FIXTURES: readonly ReferenceFixture[] = [
+const BASE_REFERENCE_FIXTURES: readonly ReferenceFixture[] = [
   ...(['Full', 'Lite', 'Heavy'] as const).map((variant) => ({
     id: `${variant.toLowerCase()}-1x1-none`,
     variant,
@@ -102,6 +104,24 @@ const REFERENCE_FIXTURES: readonly ReferenceFixture[] = [
     },
   ]),
 ]
+
+const HYBRID_REFERENCE_FIXTURES: readonly ReferenceFixture[] = [
+  {
+    id: 'hybrid-6x6-none',
+    variant: 'Hybrid',
+    overrides: { rows: 6, columns: 6 },
+  },
+  {
+    id: 'hybrid-12x12-none',
+    variant: 'Hybrid',
+    overrides: { rows: 12, columns: 12 },
+  },
+]
+
+const REFERENCE_FIXTURES: readonly ReferenceFixture[] =
+  includeHybridReferenceFixtures
+    ? [...BASE_REFERENCE_FIXTURES, ...HYBRID_REFERENCE_FIXTURES]
+    : BASE_REFERENCE_FIXTURES
 
 function parameters(
   variant: OpenGridParameters['variant'],
@@ -241,7 +261,9 @@ function zPlanesForVariant(
   variant: OpenGridParameters['variant'],
 ): readonly number[] {
   if (variant === 'Lite') return [0.23, 1.37, 3.77]
-  if (variant === 'Heavy') return [0.23, 3.37, 6.87, 7.13, 10.37, 13.57]
+  if (variant === 'Heavy' || variant === 'Hybrid') {
+    return [0.23, 3.37, 6.87, 7.13, 10.37, 13.57]
+  }
   return [0.23, 2.17, 4.17, 6.57]
 }
 

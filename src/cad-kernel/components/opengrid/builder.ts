@@ -19,6 +19,7 @@ import {
   HALF_CELL_CONFIGURATION,
   fullGridCenterOffsetX,
   fullGridCenterOffsetY,
+  isOpenGridLayeredVariant,
 } from '../../../cad-contract/units'
 import {
   OPENGRID_CONFIGURATION,
@@ -35,6 +36,7 @@ import {
   openGridLiteTileProfile,
   openGridTileProfile,
   openGridProfileConstants,
+  type OpenGridProfilePoint,
 } from './profile'
 import {
   measureBoolean,
@@ -84,6 +86,7 @@ export const OPENGRID_PRODUCT_STRATEGIES: Readonly<
   Full: 'cell-balanced',
   Lite: 'cell-balanced',
   Heavy: 'cell-balanced',
+  Hybrid: 'cell-balanced',
 }
 
 export const OPENGRID_PROTOTYPE_TEMPLATE_URLS: Readonly<
@@ -92,6 +95,7 @@ export const OPENGRID_PROTOTYPE_TEMPLATE_URLS: Readonly<
   Full: new URL('./opengrid-full-cell.step', import.meta.url),
   Lite: new URL('./opengrid-lite-cell.step', import.meta.url),
   Heavy: new URL('./opengrid-heavy-cell.step', import.meta.url),
+  Hybrid: new URL('./opengrid-heavy-cell.step', import.meta.url),
 }
 
 function deleteShape(shape: { delete?: () => void } | null | undefined): void {
@@ -383,11 +387,12 @@ export function buildOpenGridCanonicalTile(
   variant: OpenGridVariant,
   context: OpenGridBuildContext = {},
 ): Promise<Shape3D> {
+  const surfaceVariant = variant === 'Hybrid' ? 'Heavy' : variant
   const thickness =
-    variant === 'Lite'
+    surfaceVariant === 'Lite'
       ? OPENGRID_CONFIGURATION.variants.Lite.thickness
       : OPENGRID_CONFIGURATION.variants.Full.thickness
-  return buildCanonicalTile(variant, thickness, context)
+  return buildCanonicalTile(surfaceVariant, thickness, context)
 }
 
 type HalfExtensionTileSpec = {
@@ -944,7 +949,7 @@ async function buildOpenGridPrototypeShape(
   }
   const startedAt = performance.now()
 
-  if (variant !== 'Heavy') {
+  if (variant === 'Full' || variant === 'Lite') {
     const thickness = OPENGRID_CONFIGURATION.variants[variant].thickness
     const prototype = await buildCanonicalTile(variant, thickness, context)
     context.reportPhase?.('prototype-build', performance.now() - startedAt)
@@ -1333,16 +1338,408 @@ async function buildHeavyBridge(
   }
 }
 
+type HybridSurfaceProfile = 'Full' | 'Heavy'
+type HybridTransitionSide = 'top' | 'right' | 'bottom' | 'left'
+
+function isHybridPerimeterCell(
+  parameters: OpenGridParameters,
+  row: number,
+  column: number,
+): boolean {
+  return (
+    row === 0 ||
+    row === parameters.rows - 1 ||
+    column === 0 ||
+    column === parameters.columns - 1
+  )
+}
+
+function hybridPerimeterCellCount(parameters: OpenGridParameters): number {
+  let count = 0
+  for (let row = 0; row < parameters.rows; row += 1) {
+    for (let column = 0; column < parameters.columns; column += 1) {
+      if (isHybridPerimeterCell(parameters, row, column)) count += 1
+    }
+  }
+  return count
+}
+
+function hybridSurfaceProfileForCell(
+  parameters: OpenGridParameters,
+  row: number,
+  column: number,
+): HybridSurfaceProfile {
+  return isHybridPerimeterCell(parameters, row, column) ? 'Heavy' : 'Full'
+}
+
+function hybridTransitionWidth(): number {
+  return OPENGRID_CONFIGURATION.hybridTransitionWidth
+}
+
+function hybridTransitionSidesForCell(
+  parameters: OpenGridParameters,
+  row: number,
+  column: number,
+): HybridTransitionSide[] {
+  if (parameters.rows < 3 || parameters.columns < 3) return []
+
+  const sides: HybridTransitionSide[] = []
+  if (row === 0) sides.push('top')
+  if (column === parameters.columns - 1) sides.push('right')
+  if (row === parameters.rows - 1) sides.push('bottom')
+  if (column === 0) sides.push('left')
+  return sides
+}
+
+function buildHybridTransitionWedge(
+  parameters: OpenGridParameters,
+  row: number,
+  column: number,
+  side: HybridTransitionSide,
+): Shape3D {
+  const [centerX, centerY] = cellCenterForOpenGrid(parameters, row, column)
+  const halfTile = OPENGRID_CONFIGURATION.gridPitch / 2
+  const width = hybridTransitionWidth()
+  const fullThickness = OPENGRID_CONFIGURATION.variants.Full.thickness
+  const heavyThickness = OPENGRID_CONFIGURATION.variants.Heavy.thickness
+  const seamOverlap = OPENGRID_CONFIGURATION.heavyGap
+  const signedWidth = side === 'top' || side === 'right' ? width : -width
+  const profile: OpenGridProfilePoint[] = [
+    [0, fullThickness - seamOverlap],
+    [signedWidth, fullThickness - seamOverlap],
+    [signedWidth, heavyThickness],
+    [0, fullThickness + seamOverlap],
+  ]
+
+  if (side === 'top' || side === 'bottom') {
+    const boundaryY = side === 'top' ? centerY - halfTile : centerY + halfTile
+    return extrudeProfile(
+      'YZ',
+      [centerX - halfTile, boundaryY, 0],
+      profile,
+      OPENGRID_CONFIGURATION.gridPitch,
+      [1, 0, 0],
+    )
+  }
+
+  const boundaryX = side === 'right' ? centerX - halfTile : centerX + halfTile
+  return extrudeProfile(
+    'XZ',
+    [boundaryX, centerY - halfTile, 0],
+    profile,
+    OPENGRID_CONFIGURATION.gridPitch,
+    [0, 1, 0],
+  )
+}
+
+async function buildHybridTransitionWedges(
+  parameters: OpenGridParameters,
+  strategy: OpenGridAssemblyStrategy,
+  context: OpenGridBuildContext,
+): Promise<Shape3D | null> {
+  const pieces: Shape3D[] = []
+
+  if (parameters.rows < 3 || parameters.columns < 3) return null
+
+  try {
+    for (let row = 0; row < parameters.rows; row += 1) {
+      for (let column = 0; column < parameters.columns; column += 1) {
+        for (const side of hybridTransitionSidesForCell(
+          parameters,
+          row,
+          column,
+        )) {
+          assertGenerationCurrent(context)
+          pieces.push(buildHybridTransitionWedge(parameters, row, column, side))
+          await yieldAtSafeBoundary(context)
+        }
+      }
+    }
+
+    if (pieces.length === 0) return null
+    return await fuseByStrategy([pieces], strategy, context)
+  } catch (error) {
+    for (const piece of pieces) deleteShape(piece)
+    throw error
+  }
+}
+
+async function buildHybridSurface(
+  parameters: OpenGridParameters,
+  zOffset: number,
+  mirrorWithinLayer: boolean,
+  includeInterior: boolean,
+  strategy: OpenGridAssemblyStrategy,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  const canonicalByProfile = new Map<HybridSurfaceProfile, Shape3D>()
+  const ownedCanonical = new Set<Shape3D>()
+  const rows: Shape3D[][] = []
+  const totalCells = includeInterior
+    ? parameters.rows * parameters.columns
+    : hybridPerimeterCellCount(parameters)
+  let completed = 0
+
+  try {
+    reportProgress(context, 0, totalCells)
+    for (let row = 0; row < parameters.rows; row += 1) {
+      const rowPieces: Shape3D[] = []
+      for (let column = 0; column < parameters.columns; column += 1) {
+        const isPerimeter = isHybridPerimeterCell(parameters, row, column)
+        if (!includeInterior && !isPerimeter) continue
+
+        assertGenerationCurrent(context)
+        const profile = hybridSurfaceProfileForCell(parameters, row, column)
+        const [centerX, centerY] = cellCenterForOpenGrid(
+          parameters,
+          row,
+          column,
+        )
+        let canonical = canonicalByProfile.get(profile)
+        if (!canonical) {
+          canonical = context.getOpenGridCanonicalTile
+            ? await context.getOpenGridCanonicalTile(
+                profile,
+                OPENGRID_CONFIGURATION.variants.Full.thickness,
+              )
+            : await buildCanonicalTile(
+                profile,
+                OPENGRID_CONFIGURATION.variants.Full.thickness,
+                context,
+              )
+          canonicalByProfile.set(profile, canonical)
+          if (!context.getOpenGridCanonicalTile) ownedCanonical.add(canonical)
+        }
+
+        let piece = canonical.clone()
+        if (mirrorWithinLayer) {
+          const mirrored = mirrorSurfaceWithinLayer(
+            piece,
+            OPENGRID_CONFIGURATION.variants.Full.thickness,
+          )
+          if (mirrored !== piece) deleteShape(piece)
+          piece = mirrored
+        }
+        const translated = piece.translate(centerX, centerY, zOffset)
+        if (translated !== piece) deleteShape(piece)
+        rowPieces.push(translated)
+        completed += 1
+        reportProgress(context, completed, totalCells)
+        await yieldAtSafeBoundary(context)
+      }
+      if (rowPieces.length > 0) rows.push(rowPieces)
+    }
+
+    if (context.fuseHalfCellExtensionsIntoAssembly !== false) {
+      const extensionPieces = await buildOfficialHalfCellExtensionPieces(
+        parameters,
+        'Heavy',
+        OPENGRID_CONFIGURATION.variants.Full.thickness,
+        zOffset,
+        mirrorWithinLayer,
+        context,
+      )
+      if (extensionPieces.length > 0) rows.push(extensionPieces)
+    }
+
+    const result = await fuseByStrategy(rows, strategy, context)
+    for (const canonical of ownedCanonical) deleteShape(canonical)
+    if (context.fuseHalfCellExtensionsIntoAssembly !== false) return result
+    return addOfficialHalfCellExtensions(
+      result,
+      parameters,
+      'Heavy',
+      OPENGRID_CONFIGURATION.variants.Full.thickness,
+      zOffset,
+      mirrorWithinLayer,
+      context,
+    )
+  } catch (error) {
+    for (const row of rows) {
+      for (const piece of row) deleteShape(piece)
+    }
+    for (const canonical of ownedCanonical) deleteShape(canonical)
+    throw error
+  }
+}
+
+async function buildHybridBridge(
+  parameters: OpenGridParameters,
+  zOffset: number,
+  strategy: OpenGridAssemblyStrategy,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  const rows: Shape3D[][] = []
+  try {
+    for (let row = 0; row < parameters.rows; row += 1) {
+      const rowParts: Shape3D[] = []
+      for (let column = 0; column < parameters.columns; column += 1) {
+        if (!isHybridPerimeterCell(parameters, row, column)) continue
+        const [centerX, centerY] = cellCenterForOpenGrid(
+          parameters,
+          row,
+          column,
+        )
+        rowParts.push(
+          ...buildFlatBridgeTile(
+            centerX,
+            centerY,
+            zOffset,
+            context.booleanOperations,
+          ),
+        )
+        await yieldAtSafeBoundary(context)
+      }
+      if (rowParts.length > 0) rows.push(rowParts)
+    }
+
+    if (context.fuseHalfCellExtensionsIntoAssembly !== false) {
+      const extensionPieces = await buildHalfCellExtensionPieces(
+        parameters,
+        (spec) =>
+          fuseBalanced(
+            buildHalfFlatBridgeTile(
+              0,
+              0,
+              0,
+              spec.width,
+              spec.depth,
+              spec.interfaceX,
+              spec.interfaceY,
+            ),
+            context,
+          ),
+        'heavy-bridge',
+        OPENGRID_CONFIGURATION.heavyGap,
+        zOffset,
+        false,
+        context,
+      )
+      if (extensionPieces.length > 0) rows.push(extensionPieces)
+    }
+
+    const result = await fuseByStrategy(rows, strategy, context)
+    if (context.fuseHalfCellExtensionsIntoAssembly !== false) return result
+    return addHalfCellExtensions(
+      result,
+      parameters,
+      async (spec) =>
+        fuseBalanced(
+          buildHalfFlatBridgeTile(
+            0,
+            0,
+            0,
+            spec.width,
+            spec.depth,
+            spec.interfaceX,
+            spec.interfaceY,
+          ),
+          context,
+        ),
+      OPENGRID_CONFIGURATION.heavyGap,
+      zOffset,
+      false,
+      context,
+    )
+  } catch (error) {
+    for (const row of rows) {
+      for (const part of row) deleteShape(part)
+    }
+    throw error
+  }
+}
+
+async function buildHybridProductBase(
+  parameters: OpenGridParameters,
+  strategy: OpenGridAssemblyStrategy,
+  context: OpenGridBuildContext,
+): Promise<Shape3D> {
+  const layerThickness = OPENGRID_CONFIGURATION.variants.Full.thickness
+  let lower: Shape3D | null = null
+  let upper: Shape3D | null = null
+  let bridge: Shape3D | null = null
+  let cutBridge: Shape3D | null = null
+  let transition: Shape3D | null = null
+
+  try {
+    lower = await buildHybridSurface(
+      parameters,
+      0,
+      true,
+      true,
+      strategy,
+      context,
+    )
+    upper = await buildHybridSurface(
+      parameters,
+      layerThickness + OPENGRID_CONFIGURATION.heavyGap,
+      false,
+      false,
+      strategy,
+      context,
+    )
+    bridge = await buildHybridBridge(
+      parameters,
+      layerThickness,
+      strategy,
+      context,
+    )
+    cutBridge = await applyHeavyBridgeFeatures(
+      bridge,
+      parameters,
+      layerThickness,
+      context,
+    )
+    bridge = null
+    lower = await applyBatchedCuts(lower, parameters, context)
+    upper = await applyBatchedCuts(upper, parameters, context)
+    transition = await buildHybridTransitionWedges(
+      parameters,
+      strategy,
+      context,
+    )
+
+    if (!lower || !cutBridge || !upper) {
+      throw new Error('OPENGRID_HYBRID_ASSEMBLY_EMPTY')
+    }
+    const parts = [lower, cutBridge, upper]
+    if (transition) parts.push(transition)
+    const result = await fuseBalanced(parts, context)
+    lower = null
+    cutBridge = null
+    upper = null
+    transition = null
+    return result
+  } catch (error) {
+    deleteShape(lower)
+    deleteShape(cutBridge ?? bridge)
+    deleteShape(upper)
+    deleteShape(transition)
+    throw error
+  }
+}
+
 async function buildProductBase(
   parameters: OpenGridParameters,
   strategy: OpenGridAssemblyStrategy,
   context: OpenGridBuildContext,
 ): Promise<Shape3D> {
+  if (
+    strategy === 'prototype-template' &&
+    parameters.variant === 'Hybrid' &&
+    (parameters.rows > 1 || parameters.columns > 1)
+  ) {
+    throw new Error('OPENGRID_HYBRID_TEMPLATE_UNAVAILABLE')
+  }
   if (strategy === 'prototype-template' && !hasOpenGridHalfCell(parameters)) {
     return buildPrototypeTemplateAssembly(parameters, context)
   }
 
-  if (parameters.variant !== 'Heavy') {
+  if (parameters.variant === 'Hybrid') {
+    return buildHybridProductBase(parameters, strategy, context)
+  }
+
+  if (!isOpenGridLayeredVariant(parameters.variant)) {
     return buildGridSurface(
       parameters,
       parameters.variant,
@@ -1892,7 +2289,7 @@ function createBoardScrewCutterGroups(
   const centers = openGridScrewCentersFor(parameters)
   if (centers.length === 0) return []
 
-  if (parameters.variant !== 'Heavy') {
+  if (!isOpenGridLayeredVariant(parameters.variant)) {
     const layerHeight =
       parameters.variant === 'Lite'
         ? OPENGRID_CONFIGURATION.variants.Lite.thickness
@@ -1935,7 +2332,7 @@ function createBoardConnectorCutterGroups(
 ): CutterGroup[] {
   const locations = openGridConnectorLocationsFor(parameters)
   if (locations.length === 0) return []
-  if (parameters.variant !== 'Heavy') {
+  if (!isOpenGridLayeredVariant(parameters.variant)) {
     const layerHeight =
       parameters.variant === 'Lite'
         ? OPENGRID_CONFIGURATION.variants.Lite.thickness
@@ -2145,7 +2542,7 @@ export async function buildOpenGridBRepWithStrategy(
         base,
         parameters,
         context,
-        parameters.variant !== 'Heavy',
+        !isOpenGridLayeredVariant(parameters.variant),
       )
     }
     assertGenerationCurrent(context)

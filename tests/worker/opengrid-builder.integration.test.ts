@@ -28,6 +28,7 @@ import {
   OPENGRID_PREVIEW_CONFIGURATION,
   openGridScrewCentersFor,
   type OpenGridParameters,
+  type OpenGridVariant,
 } from '../../src/cad-contract/units'
 
 ;(globalThis as typeof globalThis & { __dirname?: string }).__dirname = dirname(
@@ -647,6 +648,7 @@ describe('OpenGrid official-profile product builder', () => {
         shape.delete()
       }
     },
+    60_000,
   )
 
   it.each(CAPTURE_LEDGE_CASES)(
@@ -721,8 +723,11 @@ describe('OpenGrid official-profile product builder', () => {
     const halfCell = new Map<string, Promise<Shape3D>>()
     let halfCellFactoryCalls = 0
     const context = {
-      getOpenGridCanonicalTile: (variant: 'Full' | 'Lite' | 'Heavy') => {
-        const key = `${variant}:${OPENGRID_CONFIGURATION.variants.Full.thickness}`
+      getOpenGridCanonicalTile: (
+        variant: OpenGridVariant,
+        thickness: number,
+      ) => {
+        const key = `${variant}:${thickness}`
         const cached = canonical.get(key)
         if (cached) return cached
         const next = buildOpenGridCanonicalTile(variant)
@@ -829,14 +834,17 @@ describe('OpenGrid official-profile product builder', () => {
         halfCellX: 'right',
         halfCellY: 'top',
       })
-      const canonical = new Map<'Full' | 'Lite' | 'Heavy', Promise<Shape3D>>()
+      const canonical = new Map<OpenGridVariant, Promise<Shape3D>>()
       const halfCell = new Map<string, Promise<Shape3D>>()
       const context = {
         useCompoundChamferCutters: true,
         useCompoundScrewParts: true,
         fuseHalfCellExtensionsIntoAssembly: true,
         balancedFuseBatchSize: 2,
-        getOpenGridCanonicalTile: (variant: 'Full' | 'Lite' | 'Heavy') => {
+        getOpenGridCanonicalTile: (
+          variant: OpenGridVariant,
+          thickness: number,
+        ) => {
           const cached = canonical.get(variant)
           if (cached) return cached
           const next = buildOpenGridCanonicalTile(variant, {
