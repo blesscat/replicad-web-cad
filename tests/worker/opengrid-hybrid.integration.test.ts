@@ -244,6 +244,26 @@ describe('OpenGrid Hybrid product builder', () => {
     }
   }, 120_000)
 
+  it('keeps feature-enabled transitions on every side of a 5×5 board', async () => {
+    const input = parameters({
+      variant: 'Hybrid',
+      rows: 5,
+      columns: 5,
+    })
+    const { shape, quality } = await buildAndInspect(input)
+    try {
+      expect(quality.passed, quality.failures.join(';')).toBe(true)
+      expect(quality.solidCount).toBe(1)
+      expect(quality.cellOpeningCount).toBe(25)
+      expect(quality.bounds?.max[2]).toBeCloseTo(
+        OPENGRID_CONFIGURATION.variants.Hybrid.thickness,
+        5,
+      )
+    } finally {
+      shape.delete()
+    }
+  }, 120_000)
+
   it('keeps Heavy perimeter material and Full interior depth on a 3×3 board', async () => {
     const input = parameters({
       variant: 'Hybrid',

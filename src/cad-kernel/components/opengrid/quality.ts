@@ -379,11 +379,18 @@ function inspectHybridTransition(
   const transitionWidth = OPENGRID_CONFIGURATION.hybridTransitionWidth
   const transitionRise = heavyThickness - fullThickness
   const halfPitch = OPENGRID_CONFIGURATION.gridPitch / 2
-  const [interiorX, interiorY] = cellCenterForOpenGrid(parameters, 1, 1)
   const probeHalfWidth = 0.5
   const probeHalfDepth = 0.25
   const fractions = [0.25, 0.5, 0.75]
   const sides = ['top', 'right', 'bottom', 'left'] as const
+  const interiorRow = Math.floor((parameters.rows - 1) / 2)
+  const interiorColumn = Math.floor((parameters.columns - 1) / 2)
+  const sideCells: Record<(typeof sides)[number], [number, number]> = {
+    top: [1, interiorColumn],
+    right: [interiorRow, parameters.columns - 2],
+    bottom: [parameters.rows - 2, interiorColumn],
+    left: [interiorRow, 1],
+  }
 
   const volumeAtTransition = (
     side: (typeof sides)[number],
@@ -392,8 +399,10 @@ function inspectHybridTransition(
     zMax: number,
   ): number => {
     const offset = transitionWidth * fraction
-    let x = interiorX
-    let y = interiorY
+    const [row, column] = sideCells[side]
+    const [sectionX, sectionY] = cellCenterForOpenGrid(parameters, row, column)
+    let x = sectionX
+    let y = sectionY
     let xHalfSize = probeHalfWidth
     let yHalfSize = probeHalfDepth
 
