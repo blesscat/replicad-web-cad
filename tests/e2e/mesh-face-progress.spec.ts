@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { skipHeadlessFirefoxWithoutWebGL } from './helpers'
 
-test('CAD UI shows the current stage message and clears progress at terminal state', async ({
+test('CAD UI shows face progress and clears it at terminal state', async ({
   page,
   browserName,
 }) => {
@@ -75,10 +75,11 @@ test('CAD UI shows the current stage message and clears progress at terminal sta
   await page.goto('/cad/box')
 
   const progress = page.getByTestId('cad-progress')
-  const message = page.getByTestId('cad-progress-message')
   const count = page.getByTestId('cad-progress-count')
 
-  await expect(message).toContainText('正在產生預覽 mesh', { timeout: 30_000 })
+  await expect(progress).not.toContainText('正在產生預覽 mesh', {
+    timeout: 30_000,
+  })
   await expect(count).toHaveText(/\d+ \/ 100 面/, { timeout: 30_000 })
   await expect(
     page.getByRole('progressbar', { name: '產生預覽 mesh' }),

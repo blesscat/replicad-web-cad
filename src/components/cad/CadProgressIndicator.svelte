@@ -136,9 +136,6 @@
       >{countLabel ?? `${current.step} / ${current.totalSteps}`}</span
     >
   </div>
-  <p class="text-sm text-ink" data-testid="cad-progress-message">
-    {current.message}
-  </p>
   {#if booleanLabel !== null}
     <p class="text-sm text-muted" data-testid="cad-progress-boolean">
       {booleanLabel}

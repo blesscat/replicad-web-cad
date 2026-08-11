@@ -69,9 +69,6 @@ test('CAD route shows the current loading stage', async ({
     expect(progress).toBeVisible(),
     expect(progress).toHaveAttribute('aria-valuenow', '1'),
     expect(page.getByTestId('cad-progress')).toContainText('載入 CAD engine'),
-    expect(page.getByTestId('cad-progress-message')).toContainText(
-      '正在載入 CAD engine',
-    ),
     expect(fallback).toBeVisible(),
   ])
 

@@ -18,9 +18,9 @@
 
 - [x] 3.1 Wire face progress through the existing generation-correlated Worker
   progress lifecycle without changing stale or terminal semantics.
-- [x] 3.2 Show the current mesh message, face N/M when available, and
-  elapsed/indeterminate feedback otherwise while retaining four top-level
-  stages.
+- [x] 3.2 Keep the four-stage mesh label, show face N/M when available, and
+  show elapsed/indeterminate feedback otherwise without adding a duplicate
+  current-action message.
 - [x] 3.3 Add an end-to-end regression test for visible face progress and
   cleanup after completion or supersession.
 

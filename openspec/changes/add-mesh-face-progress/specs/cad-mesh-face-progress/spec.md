@@ -49,14 +49,15 @@ the latest observed count when the meshing operation succeeds or fails.
 ### Requirement: Mesh subphase is visible without changing the stage model
 
 The progress indicator MUST keep `meshing` as the current top-level stage and
-MUST show a human-readable mesh message. When face counters exist, it MUST
-show the completed and total face counts; when counters do not exist, it MUST
-show an indeterminate or elapsed-only mesh state.
+MUST show a human-readable mesh label through the existing stage list. It MUST
+not add a duplicate current-action message above that list. When face counters
+exist, it MUST show the completed and total face counts; when counters do not
+exist, it MUST show an indeterminate or elapsed-only mesh state.
 
 #### Scenario: User sees current mesh activity
 
 - **WHEN** preview meshing is active
-- **THEN** the indicator shows that a preview mesh is being generated
+- **THEN** the stage list identifies that a preview mesh is being generated
 - **AND** the existing four top-level stages remain visible
 
 #### Scenario: User sees face count when available

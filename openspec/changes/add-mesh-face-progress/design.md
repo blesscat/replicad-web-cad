@@ -65,11 +65,12 @@ not part of the public protocol.
 
 ### Render counters as stage progress, not end-to-end progress
 
-The existing progress indicator will display the mesh message and face count
-while retaining `meshing` as stage 3 of 4. Its accessibility text will describe
-the current stage and count; it will not reinterpret face completion as total
-model completion. A local elapsed clock remains available for mesh work that
-has no face counters.
+The existing progress indicator will display the face count while retaining
+`meshing` as stage 3 of 4. The existing four-stage list is the visible
+human-readable stage label, so no duplicate current-action message is added
+above it. Accessibility text will still describe the current stage and count;
+it will not reinterpret face completion as total model completion. A local
+elapsed clock remains available for mesh work that has no face counters.
 
 ### Keep lifecycle handling at the existing runtime boundary
 
