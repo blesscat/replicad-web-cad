@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   CAD_PROGRESS_STAGES,
+  booleanProgressLabel,
+  formatProgressElapsed,
   progressCountLabel,
   progressDetails,
   progressMessage,
@@ -40,5 +42,31 @@ describe('CAD progress messages', () => {
       }),
     ).toBe('3 / 10 格')
     expect(progressCountLabel({ stage: 'meshing' })).toBeNull()
+  })
+
+  it('formats boolean subprogress without turning it into a stage percentage', () => {
+    expect(
+      booleanProgressLabel({
+        stage: 'building',
+        booleanOperation: {
+          kind: 'fuse',
+          state: 'running',
+          completed: 3,
+          total: 8,
+          elapsedMs: 1200,
+        },
+      }),
+    ).toBe('合併（Fuse） 3 / 8')
+    expect(
+      booleanProgressLabel({
+        stage: 'building',
+        booleanOperation: {
+          kind: 'intersect',
+          state: 'running',
+          elapsedMs: 1200,
+        },
+      }),
+    ).toBe('交集（Intersect）進行中')
+    expect(formatProgressElapsed(61_250)).toBe('1:01')
   })
 })

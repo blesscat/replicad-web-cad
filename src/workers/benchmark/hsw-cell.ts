@@ -242,7 +242,7 @@ async function runSample(
     try {
       shape = await adapter.build(fixture, template, strategy, {
         reportPhase: (phase, durationMs) => {
-          phaseTimings[phase] = durationMs
+          phaseTimings[phase] = (phaseTimings[phase] ?? 0) + durationMs
         },
       })
     } catch (error) {

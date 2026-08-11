@@ -36,12 +36,19 @@ import {
   openGridTileProfile,
   openGridProfileConstants,
 } from './profile'
+import {
+  measureBoolean,
+  measureBooleanInScope,
+  type BooleanOperationScope,
+  type BooleanOperationReporter,
+} from '../../boolean-progress'
 
 export type OpenGridBuildContext = {
   getOpenGridPrototype?: (variant: OpenGridVariant) => Promise<Shape3D>
   getOpenGridCanonicalTile?: (
     variant: OpenGridVariant,
     thickness: number,
+    booleanOperations?: BooleanOperationReporter,
   ) => Promise<Shape3D>
   getOpenGridHalfCellPrototype?: (
     key: string,
@@ -63,6 +70,7 @@ export type OpenGridBuildContext = {
     phase: 'assembly-fuse' | 'prototype-build',
     durationMs: number,
   ) => void
+  booleanOperations?: BooleanOperationReporter
 }
 
 export type OpenGridAssemblyStrategy =
@@ -219,6 +227,7 @@ async function fuseBalanced(
   if (!Number.isSafeInteger(batchSize) || batchSize < 2) {
     throw new Error('OPENGRID_FUSE_BATCH_SIZE_INVALID')
   }
+  const fuseScope = context.booleanOperations?.createScope(input.length - 1)
   try {
     while (current.length > 1) {
       assertGenerationCurrent(context)
@@ -230,7 +239,9 @@ async function fuseBalanced(
         for (const shape of batch.slice(1)) {
           assertGenerationCurrent(context)
           const startedAt = performance.now()
-          const fused = combined.fuse(shape)
+          const fused = measureBooleanInScope(fuseScope, 'fuse', () =>
+            combined.fuse(shape),
+          )
           context.reportPhase?.('assembly-fuse', performance.now() - startedAt)
           if (fused !== combined) {
             owned.delete(combined)
@@ -266,11 +277,14 @@ async function fuseSequential(
   const owned = new Set(input)
   let combined = input[0]
   if (!combined) throw new Error('OPENGRID_SHAPE_EMPTY')
+  const fuseScope = context.booleanOperations?.createScope(input.length - 1)
   try {
     for (const shape of input.slice(1)) {
       assertGenerationCurrent(context)
       const startedAt = performance.now()
-      const fused = combined.fuse(shape)
+      const fused = measureBooleanInScope(fuseScope, 'fuse', () =>
+        combined.fuse(shape),
+      )
       context.reportPhase?.('assembly-fuse', performance.now() - startedAt)
       if (fused !== combined) {
         owned.delete(combined)
@@ -346,9 +360,14 @@ async function buildCanonicalTile(
   )
   try {
     const corner = buildCornerNode(variant, thickness)
+    const intersectionScope = context.booleanOperations?.createScope(4)
     for (let quarterTurns = 0; quarterTurns < 4; quarterTurns += 1) {
       const rotated = cloneRotated(corner, quarterTurns)
-      const clipped = rotated.intersect(clip)
+      const clipped = measureBooleanInScope(
+        intersectionScope,
+        'intersect',
+        () => rotated.intersect(clip),
+      )
       if (clipped !== rotated) deleteShape(rotated)
       parts.push(clipped)
     }
@@ -461,8 +480,14 @@ function translateShape(shape: Shape3D, x: number, y: number, z = 0): Shape3D {
   return translated
 }
 
-function clipShapeToBox(shape: Shape3D, clip: Shape3D): Shape3D {
-  const clipped = shape.intersect(clip)
+function clipShapeToBox(
+  shape: Shape3D,
+  clip: Shape3D,
+  scope: BooleanOperationScope | undefined,
+): Shape3D {
+  const clipped = measureBooleanInScope(scope, 'intersect', () =>
+    shape.intersect(clip),
+  )
   if (clipped !== shape) deleteShape(shape)
   return clipped
 }
@@ -529,7 +554,12 @@ async function buildHalfBoundaryTile(
       [-width / 2, -depth / 2, -0.01],
       [width / 2, depth / 2, thickness + 0.01],
     )
-    const clippedParts = parts.map((part) => clipShapeToBox(part, clip!))
+    const intersectionScope = context.booleanOperations?.createScope(
+      parts.length,
+    )
+    const clippedParts = parts.map((part) =>
+      clipShapeToBox(part, clip!, intersectionScope),
+    )
     parts.length = 0
     parts.push(...clippedParts)
     const seamOverlap = 0.2
@@ -781,7 +811,11 @@ async function buildGridSurface(
         let canonical = canonicalByPattern.get(patternKey)
         if (!canonical) {
           canonical = context.getOpenGridCanonicalTile
-            ? await context.getOpenGridCanonicalTile(variant, thickness)
+            ? await context.getOpenGridCanonicalTile(
+                variant,
+                thickness,
+                context.booleanOperations,
+              )
             : await buildCanonicalTile(variant, thickness, context)
           canonicalByPattern.set(patternKey, canonical)
           if (!context.getOpenGridCanonicalTile) ownedCanonical.add(canonical)
@@ -937,7 +971,7 @@ async function buildOpenGridPrototypeShape(
     upper = translatedUpper
 
     bridge = await fuseBalanced(
-      buildFlatBridgeTile(0, 0, layerThickness),
+      buildFlatBridgeTile(0, 0, layerThickness, context.booleanOperations),
       context,
     )
     const prototype = await fuseBalanced([lower, bridge, upper], context)
@@ -1067,6 +1101,7 @@ function buildFlatBridgeTile(
   centerX: number,
   centerY: number,
   zOffset: number,
+  reporter: BooleanOperationReporter | undefined,
 ): Shape3D[] {
   const tileSize = OPENGRID_CONFIGURATION.gridPitch
   const halfTile = tileSize / 2
@@ -1112,12 +1147,17 @@ function buildFlatBridgeTile(
     [centerX - halfTile, centerY - halfTile, zOffset - 0.01],
     [centerX + halfTile, centerY + halfTile, zOffset + height + 0.01],
   )
+  const intersectionScope = reporter?.createScope(4)
   try {
     for (let quarterTurns = 0; quarterTurns < 4; quarterTurns += 1) {
       const rotated = cloneRotated(localCorner, quarterTurns)
       const translated = rotated.translate(centerX, centerY, 0)
       if (translated !== rotated) deleteShape(rotated)
-      const clipped = translated.intersect(tileClip)
+      const clipped = measureBooleanInScope(
+        intersectionScope,
+        'intersect',
+        () => translated.intersect(tileClip),
+      )
       if (clipped !== translated) deleteShape(translated)
       parts.push(clipped)
     }
@@ -1227,7 +1267,14 @@ async function buildHeavyBridge(
           row,
           column,
         )
-        rowParts.push(...buildFlatBridgeTile(centerX, centerY, zOffset))
+        rowParts.push(
+          ...buildFlatBridgeTile(
+            centerX,
+            centerY,
+            zOffset,
+            context.booleanOperations,
+          ),
+        )
         await yieldAtSafeBoundary(context)
       }
     }
@@ -1565,14 +1612,20 @@ function screwHeadCutters(
   ]
 }
 
-function fuseCutterParts(parts: Shape3D[]): CutterGroup {
+function fuseCutterParts(
+  parts: Shape3D[],
+  reporter: BooleanOperationReporter | undefined,
+): CutterGroup {
   const first = parts[0]
   if (!first) throw new Error('OPENGRID_CUTTER_EMPTY')
   const owned = new Set(parts)
   let combined = first
+  const fuseScope = reporter?.createScope(parts.length - 1)
   try {
     for (const part of parts.slice(1)) {
-      const fused = combined.fuse(part)
+      const fused = measureBooleanInScope(fuseScope, 'fuse', () =>
+        combined.fuse(part),
+      )
       if (fused !== combined) {
         owned.delete(combined)
         deleteShape(combined)
@@ -1597,6 +1650,7 @@ function createScrewCutterGroupsForLayer(
   centers: readonly OpenGridPoint2D[],
   layerHeight: number,
   outward: 'top' | 'bottom',
+  context: OpenGridBuildContext,
   zOffset = 0,
 ): CutterGroup[] {
   if (centers.length === 0) return []
@@ -1615,7 +1669,7 @@ function createScrewCutterGroupsForLayer(
       // The shaft and head cutters overlap. They must be fused per screw
       // before any optional board-level compound is made; a native cut of a
       // compound containing overlapping solids can leave the hole material.
-      groups.push(fuseCutterParts(parts))
+      groups.push(fuseCutterParts(parts, context.booleanOperations))
     }
     return groups
   } catch (error) {
@@ -1690,6 +1744,7 @@ function makeConnectorLocalBox(
 function createConnectorCutterShape(
   location: OpenGridConnectorLocation,
   zCenter: number,
+  reporter: BooleanOperationReporter | undefined,
 ): Shape3D {
   const primaryRadius = OPENGRID_CONFIGURATION.connector.primaryRadius
   const dimpleRadius = OPENGRID_CONFIGURATION.connector.dimpleRadius
@@ -1697,6 +1752,9 @@ function createConnectorCutterShape(
   const height = OPENGRID_CONFIGURATION.connector.cutoutHeight
   const lowerZ = zCenter - height / 2
   let capsule: Shape3D | null = null
+  const fuseScope = reporter?.createScope(3)
+  const cutScope = reporter?.createScope(2)
+  const intersectionScope = reporter?.createScope(1)
   try {
     // The official tool creates a hull of two X-copies, shifts it left by
     // 0.1 mm, then keeps the RIGHT half. X is therefore the inward axis;
@@ -1718,7 +1776,7 @@ function createConnectorCutterShape(
       connectorLocalPoint(location, firstCenter, 0, lowerZ),
       OPENGRID_CONNECTOR_SIDES,
     )
-    capsule = box.fuse(firstEnd)
+    capsule = measureBooleanInScope(fuseScope, 'fuse', () => box.fuse(firstEnd))
     if (capsule !== box) deleteShape(box)
     if (capsule !== firstEnd) deleteShape(firstEnd)
     const secondEnd = makePolygonalCylinder(
@@ -1727,7 +1785,12 @@ function createConnectorCutterShape(
       connectorLocalPoint(location, secondCenter, 0, lowerZ),
       OPENGRID_CONNECTOR_SIDES,
     )
-    const expandedCapsule = capsule.fuse(secondEnd)
+    const capsuleBeforeSecondFuse = capsule
+    if (!capsuleBeforeSecondFuse)
+      throw new Error('OPENGRID_CONNECTOR_CAPSULE_EMPTY')
+    const expandedCapsule = measureBooleanInScope(fuseScope, 'fuse', () =>
+      capsuleBeforeSecondFuse.fuse(secondEnd),
+    )
     if (expandedCapsule !== capsule) deleteShape(capsule)
     if (expandedCapsule !== secondEnd) deleteShape(secondEnd)
     capsule = expandedCapsule
@@ -1742,7 +1805,9 @@ function createConnectorCutterShape(
       )
       const currentCapsule: Shape3D | null = capsule
       if (!currentCapsule) throw new Error('OPENGRID_CONNECTOR_CAPSULE_EMPTY')
-      const cut: Shape3D = currentCapsule.cut(dimple)
+      const cut: Shape3D = measureBooleanInScope(cutScope, 'cut', () =>
+        currentCapsule.cut(dimple),
+      )
       if (cut !== currentCapsule) deleteShape(currentCapsule)
       deleteShape(dimple)
       capsule = cut
@@ -1762,7 +1827,9 @@ function createConnectorCutterShape(
     )
     const currentCapsule = capsule
     if (!currentCapsule) throw new Error('OPENGRID_CONNECTOR_CAPSULE_EMPTY')
-    const withFlare = currentCapsule.fuse(flare)
+    const withFlare = measureBooleanInScope(fuseScope, 'fuse', () =>
+      currentCapsule.fuse(flare),
+    )
     if (withFlare !== currentCapsule) deleteShape(currentCapsule)
     if (withFlare !== flare) deleteShape(flare)
     capsule = withFlare
@@ -1776,7 +1843,12 @@ function createConnectorCutterShape(
       lowerZ - 0.01,
       lowerZ + height + 0.01,
     )
-    const clipped = capsule.intersect(halfSpace)
+    const capsuleBeforeIntersection = capsule
+    if (!capsuleBeforeIntersection)
+      throw new Error('OPENGRID_CONNECTOR_CAPSULE_EMPTY')
+    const clipped = measureBooleanInScope(intersectionScope, 'intersect', () =>
+      capsuleBeforeIntersection.intersect(halfSpace),
+    )
     if (clipped !== capsule) deleteShape(capsule)
     deleteShape(halfSpace)
     capsule = clipped
@@ -1791,6 +1863,7 @@ function createConnectorCutterGroupsForLocations(
   parameters: OpenGridParameters,
   locations: readonly OpenGridConnectorLocation[],
   layerHeight: number,
+  context: OpenGridBuildContext,
   zOffset = 0,
 ): CutterGroup[] {
   if (locations.length === 0) return []
@@ -1798,7 +1871,11 @@ function createConnectorCutterGroupsForLocations(
   const groups: CutterGroup[] = []
   try {
     for (const location of locations) {
-      const shape = createConnectorCutterShape(location, zCenter + zOffset)
+      const shape = createConnectorCutterShape(
+        location,
+        zCenter + zOffset,
+        context.booleanOperations,
+      )
       groups.push({ shape, parts: [shape] })
     }
     return groups
@@ -1810,6 +1887,7 @@ function createConnectorCutterGroupsForLocations(
 
 function createBoardScrewCutterGroups(
   parameters: OpenGridParameters,
+  context: OpenGridBuildContext,
 ): CutterGroup[] {
   const centers = openGridScrewCentersFor(parameters)
   if (centers.length === 0) return []
@@ -1824,6 +1902,7 @@ function createBoardScrewCutterGroups(
       centers,
       layerHeight,
       'top',
+      context,
     )
   }
 
@@ -1841,7 +1920,7 @@ function createBoardScrewCutterGroups(
         ...screwHeadCutters(x, y, board.height, parameters, 'top'),
         ...screwHeadCutters(x, y, board.height, parameters, 'bottom'),
       ]
-      groups.push(fuseCutterParts(parts))
+      groups.push(fuseCutterParts(parts, context.booleanOperations))
     }
     return groups
   } catch (error) {
@@ -1852,6 +1931,7 @@ function createBoardScrewCutterGroups(
 
 function createBoardConnectorCutterGroups(
   parameters: OpenGridParameters,
+  context: OpenGridBuildContext,
 ): CutterGroup[] {
   const locations = openGridConnectorLocationsFor(parameters)
   if (locations.length === 0) return []
@@ -1864,6 +1944,7 @@ function createBoardConnectorCutterGroups(
       parameters,
       locations,
       layerHeight,
+      context,
     )
   }
 
@@ -1876,6 +1957,7 @@ function createBoardConnectorCutterGroups(
         parameters,
         locations,
         layerHeight,
+        context,
       ),
     )
     groups.push(
@@ -1883,6 +1965,7 @@ function createBoardConnectorCutterGroups(
         parameters,
         locations,
         layerHeight,
+        context,
         upperLayerOffset,
       ),
     )
@@ -1912,8 +1995,10 @@ async function applyBoardFeatureCuts(
   const screwGroups: CutterGroup[] = []
   try {
     if (includeChamfers) chamferGroups.push(...createChamferCutters(parameters))
-    connectorGroups.push(...createBoardConnectorCutterGroups(parameters))
-    screwGroups.push(...createBoardScrewCutterGroups(parameters))
+    connectorGroups.push(
+      ...createBoardConnectorCutterGroups(parameters, context),
+    )
+    screwGroups.push(...createBoardScrewCutterGroups(parameters, context))
     const useCompoundScrewParts = context.useCompoundScrewParts !== false
     const useCompoundChamfers =
       context.useCompoundChamferCutters !== false &&
@@ -1956,7 +2041,7 @@ async function applyBoardScrewCuts(
   parameters: OpenGridParameters,
   context: OpenGridBuildContext,
 ): Promise<Shape3D> {
-  const screwGroups = createBoardScrewCutterGroups(parameters)
+  const screwGroups = createBoardScrewCutterGroups(parameters, context)
   let groups: CutterGroup[]
   if (context.useCompoundScrewParts === false) {
     groups = screwGroups
@@ -1972,7 +2057,7 @@ async function applyBoardConnectorCuts(
   context: OpenGridBuildContext,
 ): Promise<Shape3D> {
   const groups = combineCutterGroups(
-    createBoardConnectorCutterGroups(parameters),
+    createBoardConnectorCutterGroups(parameters, context),
   )
   return applyCutterGroups(source, groups, context)
 }
@@ -1989,13 +2074,16 @@ async function applyCutterGroups(
   context: OpenGridBuildContext,
 ): Promise<Shape3D> {
   let current = source
+  const cutScope = context.booleanOperations?.createScope(groups.length)
   try {
     while (groups.length > 0) {
       assertGenerationCurrent(context)
       const group = groups.shift()
       if (!group) continue
       try {
-        current = cutShape(current, group.shape)
+        current = measureBooleanInScope(cutScope, 'cut', () =>
+          cutShape(current, group.shape),
+        )
       } finally {
         disposeCutter(group)
       }

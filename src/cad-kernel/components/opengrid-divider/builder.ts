@@ -7,6 +7,10 @@ import {
   validateOpenGridDividerParameters,
   type OpenGridDividerParameters,
 } from '../../../cad-contract/units'
+import {
+  measureBoolean,
+  type BooleanOperationReporter,
+} from '../../boolean-progress'
 
 export type OpenGridDividerBuildContext = {
   yieldToEventLoop?: () => Promise<void>
@@ -17,6 +21,7 @@ export type OpenGridDividerBuildContext = {
     total?: number
     unit?: 'steps'
   }) => void
+  booleanOperations?: BooleanOperationReporter
 }
 
 function deleteShape(shape: { delete?: () => void } | null | undefined): void {
@@ -329,8 +334,14 @@ function asSingleSolid(shape: Shape3D): Solid {
   return solids[0]
 }
 
-function fuseAsSingleSolid(first: Shape3D, second: Shape3D): Solid {
-  const fused = fuseShapes(first, second)
+function fuseAsSingleSolid(
+  first: Shape3D,
+  second: Shape3D,
+  reporter: BooleanOperationReporter | undefined,
+): Solid {
+  const fused = measureBoolean(reporter, 'fuse', () =>
+    fuseShapes(first, second),
+  )
   let solid: Solid | null = null
   try {
     solid = asSingleSolid(fused)
@@ -416,10 +427,14 @@ async function makeContinuousWall(
       try {
         if (armAxisForPeg(center, horizontalActive) === 'x') {
           if (!horizontal) throw new Error('OPENGRID_DIVIDER_WALL_EMPTY')
-          horizontal = fuseAsSingleSolid(horizontal, peg)
+          horizontal = fuseAsSingleSolid(
+            horizontal,
+            peg,
+            context.booleanOperations,
+          )
         } else {
           if (!vertical) throw new Error('OPENGRID_DIVIDER_WALL_EMPTY')
-          vertical = fuseAsSingleSolid(vertical, peg)
+          vertical = fuseAsSingleSolid(vertical, peg, context.booleanOperations)
         }
       } catch (error) {
         deleteShape(peg)
@@ -432,7 +447,11 @@ async function makeContinuousWall(
 
     if (!horizontal) return vertical as Shape3D
     if (!vertical) return horizontal
-    const fused = fuseAsSingleSolid(horizontal, vertical)
+    const fused = fuseAsSingleSolid(
+      horizontal,
+      vertical,
+      context.booleanOperations,
+    )
     horizontal = null
     vertical = null
     return fused

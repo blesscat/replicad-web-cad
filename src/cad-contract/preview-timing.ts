@@ -15,7 +15,13 @@ export type PreviewTiming = {
   candidateMs: number | null
   serializationMs: number | null
   totalMs: number
+  booleanMs?: number | null
+  booleanFuseMs?: number | null
+  booleanCutMs?: number | null
+  booleanIntersectMs?: number | null
 }
+
+type BooleanTimingKind = 'fuse' | 'cut' | 'intersect'
 
 type PhaseDurationKey =
   'buildMs' | 'meshMs' | 'qualityMs' | 'candidateMs' | 'serializationMs'
@@ -41,6 +47,14 @@ function emptyDurations(): Pick<PreviewTiming, PhaseDurationKey> {
 export class PreviewTimingRecorder {
   private readonly startedAt: number
   private readonly durations = emptyDurations()
+  private booleanMs = 0
+  private booleanFuseMs = 0
+  private booleanCutMs = 0
+  private booleanIntersectMs = 0
+  private booleanOperationCount = 0
+  private booleanFuseCount = 0
+  private booleanCutCount = 0
+  private booleanIntersectCount = 0
 
   constructor(private readonly now: () => number = () => performance.now()) {
     this.startedAt = now()
@@ -67,10 +81,33 @@ export class PreviewTimingRecorder {
     }
   }
 
+  recordBoolean(kind: BooleanTimingKind, durationMs: number): void {
+    const duration = Math.max(0, durationMs)
+    this.booleanOperationCount += 1
+    this.booleanMs += duration
+    if (kind === 'fuse') {
+      this.booleanFuseCount += 1
+      this.booleanFuseMs += duration
+    }
+    if (kind === 'cut') {
+      this.booleanCutCount += 1
+      this.booleanCutMs += duration
+    }
+    if (kind === 'intersect') {
+      this.booleanIntersectCount += 1
+      this.booleanIntersectMs += duration
+    }
+  }
+
   snapshot(): PreviewTiming {
     return {
       ...this.durations,
       totalMs: this.now() - this.startedAt,
+      booleanMs: this.booleanOperationCount > 0 ? this.booleanMs : null,
+      booleanFuseMs: this.booleanFuseCount > 0 ? this.booleanFuseMs : null,
+      booleanCutMs: this.booleanCutCount > 0 ? this.booleanCutMs : null,
+      booleanIntersectMs:
+        this.booleanIntersectCount > 0 ? this.booleanIntersectMs : null,
     }
   }
 }

@@ -122,6 +122,18 @@ export type EngineReadyEvent = Envelope<'engine.ready'> & {
   engine: { name: 'replicad'; wasm: true }
 }
 
+export type BooleanOperationKind = 'fuse' | 'cut' | 'intersect'
+
+export type BooleanOperationState = 'running' | 'completed'
+
+export type BooleanOperationProgress = {
+  kind: BooleanOperationKind
+  state: BooleanOperationState
+  completed?: number
+  total?: number
+  elapsedMs: number
+}
+
 export type ProgressEvent = Envelope<'operation.progress'> & {
   operationId: string
   stage: 'loading' | 'building' | 'meshing' | 'exporting'
@@ -130,6 +142,7 @@ export type ProgressEvent = Envelope<'operation.progress'> & {
   completed?: number
   total?: number
   unit?: ProgressUnit
+  booleanOperation?: BooleanOperationProgress
 }
 
 export type ProgressUnit = 'cells' | 'batches' | 'steps' | 'columns'
@@ -261,6 +274,17 @@ const PROGRESS_UNITS: readonly ProgressUnit[] = [
   'columns',
 ]
 
+const BOOLEAN_OPERATION_KINDS: readonly BooleanOperationKind[] = [
+  'fuse',
+  'cut',
+  'intersect',
+]
+
+const BOOLEAN_OPERATION_STATES: readonly BooleanOperationState[] = [
+  'running',
+  'completed',
+]
+
 function isProgressCounters(value: Record<string, unknown>): boolean {
   const hasCompleted = value.completed !== undefined
   const hasTotal = value.total !== undefined
@@ -276,6 +300,30 @@ function isProgressCounters(value: Record<string, unknown>): boolean {
     isPositiveInteger(value.total) &&
     value.completed <= value.total &&
     PROGRESS_UNITS.includes(value.unit as ProgressUnit)
+  )
+}
+
+function isBooleanOperationProgress(
+  value: unknown,
+): value is BooleanOperationProgress {
+  if (!isRecord(value)) return false
+  const hasCompleted = value.completed !== undefined
+  const hasTotal = value.total !== undefined
+  const hasCounts = hasCompleted || hasTotal
+  if (hasCompleted !== hasTotal) return false
+  if (
+    !BOOLEAN_OPERATION_KINDS.includes(value.kind as BooleanOperationKind) ||
+    !BOOLEAN_OPERATION_STATES.includes(value.state as BooleanOperationState) ||
+    !isFiniteNumber(value.elapsedMs) ||
+    value.elapsedMs < 0
+  ) {
+    return false
+  }
+  if (!hasCounts) return true
+  return (
+    isNonNegativeInteger(value.completed) &&
+    isPositiveInteger(value.total) &&
+    value.completed <= value.total
   )
 }
 
@@ -361,10 +409,19 @@ function isPreviewTiming(value: unknown): value is PreviewTiming {
     'candidateMs',
     'serializationMs',
   ] as const
+  const booleanDurationKeys = [
+    'booleanMs',
+    'booleanFuseMs',
+    'booleanCutMs',
+    'booleanIntersectMs',
+  ] as const
   const validDuration = (duration: unknown): boolean =>
     duration === null || (isFiniteNumber(duration) && duration >= 0)
   return (
     durationKeys.every((key) => validDuration(value[key])) &&
+    booleanDurationKeys.every(
+      (key) => value[key] === undefined || validDuration(value[key]),
+    ) &&
     isFiniteNumber(value.totalMs) &&
     value.totalMs >= 0
   )
@@ -512,7 +569,9 @@ export function isWorkerEvent(value: unknown): value is WorkerEvent {
           isPositiveInteger(value.generation)) &&
         (value.modelRevision === undefined ||
           isNonEmptyString(value.modelRevision)) &&
-        isProgressCounters(value)
+        isProgressCounters(value) &&
+        (value.booleanOperation === undefined ||
+          isBooleanOperationProgress(value.booleanOperation))
       )
     case 'model.invalidated':
       return (

@@ -532,7 +532,7 @@ async function runSample(
         },
         reportPhase: (nextPhase, durationMs) => {
           phase = nextPhase
-          phaseTimings[nextPhase] = durationMs
+          phaseTimings[nextPhase] = (phaseTimings[nextPhase] ?? 0) + durationMs
         },
       })
       shape = await Promise.race([

@@ -493,5 +493,50 @@ describe('Worker contract runtime validation', () => {
         unit: undefined,
       }),
     ).toBe(true)
+
+    const booleanProgress = {
+      ...progress,
+      completed: undefined,
+      total: undefined,
+      unit: undefined,
+      booleanOperation: {
+        kind: 'fuse' as const,
+        state: 'running' as const,
+        completed: 1,
+        total: 3,
+        elapsedMs: 250,
+      },
+    }
+    expect(isWorkerEvent(booleanProgress)).toBe(true)
+    expect(
+      isWorkerEvent({
+        ...booleanProgress,
+        booleanOperation: {
+          ...booleanProgress.booleanOperation,
+          completed: 4,
+        },
+      }),
+    ).toBe(false)
+    expect(
+      isWorkerEvent({
+        ...booleanProgress,
+        booleanOperation: {
+          kind: 'cut',
+          state: 'running',
+          elapsedMs: 250,
+          total: 2,
+        },
+      }),
+    ).toBe(false)
+    expect(
+      isWorkerEvent({
+        ...booleanProgress,
+        booleanOperation: {
+          kind: 'intersect',
+          state: 'running',
+          elapsedMs: 250,
+        },
+      }),
+    ).toBe(true)
   })
 })

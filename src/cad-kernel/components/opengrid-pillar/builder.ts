@@ -13,12 +13,17 @@ import {
   validatePillarParameters,
   type PillarParameters,
 } from '../../../cad-contract/units'
+import {
+  measureBoolean,
+  type BooleanOperationReporter,
+} from '../../boolean-progress'
 
 const GEOMETRY_TOLERANCE = 0.02
 
 export type PillarBuildContext = {
   yieldToEventLoop?: () => Promise<void>
   isGenerationCurrent?: () => boolean
+  booleanOperations?: BooleanOperationReporter
 }
 
 type PointOnEdge = {
@@ -136,11 +141,15 @@ function asSingleSolid(shape: Shape3D): Solid {
   return solids[0]
 }
 
-function fusePartsAsSingleSolid(first: Shape3D, second: Shape3D): Solid {
+function fusePartsAsSingleSolid(
+  first: Shape3D,
+  second: Shape3D,
+  reporter: BooleanOperationReporter | undefined,
+): Solid {
   let fused: Shape3D | null = null
   let solid: Solid | null = null
   try {
-    fused = first.fuse(second)
+    fused = measureBoolean(reporter, 'fuse', () => first.fuse(second))
     if (!isShape3D(fused)) throw new Error('PILLAR_FUSE_RESULT_NOT_3D')
     solid = asSingleSolid(fused)
     return solid
@@ -210,7 +219,10 @@ function buildPlainPillar(parameters: PillarParameters): Shape3D {
   )
 }
 
-function buildBaseConnectionPillar(parameters: PillarParameters): Solid {
+function buildBaseConnectionPillar(
+  parameters: PillarParameters,
+  reporter: BooleanOperationReporter | undefined,
+): Solid {
   const flange = makeCylinder(
     PILLAR_CONFIGURATION.baseDiameter / 2,
     PILLAR_CONFIGURATION.baseHeight,
@@ -221,7 +233,7 @@ function buildBaseConnectionPillar(parameters: PillarParameters): Solid {
     parameters.length - PILLAR_CONFIGURATION.baseHeight,
     [0, 0, PILLAR_CONFIGURATION.baseHeight],
   )
-  return fusePartsAsSingleSolid(flange, body)
+  return fusePartsAsSingleSolid(flange, body, reporter)
 }
 
 export async function buildPillar(
@@ -238,7 +250,7 @@ export async function buildPillar(
   let finalSolid: Solid | null = null
   try {
     shape = parameters.baseConnection
-      ? buildBaseConnectionPillar(parameters)
+      ? buildBaseConnectionPillar(parameters, context.booleanOperations)
       : buildPlainPillar(parameters)
 
     assertGenerationCurrent(context)

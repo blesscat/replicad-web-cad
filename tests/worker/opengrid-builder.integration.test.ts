@@ -18,6 +18,7 @@ import {
 } from '../../src/cad-kernel/components/opengrid/builder'
 import { meshBRep, serializeMesh } from '../../src/cad-kernel/mesh'
 import { PreviewTimingRecorder } from '../../src/cad-contract/preview-timing'
+import { createBooleanOperationReporter } from '../../src/cad-kernel/boolean-progress'
 import {
   boundsForOpenGrid,
   cellCenterForOpenGrid,
@@ -227,6 +228,51 @@ describe('OpenGrid official-profile product builder', () => {
       }
     }
   }, 15_000)
+
+  it('reports fuse, cut, and intersect boundaries without changing geometry', async () => {
+    const input = parameters({
+      variant: 'Full',
+      rows: 1,
+      columns: 1,
+      chamfers: 'none',
+      connectorHoles: 'none',
+      screwMode: 'corners',
+    })
+    const progress: Array<{
+      kind: 'fuse' | 'cut' | 'intersect'
+      state: 'running' | 'completed'
+      elapsedMs: number
+      completed?: number
+      total?: number
+    }> = []
+    const reporter = createBooleanOperationReporter((update) => {
+      progress.push(update)
+    })
+    const shape = await buildOpenGridBRep(input, {
+      booleanOperations: reporter,
+    })
+    try {
+      const quality = inspectOpenGridShapeQuality(
+        shape,
+        input,
+        meshBRep(shape, OPENGRID_PREVIEW_CONFIGURATION),
+      )
+      expect(quality.passed, quality.failures.join('; ')).toBe(true)
+    } finally {
+      shape.delete()
+    }
+
+    for (const kind of ['fuse', 'cut', 'intersect'] as const) {
+      const updates = progress.filter((update) => update.kind === kind)
+      expect(updates.some((update) => update.state === 'running')).toBe(true)
+      expect(updates.some((update) => update.state === 'completed')).toBe(true)
+      expect(
+        updates
+          .filter((update) => update.state === 'completed')
+          .every((update) => update.elapsedMs >= 0),
+      ).toBe(true)
+    }
+  }, 60_000)
 
   it('keeps preview tolerance independent from B-Rep quality and export precision', async () => {
     const input = parameters({

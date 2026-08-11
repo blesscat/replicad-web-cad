@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   buildModelBRep: vi.fn(),
+  buildOpenGridCanonicalTile: vi.fn(),
   initialiseCadKernel: vi.fn(),
   meshBRep: vi.fn(),
   serializeMesh: vi.fn(),
@@ -16,6 +17,10 @@ vi.mock('../../src/cad-kernel/initialise', () => ({
 }))
 vi.mock('../../src/cad-kernel/model', () => ({
   buildModelBRep: mocks.buildModelBRep,
+}))
+vi.mock('../../src/cad-kernel/components/opengrid/builder', () => ({
+  buildOpenGridCanonicalTile: mocks.buildOpenGridCanonicalTile,
+  loadOpenGridPrototypeTemplate: vi.fn(),
 }))
 vi.mock('../../src/cad-kernel/mesh', () => ({
   meshBRep: mocks.meshBRep,
@@ -369,6 +374,89 @@ describe('OpenGrid Worker runtime', () => {
           event.kind === 'export.ready',
       ),
     ).toHaveLength(2)
+  })
+
+  it('publishes all boolean operation boundaries from the shared build context', async () => {
+    mocks.buildModelBRep.mockImplementation(
+      async (_modelId, _parameters, context) => {
+        const scope = context.booleanOperations.createScope(3)
+        scope.measure('fuse', () => undefined)
+        scope.measure('cut', () => undefined)
+        scope.measure('intersect', () => undefined)
+        return { delete: vi.fn() }
+      },
+    )
+    const events: any[] = []
+    const runtime = new CadWorkerRuntime('epoch-opengrid-boolean', (event) =>
+      events.push(event),
+    )
+
+    await runtime.handle(initCommand())
+    await runtime.handle(generateCommand())
+
+    const progressEvents = events.filter(
+      (event) =>
+        event.kind === 'operation.progress' &&
+        event.operationId === 'opengrid-operation-1' &&
+        event.booleanOperation,
+    )
+    expect(progressEvents).toHaveLength(6)
+    expect(
+      progressEvents
+        .filter((event) => event.booleanOperation.state === 'running')
+        .map((event) => event.booleanOperation.kind),
+    ).toEqual(['fuse', 'cut', 'intersect'])
+    expect(
+      progressEvents
+        .filter((event) => event.booleanOperation.state === 'completed')
+        .map((event) => event.booleanOperation.kind),
+    ).toEqual(['fuse', 'cut', 'intersect'])
+    expect(
+      progressEvents
+        .filter((event) => event.booleanOperation.state === 'completed')
+        .map((event) => event.booleanOperation.completed),
+    ).toEqual([1, 2, 3])
+  })
+
+  it('reports boolean work performed while populating the canonical tile cache', async () => {
+    mocks.buildOpenGridCanonicalTile.mockImplementation(
+      async (_variant, context) => {
+        const scope = context.booleanOperations?.createScope(1)
+        scope?.measure('intersect', () => undefined)
+        return { delete: vi.fn() }
+      },
+    )
+    mocks.buildModelBRep.mockImplementation(
+      async (_modelId, _parameters, context) => {
+        const canonical = await context.getOpenGridCanonicalTile?.(
+          'Full',
+          3,
+          context.booleanOperations,
+        )
+        canonical?.delete()
+        return { delete: vi.fn() }
+      },
+    )
+    const events: any[] = []
+    const runtime = new CadWorkerRuntime('epoch-opengrid-canonical', (event) =>
+      events.push(event),
+    )
+
+    await runtime.handle(initCommand())
+    await runtime.handle(generateCommand())
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'operation.progress',
+        operationId: 'opengrid-operation-1',
+        booleanOperation: expect.objectContaining({
+          kind: 'intersect',
+          state: 'completed',
+          completed: 1,
+          total: 1,
+        }),
+      }),
+    )
   })
 
   it('routes stackable-box commands independently and keeps export names typed', async () => {

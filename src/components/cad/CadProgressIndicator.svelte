@@ -1,6 +1,10 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
+  import type { BooleanOperationProgress } from '../../cad-contract/messages'
   import {
     CAD_PROGRESS_STAGES,
+    booleanProgressLabel,
+    formatProgressElapsed,
     progressCountLabel,
     progressDetails,
     type CadProgress,
@@ -37,20 +41,66 @@
   function getValueText(
     current: CadProgressDetails,
     countLabel: string | null,
+    booleanLabel: string | null,
+    elapsedLabel: string | null,
   ): string {
-    if (countLabel !== null) return `${current.label}，${countLabel}`
-    return `${current.label}，第 ${current.step} / ${current.totalSteps} 階段`
+    let valueText = `${current.label}，第 ${current.step} / ${current.totalSteps} 階段`
+    if (countLabel !== null) valueText = `${current.label}，${countLabel}`
+    if (booleanLabel !== null && elapsedLabel !== null) {
+      valueText = `${valueText}，${booleanLabel}，已耗時 ${elapsedLabel}`
+    }
+    return valueText
+  }
+
+  function clockNow(): number {
+    if (typeof performance !== 'undefined') return performance.now()
+    return Date.now()
   }
 
   let { progress }: Props = $props()
+  let now = $state(clockNow())
+  let trackedBooleanOperation: BooleanOperationProgress | undefined
+  let operationStartedAt = $state<number | null>(null)
   let current = $derived(progressDetails(progress.stage))
   let countLabel = $derived(progressCountLabel(progress))
+  let booleanLabel = $derived(booleanProgressLabel(progress))
+  let booleanElapsedMs = $derived.by(() => {
+    const operation = progress.booleanOperation
+    if (!operation) return null
+    if (operation.state !== 'running' || operationStartedAt === null) {
+      return operation.elapsedMs
+    }
+    return Math.max(operation.elapsedMs, now - operationStartedAt)
+  })
+  let booleanElapsedLabel = $derived(
+    booleanElapsedMs === null ? null : formatProgressElapsed(booleanElapsedMs),
+  )
   let hasCounters = $derived(countLabel !== null)
   let valueMin = $derived(getValueMin(hasCounters))
   let valueMax = $derived(getValueMax(progress, current, hasCounters))
   let valueNow = $derived(getValueNow(progress, current, hasCounters))
   let completion = $derived((valueNow / valueMax) * 100)
-  let valueText = $derived(getValueText(current, countLabel))
+  let valueText = $derived(
+    getValueText(current, countLabel, booleanLabel, booleanElapsedLabel),
+  )
+
+  onMount(() => {
+    const timer = window.setInterval(() => {
+      now = clockNow()
+    }, 250)
+    return () => window.clearInterval(timer)
+  })
+
+  $effect(() => {
+    const operation = progress.booleanOperation
+    if (operation === trackedBooleanOperation) return
+    trackedBooleanOperation = operation
+    if (operation?.state === 'running') {
+      operationStartedAt = now - operation.elapsedMs
+    } else {
+      operationStartedAt = null
+    }
+  })
 
   function getMarkerClassName(
     progressStage: CadProgress['stage'],
@@ -72,6 +122,11 @@
       >{countLabel ?? `${current.step} / ${current.totalSteps}`}</span
     >
   </div>
+  {#if booleanLabel !== null && booleanElapsedLabel !== null}
+    <p class="text-sm text-muted" data-testid="cad-progress-boolean">
+      {booleanLabel} · 已耗時 {booleanElapsedLabel}
+    </p>
+  {/if}
   <div
     aria-label={current.label}
     aria-valuemax={valueMax}

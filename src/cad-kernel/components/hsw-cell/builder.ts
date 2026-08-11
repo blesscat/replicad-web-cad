@@ -13,6 +13,8 @@ import {
   HSW_CELL_CONFIGURATION,
   type HswCellParameters,
 } from '../../../cad-contract/units'
+import type { BooleanOperationReporter } from '../../boolean-progress'
+import { measureBoolean } from '../../boolean-progress'
 
 export const hswCellTemplateUrl = new URL('./hsw-cell.step', import.meta.url)
 
@@ -31,6 +33,7 @@ export type HswCellBuildContext = {
     phase: 'clone-translate' | 'assembly-fuse',
     durationMs: number,
   ) => void
+  booleanOperations?: BooleanOperationReporter
 }
 
 export type HswCellAssemblyStrategy = 'sequential' | 'column'
@@ -146,7 +149,9 @@ async function fuseOwnedShapes(
 
   try {
     assertGenerationCurrent(context)
-    fused = fuseShapes(first, second, simplifyResult)
+    fused = measureBoolean(context.booleanOperations, 'fuse', () =>
+      fuseShapes(first, second, simplifyResult),
+    )
     assertGenerationCurrent(context)
     if (fused !== first) owned.release(first)
     if (fused !== second) owned.release(second)

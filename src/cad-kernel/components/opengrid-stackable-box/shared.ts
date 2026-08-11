@@ -1,9 +1,11 @@
 import type { Shape3D } from 'replicad'
+import type { BooleanOperationReporter } from '../../boolean-progress'
 
 export type Bounds = [[number, number, number], [number, number, number]]
 
 export type OpenGridStackableBoxBuildContext = {
   isGenerationCurrent?: () => boolean
+  booleanOperations?: BooleanOperationReporter
 }
 
 export function deleteShape(

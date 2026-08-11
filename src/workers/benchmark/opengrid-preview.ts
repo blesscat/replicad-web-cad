@@ -86,6 +86,10 @@ export type OpenGridPreviewBenchmarkRunKind = 'cold' | 'warmup' | 'measured'
 
 export type OpenGridPreviewBenchmarkPhase =
   | 'buildMs'
+  | 'booleanMs'
+  | 'booleanFuseMs'
+  | 'booleanCutMs'
+  | 'booleanIntersectMs'
   | 'meshMs'
   | 'qualityMs'
   | 'candidateMs'
@@ -301,6 +305,10 @@ function phaseTiming(
   const viewportTotalMs = (viewportBaseMs ?? 0) + (viewportEdgeMs ?? 0)
   return {
     buildMs: previewTiming.buildMs,
+    booleanMs: previewTiming.booleanMs ?? null,
+    booleanFuseMs: previewTiming.booleanFuseMs ?? null,
+    booleanCutMs: previewTiming.booleanCutMs ?? null,
+    booleanIntersectMs: previewTiming.booleanIntersectMs ?? null,
     meshMs: previewTiming.meshMs,
     qualityMs: previewTiming.qualityMs,
     candidateMs: previewTiming.candidateMs,
@@ -578,6 +586,10 @@ function summarize(
   >
   for (const phase of [
     'buildMs',
+    'booleanMs',
+    'booleanFuseMs',
+    'booleanCutMs',
+    'booleanIntersectMs',
     'meshMs',
     'qualityMs',
     'candidateMs',

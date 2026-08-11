@@ -10,6 +10,11 @@ import {
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import type { BOPAlgo_GlueEnum } from 'replicad-opencascadejs'
 import {
+  measureBoolean,
+  measureBooleanInScope,
+  type BooleanOperationReporter,
+} from '../../boolean-progress'
+import {
   boundsForModularGridBase,
   PROTOTYPE_CONFIGURATION,
   type ModularGridBaseParameters,
@@ -37,6 +42,7 @@ export type ModularGridBaseBuildContext = {
     phase: 'clone-translate' | 'assembly-fuse' | 'fillet',
     durationMs: number,
   ) => void
+  booleanOperations?: BooleanOperationReporter
 }
 
 export type ModularGridAssemblyStrategy = 'sequential' | 'balanced'
@@ -141,9 +147,15 @@ async function fuseOwnedShapes(
 
   try {
     assertGenerationCurrent(context)
-    fused = simplifyResult
-      ? first.fuse(second, { optimisation: 'sameFace' })
-      : fusePairWithoutSimplifying(first, second)
+    if (simplifyResult) {
+      fused = measureBoolean(context.booleanOperations, 'fuse', () =>
+        first.fuse(second, { optimisation: 'sameFace' }),
+      )
+    } else {
+      fused = measureBoolean(context.booleanOperations, 'fuse', () =>
+        fusePairWithoutSimplifying(first, second),
+      )
+    }
     assertGenerationCurrent(context)
     if (fused !== first) owned.release(first)
     if (fused !== second) owned.release(second)
@@ -222,6 +234,7 @@ async function fuseMany(
   const toolsList = new oc.TopTools_ListOfShape_1()
   const progress = new oc.Message_ProgressRange_1()
   const builder = new oc.BRepAlgoAPI_Fuse_1()
+  const fuseScope = context.booleanOperations?.createScope(1)
   let fused: Shape3D | null = null
 
   try {
@@ -233,7 +246,7 @@ async function fuseMany(
     builder.SetGlue(
       oc.BOPAlgo_GlueEnum.BOPAlgo_GlueShift as unknown as BOPAlgo_GlueEnum,
     )
-    builder.Build(progress)
+    measureBooleanInScope(fuseScope, 'fuse', () => builder.Build(progress))
     const result = cast(builder.Shape())
     if (!isShape3D(result)) {
       deleteShape(result)
