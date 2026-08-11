@@ -26,12 +26,18 @@ import { assertOpenGridSnapShapeQuality } from '../cad-kernel/components/opengri
 import { assertOpenGridDividerShapeQuality } from '../cad-kernel/components/opengrid-divider/quality'
 import { assertPillarShapeQuality } from '../cad-kernel/components/opengrid-pillar/quality'
 import { meshBRep, serializeMesh, type MeshData } from '../cad-kernel/mesh'
+import {
+  createBooleanOperationReporter,
+  type BooleanOperationReporter,
+} from '../cad-kernel/boolean-progress'
 import { PreviewTimingRecorder } from '../cad-contract/preview-timing'
 import {
   errorEvent,
   isWorkerCommand,
   PROTOCOL_VERSION,
+  type BooleanOperationProgress,
   type ProgressUnit,
+  type ProgressEvent,
   type WorkerCommand,
   type WorkerEvent,
 } from '../cad-contract/messages'
@@ -311,6 +317,11 @@ export class CadWorkerRuntime {
     this.invalidatedGeneration = 0
     this.lifetime.pruneCommitsBeforeGeneration(this.latestInputGeneration)
     const timing = new PreviewTimingRecorder()
+    const booleanOperations = createBooleanOperationReporter(
+      (progress) =>
+        this.emitProgress(command, 'building', undefined, undefined, progress),
+      (kind, durationMs) => timing.recordBoolean(kind, durationMs),
+    )
     let generationParameters: ModelParameterValues = command.parameters
     if (command.modelId === 'opengrid') {
       const normalizedParameters = normalizeOpenGridParameters(
@@ -353,6 +364,7 @@ export class CadWorkerRuntime {
         getOpenGridSnapRemoverAsset: () => this.getOpenGridSnapRemoverAsset(),
         yieldToEventLoop: yieldToWorkerEventLoop,
         isGenerationCurrent: () => this.isGenerationCurrent(command.generation),
+        booleanOperations,
         reportProgress: (progress) =>
           this.emitProgress(command, progress.stage, undefined, {
             completed: progress.completed,
@@ -367,8 +379,17 @@ export class CadWorkerRuntime {
             : undefined,
       }
       if (useOpenGridCanonicalTileCache) {
-        buildContext.getOpenGridCanonicalTile = (variant, thickness) =>
-          this.getOpenGridCanonicalTile(variant, thickness, command.generation)
+        buildContext.getOpenGridCanonicalTile = (
+          variant,
+          thickness,
+          canonicalBooleanOperations,
+        ) =>
+          this.getOpenGridCanonicalTile(
+            variant,
+            thickness,
+            command.generation,
+            canonicalBooleanOperations,
+          )
       }
       if (useOpenGridHalfCellPrototypeCache) {
         buildContext.getOpenGridHalfCellPrototype = (key, factory) =>
@@ -739,8 +760,9 @@ export class CadWorkerRuntime {
       total?: number
       unit?: ProgressUnit
     },
+    booleanOperation?: BooleanOperationProgress,
   ): void {
-    this.emit({
+    const event: ProgressEvent = {
       version: PROTOCOL_VERSION,
       kind: 'operation.progress',
       requestId: id(),
@@ -749,7 +771,10 @@ export class CadWorkerRuntime {
       generation: command.generation,
       modelRevision,
       ...counters,
-    })
+    }
+    if (booleanOperation !== undefined)
+      event.booleanOperation = booleanOperation
+    this.emit(event)
   }
 
   private superseded(
@@ -897,6 +922,7 @@ export class CadWorkerRuntime {
     variant: OpenGridVariant,
     _thickness: number,
     generation: number,
+    booleanOperations?: BooleanOperationReporter,
   ): Promise<import('replicad').Shape3D> {
     const cached = this.openGridCanonicalTiles.get(variant)
     if (cached) return cached
@@ -905,6 +931,7 @@ export class CadWorkerRuntime {
       balancedFuseBatchSize: this.openGridBuildOptions.balancedFuseBatchSize,
       yieldToEventLoop: yieldToWorkerEventLoop,
       isGenerationCurrent: () => this.isGenerationCurrent(generation),
+      booleanOperations,
     })
     const recoverable = canonical.catch((error) => {
       this.openGridCanonicalTiles.delete(variant)

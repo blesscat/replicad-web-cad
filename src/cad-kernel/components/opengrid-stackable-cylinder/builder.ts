@@ -20,9 +20,15 @@ import {
   type OpenGridStackableCylinderPoint2D,
   type OpenGridStackableCylinderProfile,
 } from '../../../cad-contract/units'
+import {
+  measureBoolean,
+  measureBooleanInScope,
+  type BooleanOperationReporter,
+} from '../../boolean-progress'
 
 export type OpenGridStackableCylinderBuildContext = {
   isGenerationCurrent?: () => boolean
+  booleanOperations?: BooleanOperationReporter
 }
 
 type Bounds = [[number, number, number], [number, number, number]]
@@ -228,6 +234,7 @@ function cutSteppedHole(
   shape: Shape3D,
   parameters: OpenGridStackableCylinderParameters,
   center: OpenGridStackableCylinderPoint2D,
+  reporter: BooleanOperationReporter | undefined,
 ): Shape3D {
   const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
   const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
@@ -237,8 +244,9 @@ function cutSteppedHole(
     [center[0], center[1], -0.01],
   )
   let lowerCut: Shape3D | null = null
+  const cutScope = reporter?.createScope(2)
   try {
-    lowerCut = shape.cut(lower)
+    lowerCut = measureBooleanInScope(cutScope, 'cut', () => shape.cut(lower))
   } finally {
     deleteShape(lower)
   }
@@ -251,7 +259,11 @@ function cutSteppedHole(
       [center[0], center[1], derived.bottomHoleSectionDepth],
     )
     if (!lowerCut) throw new Error('OPENGRID_STACKABLE_CYLINDER_HOLE_INVALID')
-    const steppedCut = lowerCut.cut(upper)
+    const activeLowerCut = lowerCut
+    const activeUpper = upper
+    const steppedCut = measureBooleanInScope(cutScope, 'cut', () =>
+      activeLowerCut.cut(activeUpper),
+    )
     deleteShape(lowerCut)
     lowerCut = null
     return steppedCut
@@ -269,7 +281,12 @@ function addBottomHoles(
   let current = shape
   for (const center of openGridStackableCylinderHoleCentersFor(parameters)) {
     assertGenerationCurrent(context)
-    const cut = cutSteppedHole(current, parameters, center)
+    const cut = cutSteppedHole(
+      current,
+      parameters,
+      center,
+      context.booleanOperations,
+    )
     deleteShape(current)
     current = cut
   }
@@ -401,14 +418,22 @@ function addSideOpenings(
 ): Shape3D {
   const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
   let current = shape
-  for (const direction of ['+X', '-X', '+Y', '-Y'] as const) {
+  const directions = (['+X', '-X', '+Y', '-Y'] as const).filter(
+    (direction) => derived.openings[direction].enabled,
+  )
+  const cutScope = context.booleanOperations?.createScope(directions.length)
+  for (const direction of directions) {
     assertGenerationCurrent(context)
-    if (!derived.openings[direction].enabled) continue
 
     let cutter: Shape3D | null = null
     try {
       cutter = makeSideOpeningCutter(parameters, direction)
-      const cut = current.cut(cutter)
+      const activeCutter = cutter
+      if (!activeCutter)
+        throw new Error('OPENGRID_STACKABLE_CYLINDER_CUTTER_EMPTY')
+      const cut = measureBooleanInScope(cutScope, 'cut', () =>
+        current.cut(activeCutter),
+      )
       deleteShape(current)
       current = cut
     } finally {

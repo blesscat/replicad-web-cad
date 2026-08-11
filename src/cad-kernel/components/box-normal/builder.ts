@@ -19,6 +19,10 @@ import {
   type BoxNormalParameters,
 } from '../../../cad-contract/units'
 import { buildHexagonalColumnPrototype } from '../hexagonal-column/builder'
+import {
+  measureBooleanInScope,
+  type BooleanOperationReporter,
+} from '../../boolean-progress'
 
 export const boxNormalReferenceUrl = new URL(
   './box-normal.step',
@@ -67,6 +71,7 @@ export type BoxNormalBuildContext = {
   }) => void
   reportPhase?: (phase: 'prototype-build', durationMs: number) => void
   reportOperationCounts?: (counts: BoxNormalOperationCounts) => void
+  booleanOperations?: BooleanOperationReporter
 }
 
 function deleteShape(shape: { delete?: () => void } | null | undefined): void {
@@ -585,7 +590,10 @@ function assertReferenceGeometry(shape: Shape3D): void {
   assertReferenceProfileDimensions(shape)
 }
 
-function buildBoxNormalBody(parameters: BoxNormalParameters): Shape3D {
+function buildBoxNormalBody(
+  parameters: BoxNormalParameters,
+  reporter: BooleanOperationReporter | undefined,
+): Shape3D {
   const [nominalWidth, nominalDepth] = [
     parameters.x * BOX_NORMAL_CONFIGURATION.gridX,
     parameters.y * BOX_NORMAL_CONFIGURATION.gridY,
@@ -625,7 +633,8 @@ function buildBoxNormalBody(parameters: BoxNormalParameters): Shape3D {
     bodyBaseZ + parameters.height,
   )
 
-  return outer.cut(cavity)
+  const cutScope = reporter?.createScope(1)
+  return measureBooleanInScope(cutScope, 'cut', () => outer.cut(cavity))
 }
 
 function makePostConnector(x: number, y: number): Shape3D {
@@ -671,7 +680,7 @@ export async function buildBoxNormal(
   try {
     assertGenerationCurrent(context)
     const prototypeStartedAt = performance.now()
-    body = buildBoxNormalBody(parameters)
+    body = buildBoxNormalBody(parameters, context.booleanOperations)
     context.reportPhase?.(
       'prototype-build',
       performance.now() - prototypeStartedAt,
@@ -699,6 +708,7 @@ export async function buildBoxNormal(
     )
     owned.add(postPrototype)
     const centers = boxNormalPostCentersFor(parameters)
+    const fuseScope = context.booleanOperations?.createScope(centers.length * 2)
     context.reportProgress?.({
       stage: 'building',
       completed: 0,
@@ -716,13 +726,20 @@ export async function buildBoxNormal(
 
       const connector = makePostConnector(x, y)
       owned.add(connector)
-      const reinforcedPost = translated.fuse(connector)
+      const reinforcedPost = measureBooleanInScope(fuseScope, 'fuse', () =>
+        translated.fuse(connector),
+      )
       owned.release(translated)
       owned.release(connector)
       owned.add(reinforcedPost)
 
       if (!combined) throw new Error('BOX_NORMAL_BODY_EMPTY')
-      const fused: Shape3D = combined.fuse(reinforcedPost)
+      const currentCombined: Shape3D = combined
+      const fused: Shape3D = measureBooleanInScope<Shape3D>(
+        fuseScope,
+        'fuse',
+        () => currentCombined.fuse(reinforcedPost),
+      )
       owned.release(combined)
       owned.release(reinforcedPost)
       owned.add(fused)

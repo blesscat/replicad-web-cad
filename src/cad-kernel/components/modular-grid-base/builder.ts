@@ -10,6 +10,11 @@ import {
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import type { BOPAlgo_GlueEnum } from 'replicad-opencascadejs'
 import {
+  measureBooleanInScope,
+  type BooleanOperationScope,
+  type BooleanOperationReporter,
+} from '../../boolean-progress'
+import {
   boundsForModularGridBase,
   PROTOTYPE_CONFIGURATION,
   type ModularGridBaseParameters,
@@ -37,6 +42,7 @@ export type ModularGridBaseBuildContext = {
     phase: 'clone-translate' | 'assembly-fuse' | 'fillet',
     durationMs: number,
   ) => void
+  booleanOperations?: BooleanOperationReporter
 }
 
 export type ModularGridAssemblyStrategy = 'sequential' | 'balanced'
@@ -135,15 +141,22 @@ async function fuseOwnedShapes(
   second: Shape3D,
   owned: OwnedShapeGroup,
   context: ModularGridBaseBuildContext,
+  fuseScope: BooleanOperationScope | undefined,
   simplifyResult = true,
 ): Promise<Shape3D> {
   let fused: Shape3D | null = null
 
   try {
     assertGenerationCurrent(context)
-    fused = simplifyResult
-      ? first.fuse(second, { optimisation: 'sameFace' })
-      : fusePairWithoutSimplifying(first, second)
+    if (simplifyResult) {
+      fused = measureBooleanInScope(fuseScope, 'fuse', () =>
+        first.fuse(second, { optimisation: 'sameFace' }),
+      )
+    } else {
+      fused = measureBooleanInScope(fuseScope, 'fuse', () =>
+        fusePairWithoutSimplifying(first, second),
+      )
+    }
     assertGenerationCurrent(context)
     if (fused !== first) owned.release(first)
     if (fused !== second) owned.release(second)
@@ -164,6 +177,10 @@ async function fuseBalanced(
   simplifyResult = true,
 ): Promise<Shape3D> {
   let current = shapes
+  const fuseScope =
+    shapes.length > 1
+      ? context.booleanOperations?.createScope(shapes.length - 1)
+      : undefined
 
   while (current.length > 1) {
     assertGenerationCurrent(context)
@@ -178,7 +195,14 @@ async function fuseBalanced(
 
       const fuseStartedAt = performance.now()
       next.push(
-        await fuseOwnedShapes(first, second, owned, context, simplifyResult),
+        await fuseOwnedShapes(
+          first,
+          second,
+          owned,
+          context,
+          fuseScope,
+          simplifyResult,
+        ),
       )
       timings.fuseMs += performance.now() - fuseStartedAt
     }
@@ -199,10 +223,14 @@ async function fuseSequential(
   const first = shapes[0]
   if (!first) throw new Error('GRID_TEMPLATE_EMPTY')
   let combined = first
+  const fuseScope =
+    shapes.length > 1
+      ? context.booleanOperations?.createScope(shapes.length - 1)
+      : undefined
 
   for (const shape of shapes.slice(1)) {
     const fuseStartedAt = performance.now()
-    combined = await fuseOwnedShapes(combined, shape, owned, context)
+    combined = await fuseOwnedShapes(combined, shape, owned, context, fuseScope)
     timings.fuseMs += performance.now() - fuseStartedAt
   }
   return combined
@@ -222,6 +250,7 @@ async function fuseMany(
   const toolsList = new oc.TopTools_ListOfShape_1()
   const progress = new oc.Message_ProgressRange_1()
   const builder = new oc.BRepAlgoAPI_Fuse_1()
+  const fuseScope = context.booleanOperations?.createScope(1)
   let fused: Shape3D | null = null
 
   try {
@@ -233,7 +262,7 @@ async function fuseMany(
     builder.SetGlue(
       oc.BOPAlgo_GlueEnum.BOPAlgo_GlueShift as unknown as BOPAlgo_GlueEnum,
     )
-    builder.Build(progress)
+    measureBooleanInScope(fuseScope, 'fuse', () => builder.Build(progress))
     const result = cast(builder.Shape())
     if (!isShape3D(result)) {
       deleteShape(result)
@@ -304,6 +333,10 @@ async function buildSequentialAssembly(
   const timings: AssemblyTimings = { cloneTranslateMs: 0, fuseMs: 0 }
   let combined: Shape3D | null = null
   let completedCells = 0
+  const fuseScope =
+    offsets.length > 1
+      ? context.booleanOperations?.createScope(offsets.length - 1)
+      : undefined
 
   try {
     for (const offset of offsets) {
@@ -319,7 +352,13 @@ async function buildSequentialAssembly(
       }
 
       const fuseStartedAt = performance.now()
-      combined = await fuseOwnedShapes(combined, cell, owned, context)
+      combined = await fuseOwnedShapes(
+        combined,
+        cell,
+        owned,
+        context,
+        fuseScope,
+      )
       timings.fuseMs += performance.now() - fuseStartedAt
     }
 

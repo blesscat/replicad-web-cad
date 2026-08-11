@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { MeshSnapshot } from '../../src/cad-contract/messages'
+import type {
+  MeshSnapshot,
+  ProgressEvent,
+} from '../../src/cad-contract/messages'
 import { initialCadState } from '../../src/features/cad/state'
 import { rawFromParameters } from '../../src/components/cad/workspace/validation'
 import { createWorkerEventHandler } from '../../src/components/cad/workspace/runtime/events'
@@ -82,8 +85,18 @@ function createContext() {
   return { context, setProgress, refs }
 }
 
-function progressEvent(generation: number, operationId: string) {
-  return {
+function progressEvent(
+  generation: number,
+  operationId: string,
+  booleanOperation?: {
+    kind: 'fuse' | 'cut' | 'intersect'
+    state: 'running' | 'completed'
+    completed?: number
+    total?: number
+    elapsedMs: number
+  },
+) {
+  const event: ProgressEvent = {
     version: 1 as const,
     kind: 'operation.progress' as const,
     requestId: `progress-request-${generation}`,
@@ -94,6 +107,8 @@ function progressEvent(generation: number, operationId: string) {
     total: 10,
     unit: 'cells' as const,
   }
+  if (booleanOperation) event.booleanOperation = booleanOperation
+  return event
 }
 
 describe('CAD Worker progress lifecycle', () => {
@@ -106,11 +121,52 @@ describe('CAD Worker progress lifecycle', () => {
 
     handle(progressEvent(2, 'operation-2'))
     expect(setProgress).toHaveBeenCalledWith({
+      operationId: 'operation-2',
       stage: 'building',
       completed: 2,
       total: 10,
       unit: 'cells',
     })
+  })
+
+  it('keeps boolean subprogress on the current operation and clears it at terminal state', () => {
+    const { context, setProgress } = createContext()
+    const handle = createWorkerEventHandler(context)
+
+    handle(
+      progressEvent(2, 'operation-2', {
+        kind: 'fuse',
+        state: 'running',
+        completed: 2,
+        total: 7,
+        elapsedMs: 1800,
+      }),
+    )
+    expect(setProgress).toHaveBeenLastCalledWith({
+      operationId: 'operation-2',
+      stage: 'building',
+      completed: 2,
+      total: 10,
+      unit: 'cells',
+      booleanOperation: {
+        kind: 'fuse',
+        state: 'running',
+        completed: 2,
+        total: 7,
+        elapsedMs: 1800,
+      },
+    })
+
+    handle({
+      version: 1,
+      kind: 'operation.superseded',
+      requestId: 'superseded-response',
+      operationId: 'operation-2',
+      terminalForRequestId: 'request-2',
+      generation: 2,
+      reason: 'STALE_GENERATION',
+    })
+    expect(setProgress).toHaveBeenLastCalledWith(null)
   })
 
   it('clears current progress on invalidation and superseded/error terminals', () => {

@@ -35,6 +35,7 @@ import {
 } from '../../src/cad-contract/units'
 import { exportStlBytes, exportStepBytes } from '../../src/cad-kernel/export'
 import { meshBRep } from '../../src/cad-kernel/mesh'
+import { createBooleanOperationReporter } from '../../src/cad-kernel/boolean-progress'
 import { bottomStackingProfileTopZ } from '../../src/cad-kernel/components/opengrid-stackable-box/geometry'
 import { measureMountingHoleProfiles } from '../../src/cad-kernel/components/opengrid-stackable-box/quality-holes'
 import { volumeInBox } from '../../src/cad-kernel/components/opengrid-stackable-box/quality-metrics'
@@ -116,6 +117,42 @@ function deleteShape(shape: Shape3D | null | undefined): void {
 }
 
 describe('OpenGrid stackable-box B-Rep', () => {
+  it('reports remaining counts for deterministic fuse and cut scopes', () => {
+    const progress: Array<{
+      kind: string
+      state: string
+      completed?: number
+      total?: number
+    }> = []
+    const reporter = createBooleanOperationReporter((update) =>
+      progress.push(update),
+    )
+    const input = parameters({ x: 2, y: 2, fullBottomHoleGrid: true })
+    const shape = buildOpenGridStackableBox(input, {
+      booleanOperations: reporter,
+    })
+
+    try {
+      const completed = progress.filter(
+        (update) => update.state === 'completed',
+      )
+      expect(completed.length).toBeGreaterThan(0)
+      expect(completed.every((update) => update.total !== undefined)).toBe(true)
+      expect(
+        completed.some(
+          (update) => update.kind === 'fuse' && update.total !== undefined,
+        ),
+      ).toBe(true)
+      expect(
+        completed.some(
+          (update) => update.kind === 'cut' && update.total !== undefined,
+        ),
+      ).toBe(true)
+    } finally {
+      deleteShape(shape)
+    }
+  })
+
   it.each([
     { x: 1, y: 1 },
     { x: 1, y: 4 },

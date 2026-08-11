@@ -15,9 +15,11 @@ import { exportStlBytes, exportStepBytes } from '../../src/cad-kernel/export'
 import { buildBoxBRep } from '../../src/cad-kernel/components/box/builder'
 import {
   buildModularGridBase,
+  buildModularGridBaseWithStrategy,
   importModularGridBaseTemplate,
 } from '../../src/cad-kernel/components/modular-grid-base/builder'
 import { meshBRep } from '../../src/cad-kernel/mesh'
+import { createBooleanOperationReporter } from '../../src/cad-kernel/boolean-progress'
 import {
   boundsForBox,
   boundsForModularGridBase,
@@ -299,6 +301,76 @@ describe('modular-grid-base CAD kernel integration', () => {
       template.delete()
     }
   })
+
+  it('reports the balanced native multi-fuse boundary', async () => {
+    const template = await loadTemplate()
+    const progress: Array<{
+      kind: string
+      state: string
+      completed?: number
+      total?: number
+    }> = []
+    const reporter = createBooleanOperationReporter((update) =>
+      progress.push(update),
+    )
+
+    try {
+      const shape = await buildModularGridBaseWithStrategy(
+        { rows: 2, columns: 2 },
+        template,
+        'balanced',
+        { booleanOperations: reporter },
+      )
+      shape.delete()
+    } finally {
+      template.delete()
+    }
+
+    expect(
+      progress.some(
+        (update) =>
+          update.kind === 'fuse' &&
+          update.state === 'completed' &&
+          update.completed === 1 &&
+          update.total === 1,
+      ),
+    ).toBe(true)
+  }, 180_000)
+
+  it('reports the planned sequential fuse total', async () => {
+    const template = await loadTemplate()
+    const progress: Array<{
+      kind: string
+      state: string
+      completed?: number
+      total?: number
+    }> = []
+    const reporter = createBooleanOperationReporter((update) =>
+      progress.push(update),
+    )
+
+    try {
+      const shape = await buildModularGridBaseWithStrategy(
+        { rows: 1, columns: 3 },
+        template,
+        'sequential',
+        { booleanOperations: reporter },
+      )
+      shape.delete()
+    } finally {
+      template.delete()
+    }
+
+    expect(
+      progress.some(
+        (update) =>
+          update.kind === 'fuse' &&
+          update.state === 'completed' &&
+          update.completed === 2 &&
+          update.total === 2,
+      ),
+    ).toBe(true)
+  }, 180_000)
 
   it.each([
     { rows: 1, columns: 1 },

@@ -157,7 +157,7 @@ async function runSample(
     > = {}
     shape = await adapter.build(fixture, reference, {
       reportPhase: (phase, durationMs) => {
-        phaseTimings[phase] = durationMs
+        phaseTimings[phase] = (phaseTimings[phase] ?? 0) + durationMs
       },
     })
     readPhases(phaseTimings, timing)

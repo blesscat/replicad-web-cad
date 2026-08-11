@@ -156,7 +156,7 @@ export function createCadWorkerRuntime(
 
   const setOperationProgress = (operationId: string, progress: CadProgress) => {
     activeProgressOperationIdRef.current = operationId
-    setProgress(progress)
+    setProgress({ ...progress, operationId })
   }
 
   const clearOperationProgress = (operationId: string) => {

@@ -179,6 +179,26 @@ describe('OpenGrid geometry benchmark contract', () => {
     ).toBe(true)
   })
 
+  it('sums repeated boolean phase reports and keeps mixed phases separate', async () => {
+    const fixture = OPENGRID_BENCHMARK_FIXTURES[0]
+    const report = await runOpenGridBenchmark({
+      adapter: createFakeAdapter(async (_fixture, _strategy, context) => {
+        context.reportPhaseStart?.('assembly-fuse')
+        context.reportPhase?.('assembly-fuse', 3)
+        context.reportPhase?.('assembly-fuse', 5)
+        context.reportPhase?.('boolean-cut', 7)
+        return { delete: vi.fn() } as unknown as Shape3D
+      }),
+      environment: fakeEnvironment(),
+      fixtures: [fixture],
+      strategies: ['cell-balanced'],
+    })
+
+    expect(report.failures).toHaveLength(0)
+    expect(report.runs[0]?.timing.assemblyFuseMs).toBe(8)
+    expect(report.runs[0]?.timing.booleanCutMs).toBe(7)
+  })
+
   it('retains a timeout failure for every timed-out sample', async () => {
     const fixture = OPENGRID_BENCHMARK_FIXTURES[0]
     const report = await runOpenGridBenchmark({

@@ -45,11 +45,11 @@ export function buildOpenGridStackableBox(
   if (!validation.valid) throw new Error('INVALID_INPUT')
   assertGenerationCurrent(context)
 
-  let shape = makeBoxShell(parameters)
+  let shape = makeBoxShell(parameters, context.booleanOperations)
   assertGenerationCurrent(context)
   shape = applyStackingProfile(shape, parameters, context)
   shape = addMountingSockets(shape, parameters, context)
-  shape = applyBasePlateMode(shape, parameters)
+  shape = applyBasePlateMode(shape, parameters, context.booleanOperations)
   shape = addSideOpenings(shape, parameters, context)
   assertGenerationCurrent(context)
   assertOpenGridStackableBoxGeometry(shape, parameters)

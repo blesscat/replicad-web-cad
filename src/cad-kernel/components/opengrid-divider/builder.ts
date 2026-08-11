@@ -7,6 +7,11 @@ import {
   validateOpenGridDividerParameters,
   type OpenGridDividerParameters,
 } from '../../../cad-contract/units'
+import {
+  measureBooleanInScope,
+  type BooleanOperationScope,
+  type BooleanOperationReporter,
+} from '../../boolean-progress'
 
 export type OpenGridDividerBuildContext = {
   yieldToEventLoop?: () => Promise<void>
@@ -17,6 +22,7 @@ export type OpenGridDividerBuildContext = {
     total?: number
     unit?: 'steps'
   }) => void
+  booleanOperations?: BooleanOperationReporter
 }
 
 function deleteShape(shape: { delete?: () => void } | null | undefined): void {
@@ -329,8 +335,14 @@ function asSingleSolid(shape: Shape3D): Solid {
   return solids[0]
 }
 
-function fuseAsSingleSolid(first: Shape3D, second: Shape3D): Solid {
-  const fused = fuseShapes(first, second)
+function fuseAsSingleSolid(
+  first: Shape3D,
+  second: Shape3D,
+  scope: BooleanOperationScope | undefined,
+): Solid {
+  const fused = measureBooleanInScope(scope, 'fuse', () =>
+    fuseShapes(first, second),
+  )
   let solid: Solid | null = null
   try {
     solid = asSingleSolid(fused)
@@ -394,6 +406,12 @@ async function makeContinuousWall(
 ): Promise<Shape3D> {
   const horizontalActive = parameters.left > 0 || parameters.right > 0
   const verticalActive = parameters.up > 0 || parameters.down > 0
+  const fuseTotal =
+    pegCenters.length + (horizontalActive && verticalActive ? 1 : 0)
+  const fuseScope =
+    fuseTotal > 0
+      ? context.booleanOperations?.createScope(fuseTotal)
+      : undefined
 
   let horizontal: Solid | null = null
   let vertical: Solid | null = null
@@ -416,10 +434,10 @@ async function makeContinuousWall(
       try {
         if (armAxisForPeg(center, horizontalActive) === 'x') {
           if (!horizontal) throw new Error('OPENGRID_DIVIDER_WALL_EMPTY')
-          horizontal = fuseAsSingleSolid(horizontal, peg)
+          horizontal = fuseAsSingleSolid(horizontal, peg, fuseScope)
         } else {
           if (!vertical) throw new Error('OPENGRID_DIVIDER_WALL_EMPTY')
-          vertical = fuseAsSingleSolid(vertical, peg)
+          vertical = fuseAsSingleSolid(vertical, peg, fuseScope)
         }
       } catch (error) {
         deleteShape(peg)
@@ -432,7 +450,7 @@ async function makeContinuousWall(
 
     if (!horizontal) return vertical as Shape3D
     if (!vertical) return horizontal
-    const fused = fuseAsSingleSolid(horizontal, vertical)
+    const fused = fuseAsSingleSolid(horizontal, vertical, fuseScope)
     horizontal = null
     vertical = null
     return fused

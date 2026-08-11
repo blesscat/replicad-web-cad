@@ -1,6 +1,7 @@
 import { normalizeError } from '../../../../cad-contract/errors'
 import {
   isWorkerEvent,
+  type ProgressEvent,
   type WorkerEvent,
 } from '../../../../cad-contract/messages'
 import {
@@ -66,6 +67,19 @@ function isCurrentExportOperation(
     operation?.kind === 'export' &&
     context.refs.exportRequest.current?.operationId === operationId
   )
+}
+
+function progressFromEvent(event: ProgressEvent) {
+  const progress = {
+    operationId: event.operationId,
+    stage: event.stage,
+    completed: event.completed,
+    total: event.total,
+    unit: event.unit,
+  } as const
+
+  if (event.booleanOperation === undefined) return progress
+  return { ...progress, booleanOperation: event.booleanOperation }
 }
 
 export function createWorkerEventHandler(
@@ -141,12 +155,10 @@ export function createWorkerEventHandler(
           context.refs.activeProgressOperationId.current !== event.operationId
         )
           return
-        context.setOperationProgress(event.operationId, {
-          stage: event.stage,
-          completed: event.completed,
-          total: event.total,
-          unit: event.unit,
-        })
+        context.setOperationProgress(
+          event.operationId,
+          progressFromEvent(event),
+        )
         return
       }
       case 'model.candidate-ready': {

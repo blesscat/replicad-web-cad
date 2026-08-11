@@ -27,6 +27,12 @@ import {
 } from './profile'
 import { buildOpenGridSnapBoundaryObstacle } from './boundary'
 import { transformShapeXY, type XYScaleTransform } from '../../transform'
+import {
+  measureBoolean,
+  measureBooleanInScope,
+  type BooleanOperationScope,
+  type BooleanOperationReporter,
+} from '../../boolean-progress'
 
 export const OPENGRID_SNAP_REFERENCE_URLS: Readonly<
   Record<OpenGridSnapProfile, Record<OpenGridSnapVariant, URL>>
@@ -53,6 +59,7 @@ export type OpenGridSnapBuildContext = {
   ) => Promise<Shape3D>
   yieldToEventLoop?: () => Promise<void>
   isGenerationCurrent?: () => boolean
+  booleanOperations?: BooleanOperationReporter
 }
 
 export type OpenGridSnapReferenceReport = {
@@ -251,15 +258,25 @@ function cloneImportedAssembly(shape: Shape3D): Shape3D {
   return deserializeShape(shape.serialize()).asShape3D()
 }
 
-function cutShape(source: Shape3D, cutter: Shape3D): Shape3D {
-  const result = source.cut(cutter)
+function cutShape(
+  source: Shape3D,
+  cutter: Shape3D,
+  scope: BooleanOperationScope | undefined,
+): Shape3D {
+  const result = measureBooleanInScope(scope, 'cut', () => source.cut(cutter))
   if (result !== source) deleteShape(source)
   deleteShape(cutter)
   return result
 }
 
-function fuseCutter(current: Shape3D, extension: Shape3D): Shape3D {
-  const fused = current.fuse(extension, { optimisation: 'none' })
+function fuseCutter(
+  current: Shape3D,
+  extension: Shape3D,
+  scope: ReturnType<BooleanOperationReporter['createScope']> | undefined,
+): Shape3D {
+  const fused = measureBooleanInScope(scope, 'fuse', () =>
+    current.fuse(extension, { optimisation: 'none' }),
+  )
   if (fused !== current) deleteShape(current)
   deleteShape(extension)
   return fused
@@ -273,6 +290,7 @@ function featureCutterHeight(
 
 function makeCenterRemoverCutter(
   definition: OpenGridSnapProfileDefinition,
+  scope: BooleanOperationScope | undefined,
 ): Shape3D {
   const baseZ = definition.expectedBounds.min[2] - 1
   const topZ = definition.expectedBounds.max[2] + 1
@@ -300,7 +318,7 @@ function makeCenterRemoverCutter(
       topZ,
     ],
   )
-  const cutter = lower.fuse(upper)
+  const cutter = measureBooleanInScope(scope, 'fuse', () => lower.fuse(upper))
   if (cutter !== lower) deleteShape(lower)
   deleteShape(upper)
   return cutter
@@ -308,6 +326,7 @@ function makeCenterRemoverCutter(
 
 function makeLocatingHolesCutter(
   definition: OpenGridSnapProfileDefinition,
+  reporter: BooleanOperationReporter | undefined,
 ): Shape3D {
   const baseZ = definition.expectedBounds.min[2] - 1
   const holeHeight = featureCutterHeight(definition)
@@ -325,10 +344,12 @@ function makeLocatingHolesCutter(
     holeHeight,
     [firstCenter[0], firstCenter[1], baseZ],
   )
+  const fuseScope = reporter?.createScope(centers.length + 3)
   for (const [x, y] of centers.slice(1)) {
     cutter = fuseCutter(
       cutter,
       makeCylinder(definition.locatingHoleRadius, holeHeight, [x, y, baseZ]),
+      fuseScope,
     )
   }
 
@@ -340,6 +361,7 @@ function makeLocatingHolesCutter(
         [-halfSpan, bandCenter - slotHalfWidth, baseZ],
         [halfSpan, bandCenter + slotHalfWidth, slotStepZ],
       ),
+      fuseScope,
     )
     cutter = fuseCutter(
       cutter,
@@ -347,6 +369,7 @@ function makeLocatingHolesCutter(
         [bandCenter - slotHalfWidth, -halfSpan, baseZ],
         [bandCenter + slotHalfWidth, halfSpan, slotStepZ],
       ),
+      fuseScope,
     )
   }
 
@@ -358,6 +381,7 @@ function applyBodyFeatures(
   parameters: OpenGridSnapParameters,
   definition: OpenGridSnapProfileDefinition,
   options: { applyLocatingHoles?: boolean } = {},
+  reporter: BooleanOperationReporter | undefined,
 ): Shape3D {
   const supportsCornerHoles = definition.optionalFeatures.includes(
     'fourCornerLocatingHoles',
@@ -380,16 +404,29 @@ function applyBodyFeatures(
   }
 
   let result = body
+  const appliesLocatingHoles =
+    parameters.fourCornerLocatingHoles && options.applyLocatingHoles !== false
+  const appliesCenterRemover = parameters.centerRemoverHole
+  const cutTotal = Number(appliesLocatingHoles) + Number(appliesCenterRemover)
+  const cutScope = cutTotal > 0 ? reporter?.createScope(cutTotal) : undefined
+  const centerRemoverFuseScope = appliesCenterRemover
+    ? reporter?.createScope(1)
+    : undefined
 
-  if (
-    parameters.fourCornerLocatingHoles &&
-    options.applyLocatingHoles !== false
-  ) {
-    result = cutShape(result, makeLocatingHolesCutter(definition))
+  if (appliesLocatingHoles) {
+    result = cutShape(
+      result,
+      makeLocatingHolesCutter(definition, reporter),
+      cutScope,
+    )
   }
 
-  if (parameters.centerRemoverHole) {
-    result = cutShape(result, makeCenterRemoverCutter(definition))
+  if (appliesCenterRemover) {
+    result = cutShape(
+      result,
+      makeCenterRemoverCutter(definition, centerRemoverFuseScope),
+      cutScope,
+    )
   }
 
   return result
@@ -473,10 +510,12 @@ function composeStandardAssembly(
   parameters: OpenGridSnapParameters,
   definition: OpenGridSnapProfileDefinition,
   applyOptionalFeatures: boolean,
+  reporter: BooleanOperationReporter | undefined,
 ): Shape3D {
-  const body = applyOptionalFeatures
-    ? applyBodyFeatures(parts.body, parameters, definition)
-    : parts.body
+  let body = parts.body
+  if (applyOptionalFeatures) {
+    body = applyBodyFeatures(parts.body, parameters, definition, {}, reporter)
+  }
   const output: Shape3D[] = [body, ...parts.sideHolders, ...parts.snaps]
   try {
     return makeCompound(output).asShape3D()
@@ -504,6 +543,7 @@ function applyDirectionalFeatures(
   assembly: Shape3D,
   parameters: OpenGridSnapParameters,
   definition: OpenGridSnapProfileDefinition,
+  reporter: BooleanOperationReporter | undefined,
 ): Shape3D {
   if (!parameters.fourCornerLocatingHoles && !parameters.centerRemoverHole) {
     return assembly
@@ -522,13 +562,14 @@ function applyDirectionalFeatures(
   }
   for (const extraSolid of solids.slice(1)) deleteShape(extraSolid)
   deleteShape(assembly)
-  return applyBodyFeatures(solid, parameters, definition)
+  return applyBodyFeatures(solid, parameters, definition, {}, reporter)
 }
 
 function buildFeatureAssembly(
   reference: Shape3D,
   parameters: OpenGridSnapParameters,
   targetBounds: ModelBounds,
+  reporter: BooleanOperationReporter | undefined,
 ): Shape3D {
   const definition = openGridSnapProfileFor(
     parameters.profile,
@@ -542,7 +583,7 @@ function buildFeatureAssembly(
   if (parameters.profile === 'Directional') {
     const assembly = buildDirectionalAssembly(reference, transform)
     return parameters.footprint === 'full'
-      ? applyDirectionalFeatures(assembly, parameters, definition)
+      ? applyDirectionalFeatures(assembly, parameters, definition, reporter)
       : assembly
   }
 
@@ -555,6 +596,7 @@ function buildFeatureAssembly(
     parameters,
     definition,
     parameters.footprint === 'full',
+    reporter,
   )
 }
 
@@ -640,12 +682,20 @@ async function clipAssemblyToFootprint(
   const output: Shape3D[] = []
   let boundaryObstacle: Shape3D | null = null
   let succeeded = false
+  const firstClipScope = context.booleanOperations?.createScope(
+    sourceSolids.length,
+  )
 
   try {
-    boundaryObstacle = buildOpenGridSnapBoundaryObstacle(parameters.footprint)
+    boundaryObstacle = buildOpenGridSnapBoundaryObstacle(
+      parameters.footprint,
+      context.booleanOperations,
+    )
     for (const [sourceIndex, solid] of sourceSolids.entries()) {
       assertGenerationCurrent(context)
-      const clipped = solid.intersect(clippingProfile)
+      const clipped = measureBooleanInScope(firstClipScope, 'intersect', () =>
+        solid.intersect(clippingProfile),
+      )
       if (clipped !== solid) deleteShape(solid)
       if (measureVolume(clipped) <= ASSET_TOLERANCE) {
         deleteShape(clipped)
@@ -653,23 +703,35 @@ async function clipAssemblyToFootprint(
       }
       const translated = clipped.translate(translation[0], translation[1], 0)
       if (translated !== clipped) deleteShape(clipped)
-      let bounded = translated.intersect(finalProfile)
+      let bounded = measureBoolean(context.booleanOperations, 'intersect', () =>
+        translated.intersect(finalProfile),
+      )
       if (bounded !== translated) deleteShape(translated)
       if (measureVolume(bounded) <= ASSET_TOLERANCE) {
         deleteShape(bounded)
         continue
       }
       if (sourceIndex === centralIndex) {
-        bounded = applyBodyFeatures(bounded, parameters, definition, {
-          // A half/quarter envelope cannot contain a complete fixed ±7 mm
-          // locating hole. Keep the fixed feature out instead of producing a
-          // translated or partial hole at the new boundary.
-          applyLocatingHoles: false,
-        })
+        bounded = applyBodyFeatures(
+          bounded,
+          parameters,
+          definition,
+          {
+            // A half/quarter envelope cannot contain a complete fixed ±7 mm
+            // locating hole. Keep the fixed feature out instead of producing a
+            // translated or partial hole at the new boundary.
+            applyLocatingHoles: false,
+          },
+          context.booleanOperations,
+        )
       }
-      const boundaryCut = boundaryObstacle
-        ? bounded.cut(boundaryObstacle)
-        : bounded
+      let boundaryCut = bounded
+      if (boundaryObstacle) {
+        const activeBoundaryObstacle = boundaryObstacle
+        boundaryCut = measureBoolean(context.booleanOperations, 'cut', () =>
+          bounded.cut(activeBoundaryObstacle),
+        )
+      }
       if (boundaryCut !== bounded) deleteShape(bounded)
       if (measureVolume(boundaryCut) <= ASSET_TOLERANCE) {
         deleteShape(boundaryCut)
@@ -772,6 +834,7 @@ export async function buildOpenGridSnap(
     reference,
     parameters,
     openGridSnapPreFootprintBoundsFor(parameters),
+    context.booleanOperations,
   )
 
   if (parameters.footprint === 'full') return assembly

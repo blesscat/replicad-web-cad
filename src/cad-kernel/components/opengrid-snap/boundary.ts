@@ -8,6 +8,11 @@ import {
   openGridLiteTileProfile,
   openGridProfileConstants,
 } from '../opengrid/profile'
+import {
+  measureBooleanInScope,
+  type BooleanOperationScope,
+  type BooleanOperationReporter,
+} from '../../boolean-progress'
 
 type BoundaryInterfaceX = 'left' | 'right' | null
 type BoundaryInterfaceY = 'bottom' | 'top' | null
@@ -209,23 +214,36 @@ function translateShape(shape: Shape3D, x: number, y: number): Shape3D {
   return translated
 }
 
-function clipShapeToBox(shape: Shape3D, clip: Shape3D): Shape3D {
-  const clipped = shape.intersect(clip)
+function clipShapeToBox(
+  shape: Shape3D,
+  clip: Shape3D,
+  scope: BooleanOperationScope | undefined,
+): Shape3D {
+  const clipped = measureBooleanInScope(scope, 'intersect', () =>
+    shape.intersect(clip),
+  )
   if (clipped !== shape) deleteShape(shape)
   return clipped
 }
 
-function fuseParts(parts: Shape3D[]): Shape3D {
+function fuseParts(
+  parts: Shape3D[],
+  reporter: BooleanOperationReporter | undefined,
+): Shape3D {
   const first = parts.shift()
   if (!first) throw new Error('OPENGRID_SNAP_BOUNDARY_PARTS_EMPTY')
 
   let result = first
   let extension: Shape3D | null = null
+  const fuseScope = reporter?.createScope(parts.length)
   try {
     while (parts.length > 0) {
       extension = parts.shift() ?? null
       if (!extension) continue
-      const fused = result.fuse(extension, { optimisation: 'none' })
+      const activeExtension = extension
+      const fused = measureBooleanInScope(fuseScope, 'fuse', () =>
+        result.fuse(activeExtension, { optimisation: 'none' }),
+      )
       if (fused !== result) deleteShape(result)
       deleteShape(extension)
       extension = null
@@ -284,7 +302,10 @@ function addSeamOverlap(
   }
 }
 
-function buildBoundaryTile(tile: BoundaryTile): Shape3D {
+function buildBoundaryTile(
+  tile: BoundaryTile,
+  reporter: BooleanOperationReporter | undefined,
+): Shape3D {
   const { width, depth, interfaceX, interfaceY } = tile
   const rail = buildRail()
   const corner = buildCornerNode()
@@ -339,13 +360,14 @@ function buildBoundaryTile(tile: BoundaryTile): Shape3D {
         OPENGRID_SNAP_BOUNDARY_PROFILE.boundaryHeight + 0.01,
       ],
     )
+    const intersectionScope = reporter?.createScope(parts.length)
     for (let index = 0; index < parts.length; index += 1) {
       const part = parts[index]
       if (!part) continue
-      parts[index] = clipShapeToBox(part, clip)
+      parts[index] = clipShapeToBox(part, clip, intersectionScope)
     }
     addSeamOverlap(parts, width, depth, interfaceX, interfaceY)
-    boundary = fuseParts(parts)
+    boundary = fuseParts(parts, reporter)
     addFullHeightCornerWedges(cornerWedges, width, depth)
     if (cornerWedges.length === 0) {
       if (!boundary) {
@@ -355,14 +377,14 @@ function buildBoundaryTile(tile: BoundaryTile): Shape3D {
       boundary = null
       return result
     }
-    cornerWedge = fuseParts(cornerWedges)
+    cornerWedge = fuseParts(cornerWedges, reporter)
     if (!boundary || !cornerWedge) {
       throw new Error('OPENGRID_SNAP_BOUNDARY_CORNER_WEDGE_MISSING')
     }
     const partsToFuse: Shape3D[] = [boundary, cornerWedge]
     boundary = null
     cornerWedge = null
-    return fuseParts(partsToFuse)
+    return fuseParts(partsToFuse, reporter)
   } catch (error) {
     for (const part of parts) deleteShape(part)
     for (const wedge of cornerWedges) deleteShape(wedge)
@@ -384,23 +406,30 @@ function buildBoundaryTile(tile: BoundaryTile): Shape3D {
  */
 export function buildOpenGridSnapBoundaryObstacle(
   footprint: OpenGridSnapFootprint,
+  reporter?: BooleanOperationReporter,
 ): Shape3D | null {
   if (footprint === 'full') return null
 
   if (footprint === 'half') {
-    return buildBoundaryTile({
-      width: halfPitch(),
-      depth: OPENGRID_SNAP_BOUNDARY_PROFILE.pitch,
-      interfaceX: 'left',
-      interfaceY: null,
-    })
+    return buildBoundaryTile(
+      {
+        width: halfPitch(),
+        depth: OPENGRID_SNAP_BOUNDARY_PROFILE.pitch,
+        interfaceX: 'left',
+        interfaceY: null,
+      },
+      reporter,
+    )
   }
 
-  const quarterTile = buildBoundaryTile({
-    width: halfPitch(),
-    depth: halfPitch(),
-    interfaceX: 'left',
-    interfaceY: 'top',
-  })
+  const quarterTile = buildBoundaryTile(
+    {
+      width: halfPitch(),
+      depth: halfPitch(),
+      interfaceX: 'left',
+      interfaceY: 'top',
+    },
+    reporter,
+  )
   return quarterTile
 }

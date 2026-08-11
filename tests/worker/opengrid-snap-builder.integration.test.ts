@@ -24,6 +24,7 @@ import {
   inspectOpenGridSnapShapeQuality,
   OPENGRID_SNAP_GENERATED_ENVELOPE_TOLERANCE,
 } from '../../src/cad-kernel/components/opengrid-snap/quality'
+import { createBooleanOperationReporter } from '../../src/cad-kernel/boolean-progress'
 import { meshBRep } from '../../src/cad-kernel/mesh'
 
 ;(globalThis as typeof globalThis & { __dirname?: string }).__dirname = dirname(
@@ -346,6 +347,42 @@ describe('OpenGrid Snap reference builder', () => {
 
   afterAll(() => {
     // OpenCascade is process-global in these integration tests.
+  })
+
+  it('shows known scope totals while leaving footprint-dependent work indeterminate', async () => {
+    const reference = await importOpenGridSnapReference(
+      assetBlob('Lite'),
+      'Lite',
+    )
+    const progress: Array<{
+      kind: string
+      state: string
+      total?: number
+    }> = []
+    const reporter = createBooleanOperationReporter((update) =>
+      progress.push(update),
+    )
+    const parameters = snapParameters('Lite', 0, 'quarter')
+    const generated = await buildOpenGridSnap(parameters, {
+      getOpenGridSnapReference: async () => reference,
+      booleanOperations: reporter,
+    })
+
+    try {
+      expect(
+        progress.some(
+          (update) => update.state === 'running' && update.total !== undefined,
+        ),
+      ).toBe(true)
+      expect(
+        progress.some(
+          (update) => update.state === 'running' && update.total === undefined,
+        ),
+      ).toBe(true)
+    } finally {
+      generated.delete()
+      reference.delete()
+    }
   })
 
   it('imports complete Full and Lite nine-solid references with the expected envelope', async () => {

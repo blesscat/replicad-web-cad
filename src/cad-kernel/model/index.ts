@@ -1,5 +1,6 @@
 import type { Shape3D } from 'replicad'
 import type { ProgressUnit } from '../../cad-contract/messages'
+import type { BooleanOperationReporter } from '../boolean-progress'
 import {
   isBoxNormalParameters,
   isBoxParameters,
@@ -46,6 +47,7 @@ export type KernelBuildContext = {
   getOpenGridCanonicalTile?: (
     variant: OpenGridVariant,
     thickness: number,
+    booleanOperations?: BooleanOperationReporter,
   ) => Promise<Shape3D>
   getOpenGridHalfCellPrototype?: (
     key: string,
@@ -69,6 +71,7 @@ export type KernelBuildContext = {
     unit?: ProgressUnit
   }) => void
   reportPhase?: (phase: KernelBuildPhase, durationMs: number) => void
+  booleanOperations?: BooleanOperationReporter
   reportOperationCounts?: (counts: BoxNormalOperationCounts) => void
 }
 
@@ -117,6 +120,7 @@ async function buildBoxNormalModel(
     reportProgress: context.reportProgress,
     reportPhase: context.reportPhase,
     reportOperationCounts: context.reportOperationCounts,
+    booleanOperations: context.booleanOperations,
   })
 }
 
@@ -181,6 +185,7 @@ async function buildPillarModel(
   return buildPillar(parameters, {
     yieldToEventLoop: context.yieldToEventLoop,
     isGenerationCurrent: context.isGenerationCurrent,
+    booleanOperations: context.booleanOperations,
   })
 }
 
@@ -212,6 +217,7 @@ async function buildOpenGridModel(
         context.reportPhase?.(phase, durationMs)
       }
     },
+    booleanOperations: context.booleanOperations,
   })
 }
 
@@ -226,6 +232,7 @@ async function buildOpenGridSnapModel(
     getOpenGridSnapReference: context.getOpenGridSnapReference,
     yieldToEventLoop: context.yieldToEventLoop,
     isGenerationCurrent: context.isGenerationCurrent,
+    booleanOperations: context.booleanOperations,
   })
 }
 
@@ -240,6 +247,7 @@ async function buildOpenGridDividerModel(
     yieldToEventLoop: context.yieldToEventLoop,
     isGenerationCurrent: context.isGenerationCurrent,
     reportProgress: context.reportProgress,
+    booleanOperations: context.booleanOperations,
   })
 }
 
@@ -252,6 +260,7 @@ async function buildOpenGridStackableBoxModel(
   }
   return buildOpenGridStackableBox(parameters, {
     isGenerationCurrent: context.isGenerationCurrent,
+    booleanOperations: context.booleanOperations,
   })
 }
 
@@ -264,6 +273,7 @@ function buildOpenGridStackableCylinderModel(
   }
   return buildOpenGridStackableCylinder(parameters, {
     isGenerationCurrent: context.isGenerationCurrent,
+    booleanOperations: context.booleanOperations,
   })
 }
 

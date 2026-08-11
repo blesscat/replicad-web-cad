@@ -1,12 +1,18 @@
-import type { ProgressUnit } from '../../../cad-contract/messages'
+import type {
+  BooleanOperationKind,
+  BooleanOperationProgress,
+  ProgressUnit,
+} from '../../../cad-contract/messages'
 
 export type CadProgressStage = 'loading' | 'building' | 'meshing' | 'exporting'
 
 export type CadProgress = {
   stage: CadProgressStage
+  operationId?: string
   completed?: number
   total?: number
   unit?: ProgressUnit
+  booleanOperation?: BooleanOperationProgress
 }
 
 export type CadProgressDetails = {
@@ -53,6 +59,12 @@ const PROGRESS_UNIT_LABELS: Record<ProgressUnit, string> = {
   columns: '支',
 }
 
+const BOOLEAN_OPERATION_LABELS: Record<BooleanOperationKind, string> = {
+  fuse: '合併（Fuse）',
+  cut: '切除（Cut）',
+  intersect: '交集（Intersect）',
+}
+
 export function progressDetails(stage: CadProgressStage): CadProgressDetails {
   return {
     stage,
@@ -74,4 +86,45 @@ export function progressCountLabel(progress: CadProgress): string | null {
   )
     return null
   return `${progress.completed} / ${progress.total} ${PROGRESS_UNIT_LABELS[progress.unit]}`
+}
+
+export function booleanProgressRemaining(progress: CadProgress): number | null {
+  const operation = progress.booleanOperation
+  if (
+    !operation ||
+    operation.completed === undefined ||
+    operation.total === undefined
+  )
+    return null
+  return Math.max(0, operation.total - operation.completed)
+}
+
+export function booleanProgressLabel(progress: CadProgress): string | null {
+  const operation = progress.booleanOperation
+  if (!operation) return null
+
+  const label = BOOLEAN_OPERATION_LABELS[operation.kind]
+  if (operation.completed !== undefined && operation.total !== undefined) {
+    const remaining = booleanProgressRemaining(progress)
+    if (remaining === null)
+      return `${label} ${operation.completed} / ${operation.total}`
+    return `${label} ${operation.completed} / ${operation.total} · 剩餘 ${remaining}`
+  }
+  return `${label}進行中`
+}
+
+export function formatProgressElapsed(elapsedMs: number): string {
+  const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000))
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
+export function buildingProgressElapsedMs(
+  stage: CadProgressStage,
+  startedAt: number | null,
+  now: number,
+): number | null {
+  if (stage !== 'building' || startedAt === null) return null
+  return Math.max(0, now - startedAt)
 }
