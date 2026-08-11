@@ -13,6 +13,7 @@ import {
   calculateHswCellCounts,
   calculateModularGridCounts,
   calculateOpenGridCounts,
+  calculateOpenGridPrintPlan,
   calculateOpenGridStackableBoxCounts,
 } from '../../src/features/cad/grid-dimensions'
 
@@ -225,6 +226,198 @@ describe('OpenGrid dimension calculation', () => {
       valid: false,
       errors: { x: expect.stringContaining('42 mm') },
     })
+  })
+})
+
+describe('OpenGrid print-plan calculation', () => {
+  it('recommends a practical uniform plan for the 1000 mm example', () => {
+    const result = calculateOpenGridPrintPlan({
+      targetX: '1000',
+      targetY: '1000',
+      printerX: '256',
+      printerY: '256',
+    })
+
+    expect(result).toEqual({
+      valid: true,
+      target: { columns: 35, rows: 35, width: 980, depth: 980 },
+      printer: { columns: 9, rows: 9, width: 252, depth: 252 },
+      primary: { columns: 7, rows: 7, width: 196, depth: 196 },
+      pieceGroups: [
+        {
+          role: 'primary',
+          columns: 7,
+          rows: 7,
+          width: 196,
+          depth: 196,
+          quantity: 25,
+        },
+      ],
+      totalPieces: 25,
+    })
+  })
+
+  it('uses practical remainder groups instead of a tiny uniform divisor', () => {
+    const result = calculateOpenGridPrintPlan({
+      targetX: '952',
+      targetY: '952',
+      printerX: '256',
+      printerY: '256',
+    })
+
+    expect(result).toEqual({
+      valid: true,
+      target: { columns: 34, rows: 34, width: 952, depth: 952 },
+      printer: { columns: 9, rows: 9, width: 252, depth: 252 },
+      primary: { columns: 8, rows: 8, width: 224, depth: 224 },
+      pieceGroups: [
+        {
+          role: 'primary',
+          columns: 8,
+          rows: 8,
+          width: 224,
+          depth: 224,
+          quantity: 16,
+        },
+        {
+          role: 'edge',
+          columns: 8,
+          rows: 2,
+          width: 224,
+          depth: 56,
+          quantity: 4,
+        },
+        {
+          role: 'edge',
+          columns: 2,
+          rows: 8,
+          width: 56,
+          depth: 224,
+          quantity: 4,
+        },
+        {
+          role: 'corner',
+          columns: 2,
+          rows: 2,
+          width: 56,
+          depth: 56,
+          quantity: 1,
+        },
+      ],
+      totalPieces: 25,
+    })
+  })
+
+  it('consolidates a remainder on only one axis', () => {
+    const result = calculateOpenGridPrintPlan({
+      targetX: '980',
+      targetY: '952',
+      printerX: '256',
+      printerY: '256',
+    })
+
+    expect(result.valid && result.pieceGroups).toEqual([
+      {
+        role: 'primary',
+        columns: 7,
+        rows: 8,
+        width: 196,
+        depth: 224,
+        quantity: 20,
+      },
+      {
+        role: 'edge',
+        columns: 7,
+        rows: 2,
+        width: 196,
+        depth: 56,
+        quantity: 5,
+      },
+    ])
+  })
+
+  it('caps printer capacity at the legal OpenGrid board maximum', () => {
+    const result = calculateOpenGridPrintPlan({
+      targetX: '560',
+      targetY: '560',
+      printerX: '600',
+      printerY: '600',
+    })
+
+    expect(result.valid && result.printer).toEqual({
+      columns: OPENGRID_CONFIGURATION.maxGridCount,
+      rows: OPENGRID_CONFIGURATION.maxGridCount,
+      width:
+        OPENGRID_CONFIGURATION.maxGridCount * OPENGRID_CONFIGURATION.gridPitch,
+      depth:
+        OPENGRID_CONFIGURATION.maxGridCount * OPENGRID_CONFIGURATION.gridPitch,
+    })
+    if (result.valid) {
+      expect(result.pieceGroups.every((group) => group.columns <= 17)).toBe(
+        true,
+      )
+      expect(result.pieceGroups.every((group) => group.rows <= 17)).toBe(true)
+    }
+  })
+
+  it('rejects invalid target and printer dimensions without a plan', () => {
+    const validAxes = {
+      targetX: '100',
+      targetY: '100',
+      printerX: '256',
+      printerY: '256',
+    }
+    const invalidAxes = [
+      ['targetX', ''],
+      ['targetY', '27.99'],
+      ['printerX', 'not-a-number'],
+      ['printerY', '0'],
+      ['targetX', '-1'],
+      ['printerY', 'Infinity'],
+    ] as const
+
+    for (const [field, value] of invalidAxes) {
+      const result = calculateOpenGridPrintPlan({
+        ...validAxes,
+        [field]: value,
+      })
+
+      expect(result).toMatchObject({
+        valid: false,
+        errors: { [field]: expect.any(String) },
+      })
+    }
+  })
+
+  it('keeps every group within limits and covers the target footprint', () => {
+    const result = calculateOpenGridPrintPlan({
+      targetX: '1000',
+      targetY: '952',
+      printerX: '256',
+      printerY: '224',
+    })
+
+    expect(result.valid).toBe(true)
+    if (!result.valid) return
+
+    expect(
+      result.pieceGroups.every(
+        (group) =>
+          group.columns <= result.printer.columns &&
+          group.rows <= result.printer.rows &&
+          group.width <= result.printer.width &&
+          group.depth <= result.printer.depth,
+      ),
+    ).toBe(true)
+
+    const coveredArea = result.pieceGroups.reduce(
+      (sum, group) => sum + group.columns * group.rows * group.quantity,
+      0,
+    )
+    expect(coveredArea).toBe(result.target.columns * result.target.rows)
+    expect(result.totalPieces).toBe(
+      result.pieceGroups.reduce((sum, group) => sum + group.quantity, 0),
+    )
   })
 })
 

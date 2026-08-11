@@ -83,7 +83,7 @@ test('restore actions keep narrow controls stable and usable', async ({
 
   const targetX = page
     .getByTestId('grid-dimension-calculator')
-    .getByRole('textbox', { name: 'X（mm）' })
+    .getByRole('textbox', { name: '目標 X（mm）' })
   const targetXBefore = await readControlBox(targetX)
   await targetX.fill('56')
   await expect(page.getByRole('button', { name: '復原X' })).toHaveCount(0)
