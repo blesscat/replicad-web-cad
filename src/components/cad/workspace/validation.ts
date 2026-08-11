@@ -66,10 +66,7 @@ export const HEXAGONAL_COLUMN_PARAMETER_KEYS: ScalarModelParameterKey[] = [
   'gap',
   'orientation',
 ]
-export const PILLAR_PARAMETER_KEYS: ModelParameterKey[] = [
-  'length',
-  'baseConnection',
-]
+export const PILLAR_PARAMETER_KEYS: ModelParameterKey[] = ['mode']
 
 function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'box') return DIMENSION_KEYS
@@ -210,15 +207,8 @@ export function rawFromParameters(
     }
   }
 
-  if ('baseConnection' in parameters) {
-    const pillarParameters = parameters as {
-      length: number
-      baseConnection: boolean
-    }
-    return {
-      length: String(pillarParameters.length),
-      baseConnection: String(pillarParameters.baseConnection),
-    }
+  if ('mode' in parameters) {
+    return { mode: parameters.mode }
   }
 
   if (
@@ -420,11 +410,22 @@ export function parseRawParameters(
     Record<ModelParameterKey, number | string | boolean | null>
   > = {}
   for (const key of keys) {
+    if (key === 'mode') {
+      const mode = raw.mode
+      if (mode !== 'standard' && mode !== 'thin-shell') {
+        return {
+          valid: false,
+          message: '模式必須是 standard 或 thin-shell。',
+          field: 'mode',
+        }
+      }
+      parsed.mode = mode
+      continue
+    }
     if (
       key === 'cornerPosts' ||
       key === 'cornerBottomHoles' ||
       key === 'fullBottomHoleGrid' ||
-      key === 'baseConnection' ||
       key === 'thinBottomMode' ||
       key === 'bottomPlateMode' ||
       key === 'bottomHolesEnabled' ||

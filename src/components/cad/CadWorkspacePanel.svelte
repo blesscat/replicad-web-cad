@@ -48,7 +48,7 @@
   }: Props = $props()
 
   function hasParameterControlsFor(modelId: ModelId): boolean {
-    if (modelId === 'opengrid') return true
+    if (modelId === 'opengrid' || modelId === 'opengrid-pillar') return true
     return (getModelDefinition(modelId)?.parameterSchema.length ?? 0) > 0
   }
 </script>

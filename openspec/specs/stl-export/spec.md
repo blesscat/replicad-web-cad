@@ -125,22 +125,22 @@ The system MUST download a non-empty binary `.stl` file that can be opened throu
 
 ### Requirement: Pillar STL metadata
 
-The catalog MUST provide deterministic STL metadata for the `opengrid-pillar` component. The filename MUST use the existing `.stl` extension and `model/stl` MIME, and MUST be `pillar-{length}-{plain|base}.stl` according to the normalized `baseConnection` value. STL generation MUST continue to use the latest successfully committed OpenGrid pillar B-Rep and the existing export lifecycle gates.
+The catalog MUST provide deterministic STL metadata for the `opengrid-pillar` component. The filename MUST use the existing `.stl` extension and `model/stl` MIME, and MUST be `pillar-9-standard.stl` or `pillar-5-thin-shell.stl` according to the normalized `mode` value. STL generation MUST continue to use the latest successfully committed OpenGrid pillar B-Rep and the existing export lifecycle gates.
 
-#### Scenario: Plain pillar STL filename
+#### Scenario: Standard pillar STL filename
 
-- **WHEN** a committed pillar with `length=5` and `baseConnection=false` is exported as STL
-- **THEN** the filename MUST be `pillar-5-plain.stl`
+- **WHEN** a committed pillar with `mode=standard` is exported as STL
+- **THEN** the filename MUST be `pillar-9-standard.stl`
 - **AND** the response MUST carry `format=stl`, MIME `model/stl`, and non-empty binary bytes
 
-#### Scenario: Base-connection pillar STL filename
+#### Scenario: Thin-shell pillar STL filename
 
-- **WHEN** a committed pillar with `length=5` and `baseConnection=true` is exported as STL
-- **THEN** the filename MUST be `pillar-5-base.stl`
+- **WHEN** a committed pillar with `mode=thin-shell` is exported as STL
+- **THEN** the filename MUST be `pillar-5-thin-shell.stl`
 - **AND** the response MUST be generated from the committed pillar revision
 
 #### Scenario: Pillar STL follows readiness gates
 
-- **WHEN** the pillar input is invalid, stale, still generating, or has no committed revision
+- **WHEN** the pillar mode is invalid, stale, still generating, or has no committed revision
 - **THEN** the STL action MUST be disabled
 - **AND** the Worker MUST NOT receive an STL export request

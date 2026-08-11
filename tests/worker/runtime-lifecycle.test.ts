@@ -72,7 +72,7 @@ function pillarGenerateCommand(generation = 1) {
     kind: 'model.generate' as const,
     generation,
     modelId: 'opengrid-pillar' as const,
-    parameters: { length: 12, baseConnection: true },
+    parameters: { mode: 'standard' },
     previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
   }
 }
@@ -270,12 +270,12 @@ describe('CAD Worker candidate terminal lifecycle', () => {
     expect(candidate).toMatchObject({
       modelId: 'opengrid-pillar',
       generation: 1,
-      parameters: { length: 12, baseConnection: true },
+      parameters: { mode: 'standard' },
       workerEpoch: 'epoch-pillar',
     })
     expect(assertPillarShapeQuality).toHaveBeenCalledWith(
       expect.anything(),
-      { length: 12, baseConnection: true },
+      { mode: 'standard' },
       expect.objectContaining({ triangleCount: 1 }),
     )
 
@@ -293,7 +293,7 @@ describe('CAD Worker candidate terminal lifecycle', () => {
     expect(ready).toMatchObject({
       kind: 'model.ready',
       modelId: 'opengrid-pillar',
-      parameters: { length: 12, baseConnection: true },
+      parameters: { mode: 'standard' },
     })
     expect(ready).not.toHaveProperty('mesh')
     expect(serializeMesh).toHaveBeenCalledTimes(1)

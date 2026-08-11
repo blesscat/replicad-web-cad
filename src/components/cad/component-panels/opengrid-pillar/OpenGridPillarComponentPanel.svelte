@@ -1,101 +1,71 @@
 <script lang="ts">
   import { PILLAR_CONFIGURATION } from '../../../../cad-contract/units'
-  import {
-    displayParameterLabel,
-    opengridPillarDefinition,
-  } from '../../../../features/cad/model-catalog'
-  import ParameterControl from '../ParameterControl.svelte'
-  import ParameterField from '../ParameterField.svelte'
   import type { ComponentPanelProps } from '../types'
 
-  const COMMON_PILLAR_LENGTHS = [6, 8] as const
+  const PILLAR_MODE_OPTIONS = [
+    {
+      value: 'standard',
+      label: '標準版',
+      length: PILLAR_CONFIGURATION.standardLength,
+      description: '適合標準底板。',
+    },
+    {
+      value: 'thin-shell',
+      label: '薄殼版',
+      length: PILLAR_CONFIGURATION.thinShellLength,
+      description: '適合薄殼板。',
+    },
+  ] as const
 
   let { rawParameters, fieldErrors, onInputChange }: ComponentPanelProps =
     $props()
 
-  function handleBaseConnectionChange(event: Event): void {
+  function handleModeChange(event: Event): void {
     if (!(event.currentTarget instanceof HTMLInputElement)) return
-    onInputChange('baseConnection', String(event.currentTarget.checked))
+    onInputChange('mode', event.currentTarget.value)
   }
 </script>
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
   <p class="m-0 text-sm text-muted">
-    主體固定 Ø{PILLAR_CONFIGURATION.bodyDiameter} mm，頂端為 1 mm、45° chamfer；總長度文字輸入只接受
-    {PILLAR_CONFIGURATION.minLength}–{PILLAR_CONFIGURATION.maxLength} mm 整數，slider
-    為
-    {PILLAR_CONFIGURATION.minLength}–{PILLAR_CONFIGURATION.lengthSliderMax} mm。開啟「連接底版用」後，底端改為
-    Ø{PILLAR_CONFIGURATION.baseDiameter} mm × {PILLAR_CONFIGURATION.baseHeight} mm
-    的銳角凸台。
+    主體固定 Ø{PILLAR_CONFIGURATION.bodyDiameter} mm，底部為 Ø{PILLAR_CONFIGURATION.baseDiameter}
+    mm ×
+    {PILLAR_CONFIGURATION.baseHeight} mm 平底凸台，肩部保持銳角，頂端保留
+    {PILLAR_CONFIGURATION.upperChamfer} mm、45° chamfer。請選擇支柱版本；總長度與幾何尺寸固定，不提供手動輸入。
   </p>
 
-  {#each opengridPillarDefinition.parameterSchema as field (field.key)}
-    {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
-    <ParameterField
-      label={displayParameterLabel(field)}
-      unit={field.unit}
-      changed={value !== String(field.defaultValue)}
-      error={fieldErrors[field.key]}
-      errorId={`${field.key}-error`}
-      onRestore={() => onInputChange(field.key, String(field.defaultValue))}
-    >
-      <ParameterControl
-        {field}
-        {value}
-        error={fieldErrors[field.key]}
-        onChange={(nextValue) => onInputChange(field.key, nextValue)}
-      />
-      {#if field.key === 'length'}
-        <div class="grid gap-1">
-          <span class="text-sm text-muted">常用長度</span>
-          <div class="flex flex-wrap gap-2">
-            {#each COMMON_PILLAR_LENGTHS as commonLength}
-              {@const isSelected = value === String(commonLength)}
-              <button
-                class="cursor-pointer rounded-lg border border-border-field bg-panel px-3 py-1.5 text-sm font-semibold text-ink hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                class:border-primary={isSelected}
-                class:bg-primary={isSelected}
-                class:text-white={isSelected}
-                aria-pressed={isSelected}
-                data-testid={`opengrid-pillar-length-${commonLength}`}
-                type="button"
-                onclick={() => onInputChange('length', String(commonLength))}
-              >
-                {commonLength} mm
-              </button>
-            {/each}
-          </div>
-        </div>
-      {/if}
-    </ParameterField>
-  {/each}
-
-  <div class="grid gap-2 rounded-lg border border-border-field p-3">
-    <label class="flex min-w-0 grow items-start gap-2">
-      <input
-        aria-describedby={fieldErrors.baseConnection
-          ? 'baseConnection-error'
-          : undefined}
-        aria-invalid={Boolean(fieldErrors.baseConnection)}
-        aria-label="連接底版用"
-        class="mt-1 accent-primary"
-        data-testid="opengrid-pillar-base-connection"
-        type="checkbox"
-        checked={rawParameters.baseConnection === 'true'}
-        onchange={handleBaseConnectionChange}
-      />
-      <span class="grid gap-1">
-        <span class="font-[650]">連接底版用</span>
-        <span class="text-sm text-muted">
-          底端使用 Ø{PILLAR_CONFIGURATION.baseDiameter} mm × {PILLAR_CONFIGURATION.baseHeight}
-          mm 平底凸台，總長度不變。
+  <div
+    aria-label="支柱版本"
+    class="grid gap-2 rounded-lg border border-border-field p-3"
+    role="radiogroup"
+  >
+    {#each PILLAR_MODE_OPTIONS as option, index (option.value)}
+      <label class="flex min-w-0 grow items-start gap-2">
+        <input
+          aria-describedby={fieldErrors.mode ? 'pillar-mode-error' : undefined}
+          aria-label={option.label}
+          class="mt-1 accent-primary"
+          data-testid={`opengrid-pillar-mode-${option.value}`}
+          name="opengrid-pillar-mode"
+          type="radio"
+          value={option.value}
+          checked={rawParameters.mode === option.value}
+          required={index === 0}
+          onchange={handleModeChange}
+        />
+        <span class="grid gap-1">
+          <span class="font-[650]">{option.label}</span>
+          <span class="text-sm text-muted">
+            固定總長 {option.length} mm，{option.description}
+          </span>
         </span>
-      </span>
-    </label>
+      </label>
+    {/each}
   </div>
-  {#if fieldErrors.baseConnection}
-    <span class="text-sm text-error" id="baseConnection-error" role="alert">
-      {fieldErrors.baseConnection}
+
+  {#if fieldErrors.mode}
+    <span class="text-sm text-error" id="pillar-mode-error" role="alert">
+      {fieldErrors.mode}
     </span>
   {/if}
 </fieldset>

@@ -1,8 +1,4 @@
-## Purpose
-
-提供一個具標準版與薄殼版固定尺寸的圓柱支柱 component，讓使用者能產生可預覽、可驗證並可匯出的單一 CAD solid。
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Pillar parameter contract
 
@@ -56,7 +52,9 @@ Every valid pillar generation MUST produce one connected solid with finite, non-
 - **THEN** its export stem MUST be `pillar-9-standard`
 - **WHEN** a committed thin-shell pillar is exported
 - **THEN** its export stem MUST be `pillar-5-thin-shell`
-- **AND** the export MUST use the committed pillar B-Rep rather than a viewport mesh reconstruction
+- **AND** every export MUST use the committed pillar B-Rep rather than a viewport mesh reconstruction
+
+## ADDED Requirements
 
 ### Requirement: Fixed mode-specific pillar geometry
 
@@ -83,3 +81,21 @@ For either valid mode, the generator MUST create one centered Ø4.5 mm cylindric
 - **WHEN** a user views or edits the pillar panel
 - **THEN** no manual length, diameter, flange-height, or chamfer control MUST be exposed
 - **AND** selecting a mode MUST be sufficient to select the complete geometry profile
+
+## REMOVED Requirements
+
+### Requirement: Plain pillar geometry
+
+For a valid snapshot with `baseConnection=false`, the generator MUST create one centered Ø5 mm cylindrical body on the Z axis with total height `length` and base at `Z=0`. The upper end MUST have a 0.5 mm, 45° equal-distance chamfer. The lower end MUST have the same Ø5 mm, 1 mm, 45° equal-distance chamfer. The chamfers MUST be included within the requested total length.
+
+**Reason**: The plain Ø5 mm arbitrary-length profile is replaced by the two fixed assembly modes.
+
+**Migration**: Normalize legacy snapshots to `{ mode: 'standard' }`.
+
+### Requirement: Base-connection pillar geometry
+
+For a valid snapshot with `baseConnection=true`, the lower end MUST be a flat, sharp-edged Ø7 mm flange with axial height 0.8 mm, followed directly by the Ø5 mm body. The Ø7-to-Ø5 transition MUST be a sharp 90° step with no transition chamfer or fillet. The upper end MUST retain a 0.5 mm, 45° equal-distance chamfer. The flange, body, and upper chamfer MUST fit within the requested total length, so enabling the option MUST NOT increase the total height.
+
+**Reason**: The checkbox-controlled arbitrary-length profile is replaced by fixed standard and thin-shell modes.
+
+**Migration**: Use `mode=standard` or `mode=thin-shell`; retain the Ø7 mm flange diameter, 0.8 mm flange height, and 0.5 mm upper chamfer.

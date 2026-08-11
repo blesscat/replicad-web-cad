@@ -1,10 +1,10 @@
 import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from './opengrid-locating-assembly'
 
-export type PillarParameterKey = 'length' | 'baseConnection'
+export type PillarMode = 'standard' | 'thin-shell'
+export type PillarParameterKey = 'mode'
 
 export type PillarParameters = {
-  length: number
-  baseConnection: boolean
+  mode: PillarMode
 }
 
 export type PillarBounds = {
@@ -22,26 +22,19 @@ export type PillarValidation =
   | { valid: false; issues: PillarValidationIssue[] }
 
 export const PILLAR_CONFIGURATION = {
-  defaultLength: 5,
-  minLength: 3,
-  maxLength: 500,
-  lengthSliderMax: 200,
-  bodyDiameter: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter,
-  baseDiameter: 7,
-  baseHeight: 0.8,
-  lowerChamfer: 1,
+  defaultMode: 'standard',
+  standardLength: 9,
+  thinShellLength: 5,
+  bodyDiameter: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftDiameter,
+  baseDiameter: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testFlangeDiameter,
+  baseHeight: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testFlangeHeight,
   upperChamfer: 0.5,
-  defaultBaseConnection: false,
   defaultParameters: {
-    length: 5,
-    baseConnection: false,
+    mode: 'standard',
   } satisfies PillarParameters,
 } as const
 
-const PILLAR_PARAMETER_KEYS: readonly PillarParameterKey[] = [
-  'length',
-  'baseConnection',
-]
+const PILLAR_PARAMETER_KEYS: readonly PillarParameterKey[] = ['mode']
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -69,38 +62,23 @@ export function validatePillarParameters(value: unknown): PillarValidation {
   if (!hasExactKeys(value, PILLAR_PARAMETER_KEYS)) {
     issues.push({
       field: 'parameters',
-      message: '圓柱支柱只接受 length、baseConnection。',
+      message: '圓柱支柱只接受 mode。',
     })
   }
 
-  const length = value.length
-  if (typeof length !== 'number' || !Number.isFinite(length)) {
-    issues.push({ field: 'length', message: '總長度必須是有限的整數 mm。' })
-  } else if (!Number.isSafeInteger(length)) {
-    issues.push({ field: 'length', message: '總長度只接受整數 mm。' })
-  } else if (
-    length < PILLAR_CONFIGURATION.minLength ||
-    length > PILLAR_CONFIGURATION.maxLength
-  ) {
+  const mode = value.mode
+  if (mode !== 'standard' && mode !== 'thin-shell') {
     issues.push({
-      field: 'length',
-      message: `總長度必須介於 ${PILLAR_CONFIGURATION.minLength}–${PILLAR_CONFIGURATION.maxLength} mm。`,
+      field: 'mode',
+      message: '模式必須是 standard 或 thin-shell。',
     })
-  }
-
-  const baseConnection = value.baseConnection
-  if (typeof baseConnection !== 'boolean') {
-    issues.push({ field: 'baseConnection', message: '必須是 true 或 false。' })
   }
 
   if (issues.length > 0) return { valid: false, issues }
 
   return {
     valid: true,
-    value: {
-      length: length as number,
-      baseConnection: baseConnection as boolean,
-    },
+    value: { mode: mode as PillarMode },
   }
 }
 
@@ -108,22 +86,28 @@ export function isPillarParameters(value: unknown): value is PillarParameters {
   return validatePillarParameters(value).valid
 }
 
-export function boundsForPillar(
-  parameters: Pick<PillarParameters, 'length' | 'baseConnection'>,
-): PillarBounds {
-  const radius =
-    (parameters.baseConnection
-      ? PILLAR_CONFIGURATION.baseDiameter
-      : PILLAR_CONFIGURATION.bodyDiameter) / 2
+export function normalizePillarParameters(value: unknown): PillarParameters {
+  const validation = validatePillarParameters(value)
+  if (validation.valid) return validation.value
+  return { ...PILLAR_CONFIGURATION.defaultParameters }
+}
+
+export function pillarLengthForMode(mode: PillarMode): number {
+  if (mode === 'thin-shell') return PILLAR_CONFIGURATION.thinShellLength
+  return PILLAR_CONFIGURATION.standardLength
+}
+
+export function boundsForPillar(parameters: PillarParameters): PillarBounds {
+  const radius = PILLAR_CONFIGURATION.baseDiameter / 2
   return {
     min: [-radius, -radius, 0],
-    max: [radius, radius, parameters.length],
+    max: [radius, radius, pillarLengthForMode(parameters.mode)],
   }
 }
 
 function pillarExportStem(parameters: PillarParameters): string {
-  const mode = parameters.baseConnection ? 'base' : 'plain'
-  return `pillar-${parameters.length}-${mode}`
+  const length = pillarLengthForMode(parameters.mode)
+  return `pillar-${length}-${parameters.mode}`
 }
 
 export function pillarFileName(parameters: PillarParameters): string {

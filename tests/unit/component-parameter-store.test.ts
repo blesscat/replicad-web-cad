@@ -223,7 +223,7 @@ describe('component parameter store', () => {
           height: 25,
           wallThickness: 3,
         },
-        'opengrid-pillar': { length: 12, baseConnection: true },
+        'opengrid-pillar': { mode: 'thin-shell' },
       }),
     )
     const store = createComponentParameterStore({ storage })
@@ -265,10 +265,7 @@ describe('component parameter store', () => {
       height: 25,
       wallThickness: 3,
     })
-    expect(store.get('opengrid-pillar')).toEqual({
-      length: 12,
-      baseConnection: true,
-    })
+    expect(store.get('opengrid-pillar')).toEqual({ mode: 'thin-shell' })
     expect(store.get('opengrid-snap')).toEqual({
       variant: 'Lite',
       profile: 'Standard',
@@ -640,7 +637,7 @@ describe('component parameter store', () => {
     unsupportedStore.dispose()
   })
 
-  it('does not overwrite a valid pillar snapshot with an invalid draft', () => {
+  it('migrates legacy pillar snapshots and does not overwrite them with an invalid draft', () => {
     const storage = createMemoryStorage(
       createPayload({
         'opengrid-pillar': { length: 20, baseConnection: false },
@@ -648,20 +645,13 @@ describe('component parameter store', () => {
     )
     const store = createComponentParameterStore({ storage })
 
-    expect(store.get('opengrid-pillar')).toEqual({
-      length: 20,
-      baseConnection: false,
-    })
+    expect(store.get('opengrid-pillar')).toEqual({ mode: 'standard' })
     expect(
       store.set('opengrid-pillar', {
-        length: 20.5,
-        baseConnection: 'true',
+        mode: 'legacy',
       } as never),
     ).toBe(false)
-    expect(store.get('opengrid-pillar')).toEqual({
-      length: 20,
-      baseConnection: false,
-    })
+    expect(store.get('opengrid-pillar')).toEqual({ mode: 'standard' })
 
     store.dispose()
   })

@@ -4,6 +4,7 @@ import {
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+  normalizePillarParameters,
   type ModelId,
   type ModelParameterValues,
 } from '../../../cad-contract/units'
@@ -56,6 +57,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
+  if (modelId === 'opengrid-pillar') {
+    return normalizePillarParameters(value)
+  }
   if (modelId === 'opengrid-snap') {
     return normalizeOpenGridSnapParameters(value)
   }

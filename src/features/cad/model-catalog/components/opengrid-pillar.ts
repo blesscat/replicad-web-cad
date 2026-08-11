@@ -7,23 +7,7 @@ import {
   PILLAR_CONFIGURATION,
   validatePillarParameters,
 } from '../../../../cad-contract/units'
-import type { ModelDefinition, ParameterField } from '../types'
-
-const PILLAR_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
-  {
-    key: 'length',
-    label: '總長度',
-    axis: 'Z',
-    unit: 'mm',
-    control: 'range-text',
-    defaultValue: PILLAR_CONFIGURATION.defaultLength,
-    min: PILLAR_CONFIGURATION.minLength,
-    max: PILLAR_CONFIGURATION.maxLength,
-    step: 1,
-    sliderMin: PILLAR_CONFIGURATION.minLength,
-    sliderMax: PILLAR_CONFIGURATION.lengthSliderMax,
-  },
-]
+import type { ModelDefinition } from '../types'
 
 function validatePillarDefinitionParameters(value: unknown) {
   const validation = validatePillarParameters(value)
@@ -69,8 +53,8 @@ export const opengridPillarDefinition: ModelDefinition = {
   family: 'opengrid',
   displayName: 'OpenGrid 圓柱支柱',
   selectionLabel: '圓柱支柱',
-  selectionDescription: `OpenGrid 用 Ø5 mm 圓柱支柱；總長度文字輸入 ${PILLAR_CONFIGURATION.minLength}–${PILLAR_CONFIGURATION.maxLength} mm、slider ${PILLAR_CONFIGURATION.minLength}–${PILLAR_CONFIGURATION.lengthSliderMax} mm，上端固定 ${PILLAR_CONFIGURATION.upperChamfer} mm chamfer，可選擇 Ø7 × 0.8 mm 的連接底版凸台。`,
-  parameterSchema: PILLAR_PARAMETER_SCHEMA,
+  selectionDescription: `OpenGrid 用 Ø${PILLAR_CONFIGURATION.bodyDiameter} mm 圓柱支柱；標準版 ${PILLAR_CONFIGURATION.standardLength} mm（固定）、薄殼版 ${PILLAR_CONFIGURATION.thinShellLength} mm（固定），上端固定 ${PILLAR_CONFIGURATION.upperChamfer} mm chamfer，底部為 Ø${PILLAR_CONFIGURATION.baseDiameter} × ${PILLAR_CONFIGURATION.baseHeight} mm 平底凸台。`,
+  parameterSchema: [],
   defaultParameters: { ...PILLAR_CONFIGURATION.defaultParameters },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {

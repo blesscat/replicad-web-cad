@@ -35,7 +35,7 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
     return { height: 8, count: 1, gap: 1, orientation: 'lying' }
   }
   if (modelId === 'opengrid-pillar') {
-    return { length: 5, baseConnection: false }
+    return { mode: 'standard' }
   }
   if (modelId === 'opengrid') {
     return opengridParameters()
@@ -192,19 +192,18 @@ describe('CAD model generation debounce', () => {
     })
   })
 
-  it('debounces pillar length and preserves its base-connection mode', () => {
+  it('debounces pillar mode changes and persists the typed mode', () => {
     const { client, send, context } = createRuntimeContext('opengrid-pillar')
     const handlers = createModelGenerationHandlers(context)
 
-    handlers.handleInputChange('length', '8')
-    handlers.handleInputChange('baseConnection', 'true')
+    handlers.handleInputChange('mode', 'thin-shell')
     vi.advanceTimersByTime(500)
 
     expect(send).toHaveBeenLastCalledWith(
       expect.objectContaining({
         kind: 'model.generate',
         modelId: 'opengrid-pillar',
-        parameters: { length: 8, baseConnection: true },
+        parameters: { mode: 'thin-shell' },
       }),
     )
     expect(client.send).toHaveBeenCalledWith(
@@ -213,25 +212,22 @@ describe('CAD model generation debounce', () => {
     expect(context.setPersistedParameters).toHaveBeenLastCalledWith(
       'opengrid-pillar',
       {
-        length: 8,
-        baseConnection: true,
+        mode: 'thin-shell',
       },
     )
   })
 
   it.each([
     ['empty', ''],
-    ['fractional', '5.5'],
-    ['non-finite', 'Infinity'],
-    ['below the minimum', '2'],
-    ['above the maximum', '501'],
+    ['unsupported', 'legacy'],
+    ['wrong case', 'STANDARD'],
   ])(
-    'invalidates a pillar length that is %s without generating a snapshot',
+    'invalidates a pillar mode that is %s without generating a snapshot',
     (_label, value) => {
       const { client, send, context } = createRuntimeContext('opengrid-pillar')
       const handlers = createModelGenerationHandlers(context)
 
-      handlers.handleInputChange('length', value)
+      handlers.handleInputChange('mode', value)
       vi.advanceTimersByTime(500)
 
       expect(context.dispatch).toHaveBeenCalledWith(
@@ -250,11 +246,11 @@ describe('CAD model generation debounce', () => {
     },
   )
 
-  it('invalidates a non-boolean pillar base mode without generating a snapshot', () => {
+  it('rejects a second unsupported pillar mode value without generating a snapshot', () => {
     const { client, send, context } = createRuntimeContext('opengrid-pillar')
     const handlers = createModelGenerationHandlers(context)
 
-    handlers.handleInputChange('baseConnection', 'yes')
+    handlers.handleInputChange('mode', 'yes')
     vi.advanceTimersByTime(500)
 
     expect(context.dispatch).toHaveBeenCalledWith(

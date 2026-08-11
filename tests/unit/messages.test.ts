@@ -344,7 +344,7 @@ describe('Worker contract runtime validation', () => {
     ).toBe(false)
   })
 
-  it('accepts pillar commands only with integer length and boolean mode', () => {
+  it('accepts pillar commands only with a supported mode value', () => {
     const command = {
       version: PROTOCOL_VERSION,
       kind: 'model.generate' as const,
@@ -352,7 +352,7 @@ describe('Worker contract runtime validation', () => {
       operationId: 'operation-pillar-1',
       generation: 1,
       modelId: 'opengrid-pillar' as const,
-      parameters: { length: 12, baseConnection: true },
+      parameters: { mode: 'standard' },
       previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
     }
 
@@ -360,19 +360,19 @@ describe('Worker contract runtime validation', () => {
     expect(
       isWorkerCommand({
         ...command,
-        parameters: { length: 12.5, baseConnection: true },
+        parameters: { mode: 'legacy' },
       }),
     ).toBe(false)
     expect(
       isWorkerCommand({
         ...command,
-        parameters: { length: 12, baseConnection: 'true' },
+        parameters: { mode: true },
       }),
     ).toBe(false)
     expect(
       isWorkerCommand({
         ...command,
-        parameters: { length: 12, baseConnection: true, height: 5 },
+        parameters: { mode: 'standard', length: 9 },
       }),
     ).toBe(false)
   })

@@ -9,78 +9,65 @@ import {
 } from '../../src/cad-contract/units'
 
 describe('pillar contract', () => {
-  it('uses the agreed defaults and fixed geometry dimensions', () => {
+  it('uses the shared shaft, flange, and fixed mode dimensions', () => {
     expect(PILLAR_CONFIGURATION).toMatchObject({
-      defaultLength: 5,
-      minLength: 3,
-      maxLength: 500,
-      lengthSliderMax: 200,
-      bodyDiameter: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter,
-      baseDiameter: 7,
-      baseHeight: 0.8,
-      lowerChamfer: 1,
+      standardLength: 9,
+      thinShellLength: 5,
+      bodyDiameter: 4.5,
+      baseDiameter: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testFlangeDiameter,
+      baseHeight: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testFlangeHeight,
       upperChamfer: 0.5,
-      defaultBaseConnection: false,
+      defaultParameters: { mode: 'standard' },
     })
-    expect(
-      validatePillarParameters({ length: 5, baseConnection: false }),
-    ).toEqual({
+    expect(PILLAR_CONFIGURATION.bodyDiameter).toBe(
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftDiameter,
+    )
+  })
+
+  it('accepts exactly the standard and thin-shell modes', () => {
+    expect(validatePillarParameters({ mode: 'standard' })).toEqual({
       valid: true,
-      value: { length: 5, baseConnection: false },
+      value: { mode: 'standard' },
+    })
+    expect(validatePillarParameters({ mode: 'thin-shell' })).toEqual({
+      valid: true,
+      value: { mode: 'thin-shell' },
     })
   })
 
-  it('accepts the integer length boundaries and both modes', () => {
-    expect(
-      validatePillarParameters({ length: 3, baseConnection: true }),
-    ).toEqual({
-      valid: true,
-      value: { length: 3, baseConnection: true },
-    })
-    expect(
-      validatePillarParameters({ length: 500, baseConnection: false }),
-    ).toEqual({
-      valid: true,
-      value: { length: 500, baseConnection: false },
-    })
-  })
-
-  it('rejects fractional, out-of-range, non-boolean, and unsupported snapshots', () => {
+  it('rejects missing, unsupported, and legacy parameter shapes', () => {
     for (const value of [
-      { length: 2, baseConnection: false },
-      { length: 501, baseConnection: false },
-      { length: 5.5, baseConnection: false },
-      { length: 5, baseConnection: 'true' },
-      { length: 5 },
-      { length: 5, baseConnection: false, height: 10 },
+      {},
+      { mode: 'legacy' },
+      { mode: true },
+      { mode: 'standard', length: 9 },
+      { length: 9, baseConnection: true },
     ]) {
       expect(validatePillarParameters(value).valid).toBe(false)
     }
   })
 
-  it('returns centered bounds for both end modes', () => {
-    expect(boundsForPillar({ length: 5, baseConnection: false })).toEqual({
-      min: [-2.5, -2.5, 0],
-      max: [2.5, 2.5, 5],
+  it('returns centered fixed bounds for both modes', () => {
+    expect(boundsForPillar({ mode: 'standard' })).toEqual({
+      min: [-3.5, -3.5, 0],
+      max: [3.5, 3.5, 9],
     })
-    expect(boundsForPillar({ length: 5, baseConnection: true })).toEqual({
+    expect(boundsForPillar({ mode: 'thin-shell' })).toEqual({
       min: [-3.5, -3.5, 0],
       max: [3.5, 3.5, 5],
     })
   })
 
   it('uses deterministic mode-specific export filenames', () => {
-    expect(pillarFileName({ length: 5, baseConnection: false })).toBe(
-      'pillar-5-plain.step',
+    expect(pillarFileName({ mode: 'standard' })).toBe('pillar-9-standard.step')
+    expect(pillarFileName({ mode: 'thin-shell' })).toBe(
+      'pillar-5-thin-shell.step',
     )
-    expect(pillarFileName({ length: 5, baseConnection: true })).toBe(
-      'pillar-5-base.step',
+    expect(pillarStlFileName({ mode: 'standard' })).toBe(
+      'pillar-9-standard.stl',
     )
-    expect(pillarStlFileName({ length: 5, baseConnection: false })).toBe(
-      'pillar-5-plain.stl',
-    )
-    expect(pillarStlFileName({ length: 5, baseConnection: true })).toBe(
-      'pillar-5-base.stl',
+    expect(pillarStlFileName({ mode: 'thin-shell' })).toBe(
+      'pillar-5-thin-shell.stl',
     )
   })
 })

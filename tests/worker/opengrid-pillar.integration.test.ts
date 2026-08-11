@@ -66,15 +66,8 @@ function probeVolumeAt(
 }
 
 describe('OpenGrid pillar CAD kernel integration', () => {
-  it.each([
-    { length: 3, baseConnection: false },
-    { length: 5, baseConnection: false },
-    { length: 500, baseConnection: false },
-    { length: 3, baseConnection: true },
-    { length: 5, baseConnection: true },
-    { length: 500, baseConnection: true },
-  ] as PillarParameters[])(
-    'builds a valid centered pillar for %#',
+  it.each([{ mode: 'standard' }, { mode: 'thin-shell' }] as PillarParameters[])(
+    'builds a valid centered fixed-mode pillar for %#',
     async (parameters) => {
       const shape = await buildPillar(parameters)
       try {
@@ -121,89 +114,58 @@ describe('OpenGrid pillar CAD kernel integration', () => {
     180_000,
   )
 
-  it('keeps a 1 mm lower and 0.5 mm upper chamfer in plain mode', async () => {
-    const parameters = { length: 5, baseConnection: false }
-    const shape = await buildPillar(parameters)
-    try {
-      expect(probeVolumeAt(shape, 1.4, 0.1)).toBeGreaterThan(0)
-      expect(probeVolumeAt(shape, 1.7, 0.1)).toBeLessThan(1e-8)
-      expect(
-        probeVolumeAt(shape, 2.4, PILLAR_CONFIGURATION.lowerChamfer + 0.1),
-      ).toBeGreaterThan(0)
-      const straightStart = PILLAR_CONFIGURATION.lowerChamfer
-      const straightEnd = parameters.length - PILLAR_CONFIGURATION.upperChamfer
-      expect(straightEnd - straightStart).toBe(3.5)
-      const nearBodyEdge = PILLAR_CONFIGURATION.bodyDiameter / 2 - 0.01
-      expect(
-        probeVolumeAt(shape, nearBodyEdge, straightStart - 0.05, 0.005),
-      ).toBeLessThan(1e-8)
-      expect(
-        probeVolumeAt(shape, nearBodyEdge, straightStart + 0.05, 0.005),
-      ).toBeGreaterThan(0)
-      const upperChamferZ =
-        parameters.length - PILLAR_CONFIGURATION.upperChamfer / 2
+  it.each([{ mode: 'standard' }, { mode: 'thin-shell' }] as PillarParameters[])(
+    'keeps the Ø7 x 0.8 mm flange, sharp shoulder, Ø4.5 mm body, and upper chamfer for %#',
+    async (parameters) => {
+      const shape = await buildPillar(parameters)
+      const totalLength = boundsForPillar(parameters).max[2]
+      const bodyRadius = PILLAR_CONFIGURATION.bodyDiameter / 2
       const upperChamferBoundaryRadius =
-        PILLAR_CONFIGURATION.bodyDiameter / 2 -
-        PILLAR_CONFIGURATION.upperChamfer / 2
-      expect(
-        probeVolumeAt(shape, upperChamferBoundaryRadius - 0.15, upperChamferZ),
-      ).toBeGreaterThan(0)
-      expect(
-        probeVolumeAt(shape, upperChamferBoundaryRadius + 0.15, upperChamferZ),
-      ).toBeLessThan(1e-8)
-      expect(
-        probeVolumeAt(
-          shape,
-          2.4,
-          parameters.length - PILLAR_CONFIGURATION.upperChamfer - 0.1,
-        ),
-      ).toBeGreaterThan(0)
-      expect(
-        probeVolumeAt(shape, nearBodyEdge, straightEnd - 0.05, 0.005),
-      ).toBeGreaterThan(0)
-      expect(
-        probeVolumeAt(shape, nearBodyEdge, straightEnd + 0.05, 0.005),
-      ).toBeLessThan(1e-8)
-    } finally {
-      deleteShape(shape)
-    }
-  })
-
-  it('keeps a sharp Ø7 x 0.8 mm base flange in base-connection mode', async () => {
-    const parameters = { length: 5, baseConnection: true }
-    const shape = await buildPillar(parameters)
-    try {
-      expect(probeVolumeAt(shape, 3.4, 0.4)).toBeGreaterThan(0)
-      expect(probeVolumeAt(shape, 3.6, 0.4)).toBeLessThan(1e-8)
-      const upperFlangeProbeZ = PILLAR_CONFIGURATION.baseHeight + 0.05
-      expect(probeVolumeAt(shape, 2.4, upperFlangeProbeZ)).toBeGreaterThan(0)
-      expect(probeVolumeAt(shape, 2.6, upperFlangeProbeZ)).toBeLessThan(1e-8)
-      const straightStart = PILLAR_CONFIGURATION.baseHeight
-      const straightEnd = parameters.length - PILLAR_CONFIGURATION.upperChamfer
-      expect(straightEnd - straightStart).toBe(3.7)
-      const nearBodyEdge = PILLAR_CONFIGURATION.bodyDiameter / 2 - 0.01
-      expect(
-        probeVolumeAt(shape, nearBodyEdge, straightStart + 0.05, 0.005),
-      ).toBeGreaterThan(0)
-      const upperChamferZ =
-        parameters.length - PILLAR_CONFIGURATION.upperChamfer / 2
-      const upperChamferBoundaryRadius =
-        PILLAR_CONFIGURATION.bodyDiameter / 2 -
-        PILLAR_CONFIGURATION.upperChamfer / 2
-      expect(
-        probeVolumeAt(shape, upperChamferBoundaryRadius - 0.15, upperChamferZ),
-      ).toBeGreaterThan(0)
-      expect(
-        probeVolumeAt(shape, upperChamferBoundaryRadius + 0.15, upperChamferZ),
-      ).toBeLessThan(1e-8)
-      expect(
-        probeVolumeAt(shape, nearBodyEdge, straightEnd - 0.05, 0.005),
-      ).toBeGreaterThan(0)
-      expect(
-        probeVolumeAt(shape, nearBodyEdge, straightEnd + 0.05, 0.005),
-      ).toBeLessThan(1e-8)
-    } finally {
-      deleteShape(shape)
-    }
-  })
+        bodyRadius - PILLAR_CONFIGURATION.upperChamfer / 2
+      const upperChamferZ = totalLength - PILLAR_CONFIGURATION.upperChamfer / 2
+      try {
+        expect(probeVolumeAt(shape, 3.4, 0.4)).toBeGreaterThan(0)
+        expect(probeVolumeAt(shape, 3.6, 0.4)).toBeLessThan(1e-8)
+        expect(
+          probeVolumeAt(shape, 3.4, PILLAR_CONFIGURATION.baseHeight - 0.01),
+        ).toBeGreaterThan(0)
+        expect(
+          probeVolumeAt(shape, 3.4, PILLAR_CONFIGURATION.baseHeight + 0.01),
+        ).toBeLessThan(1e-8)
+        expect(
+          probeVolumeAt(
+            shape,
+            bodyRadius - 0.01,
+            PILLAR_CONFIGURATION.baseHeight + 0.05,
+            0.005,
+          ),
+        ).toBeGreaterThan(0)
+        expect(
+          probeVolumeAt(
+            shape,
+            bodyRadius + 0.01,
+            PILLAR_CONFIGURATION.baseHeight + 0.05,
+            0.005,
+          ),
+        ).toBeLessThan(1e-8)
+        expect(
+          probeVolumeAt(
+            shape,
+            upperChamferBoundaryRadius - 0.15,
+            upperChamferZ,
+          ),
+        ).toBeGreaterThan(0)
+        expect(
+          probeVolumeAt(
+            shape,
+            upperChamferBoundaryRadius + 0.15,
+            upperChamferZ,
+          ),
+        ).toBeLessThan(1e-8)
+      } finally {
+        deleteShape(shape)
+      }
+    },
+    180_000,
+  )
 })

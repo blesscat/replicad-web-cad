@@ -155,7 +155,7 @@ describe('CAD state machine', () => {
     const state = initialCadState('opengrid-pillar')
 
     expect(state.modelId).toBe('opengrid-pillar')
-    expect(state.input).toEqual({ length: 5, baseConnection: false })
+    expect(state.input).toEqual({ mode: 'standard' })
   })
 
   it('initializes the independent OpenGrid stackable-cylinder defaults', () => {

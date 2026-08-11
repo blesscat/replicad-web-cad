@@ -123,7 +123,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
       bottomPlateMode: true,
     },
   ])(
-    'accepts the Ø4 shaft and Ø7 flange fixture in $name mode',
+    'accepts the Ø4.5 shaft and Ø7 flange fixture in $name mode',
     ({ floorThickness, thinBottomMode, bottomPlateMode }) => {
       const input = parameters({ thinBottomMode, bottomPlateMode })
       const shape = buildOpenGridStackableCylinder(input)
