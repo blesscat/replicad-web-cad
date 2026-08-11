@@ -11,6 +11,7 @@ OpenGrid 的 Desk 與 Wall 入口會對同一個 model 使用不同的初始 pre
 - Desk Snap 的首次進入 preset 為 `variant=Lite`、`profile=Standard`、`footprint=full`、`offset=0.3`（X/Y 增量）、四周定位孔開啟、中央 remover 孔開啟。
 - Wall Snap 的首次進入 preset 為 `variant=Full`、`profile=Standard`、`footprint=full`、`offset=0`、四周定位孔關閉、中央 remover 孔關閉。
 - Desk／Wall 的底板與 Snap 參數保存 scope 互相隔離；已有的無 context 保存值只供 legacy/default route 使用，不得無聲污染 system scope。
+- CAD 編輯頁的標題上方顯示目前的 system 名稱；Desk 顯示 `目前系統：Desk System`，Wall 顯示 `目前系統：Wall Related`，legacy route 不顯示 system label。
 - 有 system context 時，參數優先順序為 scoped saved value、system preset、model definition default；「全部恢復預設」恢復目前 system 的 preset。
 - 預覽 capture 與 verify workflow 改為以可見 catalog entry 為單位。每個 context entry 都會以對應 system preset 產生自己的靜態 PNG，例如 `opengrid-snap-desk.png` 與 `opengrid-snap-wall.png`；沒有 context 的 legacy model 維持 `<modelId>.png`。
 - 預覽 capture 必須清除或使用新的 browser storage context，並透過帶有 `system` context 的 CAD route 取得 preset，不得使用開發者現有的保存值。

@@ -21,6 +21,9 @@ test('Desk and Wall Snap entries use isolated presets and context resets', async
   await expect(cornerHoles).toBeChecked()
   await expect(centerRemover).toBeChecked()
   await expect(offset).toHaveValue('0.3')
+  await expect(
+    page.getByText('目前系統：Desk System', { exact: true }),
+  ).toBeVisible()
 
   await offset.press('ArrowRight')
   await cornerHoles.uncheck()
@@ -40,6 +43,9 @@ test('Desk and Wall Snap entries use isolated presets and context resets', async
   await expect(wallCornerHoles).not.toBeChecked()
   await expect(wallCenterRemover).not.toBeChecked()
   await expect(wallOffset).toHaveValue('0')
+  await expect(
+    page.getByText('目前系統：Wall Related', { exact: true }),
+  ).toBeVisible()
 
   await page.getByRole('button', { name: '全部恢復預設' }).click()
   await expect(wallVariant).toHaveValue('Full')
@@ -79,6 +85,7 @@ test('OpenGrid Snap route exposes profiles, features, and one shared outer offse
   })
   await page.goto('/cad/opengrid-snap')
   await expect(page.getByTestId('opengrid-snap-panel')).toBeVisible()
+  await expect(page.getByTestId('cad-system-context')).toHaveCount(0)
   const variant = page.getByRole('combobox', { name: 'OpenGrid Snap 型號' })
   await expect(variant).toBeVisible()
   await expect(variant.locator('option').nth(0)).toHaveAttribute(

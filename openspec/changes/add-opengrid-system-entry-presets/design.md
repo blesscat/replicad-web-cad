@@ -44,6 +44,10 @@ Context-aware visible entries receive preview paths such as `/model-previews/ope
 
 The model family remains `opengrid` or `hsw`, but the OpenGrid family exposes `Desk System` and `Wall Related` subgroup metadata. The Astro page renders the subgroup when present and uses the entry's context-aware link and preview metadata. HSW keeps the existing flat family rendering.
 
+### The CAD header exposes the active system context
+
+The CAD page header mounts a small client-only label component that parses and validates the `system` query with the shared context resolver, then renders the matching system label above the model title. This keeps the context visible before the client-only workspace initializes and avoids duplicating label logic in the workspace. Unsupported or context-free routes omit the label.
+
 ## Risks / Trade-offs
 
 - [Risk] Existing tests and consumers assume every visible model id is unique. → [Mitigation] Add a stable entry key/context data attribute for UI tests, keep `modelDefinitions` unique, and update preview/catalog tests to assert entry identity rather than only model id.

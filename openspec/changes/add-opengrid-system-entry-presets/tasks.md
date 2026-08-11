@@ -32,3 +32,7 @@
 - [x] 6.1 Rename the system context, subgroup, query, persistence bucket, and preview identity to `desk`.
 - [x] 6.2 Set the Desk Snap default X/Y increment to `0.3` and cover it in unit and E2E tests.
 - [x] 6.3 Regenerate and verify the renamed Desk preview assets.
+
+## 7. CAD edit page context label
+
+- [x] 7.1 Show the validated Desk/Wall system name above the CAD edit title and cover both routes with behavior-focused E2E assertions.

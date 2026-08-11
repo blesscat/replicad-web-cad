@@ -1,6 +1,7 @@
 import type { ModelId } from '../../../cad-contract/units'
 import {
   systemContextQuery,
+  systemContextLabel,
   type OpenGridSystemContext,
 } from '../system-entry-context'
 import { boxDefinition } from './components/box'
@@ -84,11 +85,6 @@ export const modelFamilyMetadata: Readonly<
   },
 }
 
-const SYSTEM_SUBGROUP_LABELS: Record<OpenGridSystemContext, string> = {
-  desk: 'Desk System',
-  wall: 'Wall Related',
-}
-
 function contextPreviewFor(
   definition: ModelDefinition,
   context: OpenGridSystemContext,
@@ -97,7 +93,7 @@ function contextPreviewFor(
   return {
     ...definition.previewImage,
     src: `/model-previews/${definition.id}-${context}.png`,
-    alt: `${definition.previewImage.alt}（${SYSTEM_SUBGROUP_LABELS[context]}）`,
+    alt: `${definition.previewImage.alt}（${systemContextLabel(context)}）`,
   }
 }
 
@@ -130,12 +126,12 @@ function openGridSubgroups(
   return [
     {
       key: 'desk',
-      label: SYSTEM_SUBGROUP_LABELS.desk,
+      label: systemContextLabel('desk'),
       definitions: desk,
     },
     {
       key: 'wall',
-      label: SYSTEM_SUBGROUP_LABELS.wall,
+      label: systemContextLabel('wall'),
       definitions: wall,
     },
   ]

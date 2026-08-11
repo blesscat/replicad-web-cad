@@ -21,3 +21,17 @@ When a supported system context is active, the CAD workspace's restore-defaults 
 - **WHEN** a user changes Wall Snap parameters and activates `全部恢復預設`
 - **THEN** the controls MUST return to Full/Standard/full/0 with both optional hole flags disabled
 - **AND** the next valid generation MUST use those values
+
+### Requirement: Active system label on the CAD edit page
+
+The CAD edit page MUST show the validated active system name above the model title when a supported OpenGrid system context is present. Desk MUST show `目前系統：Desk System`, and Wall MUST show `目前系統：Wall Related`. A context-free or unsupported route MUST omit the system label.
+
+#### Scenario: Desk edit page identifies the active system
+
+- **WHEN** a user opens `/cad/opengrid-snap?system=desk`
+- **THEN** the page MUST show `目前系統：Desk System` above the model title
+
+#### Scenario: Wall edit page identifies the active system
+
+- **WHEN** a user opens `/cad/opengrid-snap?system=wall`
+- **THEN** the page MUST show `目前系統：Wall Related` above the model title
