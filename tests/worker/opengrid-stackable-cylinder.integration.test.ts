@@ -129,6 +129,10 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
       const shape = buildOpenGridStackableCylinder(input)
       const fixture = makeCompatibilityFixture(floorThickness)
       try {
+        const lowerSectionDepth =
+          openGridStackableCylinderDerivedGeometryFor(
+            input,
+          ).bottomHoleSectionDepth
         const fixtureBounds = boundsOf(fixture)
         const fixtureMinZ = fixtureBounds[0]?.[2]
         if (fixtureMinZ === undefined) throw new Error('MISSING_FIXTURE_BOUNDS')
@@ -148,7 +152,11 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
           2,
         )
         expect(measureVolume(shape.intersect(fixture))).toBeLessThan(0.01)
-        const loweredFixture = fixture.clone().translateZ(-0.2)
+        const retentionProbeOffset = Math.max(
+          0.2,
+          floorThickness - lowerSectionDepth + 0.2,
+        )
+        const loweredFixture = fixture.clone().translateZ(-retentionProbeOffset)
         try {
           expect(
             measureVolume(shape.intersect(loweredFixture)),
@@ -166,7 +174,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
 
   it.each([
     { diameter: 20, expectedOuterHoleCount: 0 },
-    { diameter: 39, expectedOuterHoleCount: 4 },
+    { diameter: 39, expectedOuterHoleCount: 0 },
     { diameter: 40, expectedOuterHoleCount: 4 },
     { diameter: 47, expectedOuterHoleCount: 4 },
     { diameter: 48, expectedOuterHoleCount: 4 },
@@ -279,36 +287,59 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
     120_000,
   )
 
-  it('keeps the center hole as two planar stepped cylindrical sections', () => {
-    const input = parameters({ diameter: 56 })
-    const shape = buildOpenGridStackableCylinder(input)
-    try {
-      const report = inspectOpenGridStackableCylinderInterface(shape, input)
-      const centerHole = report.holes.find(
-        (hole) => hole.center[0] === 0 && hole.center[1] === 0,
-      )
-      expect(centerHole?.sections).toEqual([
-        expect.objectContaining({
-          diameter: expect.closeTo(
-            OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.assemblyOpeningDiameter,
-            2,
-          ),
-        }),
-        expect.objectContaining({
-          diameter: expect.closeTo(
-            OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
-            2,
-          ),
-        }),
-      ])
-      expect(centerHole?.sections[0]?.minZ).toBeCloseTo(0, 2)
-      expect(centerHole?.sections[0]?.maxZ).toBeCloseTo(4, 1)
-      expect(centerHole?.sections[1]?.minZ).toBeCloseTo(4, 1)
-      expect(centerHole?.sections[1]?.maxZ).toBeCloseTo(5, 2)
-    } finally {
-      deleteShape(shape)
-    }
-  }, 120_000)
+  it.each([
+    {
+      name: 'default',
+      overrides: {},
+      lowerSectionDepth: 4,
+      floorThickness: 5,
+    },
+    {
+      name: 'thin',
+      overrides: { thinBottomMode: true },
+      lowerSectionDepth: 2,
+      floorThickness: 3,
+    },
+    {
+      name: 'bottom-plate',
+      overrides: { bottomPlateMode: true },
+      lowerSectionDepth: 2,
+      floorThickness: 3,
+    },
+  ])(
+    'keeps the center hole as two planar stepped cylindrical sections in $name mode',
+    ({ overrides, lowerSectionDepth, floorThickness }) => {
+      const input = parameters({ diameter: 56, ...overrides })
+      const shape = buildOpenGridStackableCylinder(input)
+      try {
+        const report = inspectOpenGridStackableCylinderInterface(shape, input)
+        const centerHole = report.holes.find(
+          (hole) => hole.center[0] === 0 && hole.center[1] === 0,
+        )
+        expect(centerHole?.sections).toEqual([
+          expect.objectContaining({
+            diameter: expect.closeTo(
+              OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
+              2,
+            ),
+          }),
+          expect.objectContaining({
+            diameter: expect.closeTo(
+              OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.retainingOpeningDiameter,
+              2,
+            ),
+          }),
+        ])
+        expect(centerHole?.sections[0]?.minZ).toBeCloseTo(0, 2)
+        expect(centerHole?.sections[0]?.maxZ).toBeCloseTo(lowerSectionDepth, 1)
+        expect(centerHole?.sections[1]?.minZ).toBeCloseTo(lowerSectionDepth, 1)
+        expect(centerHole?.sections[1]?.maxZ).toBeCloseTo(floorThickness, 2)
+      } finally {
+        deleteShape(shape)
+      }
+    },
+    120_000,
+  )
 
   it('keeps the default five-millimetre floor and internal fillet profile', () => {
     const input = parameters({ diameter: 56 })
@@ -444,8 +475,8 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
   )
 
   it.each([
-    { diameter: 47, expectedHoleCount: 5 },
-    { diameter: 48, expectedHoleCount: 5 },
+    { diameter: 47, expectedHoleCount: 1 },
+    { diameter: 48, expectedHoleCount: 1 },
     { diameter: 49, expectedHoleCount: 5 },
   ])(
     'builds the thin profile at the $diameter mm outer-hole threshold',

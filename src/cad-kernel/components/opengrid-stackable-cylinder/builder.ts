@@ -168,6 +168,7 @@ function makeAnnularRing(
 function compatibilityFixturePasses(
   shape: Shape3D,
   floorThickness: number,
+  bottomHoleSectionDepth: number,
 ): boolean {
   const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
   const shaft = makeCylinder(
@@ -189,7 +190,11 @@ function compatibilityFixturePasses(
   let loweredIntersection: Shape3D | null = null
   try {
     seatedIntersection = shape.intersect(fixture)
-    loweredFixture = fixture.clone().translateZ(-0.2)
+    const retentionProbeOffset = Math.max(
+      0.2,
+      floorThickness - bottomHoleSectionDepth + 0.2,
+    )
+    loweredFixture = fixture.clone().translateZ(-retentionProbeOffset)
     loweredIntersection = shape.intersect(loweredFixture)
     return (
       measureVolume(seatedIntersection) <= 0.01 &&
@@ -1518,7 +1523,11 @@ function assertQuality(
   }
   if (
     parameters.bottomHolesEnabled &&
-    !compatibilityFixturePasses(shape, derived.floorThickness)
+    !compatibilityFixturePasses(
+      shape,
+      derived.floorThickness,
+      derived.bottomHoleSectionDepth,
+    )
   ) {
     failures.push('compatibility-fixture')
   }

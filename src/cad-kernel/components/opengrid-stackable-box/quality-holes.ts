@@ -43,12 +43,12 @@ export function measureMountingHoleStepVolumes(
   const stepHeight = mountingHoleStepHeightFor(parameters)
   return centers.map(([centerX, centerY]) => {
     const outer = makeCylinder(
-      configuration.baseHoleBottomOpeningDiameter / 2 + 0.05,
+      configuration.baseHoleTopOpeningDiameter / 2 + 0.05,
       0.04,
       [centerX, centerY, stepHeight - 0.02],
     )
     const inner = makeCylinder(
-      configuration.baseHoleTopOpeningDiameter / 2 - 0.05,
+      configuration.baseHoleBottomOpeningDiameter / 2 - 0.05,
       0.04,
       [centerX, centerY, stepHeight - 0.02],
     )
