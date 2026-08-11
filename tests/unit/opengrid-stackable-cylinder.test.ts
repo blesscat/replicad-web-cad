@@ -456,7 +456,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
   })
 
   it.each([
-    [39, 4],
+    [39, 0],
     [40, 4],
     [47, 4],
     [48, 4],
@@ -484,8 +484,8 @@ describe('OpenGrid stackable-cylinder contract', () => {
   it.each([
     [39, 0],
     [40, 0],
-    [47, 4],
-    [48, 4],
+    [47, 0],
+    [48, 0],
     [49, 4],
   ])(
     'selects the thin-mode outer layer at diameter %s',
@@ -632,9 +632,9 @@ describe('OpenGrid stackable-cylinder contract', () => {
       thinFloorThickness: 3,
       floorThickness: 3,
       bottomHoleDiameter:
-        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.assemblyOpeningDiameter,
-      innerHoleDiameter:
         OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
+      innerHoleDiameter:
+        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.retainingOpeningDiameter,
       defaultBottomHoleSectionDepth: 4,
       thinBottomHoleSectionDepth: 2,
       bottomHoleSectionDepth: 2,

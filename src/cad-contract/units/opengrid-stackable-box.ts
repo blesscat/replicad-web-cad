@@ -162,9 +162,9 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   baseHoleClearance: 0.25,
   baseHoleOffset: 7,
   baseHoleBottomOpeningDiameter:
-    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.assemblyOpeningDiameter,
-  baseHoleTopOpeningDiameter:
     OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
+  baseHoleTopOpeningDiameter:
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.retainingOpeningDiameter,
   baseHoleStepHeight: 3,
   basePlateHoleBottomDepth: 2,
   basePlateHoleTopDepth: 1,

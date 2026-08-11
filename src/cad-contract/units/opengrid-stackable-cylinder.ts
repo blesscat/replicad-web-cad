@@ -105,9 +105,9 @@ export const OPENGRID_STACKABLE_CYLINDER_CONFIGURATION = {
   thinFloorThickness: 3,
   floorThickness: 3,
   bottomHoleDiameter:
-    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.assemblyOpeningDiameter,
-  innerHoleDiameter:
     OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
+  innerHoleDiameter:
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.retainingOpeningDiameter,
   defaultBottomHoleSectionDepth: 4,
   thinBottomHoleSectionDepth: 2,
   bottomHoleSectionDepth: 2,

@@ -417,12 +417,12 @@ describe('OpenGrid stackable-box B-Rep', () => {
       const [profile] = report.mountingHoleProfiles
       expect(profile).toMatchObject({
         lowerBoreDiameter: expect.closeTo(
-          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.assemblyOpeningDiameter,
+          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
           2,
         ),
         lowerBoreDepth: expect.closeTo(1, 1),
         upperBoreDiameter: expect.closeTo(
-          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
+          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.retainingOpeningDiameter,
           2,
         ),
         upperBoreDepth: expect.closeTo(1, 1),
@@ -539,12 +539,12 @@ describe('OpenGrid stackable-box B-Rep', () => {
       })
       expect(profile).toMatchObject({
         lowerBoreDiameter: expect.closeTo(
-          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.assemblyOpeningDiameter,
+          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
           2,
         ),
         lowerBoreDepth: expect.closeTo(2, 1),
         upperBoreDiameter: expect.closeTo(
-          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
+          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.retainingOpeningDiameter,
           2,
         ),
         upperBoreDepth: expect.closeTo(1, 1),
@@ -916,12 +916,12 @@ describe('OpenGrid stackable-box B-Rep', () => {
       expect(
         interfaceQuality.mountingHoleProfiles.every((profile) => {
           expect(profile.lowerBoreDiameter).toBeCloseTo(
-            OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.assemblyOpeningDiameter,
+            OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
             2,
           )
           expect(profile.lowerBoreDepth).toBeCloseTo(3, 1)
           expect(profile.upperBoreDiameter).toBeCloseTo(
-            OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
+            OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.retainingOpeningDiameter,
             2,
           )
           expect(profile.upperBoreDepth).toBeCloseTo(2, 1)
@@ -1224,7 +1224,9 @@ describe('OpenGrid stackable-box B-Rep', () => {
         const retentionProbeOffset = Math.max(
           0.2,
           floorThickness -
-            OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleStepHeight +
+            (basePlateMode
+              ? OPENGRID_STACKABLE_BOX_CONFIGURATION.basePlateHoleBottomDepth
+              : OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleStepHeight) +
             0.2,
         )
         const loweredInsert = insert.clone().translateZ(-retentionProbeOffset)
