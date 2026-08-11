@@ -8,6 +8,11 @@ import {
   parseSystemContext,
   systemContextForModel,
 } from '../../src/features/cad/system-entry-context'
+import {
+  OPENGRID_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+  OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+} from '../../src/cad-contract/units'
 
 describe('OpenGrid system entry context', () => {
   it('accepts only the supported system query values', () => {
@@ -37,6 +42,56 @@ describe('OpenGrid system entry context', () => {
       footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+    })
+  })
+
+  it('resolves isolated Desk container presets without changing model defaults', () => {
+    const deskBox = getSystemPreset('opengrid-stackable-box', 'desk')
+    const deskCylinder = getSystemPreset('opengrid-stackable-cylinder', 'desk')
+
+    expect(deskBox).toEqual({
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+      x: 8,
+      y: 4,
+      height: 50,
+      basePlateMode: false,
+      thinShellMode: true,
+    })
+    expect(deskCylinder).toEqual({
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+      diameter: 60,
+      height: 50,
+      thinBottomMode: true,
+      bottomPlateMode: false,
+    })
+
+    expect(getSystemPreset('opengrid-stackable-box', 'wall')).toBeUndefined()
+    expect(
+      getSystemPreset('opengrid-stackable-cylinder', 'wall'),
+    ).toBeUndefined()
+    expect(getSystemPreset('opengrid', 'desk')).toEqual({
+      ...OPENGRID_CONFIGURATION.defaultParameters,
+      customScrewPositions: [],
+    })
+
+    expect(getSystemPreset('opengrid-stackable-box', 'desk')).not.toBe(
+      getSystemPreset('opengrid-stackable-box', 'desk'),
+    )
+    expect(getSystemPreset('opengrid-stackable-cylinder', 'desk')).not.toBe(
+      getSystemPreset('opengrid-stackable-cylinder', 'desk'),
+    )
+    expect(OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS).toMatchObject({
+      x: 2,
+      y: 2,
+      height: 10,
+      basePlateMode: false,
+      thinShellMode: false,
+    })
+    expect(OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS).toMatchObject({
+      diameter: 56,
+      height: 30,
+      thinBottomMode: false,
+      bottomPlateMode: false,
     })
   })
 

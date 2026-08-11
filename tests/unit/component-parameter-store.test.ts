@@ -155,6 +155,76 @@ describe('component parameter store', () => {
     store.dispose()
   })
 
+  it('uses Desk container presets only when the Desk scope has no saved value', () => {
+    const legacyBox = {
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+      x: 3,
+      y: 3,
+      height: 20,
+      thinShellMode: false,
+    }
+    const legacyCylinder = {
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+      diameter: 80,
+      height: 45,
+      thinBottomMode: false,
+    }
+    const storage = createMemoryStorage(
+      createPayload({
+        'opengrid-stackable-box': legacyBox,
+        'opengrid-stackable-cylinder': legacyCylinder,
+      }),
+    )
+    const deskStore = createComponentParameterStore({
+      storage,
+      systemContext: 'desk',
+    })
+    const legacyStore = createComponentParameterStore({ storage })
+
+    expect(deskStore.get('opengrid-stackable-box')).toEqual({
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+      x: 8,
+      y: 4,
+      height: 50,
+      basePlateMode: false,
+      thinShellMode: true,
+    })
+    expect(deskStore.get('opengrid-stackable-cylinder')).toEqual({
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+      diameter: 60,
+      height: 50,
+      thinBottomMode: true,
+      bottomPlateMode: false,
+    })
+    expect(legacyStore.get('opengrid-stackable-box')).toEqual(legacyBox)
+    expect(legacyStore.get('opengrid-stackable-cylinder')).toEqual(
+      legacyCylinder,
+    )
+
+    const savedDeskBox = {
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+      x: 4,
+      y: 2,
+      height: 25,
+    }
+    const savedDeskCylinder = {
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+      diameter: 72,
+      height: 35,
+    }
+    expect(deskStore.set('opengrid-stackable-box', savedDeskBox)).toBe(true)
+    expect(
+      deskStore.set('opengrid-stackable-cylinder', savedDeskCylinder),
+    ).toBe(true)
+    expect(deskStore.get('opengrid-stackable-box')).toEqual(savedDeskBox)
+    expect(deskStore.get('opengrid-stackable-cylinder')).toEqual(
+      savedDeskCylinder,
+    )
+
+    deskStore.dispose()
+    legacyStore.dispose()
+  })
+
   it('uses each component definition default when no value is stored', () => {
     const storage = createMemoryStorage()
     const store = createComponentParameterStore({ storage })

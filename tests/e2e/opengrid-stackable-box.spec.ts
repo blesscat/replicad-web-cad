@@ -1,6 +1,29 @@
 import { expect, test } from '@playwright/test'
 import { skipHeadlessFirefoxWithoutWebGL, waitForCadReady } from './helpers'
 
+test('Desk System starts the stackable-box with its thin-shell preset', async ({
+  page,
+  browserName,
+}) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.goto('/cad/opengrid-stackable-box?system=desk')
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+  await waitForCadReady(page)
+
+  await expect(page.getByTestId('cad-system-context')).toHaveText(
+    '目前系統：Desk System',
+  )
+  await expect(page.getByRole('slider', { name: 'X' })).toHaveValue('8')
+  await expect(page.getByRole('slider', { name: 'Y' })).toHaveValue('4')
+  await expect(
+    page.getByRole('textbox', { name: '盒內淨高（Z）' }),
+  ).toHaveValue('50')
+  await expect(page.getByRole('radio', { name: '薄殼模式' })).toBeChecked()
+  await expect(page.getByRole('radio', { name: '預設模式' })).not.toBeChecked()
+  await expect(page.getByRole('radio', { name: '底版模式' })).not.toBeChecked()
+})
+
 test('OpenGrid stackable-box is listed and exposes the half-cell controls', async ({
   page,
 }) => {
@@ -9,8 +32,11 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
     .getByRole('heading', { name: '堆疊盒', exact: true })
     .locator('..')
     .getByRole('link', { name: '編輯 堆疊盒', exact: true })
-  await expect(modelLink).toHaveAttribute('href', '/cad/opengrid-stackable-box')
-  await modelLink.click()
+  await expect(modelLink).toHaveAttribute(
+    'href',
+    '/cad/opengrid-stackable-box?system=desk',
+  )
+  await page.goto('/cad/opengrid-stackable-box')
 
   await expect(page).toHaveURL('/cad/opengrid-stackable-box')
   await expect(
