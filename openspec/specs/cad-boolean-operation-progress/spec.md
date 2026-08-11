@@ -2,7 +2,7 @@
 
 Provide a shared, generation-scoped progress experience for long-running CAD fuse, cut, and intersect work during B-Rep construction.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: CAD builders expose boolean-operation subprogress
 

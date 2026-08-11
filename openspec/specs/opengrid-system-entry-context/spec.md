@@ -2,7 +2,7 @@
 
 This capability gives OpenGrid model entries a stable Desk or Wall context so that entry links, initial presets, saved parameters, and generated preview assets remain aligned without creating duplicate CAD models.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Stable OpenGrid system contexts and effective presets
 
