@@ -35,7 +35,7 @@ vi.mock('../../src/cad-kernel/components/opengrid-pillar/quality', () => ({
 
 import { CadWorkerRuntime } from '../../src/workers/cad.worker'
 import { assertPillarShapeQuality } from '../../src/cad-kernel/components/opengrid-pillar/quality'
-import { serializeMesh } from '../../src/cad-kernel/mesh'
+import { meshBRep, serializeMesh } from '../../src/cad-kernel/mesh'
 
 const base = {
   version: 1 as const,
@@ -79,6 +79,90 @@ function pillarGenerateCommand(generation = 1) {
 
 describe('CAD Worker candidate terminal lifecycle', () => {
   beforeEach(() => vi.clearAllMocks())
+
+  it('emits throttled face progress when the mesh adapter reports faces', async () => {
+    vi.mocked(meshBRep).mockImplementationOnce((_shape, options) => {
+      options.reportFaceProgress?.({ completed: 0, total: 1_000 })
+      for (let completed = 1; completed <= 1_000; completed += 1) {
+        options.reportFaceProgress?.({ completed, total: 1_000 })
+      }
+      return {
+        positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+        normals: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]),
+        indices: new Uint32Array([0, 1, 2]),
+        bounds: { min: [0, 0, 0], max: [1, 1, 0] },
+        triangleCount: 1,
+      }
+    })
+    const events: any[] = []
+    const runtime = new CadWorkerRuntime('epoch-face-progress', (event) =>
+      events.push(event),
+    )
+
+    await runtime.handle(initCommand())
+    await runtime.handle(generateCommand())
+
+    const faceProgress = events.filter(
+      (event) => event.kind === 'operation.progress' && event.unit === 'faces',
+    )
+    expect(faceProgress[0]).toMatchObject({
+      stage: 'meshing',
+      completed: 0,
+      total: 1_000,
+    })
+    expect(faceProgress.at(-1)).toMatchObject({
+      stage: 'meshing',
+      completed: 1_000,
+      total: 1_000,
+    })
+    expect(faceProgress.length).toBeLessThan(1_001)
+  })
+
+  it('keeps meshing stage-only when the adapter has no face progress', async () => {
+    const events: any[] = []
+    const runtime = new CadWorkerRuntime('epoch-global-mesh', (event) =>
+      events.push(event),
+    )
+
+    await runtime.handle(initCommand())
+    await runtime.handle(generateCommand())
+
+    const meshingProgress = events.filter(
+      (event) =>
+        event.kind === 'operation.progress' && event.stage === 'meshing',
+    )
+    expect(meshingProgress.length).toBeGreaterThan(0)
+    expect(meshingProgress.every((event) => event.unit === undefined)).toBe(
+      true,
+    )
+  })
+
+  it('flushes the latest face progress before a mesh failure terminal', async () => {
+    vi.mocked(meshBRep).mockImplementationOnce((_shape, options) => {
+      options.reportFaceProgress?.({ completed: 0, total: 1_000 })
+      options.reportFaceProgress?.({ completed: 5, total: 1_000 })
+      throw new Error('forced mesh failure')
+    })
+    const events: any[] = []
+    const runtime = new CadWorkerRuntime('epoch-face-failure', (event) =>
+      events.push(event),
+    )
+
+    await runtime.handle(initCommand())
+    await runtime.handle(generateCommand())
+
+    const faceProgress = events.filter(
+      (event) => event.kind === 'operation.progress' && event.unit === 'faces',
+    )
+    expect(faceProgress.at(-1)).toMatchObject({
+      completed: 5,
+      total: 1_000,
+    })
+    expect(events.at(-1)).toMatchObject({
+      kind: 'operation.error',
+      operationId: 'generate-operation-1',
+    })
+  })
 
   it('emits one original terminal response for repeated discard', async () => {
     const events: any[] = []

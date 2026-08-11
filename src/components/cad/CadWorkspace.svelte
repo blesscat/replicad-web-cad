@@ -5,6 +5,7 @@
     ModelParameterKey,
     OpenGridParameters,
   } from '../../cad-contract/units'
+  import type { CadError } from '../../cad-contract/errors'
   import type { ExportFormat } from '../../features/cad/download'
   import {
     createComponentParameterStore,
@@ -21,12 +22,14 @@
     type OpenGridSystemContext,
   } from '../../features/cad/system-entry-context'
   import CadProgressIndicator from './CadProgressIndicator.svelte'
+  import CadErrorToast from './CadErrorToast.svelte'
   import CadWorkspacePanel from './CadWorkspacePanel.svelte'
   import {
     createCadWorkspaceController,
     type CadWorkspaceController,
     type CadWorkspaceControllerSnapshot,
   } from './workspace/createCadWorkspaceController'
+  import { errorToastKey, toastErrorForState } from './workspace/error-toast'
 
   type Props = {
     modelId: ModelId
@@ -34,11 +37,24 @@
 
   let { modelId }: Props = $props()
   let snapshot = $state<CadWorkspaceControllerSnapshot | null>(null)
+  let dismissedErrorToastKey = $state<string | null>(null)
+  let toastError = $state<CadError | null>(null)
   let resetVersion = $state(0)
   let presentation = $state<CadViewportPresentation>('workspace')
   let systemContext = $state<OpenGridSystemContext | undefined>(undefined)
   let controller: CadWorkspaceController | null = null
   let parameterStore: ComponentParameterStore | null = null
+
+  function updateSnapshot(nextSnapshot: CadWorkspaceControllerSnapshot): void {
+    const previousErrorKey = errorToastKey(
+      snapshot ? toastErrorForState(snapshot.state) : null,
+    )
+    const nextError = toastErrorForState(nextSnapshot.state)
+    const nextErrorKey = errorToastKey(nextError)
+    if (previousErrorKey !== nextErrorKey) dismissedErrorToastKey = null
+    toastError = nextErrorKey === dismissedErrorToastKey ? null : nextError
+    snapshot = nextSnapshot
+  }
 
   onMount(() => {
     presentation = viewportPresentationForSearch(window.location.search)
@@ -50,7 +66,7 @@
     controller = createCadWorkspaceController(
       modelId,
       (nextSnapshot) => {
-        snapshot = nextSnapshot
+        updateSnapshot(nextSnapshot)
       },
       { parameterStore, systemContext },
     )
@@ -83,6 +99,11 @@
 
   function handleRetry(): void {
     controller?.onRetry()
+  }
+
+  function dismissErrorToast(): void {
+    dismissedErrorToastKey = errorToastKey(toastError)
+    toastError = null
   }
 
   function handleRestoreDefaults(): void {
@@ -120,6 +141,9 @@
     />
     {#if snapshot.progress}
       <CadProgressIndicator progress={snapshot.progress} />
+    {/if}
+    {#if toastError}
+      <CadErrorToast error={toastError} onDismiss={dismissErrorToast} />
     {/if}
   </div>
 {/if}

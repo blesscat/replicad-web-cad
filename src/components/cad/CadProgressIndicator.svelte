@@ -2,11 +2,11 @@
   import { onMount } from 'svelte'
   import {
     CAD_PROGRESS_STAGES,
-    buildingProgressElapsedMs,
     booleanProgressLabel,
     formatProgressElapsed,
     progressCountLabel,
     progressDetails,
+    stageProgressElapsedMs,
     type CadProgress,
     type CadProgressDetails,
   } from '../../features/cad/progress'
@@ -42,14 +42,24 @@
     current: CadProgressDetails,
     countLabel: string | null,
     booleanLabel: string | null,
-    buildingElapsedLabel: string | null,
+    stageElapsedLabel: string | null,
   ): string {
     let valueText = `${current.label}，第 ${current.step} / ${current.totalSteps} 階段`
     if (countLabel !== null) valueText = `${current.label}，${countLabel}`
     if (booleanLabel !== null) valueText = `${valueText}，${booleanLabel}`
-    if (buildingElapsedLabel !== null)
-      valueText = `${valueText}，建模總計已耗時 ${buildingElapsedLabel}`
+    if (stageElapsedLabel !== null)
+      valueText = `${valueText}，${stageElapsedLabel}`
     return valueText
+  }
+
+  function stageElapsedDescription(
+    stage: CadProgress['stage'],
+    elapsedLabel: string | null,
+  ): string | null {
+    if (elapsedLabel === null) return null
+    if (stage === 'building') return `建模總計已耗時 ${elapsedLabel}`
+    if (stage === 'meshing') return `mesh 階段已耗時 ${elapsedLabel}`
+    return null
   }
 
   function clockNow(): number {
@@ -61,19 +71,20 @@
   let now = $state(clockNow())
   let trackedStage = progress.stage
   let trackedOperationId = progress.operationId
-  let buildingStartedAt = $state<number | null>(
-    progress.stage === 'building' ? now : null,
+  let stageStartedAt = $state<number | null>(
+    progress.stage === 'building' || progress.stage === 'meshing' ? now : null,
   )
   let current = $derived(progressDetails(progress.stage))
   let countLabel = $derived(progressCountLabel(progress))
   let booleanLabel = $derived(booleanProgressLabel(progress))
-  let buildingElapsedMs = $derived.by(() => {
-    return buildingProgressElapsedMs(progress.stage, buildingStartedAt, now)
+  let stageElapsedMs = $derived.by(() => {
+    return stageProgressElapsedMs(progress.stage, stageStartedAt, now)
   })
-  let buildingElapsedLabel = $derived(
-    buildingElapsedMs === null
-      ? null
-      : formatProgressElapsed(buildingElapsedMs),
+  let stageElapsedLabel = $derived(
+    stageElapsedMs === null ? null : formatProgressElapsed(stageElapsedMs),
+  )
+  let stageElapsedDescriptionText = $derived(
+    stageElapsedDescription(progress.stage, stageElapsedLabel),
   )
   let hasCounters = $derived(countLabel !== null)
   let valueMin = $derived(getValueMin(hasCounters))
@@ -81,7 +92,12 @@
   let valueNow = $derived(getValueNow(progress, current, hasCounters))
   let completion = $derived((valueNow / valueMax) * 100)
   let valueText = $derived(
-    getValueText(current, countLabel, booleanLabel, buildingElapsedLabel),
+    getValueText(
+      current,
+      countLabel,
+      booleanLabel,
+      stageElapsedDescriptionText,
+    ),
   )
 
   onMount(() => {
@@ -97,7 +113,7 @@
     if (stage === trackedStage && operationId === trackedOperationId) return
     trackedStage = stage
     trackedOperationId = operationId
-    buildingStartedAt = stage === 'building' ? now : null
+    stageStartedAt = stage === 'building' || stage === 'meshing' ? now : null
   })
 
   function getMarkerClassName(
@@ -116,7 +132,7 @@
 >
   <div class="flex items-center justify-between gap-4 text-sm">
     <strong class="text-ink">處理進度</strong>
-    <span class="text-muted"
+    <span class="text-muted" data-testid="cad-progress-count"
       >{countLabel ?? `${current.step} / ${current.totalSteps}`}</span
     >
   </div>
@@ -125,9 +141,9 @@
       {booleanLabel}
     </p>
   {/if}
-  {#if buildingElapsedLabel !== null}
+  {#if stageElapsedDescriptionText !== null}
     <p class="text-sm text-muted" data-testid="cad-progress-elapsed">
-      建模總計 · 已耗時 {buildingElapsedLabel}
+      {stageElapsedDescriptionText}
     </p>
   {/if}
   <div

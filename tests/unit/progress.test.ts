@@ -8,6 +8,7 @@ import {
   progressCountLabel,
   progressDetails,
   progressMessage,
+  stageProgressElapsedMs,
 } from '../../src/features/cad/progress'
 
 describe('CAD progress messages', () => {
@@ -43,6 +44,14 @@ describe('CAD progress messages', () => {
         unit: 'cells',
       }),
     ).toBe('3 / 10 格')
+    expect(
+      progressCountLabel({
+        stage: 'meshing',
+        completed: 42,
+        total: 180,
+        unit: 'faces',
+      }),
+    ).toBe('42 / 180 面')
     expect(progressCountLabel({ stage: 'meshing' })).toBeNull()
   })
 
@@ -98,5 +107,11 @@ describe('CAD progress messages', () => {
     expect(buildingProgressElapsedMs('building', 1_000, 4_250)).toBe(3_250)
     expect(buildingProgressElapsedMs('building', 4_000, 3_500)).toBe(0)
     expect(buildingProgressElapsedMs('meshing', 1_000, 4_250)).toBeNull()
+  })
+
+  it('tracks elapsed time for an indeterminate meshing stage', () => {
+    expect(stageProgressElapsedMs('meshing', 1_000, 4_250)).toBe(3_250)
+    expect(stageProgressElapsedMs('meshing', 4_000, 3_500)).toBe(0)
+    expect(stageProgressElapsedMs('loading', 1_000, 4_250)).toBeNull()
   })
 })

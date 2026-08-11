@@ -57,6 +57,7 @@ const PROGRESS_UNIT_LABELS: Record<ProgressUnit, string> = {
   batches: '批次',
   steps: '步驟',
   columns: '支',
+  faces: '面',
 }
 
 const BOOLEAN_OPERATION_LABELS: Record<BooleanOperationKind, string> = {
@@ -125,6 +126,16 @@ export function buildingProgressElapsedMs(
   startedAt: number | null,
   now: number,
 ): number | null {
-  if (stage !== 'building' || startedAt === null) return null
+  if (stage !== 'building') return null
+  return stageProgressElapsedMs(stage, startedAt, now)
+}
+
+export function stageProgressElapsedMs(
+  stage: CadProgressStage,
+  startedAt: number | null,
+  now: number,
+): number | null {
+  if (stage !== 'building' && stage !== 'meshing') return null
+  if (startedAt === null) return null
   return Math.max(0, now - startedAt)
 }

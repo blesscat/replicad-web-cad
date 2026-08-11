@@ -111,6 +111,24 @@ function progressEvent(
   return event
 }
 
+function faceProgressEvent(
+  generation: number,
+  operationId: string,
+  completed: number,
+): ProgressEvent {
+  return {
+    version: 1,
+    kind: 'operation.progress',
+    requestId: `face-progress-request-${generation}`,
+    operationId,
+    generation,
+    stage: 'meshing',
+    completed,
+    total: 100,
+    unit: 'faces',
+  }
+}
+
 describe('CAD Worker progress lifecycle', () => {
   it('ignores an older generation and accepts correlated current progress', () => {
     const { context, setProgress } = createContext()
@@ -126,6 +144,23 @@ describe('CAD Worker progress lifecycle', () => {
       completed: 2,
       total: 10,
       unit: 'cells',
+    })
+  })
+
+  it('ignores stale face progress from an older generation', () => {
+    const { context, setProgress } = createContext()
+    const handle = createWorkerEventHandler(context)
+
+    handle(faceProgressEvent(1, 'operation-1', 80))
+    expect(setProgress).not.toHaveBeenCalled()
+
+    handle(faceProgressEvent(2, 'operation-2', 12))
+    expect(setProgress).toHaveBeenCalledWith({
+      operationId: 'operation-2',
+      stage: 'meshing',
+      completed: 12,
+      total: 100,
+      unit: 'faces',
     })
   })
 

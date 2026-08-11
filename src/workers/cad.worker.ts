@@ -66,6 +66,7 @@ import {
   validateModelParameters,
 } from '../cad-contract/units'
 import { cadErrorCodeFor, cadErrorStageFor } from './error-mapping'
+import { createThrottledMeshProgressReporter } from './mesh-progress'
 
 type EventSink = (event: WorkerEvent, transfer?: Transferable[]) => void
 
@@ -415,10 +416,26 @@ export class CadWorkerRuntime {
     }
     let mesh: MeshData
     try {
-      this.emitProgress(command, 'meshing')
-      mesh = timing.measureSync('mesh', () =>
-        meshBRep(shape, command.previewConfig),
+      const reportFaceProgress = createThrottledMeshProgressReporter(
+        ({ completed, total }) =>
+          this.emitProgress(command, 'meshing', undefined, {
+            completed,
+            total,
+            unit: 'faces',
+          }),
       )
+      this.emitProgress(command, 'meshing')
+      try {
+        mesh = timing.measureSync('mesh', () =>
+          meshBRep(shape, {
+            ...command.previewConfig,
+            reportFaceProgress,
+          }),
+        )
+      } catch (error) {
+        reportFaceProgress.flush()
+        throw error
+      }
       if (command.modelId === 'opengrid-snap') {
         if (!isOpenGridSnapParameters(generationParameters)) {
           throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
