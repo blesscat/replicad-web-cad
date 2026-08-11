@@ -68,6 +68,13 @@ The user-facing progress indicator MUST retain the existing top-level stages `lo
 - **THEN** the indicator replaces the previous operation detail with the new operation kind and current count
 - **AND** it does not reset the top-level stage or display a backwards overall percentage
 
+#### Scenario: Building elapsed time spans all boolean calls
+
+- **WHEN** a build remains in the `building` stage while several boolean calls run
+- **THEN** the indicator shows one elapsed timer accumulated from entry into `building`
+- **AND** the timer does not reset when the boolean operation kind or count changes
+- **AND** individual boolean-call durations remain diagnostic data rather than separate user-facing timers
+
 ### Requirement: Boolean progress obeys operation lifecycle rules
 
 Boolean subprogress MUST use the same generation and model-revision correlation as the enclosing CAD operation. Runtime consumers MUST ignore stale updates from superseded generations, and cancellation MUST prevent later updates from an obsolete operation from becoming visible. Terminal success, error, cancellation, timeout, recovery, or invalidation MUST clear the boolean detail together with the enclosing progress state.

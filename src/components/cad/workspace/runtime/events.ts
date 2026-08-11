@@ -71,6 +71,7 @@ function isCurrentExportOperation(
 
 function progressFromEvent(event: ProgressEvent) {
   const progress = {
+    operationId: event.operationId,
     stage: event.stage,
     completed: event.completed,
     total: event.total,

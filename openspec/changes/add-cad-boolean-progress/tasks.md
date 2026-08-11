@@ -24,3 +24,8 @@
 - [x] 4.1 Change preview and geometry benchmark aggregation to sum all boolean durations, preserve cumulative fuse timing compatibility, and expose cut/intersect attribution and total timing where the diagnostic schema supports it.
 - [x] 4.2 Add regression coverage for multi-fuse and mixed-boolean builds so timing output cannot regress to last-operation-only semantics.
 - [x] 4.3 Run the focused contract, workspace runtime, worker integration, and geometry benchmark suites, then run OpenSpec validation and record any environment-specific benchmark variance.
+
+## 5. Cumulative display refinement
+
+- [x] 5.1 Show the remaining count for known boolean-operation scopes while retaining indeterminate wording for unknown totals.
+- [x] 5.2 Replace per-operation elapsed text in the progress indicator with one cumulative timer for the current `building` session, correlate timer resets to the operation identity, and add behavior coverage.

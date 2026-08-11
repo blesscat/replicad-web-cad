@@ -27,7 +27,7 @@ The implementation therefore needs two kinds of visibility: an operation-boundar
 
 Extend the existing progress payload with optional boolean detail rather than creating a second event stream. The detail carries an operation kind (`fuse`, `cut`, or `intersect`), lifecycle state (`running` or `completed`), optional `completed`/`total`, and elapsed milliseconds. Existing consumers that only understand the four-stage fields continue to work, while the runtime and indicator can opt into the detail.
 
-The Worker sends a running update immediately before the native call and a completed update immediately after it. The UI records a monotonic local start time for a running operation and refreshes the displayed elapsed value on a lightweight timer; this avoids sending timer ticks from the Worker and still gives feedback during a blocked native call.
+The Worker sends a running update immediately before the native call and a completed update immediately after it. The UI records a monotonic local start time when the current generation enters `building` and refreshes one cumulative building elapsed value on a lightweight timer; this avoids sending timer ticks from the Worker, keeps the timer stable across boolean calls, and still gives feedback during a blocked native call. Per-call durations remain available in the progress payload and diagnostics but are not rendered as separate user-facing timers.
 
 Alternative considered: add a separate boolean-progress message type. This would duplicate generation filtering, validation, and terminal cleanup, and would make it easier for the two streams to disagree. The additive detail keeps correlation and lifecycle behavior in one place.
 

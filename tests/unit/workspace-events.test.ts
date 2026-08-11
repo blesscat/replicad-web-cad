@@ -121,6 +121,7 @@ describe('CAD Worker progress lifecycle', () => {
 
     handle(progressEvent(2, 'operation-2'))
     expect(setProgress).toHaveBeenCalledWith({
+      operationId: 'operation-2',
       stage: 'building',
       completed: 2,
       total: 10,
@@ -142,6 +143,7 @@ describe('CAD Worker progress lifecycle', () => {
       }),
     )
     expect(setProgress).toHaveBeenLastCalledWith({
+      operationId: 'operation-2',
       stage: 'building',
       completed: 2,
       total: 10,
