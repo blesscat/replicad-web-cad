@@ -15,6 +15,7 @@ import {
   openGridStackableBoxOpeningBottomLengthMaximumFor,
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
   openGridStackableBoxSocketCentersFor,
+  openGridStackableBoxUpperInnerRimZFor,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   validateModelParameters,
   validateOpenGridStackableBoxParameters,
@@ -30,6 +31,7 @@ function parameters(
     cornerBottomHoles: true,
     fullBottomHoleGrid: false,
     basePlateMode: false,
+    thinShellMode: false,
     openingPlusXDepth: 0,
     openingPlusXBottomLength: 1,
     openingPlusXAngle: 90,
@@ -146,6 +148,19 @@ describe('OpenGrid stackable-box contract', () => {
     )
   })
 
+  it('declares the fixed thin-shell profile without changing the thick baseline', () => {
+    const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+
+    expect(configuration.defaultThinShellMode).toBe(false)
+    expect(configuration.thinShellFloorThickness).toBe(2)
+    expect(configuration.thinShellWallThickness).toBe(1.6)
+    expect(configuration.thinShellInnerFloorFilletRadius).toBe(2)
+    expect(configuration.thinShellOuterBottomChamfer).toBe(1.5)
+    expect(configuration.thinShellTopChamfer).toBe(1.6)
+    expect(configuration.thinShellBottomHoleStepHeight).toBe(1)
+    expect(configuration.thinShellBottomAssemblyHeight).toBe(2)
+  })
+
   it('shortens the exported envelope when the base-plate mode is enabled', () => {
     const normal = parameters({ height: 20 })
     const basePlate = parameters({ height: 20, basePlateMode: true })
@@ -222,6 +237,19 @@ describe('OpenGrid stackable-box contract', () => {
     expect(validation.value.openingPlusXDepth).toBe(0)
     expect(validation.value.openingMinusYBottomLength).toBe(1)
     expect(validation.value.openingPlusYAngle).toBe(90)
+    expect(validation.value.thinShellMode).toBe(false)
+  })
+
+  it('normalizes a pre-thin current snapshot without changing its openings', () => {
+    const current = { ...parameters({ openingPlusXDepth: 4 }) }
+    delete (current as Partial<typeof current>).thinShellMode
+
+    const validation = validateOpenGridStackableBoxParameters(current)
+
+    expect(validation).toEqual({
+      valid: true,
+      value: parameters({ openingPlusXDepth: 4 }),
+    })
   })
 
   it('keeps four opening triples independent and validates their ranges', () => {
@@ -258,6 +286,7 @@ describe('OpenGrid stackable-box contract', () => {
   it('derives final floor/rim datums and rectangular wall axes per direction', () => {
     const normal = parameters({ height: 20 })
     const basePlate = parameters({ height: 20, basePlateMode: true })
+    const thin = parameters({ height: 20, thinShellMode: true })
     const sloped = parameters({
       y: 2,
       height: 20,
@@ -270,6 +299,10 @@ describe('OpenGrid stackable-box contract', () => {
     expect(openGridStackableBoxActiveFloorTopZFor(basePlate)).toBe(3)
     expect(openGridStackableBoxActiveUpperInnerRimZFor(normal)).toBe(25)
     expect(openGridStackableBoxActiveUpperInnerRimZFor(basePlate)).toBe(23)
+    expect(openGridStackableBoxActiveFloorTopZFor(thin)).toBe(2)
+    expect(openGridStackableBoxUpperInnerRimZFor(thin)).toBe(22)
+    expect(openGridStackableBoxActiveUpperInnerRimZFor(thin)).toBe(22)
+    expect(externalOpenGridStackableBoxHeightFor(thin)).toBe(23.6)
 
     const opening =
       openGridStackableBoxDerivedGeometryFor(sloped).openings['+X']
@@ -347,6 +380,7 @@ describe('OpenGrid stackable-box contract', () => {
     [parameters({ cornerBottomHoles: 'true' as never }), 'cornerBottomHoles'],
     [parameters({ fullBottomHoleGrid: 'true' as never }), 'fullBottomHoleGrid'],
     [parameters({ basePlateMode: 'true' as never }), 'basePlateMode'],
+    [parameters({ thinShellMode: 'true' as never }), 'thinShellMode'],
   ])(
     'rejects invalid %s values with a field-specific issue',
     (value, field) => {
@@ -377,6 +411,16 @@ describe('OpenGrid stackable-box contract', () => {
       openGridStackableBoxSocketCentersFor(parameters({ x: 0.5, y: 0.5 })),
     ).toEqual([[0, 0]])
     expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.gridPitch).toBe(28)
+  })
+
+  it('rejects selecting thin-shell and base-plate modes together', () => {
+    const validation = validateOpenGridStackableBoxParameters(
+      parameters({ thinShellMode: true, basePlateMode: true }),
+    )
+
+    expect(validation.valid).toBe(false)
+    if (!validation.valid)
+      expect(validation.issues[0]?.field).toBe('thinShellMode')
   })
 
   it('builds full-hole coordinates from the nominal footprint before clearance', () => {
@@ -455,6 +499,22 @@ describe('OpenGrid stackable-box contract', () => {
     )
     expect(modelStlFileName(basePlateModel)).toBe(
       'opengrid-stackable-box-1.5x2-h30-base-plate.stl',
+    )
+
+    const thinShellModel = {
+      modelId: 'opengrid-stackable-box' as const,
+      parameters: parameters({
+        x: 1.5,
+        y: 2,
+        height: 30,
+        thinShellMode: true,
+      }),
+    }
+    expect(modelFileName(thinShellModel)).toBe(
+      'opengrid-stackable-box-1.5x2-h30-thin-shell.step',
+    )
+    expect(modelStlFileName(thinShellModel)).toBe(
+      'opengrid-stackable-box-1.5x2-h30-thin-shell.stl',
     )
   })
 })

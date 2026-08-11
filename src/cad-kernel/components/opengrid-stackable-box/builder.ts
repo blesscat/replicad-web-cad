@@ -29,6 +29,8 @@ export {
   assertOpenGridStackableBoxOpenings,
   inspectOpenGridStackableBoxOpenings,
 } from './quality-openings'
+export { inspectOpenGridStackableBoxThinShell } from './quality-thin'
+export type { OpenGridStackableBoxThinShellQualityReport } from './quality-thin'
 export type { OpenGridStackableBoxOpeningQuality } from './quality-openings'
 export type {
   OpenGridStackableBoxCaptiveSocketRecord,

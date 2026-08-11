@@ -41,6 +41,7 @@ export const OPENGRID_STACKABLE_BOX_PARAMETER_KEYS: ModelParameterKey[] = [
   'cornerBottomHoles',
   'fullBottomHoleGrid',
   'basePlateMode',
+  'thinShellMode',
   ...OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
 ]
 export const OPENGRID_STACKABLE_CYLINDER_PARAMETER_KEYS: ModelParameterKey[] = [
@@ -112,6 +113,9 @@ function legacyParameterDefault(
   modelId: ModelId,
   key: ModelParameterKey,
 ): string | undefined {
+  if (modelId === 'opengrid-stackable-box' && key === 'thinShellMode') {
+    return 'false'
+  }
   if (modelId !== 'opengrid-stackable-cylinder') return undefined
   if (key === 'thinBottomMode') return 'false'
   if (key === 'bottomPlateMode') return 'false'
@@ -232,6 +236,7 @@ export function rawFromParameters(
       cornerBottomHoles: boolean
       fullBottomHoleGrid: boolean
       basePlateMode: boolean
+      thinShellMode: boolean
     }> &
       Partial<
         Record<
@@ -246,6 +251,7 @@ export function rawFromParameters(
       cornerBottomHoles: String(stackableParameters.cornerBottomHoles),
       fullBottomHoleGrid: String(stackableParameters.fullBottomHoleGrid),
       basePlateMode: String(stackableParameters.basePlateMode),
+      thinShellMode: String(stackableParameters.thinShellMode ?? false),
     }
     for (const key of OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS) {
       const value =
@@ -422,7 +428,8 @@ export function parseRawParameters(
       key === 'thinBottomMode' ||
       key === 'bottomPlateMode' ||
       key === 'bottomHolesEnabled' ||
-      key === 'basePlateMode'
+      key === 'basePlateMode' ||
+      key === 'thinShellMode'
     ) {
       const rawValue = raw[key] ?? legacyParameterDefault(modelId, key)
       if (rawValue !== 'true' && rawValue !== 'false') {

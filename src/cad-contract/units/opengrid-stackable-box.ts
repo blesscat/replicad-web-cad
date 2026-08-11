@@ -5,6 +5,7 @@ export type OpenGridStackableBoxParameterKey =
   | 'cornerBottomHoles'
   | 'fullBottomHoleGrid'
   | 'basePlateMode'
+  | 'thinShellMode'
   | 'openingPlusXDepth'
   | 'openingPlusXBottomLength'
   | 'openingPlusXAngle'
@@ -63,7 +64,10 @@ export type OpenGridStackableBoxParameters = {
   cornerBottomHoles: boolean
   fullBottomHoleGrid: boolean
   basePlateMode: boolean
+  thinShellMode: boolean
 } & Record<OpenGridStackableBoxOpeningParameterKey, number>
+
+export type OpenGridStackableBoxProfile = 'normal' | 'base-plate' | 'thin-shell'
 
 export type OpenGridStackableBoxDerivedOpening = {
   direction: OpenGridStackableBoxOpeningDirection
@@ -118,6 +122,7 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   defaultCornerBottomHoles: true,
   defaultFullBottomHoleGrid: false,
   defaultBasePlateMode: false,
+  defaultThinShellMode: false,
   minX: 0.5,
   maxX: 17.5,
   minY: 0.5,
@@ -158,6 +163,14 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   baseHoleStepHeight: 3,
   basePlateHoleBottomDepth: 2,
   basePlateHoleTopDepth: 1,
+  thinShellFloorThickness: 2,
+  thinShellWallThickness: 1.6,
+  thinShellInnerFloorFilletRadius: 2,
+  thinShellOuterBottomChamfer: 1.5,
+  thinShellTopChamfer: 1.6,
+  thinShellBottomAssemblyHeight: 2,
+  thinShellBottomHoleStepHeight: 1,
+  thinShellBottomHoleTopDepth: 1,
   bottomHoleGridPitch: 14,
   bottomHoleGridEdgeOffset: 7,
   bottomGridHoleDiameter: 5.05,
@@ -190,6 +203,7 @@ export const OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS = {
   fullBottomHoleGrid:
     OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultFullBottomHoleGrid,
   basePlateMode: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultBasePlateMode,
+  thinShellMode: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultThinShellMode,
   openingPlusXDepth: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultOpeningDepth,
   openingPlusXBottomLength:
     OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultOpeningBottomLength,
@@ -273,12 +287,12 @@ function defaultOpeningValues(): Pick<
 
 function openingValuesFor(
   value: Record<string, unknown>,
-  hasCurrentParameters: boolean,
+  hasOpeningParameters: boolean,
 ): Pick<
   OpenGridStackableBoxParameters,
   OpenGridStackableBoxOpeningParameterKey
 > {
-  if (!hasCurrentParameters) return defaultOpeningValues()
+  if (!hasOpeningParameters) return defaultOpeningValues()
 
   const defaults = defaultOpeningValues()
   const values = {} as Pick<
@@ -391,6 +405,26 @@ function validateBasePlateMode(
   }
 }
 
+function validateThinShellMode(
+  value: unknown,
+  issues: OpenGridStackableBoxValidationIssue[],
+): void {
+  if (typeof value !== 'boolean') {
+    issues.push({
+      field: 'thinShellMode',
+      message: '薄殼模式必須是布林值。',
+    })
+  }
+}
+
+export function openGridStackableBoxProfileFor(
+  parameters: OpenGridStackableBoxParameters,
+): OpenGridStackableBoxProfile {
+  if (parameters.thinShellMode) return 'thin-shell'
+  if (parameters.basePlateMode) return 'base-plate'
+  return 'normal'
+}
+
 export function nominalOpenGridStackableBoxFootprintFor(
   parameters: OpenGridStackableBoxParameters,
 ): [number, number] {
@@ -405,6 +439,12 @@ export function nominalOpenGridStackableBoxFootprintFor(
 export function openGridStackableBoxUpperInnerRimZFor(
   parameters: OpenGridStackableBoxParameters,
 ): number {
+  if (parameters.thinShellMode) {
+    return (
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.thinShellBottomAssemblyHeight +
+      parameters.height
+    )
+  }
   return (
     OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight +
     parameters.height
@@ -414,6 +454,12 @@ export function openGridStackableBoxUpperInnerRimZFor(
 export function externalOpenGridStackableBoxHeightFor(
   parameters: OpenGridStackableBoxParameters,
 ): number {
+  if (parameters.thinShellMode) {
+    return (
+      openGridStackableBoxUpperInnerRimZFor(parameters) +
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.thinShellTopChamfer
+    )
+  }
   const basePlateCutoff = parameters.basePlateMode
     ? OPENGRID_STACKABLE_BOX_CONFIGURATION.basePlateCutoffHeight
     : 0
@@ -427,6 +473,9 @@ export function externalOpenGridStackableBoxHeightFor(
 export function openGridStackableBoxActiveFloorTopZFor(
   parameters: OpenGridStackableBoxParameters,
 ): number {
+  if (parameters.thinShellMode) {
+    return OPENGRID_STACKABLE_BOX_CONFIGURATION.thinShellFloorThickness
+  }
   if (parameters.basePlateMode) {
     return OPENGRID_STACKABLE_BOX_CONFIGURATION.basePlateThickness
   }
@@ -448,11 +497,16 @@ function tangentSpanFor(
   return width
 }
 
-function openingBridgeWidth(): number {
+function openingBridgeWidth(
+  parameters: OpenGridStackableBoxParameters,
+): number {
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const wallThickness = parameters.thinShellMode
+    ? configuration.thinShellWallThickness
+    : configuration.wallThickness
   return Math.max(
     configuration.openingCornerBridge,
-    configuration.wallThickness + configuration.stackingClearance,
+    wallThickness + configuration.stackingClearance,
   )
 }
 
@@ -477,7 +531,7 @@ export function openGridStackableBoxDerivedGeometryFor(
   const activeUpperOuterEdgeZ =
     externalOpenGridStackableBoxHeightFor(parameters)
   const values = openingValuesFromParameters(parameters)
-  const bridgeWidth = openingBridgeWidth()
+  const bridgeWidth = openingBridgeWidth(parameters)
   const openings = {} as Record<
     OpenGridStackableBoxOpeningDirection,
     OpenGridStackableBoxDerivedOpening
@@ -674,11 +728,22 @@ export function validateOpenGridStackableBoxParameters(
 
   const issues: OpenGridStackableBoxValidationIssue[] = []
   const hasLegacyParameters = hasExactKeys(value, LEGACY_PARAMETER_KEYS)
-  const hasCurrentParameters = hasExactKeys(value, [
+  const hasPreThinCurrentParameters = hasExactKeys(value, [
     ...LEGACY_PARAMETER_KEYS,
     ...OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
   ])
-  if (!hasLegacyParameters && !hasCurrentParameters) {
+  const hasCurrentParameters = hasExactKeys(value, [
+    ...LEGACY_PARAMETER_KEYS,
+    'thinShellMode',
+    ...OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
+  ])
+  const hasOpeningParameters =
+    hasPreThinCurrentParameters || hasCurrentParameters
+  if (
+    !hasLegacyParameters &&
+    !hasPreThinCurrentParameters &&
+    !hasCurrentParameters
+  ) {
     issues.push({ field: 'parameters', message: '包含不支援的參數欄位。' })
   }
 
@@ -700,8 +765,16 @@ export function validateOpenGridStackableBoxParameters(
   validateCornerBottomHoles(value.cornerBottomHoles, issues)
   validateFullBottomHoleGrid(value.fullBottomHoleGrid, issues)
   validateBasePlateMode(value.basePlateMode, issues)
+  if (hasCurrentParameters) validateThinShellMode(value.thinShellMode, issues)
 
-  if (hasCurrentParameters) {
+  if (value.basePlateMode === true && value.thinShellMode === true) {
+    issues.push({
+      field: 'thinShellMode',
+      message: '薄殼模式與底版模式不可同時開啟。',
+    })
+  }
+
+  if (hasOpeningParameters) {
     for (const key of OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS) {
       const bounds = openingValidationBoundsFor(key, value.height)
       validateOpeningIntegerField(
@@ -724,7 +797,10 @@ export function validateOpenGridStackableBoxParameters(
     cornerBottomHoles: value.cornerBottomHoles as boolean,
     fullBottomHoleGrid: value.fullBottomHoleGrid as boolean,
     basePlateMode: value.basePlateMode as boolean,
-    ...openingValuesFor(value, hasCurrentParameters),
+    thinShellMode: hasCurrentParameters
+      ? (value.thinShellMode as boolean)
+      : OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultThinShellMode,
+    ...openingValuesFor(value, hasOpeningParameters),
   }
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
   if (width > OPENGRID_STACKABLE_BOX_CONFIGURATION.workspaceMaxDimension) {
@@ -741,7 +817,7 @@ export function validateOpenGridStackableBoxParameters(
   }
 
   if (issues.length > 0) return { valid: false, issues }
-  if (hasCurrentParameters) {
+  if (hasOpeningParameters) {
     const openingIssues = openingValidationIssuesFor(parameters)
     if (openingIssues.length > 0) {
       return { valid: false, issues: openingIssues }
@@ -905,16 +981,22 @@ function openingFileSuffixFor(
   return `-open-${fingerprint}`
 }
 
+function modeSuffixFor(parameters: OpenGridStackableBoxParameters): string {
+  if (parameters.thinShellMode) return '-thin-shell'
+  if (parameters.basePlateMode) return '-base-plate'
+  return ''
+}
+
 export function openGridStackableBoxFileName(
   parameters: OpenGridStackableBoxParameters,
 ): string {
-  const modeSuffix = parameters.basePlateMode ? '-base-plate' : ''
+  const modeSuffix = modeSuffixFor(parameters)
   return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${openingFileSuffixFor(parameters)}${modeSuffix}.step`
 }
 
 export function openGridStackableBoxStlFileName(
   parameters: OpenGridStackableBoxParameters,
 ): string {
-  const modeSuffix = parameters.basePlateMode ? '-base-plate' : ''
+  const modeSuffix = modeSuffixFor(parameters)
   return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${openingFileSuffixFor(parameters)}${modeSuffix}.stl`
 }

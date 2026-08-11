@@ -30,9 +30,20 @@
     onInputChange('y', String(parameters.rows))
   }
 
-  function handleBasePlateModeChange(event: Event): void {
+  type BoxMode = 'default' | 'thin-shell' | 'base-plate'
+
+  function handleModeChange(event: Event): void {
     if (!(event.currentTarget instanceof HTMLInputElement)) return
-    onInputChange('basePlateMode', event.currentTarget.value)
+    const mode = event.currentTarget.value as BoxMode
+    onInputChange('basePlateMode', String(mode === 'base-plate'))
+    onInputChange('thinShellMode', String(mode === 'thin-shell'))
+  }
+
+  function modeErrorDescriptionId(): string | undefined {
+    const ids: string[] = []
+    if (fieldErrors.basePlateMode) ids.push('basePlateMode-error')
+    if (fieldErrors.thinShellMode) ids.push('thinShellMode-error')
+    return ids.length > 0 ? ids.join(' ') : undefined
   }
 
   const openingGroups = [
@@ -107,6 +118,7 @@
       cornerBottomHoles: rawParameters.cornerBottomHoles === 'true',
       fullBottomHoleGrid: rawParameters.fullBottomHoleGrid === 'true',
       basePlateMode: rawParameters.basePlateMode === 'true',
+      thinShellMode: rawParameters.thinShellMode === 'true',
       ...openingValues,
     }
   }
@@ -213,10 +225,10 @@
     </label>
   </div>
   <div
-    aria-describedby={fieldErrors.basePlateMode
-      ? 'basePlateMode-error'
-      : undefined}
-    aria-invalid={Boolean(fieldErrors.basePlateMode)}
+    aria-describedby={modeErrorDescriptionId()}
+    aria-invalid={Boolean(
+      fieldErrors.basePlateMode || fieldErrors.thinShellMode,
+    )}
     aria-label="盒體模式"
     class="grid gap-1"
     role="radiogroup"
@@ -224,38 +236,53 @@
     <div class="flex flex-wrap items-start gap-x-4 gap-y-2">
       <label class="flex min-w-0 items-start gap-2">
         <input
-          aria-describedby={fieldErrors.basePlateMode
-            ? 'basePlateMode-error'
-            : undefined}
+          aria-describedby={modeErrorDescriptionId()}
           aria-label="預設模式"
           class="mt-1 accent-primary"
           data-testid="opengrid-stackable-box-default-mode"
           name="opengrid-stackable-box-mode"
           type="radio"
-          value="false"
-          checked={rawParameters.basePlateMode !== 'true'}
-          onchange={handleBasePlateModeChange}
+          value="default"
+          checked={rawParameters.basePlateMode !== 'true' &&
+            rawParameters.thinShellMode !== 'true'}
+          onchange={handleModeChange}
         />
         <span class="font-[650]">預設模式</span>
       </label>
       <label class="flex min-w-0 items-start gap-2">
         <input
-          aria-describedby={fieldErrors.basePlateMode
-            ? 'basePlateMode-error'
-            : undefined}
+          aria-describedby={modeErrorDescriptionId()}
+          aria-label="薄殼模式"
+          class="mt-1 accent-primary"
+          data-testid="opengrid-stackable-box-thin-shell-mode"
+          name="opengrid-stackable-box-mode"
+          type="radio"
+          value="thin-shell"
+          checked={rawParameters.thinShellMode === 'true'}
+          onchange={handleModeChange}
+        />
+        <span class="font-[650]">薄殼模式</span>
+      </label>
+      <label class="flex min-w-0 items-start gap-2">
+        <input
+          aria-describedby={modeErrorDescriptionId()}
           aria-label="底版模式"
           class="mt-1 accent-primary"
           data-testid="opengrid-stackable-box-base-plate-mode"
           name="opengrid-stackable-box-mode"
           type="radio"
-          value="true"
+          value="base-plate"
           checked={rawParameters.basePlateMode === 'true'}
-          onchange={handleBasePlateModeChange}
+          onchange={handleModeChange}
         />
         <span class="font-[650]">底版模式</span>
       </label>
     </div>
-    {#if rawParameters.basePlateMode === 'true'}
+    {#if rawParameters.thinShellMode === 'true'}
+      <span class="text-sm text-muted">
+        薄殼模式：不可堆疊，2mm 平底、1.6mm 薄壁
+      </span>
+    {:else if rawParameters.basePlateMode === 'true'}
       <span class="text-sm text-muted">
         底版模式：不可堆疊，使用6mm固定柱
       </span>
@@ -278,6 +305,11 @@
   {#if fieldErrors.basePlateMode}
     <span class="text-sm text-error" id="basePlateMode-error" role="alert"
       >{fieldErrors.basePlateMode}</span
+    >
+  {/if}
+  {#if fieldErrors.thinShellMode}
+    <span class="text-sm text-error" id="thinShellMode-error" role="alert"
+      >{fieldErrors.thinShellMode}</span
     >
   {/if}
   {#each opengridStackableBoxDefinition.parameterSchema.slice(0, 3) as field (field.key)}

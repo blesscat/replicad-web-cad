@@ -11,6 +11,7 @@ import {
 import {
   nominalOpenGridStackableBoxFootprintFor,
   openGridStackableBoxDerivedGeometryFor,
+  externalOpenGridStackableBoxHeightFor,
   openGridStackableBoxUpperInnerRimZFor,
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
   OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS,
@@ -160,6 +161,40 @@ function innerCavitySections(
   ]
 }
 
+function thinShellInnerCavitySections(
+  parameters: OpenGridStackableBoxParameters,
+): RoundedRectangleSection[] {
+  const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const floorZ = configuration.thinShellFloorThickness
+  const lowerInnerRimZ = openGridStackableBoxUpperInnerRimZFor(parameters)
+  const outerHighRimZ = externalOpenGridStackableBoxHeightFor(parameters)
+
+  return [
+    insetSection(
+      width,
+      depth,
+      configuration.outerCornerRadius,
+      configuration.thinShellWallThickness,
+      floorZ,
+    ),
+    insetSection(
+      width,
+      depth,
+      configuration.outerCornerRadius,
+      configuration.thinShellWallThickness,
+      lowerInnerRimZ,
+    ),
+    insetSection(
+      width,
+      depth,
+      configuration.outerCornerRadius,
+      -0.02,
+      outerHighRimZ + 0.02,
+    ),
+  ]
+}
+
 function outerEnvelopeSections(
   parameters: OpenGridStackableBoxParameters,
 ): RoundedRectangleSection[] {
@@ -214,10 +249,100 @@ function outerEnvelopeSections(
   ]
 }
 
+function thinShellOuterEnvelopeSections(
+  parameters: OpenGridStackableBoxParameters,
+): RoundedRectangleSection[] {
+  const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const outerHighRimZ = externalOpenGridStackableBoxHeightFor(parameters)
+
+  return [
+    insetSection(
+      width,
+      depth,
+      configuration.outerCornerRadius,
+      configuration.thinShellOuterBottomChamfer,
+      0,
+    ),
+    insetSection(
+      width,
+      depth,
+      configuration.outerCornerRadius,
+      0,
+      configuration.thinShellOuterBottomChamfer,
+    ),
+    insetSection(
+      width,
+      depth,
+      configuration.outerCornerRadius,
+      0,
+      outerHighRimZ,
+    ),
+  ]
+}
+
+function edgeIsNearZ(
+  edge: {
+    startPoint: { z?: number; delete: () => void }
+    endPoint: { z?: number; delete: () => void }
+  },
+  z: number,
+  tolerance = 0.02,
+): boolean {
+  const start = edge.startPoint
+  const end = edge.endPoint
+  try {
+    return (
+      start.z !== undefined &&
+      end.z !== undefined &&
+      Math.abs(start.z - z) <= tolerance &&
+      Math.abs(end.z - z) <= tolerance
+    )
+  } finally {
+    start.delete()
+    end.delete()
+  }
+}
+
+function makeThinShell(parameters: OpenGridStackableBoxParameters): Shape3D {
+  const outer = loftRoundedSections(thinShellOuterEnvelopeSections(parameters))
+  let cavity: Shape3D | null = null
+  let shell: Shape3D | null = null
+  try {
+    cavity = loftRoundedSections(thinShellInnerCavitySections(parameters))
+    shell = outer.cut(cavity)
+    deleteShape(outer)
+    deleteShape(cavity)
+    cavity = null
+
+    const filleted = shell.fillet(
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.thinShellInnerFloorFilletRadius,
+      (finder) =>
+        finder.when(({ element }) =>
+          edgeIsNearZ(
+            element,
+            OPENGRID_STACKABLE_BOX_CONFIGURATION.thinShellFloorThickness,
+          ),
+        ),
+    )
+    deleteShape(shell)
+    shell = null
+    const simplified = filleted.simplify()
+    if (simplified !== filleted) deleteShape(filleted)
+    return simplified
+  } catch (error) {
+    deleteShape(outer)
+    deleteShape(cavity)
+    deleteShape(shell)
+    throw error
+  }
+}
+
 export function makeBoxShell(
   parameters: OpenGridStackableBoxParameters,
   reporter: BooleanOperationReporter | undefined = undefined,
 ): Shape3D {
+  if (parameters.thinShellMode) return makeThinShell(parameters)
   const outer = loftRoundedSections(outerEnvelopeSections(parameters))
   let cavity: Shape3D | null = null
   try {
@@ -508,6 +633,52 @@ function makeSideOpeningCutter(
   const derived = openGridStackableBoxDerivedGeometryFor(parameters)
   const opening = derived.openings[direction]
   const margin = 0.04
+  if (parameters.thinShellMode) {
+    const wallStart =
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.thinShellWallThickness - margin
+    const wallDistance =
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.thinShellWallThickness + 2 * margin
+    const topZ = derived.activeUpperOuterEdgeZ
+
+    if (direction === '+X') {
+      return extrudeSideOpeningProfile(
+        'YZ',
+        [width / 2 - wallStart, 0, 0],
+        opening,
+        topZ,
+        wallDistance,
+        [1, 0, 0],
+      )
+    }
+    if (direction === '-X') {
+      return extrudeSideOpeningProfile(
+        'YZ',
+        [-width / 2 - margin, 0, 0],
+        opening,
+        topZ,
+        wallDistance,
+        [1, 0, 0],
+      )
+    }
+    if (direction === '+Y') {
+      return extrudeSideOpeningProfile(
+        'XZ',
+        [0, depth / 2 - wallStart, 0],
+        opening,
+        topZ,
+        wallDistance,
+        [0, 1, 0],
+      )
+    }
+    return extrudeSideOpeningProfile(
+      'XZ',
+      [0, -depth / 2 - margin, 0],
+      opening,
+      topZ,
+      wallDistance,
+      [0, 1, 0],
+    )
+  }
   const upperRailInnerInset =
     configuration.wallThickness + configuration.topRailInnerChamfer
   const wallStart = configuration.wallThickness - margin
@@ -801,21 +972,58 @@ function makeBasePlateMountingHoleCutter(
   return cutter
 }
 
+function makeThinShellMountingHoleCutter(
+  scope: BooleanOperationScope | undefined,
+): Shape3D {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const lowerSection = makeCylinder(
+    configuration.baseHoleBottomOpeningDiameter / 2,
+    configuration.thinShellBottomHoleStepHeight + 0.02,
+    [0, 0, -0.01],
+  )
+  const upperSection = makeCylinder(
+    configuration.baseHoleTopOpeningDiameter / 2,
+    configuration.thinShellBottomHoleTopDepth + 0.02,
+    [0, 0, configuration.thinShellBottomHoleStepHeight],
+  )
+  const cutter = measureBooleanInScope(scope, 'fuse', () =>
+    lowerSection.fuse(upperSection),
+  )
+  deleteShape(lowerSection)
+  deleteShape(upperSection)
+  return cutter
+}
+
+function activeBottomThicknessFor(
+  parameters: OpenGridStackableBoxParameters,
+): number {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  if (parameters.thinShellMode) return configuration.thinShellFloorThickness
+  if (parameters.basePlateMode) return configuration.basePlateThickness
+  return configuration.bottomAssemblyHeight
+}
+
 function makeMountingHoleCutter(
   parameters: OpenGridStackableBoxParameters,
   scope: BooleanOperationScope | undefined,
 ): Shape3D {
+  if (parameters.thinShellMode) {
+    return makeThinShellMountingHoleCutter(scope)
+  }
   if (parameters.basePlateMode) {
     return makeBasePlateMountingHoleCutter(scope)
   }
   return makeStandardMountingHoleCutter(scope)
 }
 
-function makeOrdinaryBottomHoleCutter(): Shape3D {
+function makeOrdinaryBottomHoleCutter(
+  parameters: OpenGridStackableBoxParameters,
+): Shape3D {
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const depth = activeBottomThicknessFor(parameters)
   return makeCylinder(
     configuration.bottomGridHoleDiameter / 2,
-    configuration.bottomAssemblyHeight + 0.12,
+    depth + 0.12,
     [0, 0, -0.1],
   )
 }
@@ -843,7 +1051,7 @@ export function addMountingSockets(
   let current = cutWithToolBatch(shape, socketCutters, cutScope)
 
   const ordinaryCutters = ordinaryCenters.map(([x, y]) =>
-    makeOrdinaryBottomHoleCutter().translate(x, y, 0),
+    makeOrdinaryBottomHoleCutter(parameters).translate(x, y, 0),
   )
   assertGenerationCurrent(context)
   current = cutWithToolBatch(current, ordinaryCutters, cutScope)
@@ -856,5 +1064,6 @@ export function applyStackingProfile(
   parameters: OpenGridStackableBoxParameters,
   context: OpenGridStackableBoxBuildContext,
 ): Shape3D {
+  if (parameters.thinShellMode) return shape
   return addIntegratedStackingProfile(shape, parameters, context)
 }
