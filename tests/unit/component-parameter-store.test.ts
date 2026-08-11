@@ -367,7 +367,9 @@ describe('component parameter store', () => {
     const persisted = JSON.parse(
       storage.data.get(COMPONENT_PARAMETER_STORAGE_KEY) ?? '{}',
     ) as { values?: Record<string, unknown> }
-    expect(persisted.values?.opengrid).toEqual(hybridParameters)
+    expect(persisted.values?.legacy).toMatchObject({
+      opengrid: hybridParameters,
+    })
     store.dispose()
   })
 

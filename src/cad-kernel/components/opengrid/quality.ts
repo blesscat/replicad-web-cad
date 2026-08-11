@@ -347,12 +347,12 @@ function inspectHybridProfile(
     shape,
     [
       interiorX - probeHalfWidth,
-      interiorY + halfPitch - 1.6,
+      interiorY + OPENGRID_CONFIGURATION.tileInnerSize / 2 - 2,
       upperLayerMidpoint - probeHalfHeight,
     ],
     [
       interiorX + probeHalfWidth,
-      interiorY + halfPitch - 1.3,
+      interiorY + OPENGRID_CONFIGURATION.tileInnerSize / 2 - 1.7,
       upperLayerMidpoint + probeHalfHeight,
     ],
   )
@@ -376,9 +376,11 @@ function inspectHybridTransition(
 
   const fullThickness = OPENGRID_CONFIGURATION.variants.Full.thickness
   const heavyThickness = OPENGRID_CONFIGURATION.variants.Heavy.thickness
-  const transitionWidth = OPENGRID_CONFIGURATION.hybridTransitionWidth
+  const transitionSpan = OPENGRID_CONFIGURATION.hybridTransitionSpan
   const transitionRise = heavyThickness - fullThickness
   const halfPitch = OPENGRID_CONFIGURATION.gridPitch / 2
+  const tangentialOffset =
+    halfPitch - OPENGRID_CONFIGURATION.outsideExtrusion / 2
   const probeHalfWidth = 0.5
   const probeHalfDepth = 0.25
   const fractions = [0.25, 0.5, 0.75]
@@ -397,8 +399,10 @@ function inspectHybridTransition(
     fraction: number,
     zMin: number,
     zMax: number,
+    includeTangentialOffset = true,
   ): number => {
-    const offset = transitionWidth * fraction
+    const offset = transitionSpan * fraction
+    const tangentialProbeOffset = includeTangentialOffset ? tangentialOffset : 0
     const [row, column] = sideCells[side]
     const [sectionX, sectionY] = cellCenterForOpenGrid(parameters, row, column)
     let x = sectionX
@@ -408,18 +412,22 @@ function inspectHybridTransition(
 
     switch (side) {
       case 'top':
-        y += halfPitch + offset
+        y += offset
+        x += tangentialProbeOffset
         break
       case 'right':
-        x += halfPitch + offset
+        x += offset
+        y += tangentialProbeOffset
         xHalfSize = probeHalfDepth
         yHalfSize = probeHalfWidth
         break
       case 'bottom':
-        y -= halfPitch + offset
+        y -= offset
+        x += tangentialProbeOffset
         break
       case 'left':
-        x -= halfPitch + offset
+        x -= offset
+        y += tangentialProbeOffset
         xHalfSize = probeHalfDepth
         yHalfSize = probeHalfWidth
         break
@@ -451,6 +459,7 @@ function inspectHybridTransition(
       0.5,
       heavyThickness - 0.2,
       heavyThickness + 0.1,
+      false,
     )
     if (aboveRampVolume > 0.001) {
       failures.push(`hybrid:transition-overshoots@${side}`)

@@ -9,6 +9,7 @@ import {
 } from '../../src/cad-kernel/components/opengrid/builder'
 import { inspectOpenGridShapeQuality } from '../../src/cad-kernel/components/opengrid/quality'
 import { meshBRep } from '../../src/cad-kernel/mesh'
+import { openGridProfileConstants } from '../../src/cad-kernel/components/opengrid/profile'
 import {
   boundsForOpenGrid,
   cellCenterForOpenGrid,
@@ -78,7 +79,7 @@ function measureIntersectionVolume(
 }
 
 describe('OpenGrid Hybrid product builder', () => {
-  it('adds a one-sided sloped transition from Full to the Heavy perimeter', async () => {
+  it('adds a half-cell inward sloped transition to the Heavy perimeter', async () => {
     const input = parameters({
       variant: 'Hybrid',
       rows: 3,
@@ -93,14 +94,16 @@ describe('OpenGrid Hybrid product builder', () => {
 
       const fullThickness = OPENGRID_CONFIGURATION.variants.Full.thickness
       const heavyThickness = OPENGRID_CONFIGURATION.variants.Heavy.thickness
-      const transitionWidth = OPENGRID_CONFIGURATION.hybridTransitionWidth
+      const transitionSpan = OPENGRID_CONFIGURATION.hybridTransitionSpan
       const transitionRise = heavyThickness - fullThickness
       const halfPitch = OPENGRID_CONFIGURATION.gridPitch / 2
+      const tangentialOffset =
+        halfPitch - OPENGRID_CONFIGURATION.outsideExtrusion / 2
       const [interiorX, interiorY] = cellCenterForOpenGrid(input, 1, 1)
 
       for (const fraction of [0.25, 0.5, 0.75]) {
         const expectedZ = fullThickness + transitionRise * fraction
-        const offset = transitionWidth * fraction
+        const offset = transitionSpan * fraction
         const transitionProbes: Array<{
           label: string
           minimum: [number, number, number]
@@ -109,52 +112,52 @@ describe('OpenGrid Hybrid product builder', () => {
           {
             label: 'top',
             minimum: [
-              interiorX - 0.5,
-              interiorY + halfPitch + offset - 0.25,
+              interiorX + tangentialOffset - 0.5,
+              interiorY + offset - 0.25,
               expectedZ - 0.15,
             ],
             maximum: [
-              interiorX + 0.5,
-              interiorY + halfPitch + offset + 0.25,
+              interiorX + tangentialOffset + 0.5,
+              interiorY + offset + 0.25,
               expectedZ + 0.15,
             ],
           },
           {
             label: 'right',
             minimum: [
-              interiorX + halfPitch + offset - 0.25,
-              interiorY - 0.5,
+              interiorX + offset - 0.25,
+              interiorY + tangentialOffset - 0.5,
               expectedZ - 0.15,
             ],
             maximum: [
-              interiorX + halfPitch + offset + 0.25,
-              interiorY + 0.5,
+              interiorX + offset + 0.25,
+              interiorY + tangentialOffset + 0.5,
               expectedZ + 0.15,
             ],
           },
           {
             label: 'bottom',
             minimum: [
-              interiorX - 0.5,
-              interiorY - halfPitch - offset - 0.25,
+              interiorX + tangentialOffset - 0.5,
+              interiorY - offset - 0.25,
               expectedZ - 0.15,
             ],
             maximum: [
-              interiorX + 0.5,
-              interiorY - halfPitch - offset + 0.25,
+              interiorX + tangentialOffset + 0.5,
+              interiorY - offset + 0.25,
               expectedZ + 0.15,
             ],
           },
           {
             label: 'left',
             minimum: [
-              interiorX - halfPitch - offset - 0.25,
-              interiorY - 0.5,
+              interiorX - offset - 0.25,
+              interiorY + tangentialOffset - 0.5,
               expectedZ - 0.15,
             ],
             maximum: [
-              interiorX - halfPitch - offset + 0.25,
-              interiorY + 0.5,
+              interiorX - offset + 0.25,
+              interiorY + tangentialOffset + 0.5,
               expectedZ + 0.15,
             ],
           },
@@ -170,74 +173,82 @@ describe('OpenGrid Hybrid product builder', () => {
         }
       }
 
-      const aboveTopRampVolume = measureIntersectionVolume(
+      const outwardTopRampVolume = measureIntersectionVolume(
         shape,
         [
           interiorX - 0.5,
-          interiorY + halfPitch + transitionWidth / 2 - 0.25,
-          heavyThickness - 0.2,
+          interiorY + halfPitch + transitionSpan / 2 - 0.25,
+          fullThickness + transitionRise / 2 - 0.15,
         ],
         [
           interiorX + 0.5,
-          interiorY + halfPitch + transitionWidth / 2 + 0.25,
-          heavyThickness + 0.1,
+          interiorY + halfPitch + transitionSpan / 2 + 0.25,
+          fullThickness + transitionRise / 2 + 0.15,
         ],
       )
-      expect(aboveTopRampVolume).toBeLessThan(0.001)
+      expect(outwardTopRampVolume).toBeLessThan(0.001)
 
-      const cornerOffset = transitionWidth / 2
+      const cornerLength = openGridProfileConstants(
+        OPENGRID_CONFIGURATION.gridPitch,
+        fullThickness,
+      ).cornerOffset
+      const cornerJoinOffset = Math.min(cornerLength / 2, 2.5)
+      const cornerTangentialOffset = 0.75
       const cornerZ = fullThickness + transitionRise / 2
       const cornerCases = [
         {
           label: 'top-left',
           x: interiorX - halfPitch,
           y: interiorY + halfPitch,
-          verticalDirection: 1,
-          horizontalDirection: -1,
+          verticalDirection: -1,
+          horizontalDirection: 1,
         },
         {
           label: 'top-right',
           x: interiorX + halfPitch,
           y: interiorY + halfPitch,
-          verticalDirection: 1,
-          horizontalDirection: 1,
+          verticalDirection: -1,
+          horizontalDirection: -1,
         },
         {
           label: 'bottom-left',
           x: interiorX - halfPitch,
           y: interiorY - halfPitch,
-          verticalDirection: -1,
-          horizontalDirection: -1,
+          verticalDirection: 1,
+          horizontalDirection: 1,
         },
         {
           label: 'bottom-right',
           x: interiorX + halfPitch,
           y: interiorY - halfPitch,
-          verticalDirection: -1,
-          horizontalDirection: 1,
+          verticalDirection: 1,
+          horizontalDirection: -1,
         },
       ] as const
 
       for (const corner of cornerCases) {
-        const verticalY = corner.y + corner.verticalDirection * cornerOffset
-        const verticalVolume = measureIntersectionVolume(
+        const diagonalX =
+          corner.x + corner.horizontalDirection * cornerJoinOffset
+        const diagonalY =
+          corner.y + corner.verticalDirection * cornerTangentialOffset
+        const diagonalVolume = measureIntersectionVolume(
           shape,
-          [corner.x - 0.5, verticalY - 0.25, cornerZ - 0.15],
-          [corner.x + 0.5, verticalY + 0.25, cornerZ + 0.15],
-        )
-        const horizontalX = corner.x + corner.horizontalDirection * cornerOffset
-        const horizontalVolume = measureIntersectionVolume(
-          shape,
-          [horizontalX - 0.25, corner.y - 0.5, cornerZ - 0.15],
-          [horizontalX + 0.25, corner.y + 0.5, cornerZ + 0.15],
+          [diagonalX - 0.35, diagonalY - 0.2, cornerZ - 0.15],
+          [diagonalX + 0.35, diagonalY + 0.2, cornerZ + 0.15],
         )
 
-        expect(verticalVolume, `${corner.label}:vertical`).toBeGreaterThan(
+        expect(diagonalVolume, `${corner.label}:diagonal`).toBeGreaterThan(
           0.001,
         )
-        expect(horizontalVolume, `${corner.label}:horizontal`).toBeGreaterThan(
-          0.001,
+        const openingOffset = transitionSpan / 2
+        const openingX = corner.x + corner.horizontalDirection * openingOffset
+        const openingY = corner.y + corner.verticalDirection * openingOffset
+        const openingVolume = measureIntersectionVolume(
+          shape,
+          [openingX - 0.5, openingY - 0.5, cornerZ - 0.15],
+          [openingX + 0.5, openingY + 0.5, cornerZ + 0.15],
         )
+        expect(openingVolume, `${corner.label}:opening`).toBeLessThan(0.001)
       }
     } finally {
       shape.delete()
@@ -301,8 +312,16 @@ describe('OpenGrid Hybrid product builder', () => {
       )
       const interiorUpperVolume = measureIntersectionVolume(
         shape,
-        [interiorX - 0.5, interiorY + 12.4, upperLayerMidpoint - 0.2],
-        [interiorX + 0.5, interiorY + 12.7, upperLayerMidpoint + 0.2],
+        [
+          interiorX - 0.5,
+          interiorY + OPENGRID_CONFIGURATION.tileInnerSize / 2 - 2,
+          upperLayerMidpoint - 0.2,
+        ],
+        [
+          interiorX + 0.5,
+          interiorY + OPENGRID_CONFIGURATION.tileInnerSize / 2 - 1.7,
+          upperLayerMidpoint + 0.2,
+        ],
       )
 
       expect(perimeterUpperVolume).toBeGreaterThan(0.01)
