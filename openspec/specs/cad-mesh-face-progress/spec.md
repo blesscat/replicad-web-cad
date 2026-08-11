@@ -3,7 +3,7 @@
 Expose honest, user-visible progress while large CAD previews are meshed one
 face at a time, without pretending that global native meshing has a percentage.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Per-face meshing exposes monotonic face progress
 
