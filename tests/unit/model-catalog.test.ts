@@ -44,6 +44,8 @@ describe('CAD component catalog', () => {
       'opengrid-stackable-box',
       'opengrid-stackable-cylinder',
       'opengrid-snap-remover',
+      'opengrid',
+      'opengrid-snap',
       'hsw-cell',
     ])
 
@@ -93,6 +95,12 @@ describe('CAD component catalog', () => {
       'opengrid-stackable-box',
       'opengrid-stackable-cylinder',
       'opengrid-snap-remover',
+      'opengrid',
+      'opengrid-snap',
+    ])
+    expect(groups[0]?.subgroups?.map((subgroup) => subgroup.key)).toEqual([
+      'desktop',
+      'wall',
     ])
     expect(groups[1]?.definitions.map((definition) => definition.id)).toEqual([
       'hsw-cell',

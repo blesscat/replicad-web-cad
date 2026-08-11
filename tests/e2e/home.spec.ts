@@ -55,41 +55,65 @@ test('home, model selection, and docs are static Astro pages', async ({
     'model-family-hsw',
   )
 
-  const editLinkFor = (displayName: string) =>
-    page
+  const editLinkFor = (
+    container: ReturnType<typeof page.locator>,
+    displayName: string,
+  ) =>
+    container
       .getByRole('heading', { name: displayName, exact: true })
       .locator('..')
       .getByRole('link', { name: `編輯 ${displayName}`, exact: true })
 
-  await expect(editLinkFor('六角蜂巢')).toHaveAttribute('href', '/cad/hsw-cell')
-  await expect(editLinkFor('圓柱支柱')).toHaveAttribute(
+  const desktopSystem = page.getByTestId('model-subgroup-desktop')
+  const wallRelated = page.getByTestId('model-subgroup-wall')
+  const hswSeries = page.getByTestId('model-subgroup-hsw')
+  await expect(
+    desktopSystem.getByRole('heading', { name: 'Desktop System' }),
+  ).toBeVisible()
+  await expect(
+    wallRelated.getByRole('heading', { name: 'Wall Related' }),
+  ).toBeVisible()
+  await expect(editLinkFor(hswSeries, '六角蜂巢')).toHaveAttribute(
     'href',
-    '/cad/opengrid-pillar',
+    '/cad/hsw-cell',
   )
-  await expect(editLinkFor('底板')).toHaveAttribute('href', '/cad/opengrid')
-  await expect(editLinkFor('Snap')).toHaveAttribute(
+  await expect(editLinkFor(desktopSystem, '圓柱支柱')).toHaveAttribute(
     'href',
-    '/cad/opengrid-snap',
+    '/cad/opengrid-pillar?system=desktop',
   )
-  await expect(editLinkFor('分隔塊')).toHaveAttribute(
+  await expect(editLinkFor(desktopSystem, '底板')).toHaveAttribute(
     'href',
-    '/cad/opengrid-divider',
+    '/cad/opengrid?system=desktop',
   )
-  await expect(editLinkFor('堆疊盒')).toHaveAttribute(
+  await expect(editLinkFor(desktopSystem, 'Snap')).toHaveAttribute(
     'href',
-    '/cad/opengrid-stackable-box',
+    '/cad/opengrid-snap?system=desktop',
   )
-  await expect(editLinkFor('可堆疊圓柱')).toHaveAttribute(
+  await expect(editLinkFor(wallRelated, '底板')).toHaveAttribute(
     'href',
-    '/cad/opengrid-stackable-cylinder',
+    '/cad/opengrid?system=wall',
   )
-  await expect(editLinkFor('Snap Remover')).toHaveAttribute(
+  await expect(editLinkFor(wallRelated, 'Snap')).toHaveAttribute(
     'href',
-    '/cad/opengrid-snap-remover',
+    '/cad/opengrid-snap?system=wall',
   )
-  const openGridCards = page
-    .getByTestId('model-family-opengrid')
-    .locator('[data-model-id]')
+  await expect(editLinkFor(desktopSystem, '分隔塊')).toHaveAttribute(
+    'href',
+    '/cad/opengrid-divider?system=desktop',
+  )
+  await expect(editLinkFor(desktopSystem, '堆疊盒')).toHaveAttribute(
+    'href',
+    '/cad/opengrid-stackable-box?system=desktop',
+  )
+  await expect(editLinkFor(desktopSystem, '可堆疊圓柱')).toHaveAttribute(
+    'href',
+    '/cad/opengrid-stackable-cylinder?system=desktop',
+  )
+  await expect(editLinkFor(desktopSystem, 'Snap Remover')).toHaveAttribute(
+    'href',
+    '/cad/opengrid-snap-remover?system=desktop',
+  )
+  const openGridCards = desktopSystem.locator('[data-model-id]')
   await expect(openGridCards.nth(0)).toHaveAttribute(
     'data-model-id',
     'opengrid',
@@ -107,6 +131,7 @@ test('home, model selection, and docs are static Astro pages', async ({
   }
   expect(snapCardBounds.x).toBeGreaterThan(bottomCardBounds.x)
   expect(snapCardBounds.y).toBeCloseTo(bottomCardBounds.y, 0)
+  await expect(wallRelated.locator('[data-model-id]')).toHaveCount(2)
   for (const displayName of [
     '方塊',
     '標準開口盒',

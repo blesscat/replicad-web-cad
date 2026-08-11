@@ -46,51 +46,76 @@ function previewImageFor(definition: ModelDefinition) {
             >
               {group.label}
             </h2>
-            <div class="grid gap-4 sm:grid-cols-2">
-              {group.definitions.map((definition) => {
-                const preview = previewImageFor(definition)
-                return (
-                  <article
-                    class="grid gap-3 rounded-xl border border-border-card bg-page p-4"
-                    data-model-id={definition.id}
-                  >
-                    <div
-                      class="grid aspect-[16/10] place-items-center overflow-hidden rounded-lg border border-border-card bg-viewport"
-                      data-testid="model-preview"
-                    >
-                      <div
-                        class="p-4 text-center text-sm text-muted"
-                        data-testid="model-preview-fallback"
-                        hidden
-                        role="img"
-                        aria-label={preview.alt}
+            {(
+              group.subgroups ?? [
+                {
+                  key: group.key,
+                  label: group.label,
+                  definitions: group.definitions,
+                },
+              ]
+            ).map((subgroup) => (
+              <div
+                class="mb-6 last:mb-0"
+                data-testid={`model-subgroup-${subgroup.key}`}
+              >
+                {group.subgroups ? (
+                  <h3 class="mb-3 text-xl font-semibold leading-tight">
+                    {subgroup.label}
+                  </h3>
+                ) : null}
+                <div class="grid gap-4 sm:grid-cols-2">
+                  {subgroup.definitions.map((definition) => {
+                    const preview = previewImageFor(definition)
+                    return (
+                      <article
+                        class="grid gap-3 rounded-xl border border-border-card bg-page p-4"
+                        data-model-id={definition.id}
+                        data-entry-key={`${definition.id}-${definition.systemContext ?? 'legacy'}`}
+                        data-system-context={definition.systemContext}
                       >
-                        預覽圖片暫時無法載入
-                      </div>
-                      <img
-                        src={preview.src}
-                        alt={preview.alt}
-                        width={preview.width}
-                        height={preview.height}
-                        loading="lazy"
-                        class="h-full w-full object-contain"
-                        onerror="this.hidden = true; this.previousElementSibling.removeAttribute('hidden')"
-                      />
-                    </div>
-                    <h3 class="text-2xl font-semibold leading-tight">
-                      {modelSelectionLabelFor(definition)}
-                    </h3>
-                    <a
-                      class="inline-flex items-center justify-self-start rounded-lg border border-border-card bg-panel px-3 py-2 font-semibold text-ink no-underline shadow-sm hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                      href={cadPathForModel(definition.id)}
-                      aria-label={`編輯 ${modelSelectionLabelFor(definition)}`}
-                    >
-                      編輯 →
-                    </a>
-                  </article>
-                )
-              })}
-            </div>
+                        <div
+                          class="grid aspect-[16/10] place-items-center overflow-hidden rounded-lg border border-border-card bg-viewport"
+                          data-testid="model-preview"
+                        >
+                          <div
+                            class="p-4 text-center text-sm text-muted"
+                            data-testid="model-preview-fallback"
+                            hidden
+                            role="img"
+                            aria-label={preview.alt}
+                          >
+                            預覽圖片暫時無法載入
+                          </div>
+                          <img
+                            src={preview.src}
+                            alt={preview.alt}
+                            width={preview.width}
+                            height={preview.height}
+                            loading="lazy"
+                            class="h-full w-full object-contain"
+                            onerror="this.hidden = true; this.previousElementSibling.removeAttribute('hidden')"
+                          />
+                        </div>
+                        <h3 class="text-2xl font-semibold leading-tight">
+                          {modelSelectionLabelFor(definition)}
+                        </h3>
+                        <a
+                          class="inline-flex items-center justify-self-start rounded-lg border border-border-card bg-panel px-3 py-2 font-semibold text-ink no-underline shadow-sm hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                          href={cadPathForModel(
+                            definition.id,
+                            definition.systemContext,
+                          )}
+                          aria-label={`編輯 ${modelSelectionLabelFor(definition)}`}
+                        >
+                          編輯 →
+                        </a>
+                      </article>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
           </section>
         ))
       }

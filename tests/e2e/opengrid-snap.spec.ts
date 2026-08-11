@@ -3,6 +3,54 @@ import {
   readBinaryStlByteLength,
   skipHeadlessFirefoxWithoutWebGL,
 } from './helpers'
+import { COMPONENT_PARAMETER_STORAGE_KEY } from '../../src/features/cad/parameters'
+
+test('Desktop and Wall Snap entries use isolated presets and context resets', async ({
+  page,
+}) => {
+  await page.goto('/cad/opengrid-snap?system=desktop')
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+
+  const variant = page.getByRole('combobox', { name: 'OpenGrid Snap 型號' })
+  const cornerHoles = page.getByRole('checkbox', { name: '定位孔' })
+  const centerRemover = page.getByRole('checkbox', { name: '移除孔' })
+  const offset = page.getByRole('slider', { name: '外框總增量（X/Y）' })
+
+  await expect(variant).toHaveValue('Lite')
+  await expect(cornerHoles).toBeChecked()
+  await expect(centerRemover).toBeChecked()
+  await expect(offset).toHaveValue('0')
+
+  await offset.press('ArrowRight')
+  await cornerHoles.uncheck()
+  await centerRemover.uncheck()
+  await expect(offset).toHaveValue('0.05')
+
+  await page.goto('/cad/opengrid-snap?system=wall')
+  const wallVariant = page.getByRole('combobox', {
+    name: 'OpenGrid Snap 型號',
+  })
+  const wallCornerHoles = page.getByRole('checkbox', { name: '定位孔' })
+  const wallCenterRemover = page.getByRole('checkbox', { name: '移除孔' })
+  const wallOffset = page.getByRole('slider', {
+    name: '外框總增量（X/Y）',
+  })
+  await expect(wallVariant).toHaveValue('Full')
+  await expect(wallCornerHoles).not.toBeChecked()
+  await expect(wallCenterRemover).not.toBeChecked()
+  await expect(wallOffset).toHaveValue('0')
+
+  await page.getByRole('button', { name: '全部恢復預設' }).click()
+  await expect(wallVariant).toHaveValue('Full')
+  await expect(wallOffset).toHaveValue('0')
+
+  await page.goto('/cad/opengrid-snap?system=desktop')
+  await expect(
+    page.getByRole('slider', { name: '外框總增量（X/Y）' }),
+  ).toHaveValue('0.05')
+  await expect(page.getByRole('checkbox', { name: '定位孔' })).not.toBeChecked()
+})
 
 test('OpenGrid Snap route exposes profiles, features, and one shared outer offset', async ({
   page,
@@ -117,14 +165,14 @@ test('OpenGrid Snap route exposes profiles, features, and one shared outer offse
   expect(latestParameters).not.toHaveProperty('halfCellY')
   await page.reload()
   await expect(footprint).toHaveValue('quarter')
-  const persistedSnap = await page.evaluate(() => {
-    const raw = localStorage.getItem('shape-shortcut.component-parameters')
+  const persistedSnap = await page.evaluate((storageKey) => {
+    const raw = localStorage.getItem(storageKey)
     if (!raw) return null
     const payload = JSON.parse(raw) as {
-      values?: Record<string, Record<string, unknown>>
+      values?: { legacy?: Record<string, Record<string, unknown>> }
     }
-    return payload.values?.['opengrid-snap'] ?? null
-  })
+    return payload.values?.legacy?.['opengrid-snap'] ?? null
+  }, COMPONENT_PARAMETER_STORAGE_KEY)
   expect(persistedSnap).toMatchObject({ footprint: 'quarter' })
   expect(persistedSnap).not.toHaveProperty('halfCellX')
   expect(persistedSnap).not.toHaveProperty('halfCellY')

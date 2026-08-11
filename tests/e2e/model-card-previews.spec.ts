@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import {
+  cadPathForModel,
   groupModelDefinitions,
   modelSelectionLabelFor,
 } from '../../src/features/cad/model-catalog'
@@ -15,11 +16,25 @@ const VISIBLE_MODEL_DEFINITIONS = groupModelDefinitions().flatMap(
   (group) => group.definitions,
 )
 
+function entryKey(
+  definition: (typeof VISIBLE_MODEL_DEFINITIONS)[number],
+): string {
+  return `${definition.id}-${definition.systemContext ?? 'legacy'}`
+}
+
+function previewRoute(
+  definition: (typeof VISIBLE_MODEL_DEFINITIONS)[number],
+): string {
+  const route = cadPathForModel(definition.id, definition.systemContext)
+  return `${route}${route.includes('?') ? '&' : '?'}preview=thumbnail`
+}
+
 function previewAssetPath(
   definition: (typeof VISIBLE_MODEL_DEFINITIONS)[number],
 ) {
   const preview = definition.previewImage
-  if (!preview) throw new Error(`PREVIEW_METADATA_MISSING:${definition.id}`)
+  if (!preview)
+    throw new Error(`PREVIEW_METADATA_MISSING:${entryKey(definition)}`)
   return path.resolve(process.cwd(), 'public', preview.src.slice(1))
 }
 
@@ -95,11 +110,13 @@ function assertPreviewAsset(
   definition: (typeof VISIBLE_MODEL_DEFINITIONS)[number],
 ) {
   const preview = definition.previewImage
-  if (!preview) throw new Error(`PREVIEW_METADATA_MISSING:${definition.id}`)
+  if (!preview)
+    throw new Error(`PREVIEW_METADATA_MISSING:${entryKey(definition)}`)
   const filePath = previewAssetPath(definition)
-  expect(existsSync(filePath), `Missing preview for ${definition.id}`).toBe(
-    true,
-  )
+  expect(
+    existsSync(filePath),
+    `Missing preview for ${entryKey(definition)}`,
+  ).toBe(true)
   expect(readPngDimensions(filePath)).toEqual({
     width: preview.width,
     height: preview.height,
@@ -121,7 +138,7 @@ test('visible model previews are captured from ready generators', async ({
   for (const definition of VISIBLE_MODEL_DEFINITIONS) {
     await page.goto('/models')
     await page.evaluate(() => localStorage.clear())
-    await page.goto(`/cad/${definition.id}?preview=thumbnail`)
+    await page.goto(previewRoute(definition))
 
     await expect(page.getByTestId('cad-viewport')).toHaveAttribute(
       'data-presentation',
@@ -143,24 +160,30 @@ test('visible model previews are captured from ready generators', async ({
 test('model cards expose static previews and preserve selection on image failure', async ({
   page,
 }) => {
-  await page.route('**/model-previews/opengrid.png', (route) => route.abort())
+  await page.route('**/model-previews/opengrid-desktop.png', (route) =>
+    route.abort(),
+  )
   await page.goto('/models')
 
   for (const definition of VISIBLE_MODEL_DEFINITIONS) {
     const preview = definition.previewImage
-    if (!preview) throw new Error(`PREVIEW_METADATA_MISSING:${definition.id}`)
+    if (!preview)
+      throw new Error(`PREVIEW_METADATA_MISSING:${entryKey(definition)}`)
 
-    const card = page.locator(`[data-model-id="${definition.id}"]`)
+    const card = page.locator(`[data-entry-key="${entryKey(definition)}"]`)
     await expect(card.locator('img')).toHaveAttribute('src', preview.src)
     await expect(card.locator('img')).toHaveAttribute('alt', preview.alt)
     await expect(
       card.getByRole('link', {
         name: `編輯 ${modelSelectionLabelFor(definition)}`,
       }),
-    ).toHaveAttribute('href', `/cad/${definition.id}`)
+    ).toHaveAttribute(
+      'href',
+      cadPathForModel(definition.id, definition.systemContext),
+    )
   }
 
-  const failedPreviewCard = page.locator('[data-model-id="opengrid"]')
+  const failedPreviewCard = page.locator('[data-entry-key="opengrid-desktop"]')
   await expect(
     failedPreviewCard.getByTestId('model-preview-fallback'),
   ).toBeVisible()
