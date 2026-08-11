@@ -6,15 +6,20 @@ test('home, model selection, and docs are static Astro pages', async ({
 }) => {
   await page.goto('/')
   await expect(
-    page.getByRole('heading', { name: '用瀏覽器建立、調整並匯出 CAD 模型' }),
+    page.getByRole('heading', { name: '常用模型，快速做出來' }),
+  ).toBeVisible()
+  await expect(
+    page.getByTestId('homepage-hero').getByText('Shape Shortcut', {
+      exact: true,
+    }),
   ).toBeVisible()
   await expect(
     page.getByRole('link', { name: 'Shape Shortcut' }),
   ).toHaveAttribute('aria-current', 'page')
   await expect(
-    page.getByRole('link', { name: '選擇模型', exact: true }),
+    page.getByRole('link', { name: '模型庫', exact: true }),
   ).not.toHaveAttribute('aria-current', 'page')
-  const modelCta = page.getByRole('link', { name: '開始選擇模型' })
+  const modelCta = page.getByRole('link', { name: /開始使用/ })
   await expect(modelCta).toHaveAttribute('href', '/models')
   const ctaBackground = await modelCta.evaluate(
     (element) => getComputedStyle(element).backgroundColor,
@@ -28,12 +33,62 @@ test('home, model selection, and docs are static Astro pages', async ({
   ).toHaveCount(0)
   await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
 
+  const showcase = page.getByTestId('homepage-showcase-slot')
+  await expect(showcase).toBeVisible()
+  await expect(showcase.locator('img')).toHaveCount(0)
+  const showcaseBounds = await showcase.boundingBox()
+  expect(showcaseBounds).not.toBeNull()
+  if (!showcaseBounds) {
+    throw new Error('Homepage showcase slot must have measurable dimensions')
+  }
+  expect(showcaseBounds.width / showcaseBounds.height).toBeCloseTo(4 / 3, 1)
+
+  const useCases = page.getByTestId('homepage-use-cases')
+  const expectedUseCases = [
+    ['做底板', '#home-model-opengrid'],
+    ['做連接件', '#home-model-opengrid-snap'],
+    ['做分隔', '#home-model-opengrid-divider'],
+    ['做支柱', '#home-model-opengrid-pillar'],
+    ['做收納', '#home-model-opengrid-stackable-box'],
+  ] as const
+  for (const [label, target] of expectedUseCases) {
+    await expect(useCases.getByRole('link', { name: label })).toHaveAttribute(
+      'href',
+      target,
+    )
+  }
+
+  const homeModelCards = page.getByTestId('home-model-card')
+  await expect(homeModelCards).toHaveCount(7)
+  const expectedHomeModels = [
+    ['opengrid', '底板', '/cad/opengrid'],
+    ['opengrid-snap', 'Snap', '/cad/opengrid-snap'],
+    ['opengrid-pillar', '圓柱支柱', '/cad/opengrid-pillar'],
+    ['opengrid-divider', '分隔塊', '/cad/opengrid-divider'],
+    ['opengrid-stackable-box', '堆疊盒', '/cad/opengrid-stackable-box'],
+    [
+      'opengrid-stackable-cylinder',
+      '可堆疊圓柱',
+      '/cad/opengrid-stackable-cylinder',
+    ],
+    ['opengrid-snap-remover', 'Snap Remover', '/cad/opengrid-snap-remover'],
+  ] as const
+  for (const [index, [modelId, label, route]] of expectedHomeModels.entries()) {
+    const card = homeModelCards.nth(index)
+    await expect(card).toHaveAttribute('data-model-id', modelId)
+    await expect(card.getByRole('heading', { name: label })).toBeVisible()
+    await expect(card.locator('img')).toHaveAttribute('alt', new RegExp(label))
+    await expect(
+      card.getByRole('link', { name: `開始生成 ${label}` }),
+    ).toHaveAttribute('href', route)
+  }
+
   await page.goto('/models')
   await expect(
     page.getByRole('link', { name: 'Shape Shortcut' }),
   ).not.toHaveAttribute('aria-current', 'page')
   await expect(
-    page.getByRole('link', { name: '選擇模型', exact: true }),
+    page.getByRole('link', { name: '模型庫', exact: true }),
   ).toHaveAttribute('aria-current', 'page')
   await expect(
     page.getByRole('heading', { name: '選擇 CAD 模型' }),

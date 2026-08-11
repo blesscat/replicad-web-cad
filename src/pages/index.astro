@@ -1,50 +1,211 @@
 ---
 import SiteLayout from '../layouts/SiteLayout.astro'
+import {
+  cadPathForModel,
+  modelDefinitions,
+  modelSelectionLabelFor,
+} from '../features/cad/model-catalog'
+import type { ModelDefinition } from '../features/cad/model-catalog'
+
+const openGridDefinitions = modelDefinitions.filter(
+  (definition) => definition.family === 'opengrid',
+)
+
+const homeUseCases = [
+  { label: '做底板', selectionLabel: '底板' },
+  { label: '做連接件', selectionLabel: 'Snap' },
+  { label: '做分隔', selectionLabel: '分隔塊' },
+  { label: '做支柱', selectionLabel: '圓柱支柱' },
+  { label: '做收納', selectionLabel: '堆疊盒' },
+]
+
+function previewImageFor(definition: ModelDefinition) {
+  if (!definition.previewImage) {
+    throw new Error(`MODEL_PREVIEW_MISSING:${definition.id}`)
+  }
+  return definition.previewImage
+}
+
+function definitionForUseCase(selectionLabel: string): ModelDefinition {
+  const definition = openGridDefinitions.find(
+    (candidate) => modelSelectionLabelFor(candidate) === selectionLabel,
+  )
+  if (!definition) {
+    throw new Error(`HOME_USE_CASE_MODEL_MISSING:${selectionLabel}`)
+  }
+  return definition
+}
+
+function homeModelAnchorFor(definition: ModelDefinition): string {
+  return `home-model-${definition.id}`
+}
 ---
 
 <SiteLayout
-  title="Shape Shortcut"
-  description="Browser-based parametric CAD prototype."
+  title="Shape Shortcut | 實用模型，一站生成"
+  description="Shape Shortcut 將實用的 OpenGrid 模型集中在一個地方，方便選擇、調整與匯出。"
 >
-  <section
-    class="rounded-2xl border border-border-card bg-panel p-5 shadow-card"
-    aria-labelledby="home-title"
-  >
-    <p class="mb-4 text-muted">Browser-only CAD prototype</p>
-    <h1 class="mb-4 text-4xl font-semibold leading-tight" id="home-title">
-      用瀏覽器建立、調整並匯出 CAD 模型
-    </h1>
-    <p class="mb-4 leading-normal">
-      在瀏覽器中建立參數化 CAD 模型，調整 component 專屬設定、查看即時 3D
-      預覽，並下載由精確 B-Rep 產生的 STEP 或 STL。
-    </p>
-    <div class="mt-8 grid gap-4 sm:grid-cols-3" aria-label="產品特色">
-      <article class="rounded-xl border border-border-card bg-page p-4">
-        <h2 class="mb-2 text-xl font-semibold leading-tight">瀏覽器內建模</h2>
-        <p class="m-0 text-muted">
-          不需安裝桌面 CAD 軟體，就能在瀏覽器調整參數並預覽模型。
+  <div class="grid gap-8">
+    <section
+      class="grid gap-8 rounded-3xl border border-border-card bg-panel p-6 shadow-card lg:grid-cols-[1.05fr_0.95fr] lg:items-stretch lg:p-8"
+      aria-labelledby="home-title"
+      data-testid="homepage-hero"
+    >
+      <div class="grid content-center gap-5">
+        <p
+          class="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-primary"
+        >
+          Shape Shortcut
         </p>
-      </article>
-      <article class="rounded-xl border border-border-card bg-page p-4">
-        <h2 class="mb-2 text-xl font-semibold leading-tight">參數化控制</h2>
-        <p class="m-0 text-muted">
-          每個 component 都有獨立參數、即時驗證與可恢復的設定。
+        <h1
+          class="m-0 max-w-[18ch] text-5xl font-semibold leading-[1.05]"
+          id="home-title"
+        >
+          常用模型，快速做出來
+        </h1>
+        <p class="m-0 max-w-[56ch] text-lg leading-relaxed text-muted">
+          把 OpenGrid
+          底板、Snap、支柱、分隔與堆疊配件集中在一個地方。選擇模型、調整參數、查看預覽，直接匯出可用的
+          STEP 或 STL。
         </p>
-      </article>
-      <article class="rounded-xl border border-border-card bg-page p-4">
-        <h2 class="mb-2 text-xl font-semibold leading-tight">精確匯出</h2>
-        <p class="m-0 text-muted">
-          從精確 B-Rep 產生 STEP 與 STL，方便進一步製作或加工。
-        </p>
-      </article>
-    </div>
-    <p class="mb-0 mt-8">
-      <a
-        class="inline-flex rounded-lg border border-border-card bg-panel px-4 py-3 font-semibold text-ink no-underline shadow-sm hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-        href="/models"
+        <div class="flex flex-wrap gap-3">
+          <a
+            class="inline-flex items-center rounded-xl bg-primary px-4 py-3 font-semibold text-white no-underline shadow-sm transition-colors hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            href="/models"
+          >
+            開始使用 →
+          </a>
+          <a
+            class="inline-flex items-center rounded-xl border border-border-card bg-page px-4 py-3 font-semibold text-ink no-underline transition-colors hover:bg-panel focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            href="#opengrid-models"
+          >
+            瀏覽 OpenGrid 系列
+          </a>
+        </div>
+      </div>
+      <div
+        class="aspect-[4/3] min-h-[260px] self-start rounded-2xl border border-border-card border-dashed bg-page lg:min-h-0"
+        data-testid="homepage-showcase-slot"
+        aria-hidden="true"
       >
-        開始選擇模型 →
-      </a>
-    </p>
-  </section>
+      </div>
+    </section>
+
+    <nav
+      class="grid gap-3 rounded-2xl border border-border-card bg-panel p-4 shadow-card sm:flex sm:items-center sm:gap-4 sm:p-5"
+      aria-label="依用途尋找模型"
+      data-testid="homepage-use-cases"
+    >
+      <p class="m-0 shrink-0 font-semibold">我想要...</p>
+      <div class="flex flex-wrap gap-2">
+        {
+          homeUseCases.map((useCase) => {
+            const definition = definitionForUseCase(useCase.selectionLabel)
+            return (
+              <a
+                class="rounded-full border border-border-card bg-page px-3 py-2 text-sm font-semibold text-ink no-underline transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                href={`#${homeModelAnchorFor(definition)}`}
+              >
+                {useCase.label}
+              </a>
+            )
+          })
+        }
+      </div>
+    </nav>
+
+    <section
+      class="grid gap-5"
+      id="opengrid-models"
+      aria-labelledby="opengrid-models-title"
+      data-testid="homepage-opengrid-models"
+    >
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div class="grid gap-1">
+          <p
+            class="m-0 text-sm font-semibold uppercase tracking-[0.16em] text-primary"
+          >
+            目前主力系列
+          </p>
+          <h2
+            class="m-0 text-3xl font-semibold leading-tight"
+            id="opengrid-models-title"
+          >
+            OpenGrid 系列
+          </h2>
+        </div>
+        <a
+          class="font-semibold text-ink underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          href="/models"
+        >
+          查看模型庫 →
+        </a>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {
+          openGridDefinitions.map((definition) => {
+            const preview = previewImageFor(definition)
+            const selectionLabel = modelSelectionLabelFor(definition)
+            return (
+              <article
+                class="grid gap-4 overflow-hidden rounded-2xl border border-border-card bg-panel p-3 shadow-card"
+                id={homeModelAnchorFor(definition)}
+                data-testid="home-model-card"
+                data-model-id={definition.id}
+              >
+                <div class="grid aspect-[16/10] place-items-center overflow-hidden rounded-xl border border-border-card bg-viewport">
+                  <img
+                    src={preview.src}
+                    alt={preview.alt}
+                    width={preview.width}
+                    height={preview.height}
+                    loading="lazy"
+                    class="h-full w-full object-contain"
+                  />
+                </div>
+                <div class="grid gap-3 px-1 pb-1">
+                  <h3 class="m-0 text-2xl font-semibold leading-tight">
+                    {selectionLabel}
+                  </h3>
+                  <p class="m-0 min-h-[5.5rem] leading-relaxed text-muted">
+                    {definition.selectionDescription}
+                  </p>
+                  <a
+                    class="inline-flex items-center justify-self-start rounded-lg bg-primary px-3 py-2 font-semibold text-white no-underline transition-colors hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                    href={cadPathForModel(definition.id)}
+                    aria-label={`開始生成 ${selectionLabel}`}
+                  >
+                    開始生成 →
+                  </a>
+                </div>
+              </article>
+            )
+          })
+        }
+      </div>
+    </section>
+
+    <section
+      class="grid gap-4 rounded-2xl border border-border-card bg-panel p-5 shadow-card sm:grid-cols-4 sm:items-center"
+      aria-labelledby="home-workflow-title"
+    >
+      <div class="sm:col-span-1">
+        <h2
+          class="m-0 text-2xl font-semibold leading-tight"
+          id="home-workflow-title"
+        >
+          從找到模型到完成匯出
+        </h2>
+      </div>
+      <ol
+        class="m-0 grid list-none gap-3 p-0 text-muted sm:col-span-3 sm:grid-cols-4"
+      >
+        <li><span class="font-semibold text-ink">1.</span> 選擇</li>
+        <li><span class="font-semibold text-ink">2.</span> 調整</li>
+        <li><span class="font-semibold text-ink">3.</span> 預覽</li>
+        <li><span class="font-semibold text-ink">4.</span> 匯出 STEP / STL</li>
+      </ol>
+    </section>
+  </div>
 </SiteLayout>
