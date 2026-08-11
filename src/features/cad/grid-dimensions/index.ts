@@ -46,6 +46,60 @@ export type GridDimensionFailure = {
 
 export type GridDimensionResult = GridDimensionSuccess | GridDimensionFailure
 
+export type OpenGridPrintPlanInput = {
+  targetX: string
+  targetY: string
+  printerX: string
+  printerY: string
+}
+
+export type OpenGridPrintPlanErrors = Partial<
+  Record<'targetX' | 'targetY' | 'printerX' | 'printerY', string>
+>
+
+export type OpenGridPrintPieceRole = 'primary' | 'edge' | 'corner'
+
+export type OpenGridPrintPieceGroup = {
+  role: OpenGridPrintPieceRole
+  columns: number
+  rows: number
+  width: number
+  depth: number
+  quantity: number
+}
+
+export type OpenGridPrintPlanSuccess = {
+  valid: true
+  target: {
+    columns: number
+    rows: number
+    width: number
+    depth: number
+  }
+  printer: {
+    columns: number
+    rows: number
+    width: number
+    depth: number
+  }
+  primary: {
+    columns: number
+    rows: number
+    width: number
+    depth: number
+  }
+  pieceGroups: OpenGridPrintPieceGroup[]
+  totalPieces: number
+}
+
+export type OpenGridPrintPlanFailure = {
+  valid: false
+  errors: OpenGridPrintPlanErrors
+}
+
+export type OpenGridPrintPlanResult =
+  OpenGridPrintPlanSuccess | OpenGridPrintPlanFailure
+
 type ParsedTargets =
   | { valid: true; x: number; y: number }
   | { valid: false; errors: GridDimensionErrors }
@@ -87,6 +141,204 @@ function parseTargets(input: GridDimensionInput): ParsedTargets {
   }
 
   return { valid: true, x, y }
+}
+
+type ParsedPrintPlanAxis = {
+  targetCells: number
+  printerCells: number
+}
+
+type PrintPlanAxisSegment = {
+  size: number
+  quantity: number
+  isRemainder: boolean
+}
+
+type PrintPlanAxis = {
+  targetCells: number
+  printerCells: number
+  mainSpan: number
+  segments: PrintPlanAxisSegment[]
+}
+
+function parsePositivePrintPlanDimension(
+  rawValue: string,
+  label: string,
+): number | string {
+  const trimmedValue = rawValue.trim()
+  if (!trimmedValue) return `${label} 尺寸不可空白。`
+
+  const value = Number(trimmedValue)
+  if (!Number.isFinite(value)) return `${label} 尺寸必須是有限數字。`
+  if (value <= 0) return `${label} 尺寸必須大於 0 mm。`
+  if (value < OPENGRID_CONFIGURATION.gridPitch) {
+    return `${label} 尺寸至少需要 ${OPENGRID_CONFIGURATION.gridPitch} mm 才能放入 1 格。`
+  }
+  return value
+}
+
+function parsePrintPlanAxis(
+  targetValue: string,
+  printerValue: string,
+  targetKey: 'targetX' | 'targetY',
+  printerKey: 'printerX' | 'printerY',
+  targetLabel: string,
+  printerLabel: string,
+  errors: OpenGridPrintPlanErrors,
+): ParsedPrintPlanAxis | null {
+  const target = parsePositivePrintPlanDimension(targetValue, targetLabel)
+  const printer = parsePositivePrintPlanDimension(printerValue, printerLabel)
+
+  if (typeof target === 'string') {
+    errors[targetKey] = target
+  }
+  if (typeof printer === 'string') {
+    errors[printerKey] = printer
+  }
+  if (typeof target !== 'number' || typeof printer !== 'number') return null
+
+  const targetCells = Math.floor(target / OPENGRID_CONFIGURATION.gridPitch)
+  const printerCells = Math.min(
+    Math.floor(printer / OPENGRID_CONFIGURATION.gridPitch),
+    OPENGRID_CONFIGURATION.maxGridCount,
+  )
+  return { targetCells, printerCells }
+}
+
+function practicalSpanFloor(targetCells: number, printerCells: number): number {
+  const largestPossibleSpan = Math.min(targetCells, printerCells)
+  return Math.max(1, Math.ceil(largestPossibleSpan / 2))
+}
+
+function choosePracticalMainSpan(
+  targetCells: number,
+  printerCells: number,
+): number {
+  const largestPossibleSpan = Math.min(targetCells, printerCells)
+  const minimumPracticalSpan = practicalSpanFloor(targetCells, printerCells)
+
+  for (
+    let span = largestPossibleSpan;
+    span >= minimumPracticalSpan;
+    span -= 1
+  ) {
+    if (targetCells % span === 0) return span
+  }
+
+  let selectedSpan = minimumPracticalSpan
+  let selectedRemainder = targetCells % selectedSpan
+  for (
+    let span = minimumPracticalSpan + 1;
+    span <= largestPossibleSpan;
+    span += 1
+  ) {
+    const remainder = targetCells % span
+    const isBetterRemainder = remainder < selectedRemainder
+    const isSameRemainderButLarger =
+      remainder === selectedRemainder && span > selectedSpan
+    if (isBetterRemainder || isSameRemainderButLarger) {
+      selectedSpan = span
+      selectedRemainder = remainder
+    }
+  }
+  return selectedSpan
+}
+
+function printPlanAxisFor(
+  targetCells: number,
+  printerCells: number,
+): PrintPlanAxis {
+  const mainSpan = choosePracticalMainSpan(targetCells, printerCells)
+  const fullPieceQuantity = Math.floor(targetCells / mainSpan)
+  const remainder = targetCells % mainSpan
+  const segments: PrintPlanAxisSegment[] = [
+    {
+      size: mainSpan,
+      quantity: fullPieceQuantity,
+      isRemainder: false,
+    },
+  ]
+
+  if (remainder > 0) {
+    segments.push({ size: remainder, quantity: 1, isRemainder: true })
+  }
+
+  return { targetCells, printerCells, mainSpan, segments }
+}
+
+function printPieceRoleFor(
+  xSegment: PrintPlanAxisSegment,
+  ySegment: PrintPlanAxisSegment,
+): OpenGridPrintPieceRole {
+  if (!xSegment.isRemainder && !ySegment.isRemainder) return 'primary'
+  if (xSegment.isRemainder && ySegment.isRemainder) return 'corner'
+  return 'edge'
+}
+
+function addPrintPieceGroup(
+  groups: OpenGridPrintPieceGroup[],
+  xSegment: PrintPlanAxisSegment,
+  ySegment: PrintPlanAxisSegment,
+): void {
+  const columns = xSegment.size
+  const rows = ySegment.size
+  const quantity = xSegment.quantity * ySegment.quantity
+  const existing = groups.find(
+    (group) => group.columns === columns && group.rows === rows,
+  )
+  if (existing) {
+    existing.quantity += quantity
+    return
+  }
+
+  groups.push({
+    role: printPieceRoleFor(xSegment, ySegment),
+    columns,
+    rows,
+    width: columns * OPENGRID_CONFIGURATION.gridPitch,
+    depth: rows * OPENGRID_CONFIGURATION.gridPitch,
+    quantity,
+  })
+}
+
+function printPieceGroupsFor(
+  xAxis: PrintPlanAxis,
+  yAxis: PrintPlanAxis,
+): OpenGridPrintPieceGroup[] {
+  const groups: OpenGridPrintPieceGroup[] = []
+  for (const xSegment of xAxis.segments) {
+    for (const ySegment of yAxis.segments) {
+      addPrintPieceGroup(groups, xSegment, ySegment)
+    }
+  }
+  return groups
+}
+
+function printPlanErrorsFor(input: OpenGridPrintPlanInput): {
+  errors: OpenGridPrintPlanErrors
+  xAxis: ParsedPrintPlanAxis | null
+  yAxis: ParsedPrintPlanAxis | null
+} {
+  const errors: OpenGridPrintPlanErrors = {}
+  const xAxis = parsePrintPlanAxis(
+    input.targetX,
+    input.printerX,
+    'targetX',
+    'printerX',
+    '目標 X',
+    '列印機 X',
+    errors,
+  )
+  const yAxis = parsePrintPlanAxis(
+    input.targetY,
+    input.printerY,
+    'targetY',
+    'printerY',
+    '目標 Y',
+    '列印機 Y',
+    errors,
+  )
+  return { errors, xAxis, yAxis }
 }
 
 function maxCountThatFits(
@@ -237,6 +489,61 @@ export function calculateOpenGridCounts(
     halfCellY,
   )
   return { valid: true, parameters, actualDimensions }
+}
+
+export function calculateOpenGridPrintPlan(
+  input: OpenGridPrintPlanInput,
+): OpenGridPrintPlanResult {
+  const parsed = printPlanErrorsFor(input)
+  if (parsed.xAxis === null || parsed.yAxis === null) {
+    return { valid: false, errors: parsed.errors }
+  }
+
+  const xAxis = printPlanAxisFor(
+    parsed.xAxis.targetCells,
+    parsed.xAxis.printerCells,
+  )
+  const yAxis = printPlanAxisFor(
+    parsed.yAxis.targetCells,
+    parsed.yAxis.printerCells,
+  )
+  const pieceGroups = printPieceGroupsFor(xAxis, yAxis)
+  const primary = pieceGroups.find((group) => group.role === 'primary')
+  if (!primary) {
+    return {
+      valid: false,
+      errors: {
+        targetX: '無法建立可列印的 OpenGrid 分片方案。',
+      },
+    }
+  }
+
+  return {
+    valid: true,
+    target: {
+      columns: xAxis.targetCells,
+      rows: yAxis.targetCells,
+      width: xAxis.targetCells * OPENGRID_CONFIGURATION.gridPitch,
+      depth: yAxis.targetCells * OPENGRID_CONFIGURATION.gridPitch,
+    },
+    printer: {
+      columns: xAxis.printerCells,
+      rows: yAxis.printerCells,
+      width: xAxis.printerCells * OPENGRID_CONFIGURATION.gridPitch,
+      depth: yAxis.printerCells * OPENGRID_CONFIGURATION.gridPitch,
+    },
+    primary: {
+      columns: primary.columns,
+      rows: primary.rows,
+      width: primary.width,
+      depth: primary.depth,
+    },
+    pieceGroups,
+    totalPieces: pieceGroups.reduce(
+      (total, group) => total + group.quantity,
+      0,
+    ),
+  }
 }
 
 function openGridStackableBoxBoundsSize(x: number, y: number): BoundsSize {

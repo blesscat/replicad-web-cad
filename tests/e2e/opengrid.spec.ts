@@ -265,7 +265,7 @@ test('OpenGrid restores all settings including boolean defaults', async ({
   const rows = page.getByRole('slider', { name: 'Y' })
   const targetX = page
     .getByTestId('grid-dimension-calculator')
-    .getByRole('textbox', { name: 'X（mm）' })
+    .getByRole('textbox', { name: '目標 X（mm）' })
   const topSide = page.getByRole('checkbox', { name: '上', exact: true })
   const centerScrew = page.getByRole('checkbox', {
     name: 'OpenGrid 正中心螺絲孔',

@@ -1,8 +1,5 @@
 <script lang="ts">
-  import {
-    calculateOpenGridCounts,
-    type GridDimensionInput,
-  } from '../../../../features/cad/grid-dimensions'
+  import { calculateOpenGridPrintPlan } from '../../../../features/cad/grid-dimensions'
   import {
     OPENGRID_CONFIGURATION,
     openGridBoardConfiguration,
@@ -15,7 +12,7 @@
     type OpenGridScrewDimensions,
     type OpenGridScrewPreset,
   } from '../../../../cad-contract/units'
-  import GridDimensionCalculator from '../GridDimensionCalculator.svelte'
+  import OpenGridPrintPlanCalculator from './OpenGridPrintPlanCalculator.svelte'
   import ParameterField from '../ParameterField.svelte'
   import RestoreButton from '../RestoreButton.svelte'
   import Slider from '../Slider.svelte'
@@ -325,19 +322,14 @@
     })
   }
 
-  function handleDimensionCalculation(changes: {
+  function handlePrintPlanCalculation(changes: {
     rows: number
     columns: number
   }): void {
-    updateGridCounts(changes)
-  }
-
-  function calculateGridDimensions(input: GridDimensionInput) {
-    return calculateOpenGridCounts({
-      ...input,
-      halfCellX: parameters.halfCellX,
-      halfCellY: parameters.halfCellY,
-    })
+    // Planning changes only the primary piece dimensions. Keep screw settings
+    // and custom positions intact; manual slider edits retain their existing
+    // position-cleanup behavior through updateGridCounts.
+    updateParameters(changes)
   }
 
   function updateHalfCellX(event: Event): void {
@@ -473,9 +465,9 @@
     </select>
   </ParameterField>
 
-  <GridDimensionCalculator
-    calculate={calculateGridDimensions}
-    onApply={handleDimensionCalculation}
+  <OpenGridPrintPlanCalculator
+    calculate={calculateOpenGridPrintPlan}
+    onApply={handlePrintPlanCalculation}
     onInvalid={onDimensionCalculationInvalid}
   />
 
