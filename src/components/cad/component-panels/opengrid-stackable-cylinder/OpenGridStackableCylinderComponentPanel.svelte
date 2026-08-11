@@ -33,7 +33,7 @@
     if (mode === 'bottom-plate') {
       return '底版模式：不可堆疊，使用6mm固定柱'
     }
-    if (mode === 'thin') return '薄殼模式：可堆疊，使用6mm固定柱'
+    if (mode === 'thin') return '薄殼模式：可堆疊，2 mm 底厚、1.6 mm 壁厚'
     return '預設模式：可堆疊，使用標準8mm固定柱'
   }
 
@@ -61,9 +61,13 @@
   let activeMode = $derived(modeFor(thinBottomMode, bottomPlateMode))
 
   function floorThicknessForMode(mode: CylinderMode): number {
-    return mode === 'default'
-      ? OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultFloorThickness
-      : OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.thinFloorThickness
+    if (mode === 'default') {
+      return OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultFloorThickness
+    }
+    if (mode === 'thin') {
+      return OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.thinFloorThickness
+    }
+    return OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.floorThickness
   }
 
   const openingGroups = [

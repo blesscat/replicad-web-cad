@@ -554,8 +554,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
       8,
     )
     const innerRampStartRadius =
-      derived.outerTransitionStartRadius -
-      configuration.wallThickness * Math.SQRT2
+      derived.outerTransitionStartRadius - derived.wallThickness * Math.SQRT2
     expect(derived.innerRampEndZ).toBeCloseTo(
       derived.outerTransitionStartZ +
         (derived.innerRadius - innerRampStartRadius),
@@ -565,6 +564,36 @@ describe('OpenGrid stackable-cylinder contract', () => {
       derived.innerRampEndRadius - (derived.innerRampEndZ - derived.flatFloorZ),
       8,
     )
+  })
+
+  it('uses the box-aligned thin shell thickness while retaining stack clearance', () => {
+    const derived = openGridStackableCylinderDerivedGeometryFor(
+      parameters({ diameter: 56, thinBottomMode: true }),
+    )
+
+    expect(derived.flatFloorZ).toBe(2)
+    expect(derived.innerRadius).toBeCloseTo(derived.radius - 1.6, 8)
+    expect(derived.matingProtrusionRadius).toBeCloseTo(derived.radius - 1.8, 8)
+    expect(derived.matingProtrusionRadius).toBeCloseTo(
+      derived.innerRadius -
+        OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.stackFitClearance,
+      8,
+    )
+    expect(derived.bottomHoleSectionDepth).toBe(1)
+  })
+
+  it('accepts a thin opening that ends exactly at the 2 mm floor', () => {
+    const validation = validateOpenGridStackableCylinderParameters(
+      parameters({
+        height: 20,
+        thinBottomMode: true,
+        openingPlusXDepth: 18,
+        openingPlusXBottomLength: 8,
+        openingPlusXAngle: 90,
+      }),
+    )
+
+    expect(validation.valid).toBe(true)
   })
 
   it('derives the bottom-plate mode as a clipped outer profile', () => {
@@ -601,7 +630,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
       openGridStackableCylinderDerivedGeometryFor(defaultInput)
     const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
 
-    expect(derived.floorThickness).toBe(configuration.thinFloorThickness)
+    expect(derived.floorThickness).toBe(configuration.floorThickness)
     expect(derived.innerFloorFilletRadius).toBe(
       configuration.innerFloorFilletRadius,
     )
@@ -628,15 +657,16 @@ describe('OpenGrid stackable-cylinder contract', () => {
   it('keeps the fixed geometry constants out of the user snapshot', () => {
     expect(OPENGRID_STACKABLE_CYLINDER_CONFIGURATION).toMatchObject({
       wallThickness: 2,
+      thinWallThickness: 1.6,
       defaultFloorThickness: 5,
-      thinFloorThickness: 3,
+      thinFloorThickness: 2,
       floorThickness: 3,
       bottomHoleDiameter:
         OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
       innerHoleDiameter:
         OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.retainingOpeningDiameter,
       defaultBottomHoleSectionDepth: 4,
-      thinBottomHoleSectionDepth: 2,
+      thinBottomHoleSectionDepth: 1,
       bottomHoleSectionDepth: 2,
       innerHoleSectionDepth: 1,
       innerFloorFilletRadius: 0.6,
@@ -648,6 +678,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
       bottomFootBevel: 0.8,
       bottomVerticalHeight: 2.6,
       topInnerChamfer: 2,
+      thinTopInnerChamfer: 1.6,
       topInnerChamferLand: 0,
       bottomOuterChamfer: 2,
     })

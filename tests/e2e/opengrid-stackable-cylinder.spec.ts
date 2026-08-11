@@ -39,11 +39,11 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
     .getByRole('link', { name: '編輯 可堆疊圓柱', exact: true })
   await expect(modelLink).toHaveAttribute(
     'href',
-    '/cad/opengrid-stackable-cylinder',
+    '/cad/opengrid-stackable-cylinder?system=desk',
   )
   await modelLink.click()
 
-  await expect(page).toHaveURL('/cad/opengrid-stackable-cylinder')
+  await expect(page).toHaveURL('/cad/opengrid-stackable-cylinder?system=desk')
   await expect(
     page.getByRole('heading', { name: '目前編輯：OpenGrid 可堆疊圓柱' }),
   ).toBeVisible()
@@ -146,7 +146,7 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
       page
         .getByTestId(`opengrid-cylinder-opening-group-${direction}`)
         .getByRole('slider', { name: `下切深度（${label}）` }),
-    ).toHaveAttribute('max', '17')
+    ).toHaveAttribute('max', '18')
   }
   await diameter.press('ArrowRight')
   await expect(diameter).toHaveValue('57')
@@ -236,7 +236,7 @@ test('OpenGrid stackable-cylinder exports the selected thin and no-hole state', 
     .uncheck()
   await expect(
     page.getByTestId('opengrid-cylinder-mode-description'),
-  ).toHaveText('薄殼模式：可堆疊，使用6mm固定柱')
+  ).toHaveText('薄殼模式：可堆疊，2 mm 底厚、1.6 mm 壁厚')
   await expect(page.locator('p').filter({ hasText: '底部孔洞：' })).toHaveCount(
     0,
   )

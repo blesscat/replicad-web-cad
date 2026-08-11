@@ -216,7 +216,7 @@ function makeCylinderShell(
   const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
   const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
   const effectiveTopInnerChamfer =
-    configuration.topInnerChamfer - configuration.topInnerChamferLand
+    derived.topInnerChamfer - configuration.topInnerChamferLand
   const topInnerChamferRadius = derived.innerRadius + effectiveTopInnerChamfer
   const sketcher = new Sketcher('XZ')
   let sketch: ReturnType<Sketcher['close']> | null = null
@@ -1011,8 +1011,7 @@ export function inspectOpenGridStackableCylinderInterface(
 
       const bottomProbeWidth = Math.min(opening.bottomLength / 4, 0.25)
       const topProbeWidth = Math.min(opening.upperWidth / 4, 0.25)
-      const radialProbeMinimum =
-        derived.radius - configuration.wallThickness - 0.1
+      const radialProbeMinimum = derived.radius - derived.wallThickness - 0.1
       const radialProbeMaximum = derived.radius + 0.1
       const bottomBoundaryProbeVolume = volumeInDirectionalBoxProbe(
         shape,
@@ -1075,10 +1074,10 @@ export function inspectOpenGridStackableCylinderInterface(
     const gapAngle = (firstAngle + secondAngle) / 2
     const gapVolume = volumeAtRadialProbe(
       shape,
-      derived.radius - configuration.wallThickness / 2,
+      derived.radius - derived.wallThickness / 2,
       gapAngle,
       parameters.height -
-        (configuration.topInnerChamfer - configuration.topInnerChamferLand) -
+        (derived.topInnerChamfer - configuration.topInnerChamferLand) -
         0.08,
     )
     if (gapVolume > 0.0000001) neighboringOpeningProbeCount += 1
@@ -1115,24 +1114,24 @@ export function inspectOpenGridStackableCylinderInterface(
   const topInnerChamferFaceCount = countConicalFacesInRadialBand(
     shape,
     parameters.height -
-      (configuration.topInnerChamfer - configuration.topInnerChamferLand) -
+      (derived.topInnerChamfer - configuration.topInnerChamferLand) -
       0.05,
     parameters.height + 0.05,
     cavityRadius - 0.2,
     cavityRadius +
-      configuration.topInnerChamfer -
+      derived.topInnerChamfer -
       configuration.topInnerChamferLand +
       0.2,
   )
   const topInnerChamferHeight = maxConicalFaceHeightInRadialBand(
     shape,
     parameters.height -
-      (configuration.topInnerChamfer - configuration.topInnerChamferLand) -
+      (derived.topInnerChamfer - configuration.topInnerChamferLand) -
       0.05,
     parameters.height + 0.05,
     cavityRadius - 0.2,
     cavityRadius +
-      configuration.topInnerChamfer -
+      derived.topInnerChamfer -
       configuration.topInnerChamferLand +
       0.2,
   )
@@ -1232,7 +1231,7 @@ export function inspectOpenGridStackableCylinderInterface(
   )
 
   const effectiveTopInnerChamfer =
-    configuration.topInnerChamfer - configuration.topInnerChamferLand
+    derived.topInnerChamfer - configuration.topInnerChamferLand
   const straightWallProbeZ = parameters.height - effectiveTopInnerChamfer - 0.5
   const straightWallInnerProbe = inspectRadialBoundaryAtZ(
     shape,
@@ -1252,10 +1251,14 @@ export function inspectOpenGridStackableCylinderInterface(
 
   let innerRampBoundaryProbeCount = 0
   if (derived.profile === 'thin') {
+    const rampProbeStartZ = Math.max(
+      derived.flatFloorZ,
+      derived.outerTransitionStartZ,
+    )
     const rampSampleZs = [
-      derived.flatFloorZ + 0.25,
-      derived.flatFloorZ + 0.75,
-      derived.flatFloorZ + 1.25,
+      rampProbeStartZ + 0.25,
+      rampProbeStartZ + 0.75,
+      rampProbeStartZ + 1.25,
     ]
     for (const sampleZ of rampSampleZs) {
       const innerRampRadius =
@@ -1294,7 +1297,10 @@ export function inspectOpenGridStackableCylinderInterface(
   const innerRampNormalThickness =
     derived.profile === 'thin'
       ? (() => {
-          const rampMidpointZ = derived.flatFloorZ + 0.75
+          const rampMidpointZ = Math.max(
+            derived.flatFloorZ + 0.75,
+            derived.outerTransitionStartZ + 0.75,
+          )
           const rampMidpointInnerRadius =
             derived.flatFloorRadius + (rampMidpointZ - derived.flatFloorZ)
           const rampMidpointOuterRadius =
@@ -1488,7 +1494,7 @@ function assertQuality(
     failures.push('central-floor-surface')
   }
   if (
-    !closeEnough(report.straightWallThickness, configuration.wallThickness) ||
+    !closeEnough(report.straightWallThickness, derived.wallThickness) ||
     report.straightWallBoundaryProbeCount !== 2
   ) {
     failures.push('straight-wall-thickness')
@@ -1560,7 +1566,7 @@ function assertQuality(
   if (report.topInnerChamferFaceCount === 0) {
     failures.push('top-inner-chamfer')
   }
-  if (report.topInnerChamferHeight < configuration.topInnerChamfer - 0.05) {
+  if (report.topInnerChamferHeight < derived.topInnerChamfer - 0.05) {
     failures.push('top-inner-chamfer-height')
   }
   if (derived.profile === 'bottom-plate') {
@@ -1602,7 +1608,7 @@ function assertQuality(
       (derived.profile === 'thin' &&
         !closeEnough(
           report.innerRampNormalThickness,
-          configuration.wallThickness,
+          derived.wallThickness,
           0.05,
         )) ||
       report.innerRampBoundaryProbeCount !== 6
