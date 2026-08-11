@@ -2,7 +2,7 @@
 
 ### Requirement: Canonical generator preview asset set
 
-The project MUST provide one static preview image for every visible catalog entry rendered by `/models`. A context-free entry MUST use the corresponding model definition's default parameters and the existing `<modelId>.png` asset identity. A Desktop or Wall OpenGrid entry MUST use its validated system preset and a deterministic `<modelId>-<system>.png` asset identity. Every preview MUST be generated from the corresponding model generator using a stable canonical viewport, served from the same origin, and referenced through the metadata of the exact visible entry. Existing model ids, build keys, and CAD route slugs MUST remain unchanged.
+The project MUST provide one static preview image for every visible catalog entry rendered by `/models`. A context-free entry MUST use the corresponding model definition's default parameters and the existing `<modelId>.png` asset identity. A Desk or Wall OpenGrid entry MUST use its validated system preset and a deterministic `<modelId>-<system>.png` asset identity. Every preview MUST be generated from the corresponding model generator using a stable canonical viewport, served from the same origin, and referenced through the metadata of the exact visible entry. Existing model ids, build keys, and CAD route slugs MUST remain unchanged.
 
 #### Scenario: Every visible entry has a serviceable preview asset
 
@@ -27,7 +27,7 @@ The project MUST provide a repeatable Chromium/Playwright workflow that derives 
 - **WHEN** a developer runs the preview capture workflow
 - **THEN** it MUST visit every visible context-free and context-aware entry
 - **AND** it MUST write one preview asset per visible entry
-- **AND** Desktop and Wall entries for the same model id MUST produce separate assets
+- **AND** Desk and Wall entries for the same model id MUST produce separate assets
 
 #### Scenario: Verification rejects an incomplete context asset set
 

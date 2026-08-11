@@ -68,11 +68,11 @@ function opengridParameters(
 }
 
 describe('component parameter store', () => {
-  it('keeps Desktop and Wall parameter snapshots in separate scopes', () => {
+  it('keeps Desk and Wall parameter snapshots in separate scopes', () => {
     const storage = createMemoryStorage()
-    const desktopStore = createComponentParameterStore({
+    const deskStore = createComponentParameterStore({
       storage,
-      systemContext: 'desktop',
+      systemContext: 'desk',
     })
     const wallStore = createComponentParameterStore({
       storage,
@@ -80,7 +80,7 @@ describe('component parameter store', () => {
     })
 
     expect(
-      desktopStore.set('opengrid-snap', {
+      deskStore.set('opengrid-snap', {
         variant: 'Lite',
         profile: 'Standard',
         offset: 0.2,
@@ -100,7 +100,7 @@ describe('component parameter store', () => {
       }),
     ).toBe(true)
 
-    expect(desktopStore.get('opengrid-snap')).toMatchObject({
+    expect(deskStore.get('opengrid-snap')).toMatchObject({
       variant: 'Lite',
       offset: 0.2,
       fourCornerLocatingHoles: true,
@@ -115,14 +115,14 @@ describe('component parameter store', () => {
       storage.data.get(COMPONENT_PARAMETER_STORAGE_KEY) ?? '{}',
     ) as { version?: number; values?: Record<string, unknown> }
     expect(persisted.version).toBe(2)
-    expect(persisted.values?.desktop).toMatchObject({
+    expect(persisted.values?.desk).toMatchObject({
       'opengrid-snap': expect.objectContaining({ variant: 'Lite' }),
     })
     expect(persisted.values?.wall).toMatchObject({
       'opengrid-snap': expect.objectContaining({ variant: 'Full' }),
     })
 
-    desktopStore.dispose()
+    deskStore.dispose()
     wallStore.dispose()
   })
 
@@ -141,13 +141,13 @@ describe('component parameter store', () => {
     )
     const store = createComponentParameterStore({
       storage,
-      systemContext: 'desktop',
+      systemContext: 'desk',
     })
 
     expect(store.get('opengrid-snap')).toEqual({
       variant: 'Lite',
       profile: 'Standard',
-      offset: 0,
+      offset: 0.3,
       footprint: 'full',
       fourCornerLocatingHoles: true,
       centerRemoverHole: true,

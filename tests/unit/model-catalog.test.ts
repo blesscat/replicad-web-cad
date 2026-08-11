@@ -99,7 +99,7 @@ describe('CAD component catalog', () => {
       'opengrid-snap',
     ])
     expect(groups[0]?.subgroups?.map((subgroup) => subgroup.key)).toEqual([
-      'desktop',
+      'desk',
       'wall',
     ])
     expect(groups[1]?.definitions.map((definition) => definition.id)).toEqual([

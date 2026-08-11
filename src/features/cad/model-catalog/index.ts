@@ -85,7 +85,7 @@ export const modelFamilyMetadata: Readonly<
 }
 
 const SYSTEM_SUBGROUP_LABELS: Record<OpenGridSystemContext, string> = {
-  desktop: 'Desktop System',
+  desk: 'Desk System',
   wall: 'Wall Related',
 }
 
@@ -118,8 +118,8 @@ function openGridSubgroups(
   const openGridDefinitions = definitions.filter(
     (definition) => definition.family === 'opengrid',
   )
-  const desktop = openGridDefinitions.map((definition) =>
-    entryForContext(definition, 'desktop'),
+  const desk = openGridDefinitions.map((definition) =>
+    entryForContext(definition, 'desk'),
   )
   const wall = openGridDefinitions
     .filter(
@@ -129,9 +129,9 @@ function openGridSubgroups(
     .map((definition) => entryForContext(definition, 'wall'))
   return [
     {
-      key: 'desktop',
-      label: SYSTEM_SUBGROUP_LABELS.desktop,
-      definitions: desktop,
+      key: 'desk',
+      label: SYSTEM_SUBGROUP_LABELS.desk,
+      definitions: desk,
     },
     {
       key: 'wall',

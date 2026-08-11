@@ -5,10 +5,10 @@ import {
 } from './helpers'
 import { COMPONENT_PARAMETER_STORAGE_KEY } from '../../src/features/cad/parameters'
 
-test('Desktop and Wall Snap entries use isolated presets and context resets', async ({
+test('Desk and Wall Snap entries use isolated presets and context resets', async ({
   page,
 }) => {
-  await page.goto('/cad/opengrid-snap?system=desktop')
+  await page.goto('/cad/opengrid-snap?system=desk')
   await page.evaluate(() => localStorage.clear())
   await page.reload()
 
@@ -20,12 +20,12 @@ test('Desktop and Wall Snap entries use isolated presets and context resets', as
   await expect(variant).toHaveValue('Lite')
   await expect(cornerHoles).toBeChecked()
   await expect(centerRemover).toBeChecked()
-  await expect(offset).toHaveValue('0')
+  await expect(offset).toHaveValue('0.3')
 
   await offset.press('ArrowRight')
   await cornerHoles.uncheck()
   await centerRemover.uncheck()
-  await expect(offset).toHaveValue('0.05')
+  await expect(offset).toHaveValue('0.35')
 
   await page.goto('/cad/opengrid-snap?system=wall')
   const wallVariant = page.getByRole('combobox', {
@@ -45,10 +45,10 @@ test('Desktop and Wall Snap entries use isolated presets and context resets', as
   await expect(wallVariant).toHaveValue('Full')
   await expect(wallOffset).toHaveValue('0')
 
-  await page.goto('/cad/opengrid-snap?system=desktop')
+  await page.goto('/cad/opengrid-snap?system=desk')
   await expect(
     page.getByRole('slider', { name: '外框總增量（X/Y）' }),
-  ).toHaveValue('0.05')
+  ).toHaveValue('0.35')
   await expect(page.getByRole('checkbox', { name: '定位孔' })).not.toBeChecked()
 })
 

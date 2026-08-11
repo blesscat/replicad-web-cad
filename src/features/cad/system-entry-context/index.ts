@@ -5,10 +5,10 @@ import {
   type OpenGridSnapParameters,
 } from '../../../cad-contract/units'
 
-export type OpenGridSystemContext = 'desktop' | 'wall'
+export type OpenGridSystemContext = 'desk' | 'wall'
 
 export const OPEN_GRID_SYSTEM_CONTEXTS: readonly OpenGridSystemContext[] = [
-  'desktop',
+  'desk',
   'wall',
 ]
 
@@ -16,7 +16,7 @@ export function parseSystemContext(
   search: string,
 ): OpenGridSystemContext | undefined {
   const value = new URLSearchParams(search).get('system')
-  if (value === 'desktop' || value === 'wall') return value
+  if (value === 'desk' || value === 'wall') return value
   return undefined
 }
 
@@ -62,12 +62,12 @@ export function cloneModelParameters(
 
 function snapPresetFor(context: OpenGridSystemContext): OpenGridSnapParameters {
   return {
-    variant: context === 'desktop' ? 'Lite' : 'Full',
+    variant: context === 'desk' ? 'Lite' : 'Full',
     profile: 'Standard',
-    offset: 0,
+    offset: context === 'desk' ? 0.3 : 0,
     footprint: 'full',
-    fourCornerLocatingHoles: context === 'desktop',
-    centerRemoverHole: context === 'desktop',
+    fourCornerLocatingHoles: context === 'desk',
+    centerRemoverHole: context === 'desk',
   }
 }
 

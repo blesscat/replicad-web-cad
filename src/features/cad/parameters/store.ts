@@ -173,7 +173,7 @@ function readPayload(storage: ComponentParameterStorage | null): unknown {
 }
 
 function emptyBuckets(): ParameterBuckets {
-  return { legacy: {}, desktop: {}, wall: {} }
+  return { legacy: {}, desk: {}, wall: {} }
 }
 
 function validatedEntries(
@@ -222,7 +222,7 @@ function hydrateBuckets(
   >
   return {
     legacy: validatedEntries(values.legacy),
-    desktop: validatedEntries(values.desktop),
+    desk: validatedEntries(values.desk),
     wall: validatedEntries(values.wall),
   }
 }
@@ -252,7 +252,7 @@ function serializeBuckets(buckets: ParameterBuckets): string {
   const values: Partial<
     Record<StorageScope, Record<string, ModelParameterValues>>
   > = {}
-  for (const scope of ['legacy', 'desktop', 'wall'] as const) {
+  for (const scope of ['legacy', 'desk', 'wall'] as const) {
     const entries = serializeEntries(buckets[scope])
     if (Object.keys(entries).length > 0) values[scope] = entries
   }

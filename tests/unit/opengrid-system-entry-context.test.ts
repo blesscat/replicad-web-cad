@@ -11,20 +11,21 @@ import {
 
 describe('OpenGrid system entry context', () => {
   it('accepts only the supported system query values', () => {
-    expect(parseSystemContext('?system=desktop')).toBe('desktop')
+    expect(parseSystemContext('?system=desk')).toBe('desk')
     expect(parseSystemContext('?system=wall')).toBe('wall')
+    expect(parseSystemContext('?system=desktop')).toBeUndefined()
     expect(parseSystemContext('?system=unknown')).toBeUndefined()
     expect(parseSystemContext('')).toBeUndefined()
-    expect(systemContextForModel('hsw-cell', 'desktop')).toBeUndefined()
+    expect(systemContextForModel('hsw-cell', 'desk')).toBeUndefined()
     expect(systemContextForModel('opengrid-pillar', 'wall')).toBeUndefined()
-    expect(systemContextForModel('opengrid-pillar', 'desktop')).toBe('desktop')
+    expect(systemContextForModel('opengrid-pillar', 'desk')).toBe('desk')
   })
 
-  it('resolves the documented Desktop and Wall Snap presets', () => {
-    expect(getSystemPreset('opengrid-snap', 'desktop')).toEqual({
+  it('resolves the documented Desk and Wall Snap presets', () => {
+    expect(getSystemPreset('opengrid-snap', 'desk')).toEqual({
       variant: 'Lite',
       profile: 'Standard',
-      offset: 0,
+      offset: 0.3,
       footprint: 'full',
       fourCornerLocatingHoles: true,
       centerRemoverHole: true,
@@ -44,12 +45,12 @@ describe('OpenGrid system entry context', () => {
       (group) => group.key === 'opengrid',
     )
     expect(openGrid?.subgroups?.map((group) => group.key)).toEqual([
-      'desktop',
+      'desk',
       'wall',
     ])
     expect(
       openGrid?.subgroups
-        ?.find((group) => group.key === 'desktop')
+        ?.find((group) => group.key === 'desk')
         ?.definitions.map((entry) => entry.id),
     ).toEqual([
       'opengrid',
@@ -66,12 +67,12 @@ describe('OpenGrid system entry context', () => {
         ?.definitions.map((entry) => entry.id),
     ).toEqual(['opengrid', 'opengrid-snap'])
 
-    const desktopSnap = openGrid?.subgroups?.[0]?.definitions[1]
+    const deskSnap = openGrid?.subgroups?.[0]?.definitions[1]
     const wallSnap = openGrid?.subgroups?.[1]?.definitions[1]
-    expect(desktopSnap?.systemContext).toBe('desktop')
+    expect(deskSnap?.systemContext).toBe('desk')
     expect(wallSnap?.systemContext).toBe('wall')
-    expect(desktopSnap?.previewImage?.src).toBe(
-      '/model-previews/opengrid-snap-desktop.png',
+    expect(deskSnap?.previewImage?.src).toBe(
+      '/model-previews/opengrid-snap-desk.png',
     )
     expect(wallSnap?.previewImage?.src).toBe(
       '/model-previews/opengrid-snap-wall.png',

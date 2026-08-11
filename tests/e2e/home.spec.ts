@@ -64,11 +64,11 @@ test('home, model selection, and docs are static Astro pages', async ({
       .locator('..')
       .getByRole('link', { name: `編輯 ${displayName}`, exact: true })
 
-  const desktopSystem = page.getByTestId('model-subgroup-desktop')
+  const deskSystem = page.getByTestId('model-subgroup-desk')
   const wallRelated = page.getByTestId('model-subgroup-wall')
   const hswSeries = page.getByTestId('model-subgroup-hsw')
   await expect(
-    desktopSystem.getByRole('heading', { name: 'Desktop System' }),
+    deskSystem.getByRole('heading', { name: 'Desk System' }),
   ).toBeVisible()
   await expect(
     wallRelated.getByRole('heading', { name: 'Wall Related' }),
@@ -77,17 +77,17 @@ test('home, model selection, and docs are static Astro pages', async ({
     'href',
     '/cad/hsw-cell',
   )
-  await expect(editLinkFor(desktopSystem, '圓柱支柱')).toHaveAttribute(
+  await expect(editLinkFor(deskSystem, '圓柱支柱')).toHaveAttribute(
     'href',
-    '/cad/opengrid-pillar?system=desktop',
+    '/cad/opengrid-pillar?system=desk',
   )
-  await expect(editLinkFor(desktopSystem, '底板')).toHaveAttribute(
+  await expect(editLinkFor(deskSystem, '底板')).toHaveAttribute(
     'href',
-    '/cad/opengrid?system=desktop',
+    '/cad/opengrid?system=desk',
   )
-  await expect(editLinkFor(desktopSystem, 'Snap')).toHaveAttribute(
+  await expect(editLinkFor(deskSystem, 'Snap')).toHaveAttribute(
     'href',
-    '/cad/opengrid-snap?system=desktop',
+    '/cad/opengrid-snap?system=desk',
   )
   await expect(editLinkFor(wallRelated, '底板')).toHaveAttribute(
     'href',
@@ -97,23 +97,23 @@ test('home, model selection, and docs are static Astro pages', async ({
     'href',
     '/cad/opengrid-snap?system=wall',
   )
-  await expect(editLinkFor(desktopSystem, '分隔塊')).toHaveAttribute(
+  await expect(editLinkFor(deskSystem, '分隔塊')).toHaveAttribute(
     'href',
-    '/cad/opengrid-divider?system=desktop',
+    '/cad/opengrid-divider?system=desk',
   )
-  await expect(editLinkFor(desktopSystem, '堆疊盒')).toHaveAttribute(
+  await expect(editLinkFor(deskSystem, '堆疊盒')).toHaveAttribute(
     'href',
-    '/cad/opengrid-stackable-box?system=desktop',
+    '/cad/opengrid-stackable-box?system=desk',
   )
-  await expect(editLinkFor(desktopSystem, '可堆疊圓柱')).toHaveAttribute(
+  await expect(editLinkFor(deskSystem, '可堆疊圓柱')).toHaveAttribute(
     'href',
-    '/cad/opengrid-stackable-cylinder?system=desktop',
+    '/cad/opengrid-stackable-cylinder?system=desk',
   )
-  await expect(editLinkFor(desktopSystem, 'Snap Remover')).toHaveAttribute(
+  await expect(editLinkFor(deskSystem, 'Snap Remover')).toHaveAttribute(
     'href',
-    '/cad/opengrid-snap-remover?system=desktop',
+    '/cad/opengrid-snap-remover?system=desk',
   )
-  const openGridCards = desktopSystem.locator('[data-model-id]')
+  const openGridCards = deskSystem.locator('[data-model-id]')
   await expect(openGridCards.nth(0)).toHaveAttribute(
     'data-model-id',
     'opengrid',

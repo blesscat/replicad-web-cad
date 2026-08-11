@@ -160,7 +160,7 @@ test('visible model previews are captured from ready generators', async ({
 test('model cards expose static previews and preserve selection on image failure', async ({
   page,
 }) => {
-  await page.route('**/model-previews/opengrid-desktop.png', (route) =>
+  await page.route('**/model-previews/opengrid-desk.png', (route) =>
     route.abort(),
   )
   await page.goto('/models')
@@ -183,7 +183,7 @@ test('model cards expose static previews and preserve selection on image failure
     )
   }
 
-  const failedPreviewCard = page.locator('[data-entry-key="opengrid-desktop"]')
+  const failedPreviewCard = page.locator('[data-entry-key="opengrid-desk"]')
   await expect(
     failedPreviewCard.getByTestId('model-preview-fallback'),
   ).toBeVisible()

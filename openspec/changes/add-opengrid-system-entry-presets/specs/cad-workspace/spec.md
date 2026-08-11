@@ -2,12 +2,13 @@
 
 ### Requirement: System context controls initial CAD generation
 
-The CAD workspace MUST resolve the supported `desktop` or `wall` context before its first generation. It MUST initialize from the valid scoped snapshot, system preset, or model definition default according to the persistence precedence, while keeping the existing model id, generation lifecycle, viewport behavior, and export gates unchanged.
+The CAD workspace MUST resolve the supported `desk` or `wall` context before its first generation. It MUST initialize from the valid scoped snapshot, system preset, or model definition default according to the persistence precedence, while keeping the existing model id, generation lifecycle, viewport behavior, and export gates unchanged.
 
 #### Scenario: Context route initializes the matching Snap geometry
 
-- **WHEN** a user opens `/cad/opengrid-snap?system=desktop` or `/cad/opengrid-snap?system=wall` without scoped saved values
+- **WHEN** a user opens `/cad/opengrid-snap?system=desk` or `/cad/opengrid-snap?system=wall` without scoped saved values
 - **THEN** generation 1 MUST use the corresponding context preset
+- **AND** the Desk preset MUST use an X/Y increment of `0.3`
 - **AND** the committed model MUST retain `modelId=opengrid-snap`
 - **AND** the model MUST remain previewable and exportable through the existing Worker lifecycle
 

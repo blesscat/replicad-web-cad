@@ -6,7 +6,7 @@ The existing catalog has one `ModelDefinition` and one preview image per stable 
 
 **Goals:**
 
-- Make Desktop and Wall entry links resolve deterministic effective parameter snapshots.
+- Make Desk and Wall entry links resolve deterministic effective parameter snapshots.
 - Keep scoped persistence isolated while preserving direct legacy routes.
 - Represent duplicated chooser entries without duplicating CAD model definitions.
 - Generate and verify one static preview asset per visible entry, including context-specific assets.
@@ -28,21 +28,21 @@ This keeps `getModelDefinition(modelId)` and direct routes stable. A separate mo
 
 ### One context resolver owns preset and route decisions
 
-Create a small system-entry-context module with the `desktop`/`wall` union, query parsing, context-aware path construction, and validated preset resolution. The parameter store and workspace controller consume this resolver rather than each embedding query-specific conditionals. Presets are cloned before use so nested OpenGrid flags and custom-position arrays cannot be mutated by a panel.
+Create a small system-entry-context module with the `desk`/`wall` union, query parsing, context-aware path construction, and validated preset resolution. The parameter store and workspace controller consume this resolver rather than each embedding query-specific conditionals. Presets are cloned before use so nested OpenGrid flags and custom-position arrays cannot be mutated by a panel. The Desk Snap preset uses an X/Y envelope increment of `0.3` mm.
 
 ### Versioned persistence has explicit legacy and scoped buckets
 
-Upgrade the browser payload to a version with explicit `legacy`, `desktop`, and `wall` model maps. Version-1 model-id entries are migrated into `legacy` only. A scoped read never falls through to `legacy`; a context-free read uses `legacy`. All entries still pass the existing model definition validator before hydration and serialization.
+Upgrade the browser payload to a version with explicit `legacy`, `desk`, and `wall` model maps. Version-1 model-id entries are migrated into `legacy` only. A scoped read never falls through to `legacy`; a context-free read uses `legacy`. All entries still pass the existing model definition validator before hydration and serialization.
 
 The store API accepts an optional system context, preserving existing callers through the omitted-context form. This makes the isolation observable without changing the storage key or Worker lifecycle.
 
 ### Catalog entries own preview asset metadata
 
-Context-aware visible entries receive preview paths such as `/model-previews/opengrid-snap-desktop.png`; context-free entries retain existing paths. The capture test derives its target list from the same catalog grouping used by `/models`, appends `preview=thumbnail` while preserving `system`, and clears storage for each target. This makes the output set self-describing and prevents a system preset from being accidentally captured under a legacy filename.
+Context-aware visible entries receive preview paths such as `/model-previews/opengrid-snap-desk.png`; context-free entries retain existing paths. The capture test derives its target list from the same catalog grouping used by `/models`, appends `preview=thumbnail` while preserving `system`, and clears storage for each target. This makes the output set self-describing and prevents a system preset from being accidentally captured under a legacy filename.
 
 ### The chooser renders nested subgroups
 
-The model family remains `opengrid` or `hsw`, but the OpenGrid family exposes `Desktop System` and `Wall Related` subgroup metadata. The Astro page renders the subgroup when present and uses the entry's context-aware link and preview metadata. HSW keeps the existing flat family rendering.
+The model family remains `opengrid` or `hsw`, but the OpenGrid family exposes `Desk System` and `Wall Related` subgroup metadata. The Astro page renders the subgroup when present and uses the entry's context-aware link and preview metadata. HSW keeps the existing flat family rendering.
 
 ## Risks / Trade-offs
 
