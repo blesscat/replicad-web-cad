@@ -1,13 +1,14 @@
 ---
 name: openspec-to-main-pr
-description: Continue a completed OpenSpec exploration all the way through proposal generation, implementation, independent compliance review, commit, push, and a pull request targeting main. Use when the user says an openspec-explore discussion is complete and wants the full propose → apply-review → create-pr workflow run in one pass.
+description: Continue a completed OpenSpec exploration through proposal generation, implementation, independent compliance review, main-spec synchronization, change archiving, commit, push, and a pull request targeting main. Use when the user says an openspec-explore discussion is complete and wants the full propose → apply-review → sync/archive → create-pr workflow run in one pass.
 ---
 
 # OpenSpec to Main PR
 
 Run the complete delivery workflow after the user has finished exploring an idea with
 `openspec-explore`. Keep the phases ordered and do not open a PR until the OpenSpec
-artifacts, implementation tasks, compliance review, and validation are complete.
+artifacts, implementation tasks, compliance review, validation, main-spec sync, and
+change archive are complete.
 
 The final operation creates a pull request **from the working branch into `main`**. It
 does not merge the pull request or push directly to `main`.
@@ -19,15 +20,17 @@ does not merge the pull request or push directly to `main`.
 - Run the existing skills in this order:
   1. `$openspec-propose`
   2. `$openspec-apply-review` (which includes `$openspec-apply-change`)
-  3. `create-pr` targeting `main`
+  3. `$openspec-archive-change`, synchronizing delta specs into the main specs first
+  4. `create-pr` targeting `main`
 - Continue through all non-blocked phases without asking the user to manually invoke
   the next skill.
 - Preserve unrelated user changes. Never use `git add -A` when the worktree contains
   changes whose ownership or scope is unclear.
 - Stop and report the blocker when a required artifact, implementation task, review,
   test, GitHub authentication, remote, or branch scope cannot be safely resolved.
-- Do not archive the OpenSpec change as part of this workflow unless the user asks for
-  archiving separately.
+- Archive the OpenSpec change as part of this workflow. When the archive skill finds
+  delta requirements or scenarios missing from the main spec, choose sync and verify
+  the main spec before moving the change into the archive.
 
 ## 1. Establish the change and preflight
 
@@ -103,16 +106,38 @@ Before publishing, capture:
 - the changed-file scope; and
 - the exact validation commands and results.
 
-## 4. Commit, push, and create the PR to `main`
+## 4. Synchronize the main spec and archive the change
 
-Only enter this phase after apply is complete, review has no blocking findings, and
-validation has passed or any non-blocking limitation is explicitly understood.
+Only enter this phase after apply is complete, the independent review has no blocking
+findings, and validation has passed or any non-blocking limitation is explicitly
+understood.
+
+Invoke `$openspec-archive-change` for the same change name before committing, pushing,
+or creating the PR. The archive phase must:
+
+- compare every delta requirement and scenario with the corresponding main spec;
+- synchronize missing or changed normative requirements into the main spec before
+  archiving; do not choose direct archive while required delta content is unsynced;
+- validate the synchronized main spec and the completed change artifacts;
+- move the complete change directory, including `.openspec.yaml`, into the dated
+  archive path; and
+- verify the original active-change path is gone, the archive path is complete, and
+  the sync plus archive files are included in the intended changed-file scope.
+
+If synchronization conflicts, the archive target already exists, or the archive skill
+cannot verify the result, stop before publishing and report the exact blocker.
+
+## 5. Commit, push, and create the PR to `main`
+
+Only enter this phase after apply is complete, review has no blocking findings,
+validation has passed, and main-spec synchronization plus archiving are complete.
 
 Use the GitHub publish workflow from `$yeet` when available for branch, commit, push,
 and PR safety rules. The PR target is always `main`, even when the repository's default
 branch differs.
 
-1. Recheck `git status -sb`, `git diff --stat`, and the intended changed-file list.
+1. Recheck `git status -sb`, `git diff --stat`, and the intended changed-file list,
+   including the synchronized main spec and archived change files.
 2. If currently on `main` (or another default branch), create a focused working branch
    using the repository's publish convention, such as `agent/<description>`. If already
    on a focused feature branch, keep it.
@@ -145,6 +170,7 @@ stable PR identifier. Do not merge it, resolve reviews, or modify `main` directl
 Report the full outcome in one concise handoff:
 
 - OpenSpec change name and final artifact/apply status;
+- main-spec synchronization and archive path/status;
 - implementation and compliance-review verdict;
 - validation commands and results;
 - branch, commit, and PR URL/number; and
