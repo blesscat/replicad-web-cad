@@ -24,8 +24,8 @@ importers:
         specifier: ^0.23.1
         version: 0.23.1
       replicad-opencascadejs:
-        specifier: ^0.23.0
-        version: 0.23.0
+        specifier: file:vendor/replicad-opencascadejs
+        version: file:vendor/replicad-opencascadejs
       svelte:
         specifier: 5.56.8
         version: 5.56.8
@@ -1825,8 +1825,8 @@ packages:
   regex@6.1.0:
     resolution: {integrity: sha512-6VwtthbV4o/7+OaAF9I5L5V3llLEsoPyq9P1JVXkedTP33c7MfCG0/5NOPcSJn0TzXcG9YUrR0gQSWioew3LDg==}
 
-  replicad-opencascadejs@0.23.0:
-    resolution: {integrity: sha512-igS4U9dgclqAoLAI8rLJxDJAKH2iRMRHlUwFAl5L2Q5yrP0F33D8VKlk7rZ1AFb/zQVWrouNXMK4G2QfLDYVGQ==}
+  replicad-opencascadejs@file:vendor/replicad-opencascadejs:
+    resolution: {directory: vendor/replicad-opencascadejs, type: directory}
 
   replicad@0.23.1:
     resolution: {integrity: sha512-ODqpVtyU/NQx+ZzQFPqj9j4Hg4eCZNv9M1RblbhX6cQ/nzPeU0rDax+B/AOnxGWDA4Np61sbnAaqWuiF4JwZTA==}
@@ -3891,7 +3891,7 @@ snapshots:
     dependencies:
       regex-utilities: 2.3.0
 
-  replicad-opencascadejs@0.23.0: {}
+  replicad-opencascadejs@file:vendor/replicad-opencascadejs: {}
 
   replicad@0.23.1:
     dependencies:

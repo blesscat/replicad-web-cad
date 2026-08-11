@@ -118,7 +118,7 @@ test('OpenGrid Snap route exposes profiles, features, and one shared outer offse
   await page.reload()
   await expect(footprint).toHaveValue('quarter')
   const persistedSnap = await page.evaluate(() => {
-    const raw = localStorage.getItem('replicad-web-cad.component-parameters')
+    const raw = localStorage.getItem('shape-shortcut.component-parameters')
     if (!raw) return null
     const payload = JSON.parse(raw) as {
       values?: Record<string, Record<string, unknown>>
@@ -200,5 +200,43 @@ test('OpenGrid Snap generates the complete assembly and exports the committed re
   const directionalStepDownload = await directionalStepDownloadPromise
   expect(directionalStepDownload.suggestedFilename()).toBe(
     'opengrid-snap-directional-full-offset0.2-full-corners1-center1.step',
+  )
+})
+
+test('OpenGrid Snap commits the user-reported Directional Lite offset build', async ({
+  page,
+  browserName,
+}) => {
+  test.setTimeout(180_000)
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.goto('/cad/opengrid-snap')
+  await expect(page.getByRole('button', { name: '下載 STEP' })).toBeEnabled({
+    timeout: 90_000,
+  })
+
+  await page
+    .getByRole('combobox', { name: 'OpenGrid Snap 型號' })
+    .selectOption('Lite')
+  await page
+    .getByRole('combobox', { name: 'OpenGrid Snap 幾何版本' })
+    .selectOption('Directional')
+  await page.getByRole('checkbox', { name: '定位孔' }).check()
+  await page.getByRole('checkbox', { name: '移除孔' }).check()
+
+  const offset = page.getByRole('slider', { name: '外框總增量（X/Y）' })
+  for (let step = 0; step < 7; step += 1) {
+    await offset.press('ArrowRight')
+  }
+  await expect(offset).toHaveValue('0.35')
+  await expect(page.getByLabel('寬度 X 25.95 mm')).toBeVisible({
+    timeout: 90_000,
+  })
+  await expect(page.getByLabel('深度 Y 26.35 mm')).toBeVisible()
+
+  const stepDownloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '下載 STEP' }).click()
+  const stepDownload = await stepDownloadPromise
+  expect(stepDownload.suggestedFilename()).toBe(
+    'opengrid-snap-directional-lite-offset0.35-full-corners1-center1.step',
   )
 })

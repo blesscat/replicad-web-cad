@@ -25,7 +25,7 @@ import { OPENGRID_SNAP_BOUNDARY_PROFILE } from './boundary'
 
 const QUALITY_TOLERANCE = 0.05
 // Meshing an offset assembly can add a small OCC boundary epsilon to the
-// extracted solid boxes; keep this separate from fixed-core volume checks.
+// extracted solid boxes; keep this separate from scaled-core volume checks.
 export const OPENGRID_SNAP_GENERATED_ENVELOPE_TOLERANCE = 0.45
 // Cloning and meshing the imported zero-offset compound can expand OCC's
 // cached envelope by this deterministic amount without changing its solids.
@@ -202,6 +202,45 @@ function largestSolid(shape: Shape3D): Solid {
   return selected
 }
 
+type SolidDescriptor = {
+  bounds: ModelBounds
+  volume: number
+}
+
+function sortedSolidDescriptors(shape: Shape3D): SolidDescriptor[] {
+  const oc = getOC()
+  const explorer = new oc.TopExp_Explorer_2(
+    shape.wrapped,
+    oc.TopAbs_ShapeEnum.TopAbs_SOLID as unknown as TopAbs_ShapeEnum,
+    oc.TopAbs_ShapeEnum.TopAbs_SHAPE as unknown as TopAbs_ShapeEnum,
+  )
+  const descriptors: SolidDescriptor[] = []
+  try {
+    while (explorer.More()) {
+      const solid = new Solid(oc.TopoDS.Solid_1(explorer.Current()))
+      try {
+        descriptors.push({
+          bounds: readBounds(solid),
+          volume: measureVolume(solid),
+        })
+      } finally {
+        solid.delete()
+      }
+      explorer.Next()
+    }
+  } finally {
+    explorer.delete()
+  }
+  return descriptors.sort((left, right) => {
+    if (Math.abs(left.volume - right.volume) > 0.01) {
+      return right.volume - left.volume
+    }
+    const xDifference = left.bounds.min[0] - right.bounds.min[0]
+    if (Math.abs(xDifference) > 0.01) return xDifference
+    return left.bounds.min[1] - right.bounds.min[1]
+  })
+}
+
 function volumeInProbe(shape: Shape3D, probeBounds: Probe): number {
   const probe = makeBox(probeBounds.min, probeBounds.max)
   let intersection: Shape3D | null = null
@@ -284,57 +323,6 @@ function probeFitsInBounds(
     point[1] >= bounds.min[1] + radius &&
     point[1] <= bounds.max[1] - radius
   )
-}
-
-function featureTranslationFor(
-  parameters: OpenGridSnapParameters,
-): [number, number] {
-  if (parameters.footprint === 'full') return [0, 0]
-
-  const fullBounds = boundsForOpenGridSnap({
-    variant: parameters.variant,
-    profile: parameters.profile,
-    offset: parameters.offset,
-    footprint: 'full',
-  })
-  const axes = openGridSnapCanonicalAxesFor(parameters.footprint)
-  const sourceMinX =
-    fullBounds.min[0] - (axes.halfCellX === 'none' ? 0 : parameters.offset / 2)
-  const sourceMaxX =
-    fullBounds.max[0] + (axes.halfCellX === 'none' ? 0 : parameters.offset / 2)
-  const sourceMinY =
-    fullBounds.min[1] - (axes.halfCellY === 'none' ? 0 : parameters.offset / 2)
-  const sourceMaxY =
-    fullBounds.max[1] + (axes.halfCellY === 'none' ? 0 : parameters.offset / 2)
-
-  let translationX = 0
-  let translationY = 0
-  if (axes.halfCellX === 'left') {
-    translationX = -(sourceMinX + 0) / 2
-  }
-  if (axes.halfCellX === 'right') {
-    translationX = -(0 + sourceMaxX) / 2
-  }
-  if (axes.halfCellX === 'none') {
-    translationX = -(sourceMinX + sourceMaxX) / 2
-  }
-  if (axes.halfCellY === 'bottom') {
-    translationY = -(sourceMinY + 0) / 2
-  }
-  if (axes.halfCellY === 'top') {
-    translationY = -(0 + sourceMaxY) / 2
-  }
-  if (axes.halfCellY === 'none') {
-    translationY = -(sourceMinY + sourceMaxY) / 2
-  }
-  return [translationX, translationY]
-}
-
-function translateFeaturePoint(
-  point: [number, number],
-  translation: [number, number],
-): [number, number] {
-  return [point[0] + translation[0], point[1] + translation[1]]
 }
 
 function locatingHoleElasticSlotProbes(
@@ -437,6 +425,7 @@ function inspectOptionalFeatureProbes(
   parameters: OpenGridSnapParameters,
   bounds: ModelBounds | null,
   failures: string[],
+  reference: Shape3D,
 ): number[] {
   if (!bounds) return []
 
@@ -444,16 +433,26 @@ function inspectOptionalFeatureProbes(
     parameters.profile,
     parameters.variant,
   )
-  const translation = featureTranslationFor(parameters)
   const central = largestSolid(shape)
+  const referenceCentral = largestSolid(reference)
+  const referenceBounds = readBounds(referenceCentral)
+  const referenceAssemblyBounds = readBounds(reference)
   const probeVolumes: number[] = []
   try {
     if (parameters.fourCornerLocatingHoles) {
       const probeRadius = definition.locatingHoleRadius - 0.15
+      const upperHoleBounds: ModelBounds = {
+        min: [
+          bounds.min[0],
+          bounds.min[1],
+          Math.max(bounds.min[2] + 0.1, definition.locatingHoleSlotStepZ + 0.1),
+        ],
+        max: [bounds.max[0], bounds.max[1], bounds.max[2] - 0.1],
+      }
       for (const sourceCenter of openGridSnapLocatingHoleCentersFor(
         definition,
       )) {
-        const center = translateFeaturePoint(sourceCenter, translation)
+        const center = sourceCenter
         if (
           !probeFitsInBounds(
             center,
@@ -478,44 +477,118 @@ function inspectOptionalFeatureProbes(
         if (annulusVolume <= QUALITY_TOLERANCE) {
           failures.push('features:locating-hole-diameter-or-center-invalid')
         }
-      }
-      const lowerSlotProbes = locatingHoleElasticSlotProbes(
-        definition,
-        translation,
-        bounds.min[2] + 0.05,
-        definition.locatingHoleSlotStepZ - 0.05,
-      )
-      const upperSlotProbes = locatingHoleElasticSlotProbes(
-        definition,
-        translation,
-        definition.locatingHoleSlotStepZ + 0.05,
-        bounds.max[2] - 0.05,
-      )
-      for (let index = 0; index < lowerSlotProbes.length; index += 1) {
-        const lowerProbe = lowerSlotProbes[index]
-        const upperProbe = upperSlotProbes[index]
-        if (!lowerProbe || !upperProbe) continue
+        const upperHoleHeight = upperHoleBounds.max[2] - upperHoleBounds.min[2]
         if (
-          !probeFitsInBoundsBox(lowerProbe, bounds) ||
-          !probeFitsInBoundsBox(upperProbe, bounds)
+          upperHoleHeight > 0 &&
+          probeFitsInBounds(
+            center,
+            definition.locatingHoleRadius + 0.15,
+            upperHoleBounds,
+          )
         ) {
-          continue
+          const outerAnnulusVolume = volumeInCylindricalAnnulus(
+            central,
+            center,
+            definition.locatingHoleRadius,
+            definition.locatingHoleRadius + 0.15,
+            upperHoleBounds,
+          )
+          const referenceOuterAnnulusVolume = volumeInCylindricalAnnulus(
+            referenceCentral,
+            sourceCenter,
+            definition.locatingHoleRadius,
+            definition.locatingHoleRadius + 0.15,
+            {
+              min: [
+                referenceBounds.min[0],
+                referenceBounds.min[1],
+                upperHoleBounds.min[2],
+              ],
+              max: [
+                referenceBounds.max[0],
+                referenceBounds.max[1],
+                upperHoleBounds.max[2],
+              ],
+            },
+          )
+          const innerAnnulusVolume = volumeInCylindricalAnnulus(
+            central,
+            center,
+            definition.locatingHoleRadius - 0.15,
+            definition.locatingHoleRadius,
+            upperHoleBounds,
+          )
+          if (
+            Math.abs(outerAnnulusVolume - referenceOuterAnnulusVolume) >
+              Math.max(0.15, referenceOuterAnnulusVolume * 0.08) ||
+            innerAnnulusVolume > 0.15
+          ) {
+            failures.push('features:locating-hole-clearance-invalid')
+          }
         }
-        const lowerSlotVolume = volumeInBoxProbe(central, lowerProbe)
-        const upperSlotVolume = volumeInBoxProbe(central, upperProbe)
-        probeVolumes.push(lowerSlotVolume, upperSlotVolume)
-        if (
-          lowerSlotVolume > QUALITY_TOLERANCE ||
-          upperSlotVolume <= QUALITY_TOLERANCE
-        ) {
-          failures.push('features:locating-hole-elastic-slot-missing')
+      }
+      if (parameters.footprint === 'full') {
+        const lowerSlotProbes = locatingHoleElasticSlotProbes(
+          definition,
+          [0, 0],
+          bounds.min[2] + 0.05,
+          definition.locatingHoleSlotStepZ - 0.05,
+        )
+        const upperSlotProbes = locatingHoleElasticSlotProbes(
+          definition,
+          [0, 0],
+          definition.locatingHoleSlotStepZ + 0.05,
+          bounds.max[2] - 0.05,
+        )
+        for (let index = 0; index < lowerSlotProbes.length; index += 1) {
+          const lowerProbe = lowerSlotProbes[index]
+          const upperProbe = upperSlotProbes[index]
+          if (!lowerProbe || !upperProbe) continue
+          if (
+            !probeFitsInBoundsBox(lowerProbe, bounds) ||
+            !probeFitsInBoundsBox(upperProbe, bounds)
+          ) {
+            continue
+          }
+          const lowerSlotVolume = volumeInBoxProbe(central, lowerProbe)
+          const upperSlotVolume = volumeInBoxProbe(central, upperProbe)
+          probeVolumes.push(lowerSlotVolume, upperSlotVolume)
+          if (
+            lowerSlotVolume > QUALITY_TOLERANCE ||
+            upperSlotVolume <= QUALITY_TOLERANCE
+          ) {
+            failures.push('features:locating-hole-elastic-slot-missing')
+          }
+        }
+      }
+
+      if (parameters.footprint !== 'full' && !parameters.centerRemoverHole) {
+        for (const sourceCenter of openGridSnapLocatingHoleCentersFor(
+          definition,
+        )) {
+          const translatedCenter = translatedPartialPointFor(
+            sourceCenter,
+            parameters,
+            referenceAssemblyBounds,
+          )
+          if (!translatedCenter) continue
+          if (!probeFitsInBounds(translatedCenter, 0.75, bounds)) continue
+          const translatedHoleProbe = volumeInCylinder(
+            central,
+            translatedCenter,
+            0.75,
+            bounds,
+          )
+          if (translatedHoleProbe <= QUALITY_TOLERANCE) {
+            failures.push('features:partial-locating-hole-translated')
+          }
         }
       }
     } else {
       for (const sourceCenter of openGridSnapLocatingHoleCentersFor(
         definition,
       )) {
-        const center = translateFeaturePoint(sourceCenter, translation)
+        const center = sourceCenter
         if (!probeFitsInBounds(center, 0.75, bounds)) continue
         const volume = volumeInCylinder(central, center, 0.75, bounds)
         probeVolumes.push(volume)
@@ -526,7 +599,7 @@ function inspectOptionalFeatureProbes(
     }
 
     if (parameters.centerRemoverHole) {
-      const center = translateFeaturePoint([0, 0], translation)
+      const center: [number, number] = [0, 0]
       if (
         !probeFitsInBounds(
           center,
@@ -569,7 +642,7 @@ function inspectOptionalFeatureProbes(
         failures.push('features:center-remover-missing')
       }
     } else {
-      const center = translateFeaturePoint([0, 0], translation)
+      const center: [number, number] = [0, 0]
       if (!probeFitsInBounds(center, 0.75, bounds)) {
         return probeVolumes
       }
@@ -603,6 +676,7 @@ function inspectOptionalFeatureProbes(
     }
   } finally {
     deleteShape(central)
+    deleteShape(referenceCentral)
   }
   return probeVolumes
 }
@@ -649,9 +723,136 @@ function isBRepValid(shape: Shape3D): boolean {
   }
 }
 
-function compareFixedCore(
+type XYEnvelopeTransform = {
+  scaleX: number
+  scaleY: number
+  centerX: number
+  centerY: number
+}
+
+function xyEnvelopeTransformFor(
+  parameters: OpenGridSnapParameters,
+  sourceBounds: ModelBounds,
+  targetBounds = boundsForOpenGridSnap(parameters),
+): XYEnvelopeTransform {
+  const sourceSpanX = sourceBounds.max[0] - sourceBounds.min[0]
+  const sourceSpanY = sourceBounds.max[1] - sourceBounds.min[1]
+  return {
+    scaleX: (targetBounds.max[0] - targetBounds.min[0]) / sourceSpanX,
+    scaleY: (targetBounds.max[1] - targetBounds.min[1]) / sourceSpanY,
+    centerX: (targetBounds.min[0] + targetBounds.max[0]) / 2,
+    centerY: (targetBounds.min[1] + targetBounds.max[1]) / 2,
+  }
+}
+
+function preFootprintBoundsFor(
+  parameters: OpenGridSnapParameters,
+): ModelBounds {
+  const fullBounds = boundsForOpenGridSnap({
+    variant: parameters.variant,
+    profile: parameters.profile,
+    offset: parameters.offset,
+    footprint: 'full',
+  })
+  const axes = openGridSnapCanonicalAxesFor(parameters.footprint)
+  const extraX = axes.halfCellX === 'none' ? 0 : parameters.offset / 2
+  const extraY = axes.halfCellY === 'none' ? 0 : parameters.offset / 2
+  return {
+    min: [
+      fullBounds.min[0] - extraX,
+      fullBounds.min[1] - extraY,
+      fullBounds.min[2],
+    ],
+    max: [
+      fullBounds.max[0] + extraX,
+      fullBounds.max[1] + extraY,
+      fullBounds.max[2],
+    ],
+  }
+}
+
+function partialClipTranslationFor(
+  parameters: OpenGridSnapParameters,
+  sourceBounds: ModelBounds,
+): [number, number] {
+  let minX = sourceBounds.min[0]
+  let maxX = sourceBounds.max[0]
+  let minY = sourceBounds.min[1]
+  let maxY = sourceBounds.max[1]
+  const axes = openGridSnapCanonicalAxesFor(parameters.footprint)
+  if (axes.halfCellX === 'left') maxX = 0
+  if (axes.halfCellX === 'right') minX = 0
+  if (axes.halfCellY === 'bottom') maxY = 0
+  if (axes.halfCellY === 'top') minY = 0
+  return [-(minX + maxX) / 2, -(minY + maxY) / 2]
+}
+
+function pointIsInsidePartialClip(
+  point: [number, number],
+  parameters: OpenGridSnapParameters,
+): boolean {
+  const axes = openGridSnapCanonicalAxesFor(parameters.footprint)
+  if (axes.halfCellX === 'left' && point[0] > 0.05) return false
+  if (axes.halfCellX === 'right' && point[0] < -0.05) return false
+  if (axes.halfCellY === 'bottom' && point[1] > 0.05) return false
+  if (axes.halfCellY === 'top' && point[1] < -0.05) return false
+  return true
+}
+
+function translatedPartialPointFor(
+  sourcePoint: [number, number],
+  parameters: OpenGridSnapParameters,
+  referenceBounds: ModelBounds,
+): [number, number] | null {
+  if (parameters.footprint === 'full') return null
+  const targetBounds = preFootprintBoundsFor(parameters)
+  const transform = xyEnvelopeTransformFor(
+    parameters,
+    referenceBounds,
+    targetBounds,
+  )
+  const transformed: [number, number] = [
+    transform.centerX + (sourcePoint[0] - transform.centerX) * transform.scaleX,
+    transform.centerY + (sourcePoint[1] - transform.centerY) * transform.scaleY,
+  ]
+  if (!pointIsInsidePartialClip(transformed, parameters)) return null
+  const translation = partialClipTranslationFor(parameters, targetBounds)
+  return [transformed[0] + translation[0], transformed[1] + translation[1]]
+}
+
+function transformBoundsXY(
+  bounds: ModelBounds,
+  transform: XYEnvelopeTransform,
+): ModelBounds {
+  const minX =
+    transform.centerX + (bounds.min[0] - transform.centerX) * transform.scaleX
+  const maxX =
+    transform.centerX + (bounds.max[0] - transform.centerX) * transform.scaleX
+  const minY =
+    transform.centerY + (bounds.min[1] - transform.centerY) * transform.scaleY
+  const maxY =
+    transform.centerY + (bounds.max[1] - transform.centerY) * transform.scaleY
+  return {
+    min: [minX, minY, bounds.min[2]],
+    max: [maxX, maxY, bounds.max[2]],
+  }
+}
+
+function transformProbeXY(probe: Probe, transform: XYEnvelopeTransform): Probe {
+  const bounds = transformBoundsXY(
+    {
+      min: probe.min,
+      max: probe.max,
+    },
+    transform,
+  )
+  return { min: bounds.min, max: bounds.max }
+}
+
+function compareTransformedCore(
   shape: Shape3D,
   reference: Shape3D,
+  parameters: OpenGridSnapParameters,
   height: number,
   failures: string[],
 ): {
@@ -669,26 +870,37 @@ function compareFixedCore(
     referenceCentral = largestSolid(reference)
     centralBounds = readBounds(central)
     const referenceBounds = readBounds(referenceCentral)
+    const transform = xyEnvelopeTransformFor(parameters, readBounds(reference))
+    const expectedBounds = transformBoundsXY(referenceBounds, transform)
     centralVolume = measureVolume(central)
     const referenceVolume = measureVolume(referenceCentral)
-    if (!boundsMatch(centralBounds, referenceBounds)) {
-      failures.push('fixed-core:central-bounds-changed')
+    if (!boundsMatch(centralBounds, expectedBounds)) {
+      failures.push('transformed-core:central-bounds-mismatch')
     }
-    if (!isClose(centralVolume, referenceVolume)) {
-      failures.push('fixed-core:central-volume-changed')
+    if (
+      !isClose(
+        centralVolume,
+        referenceVolume * transform.scaleX * transform.scaleY,
+      )
+    ) {
+      failures.push('transformed-core:central-volume-mismatch')
     }
 
-    for (const probe of fixedInternalProbes(height)) {
-      const actual = volumeInProbe(shape, probe)
-      const expected = volumeInProbe(reference, probe)
+    for (const sourceProbe of fixedInternalProbes(height)) {
+      const actualProbe = transformProbeXY(sourceProbe, transform)
+      const actual = volumeInProbe(shape, actualProbe)
+      const expected =
+        volumeInProbe(reference, sourceProbe) *
+        transform.scaleX *
+        transform.scaleY
       internalProbeVolumes.push(actual)
       if (!isClose(actual, expected)) {
-        failures.push('fixed-core:internal-probe-changed')
+        failures.push('transformed-core:internal-probe-mismatch')
       }
     }
   } catch (error) {
     failures.push(
-      `fixed-core:${error instanceof Error ? error.message : String(error)}`,
+      `transformed-core:${error instanceof Error ? error.message : String(error)}`,
     )
   } finally {
     deleteShape(central)
@@ -696,6 +908,226 @@ function compareFixedCore(
   }
 
   return { centralBounds, centralVolume, internalProbeVolumes }
+}
+
+function compareTransformedStandardAssembly(
+  shape: Shape3D,
+  reference: Shape3D,
+  parameters: OpenGridSnapParameters,
+  failures: string[],
+): void {
+  if (parameters.profile !== 'Standard' || hasHalfCell(parameters)) return
+
+  const referenceBounds = readBounds(reference)
+  const transform = xyEnvelopeTransformFor(parameters, referenceBounds)
+  const referenceMembers = sortedSolidDescriptors(reference)
+  const generatedMembers = sortedSolidDescriptors(shape)
+  if (generatedMembers.length !== referenceMembers.length) {
+    failures.push('transformed-assembly:member-count-mismatch')
+    return
+  }
+
+  for (let index = 0; index < referenceMembers.length; index += 1) {
+    const referenceMember = referenceMembers[index]
+    const generatedMember = generatedMembers[index]
+    if (!referenceMember || !generatedMember) {
+      failures.push('transformed-assembly:member-missing')
+      continue
+    }
+    if (
+      !boundsMatch(
+        generatedMember.bounds,
+        transformBoundsXY(referenceMember.bounds, transform),
+        0.15,
+      )
+    ) {
+      failures.push('transformed-assembly:member-bounds-mismatch')
+    }
+    if (
+      index > 0 ||
+      (!parameters.fourCornerLocatingHoles && !parameters.centerRemoverHole)
+    ) {
+      const expectedVolume =
+        referenceMember.volume * transform.scaleX * transform.scaleY
+      if (
+        !isClose(
+          generatedMember.volume,
+          expectedVolume,
+          Math.max(0.2, expectedVolume * 0.002),
+        )
+      ) {
+        failures.push('transformed-assembly:member-volume-mismatch')
+      }
+    }
+  }
+}
+
+function directionalProfileProbes(height: number): Probe[] {
+  const zMin = Math.max(0.2, height - 0.8)
+  const zMax = height - 0.1
+  return [
+    { min: [-11, -11, zMin], max: [-9, -9, zMax] },
+    { min: [9, -11, zMin], max: [11, -9, zMax] },
+    { min: [-11, 9, zMin], max: [-9, 11, zMax] },
+    { min: [9, 10.5, zMin], max: [11, 12.5, zMax] },
+    { min: [-11, -1, zMin], max: [-9, 1, zMax] },
+    { min: [9, -1, zMin], max: [11, 1, zMax] },
+  ]
+}
+
+function partialScaleProbeCandidates(
+  parameters: OpenGridSnapParameters,
+  height: number,
+): Probe[] {
+  const axes = openGridSnapCanonicalAxesFor(parameters.footprint)
+  const negativeRange: [number, number] = [-8, -7]
+  const positiveRange: [number, number] = [7, 8]
+  let xRanges: Array<[number, number]>
+  if (axes.halfCellX === 'left') {
+    xRanges = [negativeRange]
+  } else if (axes.halfCellX === 'right') {
+    xRanges = [positiveRange]
+  } else {
+    xRanges = [negativeRange, positiveRange]
+  }
+  let yRanges: Array<[number, number]>
+  if (axes.halfCellY === 'top') {
+    yRanges = [[3, 5]]
+  } else if (axes.halfCellY === 'bottom') {
+    yRanges = [[-5, -3]]
+  } else {
+    yRanges = [
+      [-5, -3],
+      [3, 5],
+    ]
+  }
+  const probes: Probe[] = []
+  const zMin = 0.1
+  const zMax = Math.max(zMin + 0.1, height - 0.1)
+  for (const [minX, maxX] of xRanges) {
+    for (const [minY, maxY] of yRanges) {
+      probes.push({ min: [minX, minY, zMin], max: [maxX, maxY, zMax] })
+    }
+  }
+  return probes
+}
+
+function translateProbe(probe: Probe, translation: [number, number]): Probe {
+  return {
+    min: [
+      probe.min[0] + translation[0],
+      probe.min[1] + translation[1],
+      probe.min[2],
+    ],
+    max: [
+      probe.max[0] + translation[0],
+      probe.max[1] + translation[1],
+      probe.max[2],
+    ],
+  }
+}
+
+function compareTransformedPartialAssembly(
+  shape: Shape3D,
+  reference: Shape3D,
+  parameters: OpenGridSnapParameters,
+  bounds: ModelBounds | null,
+  failures: string[],
+): void {
+  if (
+    parameters.footprint === 'full' ||
+    !bounds ||
+    parameters.offset <= 0 ||
+    parameters.fourCornerLocatingHoles ||
+    parameters.centerRemoverHole
+  ) {
+    return
+  }
+  const referenceBounds = readBounds(reference)
+  const targetBounds = preFootprintBoundsFor(parameters)
+  const transform = xyEnvelopeTransformFor(
+    parameters,
+    referenceBounds,
+    targetBounds,
+  )
+  const translation = partialClipTranslationFor(parameters, targetBounds)
+  let comparedProbeCount = 0
+  for (const sourceProbe of partialScaleProbeCandidates(
+    parameters,
+    OPENGRID_SNAP_CONFIGURATION.variantHeights[parameters.variant],
+  )) {
+    const expected = volumeInProbe(reference, sourceProbe)
+    if (expected <= QUALITY_TOLERANCE) continue
+    const transformedProbe = transformProbeXY(sourceProbe, transform)
+    if (
+      !pointIsInsidePartialClip(
+        [
+          (transformedProbe.min[0] + transformedProbe.max[0]) / 2,
+          (transformedProbe.min[1] + transformedProbe.max[1]) / 2,
+        ],
+        parameters,
+      )
+    ) {
+      continue
+    }
+    const actualProbe = translateProbe(transformedProbe, translation)
+    if (!probeFitsInBoundsBox(actualProbe, bounds)) continue
+    const actual = volumeInProbe(shape, actualProbe)
+    comparedProbeCount += 1
+    if (
+      !isClose(
+        actual,
+        expected * transform.scaleX * transform.scaleY,
+        Math.max(0.05, expected * 0.1),
+      )
+    ) {
+      failures.push('transformed-partial:probe-mismatch')
+    }
+  }
+  if (comparedProbeCount === 0) {
+    failures.push('transformed-partial:probes-empty')
+  }
+}
+
+function compareTransformedDirectionalProfile(
+  shape: Shape3D,
+  reference: Shape3D,
+  parameters: OpenGridSnapParameters,
+  failures: string[],
+): void {
+  if (
+    parameters.profile !== 'Directional' ||
+    parameters.footprint !== 'full' ||
+    parameters.offset <= 0
+  ) {
+    return
+  }
+
+  const transform = xyEnvelopeTransformFor(parameters, readBounds(reference))
+  let comparedProbeCount = 0
+  for (const sourceProbe of directionalProfileProbes(
+    OPENGRID_SNAP_CONFIGURATION.variantHeights[parameters.variant],
+  )) {
+    const expected = volumeInProbe(reference, sourceProbe)
+    if (expected <= QUALITY_TOLERANCE) continue
+    const actual = volumeInProbe(
+      shape,
+      transformProbeXY(sourceProbe, transform),
+    )
+    comparedProbeCount += 1
+    if (
+      !isClose(
+        actual,
+        expected * transform.scaleX * transform.scaleY,
+        Math.max(0.05, expected * 0.1),
+      )
+    ) {
+      failures.push('transformed-profile:directional-probe-mismatch')
+    }
+  }
+  if (comparedProbeCount === 0) {
+    failures.push('transformed-profile:directional-probes-empty')
+  }
 }
 
 function hasHalfCell(parameters: OpenGridSnapParameters): boolean {
@@ -1077,6 +1509,22 @@ export function inspectOpenGridSnapShapeQuality(
     )
   }
 
+  try {
+    compareTransformedStandardAssembly(shape, reference, parameters, failures)
+    compareTransformedDirectionalProfile(shape, reference, parameters, failures)
+    compareTransformedPartialAssembly(
+      shape,
+      reference,
+      parameters,
+      bounds,
+      failures,
+    )
+  } catch (error) {
+    failures.push(
+      `transformed-profile:${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+
   if (hasHalfCell(parameters)) {
     internalProbeVolumes = inspectHalfCellQuality(
       shape,
@@ -1100,15 +1548,16 @@ export function inspectOpenGridSnapShapeQuality(
     !parameters.fourCornerLocatingHoles &&
     !parameters.centerRemoverHole
   ) {
-    const fixedCore = compareFixedCore(
+    const transformedCore = compareTransformedCore(
       shape,
       reference,
+      parameters,
       OPENGRID_SNAP_CONFIGURATION.variantHeights[parameters.variant],
       failures,
     )
-    centralBounds = fixedCore.centralBounds
-    centralVolume = fixedCore.centralVolume
-    internalProbeVolumes = fixedCore.internalProbeVolumes
+    centralBounds = transformedCore.centralBounds
+    centralVolume = transformedCore.centralVolume
+    internalProbeVolumes = transformedCore.internalProbeVolumes
   } else {
     try {
       const central = largestSolid(shape)
@@ -1128,6 +1577,7 @@ export function inspectOpenGridSnapShapeQuality(
       parameters,
       bounds,
       failures,
+      reference,
     )
   } catch (error) {
     failures.push(
