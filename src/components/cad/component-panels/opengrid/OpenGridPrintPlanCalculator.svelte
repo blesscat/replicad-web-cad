@@ -82,86 +82,90 @@
     </p>
   </div>
 
-  <div class="grid min-w-0 gap-2 sm:grid-cols-2">
-    <ParameterField
-      label="目標 X"
-      unit="mm"
-      error={errors.targetX}
-      errorId="opengrid-print-plan-target-x-error"
-    >
-      <input
-        aria-describedby={errors.targetX
-          ? 'opengrid-print-plan-target-x-error'
-          : undefined}
-        aria-invalid={Boolean(errors.targetX)}
-        aria-label="目標 X（mm）"
-        class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
-        inputmode="decimal"
-        type="text"
-        value={targetX}
-        oninput={(event) => updateInput('targetX', event)}
-      />
-    </ParameterField>
+  <div class="grid min-w-0 gap-2">
+    <div class="grid min-w-0 grid-cols-2 gap-2">
+      <ParameterField
+        label="目標 X"
+        unit="mm"
+        error={errors.targetX}
+        errorId="opengrid-print-plan-target-x-error"
+      >
+        <input
+          aria-describedby={errors.targetX
+            ? 'opengrid-print-plan-target-x-error'
+            : undefined}
+          aria-invalid={Boolean(errors.targetX)}
+          aria-label="目標 X（mm）"
+          class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
+          inputmode="decimal"
+          type="text"
+          value={targetX}
+          oninput={(event) => updateInput('targetX', event)}
+        />
+      </ParameterField>
 
-    <ParameterField
-      label="目標 Y"
-      unit="mm"
-      error={errors.targetY}
-      errorId="opengrid-print-plan-target-y-error"
-    >
-      <input
-        aria-describedby={errors.targetY
-          ? 'opengrid-print-plan-target-y-error'
-          : undefined}
-        aria-invalid={Boolean(errors.targetY)}
-        aria-label="目標 Y（mm）"
-        class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
-        inputmode="decimal"
-        type="text"
-        value={targetY}
-        oninput={(event) => updateInput('targetY', event)}
-      />
-    </ParameterField>
+      <ParameterField
+        label="目標 Y"
+        unit="mm"
+        error={errors.targetY}
+        errorId="opengrid-print-plan-target-y-error"
+      >
+        <input
+          aria-describedby={errors.targetY
+            ? 'opengrid-print-plan-target-y-error'
+            : undefined}
+          aria-invalid={Boolean(errors.targetY)}
+          aria-label="目標 Y（mm）"
+          class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
+          inputmode="decimal"
+          type="text"
+          value={targetY}
+          oninput={(event) => updateInput('targetY', event)}
+        />
+      </ParameterField>
+    </div>
 
-    <ParameterField
-      label="列印機 X"
-      unit="mm"
-      error={errors.printerX}
-      errorId="opengrid-print-plan-printer-x-error"
-    >
-      <input
-        aria-describedby={errors.printerX
-          ? 'opengrid-print-plan-printer-x-error'
-          : undefined}
-        aria-invalid={Boolean(errors.printerX)}
-        aria-label="列印機 X（mm）"
-        class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
-        inputmode="decimal"
-        type="text"
-        value={printerX}
-        oninput={(event) => updateInput('printerX', event)}
-      />
-    </ParameterField>
+    <div class="grid min-w-0 grid-cols-2 gap-2">
+      <ParameterField
+        label="列印機 X"
+        unit="mm"
+        error={errors.printerX}
+        errorId="opengrid-print-plan-printer-x-error"
+      >
+        <input
+          aria-describedby={errors.printerX
+            ? 'opengrid-print-plan-printer-x-error'
+            : undefined}
+          aria-invalid={Boolean(errors.printerX)}
+          aria-label="列印機 X（mm）"
+          class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
+          inputmode="decimal"
+          type="text"
+          value={printerX}
+          oninput={(event) => updateInput('printerX', event)}
+        />
+      </ParameterField>
 
-    <ParameterField
-      label="列印機 Y"
-      unit="mm"
-      error={errors.printerY}
-      errorId="opengrid-print-plan-printer-y-error"
-    >
-      <input
-        aria-describedby={errors.printerY
-          ? 'opengrid-print-plan-printer-y-error'
-          : undefined}
-        aria-invalid={Boolean(errors.printerY)}
-        aria-label="列印機 Y（mm）"
-        class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
-        inputmode="decimal"
-        type="text"
-        value={printerY}
-        oninput={(event) => updateInput('printerY', event)}
-      />
-    </ParameterField>
+      <ParameterField
+        label="列印機 Y"
+        unit="mm"
+        error={errors.printerY}
+        errorId="opengrid-print-plan-printer-y-error"
+      >
+        <input
+          aria-describedby={errors.printerY
+            ? 'opengrid-print-plan-printer-y-error'
+            : undefined}
+          aria-invalid={Boolean(errors.printerY)}
+          aria-label="列印機 Y（mm）"
+          class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
+          inputmode="decimal"
+          type="text"
+          value={printerY}
+          oninput={(event) => updateInput('printerY', event)}
+        />
+      </ParameterField>
+    </div>
   </div>
 
   <button

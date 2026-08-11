@@ -1,4 +1,12 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Locator } from '@playwright/test'
+
+async function expectSameRow(first: Locator, second: Locator): Promise<void> {
+  const firstBox = await first.boundingBox()
+  const secondBox = await second.boundingBox()
+  expect(firstBox).not.toBeNull()
+  expect(secondBox).not.toBeNull()
+  expect(Math.abs(firstBox!.y - secondBox!.y)).toBeLessThanOrEqual(1)
+}
 
 test('grid dimension calculators apply counts and preserve manual controls', async ({
   page,
@@ -232,7 +240,18 @@ test('grid dimension calculators remain usable on narrow viewports', async ({
   const openGridTargetX = openGridCalculator.getByRole('textbox', {
     name: '目標 X（mm）',
   })
+  const openGridTargetY = openGridCalculator.getByRole('textbox', {
+    name: '目標 Y（mm）',
+  })
+  const openGridPrinterX = openGridCalculator.getByRole('textbox', {
+    name: '列印機 X（mm）',
+  })
+  const openGridPrinterY = openGridCalculator.getByRole('textbox', {
+    name: '列印機 Y（mm）',
+  })
   await expect(openGridTargetX).toBeVisible()
+  await expectSameRow(openGridTargetX, openGridTargetY)
+  await expectSameRow(openGridPrinterX, openGridPrinterY)
   await openGridTargetX.fill('1000')
   await openGridCalculator
     .getByRole('textbox', { name: '目標 Y（mm）' })
