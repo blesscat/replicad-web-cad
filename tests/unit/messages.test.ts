@@ -538,5 +538,15 @@ describe('Worker contract runtime validation', () => {
         },
       }),
     ).toBe(true)
+
+    expect(
+      isWorkerEvent({
+        ...progress,
+        stage: 'meshing',
+        completed: 42,
+        total: 180,
+        unit: 'faces',
+      }),
+    ).toBe(true)
   })
 })

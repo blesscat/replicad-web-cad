@@ -21,10 +21,18 @@ type TriangulationData = FaceMeshData | null
 
 export const MAX_GLOBAL_MESH_FACE_COUNT = 512
 
+export type MeshFaceProgress = {
+  completed: number
+  total: number
+}
+
+export type MeshFaceProgressReporter = (progress: MeshFaceProgress) => void
+
 export type MeshOptions = {
   tolerance: number
   angularTolerance: number
   faceMeshingThreshold?: number
+  reportFaceProgress?: MeshFaceProgressReporter
 }
 
 function appendNumbers(target: number[], source: number[]): void {
@@ -53,14 +61,17 @@ function countFaces(shape: Shape3D): number {
 function meshFacesIndividually(
   shape: Shape3D,
   options: MeshOptions,
+  faceCount: number,
 ): FaceMeshData {
-  return collectFaceMeshData(shape, options, true)
+  options.reportFaceProgress?.({ completed: 0, total: faceCount })
+  return collectFaceMeshData(shape, options, true, faceCount)
 }
 
 function collectFaceMeshData(
   shape: Shape3D,
   options: MeshOptions,
   meshEachFace: boolean,
+  faceCount?: number,
 ): FaceMeshData {
   const oc = getOC()
   const explorer = new oc.TopExp_Explorer_2(
@@ -76,6 +87,7 @@ function collectFaceMeshData(
   try {
     while (explorer.More()) {
       const face = new Face(oc.TopoDS.Face_1(explorer.Current()))
+      let faceCompleted = false
       try {
         if (meshEachFace) {
           try {
@@ -98,11 +110,18 @@ function collectFaceMeshData(
           appendNumbers(vertices, triangulation.vertices)
           appendNumbers(normals, triangulation.normals)
         }
+        faceCompleted = true
       } finally {
         try {
           face.delete()
         } catch {
           // Keep the primary meshing error if a subshape wrapper is already gone.
+        }
+        if (faceCompleted && faceCount !== undefined) {
+          options.reportFaceProgress?.({
+            completed: index + 1,
+            total: faceCount,
+          })
         }
         index += 1
         explorer.Next()
@@ -284,7 +303,7 @@ export function meshBRep(shape: Shape3D, options: MeshOptions): MeshData {
     const faceMeshingThreshold =
       options.faceMeshingThreshold ?? MAX_GLOBAL_MESH_FACE_COUNT
     if (faceCount !== null && faceCount > faceMeshingThreshold) {
-      mesh = meshFacesIndividually(shape, options)
+      mesh = meshFacesIndividually(shape, options, faceCount)
     } else if (faceCount !== null) {
       mesh = meshShapeGlobally(shape, options)
     } else {

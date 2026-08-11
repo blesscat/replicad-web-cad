@@ -145,7 +145,7 @@ export type ProgressEvent = Envelope<'operation.progress'> & {
   booleanOperation?: BooleanOperationProgress
 }
 
-export type ProgressUnit = 'cells' | 'batches' | 'steps' | 'columns'
+export type ProgressUnit = 'cells' | 'batches' | 'steps' | 'columns' | 'faces'
 
 export type ModelInvalidatedEvent = Envelope<'model.invalidated'> & {
   operationId: string
@@ -272,6 +272,7 @@ const PROGRESS_UNITS: readonly ProgressUnit[] = [
   'batches',
   'steps',
   'columns',
+  'faces',
 ]
 
 const BOOLEAN_OPERATION_KINDS: readonly BooleanOperationKind[] = [
