@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-08-11
+goal: Generate static preview images that reflect each system context preset
+  while preserving canonical model identities.

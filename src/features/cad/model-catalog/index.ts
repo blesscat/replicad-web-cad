@@ -1,4 +1,9 @@
 import type { ModelId } from '../../../cad-contract/units'
+import {
+  systemContextQuery,
+  systemContextLabel,
+  type OpenGridSystemContext,
+} from '../system-entry-context'
 import { boxDefinition } from './components/box'
 import { boxNormalDefinition } from './components/box-normal'
 import { hexagonalColumnDefinition } from './components/hexagonal-column'
@@ -16,6 +21,7 @@ import type {
   ModelFamily,
   ModelFamilyGroup,
   ModelFamilyMetadata,
+  ModelSelectionSubgroup,
 } from './types'
 
 export { displayParameterLabel } from './labels'
@@ -25,8 +31,10 @@ export type {
   ModelFamilyGroup,
   ModelFamilyMetadata,
   ModelPreviewImage,
+  ModelSelectionSubgroup,
   ParameterField,
 } from './types'
+export type { OpenGridSystemContext } from '../system-entry-context'
 export { boxDefinition } from './components/box'
 export { boxNormalDefinition } from './components/box-normal'
 export { hexagonalColumnDefinition } from './components/hexagonal-column'
@@ -77,15 +85,77 @@ export const modelFamilyMetadata: Readonly<
   },
 }
 
+function contextPreviewFor(
+  definition: ModelDefinition,
+  context: OpenGridSystemContext,
+) {
+  if (!definition.previewImage) return undefined
+  return {
+    ...definition.previewImage,
+    src: `/model-previews/${definition.id}-${context}.png`,
+    alt: `${definition.previewImage.alt}（${systemContextLabel(context)}）`,
+  }
+}
+
+function entryForContext(
+  definition: ModelDefinition,
+  context: OpenGridSystemContext,
+): ModelDefinition {
+  return {
+    ...definition,
+    systemContext: context,
+    previewImage: contextPreviewFor(definition, context),
+  }
+}
+
+function openGridSubgroups(
+  definitions: ReadonlyArray<ModelDefinition>,
+): ReadonlyArray<ModelSelectionSubgroup> {
+  const openGridDefinitions = definitions.filter(
+    (definition) => definition.family === 'opengrid',
+  )
+  const desk = openGridDefinitions.map((definition) =>
+    entryForContext(definition, 'desk'),
+  )
+  const wall = openGridDefinitions
+    .filter(
+      (definition) =>
+        definition.id === 'opengrid' || definition.id === 'opengrid-snap',
+    )
+    .map((definition) => entryForContext(definition, 'wall'))
+  return [
+    {
+      key: 'desk',
+      label: systemContextLabel('desk'),
+      definitions: desk,
+    },
+    {
+      key: 'wall',
+      label: systemContextLabel('wall'),
+      definitions: wall,
+    },
+  ]
+}
+
 export function groupModelDefinitions(
   definitions: ReadonlyArray<ModelDefinition> = modelDefinitions,
 ): ReadonlyArray<ModelFamilyGroup> {
-  return modelFamilyOrder.map((family) => ({
-    ...modelFamilyMetadata[family],
-    definitions: definitions.filter(
-      (definition) => definition.family === family,
-    ),
-  }))
+  return modelFamilyOrder.map((family) => {
+    if (family === 'opengrid') {
+      const subgroups = openGridSubgroups(definitions)
+      return {
+        ...modelFamilyMetadata[family],
+        definitions: subgroups.flatMap((subgroup) => subgroup.definitions),
+        subgroups,
+      }
+    }
+    return {
+      ...modelFamilyMetadata[family],
+      definitions: definitions.filter(
+        (definition) => definition.family === family,
+      ),
+    }
+  })
 }
 
 export function modelSelectionLabelFor(definition: ModelDefinition): string {
@@ -98,10 +168,13 @@ export function getModelDefinition(
   return modelDefinitions.find((definition) => definition.id === modelId)
 }
 
-export function cadPathForModel(modelId: ModelId): string {
+export function cadPathForModel(
+  modelId: ModelId,
+  systemContext?: OpenGridSystemContext,
+): string {
   const definition = getModelDefinition(modelId)
   if (!definition) throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
-  return `/cad/${definition.id}`
+  return `/cad/${definition.id}${systemContextQuery(systemContext)}`
 }
 
 export function modelIdForCadPath(pathname: string): ModelId | undefined {

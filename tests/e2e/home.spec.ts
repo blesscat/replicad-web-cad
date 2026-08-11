@@ -54,42 +54,82 @@ test('home, model selection, and docs are static Astro pages', async ({
     'data-testid',
     'model-family-hsw',
   )
+  const openGridFamily = page.getByTestId('model-family-opengrid')
+  const openGridSubgroups = page.getByTestId('model-subgroups-opengrid')
+  await expect(
+    openGridFamily.locator(':scope > [data-testid="model-subgroups-opengrid"]'),
+  ).toHaveCount(1)
+  await expect(
+    openGridSubgroups.locator(':scope > [data-testid^="model-subgroup-"]'),
+  ).toHaveCount(2)
+  const openGridFamilyBounds = await openGridFamily.boundingBox()
+  const openGridSubgroupsBounds = await openGridSubgroups.boundingBox()
+  expect(openGridFamilyBounds).not.toBeNull()
+  expect(openGridSubgroupsBounds).not.toBeNull()
+  if (!openGridFamilyBounds || !openGridSubgroupsBounds) {
+    throw new Error('OpenGrid subgroups must be nested inside the family')
+  }
+  expect(openGridSubgroupsBounds.x).toBeGreaterThan(openGridFamilyBounds.x)
 
-  const editLinkFor = (displayName: string) =>
-    page
+  const editLinkFor = (
+    container: ReturnType<typeof page.locator>,
+    displayName: string,
+  ) =>
+    container
       .getByRole('heading', { name: displayName, exact: true })
       .locator('..')
       .getByRole('link', { name: `編輯 ${displayName}`, exact: true })
 
-  await expect(editLinkFor('六角蜂巢')).toHaveAttribute('href', '/cad/hsw-cell')
-  await expect(editLinkFor('圓柱支柱')).toHaveAttribute(
+  const deskSystem = page.getByTestId('model-subgroup-desk')
+  const wallRelated = page.getByTestId('model-subgroup-wall')
+  const hswSeries = page.getByTestId('model-subgroup-hsw')
+  await expect(
+    deskSystem.getByRole('heading', { name: 'Desk System' }),
+  ).toBeVisible()
+  await expect(
+    wallRelated.getByRole('heading', { name: 'Wall Related' }),
+  ).toBeVisible()
+  await expect(editLinkFor(hswSeries, '六角蜂巢')).toHaveAttribute(
     'href',
-    '/cad/opengrid-pillar',
+    '/cad/hsw-cell',
   )
-  await expect(editLinkFor('底板')).toHaveAttribute('href', '/cad/opengrid')
-  await expect(editLinkFor('Snap')).toHaveAttribute(
+  await expect(editLinkFor(deskSystem, '圓柱支柱')).toHaveAttribute(
     'href',
-    '/cad/opengrid-snap',
+    '/cad/opengrid-pillar?system=desk',
   )
-  await expect(editLinkFor('分隔塊')).toHaveAttribute(
+  await expect(editLinkFor(deskSystem, '底板')).toHaveAttribute(
     'href',
-    '/cad/opengrid-divider',
+    '/cad/opengrid?system=desk',
   )
-  await expect(editLinkFor('堆疊盒')).toHaveAttribute(
+  await expect(editLinkFor(deskSystem, 'Snap')).toHaveAttribute(
     'href',
-    '/cad/opengrid-stackable-box',
+    '/cad/opengrid-snap?system=desk',
   )
-  await expect(editLinkFor('可堆疊圓柱')).toHaveAttribute(
+  await expect(editLinkFor(wallRelated, '底板')).toHaveAttribute(
     'href',
-    '/cad/opengrid-stackable-cylinder',
+    '/cad/opengrid?system=wall',
   )
-  await expect(editLinkFor('Snap Remover')).toHaveAttribute(
+  await expect(editLinkFor(wallRelated, 'Snap')).toHaveAttribute(
     'href',
-    '/cad/opengrid-snap-remover',
+    '/cad/opengrid-snap?system=wall',
   )
-  const openGridCards = page
-    .getByTestId('model-family-opengrid')
-    .locator('[data-model-id]')
+  await expect(editLinkFor(deskSystem, '分隔塊')).toHaveAttribute(
+    'href',
+    '/cad/opengrid-divider?system=desk',
+  )
+  await expect(editLinkFor(deskSystem, '堆疊盒')).toHaveAttribute(
+    'href',
+    '/cad/opengrid-stackable-box?system=desk',
+  )
+  await expect(editLinkFor(deskSystem, '可堆疊圓柱')).toHaveAttribute(
+    'href',
+    '/cad/opengrid-stackable-cylinder?system=desk',
+  )
+  await expect(editLinkFor(deskSystem, 'Snap Remover')).toHaveAttribute(
+    'href',
+    '/cad/opengrid-snap-remover?system=desk',
+  )
+  const openGridCards = deskSystem.locator('[data-model-id]')
   await expect(openGridCards.nth(0)).toHaveAttribute(
     'data-model-id',
     'opengrid',
@@ -107,6 +147,7 @@ test('home, model selection, and docs are static Astro pages', async ({
   }
   expect(snapCardBounds.x).toBeGreaterThan(bottomCardBounds.x)
   expect(snapCardBounds.y).toBeCloseTo(bottomCardBounds.y, 0)
+  await expect(wallRelated.locator('[data-model-id]')).toHaveCount(2)
   for (const displayName of [
     '方塊',
     '標準開口盒',

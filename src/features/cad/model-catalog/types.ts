@@ -5,6 +5,7 @@ import type {
   ModelParameterValues,
   ModelValidation,
 } from '../../../cad-contract/units'
+import type { OpenGridSystemContext } from '../system-entry-context'
 
 export type ModelFamily = 'hsw' | 'opengrid' | 'other'
 
@@ -15,6 +16,13 @@ export type ModelFamilyMetadata = {
 }
 
 export type ModelFamilyGroup = ModelFamilyMetadata & {
+  definitions: ReadonlyArray<ModelDefinition>
+  subgroups?: ReadonlyArray<ModelSelectionSubgroup>
+}
+
+export type ModelSelectionSubgroup = {
+  key: OpenGridSystemContext
+  label: string
   definitions: ReadonlyArray<ModelDefinition>
 }
 
@@ -55,4 +63,5 @@ export type ModelDefinition = {
   boundsForParameters: (parameters: ModelParameterValues) => ModelBounds
   exportFileName: (parameters: ModelParameterValues) => string
   stlFileName: (parameters: ModelParameterValues) => string
+  systemContext?: OpenGridSystemContext
 }

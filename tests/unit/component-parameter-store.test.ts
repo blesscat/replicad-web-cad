@@ -68,6 +68,93 @@ function opengridParameters(
 }
 
 describe('component parameter store', () => {
+  it('keeps Desk and Wall parameter snapshots in separate scopes', () => {
+    const storage = createMemoryStorage()
+    const deskStore = createComponentParameterStore({
+      storage,
+      systemContext: 'desk',
+    })
+    const wallStore = createComponentParameterStore({
+      storage,
+      systemContext: 'wall',
+    })
+
+    expect(
+      deskStore.set('opengrid-snap', {
+        variant: 'Lite',
+        profile: 'Standard',
+        offset: 0.2,
+        footprint: 'full',
+        fourCornerLocatingHoles: true,
+        centerRemoverHole: true,
+      }),
+    ).toBe(true)
+    expect(
+      wallStore.set('opengrid-snap', {
+        variant: 'Full',
+        profile: 'Standard',
+        offset: 0,
+        footprint: 'full',
+        fourCornerLocatingHoles: false,
+        centerRemoverHole: false,
+      }),
+    ).toBe(true)
+
+    expect(deskStore.get('opengrid-snap')).toMatchObject({
+      variant: 'Lite',
+      offset: 0.2,
+      fourCornerLocatingHoles: true,
+    })
+    expect(wallStore.get('opengrid-snap')).toMatchObject({
+      variant: 'Full',
+      offset: 0,
+      fourCornerLocatingHoles: false,
+    })
+
+    const persisted = JSON.parse(
+      storage.data.get(COMPONENT_PARAMETER_STORAGE_KEY) ?? '{}',
+    ) as { version?: number; values?: Record<string, unknown> }
+    expect(persisted.version).toBe(2)
+    expect(persisted.values?.desk).toMatchObject({
+      'opengrid-snap': expect.objectContaining({ variant: 'Lite' }),
+    })
+    expect(persisted.values?.wall).toMatchObject({
+      'opengrid-snap': expect.objectContaining({ variant: 'Full' }),
+    })
+
+    deskStore.dispose()
+    wallStore.dispose()
+  })
+
+  it('does not use an unscoped legacy value for a system route', () => {
+    const storage = createMemoryStorage(
+      createPayload({
+        'opengrid-snap': {
+          variant: 'Full',
+          profile: 'Standard',
+          offset: 0.2,
+          footprint: 'full',
+          fourCornerLocatingHoles: false,
+          centerRemoverHole: false,
+        },
+      }),
+    )
+    const store = createComponentParameterStore({
+      storage,
+      systemContext: 'desk',
+    })
+
+    expect(store.get('opengrid-snap')).toEqual({
+      variant: 'Lite',
+      profile: 'Standard',
+      offset: 0.3,
+      footprint: 'full',
+      fourCornerLocatingHoles: true,
+      centerRemoverHole: true,
+    })
+    store.dispose()
+  })
+
   it('uses each component definition default when no value is stored', () => {
     const storage = createMemoryStorage()
     const store = createComponentParameterStore({ storage })
@@ -207,8 +294,8 @@ describe('component parameter store', () => {
 
     const persisted = JSON.parse(
       storage.data.get(COMPONENT_PARAMETER_STORAGE_KEY) ?? '{}',
-    ) as { values?: Record<string, unknown> }
-    expect(persisted.values?.['opengrid-stackable-cylinder']).toEqual({
+    ) as { values?: { legacy?: Record<string, unknown> } }
+    expect(persisted.values?.legacy?.['opengrid-stackable-cylinder']).toEqual({
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       diameter: 80,
       height: 45,
@@ -284,8 +371,8 @@ describe('component parameter store', () => {
 
     const persisted = JSON.parse(
       storage.data.get(COMPONENT_PARAMETER_STORAGE_KEY) ?? '{}',
-    ) as { values?: Record<string, unknown> }
-    expect(persisted.values?.['opengrid-stackable-cylinder']).toEqual(
+    ) as { values?: { legacy?: Record<string, unknown> } }
+    expect(persisted.values?.legacy?.['opengrid-stackable-cylinder']).toEqual(
       bottomPlateParameters,
     )
 
@@ -370,12 +457,14 @@ describe('component parameter store', () => {
     expect(store.set('modular-grid-base', { rows: 2, columns: 3 })).toBe(true)
 
     expect(JSON.parse(storage.writes.at(-1) ?? '')).toEqual({
-      version: 1,
+      version: 2,
       values: {
-        box: { width: 25, depth: 30, height: 40 },
-        'box-normal': { x: 3, y: 4, height: 25, cornerPosts: false },
-        'modular-grid-base': { rows: 2, columns: 3 },
-        'hsw-cell': { rows: 4, columns: 2 },
+        legacy: {
+          box: { width: 25, depth: 30, height: 40 },
+          'box-normal': { x: 3, y: 4, height: 25, cornerPosts: false },
+          'modular-grid-base': { rows: 2, columns: 3 },
+          'hsw-cell': { rows: 4, columns: 2 },
+        },
       },
     })
 
@@ -504,10 +593,10 @@ describe('component parameter store', () => {
 
     expect(store.set('opengrid-snap', store.get('opengrid-snap'))).toBe(true)
     const persisted = JSON.parse(storage.writes.at(-1) ?? '{}') as {
-      values?: Record<string, Record<string, unknown>>
+      values?: { legacy?: Record<string, Record<string, unknown>> }
     }
-    expect(persisted.values?.opengrid).toEqual(board)
-    expect(persisted.values?.['opengrid-snap']).toEqual({
+    expect(persisted.values?.legacy?.opengrid).toEqual(board)
+    expect(persisted.values?.legacy?.['opengrid-snap']).toEqual({
       variant: 'Full',
       profile: 'Standard',
       offset: 0.2,
@@ -515,8 +604,12 @@ describe('component parameter store', () => {
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
     })
-    expect(persisted.values?.['opengrid-snap']).not.toHaveProperty('halfCellX')
-    expect(persisted.values?.['opengrid-snap']).not.toHaveProperty('halfCellY')
+    expect(persisted.values?.legacy?.['opengrid-snap']).not.toHaveProperty(
+      'halfCellX',
+    )
+    expect(persisted.values?.legacy?.['opengrid-snap']).not.toHaveProperty(
+      'halfCellY',
+    )
     store.dispose()
   })
 

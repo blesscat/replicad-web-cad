@@ -5,6 +5,11 @@ import type {
 } from '../../../cad-contract/units'
 import { initialCadState, type CadState } from '../../../features/cad/state'
 import { getModelDefinition } from '../../../features/cad/model-catalog'
+import {
+  cloneModelParameters,
+  getSystemPreset,
+  type OpenGridSystemContext,
+} from '../../../features/cad/system-entry-context'
 import type { ComponentParameterStore } from '../../../features/cad/parameters'
 import type { CadProgress } from '../../../features/cad/progress'
 import type { ExportFormat } from '../../../features/cad/download'
@@ -38,6 +43,7 @@ export type CadWorkspaceController = {
 
 export type CadWorkspaceControllerOptions = {
   parameterStore: ComponentParameterStore
+  systemContext?: OpenGridSystemContext
 }
 
 function cloneOpenGridParameters(
@@ -79,6 +85,7 @@ export function createCadWorkspaceController(
 ): CadWorkspaceController {
   const definition = getModelDefinition(modelId)
   if (!definition) throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
+  const systemContext = options.systemContext
 
   const initialParameters = options.parameterStore.get(modelId)
   let state = initialCadState(modelId, initialParameters)
@@ -115,16 +122,20 @@ export function createCadWorkspaceController(
   })
 
   const onRestoreDefaults = (): void => {
+    const systemPreset = systemContext
+      ? getSystemPreset(modelId, systemContext)
+      : undefined
+    const defaultParameters = cloneModelParameters(
+      systemPreset ?? definition.defaultParameters,
+    )
     if (modelId === 'opengrid') {
       runtime.handleOpenGridParametersChange(
-        cloneOpenGridParameters(
-          definition.defaultParameters as OpenGridParameters,
-        ),
+        cloneOpenGridParameters(defaultParameters as OpenGridParameters),
       )
       return
     }
 
-    for (const [key, value] of Object.entries(definition.defaultParameters)) {
+    for (const [key, value] of Object.entries(defaultParameters)) {
       runtime.handleInputChange(key as ModelParameterKey, String(value))
     }
   }

@@ -7,12 +7,18 @@ import {
   type ModelId,
   type ModelParameterValues,
 } from '../../../cad-contract/units'
-import { getModelDefinition, modelDefinitions } from '../model-catalog'
 import { normalizeOpenGridSnapParameters } from '../../../cad-contract/units'
+import { getModelDefinition, modelDefinitions } from '../model-catalog'
+import {
+  cloneModelParameters,
+  getSystemPreset,
+  type OpenGridSystemContext,
+} from '../system-entry-context'
 
 export const COMPONENT_PARAMETER_STORAGE_KEY =
   'shape-shortcut.component-parameters'
-export const COMPONENT_PARAMETER_STORAGE_VERSION = 1 as const
+export const COMPONENT_PARAMETER_STORAGE_VERSION = 2 as const
+const LEGACY_COMPONENT_PARAMETER_STORAGE_VERSION = 1 as const
 
 export type ComponentParameterStorage = {
   getItem: (key: string) => string | null
@@ -20,9 +26,16 @@ export type ComponentParameterStorage = {
 }
 
 type ComponentParameterEntries = Partial<Record<ModelId, ModelParameterValues>>
+type StorageScope = 'legacy' | OpenGridSystemContext
+type ParameterBuckets = Record<StorageScope, ComponentParameterEntries>
 
 type PersistedParameterPayload = {
   version: typeof COMPONENT_PARAMETER_STORAGE_VERSION
+  values: Partial<Record<StorageScope, Record<string, unknown>>>
+}
+
+type LegacyPersistedParameterPayload = {
+  version: typeof LEGACY_COMPONENT_PARAMETER_STORAGE_VERSION
   values: Record<string, unknown>
 }
 
@@ -35,6 +48,7 @@ export type ComponentParameterStore = {
 
 export type CreateComponentParameterStoreOptions = {
   storage?: ComponentParameterStorage | null
+  systemContext?: OpenGridSystemContext
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -111,22 +125,6 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
   return normalized
 }
 
-function cloneParameters(
-  parameters: ModelParameterValues,
-): ModelParameterValues {
-  if ('customScrewPositions' in parameters && 'chamferCorners' in parameters) {
-    return {
-      ...parameters,
-      chamferCorners: { ...parameters.chamferCorners },
-      connectorSides: { ...parameters.connectorSides },
-      customScrewPositions: parameters.customScrewPositions.map((position) => ({
-        ...position,
-      })),
-    }
-  }
-  return { ...parameters }
-}
-
 function getDefinition(modelId: ModelId) {
   const definition = getModelDefinition(modelId)
   if (!definition) throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
@@ -138,9 +136,7 @@ function normalizeLegacyHalfCellParameters(
   candidate: unknown,
 ): unknown {
   if (!isRecord(candidate)) return candidate
-  if (modelId !== 'opengrid') {
-    return candidate
-  }
+  if (modelId !== 'opengrid') return candidate
   const hasHalfCellX = Object.prototype.hasOwnProperty.call(
     candidate,
     'halfCellX',
@@ -176,17 +172,17 @@ function readPayload(storage: ComponentParameterStorage | null): unknown {
   }
 }
 
-function hydrateEntries(
-  storage: ComponentParameterStorage | null,
-): ComponentParameterEntries {
-  const payload = readPayload(storage)
-  if (!isRecord(payload)) return {}
-  if (payload.version !== COMPONENT_PARAMETER_STORAGE_VERSION) return {}
-  if (!isRecord(payload.values)) return {}
+function emptyBuckets(): ParameterBuckets {
+  return { legacy: {}, desk: {}, wall: {} }
+}
 
+function validatedEntries(
+  candidates: Record<string, unknown> | undefined,
+): ComponentParameterEntries {
+  if (!candidates) return {}
   const entries: ComponentParameterEntries = {}
   for (const definition of modelDefinitions) {
-    const candidate = payload.values[definition.id]
+    const candidate = candidates[definition.id]
     if (candidate === undefined) continue
     const normalizedCandidate = normalizeLegacyHalfCellParameters(
       definition.id,
@@ -196,7 +192,7 @@ function hydrateEntries(
     try {
       const validation = definition.validateParameters(normalizedCandidate)
       if (!validation.valid) continue
-      entries[definition.id] = cloneParameters(validation.value.parameters)
+      entries[definition.id] = cloneModelParameters(validation.value.parameters)
     } catch {
       continue
     }
@@ -204,7 +200,36 @@ function hydrateEntries(
   return entries
 }
 
-function serializeEntries(entries: ComponentParameterEntries): string {
+function hydrateBuckets(
+  storage: ComponentParameterStorage | null,
+): ParameterBuckets {
+  const payload = readPayload(storage)
+  if (!isRecord(payload) || !isRecord(payload.values)) return emptyBuckets()
+
+  if (payload.version === LEGACY_COMPONENT_PARAMETER_STORAGE_VERSION) {
+    return {
+      ...emptyBuckets(),
+      legacy: validatedEntries(payload.values),
+    }
+  }
+
+  if (payload.version !== COMPONENT_PARAMETER_STORAGE_VERSION) {
+    return emptyBuckets()
+  }
+
+  const values = payload.values as Partial<
+    Record<StorageScope, Record<string, unknown>>
+  >
+  return {
+    legacy: validatedEntries(values.legacy),
+    desk: validatedEntries(values.desk),
+    wall: validatedEntries(values.wall),
+  }
+}
+
+function serializeEntries(
+  entries: ComponentParameterEntries,
+): Record<string, ModelParameterValues> {
   const values: Record<string, ModelParameterValues> = {}
 
   for (const definition of modelDefinitions) {
@@ -214,10 +239,22 @@ function serializeEntries(entries: ComponentParameterEntries): string {
     try {
       const validation = definition.validateParameters(parameters)
       if (!validation.valid) continue
-      values[definition.id] = cloneParameters(validation.value.parameters)
+      values[definition.id] = cloneModelParameters(validation.value.parameters)
     } catch {
       continue
     }
+  }
+
+  return values
+}
+
+function serializeBuckets(buckets: ParameterBuckets): string {
+  const values: Partial<
+    Record<StorageScope, Record<string, ModelParameterValues>>
+  > = {}
+  for (const scope of ['legacy', 'desk', 'wall'] as const) {
+    const entries = serializeEntries(buckets[scope])
+    if (Object.keys(entries).length > 0) values[scope] = entries
   }
 
   const payload: PersistedParameterPayload = {
@@ -227,14 +264,21 @@ function serializeEntries(entries: ComponentParameterEntries): string {
   return JSON.stringify(payload)
 }
 
+function scopeKey(context: OpenGridSystemContext | undefined): StorageScope {
+  return context ?? 'legacy'
+}
+
 function persistEntries(
   storage: ComponentParameterStorage | null,
   entries: ComponentParameterEntries,
+  context: OpenGridSystemContext | undefined,
 ): void {
   if (!storage) return
 
   try {
-    storage.setItem(COMPONENT_PARAMETER_STORAGE_KEY, serializeEntries(entries))
+    const buckets = hydrateBuckets(storage)
+    buckets[scopeKey(context)] = entries
+    storage.setItem(COMPONENT_PARAMETER_STORAGE_KEY, serializeBuckets(buckets))
   } catch {
     // Browser storage is optional; the in-memory store remains authoritative.
   }
@@ -245,7 +289,10 @@ export function createComponentParameterStore(
 ): ComponentParameterStore {
   const storage =
     options.storage === undefined ? getBrowserStorage() : options.storage
-  const state = writable<ComponentParameterEntries>(hydrateEntries(storage))
+  const systemContext = options.systemContext
+  const state = writable<ComponentParameterEntries>(
+    hydrateBuckets(storage)[scopeKey(systemContext)],
+  )
   let skipInitialPersistence = true
   let disposed = false
 
@@ -254,13 +301,18 @@ export function createComponentParameterStore(
       skipInitialPersistence = false
       return
     }
-    persistEntries(storage, entries)
+    persistEntries(storage, entries, systemContext)
   })
 
   const get = (modelId: ModelId): ModelParameterValues => {
     const definition = getDefinition(modelId)
     const parameters = getStoreValue(state)[modelId]
-    return cloneParameters(parameters ?? definition.defaultParameters)
+    if (parameters) return cloneModelParameters(parameters)
+
+    const systemPreset = systemContext
+      ? getSystemPreset(modelId, systemContext)
+      : undefined
+    return cloneModelParameters(systemPreset ?? definition.defaultParameters)
   }
 
   const set = (modelId: ModelId, parameters: ModelParameterValues): boolean => {
@@ -270,7 +322,7 @@ export function createComponentParameterStore(
 
     state.update((entries) => ({
       ...entries,
-      [modelId]: cloneParameters(validation.value.parameters),
+      [modelId]: cloneModelParameters(validation.value.parameters),
     }))
     return true
   }

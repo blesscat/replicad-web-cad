@@ -15,6 +15,11 @@
     viewportPresentationForSearch,
     type CadViewportPresentation,
   } from '../../features/cad/viewport/presentation'
+  import {
+    parseSystemContext,
+    systemContextForModel,
+    type OpenGridSystemContext,
+  } from '../../features/cad/system-entry-context'
   import CadProgressIndicator from './CadProgressIndicator.svelte'
   import CadWorkspacePanel from './CadWorkspacePanel.svelte'
   import {
@@ -31,18 +36,23 @@
   let snapshot = $state<CadWorkspaceControllerSnapshot | null>(null)
   let resetVersion = $state(0)
   let presentation = $state<CadViewportPresentation>('workspace')
+  let systemContext = $state<OpenGridSystemContext | undefined>(undefined)
   let controller: CadWorkspaceController | null = null
   let parameterStore: ComponentParameterStore | null = null
 
   onMount(() => {
     presentation = viewportPresentationForSearch(window.location.search)
-    parameterStore = createComponentParameterStore()
+    systemContext = systemContextForModel(
+      modelId,
+      parseSystemContext(window.location.search),
+    )
+    parameterStore = createComponentParameterStore({ systemContext })
     controller = createCadWorkspaceController(
       modelId,
       (nextSnapshot) => {
         snapshot = nextSnapshot
       },
-      { parameterStore },
+      { parameterStore, systemContext },
     )
 
     return () => {
