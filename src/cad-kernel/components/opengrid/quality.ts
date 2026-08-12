@@ -361,6 +361,112 @@ function inspectHybridProfile(
   }
 }
 
+function inspectHybridTransition(
+  shape: Shape3D,
+  parameters: OpenGridParameters,
+  failures: string[],
+): void {
+  if (
+    parameters.variant !== 'Hybrid' ||
+    parameters.rows < 3 ||
+    parameters.columns < 3
+  ) {
+    return
+  }
+
+  const fullThickness = OPENGRID_CONFIGURATION.variants.Full.thickness
+  const heavyThickness = OPENGRID_CONFIGURATION.variants.Heavy.thickness
+  const transitionSpan = OPENGRID_CONFIGURATION.hybridTransitionSpan
+  const transitionRise = heavyThickness - fullThickness
+  const halfPitch = OPENGRID_CONFIGURATION.gridPitch / 2
+  const tangentialOffset =
+    halfPitch - OPENGRID_CONFIGURATION.outsideExtrusion / 2
+  const probeHalfWidth = 0.5
+  const probeHalfDepth = 0.25
+  const fractions = [0.25, 0.5, 0.75]
+  const sides = ['top', 'right', 'bottom', 'left'] as const
+  const interiorRow = Math.floor((parameters.rows - 1) / 2)
+  const interiorColumn = Math.floor((parameters.columns - 1) / 2)
+  const sideCells: Record<(typeof sides)[number], [number, number]> = {
+    top: [1, interiorColumn],
+    right: [interiorRow, parameters.columns - 2],
+    bottom: [parameters.rows - 2, interiorColumn],
+    left: [interiorRow, 1],
+  }
+
+  const volumeAtTransition = (
+    side: (typeof sides)[number],
+    fraction: number,
+    zMin: number,
+    zMax: number,
+    includeTangentialOffset = true,
+  ): number => {
+    const offset = -transitionSpan / 2 + transitionSpan * fraction
+    const tangentialProbeOffset = includeTangentialOffset ? tangentialOffset : 0
+    const [row, column] = sideCells[side]
+    const [sectionX, sectionY] = cellCenterForOpenGrid(parameters, row, column)
+    let x = sectionX
+    let y = sectionY
+    let xHalfSize = probeHalfWidth
+    let yHalfSize = probeHalfDepth
+
+    switch (side) {
+      case 'top':
+        y += offset
+        x += tangentialProbeOffset
+        break
+      case 'right':
+        x += offset
+        y += tangentialProbeOffset
+        xHalfSize = probeHalfDepth
+        yHalfSize = probeHalfWidth
+        break
+      case 'bottom':
+        y -= offset
+        x += tangentialProbeOffset
+        break
+      case 'left':
+        x -= offset
+        y += tangentialProbeOffset
+        xHalfSize = probeHalfDepth
+        yHalfSize = probeHalfWidth
+        break
+    }
+
+    return volumeInProbe(
+      shape,
+      [x - xHalfSize, y - yHalfSize, zMin],
+      [x + xHalfSize, y + yHalfSize, zMax],
+    )
+  }
+
+  for (const side of sides) {
+    for (const fraction of fractions) {
+      const expectedZ = fullThickness + transitionRise * fraction
+      const rampVolume = volumeAtTransition(
+        side,
+        fraction,
+        expectedZ - 0.15,
+        expectedZ + 0.15,
+      )
+      if (rampVolume <= 0.001) {
+        failures.push(`hybrid:transition-missing@${side}:${fraction}`)
+      }
+    }
+
+    const aboveRampVolume = volumeAtTransition(
+      side,
+      0.5,
+      heavyThickness - 0.2,
+      heavyThickness + 0.1,
+      false,
+    )
+    if (aboveRampVolume > 0.001) {
+      failures.push(`hybrid:transition-overshoots@${side}`)
+    }
+  }
+}
+
 function inspectCellOpenings(
   shape: Shape3D,
   parameters: OpenGridParameters,
@@ -502,6 +608,7 @@ export function inspectOpenGridShapeQuality(
   }
   inspectOfficialProfile(shape, parameters, failures)
   inspectHybridProfile(shape, parameters, failures)
+  inspectHybridTransition(shape, parameters, failures)
   inspectHalfCellBoundary(shape, parameters, failures)
   if (mesh.triangleCount <= 0 || !meshIsFinite(mesh)) {
     failures.push('mesh:empty-or-non-finite')
