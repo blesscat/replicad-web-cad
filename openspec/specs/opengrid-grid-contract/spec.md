@@ -24,7 +24,7 @@ The system MUST expose a shared OpenGrid grid contract whose official full pitch
 
 ### Requirement: Grid pitch 與元件特徵尺寸必須分開
 
-The OpenGrid contract MUST keep the 28 mm grid pitch and 14 mm half-pitch independent from the component feature dimensions. The shared nominal locating diameter MUST be 5 mm. The ordinary grid assembly opening MUST remain 5.05 mm, while the lower connection opening used by the special box/cylinder sockets MUST be exactly 5 mm. The retaining opening MUST remain 7.05 mm, and the quality-test shaft MUST be exactly 5 mm with the existing Ø7 mm × 0.8 mm flange. Changing the locating diameter or lower connection opening MUST NOT silently change the official grid pitch or ordinary assembly opening.
+The OpenGrid contract MUST keep the 28 mm grid pitch and 14 mm half-pitch independent from the component feature dimensions. Shared locating and assembly dimensions MUST resolve from the dedicated OpenGrid locating and assembly interface contract. The shared nominal locating diameter MUST be 5 mm. The ordinary grid assembly opening MUST remain 5.05 mm, while the lower connection opening used by the special box/cylinder sockets MUST be exactly 5 mm. The retaining opening MUST remain 7.05 mm, and the quality-test shaft MUST be exactly 5 mm with the existing Ø7 mm × 0.8 mm flange. Changing the locating diameter or lower connection opening MUST NOT silently change the official grid pitch or ordinary assembly opening.
 
 #### Scenario: Shared contract exposes confirmed dimensions
 
@@ -47,6 +47,14 @@ The OpenGrid contract MUST keep the 28 mm grid pitch and 14 mm half-pitch indepe
 - **WHEN** the locating dimensions are consumed by a box or cylinder generator
 - **THEN** the 28 mm grid pitch and 14 mm half-pitch MUST remain unchanged
 - **AND** the lower special opening MUST be 5 mm without changing the ordinary grid-hole layout
+
+#### Scenario: 元件專用偏移不被升格為半格
+
+- **WHEN** a box, Snap, or other OpenGrid component uses a 7 mm locating
+  center, edge offset, or clearance
+- **THEN** that value MUST remain a named feature-specific dimension
+- **AND** changing or consuming the official half pitch MUST NOT silently
+  rescale that feature
 
 #### Scenario: Fixture contract matches generated sockets
 
