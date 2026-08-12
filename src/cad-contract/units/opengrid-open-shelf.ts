@@ -68,6 +68,7 @@ export const OPENGRID_OPEN_SHELF_CONFIGURATION = {
   innerPlateThickness: 1.2,
   outerWallThickness: 1.6,
   outerCornerRadius: 3.75,
+  topOuterEdgeRadius: 0.6,
   backboardThickness: 1.2,
   pegDiameter: 4.5,
   pegHeight: 3,

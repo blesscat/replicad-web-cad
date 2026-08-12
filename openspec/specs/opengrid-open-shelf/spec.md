@@ -43,7 +43,7 @@ The validator MUST reject non-finite, fractional, unknown, missing, or out-of-ra
 
 ### Requirement: Open Shelf geometry has a front opening and a shared upward inclination
 
-The generated component MUST be centered on X/Y with front at `-Y` and rear at `+Y`. The outer frame MUST use continuous R3.75 mm rounded corners matching the existing OpenGrid outer-corner convention. The bottom board MUST be horizontal with 2 mm thickness and its upper datum MUST be Z=2 mm. The backboard MUST remain vertical and use 1.2 mm thickness. The two outer side walls MUST use 1.6 mm thickness. Horizontal internal shelves, vertical internal X dividers, and the top panel MUST use the common angle, rising toward the front, and MUST span the complete Y depth to the rear backboard. The top panel's highest outer front surface MUST be Z=`height`; its rear end MUST be lower by the derived depth elevation. When `angle > 0`, the bottom horizontal board and the first common-angle shelf MUST form a separate bottom wedge that is not counted in `cellZ`; `cellZ` MUST count only the regular parallel cells above that wedge. When `angle = 0`, no bottom wedge shelf MUST be added. The model MUST represent a front opening, not an opening on the top face.
+The generated component MUST be centered on X/Y with front at `-Y` and rear at `+Y`. The outer frame MUST use continuous R3.75 mm rounded plan corners matching the existing OpenGrid outer-corner convention. The top rear outer edge and both upper sloped side edges MUST use continuous nominal R0.6 mm rounded transitions. The highest front outer edge of the top panel MUST remain the height datum. The bottom board MUST be horizontal with 2 mm thickness and its upper datum MUST be Z=2 mm. The backboard MUST remain vertical and use 1.2 mm thickness. The two outer side walls MUST use 1.6 mm thickness. Horizontal internal shelves, vertical internal X dividers, and the top panel MUST use the common angle, rising toward the front, and MUST span the complete Y depth to the rear backboard. The top panel's highest outer front surface MUST be Z=`height`; its rear end MUST be lower by the derived depth elevation. When `angle > 0`, the bottom horizontal board and the first common-angle shelf MUST form a separate bottom wedge that is not counted in `cellZ`; `cellZ` MUST count only the regular parallel cells above that wedge. When `angle = 0`, no bottom wedge shelf MUST be added. The model MUST represent a front opening, not an opening on the top face.
 
 #### Scenario: Default side profile is front-open
 
@@ -73,11 +73,12 @@ The generated component MUST be centered on X/Y with front at `-Y` and rear at `
 - **THEN** the parameter panel MUST display the per-cell clear width and depth to the rear backboard
 - **AND** it MUST display the regular cell clear height separately from the bottom wedge height
 
-#### Scenario: Outer frame uses rounded corners
+#### Scenario: Outer frame uses rounded corners and upper transitions
 
 - **WHEN** the component is generated at any valid size
-- **THEN** the four outer frame corners MUST be continuous circular arcs with nominal R3.75 mm
-- **AND** the rounded outer profile MUST preserve the declared rectangular X/Y bounds and the four locating peg positions
+- **THEN** the four outer plan corners MUST be continuous circular arcs with nominal R3.75 mm
+- **AND** the top rear outer edge and both upper sloped side edges MUST have nominal R0.6 mm rounded transitions
+- **AND** the rounded outer profile MUST preserve the declared rectangular X/Y bounds, the four locating peg positions, and the highest front Z=`height` datum
 
 #### Scenario: Overall height uses the world-Z envelope
 

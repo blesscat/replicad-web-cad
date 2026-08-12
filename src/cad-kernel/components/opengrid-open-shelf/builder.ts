@@ -7,6 +7,7 @@ import {
   Solid,
   type Shape3D,
 } from 'replicad'
+import type { Edge } from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForOpenGridOpenShelf,
@@ -35,6 +36,7 @@ export type OpenGridOpenShelfBuildContext = {
 }
 
 type Point2D = [number, number]
+type Point3D = [number, number, number]
 
 function deleteShape(shape: { delete?: () => void } | null | undefined): void {
   try {
@@ -124,6 +126,77 @@ function makeProfileExtrusion(
     deleteShape(sketch)
     sketcher.delete()
   }
+}
+
+function readPoint(point: {
+  toTuple: () => Point3D
+  delete: () => void
+}): Point3D {
+  try {
+    return point.toTuple()
+  } finally {
+    point.delete()
+  }
+}
+
+function closeEnough(first: number, second: number, tolerance = 0.08): boolean {
+  return Math.abs(first - second) <= tolerance
+}
+
+function isTopOuterPerimeterEdge(
+  edge: Edge,
+  parameters: OpenGridOpenShelfParameters,
+): boolean {
+  if (edge.geomType !== 'LINE') return false
+
+  const start = readPoint(edge.startPoint)
+  const end = readPoint(edge.endPoint)
+  const [width, depth] = openGridOpenShelfFootprintFor(parameters)
+  const halfWidth = width / 2
+  const yFront = -depth / 2
+  const yRear = depth / 2
+  const rearZ = openGridOpenShelfTopOuterRearZFor(parameters)
+  const widthSpan = Math.abs(start[0] - end[0])
+  const depthSpan = Math.abs(start[1] - end[1])
+
+  const isTopRearEdge =
+    closeEnough(start[1], yRear) &&
+    closeEnough(end[1], yRear) &&
+    closeEnough(start[2], rearZ) &&
+    closeEnough(end[2], rearZ) &&
+    widthSpan > width * 0.5
+  const hasTopSideX =
+    closeEnough(Math.abs(start[0]), halfWidth) && depthSpan > depth * 0.5
+
+  const isTopSideEdgeForward =
+    hasTopSideX &&
+    closeEnough(start[0], end[0]) &&
+    closeEnough(start[1], yFront) &&
+    closeEnough(end[1], yRear) &&
+    closeEnough(start[2], parameters.height) &&
+    closeEnough(end[2], rearZ)
+  const isTopSideEdgeReverse =
+    hasTopSideX &&
+    closeEnough(start[0], end[0]) &&
+    closeEnough(start[1], yRear) &&
+    closeEnough(end[1], yFront) &&
+    closeEnough(start[2], rearZ) &&
+    closeEnough(end[2], parameters.height)
+  const isTopSideEdge = isTopSideEdgeForward || isTopSideEdgeReverse
+
+  return isTopRearEdge || isTopSideEdge
+}
+
+function roundTopOuterEdges(
+  shape: Shape3D,
+  parameters: OpenGridOpenShelfParameters,
+): Shape3D {
+  const rounded = shape.fillet((edge) => {
+    if (!isTopOuterPerimeterEdge(edge, parameters)) return null
+    return OPENGRID_OPEN_SHELF_CONFIGURATION.topOuterEdgeRadius
+  })
+  if (rounded !== shape) deleteShape(shape)
+  return rounded
 }
 
 function slopeNormalFor(angle: number): Point2D {
@@ -368,6 +441,8 @@ export async function buildOpenGridOpenShelf(
       await yieldAtSafeBoundary(context)
     }
     assertGenerationCurrent(context)
+    const rounded = roundTopOuterEdges(current, parameters)
+    current = rounded
     const clipped = clipToContractBounds(current, parameters)
     if (clipped !== current) deleteShape(current)
     current = clipped

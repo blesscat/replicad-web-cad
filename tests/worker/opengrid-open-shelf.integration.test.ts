@@ -12,9 +12,11 @@ import {
 import {
   boundsForOpenGridOpenShelf,
   openGridOpenShelfDepthFor,
+  openGridOpenShelfFootprintFor,
   openGridOpenShelfFrontToRearElevationFor,
   openGridOpenShelfPegCentersFor,
   openGridOpenShelfShelfLowerSurfaceZFor,
+  openGridOpenShelfTopOuterRearZFor,
   OPENGRID_OPEN_SHELF_CONFIGURATION,
   OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
   type OpenGridOpenShelfParameters,
@@ -91,9 +93,13 @@ describe('OpenGrid open-shelf CAD kernel integration', () => {
           face.delete()
         }
       })
-      const outerArcFaces = cylindricalFaceBounds.filter(
-        ({ min, max }) => (min[2] ?? 0) >= -0.1 && (max[2] ?? 0) > 1,
-      )
+      const outerArcFaces = cylindricalFaceBounds.filter(({ min, max }) => {
+        const xSpan = (max[0] ?? 0) - (min[0] ?? 0)
+        const ySpan = (max[1] ?? 0) - (min[1] ?? 0)
+        return (
+          (min[2] ?? 0) >= -0.1 && (max[2] ?? 0) > 1 && xSpan > 1 && ySpan > 1
+        )
+      })
       expect(outerArcFaces).toHaveLength(4)
       for (const { min, max } of outerArcFaces) {
         expect(
@@ -103,6 +109,34 @@ describe('OpenGrid open-shelf CAD kernel integration', () => {
           ),
         ).toBeCloseTo(OPENGRID_OPEN_SHELF_CONFIGURATION.outerCornerRadius, 2)
       }
+      const [width, depth] = openGridOpenShelfFootprintFor(parameters)
+      const rearZ = openGridOpenShelfTopOuterRearZFor(parameters)
+      const topRearFilletFaces = cylindricalFaceBounds.filter(
+        ({ min, max }) => {
+          const xSpan = (max[0] ?? 0) - (min[0] ?? 0)
+          const ySpan = (max[1] ?? 0) - (min[1] ?? 0)
+          const zSpan = (max[2] ?? 0) - (min[2] ?? 0)
+          const radius = OPENGRID_OPEN_SHELF_CONFIGURATION.topOuterEdgeRadius
+          return (
+            xSpan > width * 0.5 &&
+            ySpan > radius * 0.5 &&
+            zSpan <= radius + 0.2 &&
+            (min[2] ?? 0) >= rearZ - radius - 0.2 &&
+            (max[2] ?? 0) <= rearZ + 0.2
+          )
+        },
+      )
+      expect(topRearFilletFaces).toHaveLength(1)
+      const topSideFilletFaces = cylindricalFaceBounds.filter(
+        ({ min, max }) => {
+          const xSpan = (max[0] ?? 0) - (min[0] ?? 0)
+          const ySpan = (max[1] ?? 0) - (min[1] ?? 0)
+          const zSpan = (max[2] ?? 0) - (min[2] ?? 0)
+          const radius = OPENGRID_OPEN_SHELF_CONFIGURATION.topOuterEdgeRadius
+          return xSpan <= radius + 0.2 && ySpan > depth * 0.5 && zSpan > 0.2
+        },
+      )
+      expect(topSideFilletFaces).toHaveLength(2)
       expectBoundsClose(boundsOf(shape), boundsForOpenGridOpenShelf(parameters))
       const quality = inspectOpenGridOpenShelfShapeQuality(
         shape,
@@ -251,4 +285,23 @@ describe('OpenGrid open-shelf CAD kernel integration', () => {
     },
     180_000,
   )
+
+  it('keeps upper transitions when the shelf is flat', async () => {
+    const parameters: OpenGridOpenShelfParameters = {
+      ...OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
+      angle: 0,
+    }
+    const shape = await buildOpenGridOpenShelf(parameters)
+    try {
+      const quality = inspectOpenGridOpenShelfShapeQuality(
+        shape,
+        parameters,
+        meshBRep(shape, { tolerance: 0.05, angularTolerance: 0.1 }),
+      )
+      expect(quality).toMatchObject({ passed: true, failures: [] })
+      expectBoundsClose(boundsOf(shape), boundsForOpenGridOpenShelf(parameters))
+    } finally {
+      deleteShape(shape)
+    }
+  }, 180_000)
 })

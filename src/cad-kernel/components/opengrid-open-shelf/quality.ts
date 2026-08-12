@@ -4,6 +4,7 @@ import {
   openGridOpenShelfFrontToRearElevationFor,
   openGridOpenShelfDepthFor,
   openGridOpenShelfFootprintFor,
+  openGridOpenShelfTopOuterRearZFor,
   OPENGRID_OPEN_SHELF_CONFIGURATION,
   type OpenGridOpenShelfParameters,
 } from '../../../cad-contract/units'
@@ -157,6 +158,27 @@ function inspectGeometryInterfaces(
   )
   if (outerCornerArcFaces.length !== 4) {
     failures.push('outer-corner-arcs')
+  }
+
+  const rearZ = openGridOpenShelfTopOuterRearZFor(parameters)
+  const topRearArcFaces = faces.filter(
+    (face) =>
+      face.surfaceType === 'CYLINDRE' &&
+      span(face, 0) > width * 0.5 &&
+      span(face, 1) > configuration.topOuterEdgeRadius * 0.5 &&
+      span(face, 2) <= configuration.topOuterEdgeRadius + 0.2 &&
+      face.min[2] >= rearZ - configuration.topOuterEdgeRadius - 0.2 &&
+      face.max[2] <= rearZ + 0.2,
+  )
+  const topSideArcFaces = faces.filter(
+    (face) =>
+      face.surfaceType === 'CYLINDRE' &&
+      span(face, 0) <= configuration.topOuterEdgeRadius + 0.2 &&
+      span(face, 1) > depth * 0.5 &&
+      span(face, 2) > 0.2,
+  )
+  if (topRearArcFaces.length !== 1 || topSideArcFaces.length !== 2) {
+    failures.push('top-outer-arcs')
   }
 }
 
