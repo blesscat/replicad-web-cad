@@ -262,11 +262,11 @@
     </div>
     {#if rawParameters.thinShellMode === 'true'}
       <span class="text-sm text-muted">
-        薄殼模式：不可堆疊，使用5mm定位柱
+        薄殼模式：不可堆疊，使用6mm定位柱
       </span>
     {:else}
       <span class="text-sm text-muted">
-        預設模式：可堆疊滑動，使用8mm定位柱
+        預設模式：可堆疊滑動，使用9mm定位柱
       </span>
     {/if}
   </div>

@@ -352,7 +352,7 @@ describe('Worker contract runtime validation', () => {
       operationId: 'operation-pillar-1',
       generation: 1,
       modelId: 'opengrid-pillar' as const,
-      parameters: { mode: 'standard' },
+      parameters: { mode: 'standard', offsetX: 0, offsetY: 0 },
       previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
     }
 

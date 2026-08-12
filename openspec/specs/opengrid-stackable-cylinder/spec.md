@@ -108,19 +108,19 @@ The default and thin modes MUST retain the common printable lower foot bevel and
 
 ### Requirement: Stepped center mounting hole
 
-When `bottomHolesEnabled=true`, every valid cylinder MUST contain one centered floor hole at `(0, 0)`. From the outside bottom surface toward the interior, the hole profile MUST depend on the selected profile: in the default mode it MUST have a straight `Ø4.55 mm` section from nominal Z=0 through Z=4, followed by a straight `Ø7.05 mm` section from nominal Z=4 through Z=5; in thin-bottom mode it MUST have a straight `Ø4.55 mm` section from nominal Z=0 through Z=1, followed by a straight `Ø7.05 mm` section from nominal Z=1 through Z=2; in bottom-plate mode it MUST have a straight `Ø4.55 mm` section from nominal Z=0 through Z=2, followed by a straight `Ø7.05 mm` section from nominal Z=2 through Z=3. Each transition MUST be a planar shoulder at the selected first-section depth and MUST NOT be a taper or a chamfer. When `bottomHolesEnabled=false`, no center or outer bottom hole may be generated.
+When `bottomHolesEnabled=true`, every valid cylinder MUST contain one centered floor hole at `(0, 0)`. From the outside bottom surface toward the interior, the hole profile MUST depend on the selected profile: in the default mode it MUST have a straight `Ø5 mm` section from nominal Z=0 through Z=4, followed by a straight `Ø7.05 mm` section from nominal Z=4 through Z=5; in thin-bottom mode it MUST have a straight `Ø5 mm` section from nominal Z=0 through Z=1, followed by a straight `Ø7.05 mm` section from nominal Z=1 through Z=2; in bottom-plate mode it MUST have a straight `Ø5 mm` section from nominal Z=0 through Z=2, followed by a straight `Ø7.05 mm` section from nominal Z=2 through Z=3. Each transition MUST be a planar shoulder at the selected first-section depth and MUST NOT be a taper or a chamfer. When `bottomHolesEnabled=false`, no center or outer bottom hole may be generated.
 
 #### Scenario: Default center hole profile
 
 - **WHEN** a valid cylinder completes generation with `thinBottomMode=false` and `bottomPlateMode=false`
-- **THEN** its center floor hole MUST expose a `Ø4.55 mm` outside opening through 4 mm of floor depth
+- **THEN** its center floor hole MUST expose a `Ø5 mm` outside opening through 4 mm of floor depth
 - **AND** the hole MUST change to `Ø7.05 mm` after 4 mm of axial depth
 - **AND** the larger section MUST terminate at the 5 mm interior floor surface
 
 #### Scenario: Thin center hole profile
 
 - **WHEN** a valid cylinder completes generation with `thinBottomMode=true` and `bottomPlateMode=false`
-- **THEN** its center floor hole MUST expose a `Ø4.55 mm` outside opening through 1 mm of floor depth
+- **THEN** its center floor hole MUST expose a `Ø5 mm` outside opening through 1 mm of floor depth
 - **AND** the hole MUST change to `Ø7.05 mm` after 1 mm of axial depth
 - **AND** the larger section MUST terminate at the 2 mm central flat floor surface
 

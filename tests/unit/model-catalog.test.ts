@@ -574,9 +574,7 @@ describe('CAD component catalog', () => {
     expect(definition?.defaultParameters).toEqual(
       OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
     )
-    expect(definition?.selectionDescription).toBe(
-      'Grid Box (方盒)；提供堆疊與薄殼兩種模式。',
-    )
+    expect(definition?.selectionDescription).toContain('四角連接孔為 Ø5 mm')
     expect(
       definition?.validateParameters({
         ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
@@ -703,41 +701,71 @@ describe('CAD component catalog', () => {
       family: 'opengrid',
       displayName: 'Locating Post (定位柱)',
     })
-    expect(definition?.selectionDescription).toContain('Ø4.5 mm')
-    expect(definition?.selectionDescription).toContain('堆疊版 8 mm')
-    expect(definition?.selectionDescription).toContain('薄殼版 5 mm')
+    expect(definition?.selectionDescription).toContain('Ø5 mm')
+    expect(definition?.selectionDescription).toContain('堆疊版 9 mm')
+    expect(definition?.selectionDescription).toContain('薄殼版 6 mm')
+    expect(definition?.selectionDescription).toContain('-0.5～0.5 mm')
     expect(definition?.selectionDescription).toContain('物件定位用')
     expect(definition?.parameterSchema.map((field) => field.key)).toEqual([
       'length',
+      'offsetX',
+      'offsetY',
     ])
-    expect(definition?.defaultParameters).toEqual({ mode: 'standard' })
-    expect(definition?.validateParameters({ mode: 'standard' })).toEqual({
+    expect(definition?.defaultParameters).toEqual({
+      mode: 'standard',
+      offsetX: 0,
+      offsetY: 0,
+    })
+    expect(
+      definition?.validateParameters({
+        mode: 'standard',
+        offsetX: 0,
+        offsetY: 0,
+      }),
+    ).toEqual({
       valid: true,
       value: {
         modelId: 'opengrid-pillar',
-        parameters: { mode: 'standard' },
+        parameters: { mode: 'standard', offsetX: 0, offsetY: 0 },
       },
     })
-    expect(definition?.boundsForParameters({ mode: 'thin-shell' })).toEqual({
+    expect(
+      definition?.boundsForParameters({
+        mode: 'thin-shell',
+        offsetX: 0,
+        offsetY: 0,
+      }),
+    ).toEqual({
       min: [-3.5, -3.5, 0],
-      max: [3.5, 3.5, 5],
-    })
-    expect(definition?.boundsForParameters({ mode: 'standard' })).toEqual({
-      min: [-3.5, -3.5, 0],
-      max: [3.5, 3.5, 8],
+      max: [3.5, 3.5, 6],
     })
     expect(
-      definition?.boundsForParameters({ mode: 'positioning', length: 25 }),
+      definition?.boundsForParameters({
+        mode: 'standard',
+        offsetX: 0,
+        offsetY: 0,
+      }),
     ).toEqual({
-      min: [-2.5, -2.5, 0],
-      max: [2.5, 2.5, 25],
+      min: [-3.5, -3.5, 0],
+      max: [3.5, 3.5, 9],
     })
-    expect(definition?.exportFileName({ mode: 'standard' })).toBe(
-      'pillar-8-standard.step',
-    )
-    expect(definition?.stlFileName({ mode: 'thin-shell' })).toBe(
-      'pillar-5-thin-shell.stl',
-    )
+    expect(
+      definition?.boundsForParameters({
+        mode: 'positioning',
+        length: 25,
+        offsetX: 0.25,
+        offsetY: -0.15,
+      }),
+    ).toEqual({
+      min: [-2.25, -2.65, 0],
+      max: [2.75, 2.35, 25],
+    })
+    expect(
+      definition?.exportFileName({ mode: 'standard', offsetX: 0, offsetY: 0 }),
+    ).toBe('pillar-9-standard.step')
+    expect(
+      definition?.stlFileName({ mode: 'thin-shell', offsetX: 0, offsetY: 0 }),
+    ).toBe('pillar-6-thin-shell.stl')
     expect(cadPathForModel('opengrid-pillar')).toBe('/cad/opengrid-pillar')
     expect(modelIdForCadPath('/cad/opengrid-pillar/')).toBe('opengrid-pillar')
   })
@@ -783,8 +811,8 @@ describe('CAD component catalog', () => {
     expect(definition?.defaultParameters).toEqual(
       OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
     )
-    expect(definition?.selectionDescription).toBe(
-      'Round Box (圓盒)；提供堆疊與薄殼兩種模式。',
+    expect(definition?.selectionDescription).toContain(
+      '中心加四個外側連接孔為 Ø5 mm',
     )
     expect(
       definition?.validateParameters({ diameter: 60, height: 20 }),

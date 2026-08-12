@@ -17,8 +17,8 @@ describe('OpenGrid locating and assembly interface contract', () => {
     expect(configuration.assemblyOpeningDiameter).toBe(
       configuration.nominalDiameter + configuration.assemblyIncrement,
     )
-    expect(configuration.testShaftDiameter).toBe(4.5)
-    expect(configuration.shaftOpeningDiameter).toBe(4.55)
+    expect(configuration.testShaftDiameter).toBe(5)
+    expect(configuration.shaftOpeningDiameter).toBe(5)
     expect(configuration.testFlangeDiameter).toBe(7)
     expect(configuration.retainingOpeningDiameter).toBe(7.05)
     expect(configuration.assemblyOpeningDiameter).toBe(5.05)

@@ -47,7 +47,7 @@ The default snapshot MUST be `x=2`, `y=2`, `height=20`, `cornerBottomHoles=true`
 
 The four opening triples MUST use the same normalized names and semantics as the stackable-cylinder opening interface. Each depth and flat-bottom length MUST be a finite non-negative integer millimetre value with a 1 mm step. Every bottom-length control MUST default to 1 mm, every depth MUST default to 0 mm, and every angle MUST default to 90 degrees. An opening depth of zero MUST disable that direction, so its default bottom length MUST NOT create geometry. For an enabled direction, the live depth maximum MUST be the clear internal `height`, capped by the configured global maximum; the exact clear-height boundary MUST be accepted and deeper values MUST be rejected. The live bottom-length maximum MUST be the largest integer that fits the selected rectangular side's straight run while preserving the required corner and neighboring-opening structure, capped by the configured global maximum. An enabled angle MUST be an integer degree from 1 through 90, measured from the flat bottom; 90 degrees MUST produce vertical side walls and 45 degrees MUST produce outward-sloping side walls. The existing model identity, route, footprint calculator, and height semantics MUST remain unchanged for existing modes.
 
-The parameter panel MUST present exactly two mutually exclusive visible radio choices, `薄殼模式` and `堆疊模式`. The selected normal-mode description MUST read `預設模式：可堆疊滑動，使用8mm定位柱`. The selected thin-shell description MUST read `薄殼模式：不可堆疊，使用5mm定位柱`. The normalized `basePlateMode` field MUST remain available for legacy or programmatic snapshots and geometry compatibility, but the panel MUST NOT expose it as a selectable radio choice.
+The parameter panel MUST present exactly two mutually exclusive visible radio choices, `薄殼模式` and `堆疊模式`. The selected normal-mode description MUST read `預設模式：可堆疊滑動，使用9mm定位柱`. The selected thin-shell description MUST read `薄殼模式：不可堆疊，使用6mm定位柱`. The normalized `basePlateMode` field MUST remain available for legacy or programmatic snapshots and geometry compatibility, but the panel MUST NOT expose it as a selectable radio choice.
 
 The stackable-box parameter panel MUST provide a width/depth calculator that accepts X/Y dimensions in millimetres and chooses the smallest valid X/Y count on the 0.5-cell step whose generated footprint is not smaller than the requested dimensions. The calculator MUST use the same 28 mm pitch and 0.15 mm total per-axis clearance as the generated model.
 
@@ -97,7 +97,7 @@ The stackable-box parameter panel MUST provide a width/depth calculator that acc
 - **AND** it MUST remove all geometry below the fixed 2.0 mm plane, leaving a 3.0 mm bottom shell to the fixed 5.0 mm interior-floor datum
 - **AND** the remaining cut face MUST be translated to `Z=0` and form a continuous printable base plate
 - **AND** the external height MUST be reduced by exactly 2.0 mm while the requested clear internal height and upper rail dimensions remain unchanged
-- **AND** the four corner sockets MUST use an outside/lower Ø4.55 mm bore for 2.0 mm followed by an inside/upper Ø7.05 mm retaining seat for 1.0 mm
+- **AND** the four corner sockets MUST use an outside/lower Ø5 mm bore for 2.0 mm followed by an inside/upper Ø7.05 mm retaining seat for 1.0 mm
 - **AND** the base-plate export MUST use a mode-specific filename so it cannot overwrite the normal stackable-box export
 
 ### Requirement: Identical box-to-box stacking interface
@@ -148,16 +148,16 @@ Base-plate and thin-shell modes MUST be treated as non-stackable profiles. They 
 
 The box MUST retain the existing fixed 5 mm bottom assembly in normal mode and the existing 3 mm clipped base plate in base-plate mode. In thin-shell mode it MUST use a fixed 2 mm flat bottom. When `cornerBottomHoles` is `true`, it MUST provide nominal Ø5 mm base-mounting sockets at the external corner positions used by the OpenGrid Snap interface. When `cornerBottomHoles` is `false`, it MUST NOT cut those special Snap sockets. When `fullBottomHoleGrid` is `true`, the box MUST additionally provide the ordinary holes defined by the optional nominal OpenGrid bottom hole grid requirement; the ordinary grid holes MUST remain available even when `cornerBottomHoles` is `false`. For a full-cell axis with corner sockets enabled, the four special socket centers MUST occupy the outermost positions of the nominal 14 mm hole grid, 7 mm from the corresponding pre-clearance nominal box footprint edge.
 
-In normal mode, each special socket MUST have a Ø4.55 mm base-facing bore through the lower/outside 3.0 mm of the fixed bottom assembly followed by a Ø7.05 mm bore through the upper/interior 2.0 mm toward the box interior. In base-plate mode, each retained socket MUST have a Ø4.55 mm outside/lower bore for 2.0 mm followed by a Ø7.05 mm inside/upper retaining seat for 1.0 mm. In thin-shell mode, each retained socket MUST have a Ø4.55 mm outside/lower bore for 1.0 mm followed by a Ø7.05 mm inside/upper retaining seat for 1.0 mm. In every mode, the diameter change MUST be a fixed planar retaining shoulder, not a long graduated lead-in, conical chamfer, or overlaid counterbore.
+In normal mode, each special socket MUST have a Ø5 mm base-facing bore through the lower/outside 3.0 mm of the fixed bottom assembly followed by a Ø7.05 mm bore through the upper/interior 2.0 mm toward the box interior. In base-plate mode, each retained socket MUST have a Ø5 mm outside/lower bore for 2.0 mm followed by a Ø7.05 mm inside/upper retaining seat for 1.0 mm. In thin-shell mode, each retained socket MUST have a Ø5 mm outside/lower bore for 1.0 mm followed by a Ø7.05 mm inside/upper retaining seat for 1.0 mm. In every mode, the diameter change MUST be a fixed planar retaining shoulder, not a long graduated lead-in, conical chamfer, or overlaid counterbore.
 
-The Ø7.05 mm upper opening MUST serve as the retaining seat for a Ø4.5 mm shaft with a Ø7 mm flange. After insertion from inside the box, the flange MUST be retained by the planar shoulder above the Ø4.55 mm lower passage and its upper surface MUST be flush with the selected mode's interior floor. The compatibility fixture shaft length MUST equal the selected active bottom thickness plus the existing 1 mm exterior allowance; the fixture flange MUST remain Ø7 mm × 0.8 mm. Separate nominal Ø5 mm Snap-reference exposure rules MUST remain unchanged. The four nominal corner locations MUST be geometrically de-duplicated when a half-cell axis would otherwise cause overlapping Ø5 mm sockets, without removing the corresponding nominal grid position in full-hole mode. Runtime generation MUST realize these interfaces from the declared OpenGrid geometry contract and MUST NOT require a Snap STEP reference to be downloaded, loaded, or parsed. The bundled dedicated Snap reference MUST be validated separately during integration or CI testing.
+The Ø7.05 mm upper opening MUST serve as the retaining seat for a Ø5 mm shaft with a Ø7 mm flange. After insertion from inside the box, the flange MUST be retained by the planar shoulder above the Ø5 mm lower passage and its upper surface MUST be flush with the selected mode's interior floor. The compatibility fixture shaft length MUST equal the selected active bottom thickness plus the existing 1 mm exterior allowance; the fixture MUST use a Ø5 mm shaft and a Ø7 mm × 0.8 mm flange. Separate nominal Ø5 mm Snap-reference exposure rules MUST remain unchanged. The four nominal corner locations MUST be geometrically de-duplicated when a half-cell axis would otherwise cause overlapping Ø5 mm sockets, without removing the corresponding nominal grid position in full-hole mode. Runtime generation MUST realize these interfaces from the declared OpenGrid geometry contract and MUST NOT require a Snap STEP reference to be downloaded, loaded, or parsed. The bundled dedicated Snap reference MUST be validated separately during integration or CI testing.
 
 #### Scenario: Full-cell base mounting
 
 - **WHEN** a full-cell or multi-cell box is aligned with the supplied OpenGrid Snap base interface and `cornerBottomHoles=true`
 - **THEN** its external corner sockets MUST align with the corresponding nominal 7 mm-offset Ø5 mm Snap positions
 - **AND** the selected mode MUST retain its declared fixed bottom thickness between those sockets
-- **AND** the socket MUST retain the selected mode's fixed Ø4.55-to-Ø7.05 two-stage bore profile
+- **AND** the socket MUST retain the selected mode's fixed Ø5-to-Ø7.05 two-stage bore profile
 
 #### Scenario: Full grid preserves corner Snap mounting
 
@@ -175,16 +175,16 @@ The Ø7.05 mm upper opening MUST serve as the retaining seat for a Ø4.5 mm shaf
 #### Scenario: Fixed two-stage mounting-hole profile
 
 - **WHEN** a special corner mounting socket is generated in normal, base-plate, or thin-shell mode
-- **THEN** its base-facing opening MUST measure Ø4.55 mm within the geometry tolerance
+- **THEN** its base-facing opening MUST measure Ø5 mm within the geometry tolerance
 - **AND** its lower bore MUST extend 3.0 mm in normal mode, 2.0 mm in base-plate mode, or 1.0 mm in thin-shell mode
 - **AND** its upper opening MUST measure Ø7.05 mm and extend 2.0 mm in normal mode or 1.0 mm in base-plate and thin-shell modes toward the interior
 - **AND** the diameter change MUST be a single fixed planar shoulder rather than a long graduated taper or conical transition
 
 #### Scenario: Captive flanged cylinder
 
-- **WHEN** a Ø4.5 mm shaft with a Ø7 mm flange is inserted through a special corner mounting socket from inside the box
-- **THEN** the Ø4.5 mm shaft MUST pass through both the Ø7.05 mm upper seat and the Ø4.55 mm lower passage
-- **AND** the Ø7 mm flange MUST be retained above the planar shoulder and MUST NOT fall through the Ø4.55 mm lower passage
+- **WHEN** a Ø5 mm shaft with a Ø7 mm × 0.8 mm flange is inserted through a special corner mounting socket from inside the box
+- **THEN** the Ø5 mm shaft MUST pass through both the Ø7.05 mm upper seat and the Ø5 mm lower bore
+- **AND** the Ø7 mm flange MUST be retained above the planar shoulder and MUST NOT fall through the Ø5 mm lower bore
 - **AND** the flange MUST be flush with the selected mode's interior floor
 - **AND** the fixture shaft length MUST equal the active bottom thickness plus 1 mm while the separate nominal Ø5 mm Snap-reference exposure contract remains unchanged
 

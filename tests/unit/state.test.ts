@@ -151,11 +151,11 @@ describe('CAD state machine', () => {
     )
   })
 
-  it('initializes the pillar with a plain five-millimetre default', () => {
+  it('initializes the pillar with the typed zero-offset default', () => {
     const state = initialCadState('opengrid-pillar')
 
     expect(state.modelId).toBe('opengrid-pillar')
-    expect(state.input).toEqual({ mode: 'standard' })
+    expect(state.input).toEqual({ mode: 'standard', offsetX: 0, offsetY: 0 })
   })
 
   it('initializes the independent OpenGrid stackable-cylinder defaults', () => {

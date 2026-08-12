@@ -686,5 +686,6 @@ describe('OpenGrid stackable-cylinder contract', () => {
       topInnerChamferLand: 0,
       bottomOuterChamfer: 2,
     })
+    expect(OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.bottomHoleDiameter).toBe(5)
   })
 })

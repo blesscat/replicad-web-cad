@@ -1,10 +1,20 @@
 import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from './opengrid-locating-assembly'
 
 export type PillarMode = 'standard' | 'thin-shell' | 'positioning'
-export type PillarParameterKey = 'mode' | 'length'
+export type PillarParameterKey = 'mode' | 'length' | 'offsetX' | 'offsetY'
 
 export type PillarParameters =
-  { mode: 'standard' | 'thin-shell' } | { mode: 'positioning'; length: number }
+  | {
+      mode: 'standard' | 'thin-shell'
+      offsetX: number
+      offsetY: number
+    }
+  | {
+      mode: 'positioning'
+      length: number
+      offsetX: number
+      offsetY: number
+    }
 
 export type PillarBounds = {
   min: [number, number, number]
@@ -22,12 +32,15 @@ export type PillarValidation =
 
 export const PILLAR_CONFIGURATION = {
   defaultMode: 'standard',
-  standardLength: 8,
-  thinShellLength: 5,
+  standardLength: 9,
+  thinShellLength: 6,
   positioningDefaultLength: 5,
   positioningMinLength: 3,
   positioningMaxLength: 500,
   positioningLengthSliderMax: 200,
+  offsetMin: -0.5,
+  offsetMax: 0.5,
+  offsetStep: 0.05,
   bodyDiameter: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftDiameter,
   positioningBodyDiameter: 5,
   baseDiameter: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testFlangeDiameter,
@@ -37,14 +50,24 @@ export const PILLAR_CONFIGURATION = {
   positioningUpperChamfer: 0.5,
   defaultParameters: {
     mode: 'standard',
+    offsetX: 0,
+    offsetY: 0,
   } satisfies PillarParameters,
 } as const
 
-const FIXED_PILLAR_PARAMETER_KEYS: readonly PillarParameterKey[] = ['mode']
+const FIXED_PILLAR_PARAMETER_KEYS: readonly PillarParameterKey[] = [
+  'mode',
+  'offsetX',
+  'offsetY',
+]
 const POSITIONING_PILLAR_PARAMETER_KEYS: readonly PillarParameterKey[] = [
   'mode',
   'length',
+  'offsetX',
+  'offsetY',
 ]
+
+const OFFSET_STEP_TOLERANCE = 1e-9
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -78,8 +101,8 @@ export function validatePillarParameters(value: unknown): PillarValidation {
     issues.push({
       field: 'parameters',
       message: isPositioningMode
-        ? '物件定位用支柱只接受 mode、length。'
-        : '固定版支柱只接受 mode。',
+        ? '物件定位用支柱只接受 mode、length、offsetX、offsetY。'
+        : '固定版支柱只接受 mode、offsetX、offsetY。',
     })
   }
 
@@ -113,18 +136,58 @@ export function validatePillarParameters(value: unknown): PillarValidation {
     }
   }
 
+  for (const field of ['offsetX', 'offsetY'] as const) {
+    const offset = value[field]
+    if (typeof offset !== 'number' || !Number.isFinite(offset)) {
+      issues.push({
+        field,
+        message: `${field} 必須是有限的小數 mm。`,
+      })
+      continue
+    }
+    if (
+      offset < PILLAR_CONFIGURATION.offsetMin ||
+      offset > PILLAR_CONFIGURATION.offsetMax
+    ) {
+      issues.push({
+        field,
+        message: `${field} 必須介於 ${PILLAR_CONFIGURATION.offsetMin}–${PILLAR_CONFIGURATION.offsetMax} mm。`,
+      })
+      continue
+    }
+    const nearestStep = Math.round(offset / PILLAR_CONFIGURATION.offsetStep)
+    if (
+      Math.abs(offset - nearestStep * PILLAR_CONFIGURATION.offsetStep) >
+      OFFSET_STEP_TOLERANCE
+    ) {
+      issues.push({
+        field,
+        message: `${field} 必須以 ${PILLAR_CONFIGURATION.offsetStep} mm 為步進。`,
+      })
+    }
+  }
+
   if (issues.length > 0) return { valid: false, issues }
 
   if (isPositioningMode) {
     return {
       valid: true,
-      value: { mode: 'positioning', length: length as number },
+      value: {
+        mode: 'positioning',
+        length: length as number,
+        offsetX: value.offsetX as number,
+        offsetY: value.offsetY as number,
+      },
     }
   }
 
   return {
     valid: true,
-    value: { mode: mode as 'standard' | 'thin-shell' },
+    value: {
+      mode: mode as 'standard' | 'thin-shell',
+      offsetX: value.offsetX as number,
+      offsetY: value.offsetY as number,
+    },
   }
 }
 
@@ -137,6 +200,29 @@ export function normalizePillarParameters(value: unknown): PillarParameters {
   if (validation.valid) return validation.value
 
   if (isRecord(value)) {
+    const mode = value.mode
+    const hasOnlyMode = Object.keys(value).length === 1
+    if (hasOnlyMode && (mode === 'standard' || mode === 'thin-shell')) {
+      return { mode, offsetX: 0, offsetY: 0 }
+    }
+
+    const legacyPositioningLength = value.length
+    if (
+      mode === 'positioning' &&
+      Object.keys(value).length === 2 &&
+      typeof legacyPositioningLength === 'number' &&
+      Number.isSafeInteger(legacyPositioningLength) &&
+      legacyPositioningLength >= PILLAR_CONFIGURATION.positioningMinLength &&
+      legacyPositioningLength <= PILLAR_CONFIGURATION.positioningMaxLength
+    ) {
+      return {
+        mode: 'positioning',
+        length: legacyPositioningLength,
+        offsetX: 0,
+        offsetY: 0,
+      }
+    }
+
     const legacyLength = value.length
     const legacyBaseConnection = value.baseConnection
     const isLegacyLength =
@@ -145,7 +231,12 @@ export function normalizePillarParameters(value: unknown): PillarParameters {
       legacyLength >= PILLAR_CONFIGURATION.positioningMinLength &&
       legacyLength <= PILLAR_CONFIGURATION.positioningMaxLength
     if (isLegacyLength && legacyBaseConnection === false) {
-      return { mode: 'positioning', length: legacyLength }
+      return {
+        mode: 'positioning',
+        length: legacyLength,
+        offsetX: 0,
+        offsetY: 0,
+      }
     }
   }
 
@@ -171,16 +262,26 @@ export function boundsForPillar(parameters: PillarParameters): PillarBounds {
       ? PILLAR_CONFIGURATION.positioningBodyDiameter / 2
       : PILLAR_CONFIGURATION.baseDiameter / 2
   return {
-    min: [-radius, -radius, 0],
-    max: [radius, radius, pillarLengthForParameters(parameters)],
+    min: [parameters.offsetX - radius, parameters.offsetY - radius, 0],
+    max: [
+      parameters.offsetX + radius,
+      parameters.offsetY + radius,
+      pillarLengthForParameters(parameters),
+    ],
   }
+}
+
+function formatPillarOffset(value: number): string {
+  return Object.is(value, -0) || value === 0 ? '0' : String(value)
 }
 
 function pillarExportStem(parameters: PillarParameters): string {
   const length = pillarLengthForParameters(parameters)
   const mode =
     parameters.mode === 'positioning' ? 'positioning' : parameters.mode
-  return `pillar-${length}-${mode}`
+  const stem = `pillar-${length}-${mode}`
+  if (parameters.offsetX === 0 && parameters.offsetY === 0) return stem
+  return `${stem}-x${formatPillarOffset(parameters.offsetX)}-y${formatPillarOffset(parameters.offsetY)}`
 }
 
 export function pillarFileName(parameters: PillarParameters): string {

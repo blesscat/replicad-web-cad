@@ -101,8 +101,8 @@ function meshIsFinite(mesh: MeshData | MeshSnapshot): boolean {
   )
 }
 
-function volumeAt(shape: Shape3D, x: number, z: number): number {
-  const probe = makeCylinder(0.05, 0.02, [x, 0, z])
+function volumeAt(shape: Shape3D, x: number, y: number, z: number): number {
+  const probe = makeCylinder(0.05, 0.02, [x, y, z])
   let intersection: Shape3D | null = null
   try {
     intersection = shape.intersect(probe)
@@ -120,9 +120,12 @@ function expectMaterial(
   x: number,
   z: number,
   expected: boolean,
+  offsetX = 0,
+  offsetY = 0,
 ): void {
   try {
-    const hasMaterial = volumeAt(shape, x, z) > PROBE_VOLUME_EPSILON
+    const hasMaterial =
+      volumeAt(shape, x + offsetX, offsetY, z) > PROBE_VOLUME_EPSILON
     if (hasMaterial !== expected) {
       failures.push(`profile:${label}`)
     }
@@ -147,76 +150,55 @@ function inspectFixedEndProfiles(
   const upperChamferInsideRadius = upperChamferBoundaryRadius - 0.15
   const upperChamferOutsideRadius = upperChamferBoundaryRadius + 0.15
 
-  expectMaterial(shape, failures, 'base-flange-inside', 3.4, 0.4, true)
-  expectMaterial(shape, failures, 'base-flange-outside', 3.6, 0.4, false)
-  expectMaterial(
-    shape,
-    failures,
+  const probe = (label: string, x: number, z: number, expected: boolean) =>
+    expectMaterial(
+      shape,
+      failures,
+      label,
+      x,
+      z,
+      expected,
+      parameters.offsetX,
+      parameters.offsetY,
+    )
+
+  probe('base-flange-inside', 3.4, 0.4, true)
+  probe('base-flange-outside', 3.6, 0.4, false)
+  probe(
     'shoulder-below-wide',
     3.4,
     PILLAR_CONFIGURATION.baseHeight - 0.02,
     true,
   )
-  expectMaterial(
-    shape,
-    failures,
+  probe(
     'shoulder-above-wide',
     3.4,
     PILLAR_CONFIGURATION.baseHeight + 0.02,
     false,
   )
-  expectMaterial(
-    shape,
-    failures,
+  probe(
     'shoulder-above-body',
     bodyRadius - 0.1,
     PILLAR_CONFIGURATION.baseHeight + 0.02,
     true,
   )
 
-  expectMaterial(
-    shape,
-    failures,
+  probe(
     'body-straight-inside',
     bodyRadius - 0.1,
     PILLAR_CONFIGURATION.baseHeight + 0.1,
     true,
   )
-  expectMaterial(
-    shape,
-    failures,
+  probe(
     'body-straight-outside',
     bodyRadius + 0.1,
     PILLAR_CONFIGURATION.baseHeight + 0.1,
     false,
   )
-  expectMaterial(
-    shape,
-    failures,
-    'upper-straight-inside',
-    bodyRadius - 0.1,
-    upperStraightZ,
-    true,
-  )
-  expectMaterial(
-    shape,
-    failures,
-    'upper-straight-outside',
-    bodyRadius + 0.1,
-    upperStraightZ,
-    false,
-  )
-  expectMaterial(
-    shape,
-    failures,
-    'upper-chamfer-inside',
-    upperChamferInsideRadius,
-    upperChamferZ,
-    true,
-  )
-  expectMaterial(
-    shape,
-    failures,
+  probe('upper-straight-inside', bodyRadius - 0.1, upperStraightZ, true)
+  probe('upper-straight-outside', bodyRadius + 0.1, upperStraightZ, false)
+  probe('upper-chamfer-inside', upperChamferInsideRadius, upperChamferZ, true)
+  probe(
     'upper-chamfer-outside',
     upperChamferOutsideRadius,
     upperChamferZ,
@@ -241,65 +223,26 @@ function inspectPositioningEndProfiles(
   const upperChamferInsideRadius = upperChamferBoundaryRadius - 0.15
   const upperChamferOutsideRadius = upperChamferBoundaryRadius + 0.15
 
-  expectMaterial(
-    shape,
-    failures,
-    'lower-chamfer-inside',
-    1.4,
-    lowerChamferZ,
-    true,
-  )
-  expectMaterial(
-    shape,
-    failures,
-    'lower-chamfer-outside',
-    1.7,
-    lowerChamferZ,
-    false,
-  )
-  expectMaterial(
-    shape,
-    failures,
-    'lower-straight-inside',
-    2.4,
-    lowerStraightZ,
-    true,
-  )
-  expectMaterial(
-    shape,
-    failures,
-    'lower-straight-outside',
-    2.6,
-    lowerStraightZ,
-    false,
-  )
-  expectMaterial(
-    shape,
-    failures,
-    'upper-straight-inside',
-    2.4,
-    upperStraightZ,
-    true,
-  )
-  expectMaterial(
-    shape,
-    failures,
-    'upper-straight-outside',
-    2.6,
-    upperStraightZ,
-    false,
-  )
-  expectMaterial(
-    shape,
-    failures,
-    'upper-chamfer-inside',
-    upperChamferInsideRadius,
-    upperChamferZ,
-    true,
-  )
-  expectMaterial(
-    shape,
-    failures,
+  const probe = (label: string, x: number, z: number, expected: boolean) =>
+    expectMaterial(
+      shape,
+      failures,
+      label,
+      x,
+      z,
+      expected,
+      parameters.offsetX,
+      parameters.offsetY,
+    )
+
+  probe('lower-chamfer-inside', 1.4, lowerChamferZ, true)
+  probe('lower-chamfer-outside', 1.7, lowerChamferZ, false)
+  probe('lower-straight-inside', 2.4, lowerStraightZ, true)
+  probe('lower-straight-outside', 2.6, lowerStraightZ, false)
+  probe('upper-straight-inside', 2.4, upperStraightZ, true)
+  probe('upper-straight-outside', 2.6, upperStraightZ, false)
+  probe('upper-chamfer-inside', upperChamferInsideRadius, upperChamferZ, true)
+  probe(
     'upper-chamfer-outside',
     upperChamferOutsideRadius,
     upperChamferZ,
