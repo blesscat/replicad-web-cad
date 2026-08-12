@@ -37,7 +37,7 @@ The existing catalog model id MUST remain opengrid and its normalized
 parameters MUST include:
 
 - variant Full, Lite, or Heavy;
-- integer rows and columns from 1 through 17;
+- integer rows and columns from 1 through 10;
 - halfCellX none, left, or right, and halfCellY none, top, or bottom;
 - chamfers none, corners, or everywhere plus four outer-corner flags;
 - connectorHoles none or enabled plus independent top, right, bottom, and left
@@ -229,7 +229,8 @@ committed B-Rep revision.
 
 ### Requirement: Optional official reference comparison
 
-The repository MAY run an environment-gated official-reference test using
+The repository MUST treat the official-reference comparison as an optional,
+environment-gated test using
 binary STL fixtures supplied through OPENGRID_OFFICIAL_REFERENCE_DIR. The test
 MUST export the Replicad candidate and compare centered envelope coordinates
 within 0.01 mm, absolute volume within 0.5 mm3, and representative section
@@ -252,8 +253,8 @@ runtime dependencies.
 ### Requirement: Optional release benchmark
 
 The repository MUST provide an environment-gated benchmark capability that
-covers Full, Lite, and Heavy at 1 by 1, 2 by 2, 5 by 5, 10 by 10, and 17 by
-17 within the 500 mm limit. It MUST compare the available assembly strategies,
+covers Full, Lite, and Heavy at 1 by 1, 2 by 2, 5 by 5, and 10 by 10 within the
+500 mm limit. It MUST compare the available assembly strategies,
 perform one cold run, one warm-up, and five measured runs, and retain quality
 and export failures.
 

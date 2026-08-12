@@ -30,12 +30,12 @@
     onInputChange('y', String(parameters.rows))
   }
 
-  type BoxMode = 'default' | 'thin-shell' | 'base-plate'
+  type BoxMode = 'default' | 'thin-shell'
 
   function handleModeChange(event: Event): void {
     if (!(event.currentTarget instanceof HTMLInputElement)) return
     const mode = event.currentTarget.value as BoxMode
-    onInputChange('basePlateMode', String(mode === 'base-plate'))
+    onInputChange('basePlateMode', 'false')
     onInputChange('thinShellMode', String(mode === 'thin-shell'))
   }
 
@@ -173,10 +173,6 @@
 </script>
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
-  <p class="m-0 text-sm text-muted">
-    盒內淨高文字輸入為 10–500 mm、slider 為 10–200 mm；X/Y footprint 維持 500 mm
-    安全上限。
-  </p>
   <GridDimensionCalculator
     calculate={calculateOpenGridStackableBoxCounts}
     description=""
@@ -237,21 +233,6 @@
       <label class="flex min-w-0 items-start gap-2">
         <input
           aria-describedby={modeErrorDescriptionId()}
-          aria-label="預設模式"
-          class="mt-1 accent-primary"
-          data-testid="opengrid-stackable-box-default-mode"
-          name="opengrid-stackable-box-mode"
-          type="radio"
-          value="default"
-          checked={rawParameters.basePlateMode !== 'true' &&
-            rawParameters.thinShellMode !== 'true'}
-          onchange={handleModeChange}
-        />
-        <span class="font-[650]">預設模式</span>
-      </label>
-      <label class="flex min-w-0 items-start gap-2">
-        <input
-          aria-describedby={modeErrorDescriptionId()}
           aria-label="薄殼模式"
           class="mt-1 accent-primary"
           data-testid="opengrid-stackable-box-thin-shell-mode"
@@ -266,29 +247,26 @@
       <label class="flex min-w-0 items-start gap-2">
         <input
           aria-describedby={modeErrorDescriptionId()}
-          aria-label="底版模式"
+          aria-label="堆疊模式"
           class="mt-1 accent-primary"
-          data-testid="opengrid-stackable-box-base-plate-mode"
+          data-testid="opengrid-stackable-box-default-mode"
           name="opengrid-stackable-box-mode"
           type="radio"
-          value="base-plate"
-          checked={rawParameters.basePlateMode === 'true'}
+          value="default"
+          checked={rawParameters.basePlateMode !== 'true' &&
+            rawParameters.thinShellMode !== 'true'}
           onchange={handleModeChange}
         />
-        <span class="font-[650]">底版模式</span>
+        <span class="font-[650]">堆疊模式</span>
       </label>
     </div>
     {#if rawParameters.thinShellMode === 'true'}
       <span class="text-sm text-muted">
-        薄殼模式：不可堆疊，2mm 平底、1.6mm 薄壁
-      </span>
-    {:else if rawParameters.basePlateMode === 'true'}
-      <span class="text-sm text-muted">
-        底版模式：不可堆疊，使用6mm固定柱
+        薄殼模式：不可堆疊，使用5mm定位柱
       </span>
     {:else}
       <span class="text-sm text-muted">
-        預設模式：可堆疊滑動，使用標準8mm固定柱
+        預設模式：可堆疊滑動，使用8mm定位柱
       </span>
     {/if}
   </div>

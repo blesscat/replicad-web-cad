@@ -61,6 +61,19 @@ describe('OpenGrid stackable-box contract', () => {
     ).toBe(false)
   })
 
+  it('limits X and Y footprints to ten grid units', () => {
+    expect(
+      validateOpenGridStackableBoxParameters(parameters({ x: 10, y: 10 }))
+        .valid,
+    ).toBe(true)
+    expect(
+      validateOpenGridStackableBoxParameters(parameters({ x: 10.5 })).valid,
+    ).toBe(false)
+    expect(
+      validateOpenGridStackableBoxParameters(parameters({ y: 10.5 })).valid,
+    ).toBe(false)
+  })
+
   it('controls corner sockets and the full bottom grid independently', () => {
     const parametersForHoleMode = (
       cornerBottomHoles: boolean,

@@ -7,8 +7,8 @@ face at a time, without pretending that global native meshing has a percentage.
 
 ### Requirement: Per-face meshing exposes monotonic face progress
 
-When the preview mesher uses a per-face path with a known face count, the CAD
-operation MUST expose the current meshing subphase as completed faces and total
+The CAD operation MUST, when the preview mesher uses a per-face path with a known face count, expose the
+current meshing subphase as completed faces and total
 faces. The completed count MUST start at zero, increase only after a face has
 finished processing, never exceed the total, and reach the total before the
 meshing operation completes.

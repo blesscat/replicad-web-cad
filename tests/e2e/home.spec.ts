@@ -97,35 +97,34 @@ test('home, model selection, and docs are static Astro pages', async ({
     'href',
     '/cad/hsw-cell',
   )
-  await expect(editLinkFor(deskSystem, '圓柱支柱')).toHaveAttribute(
-    'href',
-    '/cad/opengrid-pillar?system=desk',
-  )
-  await expect(editLinkFor(deskSystem, '底板')).toHaveAttribute(
+  await expect(
+    editLinkFor(deskSystem, 'Locating Post (定位柱)'),
+  ).toHaveAttribute('href', '/cad/opengrid-pillar?system=desk')
+  await expect(editLinkFor(deskSystem, 'Board (底版)')).toHaveAttribute(
     'href',
     '/cad/opengrid?system=desk',
   )
-  await expect(editLinkFor(deskSystem, 'Snap')).toHaveAttribute(
+  await expect(editLinkFor(deskSystem, 'Snap (咔咔)')).toHaveAttribute(
     'href',
     '/cad/opengrid-snap?system=desk',
   )
-  await expect(editLinkFor(wallRelated, '底板')).toHaveAttribute(
+  await expect(editLinkFor(wallRelated, 'Board (底版)')).toHaveAttribute(
     'href',
     '/cad/opengrid?system=wall',
   )
-  await expect(editLinkFor(wallRelated, 'Snap')).toHaveAttribute(
+  await expect(editLinkFor(wallRelated, 'Snap (咔咔)')).toHaveAttribute(
     'href',
     '/cad/opengrid-snap?system=wall',
   )
-  await expect(editLinkFor(deskSystem, '分隔塊')).toHaveAttribute(
+  await expect(editLinkFor(deskSystem, 'divider (分隔牆)')).toHaveAttribute(
     'href',
     '/cad/opengrid-divider?system=desk',
   )
-  await expect(editLinkFor(deskSystem, '堆疊盒')).toHaveAttribute(
+  await expect(editLinkFor(deskSystem, 'Grid Box (方盒)')).toHaveAttribute(
     'href',
     '/cad/opengrid-stackable-box?system=desk',
   )
-  await expect(editLinkFor(deskSystem, '可堆疊圓柱')).toHaveAttribute(
+  await expect(editLinkFor(deskSystem, 'Round Box (圓盒)')).toHaveAttribute(
     'href',
     '/cad/opengrid-stackable-cylinder?system=desk',
   )
@@ -220,6 +219,23 @@ test('model selection stacks all cards on narrow screens', async ({ page }) => {
       return index === 0 || (previous !== undefined && position.y > previous.y)
     }),
   ).toBe(true)
+})
+
+test('model cards keep long localized names on one line', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/models')
+
+  const heading = page.getByRole('heading', {
+    name: 'Locating Post (定位柱)',
+    exact: true,
+  })
+  await expect(heading).toBeVisible()
+
+  const isSingleLine = await heading.evaluate((element) => {
+    const lineHeight = Number.parseFloat(getComputedStyle(element).lineHeight)
+    return element.getBoundingClientRect().height <= lineHeight + 1
+  })
+  expect(isSingleLine).toBe(true)
 })
 
 test('shared navigation exposes the configured support link contract', async ({

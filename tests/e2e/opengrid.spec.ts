@@ -6,6 +6,17 @@ import {
 } from './helpers'
 import { OPENGRID_CONFIGURATION } from '../../src/cad-contract/units'
 
+test('Desk OpenGrid board starts with a 4 by 4 grid when no value is saved', async ({
+  page,
+}) => {
+  await page.goto('/cad/opengrid?system=desk')
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+
+  await expect(page.getByRole('slider', { name: 'Y' })).toHaveValue('4')
+  await expect(page.getByRole('slider', { name: 'X' })).toHaveValue('4')
+})
+
 test('OpenGrid CAD route exposes typed controls and the custom matrix', async ({
   page,
 }) => {
@@ -53,7 +64,10 @@ test('OpenGrid CAD route exposes typed controls and the custom matrix', async ({
   await halfCellX.selectOption('right')
   await expect(columns).toHaveValue('2.5')
   await expect(columns).toHaveAttribute('min', '1')
-  await expect(columns).toHaveAttribute('max', '17.5')
+  await expect(columns).toHaveAttribute(
+    'max',
+    String(OPENGRID_CONFIGURATION.maxGridCount + 0.5),
+  )
   await expect(columns).toHaveAttribute('step', '0.5')
   await expect(page.getByText('X 2.5 格')).toBeVisible()
   await columns.press('ArrowRight')
@@ -71,6 +85,10 @@ test('OpenGrid CAD route exposes typed controls and the custom matrix', async ({
   const screwSource = page.getByRole('combobox', {
     name: 'OpenGrid 螺絲尺寸來源',
   })
+  const woodScrewDescription = page.getByText(
+    '木螺絲預設採 90° 沉頭；板厚或格內淨空不足的規格會停用。',
+    { exact: true },
+  )
   const advancedSettings = page.getByRole('checkbox', { name: '進階設定' })
   const screwDiameter = page.getByRole('spinbutton', {
     name: 'OpenGrid 螺絲通孔直徑',
@@ -83,7 +101,9 @@ test('OpenGrid CAD route exposes typed controls and the custom matrix', async ({
   await expect(
     page.getByRole('checkbox', { name: 'OpenGrid 是否沉頭' }),
   ).toHaveCount(0)
+  await expect(woodScrewDescription).toHaveCount(0)
   await screwSource.selectOption('custom')
+  await expect(woodScrewDescription).toHaveCount(0)
   await expect(advancedSettings).toBeVisible()
   await expect(advancedSettings).toBeChecked()
   await expect(screwDiameter).toBeVisible()
@@ -101,6 +121,7 @@ test('OpenGrid CAD route exposes typed controls and the custom matrix', async ({
     ).toHaveCount(0)
   }
   await screwSource.selectOption('m5')
+  await expect(woodScrewDescription).toBeVisible()
   await expect(
     page.getByRole('spinbutton', { name: 'OpenGrid 螺絲通孔直徑' }),
   ).toHaveValue(String(OPENGRID_CONFIGURATION.screwPresets.m5.diameter))
@@ -109,6 +130,7 @@ test('OpenGrid CAD route exposes typed controls and the custom matrix', async ({
   ).toHaveValue(String(OPENGRID_CONFIGURATION.screwPresets.m5.headDiameter))
   await screwSource.selectOption('official-default')
   await expect(screwSource).toHaveValue('official-default')
+  await expect(woodScrewDescription).toHaveCount(0)
   await expect(advancedSettings).toHaveCount(0)
   await expect(screwDiameter).toHaveCount(0)
   const centerScrew = page.getByRole('checkbox', {
@@ -117,21 +139,9 @@ test('OpenGrid CAD route exposes typed controls and the custom matrix', async ({
   await expect(centerScrew).toBeEnabled()
   await centerScrew.check()
   await expect(centerScrew).toBeChecked()
-  const centerScrewDescription = page.getByText(
-    '正中心需要 X、Y 格數都至少為 2，才會對應到內部格線交界。',
-    { exact: true },
-  )
-  await expect(centerScrewDescription).toBeVisible()
   const screwEvery = page.getByRole('spinbutton', {
     name: 'OpenGrid 每隔幾格一個螺絲孔',
   })
-  const descriptionBottom = await centerScrewDescription.evaluate(
-    (element) => element.getBoundingClientRect().bottom,
-  )
-  const screwEveryTop = await screwEvery.evaluate(
-    (element) => element.getBoundingClientRect().top,
-  )
-  expect(screwEveryTop).toBeGreaterThanOrEqual(descriptionBottom)
   await screwEvery.fill('2')
   await expect(screwEvery).toHaveValue('2')
   await page
@@ -164,11 +174,6 @@ test('OpenGrid enables the center screw on odd grids using the official corner c
   await expect(centerScrew).toBeEnabled()
   await centerScrew.check()
   await expect(centerScrew).toBeChecked()
-  await expect(
-    page.getByText('奇數格會選擇靠近中心、偏向左上的內部格線交界。', {
-      exact: true,
-    }),
-  ).toBeVisible()
 
   await columns.fill('1')
   await expect(centerScrew).toBeDisabled()

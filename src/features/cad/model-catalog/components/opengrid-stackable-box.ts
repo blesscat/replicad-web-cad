@@ -165,10 +165,9 @@ export const opengridStackableBoxDefinition: ModelDefinition = {
   id: 'opengrid-stackable-box',
   buildKey: 'opengrid-stackable-box',
   family: 'opengrid',
-  displayName: 'OpenGrid 堆疊盒',
-  selectionLabel: '堆疊盒',
-  selectionDescription:
-    'OpenGrid 堆疊盒；提供預設、薄殼與底版三種模式，盒內淨高文字輸入 10–500 mm、slider 10–200 mm，X/Y footprint 上限 500 mm。',
+  displayName: 'Grid Box (方盒)',
+  selectionLabel: 'Grid Box (方盒)',
+  selectionDescription: 'Grid Box (方盒)；提供堆疊與薄殼兩種模式。',
   parameterSchema: OPENGRID_STACKABLE_BOX_PARAMETER_SCHEMA,
   defaultParameters: {
     ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
@@ -176,7 +175,7 @@ export const opengridStackableBoxDefinition: ModelDefinition = {
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {
     src: '/model-previews/opengrid-stackable-box.png',
-    alt: 'OpenGrid 堆疊盒預覽',
+    alt: 'Grid Box (方盒) 預覽',
     width: 640,
     height: 400,
   },

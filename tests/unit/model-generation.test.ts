@@ -557,6 +557,7 @@ describe('CAD model generation debounce', () => {
         parameters: {
           ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
           diameter: 57,
+          height: 30,
         },
       }),
     )

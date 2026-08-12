@@ -6,9 +6,9 @@ test('OpenGrid divider is listed with independent directional controls', async (
 }) => {
   await page.goto('/models')
   const modelLink = page
-    .getByRole('heading', { name: '分隔塊', exact: true })
+    .getByRole('heading', { name: 'divider (分隔牆)', exact: true })
     .locator('..')
-    .getByRole('link', { name: '編輯 分隔塊', exact: true })
+    .getByRole('link', { name: '編輯 divider (分隔牆)', exact: true })
   await expect(modelLink).toHaveAttribute(
     'href',
     '/cad/opengrid-divider?system=desk',
@@ -17,7 +17,7 @@ test('OpenGrid divider is listed with independent directional controls', async (
 
   await expect(page).toHaveURL('/cad/opengrid-divider?system=desk')
   await expect(
-    page.getByRole('heading', { name: '目前編輯：OpenGrid 分隔塊' }),
+    page.getByRole('heading', { name: '目前編輯：divider (分隔牆)' }),
   ).toBeVisible()
   await expect(
     page.getByText(/官方 OpenGrid 間距：整格 28 mm、半格 14 mm/),
@@ -39,6 +39,14 @@ test('OpenGrid divider is listed with independent directional controls', async (
       '0.5',
     )
   }
+  await expect(page.getByRole('slider', { name: '左臂（X）' })).toHaveValue(
+    '1.5',
+  )
+  await expect(page.getByRole('slider', { name: '右臂（X）' })).toHaveValue(
+    '1.5',
+  )
+  await expect(page.getByRole('slider', { name: '上臂（Y）' })).toHaveValue('0')
+  await expect(page.getByRole('slider', { name: '下臂（Y）' })).toHaveValue('0')
   const height = page.getByRole('textbox', { name: '分隔牆高度（Z）' })
   const heightSlider = page.getByRole('slider', { name: '分隔牆高度（Z）' })
   await expect(height).toHaveAttribute('min', '2')
@@ -72,7 +80,7 @@ test('OpenGrid divider exports the committed normalized shape', async ({
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-divider-l1-r1-u0-d0-t2-h24.step',
+    'opengrid-divider-l1.5-r1.5-u0-d0-t2-h24.step',
   )
 })
 

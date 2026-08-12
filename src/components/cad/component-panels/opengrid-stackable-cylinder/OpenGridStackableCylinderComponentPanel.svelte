@@ -30,11 +30,8 @@
   }
 
   function modeSummary(mode: CylinderMode): string {
-    if (mode === 'bottom-plate') {
-      return '底版模式：不可堆疊，使用6mm固定柱'
-    }
-    if (mode === 'thin') return '薄殼模式：可堆疊，2 mm 底厚、1.6 mm 壁厚'
-    return '預設模式：可堆疊，使用標準8mm固定柱'
+    if (mode === 'thin') return '薄殼模式：不可堆疊，使用5mm定位柱'
+    return '預設模式：可堆疊滑動，使用8mm定位柱'
   }
 
   function onModeChange(mode: CylinderMode): void {
@@ -198,21 +195,11 @@
   }
 </script>
 
-<fieldset class="m-0 grid gap-3 border-0 p-0" aria-label="底部模式">
+<fieldset class="m-0 grid gap-3 border-0 p-0" aria-label="盒體模式">
   <div
     class="flex items-center gap-4 whitespace-nowrap"
     data-testid="opengrid-cylinder-mode-options"
   >
-    <label class="flex items-center gap-2 text-sm">
-      <input
-        type="radio"
-        name="opengrid-stackable-cylinder-bottom-mode"
-        aria-label="預設模式"
-        checked={activeMode === 'default'}
-        onchange={(event) => onModeRadioChange('default', event)}
-      />
-      <span>預設模式</span>
-    </label>
     <label class="flex items-center gap-2 text-sm">
       <input
         type="radio"
@@ -227,11 +214,11 @@
       <input
         type="radio"
         name="opengrid-stackable-cylinder-bottom-mode"
-        aria-label="底版模式"
-        checked={activeMode === 'bottom-plate'}
-        onchange={(event) => onModeRadioChange('bottom-plate', event)}
+        aria-label="堆疊模式"
+        checked={activeMode === 'default'}
+        onchange={(event) => onModeRadioChange('default', event)}
       />
-      <span>底版模式</span>
+      <span>堆疊模式</span>
     </label>
   </div>
   <p
@@ -240,9 +227,6 @@
     aria-live="polite"
   >
     {modeSummary(activeMode)}
-  </p>
-  <p class="m-0 text-sm text-muted">
-    高度文字輸入為 10–500 mm、slider 為 10–200 mm；外徑維持 20–300 mm。
   </p>
   <label class="flex items-start gap-2 text-sm">
     <input

@@ -34,6 +34,11 @@ describe('OpenGrid Snap contract', () => {
     expect(OPENGRID_SNAP_CONFIGURATION.minOffset).toBe(0)
     expect(OPENGRID_SNAP_CONFIGURATION.maxOffset).toBe(1)
     expect(OPENGRID_SNAP_CONFIGURATION.offsetStep).toBe(0.05)
+    expect(
+      validateOpenGridSnapParameters(
+        parameters({ offset: OPENGRID_SNAP_CONFIGURATION.maxOffset }),
+      ).valid,
+    ).toBe(true)
   })
 
   it('accepts only the typed footprint contract and preserves defaults', () => {

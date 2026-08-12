@@ -133,6 +133,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
 
   it('derives a flat-bottom U-opening from depth, length, and side angle', () => {
     const input = parameters({
+      height: 30,
       openingPlusXDepth: 12,
       openingPlusXBottomLength: 12,
       openingPlusXAngle: 90,
@@ -160,6 +161,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
   it('uses a shallower side angle for a V-like opening while keeping the radius fixed', () => {
     const uOpening = openGridStackableCylinderDerivedGeometryFor(
       parameters({
+        height: 30,
         openingPlusXDepth: 12,
         openingPlusXBottomLength: 12,
         openingPlusXAngle: 90,
@@ -167,6 +169,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
     ).openings['+X']
     const vOpening = openGridStackableCylinderDerivedGeometryFor(
       parameters({
+        height: 30,
         openingPlusXDepth: 8,
         openingPlusXBottomLength: 0,
         openingPlusXAngle: 45,
@@ -315,11 +318,12 @@ describe('OpenGrid stackable-cylinder contract', () => {
   })
 
   it('normalizes legacy diameter and height snapshots to the default profile', () => {
+    const legacyParameters = parameters({ diameter: 56, height: 30 })
     expect(
       validateOpenGridStackableCylinderParameters({ diameter: 56, height: 30 }),
     ).toEqual({
       valid: true,
-      value: parameters(),
+      value: legacyParameters,
     })
   })
 
@@ -374,14 +378,14 @@ describe('OpenGrid stackable-cylinder contract', () => {
     const value = parameters()
 
     expect(boundsForOpenGridStackableCylinder(value)).toEqual({
-      min: [-28, -28, 0],
-      max: [28, 28, 30],
+      min: [-30, -30, 0],
+      max: [30, 30, 20],
     })
     expect(openGridStackableCylinderFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d56-h30.step',
+      'opengrid-stackable-cylinder-d60-h20.step',
     )
     expect(openGridStackableCylinderStlFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d56-h30.stl',
+      'opengrid-stackable-cylinder-d60-h20.stl',
     )
     const model = {
       modelId: 'opengrid-stackable-cylinder' as const,
@@ -391,10 +395,10 @@ describe('OpenGrid stackable-cylinder contract', () => {
       boundsForOpenGridStackableCylinder(value),
     )
     expect(modelFileName(model)).toBe(
-      'opengrid-stackable-cylinder-d56-h30.step',
+      'opengrid-stackable-cylinder-d60-h20.step',
     )
     expect(modelStlFileName(model)).toBe(
-      'opengrid-stackable-cylinder-d56-h30.stl',
+      'opengrid-stackable-cylinder-d60-h20.stl',
     )
     expect(validateModelParameters(model.modelId, value)).toEqual({
       valid: true,
@@ -411,17 +415,17 @@ describe('OpenGrid stackable-cylinder contract', () => {
     }
 
     expect(openGridStackableCylinderFileName(thin)).toBe(
-      'opengrid-stackable-cylinder-d56-h30-thin.step',
+      'opengrid-stackable-cylinder-d60-h20-thin.step',
     )
     expect(openGridStackableCylinderStlFileName(noHoles)).toBe(
-      'opengrid-stackable-cylinder-d56-h30-no-holes.stl',
+      'opengrid-stackable-cylinder-d60-h20-no-holes.stl',
     )
     expect(openGridStackableCylinderFileName(thinNoHoles)).toBe(
-      'opengrid-stackable-cylinder-d56-h30-thin-no-holes.step',
+      'opengrid-stackable-cylinder-d60-h20-thin-no-holes.step',
     )
     expect(
       openGridStackableCylinderFileName(parameters({ bottomPlateMode: true })),
-    ).toBe('opengrid-stackable-cylinder-d56-h30-bottom-plate.step')
+    ).toBe('opengrid-stackable-cylinder-d60-h20-bottom-plate.step')
   })
 
   it('adds a deterministic opening fingerprint only when a side opening is enabled', () => {
@@ -432,10 +436,10 @@ describe('OpenGrid stackable-cylinder contract', () => {
     })
 
     expect(openGridStackableCylinderFileName(input)).toBe(
-      'opengrid-stackable-cylinder-d56-h30-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
+      'opengrid-stackable-cylinder-d60-h20-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
     )
     expect(openGridStackableCylinderStlFileName(input)).toBe(
-      'opengrid-stackable-cylinder-d56-h30-open-8-12-70_0-1-90_0-1-90_0-1-90.stl',
+      'opengrid-stackable-cylinder-d60-h20-open-8-12-70_0-1-90_0-1-90_0-1-90.stl',
     )
   })
 

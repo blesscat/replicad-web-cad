@@ -42,7 +42,7 @@ function parameters(
 describe('OpenGrid contract', () => {
   it('accepts official defaults and derives the legal centered envelope', () => {
     const defaults = parameters()
-    expect(OPENGRID_CONFIGURATION.maxGridCount).toBe(17)
+    expect(OPENGRID_CONFIGURATION.maxGridCount).toBe(10)
     expect(validateOpenGridParameters(defaults)).toEqual({
       valid: true,
       value: defaults,
@@ -51,11 +51,14 @@ describe('OpenGrid contract', () => {
       min: [-28, -28, 0],
       max: [28, 28, 4],
     })
-    expect(boundsForOpenGrid({ ...defaults, rows: 17, columns: 17 })).toEqual({
-      min: [-238, -238, 0],
-      max: [238, 238, 4],
+    expect(boundsForOpenGrid({ ...defaults, rows: 10, columns: 10 })).toEqual({
+      min: [-140, -140, 0],
+      max: [140, 140, 4],
     })
-    expect(validateOpenGridParameters({ ...defaults, rows: 18 }).valid).toBe(
+    expect(validateOpenGridParameters({ ...defaults, rows: 11 }).valid).toBe(
+      false,
+    )
+    expect(validateOpenGridParameters({ ...defaults, columns: 11 }).valid).toBe(
       false,
     )
   })
@@ -550,7 +553,7 @@ describe('OpenGrid contract', () => {
 
   it('keeps the official deterministic custom fixture and removes the old block rule', () => {
     expect(deterministicOpenGridCustomScrewPositions(5, 5)).toHaveLength(4)
-    expect(deterministicOpenGridCustomScrewPositions(17, 17)).toHaveLength(64)
+    expect(deterministicOpenGridCustomScrewPositions(10, 10)).toHaveLength(21)
     const legal = parameters({
       rows: 10,
       columns: 10,

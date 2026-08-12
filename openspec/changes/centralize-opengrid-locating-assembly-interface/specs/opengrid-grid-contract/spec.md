@@ -9,14 +9,14 @@ The system MUST keep feature-specific dimensions separate from the official Open
 - **WHEN** an OpenGrid component generates its bottom or locating holes after the shared grid contract and locating-interface contract are applied
 - **THEN** nominal locating consumers MUST remain Ø5 mm or radius 2.5 mm as appropriate
 - **AND** assembly openings MUST remain Ø5.05 mm
-- **AND** stop-side shaft openings MUST remain Ø4.05 mm
+- **AND** shaft openings MUST remain Ø4.55 mm and retaining openings MUST remain Ø7.05 mm
 - **AND** hole placement grids or offsets MUST continue to follow their owning component contract
 
 #### Scenario: Ordinary and stopped holes retain different profiles
 
 - **WHEN** a Stackable Box generates ordinary bottom-grid holes and special corner sockets
 - **THEN** ordinary bottom-grid holes MUST remain straight Ø5.05 mm holes
-- **AND** special corner sockets MUST use the Ø5.05 mm lower opening and Ø4.05 mm shoulder-side opening
+- **AND** special corner sockets MUST use the Ø4.55 mm lower opening and Ø7.05 mm shoulder-side retaining opening
 - **AND** the grid contract MUST NOT cause either profile to use 28 mm or 14 mm as a hole diameter
 
 #### Scenario: 元件專用偏移不被升格為半格

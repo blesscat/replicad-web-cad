@@ -4,6 +4,7 @@ import {
   skipHeadlessFirefoxWithoutWebGL,
 } from './helpers'
 import { COMPONENT_PARAMETER_STORAGE_KEY } from '../../src/features/cad/parameters'
+import { OPENGRID_SNAP_CONFIGURATION } from '../../src/cad-contract/units'
 
 test('Desk and Wall Snap entries use isolated presets and context resets', async ({
   page,
@@ -12,6 +13,9 @@ test('Desk and Wall Snap entries use isolated presets and context resets', async
   await page.evaluate(() => localStorage.clear())
   await page.reload()
 
+  await expect(
+    page.getByRole('heading', { name: '目前編輯：Snap (咔咔)' }),
+  ).toBeVisible()
   const variant = page.getByRole('combobox', { name: 'OpenGrid Snap 型號' })
   const cornerHoles = page.getByRole('checkbox', { name: '定位孔' })
   const centerRemover = page.getByRole('checkbox', { name: '移除孔' })
@@ -20,7 +24,7 @@ test('Desk and Wall Snap entries use isolated presets and context resets', async
   await expect(variant).toHaveValue('Lite')
   await expect(cornerHoles).toBeChecked()
   await expect(centerRemover).toBeChecked()
-  await expect(offset).toHaveValue('0.3')
+  await expect(offset).toHaveValue('0.25')
   await expect(
     page.getByText('目前系統：Desk System', { exact: true }),
   ).toBeVisible()
@@ -28,7 +32,7 @@ test('Desk and Wall Snap entries use isolated presets and context resets', async
   await offset.press('ArrowRight')
   await cornerHoles.uncheck()
   await centerRemover.uncheck()
-  await expect(offset).toHaveValue('0.35')
+  await expect(offset).toHaveValue('0.3')
 
   await page.goto('/cad/opengrid-snap?system=wall')
   const wallVariant = page.getByRole('combobox', {
@@ -54,7 +58,7 @@ test('Desk and Wall Snap entries use isolated presets and context resets', async
   await page.goto('/cad/opengrid-snap?system=desk')
   await expect(
     page.getByRole('slider', { name: '外框總增量（X/Y）' }),
-  ).toHaveValue('0.35')
+  ).toHaveValue('0.3')
   await expect(page.getByRole('checkbox', { name: '定位孔' })).not.toBeChecked()
 })
 
@@ -119,7 +123,10 @@ test('OpenGrid Snap route exposes profiles, features, and one shared outer offse
   const offset = page.getByRole('slider', { name: '外框總增量（X/Y）' })
   await expect(offset).toHaveValue('0')
   await expect(offset).toHaveAttribute('min', '0')
-  await expect(offset).toHaveAttribute('max', '1')
+  await expect(offset).toHaveAttribute(
+    'max',
+    String(OPENGRID_SNAP_CONFIGURATION.maxOffset),
+  )
   await expect(offset).toHaveAttribute('step', '0.05')
   await expect(
     page.getByRole('textbox', { name: '外框總增量（X/Y）' }),

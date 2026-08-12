@@ -73,7 +73,7 @@ const FIXTURE_SCALES: readonly FixtureScale[] = [
     connectorHoles: 'enabled',
   },
   {
-    id: '17x17-max-500mm',
+    id: 'max-grid-custom',
     rows: OPENGRID_BENCHMARK_CONFIGURATION.maxGridCount,
     columns: OPENGRID_BENCHMARK_CONFIGURATION.maxGridCount,
     screwMode: 'custom',
@@ -109,7 +109,7 @@ function createFixture(
       top: true,
       right: scale.id !== '2x2',
       bottom: true,
-      left: scale.id === '17x17-max-500mm',
+      left: scale.id === 'max-grid-custom',
     },
     screwKind: scale.id === '5x5' ? 'custom' : 'official-default',
     screwMode: scale.screwMode,

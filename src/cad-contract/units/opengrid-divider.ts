@@ -85,8 +85,8 @@ export const OPENGRID_DIVIDER_CONFIGURATION = {
   maxHeight: 500,
   heightSliderMax: 200,
   defaultParameters: {
-    left: 1,
-    right: 1,
+    left: 1.5,
+    right: 1.5,
     up: 0,
     down: 0,
     height: 20,
