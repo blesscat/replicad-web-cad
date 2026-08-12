@@ -11,8 +11,12 @@ import type {
   ModelBounds,
   ModelParameterValues,
 } from '../../src/cad-contract/units'
+import { boundsForPillar } from '../../src/cad-contract/units'
 
-function createContext(modelId: 'box' | 'opengrid-pillar' = 'box'): {
+function createContext(
+  modelId: 'box' | 'opengrid-pillar' = 'box',
+  pillarMode: 'standard' | 'thin-shell' = 'standard',
+): {
   context: RuntimeContext
   refs: RuntimeRefs
   client: { send: ReturnType<typeof vi.fn> }
@@ -20,15 +24,15 @@ function createContext(modelId: 'box' | 'opengrid-pillar' = 'box'): {
 } {
   const parameters: ModelParameterValues =
     modelId === 'opengrid-pillar'
-      ? { length: 12, baseConnection: true }
+      ? { mode: pillarMode }
       : { width: 20, depth: 30, height: 40 }
   const rawParameters: Record<string, string> =
     modelId === 'opengrid-pillar'
-      ? { length: '12', baseConnection: 'true' }
+      ? { mode: pillarMode }
       : { width: '20', depth: '30', height: '40' }
   const bounds: ModelBounds =
     modelId === 'opengrid-pillar'
-      ? { min: [-3.5, -3.5, 0], max: [3.5, 3.5, 12] }
+      ? boundsForPillar({ mode: pillarMode })
       : { min: [-10, -15, 0], max: [10, 15, 40] }
   const state = {
     ...initialCadState(modelId, parameters),
@@ -109,7 +113,7 @@ describe('CAD export runtime', () => {
     })
   })
 
-  it('uses pillar mode and length in deterministic STEP and STL metadata', () => {
+  it('uses fixed pillar modes in deterministic STEP and STL metadata', () => {
     const step = createContext('opengrid-pillar')
     const stepHandlers = createExportHandlers(step.context)
     stepHandlers.handleExport('step')
@@ -117,18 +121,18 @@ describe('CAD export runtime', () => {
     expect(step.client.send).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: 'export.step',
-        file: { name: 'pillar-12-base.step', mime: 'model/step' },
+        file: { name: 'pillar-9-standard.step', mime: 'model/step' },
       }),
     )
 
-    const stl = createContext('opengrid-pillar')
+    const stl = createContext('opengrid-pillar', 'thin-shell')
     const stlHandlers = createExportHandlers(stl.context)
     stlHandlers.handleExport('stl')
 
     expect(stl.client.send).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: 'export.stl',
-        file: { name: 'pillar-12-base.stl', mime: 'model/stl' },
+        file: { name: 'pillar-5-thin-shell.stl', mime: 'model/stl' },
       }),
     )
   })

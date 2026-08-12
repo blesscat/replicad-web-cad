@@ -9,7 +9,9 @@ import {
   parseDimensionInput,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
+  PILLAR_CONFIGURATION,
   validateModelParameters,
+  validatePillarParameters,
   type HexagonalColumnParameters,
   type ModelId,
   type ModelParameterKey,
@@ -66,10 +68,7 @@ export const HEXAGONAL_COLUMN_PARAMETER_KEYS: ScalarModelParameterKey[] = [
   'gap',
   'orientation',
 ]
-export const PILLAR_PARAMETER_KEYS: ModelParameterKey[] = [
-  'length',
-  'baseConnection',
-]
+export const PILLAR_PARAMETER_KEYS: ModelParameterKey[] = ['mode', 'length']
 
 function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'box') return DIMENSION_KEYS
@@ -162,6 +161,56 @@ function parseBooleanRawParameter(
   }
 }
 
+function parsePillarRawParameters(
+  raw: RawParameters,
+):
+  | { valid: true; value: ModelParameterValues }
+  | { valid: false; message: string; field?: ModelParameterKey } {
+  const mode = raw.mode
+  if (mode !== 'standard' && mode !== 'thin-shell' && mode !== 'positioning') {
+    return {
+      valid: false,
+      message: '模式必須是 standard、thin-shell 或 positioning。',
+      field: 'mode',
+    }
+  }
+
+  if (mode !== 'positioning') {
+    const validation = validatePillarParameters({ mode })
+    if (!validation.valid) {
+      const issue = validation.issues[0]
+      return {
+        valid: false,
+        message: issue?.message ?? '支柱模式輸入無效。',
+        field: issue?.field === 'parameters' ? undefined : issue?.field,
+      }
+    }
+    return { valid: true, value: validation.value }
+  }
+
+  const rawLength =
+    raw.length ?? String(PILLAR_CONFIGURATION.positioningDefaultLength)
+  const length = parseDimensionInput(rawLength)
+  if (length === null) {
+    return {
+      valid: false,
+      message: '物件定位用支柱長度必須是有限的整數 mm。',
+      field: 'length',
+    }
+  }
+
+  const validation = validatePillarParameters({ mode, length })
+  if (!validation.valid) {
+    const issue = validation.issues[0]
+    return {
+      valid: false,
+      message: issue?.message ?? '物件定位用支柱輸入無效。',
+      field: issue?.field === 'parameters' ? undefined : issue?.field,
+    }
+  }
+  return { valid: true, value: validation.value }
+}
+
 export function rawFromParameters(
   parameters: ModelParameterValues,
 ): RawParameters {
@@ -210,15 +259,11 @@ export function rawFromParameters(
     }
   }
 
-  if ('baseConnection' in parameters) {
-    const pillarParameters = parameters as {
-      length: number
-      baseConnection: boolean
+  if ('mode' in parameters) {
+    if (parameters.mode === 'positioning' && 'length' in parameters) {
+      return { mode: parameters.mode, length: String(parameters.length) }
     }
-    return {
-      length: String(pillarParameters.length),
-      baseConnection: String(pillarParameters.baseConnection),
-    }
+    return { mode: parameters.mode }
   }
 
   if (
@@ -347,6 +392,10 @@ export function parseRawParameters(
     return { valid: false, message: '包含不支援的參數欄位。' }
   }
 
+  if (modelId === 'opengrid-pillar') {
+    return parsePillarRawParameters(raw)
+  }
+
   if (modelId === 'opengrid-snap') {
     const variant = raw.variant
     if (variant !== 'Full' && variant !== 'Lite') {
@@ -420,11 +469,22 @@ export function parseRawParameters(
     Record<ModelParameterKey, number | string | boolean | null>
   > = {}
   for (const key of keys) {
+    if (key === 'mode') {
+      const mode = raw.mode
+      if (mode !== 'standard' && mode !== 'thin-shell') {
+        return {
+          valid: false,
+          message: '模式必須是 standard 或 thin-shell。',
+          field: 'mode',
+        }
+      }
+      parsed.mode = mode
+      continue
+    }
     if (
       key === 'cornerPosts' ||
       key === 'cornerBottomHoles' ||
       key === 'fullBottomHoleGrid' ||
-      key === 'baseConnection' ||
       key === 'thinBottomMode' ||
       key === 'bottomPlateMode' ||
       key === 'bottomHolesEnabled' ||

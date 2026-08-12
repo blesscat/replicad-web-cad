@@ -283,13 +283,13 @@ describe('HSW kernel model registration', () => {
   it('routes pillar directly to its asset-free builder', async () => {
     const shape = await buildModelBRep(
       'opengrid-pillar',
-      { length: 5, baseConnection: true },
+      { mode: 'thin-shell' },
       context,
     )
 
     expect(shape).toMatchObject({ model: 'opengrid-pillar' })
     expect(mocks.buildPillar).toHaveBeenCalledWith(
-      { length: 5, baseConnection: true },
+      { mode: 'thin-shell' },
       expect.objectContaining({
         isGenerationCurrent: undefined,
         yieldToEventLoop: undefined,

@@ -402,37 +402,38 @@ describe('CAD workspace validation helpers', () => {
     })
   })
 
-  it('round-trips pillar length and its typed base-connection checkbox', () => {
-    const parameters: PillarParameters = {
-      length: 5,
-      baseConnection: true,
-    }
+  it('round-trips the typed pillar mode radio value', () => {
+    const parameters: PillarParameters = { mode: 'thin-shell' }
     const raw = rawFromParameters(parameters)
 
-    expect(raw).toEqual({ length: '5', baseConnection: 'true' })
+    expect(raw).toEqual({ mode: 'thin-shell' })
     expect(parseRawParameters(raw, 'opengrid-pillar')).toEqual({
       valid: true,
       value: parameters,
     })
-    expect(
-      parseRawParameters(
-        { length: '5', baseConnection: 'yes' },
-        'opengrid-pillar',
-      ),
-    ).toEqual({
+    expect(parseRawParameters({ mode: 'legacy' }, 'opengrid-pillar')).toEqual({
       valid: false,
-      message: '必須是 true 或 false。',
-      field: 'baseConnection',
+      message: '模式必須是 standard、thin-shell 或 positioning。',
+      field: 'mode',
     })
-    expect(
-      parseRawParameters(
-        { length: '5.5', baseConnection: 'false' },
-        'opengrid-pillar',
-      ),
-    ).toEqual({
+    expect(parseRawParameters({}, 'opengrid-pillar')).toEqual({
       valid: false,
-      message: '總長度必須是有限的整數 mm。',
-      field: 'length',
+      message: '模式必須是 standard、thin-shell 或 positioning。',
+      field: 'mode',
+    })
+  })
+
+  it('round-trips the custom-length positioning pillar mode', () => {
+    const parameters: PillarParameters = {
+      mode: 'positioning',
+      length: 25,
+    }
+    const raw = rawFromParameters(parameters)
+
+    expect(raw).toEqual({ mode: 'positioning', length: '25' })
+    expect(parseRawParameters(raw, 'opengrid-pillar')).toEqual({
+      valid: true,
+      value: parameters,
     })
   })
 

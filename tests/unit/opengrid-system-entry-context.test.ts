@@ -43,6 +43,9 @@ describe('OpenGrid system entry context', () => {
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
     })
+    expect(getSystemPreset('opengrid-pillar', 'desk')).toEqual({
+      mode: 'thin-shell',
+    })
   })
 
   it('resolves isolated Desk container presets without changing model defaults', () => {

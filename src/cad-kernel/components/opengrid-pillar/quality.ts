@@ -2,6 +2,7 @@ import { getOC, makeCylinder, measureVolume, type Shape3D } from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForPillar,
+  pillarLengthForParameters,
   PILLAR_CONFIGURATION,
   type ModelBounds,
   type PillarParameters,
@@ -132,69 +133,130 @@ function expectMaterial(
   }
 }
 
-function inspectEndProfiles(
+function inspectFixedEndProfiles(
   shape: Shape3D,
   parameters: PillarParameters,
   failures: string[],
 ): void {
-  const lowerChamferZ = PILLAR_CONFIGURATION.lowerChamfer * 0.1
-  const lowerStraightZ = PILLAR_CONFIGURATION.lowerChamfer + 0.1
-  const upperStraightZ =
-    parameters.length - PILLAR_CONFIGURATION.upperChamfer - 0.1
-  const upperChamferZ =
-    parameters.length - PILLAR_CONFIGURATION.upperChamfer / 2
+  const totalLength = pillarLengthForParameters(parameters)
+  const upperStraightZ = totalLength - PILLAR_CONFIGURATION.upperChamfer - 0.1
+  const upperChamferZ = totalLength - PILLAR_CONFIGURATION.upperChamfer / 2
   const bodyRadius = PILLAR_CONFIGURATION.bodyDiameter / 2
   const upperChamferBoundaryRadius =
     bodyRadius - PILLAR_CONFIGURATION.upperChamfer / 2
   const upperChamferInsideRadius = upperChamferBoundaryRadius - 0.15
   const upperChamferOutsideRadius = upperChamferBoundaryRadius + 0.15
 
-  if (parameters.baseConnection) {
-    expectMaterial(shape, failures, 'base-flange-inside', 3.4, 0.4, true)
-    expectMaterial(shape, failures, 'base-flange-outside', 3.6, 0.4, false)
-    expectMaterial(
-      shape,
-      failures,
-      'shoulder-below-wide',
-      3.4,
-      PILLAR_CONFIGURATION.baseHeight - 0.02,
-      true,
-    )
-    expectMaterial(
-      shape,
-      failures,
-      'shoulder-above-wide',
-      3.4,
-      PILLAR_CONFIGURATION.baseHeight + 0.02,
-      false,
-    )
-    expectMaterial(
-      shape,
-      failures,
-      'shoulder-above-body',
-      2.4,
-      PILLAR_CONFIGURATION.baseHeight + 0.02,
-      true,
-    )
-  } else {
-    expectMaterial(
-      shape,
-      failures,
-      'lower-chamfer-inside',
-      1.4,
-      lowerChamferZ,
-      true,
-    )
-    expectMaterial(
-      shape,
-      failures,
-      'lower-chamfer-outside',
-      1.7,
-      lowerChamferZ,
-      false,
-    )
-  }
+  expectMaterial(shape, failures, 'base-flange-inside', 3.4, 0.4, true)
+  expectMaterial(shape, failures, 'base-flange-outside', 3.6, 0.4, false)
+  expectMaterial(
+    shape,
+    failures,
+    'shoulder-below-wide',
+    3.4,
+    PILLAR_CONFIGURATION.baseHeight - 0.02,
+    true,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'shoulder-above-wide',
+    3.4,
+    PILLAR_CONFIGURATION.baseHeight + 0.02,
+    false,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'shoulder-above-body',
+    bodyRadius - 0.1,
+    PILLAR_CONFIGURATION.baseHeight + 0.02,
+    true,
+  )
 
+  expectMaterial(
+    shape,
+    failures,
+    'body-straight-inside',
+    bodyRadius - 0.1,
+    PILLAR_CONFIGURATION.baseHeight + 0.1,
+    true,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'body-straight-outside',
+    bodyRadius + 0.1,
+    PILLAR_CONFIGURATION.baseHeight + 0.1,
+    false,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'upper-straight-inside',
+    bodyRadius - 0.1,
+    upperStraightZ,
+    true,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'upper-straight-outside',
+    bodyRadius + 0.1,
+    upperStraightZ,
+    false,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'upper-chamfer-inside',
+    upperChamferInsideRadius,
+    upperChamferZ,
+    true,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'upper-chamfer-outside',
+    upperChamferOutsideRadius,
+    upperChamferZ,
+    false,
+  )
+}
+
+function inspectPositioningEndProfiles(
+  shape: Shape3D,
+  parameters: Extract<PillarParameters, { mode: 'positioning' }>,
+  failures: string[],
+): void {
+  const lowerChamferZ = PILLAR_CONFIGURATION.positioningLowerChamfer * 0.1
+  const lowerStraightZ = PILLAR_CONFIGURATION.positioningLowerChamfer + 0.1
+  const upperStraightZ =
+    parameters.length - PILLAR_CONFIGURATION.positioningUpperChamfer - 0.1
+  const upperChamferZ =
+    parameters.length - PILLAR_CONFIGURATION.positioningUpperChamfer / 2
+  const bodyRadius = PILLAR_CONFIGURATION.positioningBodyDiameter / 2
+  const upperChamferBoundaryRadius =
+    bodyRadius - PILLAR_CONFIGURATION.positioningUpperChamfer / 2
+  const upperChamferInsideRadius = upperChamferBoundaryRadius - 0.15
+  const upperChamferOutsideRadius = upperChamferBoundaryRadius + 0.15
+
+  expectMaterial(
+    shape,
+    failures,
+    'lower-chamfer-inside',
+    1.4,
+    lowerChamferZ,
+    true,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'lower-chamfer-outside',
+    1.7,
+    lowerChamferZ,
+    false,
+  )
   expectMaterial(
     shape,
     failures,
@@ -243,6 +305,18 @@ function inspectEndProfiles(
     upperChamferZ,
     false,
   )
+}
+
+function inspectEndProfiles(
+  shape: Shape3D,
+  parameters: PillarParameters,
+  failures: string[],
+): void {
+  if (parameters.mode === 'positioning') {
+    inspectPositioningEndProfiles(shape, parameters, failures)
+    return
+  }
+  inspectFixedEndProfiles(shape, parameters, failures)
 }
 
 export function inspectPillarShapeQuality(

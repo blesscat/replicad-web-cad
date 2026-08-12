@@ -9,6 +9,7 @@ import {
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForPillar,
+  pillarLengthForParameters,
   PILLAR_CONFIGURATION,
   validatePillarParameters,
   type PillarParameters,
@@ -202,28 +203,11 @@ function assertFiniteShape(shape: Shape3D, parameters: PillarParameters): void {
   }
 }
 
-function buildPlainPillar(parameters: PillarParameters): Shape3D {
-  const cylinder = makeCylinder(
-    PILLAR_CONFIGURATION.bodyDiameter / 2,
-    parameters.length,
-    [0, 0, 0],
-  )
-  const lowerChamfered = chamferAtStations(
-    cylinder,
-    [0],
-    PILLAR_CONFIGURATION.lowerChamfer,
-  )
-  return chamferAtStations(
-    lowerChamfered,
-    [parameters.length],
-    PILLAR_CONFIGURATION.upperChamfer,
-  )
-}
-
-function buildBaseConnectionPillar(
+function buildFixedPillar(
   parameters: PillarParameters,
   scope: BooleanOperationScope | undefined,
 ): Solid {
+  const totalLength = pillarLengthForParameters(parameters)
   const flange = makeCylinder(
     PILLAR_CONFIGURATION.baseDiameter / 2,
     PILLAR_CONFIGURATION.baseHeight,
@@ -231,10 +215,30 @@ function buildBaseConnectionPillar(
   )
   const body = makeCylinder(
     PILLAR_CONFIGURATION.bodyDiameter / 2,
-    parameters.length - PILLAR_CONFIGURATION.baseHeight,
+    totalLength - PILLAR_CONFIGURATION.baseHeight,
     [0, 0, PILLAR_CONFIGURATION.baseHeight],
   )
   return fusePartsAsSingleSolid(flange, body, scope)
+}
+
+function buildPositioningPillar(
+  parameters: Extract<PillarParameters, { mode: 'positioning' }>,
+): Shape3D {
+  const cylinder = makeCylinder(
+    PILLAR_CONFIGURATION.positioningBodyDiameter / 2,
+    parameters.length,
+    [0, 0, 0],
+  )
+  const lowerChamfered = chamferAtStations(
+    cylinder,
+    [0],
+    PILLAR_CONFIGURATION.positioningLowerChamfer,
+  )
+  return chamferAtStations(
+    lowerChamfered,
+    [parameters.length],
+    PILLAR_CONFIGURATION.positioningUpperChamfer,
+  )
 }
 
 export async function buildPillar(
@@ -249,21 +253,23 @@ export async function buildPillar(
 
   let shape: Shape3D | null = null
   let finalSolid: Solid | null = null
-  const fuseScope = parameters.baseConnection
-    ? context.booleanOperations?.createScope(1)
-    : undefined
+  const fuseScope =
+    parameters.mode === 'positioning'
+      ? undefined
+      : context.booleanOperations?.createScope(1)
   try {
-    shape = parameters.baseConnection
-      ? buildBaseConnectionPillar(parameters, fuseScope)
-      : buildPlainPillar(parameters)
+    shape =
+      parameters.mode === 'positioning'
+        ? buildPositioningPillar(parameters)
+        : buildFixedPillar(parameters, fuseScope)
 
     assertGenerationCurrent(context)
     await yieldAtSafeBoundary(context)
 
-    if (parameters.baseConnection) {
+    if (parameters.mode !== 'positioning') {
       shape = chamferAtStations(
         shape,
-        [parameters.length],
+        [pillarLengthForParameters(parameters)],
         PILLAR_CONFIGURATION.upperChamfer,
       )
     }

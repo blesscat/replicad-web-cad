@@ -17,14 +17,11 @@ describe('OpenGrid locating and assembly interface contract', () => {
     expect(configuration.assemblyOpeningDiameter).toBe(
       configuration.nominalDiameter + configuration.assemblyIncrement,
     )
-    expect(configuration.testShaftDiameter).toBe(4)
-    expect(configuration.shaftOpeningDiameter).toBe(
-      configuration.testShaftDiameter + configuration.assemblyIncrement,
-    )
+    expect(configuration.testShaftDiameter).toBe(4.5)
+    expect(configuration.shaftOpeningDiameter).toBe(4.55)
     expect(configuration.testFlangeDiameter).toBe(7)
-    expect(configuration.retainingOpeningDiameter).toBe(
-      configuration.testFlangeDiameter + configuration.assemblyIncrement,
-    )
+    expect(configuration.retainingOpeningDiameter).toBe(7.05)
+    expect(configuration.assemblyOpeningDiameter).toBe(5.05)
     expect(configuration.testFlangeHeight).toBe(0.8)
   })
 
@@ -38,7 +35,7 @@ describe('OpenGrid locating and assembly interface contract', () => {
       configuration.nominalDiameter,
     )
     expect(PILLAR_CONFIGURATION.bodyDiameter).toBe(
-      configuration.nominalDiameter,
+      configuration.testShaftDiameter,
     )
     expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleDiameter).toBe(
       configuration.nominalDiameter,

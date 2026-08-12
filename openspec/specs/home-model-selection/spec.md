@@ -251,7 +251,7 @@ The static `/models` chooser MUST include `opengrid-divider` as an independent O
 
 ### Requirement: OpenGrid pillar model selection entry and route
 
-The static `/models` chooser MUST include `opengrid-pillar` as an independent entry in `OpenGrid 系列`, with an `OpenGrid `-prefixed display name. The entry MUST link to `/cad/opengrid-pillar` without initializing the CAD Worker. The model catalog MUST resolve `/cad/opengrid-pillar` to `modelId=opengrid-pillar`, and direct navigation MUST use valid saved pillar parameters or the pillar defaults.
+The static `/models` chooser MUST include `opengrid-pillar` as an independent entry in `OpenGrid 系列`, with an `OpenGrid `-prefixed display name. The entry MUST link to `/cad/opengrid-pillar` without initializing the CAD Worker. The model catalog MUST resolve `/cad/opengrid-pillar` to `modelId=opengrid-pillar`, and direct navigation MUST use a valid saved mode snapshot or the pillar's standard-mode default.
 
 #### Scenario: Model page lists pillar
 
@@ -270,7 +270,7 @@ The static `/models` chooser MUST include `opengrid-pillar` as an independent en
 
 - **WHEN** a user opens `/cad/opengrid-pillar` directly
 - **THEN** the page MUST load the OpenGrid pillar-specific CAD workspace
-- **AND** initial generation MUST use the valid saved pillar snapshot when available, otherwise `{ length: 5, baseConnection: false }`
+- **AND** initial generation MUST use the valid saved pillar snapshot when available, otherwise `{ mode: 'standard' }`
 - **AND** the route MUST NOT silently substitute another component
 
 ### Requirement: OpenGrid board selection entry

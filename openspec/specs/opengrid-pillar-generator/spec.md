@@ -1,98 +1,112 @@
 ## Purpose
 
-提供一個可調整總長度、具固定直徑與兩種底端介面的圓柱支柱 component，讓使用者能產生可預覽、可驗證並可匯出的單一 CAD solid。
+提供標準版、薄殼版與物件定位用自訂長度版的圓柱支柱 component，讓使用者能產生可預覽、可驗證並可匯出的單一 CAD solid。
 
 ## Requirements
 
 ### Requirement: Pillar parameter contract
 
-The system MUST expose an independent OpenGrid component with stable `modelId=opengrid-pillar` and `buildKey=opengrid-pillar`. Its normalized parameter snapshot MUST contain exactly `length` and `baseConnection`: `length` MUST be a safe integer from 3 through 500 mm, and `baseConnection` MUST be a boolean. The default snapshot MUST be `{ length: 5, baseConnection: false }`. Diameter and chamfer dimensions are fixed geometry constants and MUST NOT be exposed as additional user parameters.
+The system MUST expose an independent OpenGrid component with stable `modelId=opengrid-pillar` and `buildKey=opengrid-pillar`. Its normalized parameter snapshot MUST be either exactly `{ mode: 'standard' }`, exactly `{ mode: 'thin-shell' }`, or exactly `{ mode: 'positioning', length }`. `length` MUST be a safe integer from 3 through 500 mm and MUST be accepted only by `positioning`. The default snapshot MUST be `{ mode: 'standard' }`. The standard and thin-shell total lengths, body diameter, flange dimensions, and chamfer dimensions MUST be fixed geometry and MUST NOT be exposed as user parameters. The positioning mode MUST retain the original Ø5 mm two-end-chamfer profile and expose only its total length as a user parameter.
 
 #### Scenario: Default pillar parameters
 
 - **WHEN** a user opens the pillar component without a valid saved snapshot
-- **THEN** the component MUST use `length=5` and `baseConnection=false`
-- **AND** the generated model MUST use the plain two-chamfer end mode
+- **THEN** the component MUST use `mode=standard`
+- **AND** the generated model MUST use the standard fixed-length assembly profile
 
-#### Scenario: Integer length validation
+#### Scenario: Valid pillar modes
 
-- **WHEN** a pillar snapshot contains a fractional, non-finite, non-numeric, or out-of-range `length`
-- **THEN** validation MUST reject the snapshot with a field-specific diagnostic
-- **AND** the snapshot MUST NOT be sent as a valid model-generation request
-
-#### Scenario: Maximum manual length is valid
-
-- **WHEN** a pillar snapshot contains `length=500` and a boolean `baseConnection`
+- **WHEN** a pillar snapshot contains `mode=standard`, `mode=thin-shell`, or `mode=positioning` with an integer length from 3 through 500 mm
 - **THEN** validation MUST accept the snapshot
-- **AND** the generated Z span MUST equal 500 mm
+- **AND** the generated model MUST use only the corresponding mode profile
 
-#### Scenario: Boolean base connection validation
+#### Scenario: Positioning mode length validation
 
-- **WHEN** a pillar snapshot contains a value other than a typed boolean for `baseConnection`
+- **WHEN** a positioning snapshot contains a fractional, non-finite, non-numeric, or out-of-range `length`
 - **THEN** validation MUST reject the snapshot with a field-specific diagnostic
-- **AND** the invalid value MUST NOT be silently coerced
+- **AND** the invalid snapshot MUST NOT be sent as a valid model-generation request
 
-### Requirement: Plain pillar geometry
+#### Scenario: Invalid pillar mode
 
-For a valid snapshot with `baseConnection=false`, the generator MUST create one centered Ø5 mm cylindrical body on the Z axis with total height `length` and base at `Z=0`. The upper end MUST have a 0.5 mm, 45° equal-distance chamfer. The lower end MUST have the same Ø5 mm, 1 mm, 45° equal-distance chamfer. The chamfers MUST be included within the requested total length.
+- **WHEN** a pillar snapshot contains a missing, non-string, or unsupported `mode`
+- **THEN** validation MUST reject the snapshot with a field-specific diagnostic
+- **AND** the invalid snapshot MUST NOT be sent as a valid model-generation request
 
-#### Scenario: Default plain geometry
+#### Scenario: Legacy pillar snapshot migration
 
-- **WHEN** the generator builds `{ length: 5, baseConnection: false }`
-- **THEN** the model MUST span `Z=0` through `Z=5`
-- **AND** the lower end MUST expose a 1 mm, 45° chamfer on the Ø5 mm body
-- **AND** the upper end MUST expose a 0.5 mm, 45° chamfer on the Ø5 mm body
-- **AND** the straight Ø5 mm section between the chamfers MUST be 3.5 mm long
-
-#### Scenario: Adjustable plain geometry
-
-- **WHEN** the generator builds a valid plain pillar with another integer length
-- **THEN** the total Z span MUST equal that length
-- **AND** the upper chamfer dimension MUST remain 0.5 mm
-- **AND** the lower chamfer dimension MUST remain 1 mm
-- **AND** the straight section MUST be the remaining length after both chamfers
-
-### Requirement: Base-connection pillar geometry
-
-For a valid snapshot with `baseConnection=true`, the lower end MUST be a flat, sharp-edged Ø7 mm flange with axial height 0.8 mm, followed directly by the Ø5 mm body. The Ø7-to-Ø5 transition MUST be a sharp 90° step with no transition chamfer or fillet. The upper end MUST retain a 0.5 mm, 45° chamfer. The flange, body, and upper chamfer MUST fit within the requested total length, so enabling the option MUST NOT increase the total height.
-
-#### Scenario: Default base-connection geometry
-
-- **WHEN** the generator builds `{ length: 5, baseConnection: true }`
-- **THEN** the model MUST span `Z=0` through `Z=5`
-- **AND** the lower `Z=0` to `Z=0.8` segment MUST be Ø7 mm with a flat bottom
-- **AND** the Ø7-to-Ø5 transition at `Z=0.8` MUST be sharp
-- **AND** the upper 0.5 mm chamfer MUST remain present
-- **AND** the Ø5 mm straight section MUST be 3.7 mm long
-
-#### Scenario: Base connection preserves requested length
-
-- **WHEN** a user changes `length` while `baseConnection=true`
-- **THEN** the flange height MUST remain 0.8 mm
-- **AND** the upper chamfer MUST remain 0.5 mm
-- **AND** the complete model height MUST equal the new `length`
+- **WHEN** persistence contains the old `{ length, baseConnection: false }` pillar shape with a valid length
+- **THEN** hydration MUST normalize it to `{ mode: 'positioning', length }`
+- **WHEN** persistence contains the old base-connection shape or another malformed pillar record
+- **THEN** hydration MUST normalize it to `{ mode: 'standard' }`
+- **AND** an old checkbox state MUST NOT remain as an active user parameter
 
 ### Requirement: Pillar geometry quality and export identity
 
-Every valid pillar generation MUST produce one connected solid with finite, non-empty mesh data and bounds centered on X/Y. Plain mode MUST have X/Y bounds of ±2.5 mm; base-connection mode MUST have X/Y bounds of ±3.5 mm. Both modes MUST have Z bounds `[0, length]`. The deterministic export stem MUST be `pillar-{length}-{plain|base}` for the corresponding mode, with `.step` and `.stl` extensions supplied by the existing export contracts.
+Every valid pillar generation MUST produce one connected solid with finite, non-empty mesh data and bounds centered on X/Y. The `standard` and `thin-shell` modes MUST have X/Y bounds of ±3.5 mm; the `positioning` mode MUST have X/Y bounds of ±2.5 mm. The standard mode MUST have Z bounds `[0, 9]`, the thin-shell mode MUST have Z bounds `[0, 5]`, and positioning mode MUST have Z bounds `[0, length]`. The deterministic export stems MUST be `pillar-9-standard`, `pillar-5-thin-shell`, and `pillar-{length}-positioning` for the corresponding modes, with `.step` and `.stl` extensions supplied by the existing export contracts.
 
-#### Scenario: Plain quality gate
+#### Scenario: Standard quality gate
 
-- **WHEN** a valid plain pillar candidate is prepared for commit
+- **WHEN** a valid standard pillar candidate is prepared for commit
 - **THEN** it MUST contain exactly one valid connected solid
 - **AND** its mesh MUST be finite and non-empty
-- **AND** its bounds MUST be `[-2.5, -2.5, 0]` through `[2.5, 2.5, length]` within the workspace tolerance
+- **AND** its bounds MUST be `[-3.5, -3.5, 0]` through `[3.5, 3.5, 9]` within the workspace tolerance
 
-#### Scenario: Base-connection quality gate
+#### Scenario: Thin-shell quality gate
 
-- **WHEN** a valid base-connection pillar candidate is prepared for commit
+- **WHEN** a valid thin-shell pillar candidate is prepared for commit
 - **THEN** it MUST contain exactly one valid connected solid
 - **AND** its mesh MUST be finite and non-empty
-- **AND** its bounds MUST be `[-3.5, -3.5, 0]` through `[3.5, 3.5, length]` within the workspace tolerance
+- **AND** its bounds MUST be `[-3.5, -3.5, 0]` through `[3.5, 3.5, 5]` within the workspace tolerance
+
+#### Scenario: Positioning quality gate
+
+- **WHEN** a valid positioning pillar with `length=25` is prepared for commit
+- **THEN** it MUST contain exactly one valid connected solid
+- **AND** its mesh MUST be finite and non-empty
+- **AND** its bounds MUST be `[-2.5, -2.5, 0]` through `[2.5, 2.5, 25]` within the workspace tolerance
 
 #### Scenario: Mode-specific export identity
 
-- **WHEN** a committed pillar is exported
-- **THEN** plain mode with `length=5` MUST use the stem `pillar-5-plain`
-- **AND** base-connection mode with `length=5` MUST use the stem `pillar-5-base`
+- **WHEN** a committed standard pillar is exported
+- **THEN** its export stem MUST be `pillar-9-standard`
+- **WHEN** a committed thin-shell pillar is exported
+- **THEN** its export stem MUST be `pillar-5-thin-shell`
+- **WHEN** a committed positioning pillar with `length=25` is exported
+- **THEN** its export stem MUST be `pillar-25-positioning`
 - **AND** the export MUST use the committed pillar B-Rep rather than a viewport mesh reconstruction
+
+### Requirement: Fixed mode-specific pillar geometry
+
+For the `standard` and `thin-shell` modes, the generator MUST create one centered Ø4.5 mm cylindrical body on the Z axis, a flat sharp-edged Ø7 mm lower flange with axial height 0.8 mm, and a sharp 90-degree shoulder between the flange and body. The upper end MUST retain the existing 0.5 mm, 45-degree equal-distance chamfer. The flange and upper chamfer MUST be included within the fixed total length: 9 mm for `standard` and 5 mm for `thin-shell`.
+
+#### Scenario: Standard pillar geometry
+
+- **WHEN** the generator builds `{ mode: 'standard' }`
+- **THEN** the model MUST span `Z=0` through `Z=9`
+- **AND** the lower `Z=0` to `Z=0.8` segment MUST be Ø7 mm with a flat bottom
+- **AND** the Ø7-to-Ø4.5 transition at `Z=0.8` MUST be sharp
+- **AND** the upper 0.5 mm chamfer MUST remain present
+
+#### Scenario: Thin-shell pillar geometry
+
+- **WHEN** the generator builds `{ mode: 'thin-shell' }`
+- **THEN** the model MUST span `Z=0` through `Z=5`
+- **AND** the lower `Z=0` to `Z=0.8` segment MUST be Ø7 mm with a flat bottom
+- **AND** the Ø7-to-Ø4.5 transition at `Z=0.8` MUST be sharp
+- **AND** the upper 0.5 mm chamfer MUST remain present
+
+#### Scenario: Positioning pillar geometry
+
+- **WHEN** the generator builds `{ mode: 'positioning', length: 25 }`
+- **THEN** the model MUST span `Z=0` through `Z=25`
+- **AND** the body MUST be Ø5 mm
+- **AND** the lower end MUST retain the original 1 mm, 45-degree chamfer
+- **AND** the upper end MUST retain the original 0.5 mm, 45-degree chamfer
+- **AND** both chamfers MUST be included within the requested total length
+
+#### Scenario: Fixed dimensions are not user parameters
+
+- **WHEN** a user views or edits the pillar panel
+- **THEN** selecting standard or thin-shell MUST be sufficient to select the complete fixed geometry profile
+- **AND** those fixed modes MUST NOT expose a manual length, diameter, flange-height, or chamfer control
+- **AND** selecting positioning MUST expose only the custom total-length control

@@ -114,13 +114,17 @@ import type {
 import {
   boundsForPillar,
   isPillarParameters,
+  normalizePillarParameters,
   pillarFileName,
+  pillarLengthForParameters,
+  pillarLengthForMode,
   pillarStlFileName,
   PILLAR_CONFIGURATION,
   validatePillarParameters,
 } from './opengrid-pillar'
 import type {
   PillarBounds,
+  PillarMode,
   PillarParameterKey,
   PillarParameters,
   PillarValidation,
@@ -300,13 +304,17 @@ export type {
 export {
   boundsForPillar,
   isPillarParameters,
+  normalizePillarParameters,
   pillarFileName,
+  pillarLengthForParameters,
+  pillarLengthForMode,
   pillarStlFileName,
   PILLAR_CONFIGURATION,
   validatePillarParameters,
 } from './opengrid-pillar'
 export type {
   PillarBounds,
+  PillarMode,
   PillarParameterKey,
   PillarParameters,
   PillarValidation,
@@ -428,7 +436,6 @@ export type ScalarModelParameterKey =
   | 'diameter'
   | OpenGridDividerParameterKey
   | 'offset'
-  | 'length'
 export type ModelId =
   | 'box'
   | 'box-normal'
