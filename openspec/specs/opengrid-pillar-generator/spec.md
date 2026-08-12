@@ -1,6 +1,6 @@
 ## Purpose
 
-提供標準版、薄殼版與物件定位用自訂長度版的圓柱支柱 component，讓使用者能產生可預覽、可驗證並可匯出的單一 CAD solid。
+提供堆疊版、薄殼版與物件定位用自訂長度版的圓柱支柱 component，讓使用者能產生可預覽、可驗證並可匯出的單一 CAD solid。
 
 ## Requirements
 
@@ -42,14 +42,14 @@ The system MUST expose an independent OpenGrid component with stable `modelId=op
 
 ### Requirement: Pillar geometry quality and export identity
 
-Every valid pillar generation MUST produce one connected solid with finite, non-empty mesh data and bounds centered on X/Y. The `standard` and `thin-shell` modes MUST have X/Y bounds of ±3.5 mm; the `positioning` mode MUST have X/Y bounds of ±2.5 mm. The standard mode MUST have Z bounds `[0, 9]`, the thin-shell mode MUST have Z bounds `[0, 5]`, and positioning mode MUST have Z bounds `[0, length]`. The deterministic export stems MUST be `pillar-9-standard`, `pillar-5-thin-shell`, and `pillar-{length}-positioning` for the corresponding modes, with `.step` and `.stl` extensions supplied by the existing export contracts.
+Every valid pillar generation MUST produce one connected solid with finite, non-empty mesh data and bounds centered on X/Y. The `standard` and `thin-shell` modes MUST have X/Y bounds of ±3.5 mm; the `positioning` mode MUST have X/Y bounds of ±2.5 mm. The standard mode MUST have Z bounds `[0, 8]`, the thin-shell mode MUST have Z bounds `[0, 5]`, and positioning mode MUST have Z bounds `[0, length]`. The deterministic export stems MUST be `pillar-8-standard`, `pillar-5-thin-shell`, and `pillar-{length}-positioning` for the corresponding modes, with `.step` and `.stl` extensions supplied by the existing export contracts.
 
 #### Scenario: Standard quality gate
 
 - **WHEN** a valid standard pillar candidate is prepared for commit
 - **THEN** it MUST contain exactly one valid connected solid
 - **AND** its mesh MUST be finite and non-empty
-- **AND** its bounds MUST be `[-3.5, -3.5, 0]` through `[3.5, 3.5, 9]` within the workspace tolerance
+- **AND** its bounds MUST be `[-3.5, -3.5, 0]` through `[3.5, 3.5, 8]` within the workspace tolerance
 
 #### Scenario: Thin-shell quality gate
 
@@ -68,7 +68,7 @@ Every valid pillar generation MUST produce one connected solid with finite, non-
 #### Scenario: Mode-specific export identity
 
 - **WHEN** a committed standard pillar is exported
-- **THEN** its export stem MUST be `pillar-9-standard`
+- **THEN** its export stem MUST be `pillar-8-standard`
 - **WHEN** a committed thin-shell pillar is exported
 - **THEN** its export stem MUST be `pillar-5-thin-shell`
 - **WHEN** a committed positioning pillar with `length=25` is exported
@@ -77,12 +77,12 @@ Every valid pillar generation MUST produce one connected solid with finite, non-
 
 ### Requirement: Fixed mode-specific pillar geometry
 
-For the `standard` and `thin-shell` modes, the generator MUST create one centered Ø4.5 mm cylindrical body on the Z axis, a flat sharp-edged Ø7 mm lower flange with axial height 0.8 mm, and a sharp 90-degree shoulder between the flange and body. The upper end MUST retain the existing 0.5 mm, 45-degree equal-distance chamfer. The flange and upper chamfer MUST be included within the fixed total length: 9 mm for `standard` and 5 mm for `thin-shell`.
+For the `standard` and `thin-shell` modes, the generator MUST create one centered Ø4.5 mm cylindrical body on the Z axis, a flat sharp-edged Ø7 mm lower flange with axial height 0.8 mm, and a sharp 90-degree shoulder between the flange and body. The upper end MUST retain the existing 0.5 mm, 45-degree equal-distance chamfer. The flange and upper chamfer MUST be included within the fixed total length: 8 mm for `standard` and 5 mm for `thin-shell`.
 
 #### Scenario: Standard pillar geometry
 
 - **WHEN** the generator builds `{ mode: 'standard' }`
-- **THEN** the model MUST span `Z=0` through `Z=9`
+- **THEN** the model MUST span `Z=0` through `Z=8`
 - **AND** the lower `Z=0` to `Z=0.8` segment MUST be Ø7 mm with a flat bottom
 - **AND** the Ø7-to-Ø4.5 transition at `Z=0.8` MUST be sharp
 - **AND** the upper 0.5 mm chamfer MUST remain present

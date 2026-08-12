@@ -2,18 +2,18 @@
 
 ### Requirement: 獨立的分隔牆參數契約
 
-The system MUST expose a runtime-validated component with stable `modelId=opengrid-divider`. Its normalized parameters MUST include non-negative `left`, `right`, `up`, and `down` arm counts that are multiples of 0.5 grid, plus an integer `height` in millimetres. `height` MUST be in the inclusive range 2–500 mm. The normalized parameters MUST also include an integer `wallThickness` from 1 through 5 mm. One full divider grid MUST be 28 mm, one half-grid MUST be 14 mm, and the divider grid definition MUST resolve from the shared official OpenGrid grid contract rather than defining a separate pitch. The divider's planar footprint MUST continue to use its existing 500 mm safety limit independently of the height range. With `gridStep=0.5`, the maximum valid arm count MUST be derived from that planar limit and the official full pitch, yielding 17.5 at the current 500 mm limit. The default `wallThickness` MUST be 2 mm.
+The system MUST expose a runtime-validated component with stable `modelId=opengrid-divider`. Its normalized parameters MUST include non-negative `left`, `right`, `up`, and `down` arm counts that are multiples of 0.5 grid, plus an integer `height` in millimetres. `height` MUST be in the inclusive range 2–500 mm. The normalized parameters MUST also include an integer `wallThickness` from 1 through 5 mm. One full divider grid MUST be 28 mm, one half-grid MUST be 14 mm, and the divider grid definition MUST resolve from the shared official OpenGrid grid contract rather than defining a separate pitch. Every directional arm count MUST be no greater than 10 grids, while the combined planar envelope MUST be checked independently against the 500 mm safety limit. The default snapshot MUST be `left=1.5`, `right=1.5`, `up=0`, `down=0`, `height=20`, and `wallThickness=2`.
 
 #### Scenario: 合法分隔牆參數
 
-- **WHEN** `left`、`right`、`up`、`down` are non-negative 0.5-grid multiples, at least two adjacent or opposite directions are non-zero, and `height` is an integer from 2 through 500 mm with a planar footprint within 500 mm, and `wallThickness` is an integer from 1 through 5 mm
+- **WHEN** `left`、`right`、`up`、`down` are non-negative 0.5-grid multiples with at least one non-zero direction and every direction no greater than 10 grids, and `height` is an integer from 2 through 500 mm with a planar footprint within 500 mm, and `wallThickness` is an integer from 1 through 5 mm
 - **THEN** the component MUST accept the normalized snapshot
 - **AND** the generated arm lengths MUST use 28 mm per configured full grid unit and 14 mm per half-grid unit
 - **AND** the snapshot MUST remain independent from `modelId=opengrid`
 
 #### Scenario: 不支援的形狀被拒絕
 
-- **WHEN** fewer than two directions are non-zero, or the values are not 0.5-grid multiples, negative, non-finite, or outside the supported height, planar footprint, or `wallThickness` range
+- **WHEN** all four directions are zero, or any value is not a 0.5-grid multiple, negative, non-finite, above 10 grids, or outside the supported height, planar footprint, or `wallThickness` range
 - **THEN** validation MUST fail with field-specific diagnostics
 - **AND** the system MUST NOT send the snapshot for CAD generation or export
 
@@ -24,19 +24,29 @@ The system MUST expose a runtime-validated component with stable `modelId=opengr
 - **AND** the wall top MUST be at Z=500 mm
 - **AND** a shape whose planar footprint exceeds 500 mm MUST remain invalid even when its height is within 2–500 mm
 
-#### Scenario: 官方尺度下的臂長上限
+#### Scenario: 單一方向臂長上限
 
-- **WHEN** an otherwise valid arm uses `count=17.5`
-- **THEN** the arm MUST be accepted and its grid length MUST be 490 mm or less
+- **WHEN** an otherwise valid arm uses `count=10`
+- **THEN** the arm MUST be accepted and its grid length MUST be 280 mm before the configured endpoint retraction
 
-#### Scenario: 超過平面上限的臂格數
+#### Scenario: 超過單一方向臂格數上限
 
-- **WHEN** an otherwise valid arm uses `count=18`
-- **THEN** validation MUST reject the arm because its 504 mm grid length exceeds the 500 mm planar limit
+- **WHEN** an otherwise valid arm uses `count=10.5`
+- **THEN** validation MUST reject the arm because one directional count exceeds the 10-grid limit
+
+#### Scenario: 合併平面 envelope 超過上限
+
+- **WHEN** `left=10` and `right=10` are otherwise valid with the remaining directions zero
+- **THEN** validation MUST reject the snapshot because the combined nominal planar span exceeds 500 mm
 
 ### Requirement: 依四方向格數判定形狀
 
-The system MUST derive the displayed shape from the non-zero direction counts and MUST NOT require a separate shape selector. Exactly two opposite non-zero directions MUST be classified as a straight line, exactly two adjacent non-zero directions MUST be classified as an L shape, exactly three non-zero directions MUST be classified as a T shape, and all four non-zero directions MUST be classified as a cross shape.
+The system MUST derive the displayed shape from the non-zero direction counts and MUST NOT require a separate shape selector. Exactly one non-zero direction MUST be classified as a single-arm shape, exactly two opposite non-zero directions MUST be classified as a straight line, exactly two adjacent non-zero directions MUST be classified as an L shape, exactly three non-zero directions MUST be classified as a T shape, and all four non-zero directions MUST be classified as a cross shape.
+
+#### Scenario: 單臂型
+
+- **WHEN** exactly one direction is non-zero
+- **THEN** the result MUST be classified as a single-arm shape
 
 #### Scenario: 一字型
 

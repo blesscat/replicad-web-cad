@@ -218,8 +218,8 @@ binary STL lifecycle.
 
 ### Requirement: OpenGrid board controls
 
-The /cad/opengrid workspace MUST expose Full/Lite/Heavy variant, rows,
-columns, X/Y half-cell directions, chamfer mode and corner flags, connector
+The /cad/opengrid workspace MUST expose Full/Lite/Heavy variant, rows and
+columns from 1 through 10, X/Y half-cell directions, chamfer mode and corner flags, connector
 enable and side flags, generic screw dimensions, screw mode, center/interval
 modifiers, and an internal-intersection custom screw matrix. It MUST display
 derived width, depth, and variant thickness in millimetres.
@@ -1029,7 +1029,7 @@ The system MUST register `opengrid-divider` as an independent model definition a
 
 - **WHEN** a user opens `/cad/opengrid-divider`
 - **THEN** the page MUST resolve the route to `modelId=opengrid-divider`
-- **AND** the first generation MUST use valid saved divider parameters or the divider definition defaults, including default `wallThickness=2`
+- **AND** the first generation MUST use valid saved divider parameters or the divider definition defaults, including `left=1.5`, `right=1.5`, `up=0`, `down=0`, `height=20`, and `wallThickness=2`
 - **AND** the Worker MUST dispatch the request to the divider builder
 
 #### Scenario: 分隔器控制面板
@@ -1075,9 +1075,9 @@ The runtime-validated component catalog MUST register `opengrid-pillar` as an in
 
 - **GIVEN** a user views the `/cad/opengrid-pillar` workspace
 - **WHEN** the parameter panel is rendered
-- **THEN** it MUST expose a radio group with clearly labeled `標準版`, `薄殼版`, and `物件定位用` choices
+- **THEN** it MUST expose a radio group with clearly labeled `堆疊版`, `薄殼版`, and `物件定位用` choices
 - **AND** the standard choice MUST be selected by default
-- **AND** selecting standard MUST represent a fixed 9 mm model
+- **AND** selecting standard MUST represent a fixed 8 mm model
 - **AND** selecting thin-shell MUST represent a fixed 5 mm model
 - **AND** selecting positioning MUST expose a custom total-length field
 - **AND** standard and thin-shell MUST NOT expose adjustable length, diameter, flange-height, or chamfer fields
@@ -1108,7 +1108,7 @@ The runtime-validated component catalog MUST register `opengrid-pillar` as an in
 
 ### Requirement: OpenGrid stackable-cylinder workspace integration
 
-The CAD workspace MUST bind `/cad/opengrid-stackable-cylinder` exclusively to `modelId=opengrid-stackable-cylinder`. The catalog entry MUST expose only the typed diameter and height fields, with both controls using 1 mm slider increments and direct numeric input. The Worker MUST route this model ID to the independent cylinder builder and MUST NOT fall through to `box`, `opengrid-stackable-box`, or another component.
+The CAD workspace MUST bind `/cad/opengrid-stackable-cylinder` exclusively to `modelId=opengrid-stackable-cylinder`. The catalog entry MUST expose typed diameter and height fields with 1 mm slider increments and direct numeric input, two mutually exclusive visible mode choices `薄殼模式` and `堆疊模式`, a bottom-hole toggle, and a four-direction opening disclosure containing depth, bottom-length, and angle controls. The visible panel MUST NOT expose `bottomPlateMode` as a selectable radio choice, while the normalized legacy field MAY remain supported for persisted or programmatic snapshots. The Worker MUST route this model ID to the independent cylinder builder and MUST NOT fall through to `box`, `opengrid-stackable-box`, or another component.
 
 #### Scenario: Cylinder route initializes
 
@@ -1121,6 +1121,9 @@ The CAD workspace MUST bind `/cad/opengrid-stackable-cylinder` exclusively to `m
 - **WHEN** the user views the cylinder parameter panel
 - **THEN** it MUST show outer diameter and height controls
 - **AND** both controls MUST use a 1 mm step
+- **AND** it MUST show the two visible mode choices, the bottom-hole toggle, and the four direction opening controls
+- **AND** the selected default-mode description MUST read `預設模式：可堆疊滑動，使用8mm定位柱`
+- **AND** the selected thin-shell description MUST read `薄殼模式：不可堆疊，使用5mm定位柱`
 - **AND** it MUST NOT show rectangular X/Y cell, OpenGrid board, or stackable-box full-grid controls
 
 #### Scenario: Worker dispatch is component-specific
@@ -1183,7 +1186,7 @@ The CAD workspace MUST resolve the supported `desk` or `wall` context before its
 
 - **WHEN** a user opens `/cad/opengrid-snap?system=desk` or `/cad/opengrid-snap?system=wall` without scoped saved values
 - **THEN** generation 1 MUST use the corresponding context preset
-- **AND** the Desk preset MUST use an X/Y increment of `0.3`
+- **AND** the Desk preset MUST use an X/Y increment of `0.25`
 - **AND** the committed model MUST retain `modelId=opengrid-snap`
 - **AND** the model MUST remain previewable and exportable through the existing Worker lifecycle
 

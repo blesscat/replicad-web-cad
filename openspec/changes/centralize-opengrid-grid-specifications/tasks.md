@@ -14,13 +14,13 @@
 ## 3. 將 OpenGrid Divider 對齊官方尺度
 
 - [x] 3.1 更新 `opengrid-divider.ts`，讓 `gridPitch`／`halfGridPitch`／`pegCenterSpacing` 分別引用 shared full／half／full pitch。
-- [x] 3.2 以 `maxDimension`、shared full pitch 與 `gridStep` 推導 `maxArmCount`，使 17.5 可接受、18 因 504 mm footprint 被拒絕，並保留 field-specific validation diagnostics。
+- [x] 3.2 將單一方向 `maxArmCount` 固定為 10，並保留多方向合併後的 500 mm planar-envelope 檢查與 field-specific validation diagnostics。
 - [x] 3.3 檢查 Divider builder、quality validation、bounds 與 export path，確認所有 arm 長度與半格運算都使用更新後的 contract，且仍產生單一連通 solid。
 - [x] 3.4 更新 Worker 錯誤訊息、catalog／UI 文案與其他使用 14 mm full／7 mm half 描述的文字，改為官方 28 mm full／14 mm half；保留 `opengrid-divider` 的 modelId、build key、route、catalog 路徑與匯出檔名契約。
 
 ## 4. 更新規格與行為測試
 
-- [x] 4.1 更新 Divider unit tests，覆蓋 28 mm full arm、14 mm half arm、官方尺度下的形狀 spans、17.5 上限與 18 rejection，並保留 peg placement、fillet、chamfer 與 solid quality 覆蓋。
+- [x] 4.1 更新 Divider unit tests，覆蓋 28 mm full arm、14 mm half arm、官方尺度下的形狀 spans、10 上限與 10.5 rejection，並保留 peg placement、fillet、chamfer 與 solid quality 覆蓋。
 - [x] 4.2 更新 Divider worker integration、CAD quality、preview／export 與 E2E tests，確認新的幾何尺寸、錯誤文案及既有 OpenGrid 元件不受影響。
 - [x] 4.3 新增 shared grid contract 與 consumer behavior tests，確認 `opengrid`、half-cell、Snap、stackable box/cylinder、Divider 的 full／half mapping 一致，並確認 `7.05`／`5.05` 孔徑及元件專用 7 mm offset 未被改動。
 - [x] 4.4 依已建立的 change specs 更新 repository 的 OpenSpec source-of-truth，確認 `opengrid-divider-generator` 不再宣告 14/7 自製尺度，並保留既有 OpenGrid 元件的穩定命名規則。

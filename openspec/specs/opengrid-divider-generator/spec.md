@@ -6,7 +6,7 @@
 
 ### Requirement: 獨立的分隔牆參數契約
 
-The system MUST expose a runtime-validated component with stable `modelId=opengrid-divider`. Its normalized parameters MUST include non-negative `left`, `right`, `up`, and `down` arm counts that are multiples of 0.5 grid, plus an integer `height` in millimetres. `height` MUST be in the inclusive range 2–500 mm. The normalized parameters MUST also include an integer `wallThickness` from 1 through 5 mm. One full divider grid MUST be 28 mm, one half-grid MUST be 14 mm, and the divider grid definition MUST resolve from the shared official OpenGrid grid contract rather than defining a separate pitch. The divider's planar footprint MUST continue to use its existing 500 mm safety limit independently of the height range. Every directional arm count MUST be no greater than 10 grids, while the combined planar envelope MUST still be checked independently against the 500 mm limit. The default `wallThickness` MUST be 2 mm.
+The system MUST expose a runtime-validated component with stable `modelId=opengrid-divider`. Its normalized parameters MUST include non-negative `left`, `right`, `up`, and `down` arm counts that are multiples of 0.5 grid, plus an integer `height` in millimetres. `height` MUST be in the inclusive range 2–500 mm. The normalized parameters MUST also include an integer `wallThickness` from 1 through 5 mm. One full divider grid MUST be 28 mm, one half-grid MUST be 14 mm, and the divider grid definition MUST resolve from the shared official OpenGrid grid contract rather than defining a separate pitch. The divider's planar footprint MUST continue to use its existing 500 mm safety limit independently of the height range. Every directional arm count MUST be no greater than 10 grids, while the combined planar envelope MUST still be checked independently against the 500 mm limit. The default snapshot MUST be `left=1.5`, `right=1.5`, `up=0`, `down=0`, `height=20`, and `wallThickness=2`.
 
 #### Scenario: 合法分隔牆參數
 
@@ -105,8 +105,8 @@ The generated body MUST be a continuous connected divider whose base support has
 
 ### Requirement: 單臂中心定位柱上方延續牆體
 
-When exactly one of `left`, `right`, `up`, or `down` is non-zero, the generated
-divider MUST extend its complete profiled wall from the central arm axis
+The generated divider MUST, when exactly one of `left`, `right`, `up`, or `down` is non-zero,
+extend its complete profiled wall from the central arm axis
 2.5 mm toward the inactive side. This extension MUST include the 5 mm base
 support, any 45-degree transition, and the selected upper wall, so the central
 5 mm locating peg has wall directly above its center rather than only on the
