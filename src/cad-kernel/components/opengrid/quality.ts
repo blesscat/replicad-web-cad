@@ -401,7 +401,7 @@ function inspectHybridTransition(
     zMax: number,
     includeTangentialOffset = true,
   ): number => {
-    const offset = transitionSpan * fraction
+    const offset = -transitionSpan / 2 + transitionSpan * fraction
     const tangentialProbeOffset = includeTangentialOffset ? tangentialOffset : 0
     const [row, column] = sideCells[side]
     const [sectionX, sectionY] = cellCenterForOpenGrid(parameters, row, column)

@@ -1,25 +1,25 @@
 ## Context
 
 The Hybrid builder already creates one transition piece for each exposed side
-of a Heavy perimeter cell and fuses those pieces spatially. The current local
-profile starts at the perimeter boundary and rises outward into the Heavy
-cell, while the configured span is one quarter pitch. The existing spatial
-assembly and feature-cut ordering are useful constraints and should remain
-unchanged.
+of a Heavy perimeter cell and fuses those pieces spatially. The target local
+profile starts at the Full-side origin and rises toward the Heavy perimeter
+boundary across one full pitch. The existing spatial assembly and feature-cut
+ordering are useful constraints and should remain unchanged.
 
 The centered OpenGrid coordinate system places the top and right perimeter
 boundaries at the negative-local side of their perimeter cells, and the bottom
 and left boundaries at the positive-local side. The transition can therefore
-be moved without changing side enumeration: shift its origin by one half-cell
-span into the adjacent interior cell and reverse only the local origin side as
-needed. Because a full-pitch extrusion would cover an opening after this move,
-the transition footprint is clipped by the adjacent cell's 25 mm opening.
+be moved without changing side enumeration: shift its origin by the configured
+full-pitch span from the Heavy boundary into the adjacent interior cell and
+reverse only the local origin side as needed. Because a full-pitch extrusion
+crosses an opening after this move, the transition footprint is clipped by the
+adjacent cell's 25 mm opening.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Construct a half-pitch sloped Hybrid transition from the Full interior to
+- Construct a full-pitch sloped Hybrid transition from the Full interior to
   the Heavy perimeter boundary.
 - Keep the existing side grouping, spatial fuse tree, Heavy/Full layer
   assembly, feature subtraction, and public model contracts.
@@ -38,9 +38,9 @@ the transition footprint is clipped by the adjacent cell's 25 mm opening.
 
 ## Decisions
 
-### Use a half-pitch inward span
+### Use a full-pitch inward span
 
-The transition span is defined as `gridPitch / 2`, exposed through the existing
+The transition span is defined as `gridPitch`, exposed through the existing
 OpenGrid configuration so tests and quality checks share one source of truth.
 The local profile retains the existing Full-to-Heavy thickness interpolation
 and seam overlap. This keeps the change limited to the transition's location

@@ -1,6 +1,6 @@
 ## 1. Behavior-first coverage
 
-- [x] 1.1 Update the Hybrid integration probes to expect a half-pitch ramp on
+- [x] 1.1 Update the Hybrid integration probes to expect a full-pitch ramp on
   the Full-side of each perimeter boundary and to reject the old outward
   placement.
 - [x] 1.2 Add corner diagonal and through-opening assertions for a 3 by 3
@@ -10,8 +10,8 @@
 
 ## 2. Transition geometry
 
-- [x] 2.1 Change the Hybrid transition span configuration to one half of the
-  grid pitch and update the builder/quality naming accordingly.
+- [x] 2.1 Change the Hybrid transition span configuration to one full grid
+  pitch and update the builder/quality probes accordingly.
 - [x] 2.2 Shift each side wedge origin into the adjacent Full cell while
   retaining the Full-to-Heavy profile and tangential pitch extrusion.
 - [x] 2.3 Shift spatial assembly centers with the moved transition pieces and

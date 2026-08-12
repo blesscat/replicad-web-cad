@@ -4,18 +4,18 @@
 
 For a Hybrid board, each perimeter-to-interior boundary with an adjacent Full
 cell MUST contain a sloped transition on the Full side of that boundary. The
-transition span MUST be one half of the 28 mm grid pitch, with the lower end
+transition span MUST be one full 28 mm grid pitch, with the lower end
 matching the Full profile toward the interior and the higher end matching the
 Heavy perimeter at the boundary. The transition MUST NOT create the sloped
 portion in the outward Heavy-side cell.
 
-#### Scenario: Hybrid side transition occupies the inner half-cell
+#### Scenario: Hybrid side transition occupies one full inner cell
 
 - **WHEN** a Hybrid board has at least one Full interior cell and no optional
   feature cuts
 - **THEN** a probe moving from the interior cell center toward a selected
   perimeter boundary MUST encounter the Full height first
-- **AND** the height MUST rise across a 14 mm transition span toward the Heavy
+- **AND** the height MUST rise across a 28 mm transition span toward the Heavy
   boundary
 - **AND** the corresponding outward half of the perimeter cell MUST remain at
   the Heavy profile rather than containing the transition ramp

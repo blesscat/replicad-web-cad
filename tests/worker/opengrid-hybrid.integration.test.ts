@@ -79,7 +79,7 @@ function measureIntersectionVolume(
 }
 
 describe('OpenGrid Hybrid product builder', () => {
-  it('adds a half-cell inward sloped transition to the Heavy perimeter', async () => {
+  it('adds a full-cell inward sloped transition to the Heavy perimeter', async () => {
     const input = parameters({
       variant: 'Hybrid',
       rows: 3,
@@ -91,19 +91,23 @@ describe('OpenGrid Hybrid product builder', () => {
     const { shape, quality } = await buildAndInspect(input)
     try {
       expect(quality.passed, quality.failures.join(';')).toBe(true)
+      expect(OPENGRID_CONFIGURATION.hybridTransitionSpan).toBe(
+        OPENGRID_CONFIGURATION.gridPitch,
+      )
 
       const fullThickness = OPENGRID_CONFIGURATION.variants.Full.thickness
       const heavyThickness = OPENGRID_CONFIGURATION.variants.Heavy.thickness
       const transitionSpan = OPENGRID_CONFIGURATION.hybridTransitionSpan
       const transitionRise = heavyThickness - fullThickness
       const halfPitch = OPENGRID_CONFIGURATION.gridPitch / 2
+      const transitionStartOffset = -transitionSpan / 2
       const tangentialOffset =
         halfPitch - OPENGRID_CONFIGURATION.outsideExtrusion / 2
       const [interiorX, interiorY] = cellCenterForOpenGrid(input, 1, 1)
 
       for (const fraction of [0.25, 0.5, 0.75]) {
         const expectedZ = fullThickness + transitionRise * fraction
-        const offset = transitionSpan * fraction
+        const offset = transitionStartOffset + transitionSpan * fraction
         const transitionProbes: Array<{
           label: string
           minimum: [number, number, number]
