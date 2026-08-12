@@ -11,6 +11,7 @@ import {
   cellCenterForOpenGrid,
   HALF_CELL_CONFIGURATION,
   OPENGRID_CONFIGURATION,
+  isOpenGridLayeredVariant,
   type ModelBounds,
   type OpenGridParameters,
 } from '../../../cad-contract/units'
@@ -146,17 +147,16 @@ function inspectOfficialProfile(
 ): void {
   const board = boundsForOpenGrid(parameters)
   const [firstCellX, firstCellY] = cellCenterForOpenGrid(parameters, 0, 0)
-  const layerThickness =
-    parameters.variant === 'Heavy'
-      ? OPENGRID_CONFIGURATION.variants.Full.thickness
-      : board.max[2]
-  const zLevels =
-    parameters.variant === 'Heavy'
-      ? [
-          layerThickness / 2,
-          layerThickness + OPENGRID_CONFIGURATION.heavyGap + layerThickness / 2,
-        ]
-      : [layerThickness / 2]
+  const isLayered = isOpenGridLayeredVariant(parameters.variant)
+  const layerThickness = isLayered
+    ? OPENGRID_CONFIGURATION.variants.Full.thickness
+    : board.max[2]
+  const zLevels = isLayered
+    ? [
+        layerThickness / 2,
+        layerThickness + OPENGRID_CONFIGURATION.heavyGap + layerThickness / 2,
+      ]
+    : [layerThickness / 2]
   const probeHalfWidth = 0.5
   const probeHalfHeight = Math.min(0.2, layerThickness / 8)
   const inspectOuterRail = parameters.rows * parameters.columns <= 4
@@ -213,17 +213,16 @@ function inspectHalfCellBoundary(
     return
   }
   const board = boundsForOpenGrid(parameters)
-  const layerThickness =
-    parameters.variant === 'Heavy'
-      ? OPENGRID_CONFIGURATION.variants.Full.thickness
-      : board.max[2]
-  const zLevels =
-    parameters.variant === 'Heavy'
-      ? [
-          layerThickness / 2,
-          layerThickness + OPENGRID_CONFIGURATION.heavyGap + layerThickness / 2,
-        ]
-      : [layerThickness / 2]
+  const isLayered = isOpenGridLayeredVariant(parameters.variant)
+  const layerThickness = isLayered
+    ? OPENGRID_CONFIGURATION.variants.Full.thickness
+    : board.max[2]
+  const zLevels = isLayered
+    ? [
+        layerThickness / 2,
+        layerThickness + OPENGRID_CONFIGURATION.heavyGap + layerThickness / 2,
+      ]
+    : [layerThickness / 2]
   const probeHalfWidth = 0.5
   const probeHalfHeight = Math.min(0.2, layerThickness / 8)
   const halfPitch = HALF_CELL_CONFIGURATION.halfPitch
@@ -283,6 +282,187 @@ function inspectHalfCellBoundary(
           failures.push(`half-cell:y-boundary-missing@${centerX}:${zLevel}`)
         }
       }
+    }
+  }
+}
+
+function inspectHybridProfile(
+  shape: Shape3D,
+  parameters: OpenGridParameters,
+  failures: string[],
+): void {
+  if (
+    parameters.variant !== 'Hybrid' ||
+    parameters.rows < 3 ||
+    parameters.columns < 3
+  ) {
+    return
+  }
+
+  const layerThickness = OPENGRID_CONFIGURATION.variants.Full.thickness
+  const lowerLayerMidpoint = layerThickness / 2
+  const upperLayerMidpoint =
+    layerThickness + OPENGRID_CONFIGURATION.heavyGap + layerThickness / 2
+  const probeHalfWidth = 0.5
+  const probeHalfHeight = 0.2
+  const halfPitch = OPENGRID_CONFIGURATION.gridPitch / 2
+  const [perimeterX, perimeterY] = cellCenterForOpenGrid(parameters, 0, 0)
+  const [interiorX, interiorY] = cellCenterForOpenGrid(parameters, 1, 1)
+
+  const perimeterUpperVolume = volumeInProbe(
+    shape,
+    [
+      perimeterX - probeHalfWidth,
+      perimeterY + halfPitch - 0.7,
+      upperLayerMidpoint - probeHalfHeight,
+    ],
+    [
+      perimeterX + probeHalfWidth,
+      perimeterY + halfPitch - 0.3,
+      upperLayerMidpoint + probeHalfHeight,
+    ],
+  )
+  if (perimeterUpperVolume <= 0.01) {
+    failures.push('hybrid:perimeter-upper-layer-missing')
+  }
+
+  const interiorLowerVolume = volumeInProbe(
+    shape,
+    [
+      interiorX - probeHalfWidth,
+      interiorY + halfPitch - 0.7,
+      lowerLayerMidpoint - probeHalfHeight,
+    ],
+    [
+      interiorX + probeHalfWidth,
+      interiorY + halfPitch - 0.3,
+      lowerLayerMidpoint + probeHalfHeight,
+    ],
+  )
+  if (interiorLowerVolume <= 0.01) {
+    failures.push('hybrid:interior-full-layer-missing')
+  }
+
+  const interiorUpperVolume = volumeInProbe(
+    shape,
+    [
+      interiorX - probeHalfWidth,
+      interiorY + OPENGRID_CONFIGURATION.tileInnerSize / 2 - 2,
+      upperLayerMidpoint - probeHalfHeight,
+    ],
+    [
+      interiorX + probeHalfWidth,
+      interiorY + OPENGRID_CONFIGURATION.tileInnerSize / 2 - 1.7,
+      upperLayerMidpoint + probeHalfHeight,
+    ],
+  )
+  if (interiorUpperVolume > 0.01) {
+    failures.push('hybrid:interior-exceeds-full-layer')
+  }
+}
+
+function inspectHybridTransition(
+  shape: Shape3D,
+  parameters: OpenGridParameters,
+  failures: string[],
+): void {
+  if (
+    parameters.variant !== 'Hybrid' ||
+    parameters.rows < 3 ||
+    parameters.columns < 3
+  ) {
+    return
+  }
+
+  const fullThickness = OPENGRID_CONFIGURATION.variants.Full.thickness
+  const heavyThickness = OPENGRID_CONFIGURATION.variants.Heavy.thickness
+  const transitionSpan = OPENGRID_CONFIGURATION.hybridTransitionSpan
+  const transitionRise = heavyThickness - fullThickness
+  const halfPitch = OPENGRID_CONFIGURATION.gridPitch / 2
+  const tangentialOffset =
+    halfPitch - OPENGRID_CONFIGURATION.outsideExtrusion / 2
+  const probeHalfWidth = 0.5
+  const probeHalfDepth = 0.25
+  const fractions = [0.25, 0.5, 0.75]
+  const sides = ['top', 'right', 'bottom', 'left'] as const
+  const interiorRow = Math.floor((parameters.rows - 1) / 2)
+  const interiorColumn = Math.floor((parameters.columns - 1) / 2)
+  const sideCells: Record<(typeof sides)[number], [number, number]> = {
+    top: [1, interiorColumn],
+    right: [interiorRow, parameters.columns - 2],
+    bottom: [parameters.rows - 2, interiorColumn],
+    left: [interiorRow, 1],
+  }
+
+  const volumeAtTransition = (
+    side: (typeof sides)[number],
+    fraction: number,
+    zMin: number,
+    zMax: number,
+    includeTangentialOffset = true,
+  ): number => {
+    const offset = -transitionSpan / 2 + transitionSpan * fraction
+    const tangentialProbeOffset = includeTangentialOffset ? tangentialOffset : 0
+    const [row, column] = sideCells[side]
+    const [sectionX, sectionY] = cellCenterForOpenGrid(parameters, row, column)
+    let x = sectionX
+    let y = sectionY
+    let xHalfSize = probeHalfWidth
+    let yHalfSize = probeHalfDepth
+
+    switch (side) {
+      case 'top':
+        y += offset
+        x += tangentialProbeOffset
+        break
+      case 'right':
+        x += offset
+        y += tangentialProbeOffset
+        xHalfSize = probeHalfDepth
+        yHalfSize = probeHalfWidth
+        break
+      case 'bottom':
+        y -= offset
+        x += tangentialProbeOffset
+        break
+      case 'left':
+        x -= offset
+        y += tangentialProbeOffset
+        xHalfSize = probeHalfDepth
+        yHalfSize = probeHalfWidth
+        break
+    }
+
+    return volumeInProbe(
+      shape,
+      [x - xHalfSize, y - yHalfSize, zMin],
+      [x + xHalfSize, y + yHalfSize, zMax],
+    )
+  }
+
+  for (const side of sides) {
+    for (const fraction of fractions) {
+      const expectedZ = fullThickness + transitionRise * fraction
+      const rampVolume = volumeAtTransition(
+        side,
+        fraction,
+        expectedZ - 0.15,
+        expectedZ + 0.15,
+      )
+      if (rampVolume <= 0.001) {
+        failures.push(`hybrid:transition-missing@${side}:${fraction}`)
+      }
+    }
+
+    const aboveRampVolume = volumeAtTransition(
+      side,
+      0.5,
+      heavyThickness - 0.2,
+      heavyThickness + 0.1,
+      false,
+    )
+    if (aboveRampVolume > 0.001) {
+      failures.push(`hybrid:transition-overshoots@${side}`)
     }
   }
 }
@@ -427,6 +607,8 @@ export function inspectOpenGridShapeQuality(
     failures.push('openings:incomplete-cell-coverage')
   }
   inspectOfficialProfile(shape, parameters, failures)
+  inspectHybridProfile(shape, parameters, failures)
+  inspectHybridTransition(shape, parameters, failures)
   inspectHalfCellBoundary(shape, parameters, failures)
   if (mesh.triangleCount <= 0 || !meshIsFinite(mesh)) {
     failures.push('mesh:empty-or-non-finite')

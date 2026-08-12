@@ -184,7 +184,9 @@ test('home, model selection, and docs are static Astro pages', async ({
     page.getByText(/方塊、獨立的 box-normal 開口盒、模組化網格底板/),
   ).toBeVisible()
   await expect(
-    page.getByText(/OpenGrid 系列提供 Full、Lite、Heavy 三種 28 mm 網格板型/),
+    page.getByText(
+      /OpenGrid 系列提供 Full、Lite、Heavy、Hybrid 四種 28 mm 網格板型/,
+    ),
   ).toBeVisible()
   await expect(
     page.getByText(/模型選擇頁依 HSW 系列、OpenGrid 系列與其他模型分類/),

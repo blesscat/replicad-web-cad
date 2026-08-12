@@ -116,7 +116,7 @@ describe('OpenGrid contract', () => {
           value.thickness,
         ]),
       ),
-    ).toEqual({ Full: 6.8, Lite: 4, Heavy: 13.8 })
+    ).toEqual({ Full: 6.8, Lite: 4, Heavy: 13.8, Hybrid: 13.8 })
     expect(OPENGRID_CONFIGURATION.gridPitch).toBe(28)
     expect(OPENGRID_CONFIGURATION.tileInnerSize).toBe(25)
     expect(OPENGRID_CONFIGURATION.outsideExtrusion).toBe(0.8)
@@ -134,6 +134,20 @@ describe('OpenGrid contract', () => {
       headIsCountersunk: true,
       headCountersunkDegree: 90,
     })
+  })
+
+  it('accepts Hybrid without changing the normalized OpenGrid snapshot shape', () => {
+    const hybrid = {
+      ...parameters({ rows: 3, columns: 3 }),
+      variant: 'Hybrid',
+    }
+    const validation = validateOpenGridParameters(hybrid)
+
+    expect(validation).toMatchObject({ valid: true, value: hybrid })
+    expect(boundsForOpenGrid(hybrid as OpenGridParameters).max[2]).toBe(
+      OPENGRID_CONFIGURATION.variants.Hybrid.thickness,
+    )
+    expect(Object.keys(hybrid).sort()).toEqual(Object.keys(parameters()).sort())
   })
 
   it('exposes common wood screw presets without replacing the official profile', () => {

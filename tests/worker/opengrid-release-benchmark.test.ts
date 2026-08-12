@@ -32,7 +32,7 @@ const WASM_PATH =
 const runReleaseBenchmark = process.env.RUN_OPENGRID_RELEASE_BENCHMARK === '1'
 const writeReport = process.env.WRITE_OPENGRID_RELEASE_REPORT === '1'
 const strategy = 'cell-balanced' as const
-const variants: readonly OpenGridVariant[] = ['Full', 'Lite', 'Heavy']
+const variants: readonly OpenGridVariant[] = ['Full', 'Lite', 'Heavy', 'Hybrid']
 
 type ReleaseFixture = {
   id: string

@@ -32,6 +32,7 @@ export type {
 
 import {
   OPENGRID_CONFIGURATION,
+  isOpenGridLayeredVariant,
   type OpenGridParameters,
   type OpenGridVariant,
 } from '../../../cad-contract/units'
@@ -90,7 +91,7 @@ export function openGridTileProfile(
   const topInset = OPENGRID_CONFIGURATION.topCaptureInitialInset
   const insideExtrusion = constants.insideExtrusion
 
-  if (variant === 'Heavy') {
+  if (variant === 'Heavy' || variant === 'Hybrid') {
     return [
       [0, 0],
       [outsideExtrusion, 0],
@@ -180,7 +181,7 @@ export function openGridLiteCornerProfile(): OpenGridProfilePoint[] {
 }
 
 export function openGridSurfaceThickness(variant: OpenGridVariant): number {
-  return variant === 'Heavy'
+  return isOpenGridLayeredVariant(variant)
     ? OPENGRID_CONFIGURATION.variants.Full.thickness
     : OPENGRID_CONFIGURATION.variants[variant].thickness
 }
@@ -188,7 +189,7 @@ export function openGridSurfaceThickness(variant: OpenGridVariant): number {
 export function openGridParametersForSurface(
   parameters: OpenGridParameters,
 ): OpenGridParameters {
-  if (parameters.variant !== 'Heavy') return parameters
+  if (!isOpenGridLayeredVariant(parameters.variant)) return parameters
   return {
     ...parameters,
     variant: 'Heavy',

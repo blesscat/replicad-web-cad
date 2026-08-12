@@ -10,7 +10,7 @@ import {
 } from './half-cell'
 import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
 
-export type OpenGridVariant = 'Full' | 'Lite' | 'Heavy'
+export type OpenGridVariant = 'Full' | 'Lite' | 'Heavy' | 'Hybrid'
 export type OpenGridChamferMode = 'none' | 'corners' | 'everywhere'
 export type OpenGridScrewKind = 'official-default' | 'custom'
 export type OpenGridScrewPreset = 'm3' | 'm4' | 'm5' | 'm6' | 'm7'
@@ -183,6 +183,7 @@ const OPENGRID_WORKSPACE_MAX_DIMENSION = 500
 
 export const OPENGRID_CONFIGURATION = {
   gridPitch: OPENGRID_GRID_CONFIGURATION.fullPitch,
+  hybridTransitionSpan: OPENGRID_GRID_CONFIGURATION.fullPitch,
   workspaceMaxDimension: OPENGRID_WORKSPACE_MAX_DIMENSION,
   maxGridCount: Math.floor(
     OPENGRID_WORKSPACE_MAX_DIMENSION / OPENGRID_GRID_CONFIGURATION.fullPitch,
@@ -207,6 +208,7 @@ export const OPENGRID_CONFIGURATION = {
     Full: { thickness: 6.8 },
     Lite: { thickness: 4 },
     Heavy: { thickness: 13.8 },
+    Hybrid: { thickness: 13.8 },
   } satisfies Record<OpenGridVariant, { thickness: number }>,
   defaultScrew: DEFAULT_SCREW_DIMENSIONS,
   screwPresets: COMMON_WOOD_SCREW_PRESETS,
@@ -298,7 +300,16 @@ function hasExactKeys(
 }
 
 function isOpenGridVariant(value: unknown): value is OpenGridVariant {
-  return value === 'Full' || value === 'Lite' || value === 'Heavy'
+  return (
+    value === 'Full' ||
+    value === 'Lite' ||
+    value === 'Heavy' ||
+    value === 'Hybrid'
+  )
+}
+
+export function isOpenGridLayeredVariant(variant: OpenGridVariant): boolean {
+  return variant === 'Heavy' || variant === 'Hybrid'
 }
 
 function isOpenGridChamferMode(value: unknown): value is OpenGridChamferMode {
@@ -402,7 +413,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
   if (!isOpenGridVariant(value.variant)) {
     issues.push({
       field: 'variant',
-      message: '板型必須是 Full、Lite 或 Heavy。',
+      message: '板型必須是 Full、Lite、Heavy 或 Hybrid。',
     })
   }
 

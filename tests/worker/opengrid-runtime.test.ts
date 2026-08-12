@@ -459,6 +459,40 @@ describe('OpenGrid Worker runtime', () => {
     )
   })
 
+  it('routes Hybrid parameters through the worker quality gate', async () => {
+    const events: unknown[] = []
+    const runtime = new CadWorkerRuntime('epoch-opengrid-hybrid', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(
+      generateCommand({
+        parameters: opengridParameters({
+          variant: 'Hybrid',
+          rows: 3,
+          columns: 3,
+          chamfers: 'none',
+          connectorHoles: 'none',
+          screwMode: 'none',
+        }),
+      }),
+    )
+
+    expect(mocks.buildModelBRep).toHaveBeenCalledWith(
+      'opengrid',
+      expect.objectContaining({ variant: 'Hybrid', rows: 3, columns: 3 }),
+      expect.any(Object),
+    )
+    expect(mocks.assertOpenGridShapeQuality).toHaveBeenCalledOnce()
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'model.candidate-ready',
+        modelId: 'opengrid',
+        parameters: expect.objectContaining({ variant: 'Hybrid' }),
+      }),
+    )
+  })
+
   it('routes stackable-box commands independently and keeps export names typed', async () => {
     const events: unknown[] = []
     const runtime = new CadWorkerRuntime('epoch-stackable', (event) =>

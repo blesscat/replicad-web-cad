@@ -57,7 +57,7 @@ describe.skipIf(!runBenchmark)('OpenGrid geometry Worker benchmark', () => {
   it('records the OpenGrid strategy matrix and generator handoff', async () => {
     const fixtures = selectedFixtures ?? OPENGRID_BENCHMARK_FIXTURES
     const reports = []
-    for (const variant of ['Full', 'Lite', 'Heavy'] as const) {
+    for (const variant of ['Full', 'Lite', 'Heavy', 'Hybrid'] as const) {
       const variantFixtures = fixtures.filter(
         (fixture) => fixture.variant === variant,
       )

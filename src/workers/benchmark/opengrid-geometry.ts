@@ -81,6 +81,8 @@ const FIXTURE_SCALES: readonly FixtureScale[] = [
   },
 ]
 
+const OPENGRID_BENCHMARK_VARIANTS = ['Full', 'Lite', 'Heavy', 'Hybrid'] as const
+
 export type OpenGridBenchmarkFixture = {
   id: string
   variant: OpenGridVariant
@@ -129,7 +131,7 @@ function createFixture(
 
 export function createOpenGridBenchmarkFixtures(): OpenGridBenchmarkFixture[] {
   const fixtures: OpenGridBenchmarkFixture[] = []
-  for (const variant of ['Full', 'Lite', 'Heavy'] as const) {
+  for (const variant of OPENGRID_BENCHMARK_VARIANTS) {
     for (const scale of FIXTURE_SCALES)
       fixtures.push(createFixture(variant, scale))
   }
@@ -512,6 +514,13 @@ async function runSample(
       throw timeoutError(sampleTimeoutMs)
     }
   }
+  const assertPhaseDeadline = () => {
+    try {
+      assertDeadline()
+    } catch (error) {
+      throw recordFailure(fixture, strategy, kind, sample, phase, error)
+    }
+  }
 
   try {
     const phaseTimings: Partial<
@@ -547,7 +556,7 @@ async function runSample(
     } catch (error) {
       throw recordFailure(fixture, strategy, kind, sample, phase, error)
     }
-    assertDeadline()
+    assertPhaseDeadline()
     timing.profileMs = phaseTimings.profile ?? null
     timing.extrudeMs = phaseTimings.extrude ?? null
     timing.prototypeBuildMs = phaseTimings['prototype-build'] ?? null
@@ -563,7 +572,7 @@ async function runSample(
       throw recordFailure(fixture, strategy, kind, sample, phase, error)
     }
     timing.meshMs = performance.now() - meshStartedAt
-    assertDeadline()
+    assertPhaseDeadline()
 
     phase = 'export'
     const exportStartedAt = performance.now()
@@ -578,7 +587,7 @@ async function runSample(
       throw recordFailure(fixture, strategy, kind, sample, phase, error)
     }
     timing.exportMs = performance.now() - exportStartedAt
-    assertDeadline()
+    assertPhaseDeadline()
 
     phase = 'quality'
     const quality = adapter.inspect
@@ -759,6 +768,7 @@ function deriveRecommendations(
     Full: recommendationsFor('Full', fixtures, summaries, strategies),
     Lite: recommendationsFor('Lite', fixtures, summaries, strategies),
     Heavy: recommendationsFor('Heavy', fixtures, summaries, strategies),
+    Hybrid: recommendationsFor('Hybrid', fixtures, summaries, strategies),
   }
 }
 
@@ -856,6 +866,7 @@ export async function runOpenGridBenchmark(
       Full: recommendations.Full.strategy,
       Lite: recommendations.Lite.strategy,
       Heavy: recommendations.Heavy.strategy,
+      Hybrid: recommendations.Hybrid.strategy,
     },
   }
 }
@@ -895,6 +906,7 @@ export function mergeOpenGridBenchmarkReports(
       Full: recommendations.Full.strategy,
       Lite: recommendations.Lite.strategy,
       Heavy: recommendations.Heavy.strategy,
+      Hybrid: recommendations.Hybrid.strategy,
     },
   }
 }
@@ -975,7 +987,7 @@ export function renderOpenGridBenchmarkMarkdown(
     '| Variant | Selected | Fallbacks | Evidence |',
     '| --- | --- | --- | --- |',
   ]
-  for (const variant of ['Full', 'Lite', 'Heavy'] as const) {
+  for (const variant of OPENGRID_BENCHMARK_VARIANTS) {
     const recommendation = report.recommendations[variant]
     lines.push(
       `| ${variant} | ${report.selectedStrategies[variant] ?? 'pending'} | ${recommendation.fallbackStrategies.join(' → ') || 'none'} | ${recommendation.evidence} |`,

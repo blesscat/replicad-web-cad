@@ -143,6 +143,7 @@ export {
   cellCenterForOpenGrid,
   deterministicOpenGridCustomScrewPositions,
   isOpenGridGenerationSupported,
+  isOpenGridLayeredVariant,
   isOpenGridParameters,
   normalizeOpenGridParameters,
   openGridBoardConfiguration,

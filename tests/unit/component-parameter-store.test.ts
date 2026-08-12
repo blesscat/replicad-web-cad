@@ -417,6 +417,29 @@ describe('component parameter store', () => {
     store.dispose()
   })
 
+  it('persists Hybrid OpenGrid parameters through a typed round-trip', () => {
+    const storage = createMemoryStorage()
+    const store = createComponentParameterStore({ storage })
+    const hybridParameters = opengridParameters({
+      variant: 'Hybrid',
+      rows: 6,
+      columns: 4,
+      halfCellX: 'right',
+      halfCellY: 'top',
+    })
+
+    expect(store.set('opengrid', hybridParameters)).toBe(true)
+    expect(store.get('opengrid')).toEqual(hybridParameters)
+
+    const persisted = JSON.parse(
+      storage.data.get(COMPONENT_PARAMETER_STORAGE_KEY) ?? '{}',
+    ) as { values?: Record<string, unknown> }
+    expect(persisted.values?.legacy).toMatchObject({
+      opengrid: hybridParameters,
+    })
+    store.dispose()
+  })
+
   it('persists bottom-plate mode as a separate cylinder profile', () => {
     const storage = createMemoryStorage()
     const store = createComponentParameterStore({ storage })
