@@ -9,6 +9,7 @@ import {
   isModularGridBaseParameters,
   isOpenGridDividerModelParameters,
   isOpenGridParameters,
+  isOpenGridOpenShelfParameters,
   isOpenGridStackableBoxParameters,
   isOpenGridStackableCylinderParameters,
   isOpenGridSnapParameters,
@@ -40,6 +41,7 @@ import {
 } from '../components/opengrid-snap/builder'
 import { buildOpenGridSnapRemover } from '../components/opengrid-snap-remover/builder'
 import { buildPillar } from '../components/opengrid-pillar/builder'
+import { buildOpenGridOpenShelf } from '../components/opengrid-open-shelf/builder'
 
 export type KernelBuildContext = {
   getModularGridBaseTemplate: () => Promise<Shape3D>
@@ -271,6 +273,20 @@ async function buildOpenGridStackableBoxModel(
   })
 }
 
+async function buildOpenGridOpenShelfModel(
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Promise<Shape3D> {
+  if (!isOpenGridOpenShelfParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-open-shelf')
+  }
+  return buildOpenGridOpenShelf(parameters, {
+    isGenerationCurrent: context.isGenerationCurrent,
+    yieldToEventLoop: context.yieldToEventLoop,
+    reportProgress: context.reportProgress,
+  })
+}
+
 function buildOpenGridStackableCylinderModel(
   parameters: ModelParameterValues,
   context: KernelBuildContext,
@@ -353,6 +369,11 @@ export const opengridStackableCylinderKernelDefinition: KernelModelDefinition =
     build: buildOpenGridStackableCylinderModel,
   }
 
+export const opengridOpenShelfKernelDefinition: KernelModelDefinition = {
+  id: 'opengrid-open-shelf',
+  build: buildOpenGridOpenShelfModel,
+}
+
 export const openGridSnapRemoverKernelDefinition: KernelModelDefinition = {
   id: 'opengrid-snap-remover',
   build: buildOpenGridSnapRemoverModel,
@@ -373,6 +394,7 @@ export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   opengridKernelDefinition,
   opengridStackableBoxKernelDefinition,
   opengridStackableCylinderKernelDefinition,
+  opengridOpenShelfKernelDefinition,
   opengridSnapKernelDefinition,
   openGridSnapRemoverKernelDefinition,
   opengridDividerKernelDefinition,

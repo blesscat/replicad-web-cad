@@ -134,6 +134,36 @@ import type {
   PillarValidation,
   PillarValidationIssue,
 } from './opengrid-pillar'
+import {
+  boundsForOpenGridOpenShelf,
+  isOpenGridOpenShelfParameters,
+  openGridOpenShelfFileName,
+  openGridOpenShelfStlFileName,
+  OPENGRID_OPEN_SHELF_CONFIGURATION,
+  OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
+  openGridOpenShelfAngleRadiansFor,
+  openGridOpenShelfCellClearWidthFor,
+  openGridOpenShelfClearCellHeightsFor,
+  openGridOpenShelfCellSpaceFor,
+  openGridOpenShelfDepthFor,
+  openGridOpenShelfFootprintFor,
+  openGridOpenShelfFrontToRearElevationFor,
+  openGridOpenShelfPegCentersFor,
+  openGridOpenShelfShelfLowerSurfaceZFor,
+  openGridOpenShelfTopInnerFrontZFor,
+  openGridOpenShelfTopInnerRearZFor,
+  openGridOpenShelfTopOuterRearZFor,
+  validateOpenGridOpenShelfParameters,
+} from './opengrid-open-shelf'
+import type {
+  OpenGridOpenShelfCellClearHeights,
+  OpenGridOpenShelfCellSpace,
+  OpenGridOpenShelfParameterKey,
+  OpenGridOpenShelfParameters,
+  OpenGridOpenShelfPoint2D,
+  OpenGridOpenShelfValidation,
+  OpenGridOpenShelfValidationIssue,
+} from './opengrid-open-shelf'
 
 export {
   OPENGRID_CONFIGURATION,
@@ -158,6 +188,27 @@ export {
   validateOpenGridGenerationSupport,
   validateOpenGridParameters,
 } from './opengrid'
+export {
+  boundsForOpenGridOpenShelf,
+  isOpenGridOpenShelfParameters,
+  openGridOpenShelfAngleRadiansFor,
+  openGridOpenShelfCellClearWidthFor,
+  openGridOpenShelfClearCellHeightsFor,
+  openGridOpenShelfCellSpaceFor,
+  openGridOpenShelfDepthFor,
+  openGridOpenShelfFileName,
+  openGridOpenShelfFootprintFor,
+  openGridOpenShelfFrontToRearElevationFor,
+  openGridOpenShelfPegCentersFor,
+  openGridOpenShelfShelfLowerSurfaceZFor,
+  openGridOpenShelfStlFileName,
+  openGridOpenShelfTopInnerFrontZFor,
+  openGridOpenShelfTopInnerRearZFor,
+  openGridOpenShelfTopOuterRearZFor,
+  OPENGRID_OPEN_SHELF_CONFIGURATION,
+  OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
+  validateOpenGridOpenShelfParameters,
+} from './opengrid-open-shelf'
 export {
   boundsForOpenGridDivider,
   classifyOpenGridDividerShape,
@@ -299,6 +350,14 @@ export type {
   OpenGridParameterKey,
 } from './opengrid'
 export type {
+  OpenGridOpenShelfCellClearHeights,
+  OpenGridOpenShelfParameterKey,
+  OpenGridOpenShelfParameters,
+  OpenGridOpenShelfPoint2D,
+  OpenGridOpenShelfValidation,
+  OpenGridOpenShelfValidationIssue,
+} from './opengrid-open-shelf'
+export type {
   OpenGridDividerAxis,
   OpenGridDividerParameterKey,
   OpenGridDividerParameters,
@@ -418,6 +477,7 @@ export const PROTOTYPE_CONFIGURATION = {
   opengridStackableBox: OPENGRID_STACKABLE_BOX_CONFIGURATION,
   opengridStackableCylinder: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
   opengridDivider: OPENGRID_DIVIDER_CONFIGURATION,
+  opengridOpenShelf: OPENGRID_OPEN_SHELF_CONFIGURATION,
 } as const
 
 export type DimensionKey = 'width' | 'depth' | 'height'
@@ -436,6 +496,7 @@ export type ModelParameterKey =
   | OpenGridSnapParameterKey
   | OpenGridDividerParameterKey
   | PillarParameterKey
+  | OpenGridOpenShelfParameterKey
 export type ScalarModelParameterKey =
   | DimensionKey
   | GridParameterKey
@@ -456,6 +517,7 @@ export type ModelId =
   | 'opengrid-snap-remover'
   | 'opengrid-divider'
   | 'opengrid-pillar'
+  | 'opengrid-open-shelf'
 
 export type BoxParameters = Record<DimensionKey, number>
 export type ModularGridBaseParameters = Record<GridParameterKey, number>
@@ -505,6 +567,10 @@ export type ModelParameters =
       parameters: OpenGridDividerParameters
     }
   | { modelId: 'opengrid-pillar'; parameters: PillarParameters }
+  | {
+      modelId: 'opengrid-open-shelf'
+      parameters: OpenGridOpenShelfParameters
+    }
 
 export type ModelParameterValues = ModelParameters['parameters']
 
@@ -1158,6 +1224,20 @@ export function validateModelParameters(
     return { valid: true, value: { modelId, parameters: validation.value } }
   }
 
+  if (modelId === 'opengrid-open-shelf') {
+    const validation = validateOpenGridOpenShelfParameters(value)
+    if (!validation.valid) {
+      return {
+        valid: false,
+        issues: validation.issues.map((issue) => ({
+          field: issue.field,
+          message: issue.message,
+        })),
+      }
+    }
+    return { valid: true, value: { modelId, parameters: validation.value } }
+  }
+
   return {
     valid: false,
     issues: [{ field: 'parameters', message: '找不到指定的 CAD component。' }],
@@ -1442,6 +1522,12 @@ export function isPillarModelParameters(
   return isPillarParameters(value)
 }
 
+export function isOpenGridOpenShelfModelParameters(
+  value: unknown,
+): value is OpenGridOpenShelfParameters {
+  return isOpenGridOpenShelfParameters(value)
+}
+
 export function isModelParameters(value: unknown): value is ModelParameters {
   if (!value || typeof value !== 'object') return false
   const model = value as { modelId?: unknown; parameters?: unknown }
@@ -1474,6 +1560,8 @@ export function boundsForModel(model: ModelParameters): ModelBounds {
       return boundsForOpenGridDivider(model.parameters)
     case 'opengrid-pillar':
       return boundsForPillar(model.parameters)
+    case 'opengrid-open-shelf':
+      return boundsForOpenGridOpenShelf(model.parameters)
   }
 }
 
@@ -1503,6 +1591,8 @@ export function modelFileName(model: ModelParameters): string {
       return openGridDividerFileName(model.parameters)
     case 'opengrid-pillar':
       return pillarFileName(model.parameters)
+    case 'opengrid-open-shelf':
+      return openGridOpenShelfFileName(model.parameters)
   }
 }
 
@@ -1532,5 +1622,7 @@ export function modelStlFileName(model: ModelParameters): string {
       return openGridDividerStlFileName(model.parameters)
     case 'opengrid-pillar':
       return pillarStlFileName(model.parameters)
+    case 'opengrid-open-shelf':
+      return openGridOpenShelfStlFileName(model.parameters)
   }
 }

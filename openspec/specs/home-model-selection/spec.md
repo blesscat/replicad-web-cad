@@ -6,7 +6,7 @@
 
 ### Requirement: 首頁模型選擇
 
-The system MUST provide a static model-selection page at `/models` driven by the registered model catalog. Every model rendered in the chooser MUST have an understandable display name, a catalog-provided static preview image, and a link to its model-specific CAD route. The chooser content MUST NOT render introductory copy, family descriptions, model descriptions, or adjustable-parameter summaries. The chooser MUST display the OpenGrid series before the HSW series, including `opengrid`, `opengrid-pillar`, `opengrid-divider`, `opengrid-stackable-box`, `opengrid-stackable-cylinder`, `opengrid-snap`, `opengrid-snap-remover`, and `hsw-cell`. Registered models outside these visible series MAY remain available through direct CAD routes but MUST NOT be rendered as chooser entries. The root path `/` MUST remain a separate static product homepage and MUST link to `/models` without rendering the model chooser. The `/models` page MUST expose a page-level selection heading without requiring an additional outer visual panel around the entire chooser. The OpenGrid and HSW series MUST remain visually distinguishable by series headings, and the OpenGrid Desk/Wall subgroups MUST remain distinguishable by subgroup headings, spacing, or separators without requiring redundant family badges or nested bordered panels. Model cards MUST use an adaptive layout that uses more than two columns when a wide viewport has enough room and collapses to one column on a narrow viewport.
+The system MUST provide a static model-selection page at `/models` driven by the registered model catalog. Every model rendered in the chooser MUST have an understandable display name, a catalog-provided static preview image, and a link to its model-specific CAD route. The chooser content MUST NOT render introductory copy, family descriptions, model descriptions, or adjustable-parameter summaries. The chooser MUST display the OpenGrid series before the HSW series, including `opengrid`, `opengrid-pillar`, `opengrid-divider`, `opengrid-stackable-box`, `opengrid-stackable-cylinder`, `opengrid-snap`, `opengrid-snap-remover`, `opengrid-open-shelf`, and `hsw-cell`. Registered models outside these visible series MAY remain available through direct CAD routes but MUST NOT be rendered as chooser entries. The root path `/` MUST remain a separate static product homepage and MUST link to `/models` without rendering the model chooser. The `/models` page MUST expose a page-level selection heading without requiring an additional outer visual panel around the entire chooser. The OpenGrid and HSW series MUST remain visually distinguishable by series headings, and the OpenGrid Desk/Wall subgroups MUST remain distinguishable by subgroup headings, spacing, or separators without requiring redundant family badges or nested bordered panels. Model cards MUST use an adaptive layout that uses more than two columns when a wide viewport has enough room and collapses to one column on a narrow viewport.
 
 #### Scenario: 真正首頁不顯示模型選擇器
 
@@ -19,7 +19,7 @@ The system MUST provide a static model-selection page at `/models` driven by the
 
 - **WHEN** 使用者開啟 `/models`
 - **THEN** 頁面 MUST 依序顯示 OpenGrid 系列與 HSW 系列的可理解模型名稱
-- **AND** OpenGrid 系列 MUST 顯示 `opengrid`、`opengrid-pillar`、`opengrid-divider`、`opengrid-stackable-box`、`opengrid-stackable-cylinder`、`opengrid-snap` 與 `opengrid-snap-remover`
+- **AND** OpenGrid 系列 MUST 顯示 `opengrid`、`opengrid-pillar`、`opengrid-divider`、`opengrid-stackable-box`、`opengrid-stackable-cylinder`、`opengrid-snap`、`opengrid-snap-remover` 與 `opengrid-open-shelf`
 - **AND** HSW 系列 MUST 顯示 `hsw-cell`
 - **AND** 每個可見模型 MUST 顯示其 catalog-provided static preview image、可理解模型名稱與 `編輯 →` 入口
 - **AND** 每個 preview image MUST expose alternative text that identifies the model it represents
@@ -188,6 +188,7 @@ The model-selection page MUST render the registered catalog entries in the two v
 - **AND** `opengrid-stackable-cylinder` MUST appear in `OpenGrid 系列`
 - **AND** `opengrid-snap` MUST appear in `OpenGrid 系列`
 - **AND** `opengrid-snap-remover` MUST appear in `OpenGrid 系列`
+- **AND** `opengrid-open-shelf` MUST appear in `OpenGrid 系列`
 - **AND** `hsw-cell` MUST appear in `HSW 系列`
 - **AND** `box`、`box-normal`、`modular-grid-base` 與 `hexagonal-column` MUST NOT appear in the chooser
 
@@ -327,7 +328,7 @@ The model chooser MUST list `opengrid-stackable-cylinder` in the OpenGrid family
 
 The `/models` chooser MUST use a selection-only label for each visible model card so that a family prefix already represented by the series heading is not repeated. The series headings MUST remain `OpenGrid 系列` and `HSW 系列`. The current visible card labels MUST be:
 
-- OpenGrid: `Board (底版)`、`Snap (咔咔)`、`Locating Post (定位柱)`、`divider (分隔牆)`、`Grid Box (方盒)`、`Round Box (圓盒)`、`Snap Remover`
+- OpenGrid: `Board (底版)`、`Snap (咔咔)`、`Locating Post (定位柱)`、`divider (分隔牆)`、`Grid Box (方盒)`、`Round Box (圓盒)`、`Snap Remover`、`Open Shelf (斜開格櫃)`
 - HSW: `六角蜂巢`
 
 The corresponding edit links MUST use the same catalog selection label in their accessible names. Outside the `/models` chooser, the current catalog display names MUST remain `opengrid board (底版)`, `Snap (咔咔)`, `Locating Post (定位柱)`, `divider (分隔牆)`, `Grid Box (方盒)`, `Round Box (圓盒)`, `Snap Remover`, and `六角蜂巢` respectively.
@@ -335,19 +336,19 @@ The corresponding edit links MUST use the same catalog selection label in their 
 #### Scenario: 模型選擇頁使用系列相對名稱
 
 - **WHEN** 使用者開啟 `/models`
-- **THEN** OpenGrid 系列的卡片標題 MUST 依序顯示 `Board (底版)`、`Snap (咔咔)`、`Locating Post (定位柱)`、`divider (分隔牆)`、`Grid Box (方盒)`、`Round Box (圓盒)`、`Snap Remover`
+- **THEN** OpenGrid 系列的卡片標題 MUST 依序顯示 `Board (底版)`、`Snap (咔咔)`、`Locating Post (定位柱)`、`divider (分隔牆)`、`Grid Box (方盒)`、`Round Box (圓盒)`、`Snap Remover`、`Open Shelf (斜開格櫃)`
 - **AND** HSW 系列的卡片標題 MUST 顯示 `六角蜂巢`
-- **AND** 編輯入口的 accessible name MUST 分別使用 `編輯 Board (底版)`、`編輯 Snap (咔咔)`、`編輯 Locating Post (定位柱)`、`編輯 divider (分隔牆)`、`編輯 Grid Box (方盒)`、`編輯 Round Box (圓盒)`、`編輯 Snap Remover` 與 `編輯 六角蜂巢`
+- **AND** 編輯入口的 accessible name MUST 分別使用 `編輯 Board (底版)`、`編輯 Snap (咔咔)`、`編輯 Locating Post (定位柱)`、`編輯 divider (分隔牆)`、`編輯 Grid Box (方盒)`、`編輯 Round Box (圓盒)`、`編輯 Snap Remover`、`編輯 Open Shelf (斜開格櫃)` 與 `編輯 六角蜂巢`
 - **AND** 系列標題 MUST 仍顯示 `OpenGrid 系列` 與 `HSW 系列`
 
 #### Scenario: 其他頁面維持完整模型名稱
 
 - **WHEN** 使用者離開 `/models` 並查看目前模型的 CAD workspace 或其他既有模型識別文案
-- **THEN** 系統 MUST 維持目前 catalog display name，例如 `opengrid board (底版)`、`Snap (咔咔)`、`Locating Post (定位柱)`、`divider (分隔牆)`、`Grid Box (方盒)`、`Round Box (圓盒)` 與 `六角蜂巢`
+- **THEN** 系統 MUST 維持目前 catalog display name，例如 `opengrid board (底版)`、`Snap (咔咔)`、`Locating Post (定位柱)`、`divider (分隔牆)`、`Grid Box (方盒)`、`Round Box (圓盒)`、`OpenGrid Open Shelf (斜開格櫃)` 與 `六角蜂巢`
 
 ### Requirement: OpenGrid Snap 選擇入口順序
 
-The `/models` chooser MUST render the OpenGrid entries in this order: `opengrid`, `opengrid-snap`, `opengrid-pillar`, `opengrid-divider`, `opengrid-stackable-box`, `opengrid-stackable-cylinder`, and `opengrid-snap-remover`. The responsive card grid MUST preserve this rendered order. When the viewport has room for at least two card columns, the first two cards MUST appear next to each other; on a narrow one-column viewport they MUST remain in the same order vertically. Every entry MUST retain its existing model-specific route.
+The `/models` chooser MUST render the OpenGrid entries in this order: `opengrid`, `opengrid-snap`, `opengrid-pillar`, `opengrid-divider`, `opengrid-stackable-box`, `opengrid-stackable-cylinder`, `opengrid-snap-remover`, and `opengrid-open-shelf`. The responsive card grid MUST preserve this rendered order. When the viewport has room for at least two card columns, the first two cards MUST appear next to each other; on a narrow one-column viewport they MUST remain in the same order vertically. Every entry MUST retain its existing model-specific route.
 
 #### Scenario: Snap 與底板在寬版相鄰
 
@@ -360,12 +361,12 @@ The `/models` chooser MUST render the OpenGrid entries in this order: `opengrid`
 #### Scenario: 其他 OpenGrid 入口仍保留
 
 - **WHEN** 使用者開啟 `/models`
-- **THEN** OpenGrid 系列 MUST 仍包含 `opengrid-pillar`、`opengrid-divider`、`opengrid-stackable-box`、`opengrid-stackable-cylinder` 與 `opengrid-snap-remover`
+- **THEN** OpenGrid 系列 MUST 仍包含 `opengrid-pillar`、`opengrid-divider`、`opengrid-stackable-box`、`opengrid-stackable-cylinder`、`opengrid-snap-remover` 與 `opengrid-open-shelf`
 - **AND** 這些入口的既有 model ID 與 `/cad/<modelId>` 路由 MUST 維持不變
 
 ### Requirement: OpenGrid system entry subgroups
 
-The static `/models` chooser MUST split the visible OpenGrid catalog entries into `Desk System` and `Wall Related` subgroups. The Desk subgroup MUST contain `opengrid`, `opengrid-snap`, `opengrid-pillar`, `opengrid-divider`, `opengrid-stackable-box`, `opengrid-stackable-cylinder`, and `opengrid-snap-remover`; the Wall subgroup MUST contain only `opengrid` and `opengrid-snap`. Each entry MUST retain its understandable selection label and model-specific route, and the HSW series MUST remain after the OpenGrid subgroups.
+The static `/models` chooser MUST split the visible OpenGrid catalog entries into `Desk System` and `Wall Related` subgroups. The Desk subgroup MUST contain `opengrid`, `opengrid-snap`, `opengrid-pillar`, `opengrid-divider`, `opengrid-stackable-box`, `opengrid-stackable-cylinder`, `opengrid-snap-remover`, and `opengrid-open-shelf`; the Wall subgroup MUST contain only `opengrid` and `opengrid-snap`. Each entry MUST retain its understandable selection label and model-specific route, and the HSW series MUST remain after the OpenGrid subgroups.
 
 #### Scenario: Desk and Wall groups are visible
 
@@ -374,6 +375,27 @@ The static `/models` chooser MUST split the visible OpenGrid catalog entries int
 - **AND** the Desk subgroup MUST show every visible OpenGrid model
 - **AND** the Wall subgroup MUST show only the bottom plate and Snap
 - **AND** the HSW series MUST remain available as a separate context-free group
+
+### Requirement: Open Shelf is a Desk-only model-selection entry
+
+The static `/models` chooser MUST include `opengrid-open-shelf` exactly once under the OpenGrid `Desk System` subgroup. Its selection label MUST be `Open Shelf (斜開格櫃)`, its user-facing display name MUST begin with `OpenGrid `, and its link MUST be `/cad/opengrid-open-shelf?system=desk`. It MUST not appear in `Wall Related`.
+
+#### Scenario: Desk chooser lists Open Shelf
+
+- **WHEN** a user opens `/models`
+- **THEN** the Desk System subgroup MUST show `Open Shelf (斜開格櫃)` with a static preview and an edit link
+- **AND** the chooser MUST remain static without initializing the CAD Worker
+
+#### Scenario: Selecting Open Shelf opens its route
+
+- **WHEN** a user selects the Open Shelf card
+- **THEN** navigation MUST go to `/cad/opengrid-open-shelf?system=desk`
+- **AND** the CAD workspace MUST initialize with `modelId=opengrid-open-shelf`
+
+#### Scenario: Open Shelf is absent from Wall Related
+
+- **WHEN** the model chooser renders the Wall Related subgroup
+- **THEN** `opengrid-open-shelf` MUST not be rendered there
 
 ### Requirement: System-aware chooser links
 

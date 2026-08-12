@@ -132,6 +132,9 @@ test('home, model selection, and docs are static Astro pages', async ({
     'href',
     '/cad/opengrid-snap-remover?system=desk',
   )
+  await expect(
+    editLinkFor(deskSystem, 'Open Shelf (斜開格櫃)'),
+  ).toHaveAttribute('href', '/cad/opengrid-open-shelf?system=desk')
   const openGridCards = deskSystem.locator('[data-model-id]')
   await expect(openGridCards.nth(0)).toHaveAttribute(
     'data-model-id',
@@ -207,7 +210,7 @@ test('model selection stacks all cards on narrow screens', async ({ page }) => {
       return { x: bounds.x, y: bounds.y }
     }),
   )
-  expect(positions.length).toBe(10)
+  expect(positions.length).toBe(11)
   const cardX = positions[0]?.x
   if (cardX === undefined) throw new Error('Expected narrow model cards')
   expect(positions.every((position) => Math.abs(position.x - cardX) < 1)).toBe(

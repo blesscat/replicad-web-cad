@@ -17,6 +17,7 @@
   import OpenGridSnapComponentPanel from './opengrid-snap/OpenGridSnapComponentPanel.svelte'
   import OpenGridPillarComponentPanel from './opengrid-pillar/OpenGridPillarComponentPanel.svelte'
   import type { OpenGridSystemContext } from '../../../features/cad/system-entry-context'
+  import OpenGridOpenShelfComponentPanel from './opengrid-open-shelf/OpenGridOpenShelfComponentPanel.svelte'
   import type { ComponentPanelProps } from './types'
 
   type Props = ComponentPanelProps & {
@@ -88,6 +89,12 @@
 {:else if modelId === 'opengrid-snap'}
   <OpenGridSnapComponentPanel
     parameters={parameters as OpenGridSnapParameters}
+    {rawParameters}
+    {fieldErrors}
+    {onInputChange}
+  />
+{:else if modelId === 'opengrid-open-shelf'}
+  <OpenGridOpenShelfComponentPanel
     {rawParameters}
     {fieldErrors}
     {onInputChange}
