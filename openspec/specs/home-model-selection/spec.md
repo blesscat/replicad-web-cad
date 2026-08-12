@@ -1,9 +1,7 @@
 ## Purpose
 
 本文件定義首頁模型選擇、模型專屬 CAD 路由、模型切換入口與多模型產品文案的可觀察行為，確保首頁不啟動 CAD runtime，並讓使用者能以明確路由進入與切換目前支援的模型。
-
 ## Requirements
-
 ### Requirement: 首頁模型選擇
 
 The system MUST provide a static model-selection page at `/models` driven by the registered model catalog. Every model rendered in the chooser MUST have an understandable display name, a catalog-provided static preview image, and a link to its model-specific CAD route. The chooser content MUST NOT render introductory copy, family descriptions, model descriptions, or adjustable-parameter summaries. The chooser MUST display the OpenGrid series before the HSW series, including `opengrid`, `opengrid-pillar`, `opengrid-divider`, `opengrid-stackable-box`, `opengrid-stackable-cylinder`, `opengrid-snap`, `opengrid-snap-remover`, `opengrid-open-shelf`, and `hsw-cell`. Registered models outside these visible series MAY remain available through direct CAD routes but MUST NOT be rendered as chooser entries. The root path `/` MUST remain a separate static product homepage and MUST link to `/models` without rendering the model chooser. The `/models` page MUST expose a page-level selection heading without requiring an additional outer visual panel around the entire chooser. The OpenGrid and HSW series MUST remain visually distinguishable by series headings, and the OpenGrid Desk/Wall subgroups MUST remain distinguishable by subgroup headings, spacing, or separators without requiring redundant family badges or nested bordered panels. Model cards MUST use an adaptive layout that uses more than two columns when a wide viewport has enough room and collapses to one column on a narrow viewport.
@@ -52,69 +50,51 @@ The system MUST provide a static model-selection page at `/models` driven by the
 
 ### Requirement: 模型專屬 CAD 路由
 
-The system MUST expose one CAD route for each registered model id. The current routes MUST map `/cad/box` to `box`, `/cad/box-normal` to `box-normal`, `/cad/modular-grid-base` to `modular-grid-base`, `/cad/hsw-cell` to `hsw-cell`, `/cad/hexagonal-column` to `hexagonal-column`, `/cad/opengrid` to `opengrid`, `/cad/opengrid-stackable-box` to `opengrid-stackable-box`, and `/cad/opengrid-snap` to `opengrid-snap`. The model path segment MUST be the source of truth for the selected component, and a route for an unknown model id MUST NOT initialize a CAD Worker for an unsupported component.
+The system MUST expose one CAD route for each currently registered model ID.
+The active routes MUST include the existing `box`, `modular-grid-base`,
+`hsw-cell`, `hexagonal-column`, `opengrid`, `opengrid-stackable-box`,
+`opengrid-stackable-cylinder`, `opengrid-snap`, and other current catalog
+entries, but MUST NOT include `box-normal`. The model path segment MUST remain
+the source of truth for the selected component, and a route for an unknown or
+removed model ID MUST NOT initialize a CAD Worker for an unsupported component.
 
-#### Scenario: 直接開啟 box-normal route
+#### Scenario: Direct OpenGrid stackable-box navigation
 
-- **GIVEN** 使用者直接開啟 `/cad/box-normal`
-- **WHEN** 頁面完成 route resolution
-- **THEN** 頁面 MUST 載入 box-normal workspace
-- **AND** 初始 generation MUST 使用有效保存的 `x`、`y`、`height` 與 `cornerPosts`；若沒有有效保存參數，MUST 使用 `box-normal` 的預設值
-- **AND** 頁面 MUST NOT 要求使用者先在 CAD workspace 重新選擇 component
+- **WHEN** a user opens `/cad/opengrid-stackable-box`
+- **THEN** the page MUST load the OpenGrid stackable-box workspace
+- **AND** initial generation MUST use valid saved parameters or the current
+  definition defaults
+- **AND** the route MUST not initialize another model definition
 
-#### Scenario: 直接開啟模組化網格 route
+#### Scenario: Direct OpenGrid stackable-cylinder navigation
 
-- **GIVEN** 使用者直接開啟 `/cad/modular-grid-base`
-- **WHEN** 頁面完成 route resolution
-- **THEN** 頁面 MUST 載入模組化網格底板 workspace
-- **AND** 初始 generation MUST 使用該 component 的有效保存 rows 與 columns；若沒有有效保存參數，MUST 使用該 component 的預設 rows 與 columns
-- **AND** 頁面 MUST NOT 要求使用者先在 CAD workspace 重新選擇 component
+- **WHEN** a user opens `/cad/opengrid-stackable-cylinder`
+- **THEN** the page MUST load the OpenGrid stackable-cylinder workspace
+- **AND** initial generation MUST use valid saved parameters or the current
+  definition defaults
+- **AND** the route MUST not initialize another model definition
 
-#### Scenario: 直接開啟 HSW route
+#### Scenario: Direct navigation for remaining registered models
 
-- **GIVEN** 使用者直接開啟 `/cad/hsw-cell`
-- **WHEN** 頁面完成 route resolution
-- **THEN** 頁面 MUST 載入 HSW 專屬 CAD workspace
-- **AND** 初始 generation MUST 使用有效保存的 HSW rows 與 columns；若沒有有效保存參數，MUST 使用 HSW definition 的預設值
-- **AND** 頁面 MUST NOT 要求使用者先在 CAD workspace 重新選擇 component
+- **WHEN** a user opens a direct route for any remaining registered model
+- **THEN** the page MUST load that model's dedicated workspace
+- **AND** initial generation MUST use that model's valid saved parameters or
+  definition defaults
+- **AND** the page MUST NOT require selecting the model again in the workspace
 
-#### Scenario: 直接開啟 OpenGrid route
+#### Scenario: No model id route
 
-- **GIVEN** 使用者直接開啟 `/cad/opengrid`
-- **WHEN** 頁面完成 route resolution
-- **THEN** 頁面 MUST 載入 OpenGrid 專屬 CAD workspace
-- **AND** 初始 generation MUST 使用有效保存的 OpenGrid 參數；若沒有有效保存參數，MUST 使用 OpenGrid definition 的預設值
-- **AND** 頁面 MUST NOT 要求使用者先在 CAD workspace 重新選擇 component
+- **WHEN** a user opens `/cad/`
+- **THEN** the system MUST redirect to `/models`
+- **AND** `/cad/` MUST NOT start the CAD Worker
 
-#### Scenario: 直接開啟 OpenGrid 堆疊盒 route
+#### Scenario: Unknown or removed model route
 
-- **GIVEN** 使用者直接開啟 `/cad/opengrid-stackable-box`
-- **WHEN** 頁面完成 route resolution
-- **THEN** 頁面 MUST 載入 OpenGrid 堆疊盒專屬 CAD workspace
-- **AND** 初始 generation MUST 使用有效保存的堆疊盒參數；若沒有有效保存參數，MUST 使用堆疊盒 definition 的預設值
-- **AND** 頁面 MUST NOT 要求使用者先在 CAD workspace 重新選擇 component
-
-#### Scenario: 直接開啟六角柱 route
-
-- **GIVEN** 使用者直接開啟 `/cad/hexagonal-column`
-- **WHEN** 頁面完成 route resolution
-- **THEN** 頁面 MUST 載入 hexagonal-column 專屬 CAD workspace
-- **AND** 初始 generation MUST 使用 `height=8`、`count=1`、`gap=1` 與 `orientation=lying` 的預設值
-- **AND** 頁面 MUST NOT 要求使用者先在 CAD workspace 重新選擇 component
-
-#### Scenario: 沒有 model id 的 CAD route
-
-- **WHEN** 使用者開啟 `/cad/`
-- **THEN** 系統 MUST 導向 `/models`
-- **AND** 頁面 MUST 提供可操作的模型選擇流程
-- **AND** `/cad/` MUST NOT 啟動 CAD Worker
-
-#### Scenario: 未註冊 model route
-
-- **WHEN** 使用者開啟不屬於 model catalog 的 `/cad/<modelId>`
-- **THEN** 系統 MUST 顯示可理解的 not-found 或 route fallback
-- **AND** MUST NOT 啟動 CAD Worker
-- **AND** MUST NOT 以任一已註冊模型靜默替代該未知 model id
+- **WHEN** a user opens `/cad/box-normal` or another path not in the current
+  model catalog
+- **THEN** the system MUST show a diagnosable not-found or route fallback
+- **AND** MUST NOT start a CAD Worker for that unsupported model ID
+- **AND** MUST NOT silently substitute another registered model
 
 ### Requirement: 從 CAD 返回首頁切換模型
 
@@ -302,6 +282,7 @@ current component defaults.
 - **THEN** the page MUST load the OpenGrid board workspace
 - **AND** the route MUST not initialize the Snap, stackable-box, divider,
   pillar, or another model definition
+
 ### Requirement: OpenGrid stackable-cylinder model selection
 
 The model chooser MUST list `opengrid-stackable-cylinder` in the OpenGrid family using the catalog selection label `Round Box (圓盒)`. The entry MUST link to `/cad/opengrid-stackable-cylinder` and the chooser MUST remain static without starting the CAD Worker.
@@ -406,3 +387,17 @@ The OpenGrid entries rendered from a system subgroup MUST link to the same `/cad
 - **WHEN** a user activates the Snap card under `Wall Related`
 - **THEN** navigation MUST go to `/cad/opengrid-snap?system=wall`
 - **AND** the target page MUST initialize the existing `opengrid-snap` model with the Wall context
+
+### Requirement: Active model chooser excludes removed box-normal
+
+The static `/models` chooser and its catalog-derived route metadata MUST NOT
+advertise `box-normal`. Existing OpenGrid entries, including Grid Box and Round
+Box, MUST remain available with their existing model IDs and routes.
+
+#### Scenario: Models page retains supported OpenGrid entries
+
+- **WHEN** a user opens `/models`
+- **THEN** the chooser MUST continue to show `opengrid-stackable-box` and
+  `opengrid-stackable-cylinder`
+- **AND** neither the chooser nor its links MUST contain an active
+  `box-normal` entry

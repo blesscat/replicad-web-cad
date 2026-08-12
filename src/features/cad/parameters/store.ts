@@ -56,6 +56,26 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+function canonicalCylinderSeatModeFor(
+  value: Record<string, unknown>,
+): 'none' | 'hole' | 'integrated' {
+  if (Object.prototype.hasOwnProperty.call(value, 'bottomSeatMode')) {
+    return value.bottomSeatMode as 'none' | 'hole' | 'integrated'
+  }
+  if (value.bottomHolesEnabled === false) return 'none'
+  return 'hole'
+}
+
+function canonicalBoxSeatModeFor(
+  value: Record<string, unknown>,
+): 'none' | 'hole' | 'integrated' {
+  if (Object.prototype.hasOwnProperty.call(value, 'cornerSeatMode')) {
+    return value.cornerSeatMode as 'none' | 'hole' | 'integrated'
+  }
+  if (value.cornerBottomHoles === false) return 'none'
+  return 'hole'
+}
+
 function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
   if (modelId === 'opengrid-pillar') {
     return normalizePillarParameters(value)
@@ -64,9 +84,11 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
     return normalizeOpenGridSnapParameters(value)
   }
   if (modelId === 'opengrid-stackable-cylinder' && isRecord(value)) {
+    const withoutLegacy = { ...value }
+    delete withoutLegacy.bottomHolesEnabled
     return {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      ...value,
+      ...withoutLegacy,
       thinBottomMode: Object.prototype.hasOwnProperty.call(
         value,
         'thinBottomMode',
@@ -79,12 +101,7 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
       )
         ? value.bottomPlateMode
         : false,
-      bottomHolesEnabled: Object.prototype.hasOwnProperty.call(
-        value,
-        'bottomHolesEnabled',
-      )
-        ? value.bottomHolesEnabled
-        : true,
+      bottomSeatMode: canonicalCylinderSeatModeFor(value),
     }
   }
   if (modelId === 'opengrid-divider' && isRecord(value)) {
@@ -102,10 +119,8 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
     return value
   }
 
-  const hasCornerBottomHoles = Object.prototype.hasOwnProperty.call(
-    value,
-    'cornerBottomHoles',
-  )
+  const withoutLegacy = { ...value }
+  delete withoutLegacy.cornerBottomHoles
   const hasFullBottomHoleGrid = Object.prototype.hasOwnProperty.call(
     value,
     'fullBottomHoleGrid',
@@ -119,8 +134,8 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
     'thinShellMode',
   )
   const normalized: Record<string, unknown> = {
-    ...value,
-    cornerBottomHoles: hasCornerBottomHoles ? value.cornerBottomHoles : true,
+    ...withoutLegacy,
+    cornerSeatMode: canonicalBoxSeatModeFor(value),
     fullBottomHoleGrid: hasFullBottomHoleGrid
       ? value.fullBottomHoleGrid
       : false,

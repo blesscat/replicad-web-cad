@@ -230,12 +230,6 @@ describe('component parameter store', () => {
     const store = createComponentParameterStore({ storage })
 
     expect(store.get('box')).toEqual({ width: 20, depth: 30, height: 40 })
-    expect(store.get('box-normal')).toEqual({
-      x: 2,
-      y: 2,
-      height: 10,
-      cornerPosts: true,
-    })
     expect(store.get('modular-grid-base')).toEqual({ rows: 1, columns: 1 })
     expect(store.get('hsw-cell')).toEqual({ rows: 1, columns: 1 })
     expect(store.get('opengrid')).toEqual(opengridParameters())
@@ -263,7 +257,6 @@ describe('component parameter store', () => {
     const storage = createMemoryStorage(
       createPayload({
         box: { width: 25, depth: 30, height: 40 },
-        'box-normal': { x: 3, y: 4, height: 25, cornerPosts: false },
         'modular-grid-base': { rows: 2, columns: 3 },
         'hsw-cell': { rows: 4, columns: 2 },
         opengrid: opengridParameters({
@@ -279,7 +272,7 @@ describe('component parameter store', () => {
           x: 0.5,
           y: 1.5,
           height: 25,
-          cornerBottomHoles: true,
+          cornerSeatMode: 'hole',
           fullBottomHoleGrid: true,
           basePlateMode: true,
         },
@@ -299,12 +292,6 @@ describe('component parameter store', () => {
     const store = createComponentParameterStore({ storage })
 
     expect(store.get('box')).toEqual({ width: 25, depth: 30, height: 40 })
-    expect(store.get('box-normal')).toEqual({
-      x: 3,
-      y: 4,
-      height: 25,
-      cornerPosts: false,
-    })
     expect(store.get('modular-grid-base')).toEqual({ rows: 2, columns: 3 })
     expect(store.get('hsw-cell')).toEqual({ rows: 4, columns: 2 })
     expect(store.get('opengrid')).toEqual(
@@ -323,7 +310,7 @@ describe('component parameter store', () => {
       x: 0.5,
       y: 1.5,
       height: 25,
-      cornerBottomHoles: true,
+      cornerSeatMode: 'hole',
       fullBottomHoleGrid: true,
       basePlateMode: true,
     })
@@ -388,7 +375,7 @@ describe('component parameter store', () => {
       x: 0.5,
       y: 1.5,
       height: 25,
-      cornerBottomHoles: true,
+      cornerSeatMode: 'hole',
       fullBottomHoleGrid: false,
       basePlateMode: false,
     })
@@ -397,7 +384,7 @@ describe('component parameter store', () => {
         x: 0.5,
         y: 1.5,
         height: 25,
-        cornerBottomHoles: true,
+        cornerSeatMode: 'hole',
         fullBottomHoleGrid: true,
         basePlateMode: false,
       }),
@@ -410,7 +397,7 @@ describe('component parameter store', () => {
         x: 0.5,
         y: 1.5,
         height: 25,
-        cornerBottomHoles: true,
+        cornerSeatMode: 'hole',
         fullBottomHoleGrid: 'true' as never,
         basePlateMode: false,
       }),
@@ -418,6 +405,51 @@ describe('component parameter store', () => {
     expect(store.get('opengrid-stackable-box')).toMatchObject({
       fullBottomHoleGrid: true,
     })
+    store.dispose()
+  })
+
+  it('migrates stored seat booleans and strips them when writing canonical values', () => {
+    const storage = createMemoryStorage(
+      createPayload({
+        'opengrid-stackable-box': {
+          x: 2,
+          y: 2,
+          height: 20,
+          cornerBottomHoles: false,
+          cornerSeatMode: 'integrated',
+          fullBottomHoleGrid: false,
+          basePlateMode: false,
+        },
+        'opengrid-stackable-cylinder': {
+          diameter: 60,
+          height: 20,
+          bottomHolesEnabled: false,
+          bottomSeatMode: 'integrated',
+        },
+      }),
+    )
+    const store = createComponentParameterStore({ storage })
+
+    expect(store.get('opengrid-stackable-box')).toMatchObject({
+      cornerSeatMode: 'integrated',
+    })
+    expect(store.get('opengrid-stackable-cylinder')).toMatchObject({
+      bottomSeatMode: 'integrated',
+    })
+
+    expect(
+      store.set('opengrid-stackable-box', store.get('opengrid-stackable-box')),
+    ).toBe(true)
+    const persisted = JSON.parse(storage.writes.at(-1) ?? '{}') as {
+      values?: { legacy?: Record<string, Record<string, unknown>> }
+    }
+    expect(
+      persisted.values?.legacy?.['opengrid-stackable-box'],
+    ).not.toHaveProperty('cornerBottomHoles')
+    expect(
+      persisted.values?.legacy?.['opengrid-stackable-cylinder'],
+    ).not.toHaveProperty('bottomHolesEnabled')
+
     store.dispose()
   })
 
@@ -453,7 +485,7 @@ describe('component parameter store', () => {
       height: 45,
       thinBottomMode: false,
       bottomPlateMode: true,
-      bottomHolesEnabled: true,
+      bottomSeatMode: 'hole',
     }
 
     expect(
@@ -555,7 +587,6 @@ describe('component parameter store', () => {
       values: {
         legacy: {
           box: { width: 25, depth: 30, height: 40 },
-          'box-normal': { x: 3, y: 4, height: 25, cornerPosts: false },
           'modular-grid-base': { rows: 2, columns: 3 },
           'hsw-cell': { rows: 4, columns: 2 },
         },

@@ -1,5 +1,6 @@
 import type { OpenGridStackableBoxBottomGridSeam } from './geometry'
 import type { Bounds } from './shared'
+import type { OpenGridLocatingSeatMode } from '../../../cad-contract/units'
 
 export type OpenGridStackableBoxCaptiveSocketRecord = {
   seatedIntersectionVolume: number
@@ -17,6 +18,7 @@ export type OpenGridStackableBoxMountingHoleProfile = {
 }
 
 export type OpenGridStackableBoxInterfaceQualityReport = {
+  cornerSeatMode: OpenGridLocatingSeatMode
   externalHeight: number
   measuredExternalHeight: number
   upperInnerRimZ: number
@@ -70,6 +72,7 @@ export type OpenGridStackableBoxInterfaceQualityReport = {
   mountingHoleStepVolumes: number[]
   mountingHoleProfiles: OpenGridStackableBoxMountingHoleProfile[]
   captiveSocketRecords: OpenGridStackableBoxCaptiveSocketRecord[]
+  integratedSeatRecordCount: number
   ordinaryBottomHoleCount: number
   expectedOrdinaryBottomHoleCount: number
 }

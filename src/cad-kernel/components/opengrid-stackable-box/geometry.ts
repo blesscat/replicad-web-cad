@@ -16,6 +16,7 @@ import {
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
   OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS,
   openGridStackableBoxSocketCentersFor,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   type OpenGridStackableBoxOpeningDirection,
   type OpenGridStackableBoxDerivedOpening,
@@ -888,12 +889,37 @@ function cutWithToolBatch(
   if (tools.length === 0) return shape
 
   const tool = tools.length === 1 ? tools[0] : makeCompound(tools).asShape3D()
-  if (!tool) return shape
+  if (!tool) {
+    return shape
+  }
 
   try {
     const cut = measureBooleanInScope(scope, 'cut', () => shape.cut(tool))
     deleteShape(shape)
     return cut
+  } finally {
+    deleteShape(tool)
+  }
+}
+
+function fuseWithToolBatch(
+  shape: Shape3D,
+  tools: Shape3D[],
+  scope: BooleanOperationScope | undefined,
+): Shape3D {
+  if (tools.length === 0) return shape
+
+  const tool = tools.length === 1 ? tools[0] : makeCompound(tools).asShape3D()
+  if (!tool) {
+    return shape
+  }
+
+  try {
+    const fused = measureBooleanInScope(scope, 'fuse', () =>
+      shape.fuse(tool, { optimisation: 'commonFace' }),
+    )
+    deleteShape(shape)
+    return fused
   } finally {
     deleteShape(tool)
   }
@@ -1028,6 +1054,24 @@ function makeOrdinaryBottomHoleCutter(
   )
 }
 
+function makeIntegratedSeat(): Shape3D {
+  const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
+  return makeCylinder(
+    configuration.integratedSeatDiameter / 2,
+    configuration.integratedSeatHeight,
+    [0, 0, configuration.integratedSeatMinZ],
+  )
+}
+
+function translateShape(
+  shape: Shape3D,
+  x: number,
+  y: number,
+  z: number,
+): Shape3D {
+  return shape.translate(x, y, z)
+}
+
 export function addMountingSockets(
   shape: Shape3D,
   parameters: OpenGridStackableBoxParameters,
@@ -1038,23 +1082,40 @@ export function addMountingSockets(
     centers.length > 0
       ? context.booleanOperations?.createScope(centers.length)
       : undefined
-  const socketCutters = centers.map(([x, y]) =>
-    makeMountingHoleCutter(parameters, fuseScope).translate(x, y, 0),
-  )
+  const integratedSeats =
+    parameters.cornerSeatMode === 'integrated'
+      ? centers.map(([x, y]) => translateShape(makeIntegratedSeat(), x, y, 0))
+      : []
+  const socketCutters =
+    parameters.cornerSeatMode === 'hole'
+      ? centers.map(([x, y]) =>
+          translateShape(
+            makeMountingHoleCutter(parameters, fuseScope),
+            x,
+            y,
+            0,
+          ),
+        )
+      : []
   const ordinaryCenters =
     openGridStackableBoxOrdinaryBottomHoleCentersFor(parameters)
-  const cutTotal =
-    Number(socketCutters.length > 0) + Number(ordinaryCenters.length > 0)
-  const cutScope =
-    cutTotal > 0 ? context.booleanOperations?.createScope(cutTotal) : undefined
+  const operationTotal =
+    Number(integratedSeats.length > 0) +
+    Number(socketCutters.length > 0) +
+    Number(ordinaryCenters.length > 0)
+  const operationScope =
+    operationTotal > 0
+      ? context.booleanOperations?.createScope(operationTotal)
+      : undefined
   assertGenerationCurrent(context)
-  let current = cutWithToolBatch(shape, socketCutters, cutScope)
+  let current = fuseWithToolBatch(shape, integratedSeats, operationScope)
+  current = cutWithToolBatch(current, socketCutters, operationScope)
 
   const ordinaryCutters = ordinaryCenters.map(([x, y]) =>
-    makeOrdinaryBottomHoleCutter(parameters).translate(x, y, 0),
+    translateShape(makeOrdinaryBottomHoleCutter(parameters), x, y, 0),
   )
   assertGenerationCurrent(context)
-  current = cutWithToolBatch(current, ordinaryCutters, cutScope)
+  current = cutWithToolBatch(current, ordinaryCutters, operationScope)
 
   return current
 }

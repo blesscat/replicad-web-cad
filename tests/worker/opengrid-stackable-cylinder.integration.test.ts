@@ -219,7 +219,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
   it('builds the clipped bottom-plate mode with the default-style interior', () => {
     const input = parameters({
       bottomPlateMode: true,
-      bottomHolesEnabled: true,
+      bottomSeatMode: 'hole',
     })
     const derived = openGridStackableCylinderDerivedGeometryFor(input)
     const shape = buildOpenGridStackableCylinder(input)
@@ -350,7 +350,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
       const report = inspectOpenGridStackableCylinderInterface(shape, input)
       expect(report.profile).toBe('default')
       expect(report.thinBottomMode).toBe(false)
-      expect(report.bottomHolesEnabled).toBe(true)
+      expect(report.bottomSeatMode).toBe('hole')
       expect(report.centralFloorBelowVolume).toBeGreaterThan(0.0001)
       expect(report.centralFloorAboveVolume).toBeLessThan(0.0001)
       expect(report.innerRampFaceCount).toBe(0)
@@ -370,12 +370,12 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
       bottomPlateMode: true,
     },
   ])(
-    'keeps the $profile stacking geometry valid when all bottom holes are disabled',
+    'keeps the $profile stacking geometry valid in no-seat mode',
     ({ profile, thinBottomMode, bottomPlateMode }) => {
       const input = parameters({
         thinBottomMode,
         bottomPlateMode,
-        bottomHolesEnabled: false,
+        bottomSeatMode: 'none',
       })
       const shape = buildOpenGridStackableCylinder(input)
       try {
@@ -383,13 +383,48 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
         expect(report.profile).toBe(profile)
         expect(report.thinBottomMode).toBe(thinBottomMode)
         expect(report.bottomPlateMode).toBe(bottomPlateMode)
-        expect(report.bottomHolesEnabled).toBe(false)
+        expect(report.bottomSeatMode).toBe('none')
         expect(report.holeRecordCount).toBe(0)
         expect(report.holes).toEqual([])
         expect(report.solidCount).toBe(1)
         expect(report.brepValid).toBe(true)
         expect(report.bottomProtrusionVolume).toBeGreaterThan(0)
         expect(report.matingIntersectionVolume).toBeLessThan(0.01)
+      } finally {
+        deleteShape(shape)
+      }
+    },
+    120_000,
+  )
+
+  it.each([
+    { profile: 'default', thinBottomMode: false, bottomPlateMode: false },
+    { profile: 'thin', thinBottomMode: true, bottomPlateMode: false },
+    {
+      profile: 'bottom-plate',
+      thinBottomMode: false,
+      bottomPlateMode: true,
+    },
+  ])(
+    'builds integrated Ø5 by 3 mm seats in the $profile profile as one valid solid',
+    ({ thinBottomMode, bottomPlateMode }) => {
+      const input = parameters({
+        thinBottomMode,
+        bottomPlateMode,
+        bottomSeatMode: 'integrated',
+      })
+      const shape = buildOpenGridStackableCylinder(input)
+      try {
+        const report = inspectOpenGridStackableCylinderInterface(shape, input)
+        const expectedCenters = openGridStackableCylinderHoleCentersFor(input)
+        expect(report.bottomSeatMode).toBe('integrated')
+        expect(report.bounds.min[2]).toBeCloseTo(-3, 2)
+        expect(report.holeRecordCount).toBe(0)
+        expect(report.holes).toEqual([])
+        expect(report.integratedSeatRecordCount).toBe(expectedCenters.length)
+        expect(report.integratedSeats).toHaveLength(expectedCenters.length)
+        expect(report.solidCount).toBe(1)
+        expect(report.brepValid).toBe(true)
       } finally {
         deleteShape(shape)
       }
@@ -685,7 +720,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
         const report = inspectOpenGridStackableCylinderInterface(shape, input)
         expect(report.brepValid).toBe(true)
         expect(report.solidCount).toBe(1)
-        expect(report.bottomHolesEnabled).toBe(true)
+        expect(report.bottomSeatMode).toBe('hole')
         expect(report.volume).toBeGreaterThan(0)
       } finally {
         deleteShape(shape)
@@ -694,9 +729,9 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
     120_000,
   )
 
-  it('keeps a valid U-opening and stacking interface when all bottom holes are off', () => {
+  it('keeps a valid U-opening and stacking interface in no-seat mode', () => {
     const input = parameters({
-      bottomHolesEnabled: false,
+      bottomSeatMode: 'none',
       openingPlusXDepth: 12,
       openingPlusXBottomLength: 12,
       openingPlusXAngle: 90,

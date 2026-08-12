@@ -16,6 +16,7 @@ import {
   OPENGRID_STACKABLE_CYLINDER_OPENING_DIRECTIONS,
   validateOpenGridStackableCylinderParameters,
   type ModelBounds,
+  type OpenGridLocatingSeatMode,
   type OpenGridStackableCylinderOpeningDirection,
   type OpenGridStackableCylinderParameters,
   type OpenGridStackableCylinderPoint2D,
@@ -35,6 +36,13 @@ export type OpenGridStackableCylinderBuildContext = {
 type Bounds = [[number, number, number], [number, number, number]]
 
 export type OpenGridStackableCylinderHoleSection = {
+  diameter: number
+  minZ: number
+  maxZ: number
+}
+
+export type OpenGridStackableCylinderIntegratedSeatRecord = {
+  center: OpenGridStackableCylinderPoint2D
   diameter: number
   minZ: number
   maxZ: number
@@ -60,7 +68,7 @@ export type OpenGridStackableCylinderInterfaceQualityReport = {
   profile: OpenGridStackableCylinderProfile
   thinBottomMode: boolean
   bottomPlateMode: boolean
-  bottomHolesEnabled: boolean
+  bottomSeatMode: OpenGridLocatingSeatMode
   floorThickness: number
   bottomHoleSectionDepth: number
   bounds: ModelBounds
@@ -69,6 +77,8 @@ export type OpenGridStackableCylinderInterfaceQualityReport = {
   brepValid: boolean
   holeRecordCount: number
   holes: OpenGridStackableCylinderHoleQuality[]
+  integratedSeatRecordCount: number
+  integratedSeats: OpenGridStackableCylinderIntegratedSeatRecord[]
   openings: OpenGridStackableCylinderOpeningQuality[]
   neighboringOpeningProbeCount: number
   neighboringOpeningExpectedProbeCount: number
@@ -337,6 +347,52 @@ function addBottomHoles(
     current = cut
   }
   return current
+}
+
+function addIntegratedSeats(
+  shape: Shape3D,
+  parameters: OpenGridStackableCylinderParameters,
+  context: OpenGridStackableCylinderBuildContext,
+): Shape3D {
+  const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
+  const centers = openGridStackableCylinderHoleCentersFor(parameters)
+  const fuseScope =
+    centers.length > 0
+      ? context.booleanOperations?.createScope(centers.length)
+      : undefined
+  let current = shape
+
+  for (const [x, y] of centers) {
+    assertGenerationCurrent(context)
+    const seat = makeCylinder(
+      configuration.integratedSeatDiameter / 2,
+      configuration.integratedSeatHeight,
+      [x, y, configuration.integratedSeatMinZ],
+    )
+    try {
+      const fused = measureBooleanInScope(fuseScope, 'fuse', () =>
+        current.fuse(seat, { optimisation: 'commonFace' }),
+      )
+      deleteShape(current)
+      current = fused
+    } finally {
+      deleteShape(seat)
+    }
+  }
+
+  return current
+}
+
+function addBottomLocatingFeatures(
+  shape: Shape3D,
+  parameters: OpenGridStackableCylinderParameters,
+  context: OpenGridStackableCylinderBuildContext,
+): Shape3D {
+  if (parameters.bottomSeatMode === 'none') return shape
+  if (parameters.bottomSeatMode === 'integrated') {
+    return addIntegratedSeats(shape, parameters, context)
+  }
+  return addBottomHoles(shape, parameters, context)
 }
 
 function quarterTurnsForOpening(
@@ -732,7 +788,11 @@ function readHoleQuality(
   parameters: OpenGridStackableCylinderParameters,
   records: CylindricalFaceRecord[],
 ): OpenGridStackableCylinderHoleQuality[] {
-  return openGridStackableCylinderHoleCentersFor(parameters).map((center) => ({
+  const centers =
+    parameters.bottomSeatMode === 'hole'
+      ? openGridStackableCylinderHoleCentersFor(parameters)
+      : []
+  return centers.map((center) => ({
     center,
     sections: records
       .filter(
@@ -762,6 +822,7 @@ function readFloorHoleRecords(
   return readCylindricalFaceRecords(shape).filter(
     (record) =>
       record.diameter <= largestHoleDiameter + 0.2 &&
+      record.minZ >= -0.1 &&
       record.minZ <= floorThickness + 0.1 &&
       record.maxZ >= -0.1 &&
       holeCenters.some(
@@ -769,6 +830,29 @@ function readFloorHoleRecords(
           closeEnough(record.center[0], center[0], 0.08) &&
           closeEnough(record.center[1], center[1], 0.08),
       ),
+  )
+}
+
+function readIntegratedSeatRecords(
+  shape: Shape3D,
+  parameters: OpenGridStackableCylinderParameters,
+): OpenGridStackableCylinderIntegratedSeatRecord[] {
+  const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
+  const centers = openGridStackableCylinderHoleCentersFor(parameters)
+  const records = readCylindricalFaceRecords(shape).filter(
+    (record) =>
+      closeEnough(record.diameter, configuration.integratedSeatDiameter, 0.2) &&
+      record.minZ <= configuration.integratedSeatMinZ + 0.1 &&
+      record.maxZ >= -0.1,
+  )
+  return centers.flatMap((center) =>
+    records
+      .filter(
+        (record) =>
+          closeEnough(record.center[0], center[0], 0.08) &&
+          closeEnough(record.center[1], center[1], 0.08),
+      )
+      .map((record) => ({ ...record, center })),
   )
 }
 
@@ -988,11 +1072,19 @@ export function inspectOpenGridStackableCylinderInterface(
   const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
   const expected = expectedInterfaceProbes(parameters)
   const actualBounds = readBounds(shape)
+  const holeCenters =
+    parameters.bottomSeatMode === 'hole'
+      ? openGridStackableCylinderHoleCentersFor(parameters)
+      : []
   const floorHoleRecords = readFloorHoleRecords(
     shape,
     derived.floorThickness,
-    openGridStackableCylinderHoleCentersFor(parameters),
+    holeCenters,
   )
+  const integratedSeatRecords =
+    parameters.bottomSeatMode === 'integrated'
+      ? readIntegratedSeatRecords(shape, parameters)
+      : []
   const openingQuality = OPENGRID_STACKABLE_CYLINDER_OPENING_DIRECTIONS.map(
     (direction): OpenGridStackableCylinderOpeningQuality => {
       const opening = derived.openings[direction]
@@ -1194,11 +1286,15 @@ export function inspectOpenGridStackableCylinderInterface(
       configuration.bottomHoleDiameter,
       configuration.innerHoleDiameter,
     ) / 2
+  const locatingSeatRadius =
+    parameters.bottomSeatMode === 'integrated'
+      ? OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatDiameter / 2
+      : largestHoleRadius
   const outerHoleCenters =
     openGridStackableCylinderHoleCentersFor(parameters).slice(1)
   const holeOuterClearances = outerHoleCenters.map(
     (center) =>
-      derived.radius - Math.hypot(center[0], center[1]) - largestHoleRadius,
+      derived.radius - Math.hypot(center[0], center[1]) - locatingSeatRadius,
   )
   const holeFlatFloorClearances =
     derived.profile === 'thin'
@@ -1206,7 +1302,7 @@ export function inspectOpenGridStackableCylinderInterface(
           (center) =>
             derived.flatFloorRadius -
             Math.hypot(center[0], center[1]) -
-            largestHoleRadius,
+            locatingSeatRadius,
         )
       : []
   const floorProbeRadius = Math.min(
@@ -1396,11 +1492,13 @@ export function inspectOpenGridStackableCylinderInterface(
       derived.floorThickness + 0.3,
     ) < 0.0001
       ? {
-          min: [-derived.radius, -derived.radius, 0] as [
-            number,
-            number,
-            number,
-          ],
+          min: [
+            -derived.radius,
+            -derived.radius,
+            parameters.bottomSeatMode === 'integrated'
+              ? OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ
+              : 0,
+          ] as [number, number, number],
           max: [derived.radius, derived.radius, parameters.height] as [
             number,
             number,
@@ -1412,7 +1510,7 @@ export function inspectOpenGridStackableCylinderInterface(
     profile: derived.profile,
     thinBottomMode: parameters.thinBottomMode,
     bottomPlateMode: parameters.bottomPlateMode,
-    bottomHolesEnabled: parameters.bottomHolesEnabled,
+    bottomSeatMode: parameters.bottomSeatMode,
     floorThickness: derived.floorThickness,
     bottomHoleSectionDepth: derived.bottomHoleSectionDepth,
     bounds: reportBounds,
@@ -1421,6 +1519,8 @@ export function inspectOpenGridStackableCylinderInterface(
     brepValid: isBRepValid(shape),
     holeRecordCount: floorHoleRecords.length,
     holes: readHoleQuality(parameters, floorHoleRecords),
+    integratedSeatRecordCount: integratedSeatRecords.length,
+    integratedSeats: integratedSeatRecords,
     openings: openingQuality,
     neighboringOpeningProbeCount,
     neighboringOpeningExpectedProbeCount,
@@ -1499,36 +1599,40 @@ function assertQuality(
   ) {
     failures.push('straight-wall-thickness')
   }
-  const expectedHoleCenters =
+  const expectedLocatingCenters =
     openGridStackableCylinderHoleCentersFor(parameters)
+  const expectedHoleCenters =
+    parameters.bottomSeatMode === 'hole' ? expectedLocatingCenters : []
   const expectedHoleSectionCount = expectedHoleCenters.length * 2
   if (report.holeRecordCount !== expectedHoleSectionCount) {
     failures.push('hole-layout')
   }
-  for (const hole of report.holes) {
-    if (hole.sections.length !== 2) {
-      failures.push('stepped-holes')
-      continue
-    }
-    const [lower, upper] = hole.sections
-    if (
-      !lower ||
-      !upper ||
-      !closeEnough(lower.diameter, configuration.bottomHoleDiameter) ||
-      !closeEnough(lower.minZ, 0) ||
-      !closeEnough(lower.maxZ, derived.bottomHoleSectionDepth) ||
-      !closeEnough(upper.diameter, configuration.innerHoleDiameter) ||
-      !closeEnough(upper.minZ, derived.bottomHoleSectionDepth) ||
-      !closeEnough(
-        upper.maxZ,
-        derived.bottomHoleSectionDepth + configuration.innerHoleSectionDepth,
-      )
-    ) {
-      failures.push('stepped-hole-profile')
+  if (parameters.bottomSeatMode === 'hole') {
+    for (const hole of report.holes) {
+      if (hole.sections.length !== 2) {
+        failures.push('stepped-holes')
+        continue
+      }
+      const [lower, upper] = hole.sections
+      if (
+        !lower ||
+        !upper ||
+        !closeEnough(lower.diameter, configuration.bottomHoleDiameter) ||
+        !closeEnough(lower.minZ, 0) ||
+        !closeEnough(lower.maxZ, derived.bottomHoleSectionDepth) ||
+        !closeEnough(upper.diameter, configuration.innerHoleDiameter) ||
+        !closeEnough(upper.minZ, derived.bottomHoleSectionDepth) ||
+        !closeEnough(
+          upper.maxZ,
+          derived.bottomHoleSectionDepth + configuration.innerHoleSectionDepth,
+        )
+      ) {
+        failures.push('stepped-hole-profile')
+      }
     }
   }
   if (
-    parameters.bottomHolesEnabled &&
+    parameters.bottomSeatMode === 'hole' &&
     !compatibilityFixturePasses(
       shape,
       derived.floorThickness,
@@ -1537,20 +1641,46 @@ function assertQuality(
   ) {
     failures.push('compatibility-fixture')
   }
+  const expectedIntegratedSeatCount =
+    parameters.bottomSeatMode === 'integrated'
+      ? expectedLocatingCenters.length
+      : 0
+  if (report.integratedSeatRecordCount !== expectedIntegratedSeatCount) {
+    failures.push('integrated-seat-layout')
+  }
+  for (const seat of report.integratedSeats) {
+    if (
+      !closeEnough(
+        seat.diameter,
+        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatDiameter,
+      ) ||
+      !closeEnough(
+        seat.minZ,
+        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ,
+      ) ||
+      !closeEnough(seat.maxZ, 0)
+    ) {
+      failures.push('integrated-seat-profile')
+    }
+  }
   const largestHoleRadius =
     Math.max(
       configuration.bottomHoleDiameter,
       configuration.innerHoleDiameter,
     ) / 2
-  for (const center of expectedHoleCenters.slice(1)) {
+  const locatingSeatRadius =
+    parameters.bottomSeatMode === 'integrated'
+      ? OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatDiameter / 2
+      : largestHoleRadius
+  for (const center of expectedLocatingCenters.slice(1)) {
     const centerRadius = Math.hypot(center[0], center[1])
-    const clearance = derived.radius - centerRadius - largestHoleRadius
+    const clearance = derived.radius - centerRadius - locatingSeatRadius
     if (clearance < configuration.outerEdgeClearance - 0.05) {
       failures.push('hole-edge-clearance')
     }
     if (derived.profile === 'thin') {
       const flatFloorClearance =
-        derived.flatFloorRadius - centerRadius - largestHoleRadius
+        derived.flatFloorRadius - centerRadius - locatingSeatRadius
       if (flatFloorClearance < configuration.flatFloorClearance - 0.05) {
         failures.push('hole-flat-floor-clearance')
       }
@@ -1679,7 +1809,7 @@ export function buildOpenGridStackableCylinder(
   }
   try {
     try {
-      shape = addBottomHoles(shape, normalizedParameters, context)
+      shape = addBottomLocatingFeatures(shape, normalizedParameters, context)
     } catch (error) {
       throwStageError('OPENGRID_STACKABLE_CYLINDER_HOLES_INVALID', error)
     }

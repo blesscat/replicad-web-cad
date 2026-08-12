@@ -2,7 +2,6 @@
 
 提供一個以 OpenGrid 28 mm 格線為尺寸基準、可固定到底座並能與相同盒體互相堆疊的開口盒模型，讓盒子不需要區分上盒與下盒也能重複使用。
 ## Requirements
-
 ### Requirement: Thin-shell profile
 
 The existing `opengrid-stackable-box` model MUST expose a `thinShellMode` boolean profile flag. `thinShellMode` MUST default to `false`, MUST be mutually exclusive with `basePlateMode`, and MUST preserve the existing model ID, route, X/Y footprint contract, clear-height semantics, four-direction opening fields, corner-hole switch, full bottom-hole grid switch, preview lifecycle, and export workflow. When `thinShellMode=true`, the profile MUST be explicitly non-stackable and MUST NOT claim compatibility with the normal box-to-box sliding interface.
@@ -39,66 +38,76 @@ The thin-shell cross-section MUST use a continuous flat outside bottom at Z=0, a
 
 ### Requirement: OpenGrid stackable box parameters
 
-The system MUST expose an independently validated OpenGrid stackable-box model with stable `modelId=opengrid-stackable-box`. Its user-facing parameters MUST include `x`, `y`, `height`, the boolean `cornerBottomHoles`, the boolean `fullBottomHoleGrid`, the boolean `basePlateMode`, the boolean `thinShellMode`, and three typed opening fields for each of `+X`, `-X`, `+Y`, and `-Y`: `openingPlusXDepth`, `openingPlusXBottomLength`, `openingPlusXAngle`, `openingMinusXDepth`, `openingMinusXBottomLength`, `openingMinusXAngle`, `openingPlusYDepth`, `openingPlusYBottomLength`, `openingPlusYAngle`, `openingMinusYDepth`, `openingMinusYBottomLength`, and `openingMinusYAngle`. `x` and `y` MUST be multiples of 0.5 in the inclusive range 0.5–10 grids, and the derived footprint MUST remain within the current 500 mm workspace limit. The standard OpenGrid pitch MUST be 28 mm. The generated footprint MUST apply a total 0.15 mm clearance per axis, so the nominal width and depth are `x × 28 − 0.15 mm` and `y × 28 − 0.15 mm`.
+The system MUST expose an independently validated OpenGrid stackable-box model
+with stable `modelId=opengrid-stackable-box`. Its normalized parameters MUST
+include `x`, `y`, `height`, the enum `cornerSeatMode`, the boolean
+`fullBottomHoleGrid`, the boolean `basePlateMode`, the boolean `thinShellMode`,
+and the existing three typed opening fields for each of `+X`, `-X`, `+Y`, and
+`-Y`. `cornerSeatMode` MUST be exactly one of `none`, `hole`, or `integrated`.
+The user-facing labels MUST be `無角座`, `角座孔`, and `內建角座` respectively.
+`x` and `y` MUST be multiples of 0.5 in the inclusive range 0.5–10 grids, the
+derived footprint MUST remain within the current 500 mm workspace limit, the
+OpenGrid pitch MUST remain 28 mm, and the generated footprint MUST retain the
+total 0.15 mm per-axis clearance.
 
-The `height` control MUST be a safe integer in the inclusive range 10–500 mm and MUST represent clear internal box height. In normal mode it is measured from the upper surface of the fixed 5.0 mm bottom assembly to the upper inner-rim datum, and the nominal external height MUST remain `height + 5.0 mm + 7.55 mm`. In base-plate mode it MUST use the existing clipped-floor datum and external-height reduction. In thin-shell mode it MUST be measured from the upper surface of the fixed 2.0 mm floor to the lower inner-rim datum, and the nominal outer high rim MUST be `height + 3.6 mm`.
+The `height` control MUST remain a safe integer in the inclusive range 10–500
+mm and MUST represent clear internal box height. Existing normal, base-plate,
+and thin-shell height semantics MUST remain unchanged. The default snapshot
+MUST be `x=2`, `y=2`, `height=20`, `cornerSeatMode='hole'`,
+`fullBottomHoleGrid=false`, `basePlateMode=false`, and `thinShellMode=false`.
+`basePlateMode` and `thinShellMode` MUST NOT both be true.
 
-The default snapshot MUST be `x=2`, `y=2`, `height=20`, `cornerBottomHoles=true`, `fullBottomHoleGrid=false`, `basePlateMode=false`, and `thinShellMode=false`. `basePlateMode` and `thinShellMode` MUST NOT both be true. Existing normal and base-plate mode defaults and identities MUST remain unchanged.
+The four opening triples MUST retain their current names, ranges, defaults, and
+geometry semantics. The stackable-box panel MUST expose the existing thin-shell
+and stackable profile choices and MUST additionally expose exactly one visible
+radio group for the locating seat with the three labels above. The normalized
+`basePlateMode` field MUST remain available for legacy or programmatic
+snapshots, but MUST NOT become a visible profile choice.
 
-The four opening triples MUST use the same normalized names and semantics as the stackable-cylinder opening interface. Each depth and flat-bottom length MUST be a finite non-negative integer millimetre value with a 1 mm step. Every bottom-length control MUST default to 1 mm, every depth MUST default to 0 mm, and every angle MUST default to 90 degrees. An opening depth of zero MUST disable that direction, so its default bottom length MUST NOT create geometry. For an enabled direction, the live depth maximum MUST be the clear internal `height`, capped by the configured global maximum; the exact clear-height boundary MUST be accepted and deeper values MUST be rejected. The live bottom-length maximum MUST be the largest integer that fits the selected rectangular side's straight run while preserving the required corner and neighboring-opening structure, capped by the configured global maximum. An enabled angle MUST be an integer degree from 1 through 90, measured from the flat bottom; 90 degrees MUST produce vertical side walls and 45 degrees MUST produce outward-sloping side walls. The existing model identity, route, footprint calculator, and height semantics MUST remain unchanged for existing modes.
+When a legacy snapshot contains `cornerBottomHoles`, hydration MUST map
+`false` to `cornerSeatMode='none'` and `true` to `cornerSeatMode='hole'`;
+missing legacy values MUST map to `'hole'`. A canonical enum value MUST take
+precedence over a stale legacy boolean, and canonical validation MUST reject
+other enum values.
 
-The parameter panel MUST present exactly two mutually exclusive visible radio choices, `薄殼模式` and `堆疊模式`. The selected normal-mode description MUST read `預設模式：可堆疊滑動，使用9mm定位柱`. The selected thin-shell description MUST read `薄殼模式：不可堆疊，使用6mm定位柱`. The normalized `basePlateMode` field MUST remain available for legacy or programmatic snapshots and geometry compatibility, but the panel MUST NOT expose it as a selectable radio choice.
+#### Scenario: Valid seat mode defaults
 
-The stackable-box parameter panel MUST provide a width/depth calculator that accepts X/Y dimensions in millimetres and chooses the smallest valid X/Y count on the 0.5-cell step whose generated footprint is not smaller than the requested dimensions. The calculator MUST use the same 28 mm pitch and 0.15 mm total per-axis clearance as the generated model.
+- **WHEN** the stackable-box route initializes without valid saved parameters
+- **THEN** the model MUST use `cornerSeatMode='hole'`
+- **AND** the panel MUST select `角座孔`
+- **AND** the existing OpenGrid footprint, height, profile, and opening defaults
+  MUST remain unchanged
 
-#### Scenario: Generate a full-cell box
+#### Scenario: Seat mode selection is mutually exclusive
 
-- **WHEN** a valid `x`, `y`, `height`, `cornerBottomHoles`, `fullBottomHoleGrid`, `basePlateMode`, `thinShellMode`, and complete four-direction opening snapshot is submitted with whole-cell dimensions
-- **THEN** the generated box MUST use 28 mm per OpenGrid cell before the 0.15 mm total axis clearance
-- **AND** the box MUST remain centered on X/Y with its base aligned to Z=0
-- **AND** the clear internal height MUST equal the requested `height`
-- **AND** the external Z bound MUST match the selected mode's fixed floor and upper-rim profile within geometry tolerance
-- **AND** zero-depth opening defaults MUST preserve the no-opening geometry for that mode
-- **AND** the result MUST expose a non-empty preview and exportable CAD shape
+- **WHEN** a user selects one locating-seat radio option
+- **THEN** exactly one of `無角座`, `角座孔`, or `內建角座` MUST be selected
+- **AND** the normalized snapshot MUST contain the corresponding enum value
+- **AND** no `cornerBottomHoles` field MUST be sent in the canonical Worker
+  snapshot
 
-#### Scenario: Generate a maximum manual-height box
+#### Scenario: Legacy corner-hole migration
 
-- **WHEN** a valid snapshot has `height=500` and an X/Y footprint within the existing 500 mm workspace limit
-- **THEN** the clear internal height MUST equal 500 mm in every mode
-- **AND** the external Z bound MUST include the selected mode's fixed floor and upper-rim profile without clamping the requested height
+- **WHEN** a persisted snapshot contains `cornerBottomHoles=false` or `true`
+- **THEN** hydration MUST produce `cornerSeatMode='none'` or `'hole'`
+- **AND** the resulting geometry MUST match the old unchecked or checked
+  behavior
+- **AND** persistence MUST converge to the canonical enum field after a valid
+  update
 
-#### Scenario: Generate a half-cell box
+#### Scenario: Invalid seat mode is rejected
 
-- **WHEN** a valid snapshot contains `x=0.5` or `y=0.5` and a complete four-direction opening snapshot
-- **THEN** the model MUST accept the value without rounding it to a whole cell
-- **AND** the derived footprint MUST use 14 mm for that axis before clearance
-- **AND** the model MUST reject only values that fail the half-cell step, positivity, workspace-bound, or enabled-opening fit rules
+- **WHEN** `cornerSeatMode` is missing from a canonical current snapshot or has
+  any value other than `none`, `hole`, or `integrated`
+- **THEN** validation MUST return a field-specific error
+- **AND** the invalid snapshot MUST NOT replace the last valid revision
 
-#### Scenario: Invalid dimensions or grid mode
+#### Scenario: Existing box geometry parameters remain valid
 
-- **WHEN** `x`, `y`, or `height` is empty, non-finite, negative, zero, not on the permitted step, or outside its declared input range or workspace limits, or `cornerBottomHoles`, `fullBottomHoleGrid`, `basePlateMode`, or `thinShellMode` is not a boolean, or both mode flags are true
-- **THEN** the model snapshot MUST be rejected with a field-specific validation error
-- **AND** no invalid shape or export request MUST be committed
-- **WHEN** any opening depth or bottom length is fractional, negative, non-finite, or geometrically unsupported, or any opening angle is fractional or outside 1–90 degrees
-- **THEN** validation MUST identify the affected opening field
-- **AND** the invalid snapshot MUST NOT replace the last valid model revision
-
-#### Scenario: Calculate half-cell counts without undersizing
-
-- **WHEN** a user enters requested X/Y dimensions in millimetres in the stackable-box calculator
-- **THEN** the calculator MUST evaluate candidate counts at 0.5-cell increments
-- **AND** it MUST return the closest counts whose generated X/Y footprints are greater than or equal to the requested dimensions
-- **AND** the returned counts MUST be applied to the stackable-box X/Y parameters without changing height, `cornerBottomHoles`, `fullBottomHoleGrid`, `basePlateMode`, `thinShellMode`, or any opening field
-
-#### Scenario: Printable base-plate mode
-
-- **WHEN** a valid snapshot has `basePlateMode=true` and `thinShellMode=false`
-- **THEN** the generator MUST keep the upper box body, open interior, independent stepped top sliding rail, and all valid side-opening settings
-- **AND** it MUST remove all geometry below the fixed 2.0 mm plane, leaving a 3.0 mm bottom shell to the fixed 5.0 mm interior-floor datum
-- **AND** the remaining cut face MUST be translated to `Z=0` and form a continuous printable base plate
-- **AND** the external height MUST be reduced by exactly 2.0 mm while the requested clear internal height and upper rail dimensions remain unchanged
-- **AND** the four corner sockets MUST use an outside/lower Ø5 mm bore for 2.0 mm followed by an inside/upper Ø7.05 mm retaining seat for 1.0 mm
-- **AND** the base-plate export MUST use a mode-specific filename so it cannot overwrite the normal stackable-box export
+- **WHEN** a valid snapshot changes X/Y, height, profile, full-grid, or any
+  opening value without changing the model identity
+- **THEN** the existing footprint, clear-height, profile, opening, preview, and
+  export contracts MUST continue to apply
 
 ### Requirement: Identical box-to-box stacking interface
 
@@ -146,172 +155,162 @@ Base-plate and thin-shell modes MUST be treated as non-stackable profiles. They 
 
 ### Requirement: OpenGrid Snap base mounting sockets
 
-The box MUST retain the existing fixed 5 mm bottom assembly in normal mode and the existing 3 mm clipped base plate in base-plate mode. In thin-shell mode it MUST use a fixed 2 mm flat bottom. When `cornerBottomHoles` is `true`, it MUST provide nominal Ø5 mm base-mounting sockets at the external corner positions used by the OpenGrid Snap interface. When `cornerBottomHoles` is `false`, it MUST NOT cut those special Snap sockets. When `fullBottomHoleGrid` is `true`, the box MUST additionally provide the ordinary holes defined by the optional nominal OpenGrid bottom hole grid requirement; the ordinary grid holes MUST remain available even when `cornerBottomHoles` is `false`. For a full-cell axis with corner sockets enabled, the four special socket centers MUST occupy the outermost positions of the nominal 14 mm hole grid, 7 mm from the corresponding pre-clearance nominal box footprint edge.
+The box MUST retain its existing fixed bottom profiles: the 5 mm normal bottom
+assembly, the clipped 3 mm base-plate body, and the 2 mm thin-shell floor. For
+`cornerSeatMode='none'`, it MUST generate no special corner locating geometry.
+For `cornerSeatMode='hole'`, it MUST preserve the existing nominal Ø5 mm
+base-facing bore followed by the mode-specific Ø7.05 mm retaining seat at the
+existing de-duplicated corner positions. For `cornerSeatMode='integrated'`, it
+MUST fuse one solid round seat at each of those same positions; every seat MUST
+be Ø5 mm in diameter, exactly 3 mm high, and span Z=-3 mm through Z=0 so that
+it grows outward from the existing box bottom. An integrated seat MUST NOT be a
+stepped hole or a captive-flange opening.
 
-In normal mode, each special socket MUST have a Ø5 mm base-facing bore through the lower/outside 3.0 mm of the fixed bottom assembly followed by a Ø7.05 mm bore through the upper/interior 2.0 mm toward the box interior. In base-plate mode, each retained socket MUST have a Ø5 mm outside/lower bore for 2.0 mm followed by a Ø7.05 mm inside/upper retaining seat for 1.0 mm. In thin-shell mode, each retained socket MUST have a Ø5 mm outside/lower bore for 1.0 mm followed by a Ø7.05 mm inside/upper retaining seat for 1.0 mm. In every mode, the diameter change MUST be a fixed planar retaining shoulder, not a long graduated lead-in, conical chamfer, or overlaid counterbore.
+The existing normal, base-plate, and thin-shell hole profiles MUST remain
+unchanged in `hole` mode. The four nominal corner positions MUST continue to
+be geometrically de-duplicated when a half-cell footprint would overlap them.
+The runtime MUST continue to derive positions from the declared OpenGrid
+contract and MUST NOT load a Snap STEP reference during normal generation.
 
-The Ø7.05 mm upper opening MUST serve as the retaining seat for a Ø5 mm shaft with a Ø7 mm flange. After insertion from inside the box, the flange MUST be retained by the planar shoulder above the Ø5 mm lower passage and its upper surface MUST be flush with the selected mode's interior floor. The compatibility fixture shaft length MUST equal the selected active bottom thickness plus the existing 1 mm exterior allowance; the fixture MUST use a Ø5 mm shaft and a Ø7 mm × 0.8 mm flange. Separate nominal Ø5 mm Snap-reference exposure rules MUST remain unchanged. The four nominal corner locations MUST be geometrically de-duplicated when a half-cell axis would otherwise cause overlapping Ø5 mm sockets, without removing the corresponding nominal grid position in full-hole mode. Runtime generation MUST realize these interfaces from the declared OpenGrid geometry contract and MUST NOT require a Snap STEP reference to be downloaded, loaded, or parsed. The bundled dedicated Snap reference MUST be validated separately during integration or CI testing.
+When `fullBottomHoleGrid=true`, ordinary holes MUST remain independent from the
+seat mode. Ordinary-hole cutters MUST exclude every active special position in
+both `hole` and `integrated` modes; at a coincident position the special hole
+or integrated seat MUST win. In `none` mode, the ordinary grid MAY use every
+nominal grid position.
 
-#### Scenario: Full-cell base mounting
+#### Scenario: No locating seat
 
-- **WHEN** a full-cell or multi-cell box is aligned with the supplied OpenGrid Snap base interface and `cornerBottomHoles=true`
-- **THEN** its external corner sockets MUST align with the corresponding nominal 7 mm-offset Ø5 mm Snap positions
-- **AND** the selected mode MUST retain its declared fixed bottom thickness between those sockets
-- **AND** the socket MUST retain the selected mode's fixed Ø5-to-Ø7.05 two-stage bore profile
+- **WHEN** a valid box uses `cornerSeatMode='none'`
+- **THEN** no special corner hole or external round seat MUST be generated
+- **AND** the ordinary full-bottom-hole grid MUST remain available when enabled
 
-#### Scenario: Full grid preserves corner Snap mounting
+#### Scenario: Existing locating holes
 
-- **WHEN** a full-cell or multi-cell box is generated with both `cornerBottomHoles` and `fullBottomHoleGrid` set to `true`
-- **THEN** the four outermost grid positions MUST use the special corner Snap socket profile for the selected mode
-- **AND** the special sockets MUST retain their Ø7.05 mm upper seats and captive-cylinder behavior
-- **AND** enabling the full grid MUST NOT remove, resize, or replace the four corner Snap interfaces with ordinary holes
+- **WHEN** a valid box uses `cornerSeatMode='hole'`
+- **THEN** every existing special corner position MUST contain its mode-specific
+  Ø5-to-Ø7.05 two-stage retaining socket
+- **AND** the socket MUST retain the existing captive Ø5 mm shaft/Ø7 mm flange
+  compatibility behavior
 
-#### Scenario: Full grid without corner Snap mounting
+#### Scenario: Integrated locating seats
 
-- **WHEN** a full-cell or multi-cell box is generated with `cornerBottomHoles=false` and `fullBottomHoleGrid=true`
-- **THEN** the ordinary nominal grid holes MUST be present
-- **AND** no captive corner Snap socket MUST be generated
+- **WHEN** a valid normal, base-plate, or thin-shell box uses
+  `cornerSeatMode='integrated'`
+- **THEN** each existing special corner position MUST contain one fused Ø5 mm
+  cylinder with a 3 mm axial span from Z=-3 mm to Z=0
+- **AND** the generated shape MUST remain one valid solid
+- **AND** the seat MUST extend below the box bottom without changing the upper
+  shell, opening, or stacking interface
 
-#### Scenario: Fixed two-stage mounting-hole profile
+#### Scenario: Full grid preserves an active special position
 
-- **WHEN** a special corner mounting socket is generated in normal, base-plate, or thin-shell mode
-- **THEN** its base-facing opening MUST measure Ø5 mm within the geometry tolerance
-- **AND** its lower bore MUST extend 3.0 mm in normal mode, 2.0 mm in base-plate mode, or 1.0 mm in thin-shell mode
-- **AND** its upper opening MUST measure Ø7.05 mm and extend 2.0 mm in normal mode or 1.0 mm in base-plate and thin-shell modes toward the interior
-- **AND** the diameter change MUST be a single fixed planar shoulder rather than a long graduated taper or conical transition
+- **WHEN** `fullBottomHoleGrid=true` and a nominal ordinary grid point matches a
+  special corner position
+- **THEN** the generated result MUST contain exactly one special interface at
+  that point
+- **AND** the ordinary-hole operation MUST NOT cut through an integrated seat or
+  replace a stepped socket with a plain hole
 
-#### Scenario: Captive flanged cylinder
+#### Scenario: Half-cell positions remain valid
 
-- **WHEN** a Ø5 mm shaft with a Ø7 mm × 0.8 mm flange is inserted through a special corner mounting socket from inside the box
-- **THEN** the Ø5 mm shaft MUST pass through both the Ø7.05 mm upper seat and the Ø5 mm lower bore
-- **AND** the Ø7 mm flange MUST be retained above the planar shoulder and MUST NOT fall through the Ø5 mm lower bore
-- **AND** the flange MUST be flush with the selected mode's interior floor
-- **AND** the fixture shaft length MUST equal the active bottom thickness plus 1 mm while the separate nominal Ø5 mm Snap-reference exposure contract remains unchanged
-
-#### Scenario: Half-cell socket layout
-
-- **WHEN** a half-cell dimension would place two nominal corner sockets closer than the Ø5 mm interface can physically allow
-- **THEN** coincident or overlapping special socket locations MUST be emitted as one valid retaining socket
-- **AND** the geometry MUST remain watertight and free of overlapping cutters
-- **AND** the model MUST preserve the valid half-cell footprint instead of silently changing its dimensions
-
-#### Scenario: Snap reference compatibility is checked in test/CI
-
-- **WHEN** the test/CI suite validates the bundled module-relative `opengrid-bare-lite-snap.step` reference against the generated nominal Ø5 mm mounting interface within the declared fit tolerance
-- **THEN** a compatible reference MUST pass the dedicated mating-interface validation
-- **AND** an incompatible, malformed, or insufficient reference MUST fail with a diagnosable mating-interface error
-- **AND** a reference mismatch MUST NOT cause any stackable-box runtime mode to scale or move the box footprint
-
-#### Scenario: Snap reference mismatch
-
-- **WHEN** the bundled module-relative `opengrid-bare-lite-snap.step` reference cannot be reconciled with the generated nominal Ø5 mm mounting interface within the declared fit tolerance
-- **THEN** geometry validation MUST report a diagnosable mating-interface failure
-- **AND** the normal kernel model build path MUST NOT silently scale or move the box footprint to hide the mismatch
-
-#### Scenario: Runtime generation without a Snap reference
-
-- **WHEN** valid `opengrid-stackable-box` parameters are sent to the runtime model builder while the Snap reference loader is unavailable
-- **THEN** the builder MUST still produce a valid non-empty B-Rep for normal, base-plate, and thin-shell modes when the declared parameter and geometry contracts are valid
-- **AND** the runtime MUST NOT download, load, parse, or validate a Snap STEP reference as part of that build
+- **WHEN** a half-cell footprint would place two nominal special positions too
+  close to coexist
+- **THEN** the positions MUST be emitted as one valid special hole or seat
+- **AND** the footprint MUST remain unchanged
 
 ### Requirement: Optional nominal OpenGrid bottom hole grid
 
-The stackable-box model MUST expose `fullBottomHoleGrid` as an optional bottom-hole mode independent from `cornerBottomHoles`. When enabled, it MUST generate one ordinary straight Ø5.05 mm through-hole at each intersection of the centered 14 mm OpenGrid hole grid defined from the pre-clearance nominal footprint `x × 28 mm` by `y × 28 mm`. The grid MUST be centered on the model origin and MUST use the nominal outer grid positions that define the four corner Snap sockets when `cornerBottomHoles` is enabled, so adjacent hole centers remain exactly 14 mm apart within geometry tolerance. The 0.15 mm total per-axis exterior clearance MUST NOT be used to shift, shorten, or redistribute these hole centers. Ordinary holes MUST pass through the active bottom thickness: 5 mm in normal mode, 3 mm in base-plate mode, or 2 mm in thin-shell mode. Ordinary holes MUST have a different profile from the four special corner sockets and MUST NOT include the Ø7.05 mm upper retaining seat, flange capture, or Snap-specific underside interface.
+The stackable-box model MUST expose `fullBottomHoleGrid` independently from
+`cornerSeatMode`. When enabled, it MUST generate one ordinary straight
+Ø5.05 mm through-hole at every centered 14 mm OpenGrid grid intersection based
+on the un-cleared nominal footprint. Ordinary holes MUST pass through the
+active bottom thickness and MUST NOT contain the Ø7.05 mm retaining seat,
+flange capture, or integrated-seat geometry. Active special positions MUST be
+removed from the ordinary-hole set when `cornerSeatMode` is `hole` or
+`integrated`; when the seat mode is `none`, all nominal positions remain
+ordinary holes.
 
-#### Scenario: Corner-only mode preserves the selected bottom
+#### Scenario: Full grid with no special seat
 
-- **WHEN** `cornerBottomHoles=true` and `fullBottomHoleGrid=false` in any mode
-- **THEN** the bottom MUST contain the four special corner Snap sockets defined by the mounting-socket requirement
-- **AND** it MUST NOT add ordinary 14 mm grid holes between those sockets
+- **WHEN** `fullBottomHoleGrid=true` and `cornerSeatMode='none'`
+- **THEN** every nominal centered 14 mm position MUST contain one ordinary
+  Ø5.05 mm through-hole
+- **AND** no special retaining socket or integrated seat MUST be generated
 
-#### Scenario: Full mode generates all nominal grid positions
+#### Scenario: Full grid with locating holes
 
-- **WHEN** `fullBottomHoleGrid=true` and `cornerBottomHoles=true` for an accepted X/Y footprint
-- **THEN** the bottom MUST contain ordinary Ø5.05 mm through-holes at every centered nominal 14 mm grid intersection within the footprint
-- **AND** the outer grid positions MUST coincide with the four special corner socket centers
-- **AND** each pair of adjacent ordinary grid centers on either axis MUST be 14 mm apart within geometry tolerance
+- **WHEN** `fullBottomHoleGrid=true` and `cornerSeatMode='hole'`
+- **THEN** ordinary holes MUST be present at all non-special grid positions
+- **AND** special positions MUST retain their existing two-stage socket profile
+- **AND** adjacent ordinary grid centers MUST remain 14 mm apart
 
-#### Scenario: Full mode omits corner Snap mounting
+#### Scenario: Full grid with integrated seats
 
-- **WHEN** `fullBottomHoleGrid=true` and `cornerBottomHoles=false` for an accepted X/Y footprint
-- **THEN** the bottom MUST contain ordinary Ø5.05 mm through-holes at every centered nominal 14 mm grid intersection
-- **AND** no special corner socket profile MUST be generated
+- **WHEN** `fullBottomHoleGrid=true` and `cornerSeatMode='integrated'`
+- **THEN** ordinary holes MUST be present at all non-special grid positions
+- **AND** each special position MUST retain a solid Ø5 mm × 3 mm outward seat
+- **AND** no ordinary cutter may remove material from that seat
 
-#### Scenario: Exterior clearance does not alter grid spacing
+#### Scenario: Exterior clearance does not move the grid
 
-- **WHEN** a full-hole box applies the existing 0.15 mm total per-axis exterior clearance
-- **THEN** the nominal hole-grid coordinates MUST remain based on the un-cleared `x × 28 mm` and `y × 28 mm` dimensions
-- **AND** the hole centers MUST NOT be recomputed from the reduced printed outer footprint
-- **AND** the grid MUST NOT introduce a special shorter center interval near the middle of the box
-
-#### Scenario: Ordinary and special holes do not conflict
-
-- **WHEN** an ordinary nominal grid position coincides with a four-corner Snap position while `cornerBottomHoles=true`
-- **THEN** the generated bottom MUST expose one opening at that position
-- **AND** that opening MUST retain the special corner socket profile rather than becoming a plain Ø5.05 mm hole
-- **AND** the ordinary-hole operation MUST NOT create a duplicate or enlarge the special socket
-
-#### Scenario: Half-cell full-hole layout
-
-- **WHEN** `fullBottomHoleGrid=true` for an accepted half-cell X or Y value
-- **THEN** the nominal grid MUST remain centered and use 14 mm spacing on every axis where multiple positions exist
-- **AND** coincident corner positions MUST be represented by one special socket when `cornerBottomHoles=true`
-- **AND** the half-cell footprint MUST remain unchanged
+- **WHEN** a full-grid box applies the existing 0.15 mm exterior clearance
+- **THEN** grid centers MUST remain based on the nominal un-cleared footprint
+- **AND** the 14 mm spacing and half-cell layout MUST remain unchanged
 
 ### Requirement: Full-hole geometry quality and exports
 
-The stackable-box builder MUST validate both bottom-hole options as part of the accepted parameter snapshot. A valid full-hole result MUST remain watertight, keep the ordinary holes open through the selected bottom thickness without penetrating the walls or the thin-shell R2 floor transition, preserve the special corner retaining seats when `cornerBottomHoles` is enabled, and remain previewable and exportable through the existing STEP and STL workflows. Each special corner socket MUST use the mode-specific two-stage profile declared by the mounting-socket requirement.
+The stackable-box builder MUST validate the selected `cornerSeatMode` and
+`fullBottomHoleGrid` as part of the accepted snapshot. A valid result MUST be
+watertight, a single solid, previewable, and exportable in every supported
+profile. In `hole` mode it MUST retain the mode-specific stepped sockets and
+their captive-fixture checks. In `none` mode it MUST contain no special
+locating geometry. In `integrated` mode it MUST validate every special seat as
+fused Ø5 mm geometry with a 3 mm Z span below the bottom plane, while ordinary
+full-grid holes and all existing shell/interface checks remain valid.
 
-#### Scenario: Full-hole generation succeeds
+#### Scenario: Valid integrated full-grid result
 
-- **WHEN** a valid full-hole snapshot completes geometry generation and validation in normal, base-plate, or thin-shell mode
-- **THEN** the candidate MUST contain the requested nominal grid and special corner profiles
-- **AND** the candidate MUST be eligible for preview, STEP export, and STL export
+- **WHEN** an integrated-seat full-grid snapshot completes generation
+- **THEN** the candidate MUST contain the requested ordinary holes and every
+  active Ø5 mm × 3 mm seat
+- **AND** it MUST be a valid single solid eligible for preview, STEP export,
+  and STL export
 
-#### Scenario: Full-hole geometry fails validation
+#### Scenario: Invalid seat geometry does not commit
 
-- **WHEN** full-hole generation produces overlapping cutters, a non-watertight result, a non-14 mm ordinary center interval, damage to a special corner retaining seat, or a thin/unsupported bottom interface for the selected mode
+- **WHEN** seat fusion, bounds, hole separation, shell integrity, or ordinary
+  grid validation fails
 - **THEN** the candidate MUST be rejected with a diagnosable model error
-- **AND** the failed candidate MUST NOT replace the last valid committed revision
-- **AND** export MUST remain disabled for the failed revision
+- **AND** the failed candidate MUST NOT replace the last valid revision
+- **AND** export MUST remain disabled for that revision
 
 ### Requirement: Stackable-box geometry quality and exports
 
-The stackable-box builder MUST produce a valid CAD result for every accepted parameter snapshot. In normal mode this includes its open top, fixed 5 mm bottom assembly with a nominal 1.2 mm interior floor, nominal 1.2 mm side wall, fused reference-style stepped top rail with the fixed 1.75 / 1.2 / 0.8 / 1.8 / 2.0 mm upper sequence, fixed printable bottom guide with a 0.8 mm foot chamfer, 1.8 mm vertical support segment, and 1.2 mm 45° transition, retaining sockets, supported half-cell layout, and every enabled box-native side opening. In base-plate mode the lower guide is intentionally removed by the fixed 3.8 mm clipping plane and the resulting plate is validated as one solid with its enabled side openings. In thin-shell mode the result MUST instead include the 2 mm flat floor, R2 inner fillet, 1.6 mm main wall, 1.5 mm outside bottom chamfer, a continuous outer-high/inner-low 1.6 mm top chamfer with no horizontal rim plane, mode-specific sockets, and every enabled box-native side opening, while omitting the lower guide, internal seam reliefs, and stepped top rail. A successful result MUST be previewable and exportable through the existing STEP and STL workflows, while an invalid or failed geometry validation MUST keep the result stale or invalid and MUST NOT enable export for that snapshot.
+The stackable-box builder MUST continue to validate the existing normal,
+base-plate, and thin-shell shell, opening, and box-to-box interface contracts.
+The selected seat mode MUST be included in that validation: `none` has no
+special locating geometry, `hole` has the existing retaining sockets, and
+`integrated` has fused outward seats. For `integrated`, the contract bounds
+MUST report a minimum Z of -3 mm while preserving the existing maximum Z and
+XY bounds; `none` and `hole` MUST retain the existing minimum Z of 0. All
+successful results MUST remain previewable and exportable.
 
-#### Scenario: Successful stackable-box generation
+#### Scenario: Successful box generation in each seat mode
 
-- **WHEN** a valid normal-mode snapshot, with zero or more enabled side openings, completes generation and validation
-- **THEN** the workspace MUST commit a non-empty preview shape with bounds matching the requested footprint and the derived external height within tolerance
-- **AND** the fixed bottom assembly MUST measure 5.0 mm from the bed-facing plane to the upper interior floor
-- **AND** the nominal interior floor and main side-wall regions MUST measure 1.2 mm outside the intentional guide and upper-rim transitions
-- **AND** every internal 28 mm grid seam MUST use the reference-style supported relief and MUST retain solid floor material above the relief instead of cutting into the box interior
-- **AND** every enabled opening MUST be present at only its requested cardinal side with its requested depth, bottom length, and angle within geometry tolerance
-- **AND** the stepped top rail, corner bridges, bottom guide, and retaining sockets MUST remain valid
+- **WHEN** a valid normal, base-plate, or thin-shell snapshot uses any of the
+  three seat modes
+- **THEN** the workspace MUST commit a non-empty single solid with the
+  selected shell and opening geometry
+- **AND** the reported bounds MUST match the selected seat mode within the
+  existing tolerance
 - **AND** STEP and STL export MUST be available for the committed revision
 
-#### Scenario: Successful base-plate generation
+#### Scenario: Integrated seats do not change stacking semantics
 
-- **WHEN** a valid snapshot with `basePlateMode=true`, `thinShellMode=false`, and zero or more enabled side openings completes generation and validation
-- **THEN** the workspace MUST commit a non-empty single solid whose minimum Z bound is 0
-- **AND** the bottom surface MUST be continuous at the clipped base-plate plane without the lower guide feet or seam relief below it
-- **AND** the upper stepped sliding rail, corner bridges, and enabled opening profiles MUST remain present and exportable
-
-#### Scenario: Successful thin-shell generation
-
-- **WHEN** a valid snapshot with `thinShellMode=true`, `basePlateMode=false`, and zero or more enabled side openings completes generation and validation
-- **THEN** the workspace MUST commit a non-empty single solid whose minimum Z bound is 0
-- **AND** the outside bottom MUST be flat apart from the fixed 1.5 mm perimeter chamfer
-- **AND** the 2 mm floor, R2 inner fillet, 1.6 mm wall, continuous 1.6 mm outer-high/inner-low top chamfer, and absence of a horizontal rim plane MUST pass their mode-specific probes
-- **AND** no lower guide, internal seam relief, or stepped top rail MUST be present
-- **AND** the selected corner-hole and full-hole settings and every enabled opening MUST remain valid and exportable
-
-#### Scenario: Failed geometry validation
-
-- **WHEN** a generated shape has self-intersections, overlapping retaining sockets, invalid half-cell placement, an opening below the active floor, a merged neighboring opening, a broken corner bridge, a failed normal-mode interface quality check, or a failed thin-shell profile check
-- **THEN** the candidate MUST be rejected with a diagnosable model error
-- **AND** the failed candidate MUST NOT replace the last valid committed revision
-- **AND** export MUST remain disabled for the failed revision
+- **WHEN** a normal-mode box uses `cornerSeatMode='integrated'`
+- **THEN** its existing normal box-to-box guide contract MUST remain unchanged
+- **AND** the new seats MUST be treated as outward mounting geometry rather
+  than a replacement for the top rail or bottom guide
 
 ### Requirement: Four independently configurable box side openings
 
@@ -397,23 +396,24 @@ Every enabled opening MUST remain compatible with the normal, base-plate, and th
 
 ### Requirement: Deterministic stackable-box export metadata
 
-The catalog MUST provide deterministic filenames that include the model slug, X/Y counts, height, and bottom mode, using `.step` for STEP and `.stl` for STL. The filenames MUST be generated from typed normalized parameters and MUST NOT depend on raw input formatting. Normal no-opening filenames MUST retain their existing identity. Base-plate exports MUST retain a mode-specific `-base-plate` identity, and thin-shell exports MUST use a distinct deterministic `-thin-shell` identity. When any side opening depth is positive, the filename identity MUST include a deterministic opening-settings fingerprint that changes whenever any of the twelve opening values changes. When all four opening depths are zero, disabled directions' default bottom length and angle MUST NOT create an opening suffix.
+The catalog MUST provide deterministic STEP and STL filenames generated from
+typed normalized parameters. In addition to the existing X/Y, height, profile,
+and opening identities, every stackable-box filename MUST include exactly one
+seat suffix: `-seats-none`, `-seats-hole`, or `-seats-integrated`. The suffix
+MUST be emitted even for the default mode so exports with different geometry
+cannot overwrite one another. Filenames MUST NOT depend on raw input
+formatting, and opening fingerprints MUST retain their existing behavior.
 
-#### Scenario: Box export filenames preserve existing identities
+#### Scenario: Box filenames distinguish seat geometry
 
-- **WHEN** a normal or base-plate box with valid dimensions and no enabled side openings is exported
-- **THEN** the suggested STEP and STL filenames MUST retain the existing model, X/Y, height, and mode identity
-- **AND** normal no-opening filenames MUST remain unchanged
-- **AND** base-plate filenames MUST remain distinct from normal filenames
+- **WHEN** two valid boxes have identical dimensions, profile, and opening
+  values but different seat modes
+- **THEN** their STEP and STL filenames MUST differ by the deterministic seat
+  suffix
+- **AND** each filename MUST identify the typed normalized mode
 
-#### Scenario: Thin-shell export identity is distinct
+#### Scenario: Integrated box export metadata
 
-- **WHEN** a thin-shell box with valid dimensions and no enabled side openings is exported
-- **THEN** the suggested STEP and STL filenames MUST include the thin-shell mode identity
-- **AND** the filenames MUST NOT overwrite the normal or base-plate export identity
-
-#### Scenario: Opening settings are represented deterministically
-
-- **WHEN** two valid boxes have identical dimensions and bottom settings but different enabled opening values
-- **THEN** their suggested STEP and STL filenames MUST have different deterministic opening identities
-- **AND** equivalent typed values entered with different raw formatting MUST produce the same filename
+- **WHEN** an integrated-seat box is exported
+- **THEN** both STEP and STL filenames MUST contain `-seats-integrated`
+- **AND** the downloaded geometry MUST include the outward Ø5 mm × 3 mm seats

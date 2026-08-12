@@ -166,12 +166,7 @@ test('home, model selection, and docs are static Astro pages', async ({
   ).length
   expect(firstRowCount).toBeGreaterThanOrEqual(3)
   await expect(wallRelated.locator('[data-model-id]')).toHaveCount(2)
-  for (const displayName of [
-    '方塊',
-    '標準開口盒',
-    '模組化網格底板',
-    '可調六角柱',
-  ]) {
+  for (const displayName of ['方塊', '模組化網格底板', '可調六角柱']) {
     await expect(
       page.getByRole('heading', { name: displayName, exact: true }),
     ).toHaveCount(0)
@@ -183,7 +178,7 @@ test('home, model selection, and docs are static Astro pages', async ({
     page.getByRole('heading', { name: 'Prototype 文件' }),
   ).toBeVisible()
   await expect(
-    page.getByText(/方塊、獨立的 box-normal 開口盒、模組化網格底板/),
+    page.getByText(/方塊、模組化網格底板、獨立的 HSW 六角蜂巢/),
   ).toBeVisible()
   await expect(
     page.getByText(
@@ -345,5 +340,9 @@ test('unknown CAD model routes do not initialize the workspace', async ({
 }) => {
   const response = await page.goto('/cad/unknown-model')
   expect(response?.status()).toBe(404)
+  await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
+
+  const removedResponse = await page.goto('/cad/box-normal')
+  expect(removedResponse?.status()).toBe(404)
   await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
 })

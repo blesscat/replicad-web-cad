@@ -1,44 +1,23 @@
 ## Purpose
 
 讓每個已註冊 CAD component 的有效參數在同一個瀏覽器與網站 origin 中跨 workspace 初始化保留，同時在沒有可用保存資料時安全地回到 component 預設值。
-
 ## Requirements
-
 ### Requirement: Per-component parameter state
 
-The system MUST maintain a runtime parameter state entry keyed by the selected component's stable `modelId`. Each entry MUST contain only typed values accepted by that component's parameter validation contract, and values for one component MUST NOT replace or merge into another component's entry.
+The system MUST maintain a runtime parameter state entry keyed by each
+registered component's stable `modelId`. Each entry MUST contain only typed
+values accepted by that component's current validator, and values for one
+component MUST NOT replace or merge into another component's entry. The state
+MUST contain no active `box-normal` entry after the catalog removal.
 
 #### Scenario: Component parameter entries are isolated
 
-- **WHEN** a user changes parameters for `box`, `box-normal`, `modular-grid-base`, `hsw-cell`, or `hexagonal-column`
-- **THEN** the runtime parameter state MUST update only the entry for that component's `modelId`
-- **AND** navigating to another component MUST expose that component's own parameters
-- **AND** the two grid components MUST remain independent even though both use `rows` and `columns`
-
-### Requirement: box-normal parameters are persisted independently
-
-The existing versioned browser persistence MUST store valid `box-normal` parameters under the stable `box-normal` model id. The persisted entry MUST contain typed integer `x`, `y`, and `height` values plus typed boolean `cornerPosts`; it MUST NOT merge with the entries for `box`, `modular-grid-base`, `hsw-cell`, or `hexagonal-column`.
-
-#### Scenario: Restore saved box-normal parameters
-
-- **GIVEN** browser localStorage contains a valid `box-normal` entry
-- **WHEN** the user opens `/cad/box-normal`
-- **THEN** the controls MUST display the saved X/Y/height values and checkbox state
-- **AND** the first generation MUST use those typed values
-
-#### Scenario: Persist a valid box-normal update
-
-- **GIVEN** a box-normal parameter snapshot passes component validation
-- **WHEN** the workspace accepts the update
-- **THEN** localStorage MUST update only the `box-normal` entry
-- **AND** the stored values MUST be typed values rather than raw input strings
-
-#### Scenario: Invalid box-normal input does not overwrite persistence
-
-- **GIVEN** a previously accepted box-normal snapshot exists in localStorage
-- **WHEN** the user enters an invalid or incomplete box-normal value
-- **THEN** the previous accepted `box-normal` entry MUST remain unchanged
-- **AND** the invalid value MUST NOT be sent to the Worker
+- **WHEN** a user changes parameters for any remaining registered component
+- **THEN** only that component's model-id entry MUST change
+- **AND** navigating to another component MUST expose that component's own
+  parameters
+- **AND** stale values for an unregistered `box-normal` model MUST NOT be
+  restored or sent to the Worker
 
 ### Requirement: Restore valid saved parameters
 
@@ -175,37 +154,45 @@ The persistence reader MUST reject malformed Snap entries, entries with board Op
 
 ### Requirement: Stackable-box parameters are persisted independently
 
-The versioned browser persistence MUST store valid `opengrid-stackable-box` parameters under that stable model id. The entry MUST contain typed `x`, `y`, and `height` values accepted by the stackable-box validator, plus typed boolean `cornerBottomHoles` and typed boolean `fullBottomHoleGrid`, and MUST remain independent from both `opengrid` board parameters and `box-normal` parameters. When an older persisted stackable-box entry does not contain `cornerBottomHoles`, the workspace MUST interpret the missing field as `true`; when it does not contain `fullBottomHoleGrid`, it MUST interpret the missing field as `false` for backward compatibility. Invalid or incomplete stackable-box input MUST NOT overwrite the last accepted entry.
+The versioned browser persistence MUST store valid
+`opengrid-stackable-box` parameters under that stable model ID. The entry MUST
+contain typed `x`, `y`, and `height`, typed enum `cornerSeatMode`, typed boolean
+`fullBottomHoleGrid`, the existing profile fields, and the typed opening fields
+accepted by the current validator. It MUST remain independent from OpenGrid
+board and cylinder entries. Legacy `cornerBottomHoles=false/true` values MUST
+migrate to `cornerSeatMode='none'/'hole'`; missing legacy values MUST migrate to
+`'hole'`. Invalid or incomplete input MUST NOT overwrite the last accepted
+entry.
 
-#### Scenario: Restore saved stackable-box parameters
+#### Scenario: Restore saved stackable-box seat mode
 
-- **GIVEN** browser persistence contains a valid `opengrid-stackable-box` entry
-- **WHEN** the user opens `/cad/opengrid-stackable-box`
-- **THEN** the controls MUST display the saved typed X/Y/height values, four-corner-hole state, and full-hole mode state
+- **WHEN** persistence contains a valid stackable-box entry with a seat mode
+- **THEN** the controls MUST display the saved typed seat selection and all
+  other saved values
 - **AND** the first generation MUST use those values
 
-#### Scenario: Restore a legacy stackable-box entry
+#### Scenario: Restore legacy stackable-box hole state
 
-- **GIVEN** browser persistence contains a valid stackable-box entry created before `cornerBottomHoles` or `fullBottomHoleGrid` existed
-- **WHEN** the user opens `/cad/opengrid-stackable-box`
-- **THEN** the workspace MUST restore the saved typed X/Y/height values
-- **AND** it MUST use `cornerBottomHoles=true` and `fullBottomHoleGrid=false`
-- **AND** it MUST NOT reject the entry only because the new field is absent
+- **WHEN** persistence contains a valid older entry with
+  `cornerBottomHoles=false` or `true`
+- **THEN** hydration MUST use `cornerSeatMode='none'` or `'hole'`
+- **AND** missing legacy fields MUST use the current defaults, including
+  `cornerSeatMode='hole'` and `fullBottomHoleGrid=false`
+- **AND** the entry MUST not be rejected only because the enum field is absent
 
 #### Scenario: Persist a valid stackable-box update
 
-- **GIVEN** a stackable-box snapshot passes its component validation
-- **WHEN** the workspace accepts the update
-- **THEN** persistence MUST update only the `opengrid-stackable-box` entry
-- **AND** half-cell values MUST remain typed numeric values without rounding
-- **AND** `cornerBottomHoles` and `fullBottomHoleGrid` MUST remain typed booleans
+- **WHEN** a stackable-box snapshot passes validation
+- **THEN** persistence MUST update only the stackable-box entry
+- **AND** `cornerSeatMode` MUST be stored as its typed enum value
+- **AND** the old `cornerBottomHoles` field MUST NOT be written
 
 #### Scenario: Invalid stackable-box input does not overwrite persistence
 
-- **GIVEN** a previously accepted stackable-box snapshot exists
-- **WHEN** the user enters an invalid, incomplete, or out-of-range X/Y/height value, or a non-boolean four-corner-hole or full-hole mode value is supplied
-- **THEN** the previous accepted stackable-box entry MUST remain unchanged
-- **AND** the invalid snapshot MUST NOT be used for initialization or sent to the Worker
+- **WHEN** an invalid seat mode, incomplete snapshot, or invalid existing
+  stackable-box field is supplied
+- **THEN** the previous accepted entry MUST remain unchanged
+- **AND** the invalid snapshot MUST NOT be sent to the Worker
 
 ### Requirement: OpenGrid 分隔器參數獨立保存
 
@@ -353,37 +340,47 @@ pre-half-cell OpenGrid entry MAY normalize missing half-cell fields to none.
 - **WHEN** persistence is read
 - **THEN** that OpenGrid entry MUST fall back to the OpenGrid definition defaults
 - **AND** the `opengrid-snap` entry and all other model entries MUST remain unchanged
+
 ### Requirement: Stackable-cylinder parameters are persisted independently
 
-The versioned browser persistence MUST store valid `opengrid-stackable-cylinder` parameters under that stable model ID. The entry MUST contain typed integer `diameter` and `height` values accepted by the current cylinder validator, and MUST remain independent from `opengrid`, `opengrid-stackable-box`, and every other component entry. Invalid, incomplete, malformed, legacy, or out-of-range cylinder values MUST NOT overwrite the last accepted cylinder snapshot.
+The versioned browser persistence MUST store valid
+`opengrid-stackable-cylinder` parameters under that stable model ID. The entry
+MUST contain typed integer `diameter` and `height`, typed enum
+`bottomSeatMode`, the existing profile flags, and all opening values accepted by
+the current validator. It MUST remain independent from the board, box, and all
+other component entries. Legacy `bottomHolesEnabled=false/true` values MUST
+migrate to `bottomSeatMode='none'/'hole'`; missing legacy values MUST migrate to
+`'hole'`. Invalid or incomplete input MUST NOT overwrite the last accepted
+entry.
 
-#### Scenario: Restore valid cylinder parameters
+#### Scenario: Restore valid cylinder seat mode
 
-- **GIVEN** browser persistence contains a valid `opengrid-stackable-cylinder` entry
-- **WHEN** the user opens `/cad/opengrid-stackable-cylinder`
-- **THEN** the controls MUST display the saved typed diameter and height
-- **AND** the first generation MUST use those values
+- **WHEN** persistence contains a valid cylinder entry with a seat mode
+- **THEN** the controls MUST display the saved typed seat selection
+- **AND** the first generation MUST use that selection
 
-#### Scenario: Missing or invalid cylinder entry uses defaults
+#### Scenario: Restore legacy cylinder hole state
 
-- **GIVEN** the cylinder entry is missing or fails the current exact parameter validator
-- **WHEN** the cylinder workspace initializes
-- **THEN** the workspace MUST use the cylinder definition defaults
-- **AND** it MUST NOT merge values from `opengrid` or `opengrid-stackable-box`
+- **WHEN** persistence contains a valid legacy cylinder entry with
+  `bottomHolesEnabled=false` or `true`
+- **THEN** hydration MUST use `bottomSeatMode='none'` or `'hole'`
+- **AND** a missing legacy flag MUST use `bottomSeatMode='hole'`
+- **AND** opening defaults MUST continue to be restored as before
 
-#### Scenario: Valid cylinder updates are persisted
+#### Scenario: Persist a valid cylinder update
 
-- **GIVEN** a cylinder snapshot passes component validation
-- **WHEN** the workspace accepts the update
-- **THEN** persistence MUST update only the `opengrid-stackable-cylinder` entry
-- **AND** diameter and height MUST be stored as typed integers rather than raw input strings
+- **WHEN** a cylinder snapshot passes validation
+- **THEN** persistence MUST update only the cylinder entry
+- **AND** `bottomSeatMode` MUST be stored as its typed enum value
+- **AND** the old `bottomHolesEnabled` field MUST NOT be written
 
 #### Scenario: Invalid cylinder input does not overwrite persistence
 
-- **GIVEN** a previously accepted cylinder snapshot exists
-- **WHEN** the user enters an invalid, incomplete, fractional, or out-of-range diameter or height
+- **WHEN** an invalid seat mode, incomplete snapshot, or invalid cylinder field
+  is supplied
 - **THEN** the previous accepted cylinder entry MUST remain unchanged
-- **AND** the invalid snapshot MUST NOT be used for initialization or sent to the Worker
+- **AND** the invalid snapshot MUST NOT be used for initialization or sent to
+  the Worker
 
 ### Requirement: System-scoped parameter persistence
 
@@ -437,3 +434,18 @@ The versioned browser-local parameter record MUST store valid `opengrid-open-she
 - **WHEN** the user enters an invalid or incomplete value
 - **THEN** the previous accepted entry MUST remain unchanged
 - **AND** the invalid snapshot MUST not be used for initialization or sent to the Worker
+
+### Requirement: Stale unregistered model entries are ignored
+
+The persistence reader MUST validate candidate entries against the current
+model catalog before restoring or rewriting them. Entries keyed by the removed
+`box-normal` model ID MUST be ignored, MUST NOT cause initialization failure,
+and MUST be omitted from the next successfully written canonical payload.
+
+#### Scenario: Removed model entry is harmless
+
+- **WHEN** browser storage contains a valid-looking `box-normal` entry after the
+  model has been removed
+- **THEN** no `box-normal` state MUST be restored or generated
+- **AND** the remaining component entries MUST continue to restore normally
+- **AND** a later successful persistence write MUST omit the stale entry

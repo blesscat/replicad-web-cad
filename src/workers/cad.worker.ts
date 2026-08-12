@@ -7,10 +7,6 @@ import {
   type RevisionRecord,
 } from '../cad-kernel/lifetime'
 import { loadHswCellTemplate } from '../cad-kernel/components/hsw-cell/builder'
-import {
-  loadBoxNormalReference,
-  type BoxNormalOperationCounts,
-} from '../cad-kernel/components/box-normal/builder'
 import { loadHexagonalColumnReference } from '../cad-kernel/components/hexagonal-column/builder'
 import { loadModularGridBaseTemplate } from '../cad-kernel/components/modular-grid-base/builder'
 import {
@@ -127,11 +123,16 @@ function cylinderQualityContext(command: WorkerCommand): string {
   } else if (command.parameters.thinBottomMode === true) {
     profile = '薄底'
   }
-  const holeState =
-    command.parameters.bottomHolesEnabled === false
-      ? '底部孔洞關閉'
-      : '底部孔洞開啟'
-  return `（${profile}模式、${holeState}）`
+  const seatState = cylinderSeatModeLabelFor(command.parameters.bottomSeatMode)
+  return `（${profile}模式、${seatState}）`
+}
+
+function cylinderSeatModeLabelFor(
+  mode: 'none' | 'hole' | 'integrated',
+): string {
+  if (mode === 'none') return '無角座'
+  if (mode === 'integrated') return '內建角座'
+  return '角座孔'
 }
 
 function yieldToWorkerEventLoop(): Promise<void> {
@@ -147,8 +148,6 @@ export class CadWorkerRuntime {
   private modularGridBaseTemplate: Promise<import('replicad').Shape3D> | null =
     null
   private hswCellTemplate: Promise<import('replicad').Shape3D> | null = null
-  private boxNormalReference: Promise<import('replicad').Shape3D> | null = null
-  private lastBoxNormalOperationCounts: BoxNormalOperationCounts | null = null
   private hexagonalColumnReference: Promise<import('replicad').Shape3D> | null =
     null
   private readonly openGridPrototypes = new Map<
@@ -256,7 +255,6 @@ export class CadWorkerRuntime {
           this.disposed = true
           this.disposeModularGridBaseTemplate()
           this.disposeHswCellTemplate()
-          this.disposeBoxNormalReference()
           this.disposeHexagonalColumnReference()
           this.disposeOpenGridPrototypes()
           this.disposeOpenGridCanonicalTiles()
@@ -264,7 +262,6 @@ export class CadWorkerRuntime {
           this.disposeOpenGridSnapReferences()
           this.disposeOpenGridSnapFixedFootprints()
           this.disposeOpenGridSnapRemoverAsset()
-          this.lastBoxNormalOperationCounts = null
           this.initialized = false
           this.initializing = null
           this.invalidatedGeneration = 0
@@ -368,7 +365,6 @@ export class CadWorkerRuntime {
         ...openGridBuildOptions,
         getModularGridBaseTemplate: () => this.getModularGridBaseTemplate(),
         getHswCellTemplate: () => this.getHswCellTemplate(),
-        getBoxNormalReference: () => this.getBoxNormalReference(),
         getHexagonalColumnReference: () => this.getHexagonalColumnReference(),
         getOpenGridPrototype: (variant) => this.getOpenGridPrototype(variant),
         getOpenGridSnapReference: (variant, profile) =>
@@ -385,12 +381,6 @@ export class CadWorkerRuntime {
             total: progress.total,
             unit: progress.unit,
           }),
-        reportOperationCounts:
-          command.modelId === 'box-normal'
-            ? (counts) => {
-                this.lastBoxNormalOperationCounts = { ...counts }
-              }
-            : undefined,
       }
       if (useOpenGridCanonicalTileCache) {
         buildContext.getOpenGridCanonicalTile = (
@@ -577,12 +567,6 @@ export class CadWorkerRuntime {
       },
       [meshSnapshot.positions, meshSnapshot.normals, meshSnapshot.indices],
     )
-  }
-
-  getBoxNormalOperationCounts(): BoxNormalOperationCounts | null {
-    return this.lastBoxNormalOperationCounts
-      ? { ...this.lastBoxNormalOperationCounts }
-      : null
   }
 
   private invalidate(
@@ -1073,27 +1057,6 @@ export class CadWorkerRuntime {
     return this.openGridSnapRemoverAsset
   }
 
-  private getBoxNormalReference(): Promise<import('replicad').Shape3D> {
-    if (!this.boxNormalReference) {
-      const referencePromise = loadBoxNormalReference()
-        .then((reference) => {
-          if (this.disposed) {
-            reference.delete()
-            throw new Error('WORKER_TERMINATED')
-          }
-          return reference
-        })
-        .catch((error) => {
-          if (this.boxNormalReference === referencePromise) {
-            this.boxNormalReference = null
-          }
-          throw error
-        })
-      this.boxNormalReference = referencePromise
-    }
-    return this.boxNormalReference
-  }
-
   private isGenerationCurrent(generation: number): boolean {
     return (
       !this.disposed &&
@@ -1174,15 +1137,6 @@ export class CadWorkerRuntime {
     this.openGridSnapRemoverAsset = null
     if (!assetPromise) return
     void assetPromise.then((asset) => asset.delete()).catch(() => undefined)
-  }
-
-  private disposeBoxNormalReference(): void {
-    const referencePromise = this.boxNormalReference
-    this.boxNormalReference = null
-    if (!referencePromise) return
-    void referencePromise
-      .then((reference) => reference.delete())
-      .catch(() => undefined)
   }
 
   private toCadError(error: unknown, command: WorkerCommand): CadError {

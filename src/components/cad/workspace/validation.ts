@@ -5,6 +5,7 @@ import {
   isOpenGridSnapFootprint,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_OPENING_PARAMETER_KEYS,
+  OPENGRID_LOCATING_SEAT_MODES,
   parseOpenGridSnapDecimalInput,
   parseDimensionInput,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
@@ -31,17 +32,11 @@ export const GRID_PARAMETER_KEYS: ScalarModelParameterKey[] = [
   'rows',
   'columns',
 ]
-export const BOX_NORMAL_PARAMETER_KEYS: ModelParameterKey[] = [
-  'x',
-  'y',
-  'height',
-  'cornerPosts',
-]
 export const OPENGRID_STACKABLE_BOX_PARAMETER_KEYS: ModelParameterKey[] = [
   'x',
   'y',
   'height',
-  'cornerBottomHoles',
+  'cornerSeatMode',
   'fullBottomHoleGrid',
   'basePlateMode',
   'thinShellMode',
@@ -52,7 +47,7 @@ export const OPENGRID_STACKABLE_CYLINDER_PARAMETER_KEYS: ModelParameterKey[] = [
   'height',
   'thinBottomMode',
   'bottomPlateMode',
-  'bottomHolesEnabled',
+  'bottomSeatMode',
   ...OPENGRID_STACKABLE_CYLINDER_OPENING_PARAMETER_KEYS,
 ]
 export const OPENGRID_DIVIDER_PARAMETER_KEYS: ModelParameterKey[] = [
@@ -86,7 +81,6 @@ export const OPENGRID_OPEN_SHELF_PARAMETER_KEYS: ModelParameterKey[] = [
 
 function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'box') return DIMENSION_KEYS
-  if (modelId === 'box-normal') return BOX_NORMAL_PARAMETER_KEYS
   if (modelId === 'modular-grid-base') return GRID_PARAMETER_KEYS
   if (modelId === 'hsw-cell') return GRID_PARAMETER_KEYS
   if (modelId === 'hexagonal-column') return HEXAGONAL_COLUMN_PARAMETER_KEYS
@@ -132,13 +126,16 @@ function legacyParameterDefault(
   modelId: ModelId,
   key: ModelParameterKey,
 ): string | undefined {
+  if (modelId === 'opengrid-stackable-box' && key === 'cornerSeatMode') {
+    return 'hole'
+  }
   if (modelId === 'opengrid-stackable-box' && key === 'thinShellMode') {
     return 'false'
   }
   if (modelId !== 'opengrid-stackable-cylinder') return undefined
   if (key === 'thinBottomMode') return 'false'
   if (key === 'bottomPlateMode') return 'false'
-  if (key === 'bottomHolesEnabled') return 'true'
+  if (key === 'bottomSeatMode') return 'hole'
   const defaultValue = (
     OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS as Record<string, unknown>
   )[key]
@@ -177,6 +174,26 @@ function parseBooleanRawParameter(
   return {
     valid: false,
     message: '必須是 true 或 false。',
+    field,
+  }
+}
+
+function parseSeatModeRawParameter(
+  rawValue: string | undefined,
+  field: ModelParameterKey,
+):
+  | { valid: true; value: (typeof OPENGRID_LOCATING_SEAT_MODES)[number] }
+  | { valid: false; message: string; field: ModelParameterKey } {
+  const value = rawValue ?? 'hole'
+  if ((OPENGRID_LOCATING_SEAT_MODES as readonly string[]).includes(value)) {
+    return {
+      valid: true,
+      value: value as (typeof OPENGRID_LOCATING_SEAT_MODES)[number],
+    }
+  }
+  return {
+    valid: false,
+    message: '角座模式必須是 none、hole 或 integrated。',
     field,
   }
 }
@@ -276,10 +293,8 @@ export function rawFromParameters(
       bottomPlateMode: String(
         'bottomPlateMode' in parameters ? parameters.bottomPlateMode : false,
       ),
-      bottomHolesEnabled: String(
-        'bottomHolesEnabled' in parameters
-          ? parameters.bottomHolesEnabled
-          : true,
+      bottomSeatMode: String(
+        'bottomSeatMode' in parameters ? parameters.bottomSeatMode : 'hole',
       ),
     }
     for (const key of OPENGRID_STACKABLE_CYLINDER_OPENING_PARAMETER_KEYS) {
@@ -297,15 +312,6 @@ export function rawFromParameters(
       width: String(parameters.width),
       depth: String(parameters.depth),
       height: String(parameters.height),
-    }
-  }
-
-  if ('cornerPosts' in parameters) {
-    return {
-      x: String(parameters.x),
-      y: String(parameters.y),
-      height: String(parameters.height),
-      cornerPosts: String(parameters.cornerPosts),
     }
   }
 
@@ -341,7 +347,7 @@ export function rawFromParameters(
     'x' in parameters &&
     'y' in parameters &&
     'height' in parameters &&
-    'cornerBottomHoles' in parameters &&
+    'cornerSeatMode' in parameters &&
     'fullBottomHoleGrid' in parameters &&
     'basePlateMode' in parameters
   ) {
@@ -349,7 +355,7 @@ export function rawFromParameters(
       x: number
       y: number
       height: number
-      cornerBottomHoles: boolean
+      cornerSeatMode: (typeof OPENGRID_LOCATING_SEAT_MODES)[number]
       fullBottomHoleGrid: boolean
       basePlateMode: boolean
       thinShellMode: boolean
@@ -364,7 +370,7 @@ export function rawFromParameters(
       x: String(stackableParameters.x),
       y: String(stackableParameters.y),
       height: String(stackableParameters.height),
-      cornerBottomHoles: String(stackableParameters.cornerBottomHoles),
+      cornerSeatMode: String(stackableParameters.cornerSeatMode),
       fullBottomHoleGrid: String(stackableParameters.fullBottomHoleGrid),
       basePlateMode: String(stackableParameters.basePlateMode),
       thinShellMode: String(stackableParameters.thinShellMode ?? false),
@@ -552,13 +558,16 @@ export function parseRawParameters(
       parsed.mode = mode
       continue
     }
+    if (key === 'cornerSeatMode' || key === 'bottomSeatMode') {
+      const seatMode = parseSeatModeRawParameter(raw[key], key)
+      if (!seatMode.valid) return seatMode
+      parsed[key] = seatMode.value
+      continue
+    }
     if (
-      key === 'cornerPosts' ||
-      key === 'cornerBottomHoles' ||
       key === 'fullBottomHoleGrid' ||
       key === 'thinBottomMode' ||
       key === 'bottomPlateMode' ||
-      key === 'bottomHolesEnabled' ||
       key === 'basePlateMode' ||
       key === 'thinShellMode'
     ) {

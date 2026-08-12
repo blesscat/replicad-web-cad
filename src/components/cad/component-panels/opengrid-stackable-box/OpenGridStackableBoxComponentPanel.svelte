@@ -31,6 +31,33 @@
   }
 
   type BoxMode = 'default' | 'thin-shell'
+  type BoxSeatMode = 'none' | 'hole' | 'integrated'
+
+  const seatModeOptions: ReadonlyArray<{
+    value: BoxSeatMode
+    label: string
+    description: string
+  }> = [
+    { value: 'none', label: '無角座', description: '不建立四角定位結構。' },
+    { value: 'hole', label: '角座孔', description: '保留既有 Ø5 mm 角座孔。' },
+    {
+      value: 'integrated',
+      label: '內建角座',
+      description: '建立向下凸出的 Ø5 × 3 mm 內建角座。',
+    },
+  ]
+
+  function seatModeForRawParameters(): BoxSeatMode {
+    const value = rawParameters.cornerSeatMode
+    if (value === 'none' || value === 'integrated') return value
+    return 'hole'
+  }
+
+  function handleSeatModeChange(event: Event): void {
+    if (!(event.currentTarget instanceof HTMLInputElement)) return
+    if (!event.currentTarget.checked) return
+    onInputChange('cornerSeatMode', event.currentTarget.value)
+  }
 
   function handleModeChange(event: Event): void {
     if (!(event.currentTarget instanceof HTMLInputElement)) return
@@ -115,7 +142,7 @@
       x,
       y,
       height,
-      cornerBottomHoles: rawParameters.cornerBottomHoles === 'true',
+      cornerSeatMode: seatModeForRawParameters(),
       fullBottomHoleGrid: rawParameters.fullBottomHoleGrid === 'true',
       basePlateMode: rawParameters.basePlateMode === 'true',
       thinShellMode: rawParameters.thinShellMode === 'true',
@@ -178,27 +205,40 @@
     description=""
     onApply={handleDimensionCalculation}
   />
-  <div class="flex flex-wrap items-start gap-x-4 gap-y-2">
-    <label class="flex min-w-0 items-start gap-2">
-      <input
-        aria-describedby={fieldErrors.cornerBottomHoles
-          ? 'cornerBottomHoles-error'
-          : undefined}
-        aria-invalid={Boolean(fieldErrors.cornerBottomHoles)}
-        aria-label="底部四角孔"
-        class="mt-1 accent-primary"
-        type="checkbox"
-        checked={rawParameters.cornerBottomHoles === 'true'}
-        onchange={(event) => {
-          if (!(event.currentTarget instanceof HTMLInputElement)) return
-          onInputChange(
-            'cornerBottomHoles',
-            String(event.currentTarget.checked),
-          )
-        }}
-      />
-      <span class="font-[650]">底部四角孔</span>
-    </label>
+  <div class="grid gap-2">
+    <fieldset
+      class="grid gap-2 border-0 p-0"
+      aria-describedby={fieldErrors.cornerSeatMode
+        ? 'cornerSeatMode-error'
+        : undefined}
+      aria-invalid={Boolean(fieldErrors.cornerSeatMode)}
+      aria-label="角座模式"
+      role="radiogroup"
+      data-testid="opengrid-stackable-box-seat-mode"
+    >
+      <legend class="font-[650]">角座模式</legend>
+      <div class="flex flex-wrap items-start gap-x-4 gap-y-2">
+        {#each seatModeOptions as option (option.value)}
+          <label class="flex min-w-0 items-start gap-2">
+            <input
+              aria-label={option.label}
+              class="mt-1 accent-primary"
+              name="opengrid-stackable-box-seat-mode"
+              type="radio"
+              value={option.value}
+              checked={seatModeForRawParameters() === option.value}
+              onchange={handleSeatModeChange}
+            />
+            <span class="font-[650]">{option.label}</span>
+          </label>
+        {/each}
+      </div>
+      <span class="text-sm text-muted">
+        {seatModeOptions.find(
+          (option) => option.value === seatModeForRawParameters(),
+        )?.description}
+      </span>
+    </fieldset>
     <label class="flex min-w-0 items-start gap-2">
       <input
         aria-describedby={fieldErrors.fullBottomHoleGrid
@@ -270,9 +310,9 @@
       </span>
     {/if}
   </div>
-  {#if fieldErrors.cornerBottomHoles}
-    <span class="text-sm text-error" id="cornerBottomHoles-error" role="alert"
-      >{fieldErrors.cornerBottomHoles}</span
+  {#if fieldErrors.cornerSeatMode}
+    <span class="text-sm text-error" id="cornerSeatMode-error" role="alert"
+      >{fieldErrors.cornerSeatMode}</span
     >
   {/if}
   {#if fieldErrors.fullBottomHoleGrid}

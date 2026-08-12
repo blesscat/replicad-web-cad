@@ -1,11 +1,15 @@
 import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
-import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from './opengrid-locating-assembly'
+import {
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
+  OPENGRID_LOCATING_SEAT_MODES,
+  type OpenGridLocatingSeatMode,
+} from './opengrid-locating-assembly'
 
 export type OpenGridStackableBoxParameterKey =
   | 'x'
   | 'y'
   | 'height'
-  | 'cornerBottomHoles'
+  | 'cornerSeatMode'
   | 'fullBottomHoleGrid'
   | 'basePlateMode'
   | 'thinShellMode'
@@ -64,7 +68,7 @@ export type OpenGridStackableBoxParameters = {
   x: number
   y: number
   height: number
-  cornerBottomHoles: boolean
+  cornerSeatMode: OpenGridLocatingSeatMode
   fullBottomHoleGrid: boolean
   basePlateMode: boolean
   thinShellMode: boolean
@@ -122,7 +126,7 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   defaultX: 2,
   defaultY: 2,
   defaultHeight: 20,
-  defaultCornerBottomHoles: true,
+  defaultCornerSeatMode: 'hole' as OpenGridLocatingSeatMode,
   defaultFullBottomHoleGrid: false,
   defaultBasePlateMode: false,
   defaultThinShellMode: false,
@@ -209,8 +213,7 @@ export const OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS = {
   x: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultX,
   y: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultY,
   height: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHeight,
-  cornerBottomHoles:
-    OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultCornerBottomHoles,
+  cornerSeatMode: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultCornerSeatMode,
   fullBottomHoleGrid:
     OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultFullBottomHoleGrid,
   basePlateMode: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultBasePlateMode,
@@ -266,7 +269,7 @@ const OPENING_KEYS_BY_DIRECTION: Record<
   },
 }
 
-const LEGACY_PARAMETER_KEYS = [
+const LEGACY_BASE_PARAMETER_KEYS = [
   'x',
   'y',
   'height',
@@ -274,6 +277,53 @@ const LEGACY_PARAMETER_KEYS = [
   'fullBottomHoleGrid',
   'basePlateMode',
 ] as const
+
+const CURRENT_BASE_PARAMETER_KEYS = [
+  'x',
+  'y',
+  'height',
+  'cornerSeatMode',
+  'fullBottomHoleGrid',
+  'basePlateMode',
+  'thinShellMode',
+] as const
+
+const ALL_SUPPORTED_PARAMETER_KEYS = new Set<string>([
+  ...LEGACY_BASE_PARAMETER_KEYS,
+  ...CURRENT_BASE_PARAMETER_KEYS,
+  ...OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
+])
+
+function hasOwn(value: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key)
+}
+
+function hasRequiredBaseParameters(value: Record<string, unknown>): boolean {
+  return (
+    hasOwn(value, 'x') &&
+    hasOwn(value, 'y') &&
+    hasOwn(value, 'height') &&
+    hasOwn(value, 'fullBottomHoleGrid') &&
+    hasOwn(value, 'basePlateMode')
+  )
+}
+
+function hasOnlySupportedParameterKeys(
+  value: Record<string, unknown>,
+): boolean {
+  return Object.keys(value).every((key) =>
+    ALL_SUPPORTED_PARAMETER_KEYS.has(key),
+  )
+}
+
+function isOpenGridLocatingSeatMode(
+  value: unknown,
+): value is OpenGridLocatingSeatMode {
+  return (
+    typeof value === 'string' &&
+    (OPENGRID_LOCATING_SEAT_MODES as readonly string[]).includes(value)
+  )
+}
 
 function defaultOpeningValues(): Pick<
   OpenGridStackableBoxParameters,
@@ -319,16 +369,6 @@ function openingValuesFor(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function hasExactKeys(
-  value: Record<string, unknown>,
-  keys: readonly string[],
-): boolean {
-  return (
-    Object.keys(value).length === keys.length &&
-    keys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
-  )
 }
 
 function isHalfStep(value: unknown): value is number {
@@ -380,14 +420,14 @@ function validateHeight(
   }
 }
 
-function validateCornerBottomHoles(
+function validateCornerSeatMode(
   value: unknown,
   issues: OpenGridStackableBoxValidationIssue[],
 ): void {
-  if (typeof value !== 'boolean') {
+  if (!isOpenGridLocatingSeatMode(value)) {
     issues.push({
-      field: 'cornerBottomHoles',
-      message: '底部四角孔必須是布林值。',
+      field: 'cornerSeatMode',
+      message: '角座模式必須是 none、hole 或 integrated。',
     })
   }
 }
@@ -426,6 +466,13 @@ function validateThinShellMode(
       message: '薄殼模式必須是布林值。',
     })
   }
+}
+
+function legacyCornerSeatModeFor(
+  value: Record<string, unknown>,
+): OpenGridLocatingSeatMode {
+  if (value.cornerBottomHoles === false) return 'none'
+  return 'hole'
 }
 
 export function openGridStackableBoxProfileFor(
@@ -738,23 +785,17 @@ export function validateOpenGridStackableBoxParameters(
   }
 
   const issues: OpenGridStackableBoxValidationIssue[] = []
-  const hasLegacyParameters = hasExactKeys(value, LEGACY_PARAMETER_KEYS)
-  const hasPreThinCurrentParameters = hasExactKeys(value, [
-    ...LEGACY_PARAMETER_KEYS,
-    ...OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
-  ])
-  const hasCurrentParameters = hasExactKeys(value, [
-    ...LEGACY_PARAMETER_KEYS,
-    'thinShellMode',
-    ...OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
-  ])
+  const hasSupportedShape =
+    hasRequiredBaseParameters(value) && hasOnlySupportedParameterKeys(value)
+  const hasCurrentSeatMode = hasOwn(value, 'cornerSeatMode')
+  const hasLegacySeatMode = hasOwn(value, 'cornerBottomHoles')
+  const hasCurrentShape = hasSupportedShape && hasCurrentSeatMode
+  const hasLegacyShape = hasSupportedShape && !hasCurrentSeatMode
   const hasOpeningParameters =
-    hasPreThinCurrentParameters || hasCurrentParameters
-  if (
-    !hasLegacyParameters &&
-    !hasPreThinCurrentParameters &&
-    !hasCurrentParameters
-  ) {
+    OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS.some((key) =>
+      hasOwn(value, key),
+    )
+  if (!hasLegacyShape && !hasCurrentShape) {
     issues.push({ field: 'parameters', message: '包含不支援的參數欄位。' })
   }
 
@@ -773,10 +814,22 @@ export function validateOpenGridStackableBoxParameters(
     issues,
   )
   validateHeight(value.height, issues)
-  validateCornerBottomHoles(value.cornerBottomHoles, issues)
+  if (hasCurrentShape) {
+    validateCornerSeatMode(value.cornerSeatMode, issues)
+  } else if (
+    hasLegacySeatMode &&
+    typeof value.cornerBottomHoles !== 'boolean'
+  ) {
+    issues.push({
+      field: 'cornerSeatMode',
+      message: '舊版底部四角孔必須是布林值。',
+    })
+  }
   validateFullBottomHoleGrid(value.fullBottomHoleGrid, issues)
   validateBasePlateMode(value.basePlateMode, issues)
-  if (hasCurrentParameters) validateThinShellMode(value.thinShellMode, issues)
+  if (hasOwn(value, 'thinShellMode')) {
+    validateThinShellMode(value.thinShellMode, issues)
+  }
 
   if (value.basePlateMode === true && value.thinShellMode === true) {
     issues.push({
@@ -788,14 +841,16 @@ export function validateOpenGridStackableBoxParameters(
   if (hasOpeningParameters) {
     for (const key of OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS) {
       const bounds = openingValidationBoundsFor(key, value.height)
-      validateOpeningIntegerField(
-        value[key],
-        key,
-        bounds.minimum,
-        bounds.maximum,
-        bounds.unit,
-        issues,
-      )
+      if (hasOwn(value, key)) {
+        validateOpeningIntegerField(
+          value[key],
+          key,
+          bounds.minimum,
+          bounds.maximum,
+          bounds.unit,
+          issues,
+        )
+      }
     }
   }
 
@@ -805,12 +860,15 @@ export function validateOpenGridStackableBoxParameters(
     x: value.x as number,
     y: value.y as number,
     height: value.height as number,
-    cornerBottomHoles: value.cornerBottomHoles as boolean,
+    cornerSeatMode: hasCurrentShape
+      ? (value.cornerSeatMode as OpenGridLocatingSeatMode)
+      : legacyCornerSeatModeFor(value),
     fullBottomHoleGrid: value.fullBottomHoleGrid as boolean,
     basePlateMode: value.basePlateMode as boolean,
-    thinShellMode: hasCurrentParameters
-      ? (value.thinShellMode as boolean)
-      : OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultThinShellMode,
+    thinShellMode:
+      typeof value.thinShellMode === 'boolean'
+        ? (value.thinShellMode as boolean)
+        : OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultThinShellMode,
     ...openingValuesFor(value, hasOpeningParameters),
   }
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
@@ -840,7 +898,11 @@ export function validateOpenGridStackableBoxParameters(
 export function isOpenGridStackableBoxParameters(
   value: unknown,
 ): value is OpenGridStackableBoxParameters {
-  return validateOpenGridStackableBoxParameters(value).valid
+  return (
+    isRecord(value) &&
+    hasOwn(value, 'cornerSeatMode') &&
+    validateOpenGridStackableBoxParameters(value).valid
+  )
 }
 
 function uniqueSocketAxisPositions(halfExtent: number): number[] {
@@ -910,9 +972,10 @@ export function openGridStackableBoxOrdinaryBottomHoleCentersFor(
 ): OpenGridStackableBoxPoint2D[] {
   if (!parameters.fullBottomHoleGrid) return []
 
-  const specialCenters = parameters.cornerBottomHoles
-    ? openGridStackableBoxSocketCentersFor(parameters)
-    : []
+  const specialCenters =
+    parameters.cornerSeatMode !== 'none'
+      ? openGridStackableBoxSocketCentersFor(parameters)
+      : []
   const gridCenters =
     nominalOpenGridStackableBoxBottomGridCentersFor(parameters)
   const pitchTolerance = 0.001
@@ -930,7 +993,7 @@ export function openGridStackableBoxOrdinaryBottomHoleCentersFor(
 export function openGridStackableBoxSocketCentersFor(
   parameters: OpenGridStackableBoxParameters,
 ): OpenGridStackableBoxPoint2D[] {
-  if (!parameters.cornerBottomHoles) return []
+  if (parameters.cornerSeatMode === 'none') return []
 
   if (parameters.fullBottomHoleGrid) {
     const xPositions = uniqueGridEndpointPositions(
@@ -964,8 +1027,12 @@ export function boundsForOpenGridStackableBox(
   parameters: OpenGridStackableBoxParameters,
 ) {
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
+  const minimumZ =
+    parameters.cornerSeatMode === 'integrated'
+      ? OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ
+      : 0
   return {
-    min: [-width / 2, -depth / 2, 0] as [number, number, number],
+    min: [-width / 2, -depth / 2, minimumZ] as [number, number, number],
     max: [
       width / 2,
       depth / 2,
@@ -998,16 +1065,22 @@ function modeSuffixFor(parameters: OpenGridStackableBoxParameters): string {
   return ''
 }
 
+function seatSuffixFor(parameters: OpenGridStackableBoxParameters): string {
+  return `-seats-${parameters.cornerSeatMode}`
+}
+
 export function openGridStackableBoxFileName(
   parameters: OpenGridStackableBoxParameters,
 ): string {
   const modeSuffix = modeSuffixFor(parameters)
-  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${openingFileSuffixFor(parameters)}${modeSuffix}.step`
+  const seatSuffix = seatSuffixFor(parameters)
+  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${seatSuffix}${openingFileSuffixFor(parameters)}${modeSuffix}.step`
 }
 
 export function openGridStackableBoxStlFileName(
   parameters: OpenGridStackableBoxParameters,
 ): string {
   const modeSuffix = modeSuffixFor(parameters)
-  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${openingFileSuffixFor(parameters)}${modeSuffix}.stl`
+  const seatSuffix = seatSuffixFor(parameters)
+  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${seatSuffix}${openingFileSuffixFor(parameters)}${modeSuffix}.stl`
 }

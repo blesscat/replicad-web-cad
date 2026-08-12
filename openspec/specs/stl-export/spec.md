@@ -1,9 +1,7 @@
 ## Purpose
 
 本文件定義目前 CAD component 的 STL 產生、驗證、命名、下載生命週期與 Bambu Studio 一般檔案匯入相容性。
-
 ## Requirements
-
 ### Requirement: STL is generated from the committed B-Rep
 
 The system MUST generate STL bytes inside the CAD Worker from the selected component's pinned committed B-Rep revision. It MUST NOT reconstruct STL from the viewport mesh or run the CAD writer on the main thread.
@@ -56,32 +54,41 @@ The Worker MUST request binary STL output with explicit STL tessellation toleran
 
 ### Requirement: STL filenames are defined by the model catalog
 
-Every supported model definition MUST provide a deterministic STL filename. The box filename MUST be `box-{width}x{depth}x{height}.stl`, the box-normal filename MUST be `box-normal-{x}x{y}-h{height}-{posts|plain}.stl`, the modular-grid-base filename MUST be `modular-grid-base-{columns}x{rows}.stl`, the HSW filename MUST be `hsw-cell-{columns}x{rows}.stl`, and the hexagonal-column filename MUST retain its existing deterministic format.
+Every supported model definition MUST provide a deterministic STL filename.
+Existing `box`, modular-grid-base, HSW, hexagonal-column, OpenGrid board, Snap,
+divider, pillar, and other registered model filename contracts MUST remain
+available. The obsolete `box-normal` filename contract MUST be removed. The
+OpenGrid stackable-box and stackable-cylinder filenames MUST encode the typed
+locating-seat mode using exactly one of `-seats-none`, `-seats-hole`, or
+`-seats-integrated`, in addition to their existing dimensions, profile, and
+opening fingerprints. Equivalent typed values entered with different raw
+formatting MUST produce the same filename.
 
-#### Scenario: Box STL filename
+#### Scenario: OpenGrid stackable-box STL filename distinguishes seats
 
-- **WHEN** a 20 × 30 × 40 mm box is exported
-- **THEN** the suggested filename MUST be `box-20x30x40.stl`
+- **WHEN** an OpenGrid stackable box is exported in any supported profile
+- **THEN** its STL filename MUST contain exactly one deterministic seat suffix
+- **AND** changing only `cornerSeatMode` MUST change the filename
+- **AND** an integrated export MUST contain `-seats-integrated`
 
-#### Scenario: Box-normal STL filename with posts
+#### Scenario: OpenGrid stackable-cylinder STL filename distinguishes seats
 
-- **WHEN** a box-normal with `x=2`, `y=2`, `height=10`, and `cornerPosts=true` is exported
-- **THEN** the suggested filename MUST be `box-normal-2x2-h10-posts.stl`
+- **WHEN** an OpenGrid stackable cylinder is exported in any supported profile
+- **THEN** its STL filename MUST contain exactly one deterministic seat suffix
+- **AND** changing only `bottomSeatMode` MUST change the filename
+- **AND** an integrated export MUST contain `-seats-integrated`
 
-#### Scenario: Box-normal STL filename without posts
+#### Scenario: Existing supported model filenames remain deterministic
 
-- **WHEN** a box-normal with `x=2`, `y=2`, `height=10`, and `cornerPosts=false` is exported
-- **THEN** the suggested filename MUST be `box-normal-2x2-h10-plain.stl`
+- **WHEN** a supported non-OpenGrid-stackable model is exported
+- **THEN** its existing typed filename contract MUST remain unchanged
+- **AND** no filename may contain the removed `box-normal` identity
 
-#### Scenario: Modular grid STL filename
+#### Scenario: STL filename is independent of raw formatting
 
-- **WHEN** a 2-column × 2-row modular grid is exported
-- **THEN** the suggested filename MUST be `modular-grid-base-2x2.stl`
-
-#### Scenario: HSW STL filename
-
-- **WHEN** a 2-column × 2-row HSW grid is exported
-- **THEN** the suggested filename MUST be `hsw-cell-2x2.stl`
+- **WHEN** two valid snapshots normalize to the same typed parameters but use
+  different raw input formatting
+- **THEN** their STL filenames MUST be identical
 
 ### Requirement: STL download follows existing model lifecycle gates
 

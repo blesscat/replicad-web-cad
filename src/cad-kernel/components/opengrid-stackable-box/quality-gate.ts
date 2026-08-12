@@ -9,7 +9,10 @@ import {
   type OpenGridStackableBoxParameters,
 } from '../../../cad-contract/units'
 import { bottomGridSeamsFor } from './geometry'
-import { inspectOpenGridStackableBoxInterface } from './quality-interface'
+import {
+  inspectOpenGridStackableBoxInterface,
+  integratedSeatRecordCountFor,
+} from './quality-interface'
 import {
   inspectCaptiveSocketInterface,
   measureMountingHoleProfiles,
@@ -271,7 +274,9 @@ function assertBottomSupport(
 
 function assertMountingHoleGeometry(
   quality: OpenGridStackableBoxInterfaceQualityReport,
+  parameters: OpenGridStackableBoxParameters,
 ): void {
+  if (parameters.cornerSeatMode !== 'hole') return
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
   if (quality.mountingHoleStepVolumes.some((volume) => volume <= 0.001)) {
     throw new Error('OPENGRID_STACKABLE_BOX_MOUNTING_HOLE_STEP_INVALID')
@@ -305,6 +310,16 @@ function assertMountingHoleGeometry(
   }
 }
 
+function assertIntegratedSeats(
+  shape: Shape3D,
+  parameters: OpenGridStackableBoxParameters,
+): void {
+  const centers = openGridStackableBoxSocketCentersFor(parameters)
+  if (integratedSeatRecordCountFor(shape, parameters) !== centers.length) {
+    throw new Error('OPENGRID_STACKABLE_BOX_INTEGRATED_SEAT_INVALID')
+  }
+}
+
 function assertCaptiveSockets(
   records: ReadonlyArray<OpenGridStackableBoxCaptiveSocketRecord>,
   floorThickness: number = OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight,
@@ -335,6 +350,7 @@ function assertCaptiveSockets(
 
 function assertThinShellQuality(
   quality: OpenGridStackableBoxThinShellQualityReport,
+  parameters: OpenGridStackableBoxParameters,
 ): void {
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
   if (
@@ -355,40 +371,42 @@ function assertThinShellQuality(
     throw new Error('OPENGRID_STACKABLE_BOX_THIN_SHELL_PROFILE_INVALID')
   }
 
-  if (quality.mountingHoleStepVolumes.some((volume) => volume <= 0.001)) {
-    throw new Error('OPENGRID_STACKABLE_BOX_MOUNTING_HOLE_STEP_INVALID')
-  }
-  if (
-    quality.mountingHoleProfiles.some(
-      (profile) =>
-        !closeEnough(
-          profile.lowerBoreDiameter,
-          configuration.baseHoleBottomOpeningDiameter,
-          0.03,
-        ) ||
-        !closeEnough(
-          profile.lowerBoreDepth,
-          configuration.thinShellBottomHoleStepHeight,
-          0.03,
-        ) ||
-        !closeEnough(
-          profile.upperBoreDiameter,
-          configuration.baseHoleTopOpeningDiameter,
-          0.03,
-        ) ||
-        !closeEnough(
-          profile.upperBoreDepth,
-          configuration.thinShellBottomHoleTopDepth,
-          0.03,
-        ),
+  if (parameters.cornerSeatMode === 'hole') {
+    if (quality.mountingHoleStepVolumes.some((volume) => volume <= 0.001)) {
+      throw new Error('OPENGRID_STACKABLE_BOX_MOUNTING_HOLE_STEP_INVALID')
+    }
+    if (
+      quality.mountingHoleProfiles.some(
+        (profile) =>
+          !closeEnough(
+            profile.lowerBoreDiameter,
+            configuration.baseHoleBottomOpeningDiameter,
+            0.03,
+          ) ||
+          !closeEnough(
+            profile.lowerBoreDepth,
+            configuration.thinShellBottomHoleStepHeight,
+            0.03,
+          ) ||
+          !closeEnough(
+            profile.upperBoreDiameter,
+            configuration.baseHoleTopOpeningDiameter,
+            0.03,
+          ) ||
+          !closeEnough(
+            profile.upperBoreDepth,
+            configuration.thinShellBottomHoleTopDepth,
+            0.03,
+          ),
+      )
+    ) {
+      throw new Error('OPENGRID_STACKABLE_BOX_MOUNTING_HOLE_PROFILE_INVALID')
+    }
+    assertCaptiveSockets(
+      quality.captiveSocketRecords,
+      configuration.thinShellFloorThickness,
     )
-  ) {
-    throw new Error('OPENGRID_STACKABLE_BOX_MOUNTING_HOLE_PROFILE_INVALID')
   }
-  assertCaptiveSockets(
-    quality.captiveSocketRecords,
-    configuration.thinShellFloorThickness,
-  )
   if (
     quality.ordinaryBottomHoleCount !== quality.expectedOrdinaryBottomHoleCount
   ) {
@@ -401,6 +419,29 @@ function assertBasePlateMountingInterface(
   parameters: OpenGridStackableBoxParameters,
 ): void {
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  if (parameters.cornerSeatMode === 'integrated') {
+    assertIntegratedSeats(shape, parameters)
+    const ordinaryCenters =
+      openGridStackableBoxOrdinaryBottomHoleCentersFor(parameters)
+    if (
+      countOrdinaryBottomHoleFaces(shape, ordinaryCenters, parameters) !==
+      ordinaryCenters.length
+    ) {
+      throw new Error('OPENGRID_STACKABLE_BOX_BOTTOM_GRID_HOLES_INVALID')
+    }
+    return
+  }
+  if (parameters.cornerSeatMode === 'none') {
+    const ordinaryCenters =
+      openGridStackableBoxOrdinaryBottomHoleCentersFor(parameters)
+    if (
+      countOrdinaryBottomHoleFaces(shape, ordinaryCenters, parameters) !==
+      ordinaryCenters.length
+    ) {
+      throw new Error('OPENGRID_STACKABLE_BOX_BOTTOM_GRID_HOLES_INVALID')
+    }
+    return
+  }
   const socketCenters = openGridStackableBoxSocketCentersFor(parameters)
   const profiles = measureMountingHoleProfiles(shape, socketCenters, {
     lower: [-0.03, configuration.basePlateHoleBottomDepth],
@@ -467,12 +508,16 @@ export function assertOpenGridStackableBoxGeometry(
     try {
       assertThinShellQuality(
         inspectOpenGridStackableBoxThinShell(shape, parameters),
+        parameters,
       )
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('OPENGRID_')) {
         throw error
       }
       throw new Error('OPENGRID_STACKABLE_BOX_THIN_SHELL_GEOMETRY_INVALID')
+    }
+    if (parameters.cornerSeatMode === 'integrated') {
+      assertIntegratedSeats(shape, parameters)
     }
     return
   }
@@ -492,18 +537,31 @@ export function assertOpenGridStackableBoxGeometry(
   let quality: OpenGridStackableBoxInterfaceQualityReport
   try {
     quality = inspectOpenGridStackableBoxInterface(shape, parameters)
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('OPENGRID_')) {
+      throw error
+    }
     throw new Error('OPENGRID_STACKABLE_BOX_INTERFACE_GEOMETRY_INVALID')
   }
 
   assertThickShell(quality)
   assertGuideInterface(quality, parameters)
   assertBottomSupport(quality, parameters)
-  assertMountingHoleGeometry(quality)
+  assertMountingHoleGeometry(quality, parameters)
+  if (parameters.cornerSeatMode === 'integrated') {
+    if (
+      quality.integratedSeatRecordCount !==
+      openGridStackableBoxSocketCentersFor(parameters).length
+    ) {
+      throw new Error('OPENGRID_STACKABLE_BOX_INTEGRATED_SEAT_INVALID')
+    }
+  }
   if (
     quality.ordinaryBottomHoleCount !== quality.expectedOrdinaryBottomHoleCount
   ) {
     throw new Error('OPENGRID_STACKABLE_BOX_BOTTOM_GRID_HOLES_INVALID')
   }
-  assertCaptiveSockets(quality.captiveSocketRecords)
+  if (parameters.cornerSeatMode === 'hole') {
+    assertCaptiveSockets(quality.captiveSocketRecords)
+  }
 }

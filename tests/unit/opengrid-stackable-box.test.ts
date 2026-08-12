@@ -19,18 +19,19 @@ import {
   OPENGRID_GRID_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  type OpenGridStackableBoxParameters,
   validateModelParameters,
   validateOpenGridStackableBoxParameters,
 } from '../../src/cad-contract/units'
 
 function parameters(
   overrides: Partial<Parameters<typeof boundsForOpenGridStackableBox>[0]> = {},
-) {
+): OpenGridStackableBoxParameters {
   return {
     x: 1,
     y: 1,
     height: 10,
-    cornerBottomHoles: true,
+    cornerSeatMode: 'hole',
     fullBottomHoleGrid: false,
     basePlateMode: false,
     thinShellMode: false,
@@ -75,31 +76,31 @@ describe('OpenGrid stackable-box contract', () => {
   })
 
   it('controls corner sockets and the full bottom grid independently', () => {
-    const parametersForHoleMode = (
-      cornerBottomHoles: boolean,
+    const parametersForSeatMode = (
+      cornerSeatMode: 'none' | 'hole' | 'integrated',
       fullBottomHoleGrid: boolean,
     ) =>
       ({
         x: 1,
         y: 1,
         height: 10,
-        cornerBottomHoles,
+        cornerSeatMode,
         fullBottomHoleGrid,
       }) as Parameters<typeof openGridStackableBoxSocketCentersFor>[0]
 
-    const cornersOnly = parametersForHoleMode(true, false)
+    const cornersOnly = parametersForSeatMode('hole', false)
     expect(openGridStackableBoxSocketCentersFor(cornersOnly)).toHaveLength(4)
     expect(
       openGridStackableBoxOrdinaryBottomHoleCentersFor(cornersOnly),
     ).toHaveLength(0)
 
-    const noBottomHoles = parametersForHoleMode(false, false)
+    const noBottomHoles = parametersForSeatMode('none', false)
     expect(openGridStackableBoxSocketCentersFor(noBottomHoles)).toEqual([])
     expect(
       openGridStackableBoxOrdinaryBottomHoleCentersFor(noBottomHoles),
     ).toEqual([])
 
-    const fullGridWithoutCorners = parametersForHoleMode(false, true)
+    const fullGridWithoutCorners = parametersForSeatMode('none', true)
     expect(
       openGridStackableBoxSocketCentersFor(fullGridWithoutCorners),
     ).toEqual([])
@@ -231,7 +232,7 @@ describe('OpenGrid stackable-box contract', () => {
         x: 1,
         y: 1,
         height: 10,
-        cornerBottomHoles: true,
+        cornerSeatMode: 'hole',
         fullBottomHoleGrid: false,
         rows: 1,
       }),
@@ -374,8 +375,12 @@ describe('OpenGrid stackable-box contract', () => {
       parameters: parameters({ openingPlusXDepth: 4 }),
     }
 
-    expect(modelFileName(closed)).toBe('opengrid-stackable-box-1x1-h10.step')
-    expect(modelStlFileName(closed)).toBe('opengrid-stackable-box-1x1-h10.stl')
+    expect(modelFileName(closed)).toBe(
+      'opengrid-stackable-box-1x1-h10-seats-hole.step',
+    )
+    expect(modelStlFileName(closed)).toBe(
+      'opengrid-stackable-box-1x1-h10-seats-hole.stl',
+    )
     expect(modelFileName(open)).not.toBe(modelFileName(closed))
     expect(modelStlFileName(open)).not.toBe(modelStlFileName(closed))
     const changedInertValue = {
@@ -395,7 +400,7 @@ describe('OpenGrid stackable-box contract', () => {
     [parameters({ height: 9 }), 'height'],
     [parameters({ x: 18 }), 'x'],
     [parameters({ height: 501 }), 'height'],
-    [parameters({ cornerBottomHoles: 'true' as never }), 'cornerBottomHoles'],
+    [parameters({ cornerSeatMode: 'invalid' as never }), 'cornerSeatMode'],
     [parameters({ fullBottomHoleGrid: 'true' as never }), 'fullBottomHoleGrid'],
     [parameters({ basePlateMode: 'true' as never }), 'basePlateMode'],
     [parameters({ thinShellMode: 'true' as never }), 'thinShellMode'],
@@ -515,8 +520,12 @@ describe('OpenGrid stackable-box contract', () => {
       }),
     }
 
-    expect(modelFileName(model)).toBe('opengrid-stackable-box-1.5x2-h30.step')
-    expect(modelStlFileName(model)).toBe('opengrid-stackable-box-1.5x2-h30.stl')
+    expect(modelFileName(model)).toBe(
+      'opengrid-stackable-box-1.5x2-h30-seats-hole.step',
+    )
+    expect(modelStlFileName(model)).toBe(
+      'opengrid-stackable-box-1.5x2-h30-seats-hole.stl',
+    )
 
     const basePlateModel = {
       modelId: 'opengrid-stackable-box' as const,
@@ -528,10 +537,10 @@ describe('OpenGrid stackable-box contract', () => {
       }),
     }
     expect(modelFileName(basePlateModel)).toBe(
-      'opengrid-stackable-box-1.5x2-h30-base-plate.step',
+      'opengrid-stackable-box-1.5x2-h30-seats-hole-base-plate.step',
     )
     expect(modelStlFileName(basePlateModel)).toBe(
-      'opengrid-stackable-box-1.5x2-h30-base-plate.stl',
+      'opengrid-stackable-box-1.5x2-h30-seats-hole-base-plate.stl',
     )
 
     const thinShellModel = {
@@ -544,10 +553,10 @@ describe('OpenGrid stackable-box contract', () => {
       }),
     }
     expect(modelFileName(thinShellModel)).toBe(
-      'opengrid-stackable-box-1.5x2-h30-thin-shell.step',
+      'opengrid-stackable-box-1.5x2-h30-seats-hole-thin-shell.step',
     )
     expect(modelStlFileName(thinShellModel)).toBe(
-      'opengrid-stackable-box-1.5x2-h30-thin-shell.stl',
+      'opengrid-stackable-box-1.5x2-h30-seats-hole-thin-shell.stl',
     )
   })
 })

@@ -1,77 +1,57 @@
 ## Purpose
 
 This capability defines the independently validated OpenGrid stackable-cylinder component, including its typed parameters, printable circular stacking geometry, safe hole layout, lifecycle quality gates, and deterministic exports.
-
 ## Requirements
-
 ### Requirement: OpenGrid stackable-cylinder identity and parameters
 
-The system MUST expose the independently validated `opengrid-stackable-cylinder` component with `modelId=opengrid-stackable-cylinder`, `buildKey=opengrid-stackable-cylinder`, and route `/cad/opengrid-stackable-cylinder`. Its user-facing display name MUST be `Round Box (圓盒)`. The normalized parameter snapshot MUST contain exactly integer `diameter` and `height` values, boolean `thinBottomMode`, boolean `bottomPlateMode`, boolean `bottomHolesEnabled`, and three typed opening fields for each of `+X`, `-X`, `+Y`, and `-Y`: `openingPlusXDepth`, `openingPlusXBottomLength`, `openingPlusXAngle`, `openingMinusXDepth`, `openingMinusXBottomLength`, `openingMinusXAngle`, `openingPlusYDepth`, `openingPlusYBottomLength`, `openingPlusYAngle`, `openingMinusYDepth`, `openingMinusYBottomLength`, and `openingMinusYAngle`. `diameter` MUST represent the outer diameter and MUST be within 20–300 mm; `height` MUST be within 10–500 mm; the default profile is selected when both mode flags are false, the thin-bottom profile when `thinBottomMode=true`, and the bottom-plate profile when `bottomPlateMode=true`. The two mode flags MUST NOT both be true. `bottomHolesEnabled=true` MUST generate the complete center-plus-safe-outer-hole group and `bottomHolesEnabled=false` MUST generate no bottom holes. Both numeric fields MUST use a 1 mm step and decimal, empty, non-finite, zero, negative, and out-of-range values MUST be rejected without rounding. The height slider MUST expose 10–200 mm while the height text input MUST expose 10–500 mm; the existing diameter range and control limits MUST remain unchanged. Opening depth and flat-bottom length MUST be finite non-negative integer millimetres with a 1 mm step; every bottom-length control MUST default to and start at 1 mm. Its live maximum MUST be the largest integer that keeps its derived upper width strictly below the outer diameter and keeps each enabled neighboring opening pair strictly below a combined 90° angular footprint, capped by the configured global maximum. A zero-depth opening remains geometrically disabled, so its default 1 mm length MUST NOT create an opening. The depth control's live maximum MUST be the selected cylinder height minus the active floor thickness (5 mm in default mode, 2 mm in thin-bottom mode, and 3 mm in bottom-plate mode), capped by the configured global maximum; the exact floor boundary MUST be accepted and deeper values MUST be rejected. An enabled opening angle MUST be an integer degree between 1 and 90, measured from the flat bottom; 90° MUST produce vertical side walls and 45° MUST produce outward-sloping V-like side walls. A zero opening depth MUST mean that direction has no side opening, allowing legacy geometry to remain unchanged. A legacy snapshot that contains only `diameter` and `height` MUST normalize both mode flags to `false`, the hole flag to `true`, and all opening depths to `0`, bottom lengths to `1`, and angles to `90`. The existing model identity MUST remain unchanged.
+The system MUST expose the independently validated
+`opengrid-stackable-cylinder` component with
+`modelId=opengrid-stackable-cylinder`, `buildKey=opengrid-stackable-cylinder`,
+and route `/cad/opengrid-stackable-cylinder`. Its display name MUST remain
+`Round Box (圓盒)`. The normalized snapshot MUST contain integer `diameter` and
+`height`, boolean `thinBottomMode` and `bottomPlateMode`, enum
+`bottomSeatMode`, and the existing twelve typed opening fields.
+`bottomSeatMode` MUST be exactly `none`, `hole`, or `integrated`, with visible
+labels `無角座`, `角座孔`, and `內建角座` respectively. The numeric ranges,
+opening semantics, profile flags, 1 mm controls, and the mutual exclusion of
+`thinBottomMode` and `bottomPlateMode` MUST remain unchanged.
+
+The default snapshot MUST remain `diameter=60`, `height=20`,
+`thinBottomMode=false`, `bottomPlateMode=false`, and `bottomSeatMode='hole'`,
+with zero-depth openings, bottom length 1, and angle 90. A legacy
+`bottomHolesEnabled=false/true` value MUST migrate to
+`bottomSeatMode='none'/'hole'`; a missing legacy value MUST migrate to
+`'hole'`. A canonical enum value MUST take precedence over a stale boolean,
+and unsupported enum values MUST be rejected. Existing model identity, route,
+profile, opening, and height contracts MUST remain unchanged.
 
 #### Scenario: Valid cylinder defaults
 
 - **WHEN** the cylinder route initializes without valid persisted parameters
-- **THEN** the catalog defaults MUST provide `diameter=60`, `height=20`, `thinBottomMode=false`, `bottomPlateMode=false`, and `bottomHolesEnabled=true`
-- **AND** the opening defaults MUST preserve the existing cylinder geometry unless a user enables a positive opening depth
-- **AND** the model MUST be centered on X/Y with its base at Z=0
-- **AND** the Worker MUST generate a non-empty previewable B-Rep using the default original-style profile
+- **THEN** the panel MUST select `角座孔`
+- **AND** the normalized snapshot MUST use `bottomSeatMode='hole'`
+- **AND** the existing default shell and opening geometry MUST remain unchanged
 
-#### Scenario: Valid mode changes
+#### Scenario: Cylinder seat radio group
 
-- **WHEN** a user changes the bottom mode while keeping valid diameter and height values
-- **THEN** the snapshot MUST pass component validation with the selected boolean mode
-- **AND** the Worker MUST generate the corresponding default, thin-bottom, or bottom-plate profile
-- **AND** the stable model ID, route, diameter range, height range, and 1 mm numeric controls MUST remain unchanged
+- **WHEN** a user selects a locating-seat option
+- **THEN** exactly one of `無角座`, `角座孔`, or `內建角座` MUST be selected
+- **AND** the Worker snapshot MUST contain the corresponding enum value
+- **AND** no `bottomHolesEnabled` field MUST be sent in the canonical snapshot
 
-#### Scenario: All bottom holes toggle together
+#### Scenario: Legacy cylinder migration
 
-- **WHEN** a user changes `bottomHolesEnabled` while keeping the diameter and bottom mode unchanged
-- **THEN** the snapshot MUST pass component validation with the selected boolean value
-- **AND** `true` MUST generate the center hole and every safe outer cardinal hole for the selected mode
-- **AND** `false` MUST generate no bottom holes
-- **AND** the UI MUST NOT provide individual center-hole or outer-hole toggles
+- **WHEN** persistence contains `bottomHolesEnabled=false` or `true`
+- **THEN** hydration MUST produce `bottomSeatMode='none'` or `'hole'`
+- **AND** the old no-hole or stepped-hole geometry MUST be preserved
+- **AND** a successful update MUST rewrite only the canonical enum field
 
-#### Scenario: Legacy persisted parameters
+#### Scenario: Invalid cylinder seat mode
 
-- **WHEN** browser persistence contains a valid `{ diameter, height }` snapshot without either new boolean field
-- **THEN** hydration MUST interpret it as `thinBottomMode=false`, `bottomPlateMode=false`, and `bottomHolesEnabled=true`
-- **AND** hydration MUST add depth `0`, bottom length `1`, and angle `90` for every direction
-- **AND** persistence MUST rewrite only the normalized snapshot with the explicit default mode after a successful update
-
-#### Scenario: Valid diameter, height, and opening changes
-
-- **WHEN** a user enters integer diameter and height values within the declared ranges and valid opening values for any directions
-- **THEN** the snapshot MUST pass component validation
-- **AND** the generated bounds MUST use the requested outer diameter and overall height within the project tolerance
-- **AND** each positive opening depth, flat-bottom length, and angle MUST be retained independently in the normalized snapshot
-
-#### Scenario: Valid diameter and height changes
-
-- **WHEN** a user enters integer diameter and height values within the declared ranges
-- **THEN** the snapshot MUST pass component validation
-- **AND** the generated bounds MUST use the requested outer diameter and overall height within the project tolerance
-
-#### Scenario: Maximum manual height is valid
-
-- **WHEN** a user enters `height=500` while the diameter remains within 20–300 mm
-- **THEN** the snapshot MUST pass component validation
-- **AND** the generated cylinder MUST have the requested 500 mm overall height
-- **AND** the height slider MUST retain a maximum of 200 mm
-
-#### Scenario: Invalid cylinder or opening parameters
-
-- **WHEN** diameter, height, `thinBottomMode`, `bottomPlateMode`, or `bottomHolesEnabled` is fractional, empty, non-finite, non-boolean, non-positive, or outside its declared range, or both mode flags are true
+- **WHEN** `bottomSeatMode` is missing from a canonical current snapshot or has
+  an unsupported value
 - **THEN** validation MUST return a field-specific error
-- **AND** the invalid snapshot MUST NOT be sent to the Worker for generation or export
-- **WHEN** an opening depth or bottom length is fractional, negative, non-finite, or geometrically unsupported, an enabled opening has no positive straight side remaining between its fixed-radius transitions, or an enabled opening angle is outside 1–90 degrees or fractional
-- **THEN** validation MUST return an error for that direction's field
-- **AND** the invalid snapshot MUST NOT replace the last valid model revision
-
-#### Scenario: Invalid cylinder parameters
-
-- **WHEN** diameter, height, `thinBottomMode`, `bottomPlateMode`, or `bottomHolesEnabled` is fractional, empty, non-finite, non-boolean, non-positive, or outside its declared range, or both mode flags are true
-- **THEN** validation MUST return a field-specific error
-- **AND** the invalid snapshot MUST NOT be sent to the Worker for generation or export
+- **AND** the invalid snapshot MUST NOT be generated, exported, or committed
 
 ### Requirement: Cylindrical shell and floor
 
@@ -108,84 +88,93 @@ The default and thin modes MUST retain the common printable lower foot bevel and
 
 ### Requirement: Stepped center mounting hole
 
-When `bottomHolesEnabled=true`, every valid cylinder MUST contain one centered floor hole at `(0, 0)`. From the outside bottom surface toward the interior, the hole profile MUST depend on the selected profile: in the default mode it MUST have a straight `Ø5 mm` section from nominal Z=0 through Z=4, followed by a straight `Ø7.05 mm` section from nominal Z=4 through Z=5; in thin-bottom mode it MUST have a straight `Ø5 mm` section from nominal Z=0 through Z=1, followed by a straight `Ø7.05 mm` section from nominal Z=1 through Z=2; in bottom-plate mode it MUST have a straight `Ø5 mm` section from nominal Z=0 through Z=2, followed by a straight `Ø7.05 mm` section from nominal Z=2 through Z=3. Each transition MUST be a planar shoulder at the selected first-section depth and MUST NOT be a taper or a chamfer. When `bottomHolesEnabled=false`, no center or outer bottom hole may be generated.
+When `bottomSeatMode='hole'`, every valid cylinder MUST contain the existing
+center floor hole at `(0, 0)` with the profile-specific Ø5/Ø7.05 planar stepped
+sections: 4+1 mm in default mode, 1+1 mm in thin-bottom mode, and 2+1 mm in
+bottom-plate mode. The transition MUST remain a planar shoulder. When
+`bottomSeatMode='none'`, the center and all outer bottom-hole candidates MUST
+remain solid. When `bottomSeatMode='integrated'`, the center MUST instead carry
+one fused solid Ø5 mm cylinder exactly 3 mm high from Z=-3 mm through Z=0;
+there MUST be no stepped center hole at that position.
 
-#### Scenario: Default center hole profile
+#### Scenario: Cylinder hole mode preserves the center socket
 
-- **WHEN** a valid cylinder completes generation with `thinBottomMode=false` and `bottomPlateMode=false`
-- **THEN** its center floor hole MUST expose a `Ø5 mm` outside opening through 4 mm of floor depth
-- **AND** the hole MUST change to `Ø7.05 mm` after 4 mm of axial depth
-- **AND** the larger section MUST terminate at the 5 mm interior floor surface
+- **WHEN** a valid cylinder uses `bottomSeatMode='hole'`
+- **THEN** the center hole MUST retain the selected profile's existing Ø5 mm
+  lower and Ø7.05 mm upper sections
+- **AND** its center MUST remain at X=0 and Y=0
 
-#### Scenario: Thin center hole profile
+#### Scenario: Cylinder no-seat mode is solid
 
-- **WHEN** a valid cylinder completes generation with `thinBottomMode=true` and `bottomPlateMode=false`
-- **THEN** its center floor hole MUST expose a `Ø5 mm` outside opening through 1 mm of floor depth
-- **AND** the hole MUST change to `Ø7.05 mm` after 1 mm of axial depth
-- **AND** the larger section MUST terminate at the 2 mm central flat floor surface
+- **WHEN** a valid cylinder uses `bottomSeatMode='none'`
+- **THEN** the bottom MUST remain solid at the center and all outer-hole
+  candidates
+- **AND** no stepped-hole cylindrical faces or integrated seats may be present
 
-#### Scenario: Bottom holes disabled
+#### Scenario: Cylinder integrated center seat
 
-- **WHEN** a valid cylinder completes generation with `bottomHolesEnabled=false`
-- **THEN** the bottom surface MUST remain solid across the center and all outer-hole candidate locations
-- **AND** the result MUST contain no stepped-hole cylindrical faces
-
-#### Scenario: Center hole remains at the origin
-
-- **WHEN** the diameter or bottom mode changes through the supported values while `bottomHolesEnabled=true`
-- **THEN** the center hole MUST remain at X=0 and Y=0
-- **AND** the selected mode MUST NOT move or resize either fixed hole diameter
+- **WHEN** a valid cylinder uses `bottomSeatMode='integrated'`
+- **THEN** the center MUST contain a fused Ø5 mm round seat spanning Z=-3 mm to
+  Z=0
+- **AND** the center MUST not contain the hole-mode stepped cut
+- **AND** the result MUST remain one valid solid
 
 ### Requirement: Four outer cardinal holes from the 14 mm grid
 
-When `bottomHolesEnabled=true`, in addition to the center hole the builder MUST calculate the outer-hole index from the 14 mm grid and emit only the outermost four cardinal holes. Let `R=diameter/2`, `rH=7.05/2`, `P=14`, and `E=2`. In default and bottom-plate modes, the index MUST be `n=max(0, floor((R-E-rH)/P))`. In thin-bottom mode, the index MUST use both the outer boundary and the derived central flat-floor/ramp boundary: `n=max(0, floor(min((R-E-rH)/P, (rFlat-2-rH)/P)))`. When `n>=1`, the builder MUST add exactly `(±14n,0)` and `(0,±14n)`; when `n=0`, it MUST add no outer holes. No diagonal holes, intermediate grid holes, or additional X/Y holes are permitted. Every outer hole MUST use the mode-specific stepped profile from the center-hole requirement. When `bottomHolesEnabled=false`, the builder MUST emit no outer holes regardless of the calculated index.
+When `bottomSeatMode='hole'`, the builder MUST retain the existing safe outer
+cardinal calculation and emit only the outermost four positions
+`(±14n,0)` and `(0,±14n)` when the calculated index `n` is at least one. The
+profile-specific outer clearance and thin-floor/ramp rules MUST remain
+unchanged. When `bottomSeatMode='none'`, no outer hole may be emitted. When
+`bottomSeatMode='integrated'`, the same calculated safe positions MUST receive
+fused Ø5 mm × 3 mm seats from Z=-3 mm to Z=0 instead of holes. No diagonal,
+intermediate, or additional positions are permitted in any mode.
 
-#### Scenario: Small diameter is center-only
+#### Scenario: Hole mode uses the safe cardinal group
 
-- **WHEN** `bottomHolesEnabled=true` and a valid diameter cannot fit a complete `Ø7.05 mm` outer-hole profile with the selected mode's required clearances
-- **THEN** the generated result MUST contain the center hole only
-- **AND** the builder MUST NOT emit an unsafe, off-grid, or ramp-intersecting outer hole
+- **WHEN** a valid cylinder uses `bottomSeatMode='hole'` and its diameter fits
+  the first safe outer layer
+- **THEN** it MUST contain exactly the center hole and the four existing
+  cardinal holes at the calculated 14 mm layer
+- **AND** no diagonal or intermediate hole may be present
 
-#### Scenario: Default first safe outer layer
+#### Scenario: No-seat mode omits all cardinal holes
 
-- **WHEN** `thinBottomMode=false`, `bottomPlateMode=false`, `bottomHolesEnabled=true`, and diameter is 40 mm or greater at the first safe grid layer
-- **THEN** the result MUST contain exactly four outer holes at `(+14,0)`, `(-14,0)`, `(0,+14)`, and `(0,-14)`
-- **AND** no other non-center hole may be present
+- **WHEN** a valid cylinder uses `bottomSeatMode='none'`
+- **THEN** it MUST contain no center or outer bottom holes
+- **AND** no hole-layout failure may be raised solely because holes are absent
 
-#### Scenario: Thin first safe outer layer
+#### Scenario: Integrated mode mirrors the safe positions
 
-- **WHEN** `thinBottomMode=true`, `bottomPlateMode=false`, `bottomHolesEnabled=true`, and diameter is 48 mm or less at the first candidate layer
-- **THEN** the result MUST remain center-only because the outer holes cannot retain the required flat-floor/ramp margin
-- **WHEN** `thinBottomMode=true`, `bottomPlateMode=false`, `bottomHolesEnabled=true`, and diameter is 49 mm or greater at the first safe grid layer
-- **THEN** the result MUST contain exactly the four first-layer cardinal holes
-
-#### Scenario: Maximum diameter uses the outermost safe layer
-
-- **WHEN** a valid cylinder with diameter 300 mm is generated in any of the three profiles with `bottomHolesEnabled=true`
-- **THEN** the result MUST place the four outer holes at `(+140,0)`, `(-140,0)`, `(0,+140)`, and `(0,-140)`
-- **AND** the hole set MUST contain no additional grid points
+- **WHEN** a valid cylinder uses `bottomSeatMode='integrated'`
+- **THEN** every position that would be a safe outer hole in `hole` mode MUST
+  contain one Ø5 mm × 3 mm outward seat
+- **AND** the safe outer index and radial positions MUST be identical to hole
+  mode for the same diameter and profile
 
 ### Requirement: Outer-edge hole clearance
 
-When `bottomHolesEnabled=true`, the outer circular edge of every generated outer `Ø7.05 mm` hole opening MUST remain at least 2 mm from the outer cylindrical boundary in its radial direction. In thin-bottom mode, the complete outer-hole profile MUST also remain at least 2 mm inside the radial start of the central flat floor so no generated hole may intersect the 45-degree internal ramp. In default and bottom-plate modes, the hole-bearing floor MUST remain continuous around each selected outer hole. All three profiles MUST use the largest hole section for their clearance checks. When `bottomHolesEnabled=false`, no hole-clearance calculation is required because no bottom holes exist.
+The existing outer-edge and thin-bottom ramp clearance calculation MUST apply
+to the position set selected by `bottomSeatMode`. Hole mode MUST validate the
+Ø7.05 mm hole profile as before. Integrated mode MUST validate the Ø5 mm seat
+radius and its fused footprint against the same safe radial positions; its
+3 mm downward extension MUST NOT alter the selected outer index. None mode
+MUST perform no hole-clearance calculation and MUST not create a false failure
+for the solid bottom.
 
-#### Scenario: Safe outer-hole placement
+#### Scenario: Safe integrated seat placement
 
-- **WHEN** `bottomHolesEnabled=true` and an outer-hole grid point is selected in any of the three profiles
-- **THEN** the radial distance from the hole's `Ø7.05 mm` outer edge to the cylinder boundary MUST be at least 2 mm
-- **AND** in thin-bottom mode the radial distance from that edge to the internal ramp start MUST be at least 2 mm
-- **AND** the complete stepped hole MUST remain inside the selected mode's hole-bearing floor
+- **WHEN** an integrated outer position is selected
+- **THEN** its Ø5 mm footprint MUST remain within the existing safe outer and,
+  for thin-bottom mode, flat-floor/ramp clearances
+- **AND** the seat MUST be fused without changing the cylinder diameter
 
-#### Scenario: Hole clearance checks are inactive when disabled
+#### Scenario: Unsafe layer is skipped in both active modes
 
-- **WHEN** `bottomHolesEnabled=false`
-- **THEN** no outer-hole clearance failure may be raised because no bottom hole is generated
-
-#### Scenario: Unsafe grid layer is skipped
-
-- **WHEN** the next 14 mm grid layer would violate either applicable 2 mm clearance
-- **THEN** that layer MUST NOT be generated
-- **AND** the preceding safe outermost layer, or center-only layout, MUST remain unchanged
+- **WHEN** the next 14 mm layer would violate the applicable radial clearance
+- **THEN** neither a hole nor an integrated seat may be generated at that layer
+- **AND** the preceding safe layer or center-only/center-seat layout MUST remain
+  unchanged
 
 ### Requirement: Same-diameter stacking interface
 
@@ -215,95 +204,55 @@ The top outer rim MUST remain square at the nominal outer radius with no added s
 
 ### Requirement: Cylinder geometry quality and exports
 
-The builder MUST reject any generated cylinder that is empty, non-finite, not a single valid solid, has invalid B-Rep topology, violates its bounds, violates the selected mode's floor or wall contract, violates the selected mode's ramp/fillet contract, violates the selected mode's stepped hole profile when `bottomHolesEnabled=true`, violates applicable outer-hole clearance when holes are enabled, violates any enabled four-direction opening profile or separation constraint, or fails the common same-diameter interface probes. When `bottomHolesEnabled=false`, the builder MUST require zero bottom-hole records and MUST skip hole-profile and hole-clearance requirements. A valid committed result MUST remain eligible for preview, STEP export, and binary STL export through the existing Worker lifecycle. The quality report MUST identify the selected mode, all-holes state, and opening validation state so diagnostics cannot confuse the profiles, hole-disabled branch, or opening-disabled branch.
+The builder MUST reject any result that is empty, not a single valid solid,
+outside its bounds, or invalid for its selected profile, opening, floor, wall,
+stacking, and clearance contract. In `hole` mode it MUST validate the existing
+stepped hole records and compatibility fixture. In `none` mode it MUST require
+zero bottom-hole records and zero integrated-seat records. In `integrated` mode
+it MUST require the expected center-plus-safe-cardinal seat records, validate
+their Ø5 mm diameter and 3 mm Z span from -3 to 0, and retain the existing
+shell/opening/stacking checks. The contract bounds MUST use min Z=-3 mm only in
+integrated mode; max Z and XY bounds MUST remain unchanged. Valid results MUST
+remain eligible for preview, STEP export, and binary STL export.
 
-#### Scenario: Valid default cylinder is exportable
+#### Scenario: All three seat modes are exportable
 
-- **WHEN** a valid default-mode parameter snapshot completes geometry and quality validation with `bottomHolesEnabled=true`
+- **WHEN** a valid cylinder snapshot in any seat mode completes quality
+  validation
 - **THEN** the workspace MUST commit a non-empty preview revision
-- **AND** STEP and STL export MUST be enabled for that committed revision
-- **AND** exported geometry MUST contain the 5 mm floor and 4+1 mm stepped hole profile
+- **AND** the reported bounds MUST match the selected mode
+- **AND** STEP and STL export MUST be enabled for that revision
 
-#### Scenario: Valid thin cylinder is exportable
+#### Scenario: Invalid integrated geometry does not replace the model
 
-- **WHEN** a valid thin-bottom parameter snapshot completes geometry and quality validation with `bottomHolesEnabled=true`
-- **THEN** the workspace MUST commit a non-empty preview revision
-- **AND** STEP and STL export MUST be enabled for that committed revision
-- **AND** exported geometry MUST contain the 2 mm floor and 1+1 mm stepped hole profile
-
-#### Scenario: Valid cylinder with all bottom holes disabled is exportable
-
-- **WHEN** a valid parameter snapshot completes geometry and quality validation with `bottomHolesEnabled=false`
-- **THEN** the workspace MUST commit a non-empty preview revision
-- **AND** STEP and STL export MUST be enabled for that committed revision
-- **AND** exported geometry MUST contain no bottom holes while retaining the selected floor and stacking profile
-
-#### Scenario: Valid cylinder is exportable
-
-- **WHEN** a valid parameter snapshot, including zero or more enabled side openings, completes geometry and quality validation
-- **THEN** the workspace MUST commit a non-empty preview revision
-- **AND** STEP and STL export MUST be enabled for that committed revision
-
-#### Scenario: Valid independent openings preserve the existing interfaces
-
-- **WHEN** one or more directions use different valid depth, flat-bottom length, or angle values
-- **THEN** each enabled opening MUST be present only at its requested cardinal direction
-- **AND** all bottom holes, the active floor, the printable lower profile, and the same-diameter stacking interface MUST remain valid
-- **AND** the result MUST remain a single valid solid
-
-#### Scenario: Invalid geometry or mode does not replace the current model
-
-- **WHEN** floor, ramp, fillet, hole, clearance, opening separation, interface, or mode validation fails
-- **THEN** the candidate MUST be rejected with a diagnosable error
-- **AND** the last valid committed revision MUST remain visible
-- **AND** export MUST remain disabled for the failed snapshot
-
-#### Scenario: Invalid geometry does not replace the current model
-
-- **WHEN** geometry, opening separation, floor preservation, or interface validation fails
+- **WHEN** a seat fuse, seat dimension, bounds, shell, opening, or stacking
+  quality probe fails
 - **THEN** the candidate MUST be rejected with a diagnosable error
 - **AND** the last valid committed revision MUST remain visible
 - **AND** export MUST remain disabled for the failed snapshot
 
 ### Requirement: Deterministic cylinder export metadata
 
-The catalog MUST provide deterministic filenames generated from typed normalized parameters. Default-mode STEP/STL filenames with bottom holes enabled MUST retain the established `opengrid-stackable-cylinder-d{diameter}-h{height}` identity with `.step` or `.stl`; thin-bottom filenames MUST append `-thin`; bottom-plate filenames MUST append `-bottom-plate`; any no-hole export MUST append `-no-holes` after the mode suffix when present. When any side opening differs from its no-opening default, the filename identity MUST include a deterministic opening-settings fingerprint that changes whenever any of the twelve opening values changes; when all four opening depths are zero, the existing filename identity MUST remain unchanged. Filenames MUST NOT depend on raw input formatting and MUST distinguish all three bottom geometries, the all-holes state, and opening settings.
+The catalog MUST provide deterministic STEP and STL filenames generated from
+typed normalized parameters. Every filename MUST include exactly one seat
+suffix: `-seats-none`, `-seats-hole`, or `-seats-integrated`, in addition to
+the existing diameter, height, profile, and opening fingerprint identity. The
+suffix MUST be present even for the default mode. Filenames MUST NOT depend on
+raw input formatting and MUST distinguish all three bottom geometries and all
+opening settings.
 
-#### Scenario: Default cylinder export filenames
+#### Scenario: Cylinder filenames distinguish seat modes
 
-- **WHEN** a default-mode cylinder with diameter 56 mm and height 30 mm is exported with `bottomHolesEnabled=true`
-- **THEN** the suggested STEP filename MUST be `opengrid-stackable-cylinder-d56-h30.step`
-- **AND** the suggested STL filename MUST be `opengrid-stackable-cylinder-d56-h30.stl`
+- **WHEN** three cylinders have identical diameter, height, profile, and
+  opening values but use the three different seat modes
+- **THEN** their STEP and STL filenames MUST be distinct
+- **AND** each filename MUST contain its corresponding deterministic seat suffix
 
-#### Scenario: Thin cylinder export filenames
+#### Scenario: Integrated cylinder export metadata
 
-- **WHEN** a thin-bottom cylinder with diameter 56 mm and height 30 mm is exported with `bottomHolesEnabled=true`
-- **THEN** the suggested STEP filename MUST be `opengrid-stackable-cylinder-d56-h30-thin.step`
-- **AND** the suggested STL filename MUST be `opengrid-stackable-cylinder-d56-h30-thin.stl`
-
-#### Scenario: No-hole export filenames
-
-- **WHEN** a default-mode cylinder with diameter 56 mm and height 30 mm is exported with `bottomHolesEnabled=false`
-- **THEN** the suggested STEP filename MUST be `opengrid-stackable-cylinder-d56-h30-no-holes.step`
-- **AND** the suggested STL filename MUST be `opengrid-stackable-cylinder-d56-h30-no-holes.stl`
-
-#### Scenario: Bottom-plate export filename
-
-- **WHEN** a bottom-plate cylinder with diameter 56 mm and height 30 mm is exported with `bottomHolesEnabled=true`
-- **THEN** the suggested STEP filename MUST be `opengrid-stackable-cylinder-d56-h30-bottom-plate.step`
-- **AND** the suggested STL filename MUST be `opengrid-stackable-cylinder-d56-h30-bottom-plate.stl`
-
-#### Scenario: Cylinder export filenames
-
-- **WHEN** a cylinder with diameter 56 mm and height 30 mm and no enabled side openings is exported
-- **THEN** the suggested STEP filename MUST identify `opengrid-stackable-cylinder`, `d56`, and `h30`
-- **AND** the suggested STL filename MUST use the same typed parameter identity with the `.stl` extension
-
-#### Scenario: Opening settings are represented deterministically
-
-- **WHEN** two valid cylinders have identical dimensions and bottom settings but different opening values
-- **THEN** their suggested STEP and STL filenames MUST have different deterministic opening identities
-- **AND** equivalent typed values entered with different raw formatting MUST produce the same filename
+- **WHEN** an integrated-seat cylinder is exported
+- **THEN** both filenames MUST contain `-seats-integrated`
+- **AND** the exported geometry MUST contain the selected Ø5 mm × 3 mm seats
 
 ### Requirement: Bottom-plate profile
 

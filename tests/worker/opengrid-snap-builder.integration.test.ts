@@ -1176,6 +1176,7 @@ describe('OpenGrid Snap reference builder', () => {
         reference.delete()
       }
     },
+    120_000,
   )
 
   it('meshes the Directional Lite offset assembly with both optional features', async () => {

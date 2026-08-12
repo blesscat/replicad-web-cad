@@ -9,6 +9,7 @@ import {
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   type OpenGridStackableBoxParameters,
 } from '../../../cad-contract/units'
 import {
@@ -31,6 +32,7 @@ import {
   countVerticalProfileFaces,
   edgeBandExpectedVolumes,
   edgeBandVolumes,
+  readFaceQualityRecords,
   volumeInBox,
 } from './quality-metrics'
 import {
@@ -44,7 +46,42 @@ import {
   measureBottomGridSeamSupportThickness,
 } from './quality-seams'
 import type { OpenGridStackableBoxInterfaceQualityReport } from './quality-types'
-import { deleteShape, readBounds } from './shared'
+import { closeEnough, deleteShape, readBounds } from './shared'
+
+function isIntegratedSeatRecordFor(
+  record: ReturnType<typeof readFaceQualityRecords>[number],
+  center: readonly [number, number],
+): boolean {
+  const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
+  const diameterX = record.max[0] - record.min[0]
+  const diameterY = record.max[1] - record.min[1]
+  const centerX = (record.min[0] + record.max[0]) / 2
+  const centerY = (record.min[1] + record.max[1]) / 2
+  const zSpan = record.max[2] - record.min[2]
+  return (
+    record.surfaceType === 'CYLINDRE' &&
+    closeEnough(centerX, center[0], 0.08) &&
+    closeEnough(centerY, center[1], 0.08) &&
+    closeEnough(diameterX, configuration.integratedSeatDiameter, 0.15) &&
+    closeEnough(diameterY, configuration.integratedSeatDiameter, 0.15) &&
+    closeEnough(diameterX, diameterY, 0.08) &&
+    closeEnough(zSpan, configuration.integratedSeatHeight, 0.1) &&
+    record.min[2] <= configuration.integratedSeatMinZ + 0.03 &&
+    record.max[2] >= 0 - 0.03
+  )
+}
+
+export function integratedSeatRecordCountFor(
+  shape: Shape3D,
+  parameters: OpenGridStackableBoxParameters,
+): number {
+  if (parameters.cornerSeatMode !== 'integrated') return 0
+
+  const records = readFaceQualityRecords(shape)
+  return openGridStackableBoxSocketCentersFor(parameters).filter((center) =>
+    records.some((record) => isIntegratedSeatRecordFor(record, center)),
+  ).length
+}
 
 function thicknessesFromVolumes(
   volumes: number[],
@@ -64,7 +101,10 @@ function floorProbeCenter(
   halfExtent: number,
   parameters: OpenGridStackableBoxParameters,
 ): [number, number] | null {
-  const socketCenters = openGridStackableBoxSocketCentersFor(parameters)
+  const socketCenters =
+    parameters.cornerSeatMode === 'hole'
+      ? openGridStackableBoxSocketCentersFor(parameters)
+      : []
   const ordinaryHoleCenters =
     openGridStackableBoxOrdinaryBottomHoleCentersFor(parameters)
   const holeCenters = [...socketCenters, ...ordinaryHoleCenters]
@@ -719,7 +759,10 @@ export function inspectOpenGridStackableBoxInterface(
       (total, faceCount) => total + faceCount,
       0,
     )
-  const socketCenters = openGridStackableBoxSocketCentersFor(parameters)
+  const socketCenters =
+    parameters.cornerSeatMode === 'hole'
+      ? openGridStackableBoxSocketCentersFor(parameters)
+      : []
   const mountingHoleStepVolumes = measureMountingHoleStepVolumes(
     shape,
     socketCenters,
@@ -731,8 +774,13 @@ export function inspectOpenGridStackableBoxInterface(
   const captiveSocketRecords = socketCenters.map((center) =>
     inspectCaptiveSocketInterface(shape, center, parameters),
   )
+  const integratedSeatRecordCount = integratedSeatRecordCountFor(
+    shape,
+    parameters,
+  )
 
   return {
+    cornerSeatMode: parameters.cornerSeatMode,
     externalHeight: externalOpenGridStackableBoxHeightFor(parameters),
     measuredExternalHeight: readBounds(shape)[1][2],
     upperInnerRimZ,
@@ -756,6 +804,7 @@ export function inspectOpenGridStackableBoxInterface(
     mountingHoleStepVolumes,
     mountingHoleProfiles,
     captiveSocketRecords,
+    integratedSeatRecordCount,
     ordinaryBottomHoleCount: countOrdinaryBottomHoleFaces(
       shape,
       ordinaryBottomHoleCenters,

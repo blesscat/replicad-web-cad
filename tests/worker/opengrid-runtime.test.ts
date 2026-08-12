@@ -114,7 +114,7 @@ function stackableBoxGenerateCommand(
       x: 0.5,
       y: 1.5,
       height: 20,
-      cornerBottomHoles: true,
+      cornerSeatMode: 'hole',
       fullBottomHoleGrid: false,
       basePlateMode: false,
     },
@@ -506,7 +506,7 @@ describe('OpenGrid Worker runtime', () => {
           x: 0.5,
           y: 1.5,
           height: 20,
-          cornerBottomHoles: true,
+          cornerSeatMode: 'hole',
           fullBottomHoleGrid: true,
           basePlateMode: false,
         },
@@ -520,7 +520,7 @@ describe('OpenGrid Worker runtime', () => {
         x: 0.5,
         y: 1.5,
         height: 20,
-        cornerBottomHoles: true,
+        cornerSeatMode: 'hole',
         fullBottomHoleGrid: true,
         basePlateMode: false,
       },
@@ -560,7 +560,7 @@ describe('OpenGrid Worker runtime', () => {
       x: 0.5,
       y: 1.5,
       height: 20,
-      cornerBottomHoles: true,
+      cornerSeatMode: 'hole',
       fullBottomHoleGrid: true,
       basePlateMode: false,
     })
@@ -773,7 +773,7 @@ describe('OpenGrid Worker runtime', () => {
           height: 30,
           thinBottomMode: false,
           bottomPlateMode: true,
-          bottomHolesEnabled: false,
+          bottomSeatMode: 'none',
         },
       }),
     )
@@ -785,7 +785,7 @@ describe('OpenGrid Worker runtime', () => {
         height: 30,
         thinBottomMode: false,
         bottomPlateMode: true,
-        bottomHolesEnabled: false,
+        bottomSeatMode: 'none',
       },
       expect.any(Object),
     )
@@ -837,12 +837,36 @@ describe('OpenGrid Worker runtime', () => {
           x: 0.25,
           y: 1.5,
           height: 20,
-          cornerBottomHoles: true,
+          cornerSeatMode: 'hole',
           fullBottomHoleGrid: false,
           basePlateMode: false,
         },
       }),
     )
+
+    expect(mocks.buildModelBRep).not.toHaveBeenCalled()
+    expect(events.at(-1)).toMatchObject({
+      kind: 'operation.error',
+      code: 'PROTOCOL_INVALID',
+    })
+  })
+
+  it('rejects dispatch for the removed box-normal model', async () => {
+    const events: unknown[] = []
+    const runtime = new CadWorkerRuntime('epoch-box-normal-removed', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle({
+      ...stackableBoxGenerateCommand(1),
+      modelId: 'box-normal',
+      parameters: {
+        x: 2,
+        y: 2,
+        height: 10,
+        cornerPosts: true,
+      },
+    } as never)
 
     expect(mocks.buildModelBRep).not.toHaveBeenCalled()
     expect(events.at(-1)).toMatchObject({
@@ -866,7 +890,7 @@ describe('OpenGrid Worker runtime', () => {
           x: 1,
           y: 1,
           height: 20,
-          cornerBottomHoles: true,
+          cornerSeatMode: 'hole',
           fullBottomHoleGrid: false,
           basePlateMode: false,
         },

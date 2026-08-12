@@ -22,6 +22,37 @@
   let bottomPlateMode = $derived(rawParameters.bottomPlateMode === 'true')
 
   type CylinderMode = 'default' | 'thin' | 'bottom-plate'
+  type CylinderSeatMode = 'none' | 'hole' | 'integrated'
+
+  const seatModeOptions: ReadonlyArray<{
+    value: CylinderSeatMode
+    label: string
+    description: string
+  }> = [
+    { value: 'none', label: '無角座', description: '不建立底部角座。' },
+    {
+      value: 'hole',
+      label: '角座孔',
+      description: '保留中心與安全外圈角座孔。',
+    },
+    {
+      value: 'integrated',
+      label: '內建角座',
+      description: '建立向下凸出的 Ø5 × 3 mm 內建角座。',
+    },
+  ]
+
+  function seatModeForRawParameters(): CylinderSeatMode {
+    const value = rawParameters.bottomSeatMode
+    if (value === 'none' || value === 'integrated') return value
+    return 'hole'
+  }
+
+  function onSeatModeChange(event: Event): void {
+    if (!(event.currentTarget instanceof HTMLInputElement)) return
+    if (!event.currentTarget.checked) return
+    onInputChange('bottomSeatMode', event.currentTarget.value)
+  }
 
   function modeFor(isThin: boolean, isBottomPlate: boolean): CylinderMode {
     if (isBottomPlate) return 'bottom-plate'
@@ -137,7 +168,7 @@
       height,
       thinBottomMode: rawParameters.thinBottomMode === 'true',
       bottomPlateMode: rawParameters.bottomPlateMode === 'true',
-      bottomHolesEnabled: rawParameters.bottomHolesEnabled !== 'false',
+      bottomSeatMode: seatModeForRawParameters(),
       ...openingValues,
     }
   }
@@ -228,19 +259,44 @@
   >
     {modeSummary(activeMode)}
   </p>
-  <label class="flex items-start gap-2 text-sm">
-    <input
-      class="mt-0.5"
-      type="checkbox"
-      aria-label="開啟底部全部孔洞"
-      checked={rawParameters.bottomHolesEnabled !== 'false'}
-      onchange={(event) => {
-        if (!(event.currentTarget instanceof HTMLInputElement)) return
-        onInputChange('bottomHolesEnabled', String(event.currentTarget.checked))
-      }}
-    />
-    <span>開啟底部全部孔洞</span>
-  </label>
+  <fieldset
+    class="grid gap-2 border-0 p-0"
+    aria-describedby={fieldErrors.bottomSeatMode
+      ? 'bottomSeatMode-error'
+      : undefined}
+    aria-invalid={Boolean(fieldErrors.bottomSeatMode)}
+    aria-label="角座模式"
+    role="radiogroup"
+    data-testid="opengrid-stackable-cylinder-seat-mode"
+  >
+    <legend class="font-[650]">角座模式</legend>
+    <div class="flex flex-wrap items-start gap-x-4 gap-y-2">
+      {#each seatModeOptions as option (option.value)}
+        <label class="flex items-start gap-2 text-sm">
+          <input
+            class="mt-0.5"
+            type="radio"
+            name="opengrid-stackable-cylinder-seat-mode"
+            aria-label={option.label}
+            value={option.value}
+            checked={seatModeForRawParameters() === option.value}
+            onchange={onSeatModeChange}
+          />
+          <span>{option.label}</span>
+        </label>
+      {/each}
+    </div>
+    <span class="text-sm text-muted">
+      {seatModeOptions.find(
+        (option) => option.value === seatModeForRawParameters(),
+      )?.description}
+    </span>
+    {#if fieldErrors.bottomSeatMode}
+      <span class="text-sm text-error" id="bottomSeatMode-error" role="alert">
+        {fieldErrors.bottomSeatMode}
+      </span>
+    {/if}
+  </fieldset>
   {#each opengridStackableCylinderDefinition.parameterSchema.slice(0, 2) as field (field.key)}
     {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
     <ParameterField
