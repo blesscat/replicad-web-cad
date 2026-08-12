@@ -38,6 +38,9 @@ describe('OpenGrid system entry context', () => {
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
     })
+    expect(getSystemPreset('opengrid-pillar', 'desk')).toEqual({
+      mode: 'thin-shell',
+    })
   })
 
   it('groups context entries and gives them separate preview identities', () => {

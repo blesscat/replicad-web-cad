@@ -85,6 +85,9 @@ export function getSystemPreset(
   context: OpenGridSystemContext,
 ): ModelParameterValues | undefined {
   if (modelId === 'opengrid-snap') return snapPresetFor(context)
+  if (modelId === 'opengrid-pillar' && context === 'desk') {
+    return { mode: 'thin-shell' }
+  }
   if (modelId === 'opengrid') {
     return cloneModelParameters({
       ...OPENGRID_CONFIGURATION.defaultParameters,

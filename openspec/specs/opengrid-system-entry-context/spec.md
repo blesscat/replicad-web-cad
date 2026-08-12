@@ -6,7 +6,7 @@ This capability gives OpenGrid model entries a stable Desk or Wall context so th
 
 ### Requirement: Stable OpenGrid system contexts and effective presets
 
-The system MUST recognize exactly two OpenGrid system contexts, `desk` and `wall`, from the model-entry link query. The context MUST NOT change the existing model id, build key, route slug, Worker request model id, or export contract. For `opengrid` both contexts MUST use a validated clone of the model definition defaults as their system preset. For `opengrid-snap`, the Desk preset MUST be `variant=Lite`, `profile=Standard`, `footprint=full`, `offset=0.3` for the X/Y increment, `fourCornerLocatingHoles=true`, and `centerRemoverHole=true`; the Wall preset MUST be `variant=Full`, `profile=Standard`, `footprint=full`, `offset=0`, `fourCornerLocatingHoles=false`, and `centerRemoverHole=false`. Other visible OpenGrid entries MUST use their validated model definition defaults in the Desk context and MUST NOT appear in the Wall context.
+The system MUST recognize exactly two OpenGrid system contexts, `desk` and `wall`, from the model-entry link query. The context MUST NOT change the existing model id, build key, route slug, Worker request model id, or export contract. For `opengrid` both contexts MUST use a validated clone of the model definition defaults as their system preset. For `opengrid-snap`, the Desk preset MUST be `variant=Lite`, `profile=Standard`, `footprint=full`, `offset=0.3` for the X/Y increment, `fourCornerLocatingHoles=true`, and `centerRemoverHole=true`; the Wall preset MUST be `variant=Full`, `profile=Standard`, `footprint=full`, `offset=0`, `fourCornerLocatingHoles=false`, and `centerRemoverHole=false`. For `opengrid-pillar`, the Desk preset MUST be `{ mode: 'thin-shell' }`. Other visible OpenGrid entries MUST use their validated model definition defaults in the Desk context and MUST NOT appear in the Wall context.
 
 #### Scenario: Desk Snap entry resolves its preset
 
@@ -19,6 +19,12 @@ The system MUST recognize exactly two OpenGrid system contexts, `desk` and `wall
 - **WHEN** a user opens `/cad/opengrid-snap?system=wall` without a valid Wall/Snap saved snapshot
 - **THEN** the workspace MUST initialize `opengrid-snap` with the Wall preset
 - **AND** the Worker request MUST continue to use `modelId=opengrid-snap`
+
+#### Scenario: Desk pillar entry resolves the thin-shell preset
+
+- **WHEN** a user opens `/cad/opengrid-pillar?system=desk` without a valid Desk/Pillar saved snapshot
+- **THEN** the workspace MUST initialize `opengrid-pillar` with `{ mode: 'thin-shell' }`
+- **AND** the Worker request MUST continue to use `modelId=opengrid-pillar`
 
 #### Scenario: Unknown context falls back to legacy route behavior
 
