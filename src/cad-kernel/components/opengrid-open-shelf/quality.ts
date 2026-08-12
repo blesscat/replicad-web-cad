@@ -1,4 +1,5 @@
-import { measureVolume, type Shape3D } from 'replicad'
+import { getOC, measureVolume, type Shape3D } from 'replicad'
+import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForOpenGridOpenShelf,
   openGridOpenShelfFrontToRearElevationFor,
@@ -21,6 +22,25 @@ export type OpenGridOpenShelfQualityReport = {
 
 function closeEnough(first: number, second: number, tolerance = 0.15): boolean {
   return Math.abs(first - second) <= tolerance
+}
+
+function countSolids(shape: Shape3D): number {
+  const oc = getOC()
+  const solidType = oc.TopAbs_ShapeEnum
+    .TopAbs_SOLID as unknown as TopAbs_ShapeEnum
+  const shapeType = oc.TopAbs_ShapeEnum
+    .TopAbs_SHAPE as unknown as TopAbs_ShapeEnum
+  const explorer = new oc.TopExp_Explorer_2(shape.wrapped, solidType, shapeType)
+  let count = 0
+  try {
+    while (explorer.More()) {
+      count += 1
+      explorer.Next()
+    }
+    return count
+  } finally {
+    explorer.delete()
+  }
 }
 
 type FaceBounds = {
@@ -203,7 +223,7 @@ export function inspectOpenGridOpenShelfShapeQuality(
     }
   }
 
-  if (shape.constructor.name !== 'Solid') failures.push('single-solid')
+  if (countSolids(shape) !== 1) failures.push('single-solid')
   const volume = measureVolume(shape)
   if (volume <= 0) failures.push('positive-volume')
   if (

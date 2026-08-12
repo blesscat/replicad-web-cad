@@ -201,6 +201,27 @@ describe('OpenGrid open-shelf CAD kernel integration', () => {
     }
   }, 180_000)
 
+  it('accepts a one-solid shape when its JavaScript wrapper name is not Solid', async () => {
+    const parameters: OpenGridOpenShelfParameters = {
+      ...OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
+    }
+    const shape = await buildOpenGridOpenShelf(parameters)
+    const workerWrappedShape = Object.create(shape) as Shape3D
+    Object.defineProperty(workerWrappedShape, 'constructor', {
+      value: class WorkerWrappedShape {},
+    })
+    try {
+      const quality = inspectOpenGridOpenShelfShapeQuality(
+        workerWrappedShape,
+        parameters,
+        meshBRep(shape, { tolerance: 0.05, angularTolerance: 0.1 }),
+      )
+      expect(quality).toMatchObject({ passed: true, failures: [] })
+    } finally {
+      deleteShape(shape)
+    }
+  }, 180_000)
+
   it('keeps multi-cell shelves at the rear and uses plain peg shafts', async () => {
     const parameters: OpenGridOpenShelfParameters = {
       ...OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
