@@ -2,6 +2,7 @@ import { getOC, makeCylinder, Sketcher, Solid, type Shape3D } from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   OPENGRID_DIVIDER_CONFIGURATION,
+  classifyOpenGridDividerShape,
   openGridDividerArmEndpointsFor,
   openGridDividerPlanBoundsFor,
   openGridDividerPegCentersFor,
@@ -266,10 +267,19 @@ function makeProfiledArm(
   }
 }
 
+function singleArmCenterExtensionFor(
+  parameters: OpenGridDividerParameters,
+): number {
+  return classifyOpenGridDividerShape(parameters) === 'single'
+    ? OPENGRID_DIVIDER_CONFIGURATION.wallWidth / 2
+    : 0
+}
+
 function makeHorizontalWall(parameters: OpenGridDividerParameters): Shape3D {
   const endpoints = openGridDividerArmEndpointsFor(parameters)
-  const start = parameters.left > 0 ? endpoints.left : 0
-  const end = parameters.right > 0 ? endpoints.right : 0
+  const centerExtension = singleArmCenterExtensionFor(parameters)
+  const start = parameters.left > 0 ? endpoints.left : -centerExtension
+  const end = parameters.right > 0 ? endpoints.right : centerExtension
   return makeProfiledArm(
     parameters,
     'YZ',
@@ -281,8 +291,9 @@ function makeHorizontalWall(parameters: OpenGridDividerParameters): Shape3D {
 
 function makeVerticalWall(parameters: OpenGridDividerParameters): Shape3D {
   const endpoints = openGridDividerArmEndpointsFor(parameters)
-  const start = parameters.down > 0 ? endpoints.down : 0
-  const end = parameters.up > 0 ? endpoints.up : 0
+  const centerExtension = singleArmCenterExtensionFor(parameters)
+  const start = parameters.down > 0 ? endpoints.down : -centerExtension
+  const end = parameters.up > 0 ? endpoints.up : centerExtension
   const wall = makeProfiledArm(
     parameters,
     'YZ',

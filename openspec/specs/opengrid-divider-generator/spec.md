@@ -103,6 +103,31 @@ The generated body MUST be a continuous connected divider whose base support has
 - **THEN** the relative lengths and directions around the central junction MUST match the input counts after applying the same active-end retraction
 - **AND** the generator MUST NOT silently recenter the junction independently of the generated shape
 
+### Requirement: 單臂中心定位柱上方延續牆體
+
+When exactly one of `left`, `right`, `up`, or `down` is non-zero, the generated
+divider MUST extend its complete profiled wall from the central arm axis
+2.5 mm toward the inactive side. This extension MUST include the 5 mm base
+support, any 45-degree transition, and the selected upper wall, so the central
+5 mm locating peg has wall directly above its center rather than only on the
+active side. The active arm endpoint MUST remain at the existing retracted
+station, and the result MUST remain one connected solid.
+
+#### Scenario: 四個方向的單臂中心牆體
+
+- **WHEN** exactly one directional count is non-zero, for any of the four
+  directions
+- **THEN** the complete wall profile MUST cover the central arm axis and extend
+  2.5 mm toward the inactive side
+- **AND** the central locating peg MUST have divider wall above its center
+- **AND** the active endpoint MUST retain the existing 2.275 mm retraction
+
+#### Scenario: 多臂中心接點維持原狀
+
+- **WHEN** two or more directional counts are non-zero
+- **THEN** the central junction MUST use the existing multi-arm wall geometry
+- **AND** no single-arm-only 2.5 mm extension MAY be added to an inactive side
+
 ### Requirement: 依長度自動配置底部定位柱
 
 The generator MUST automatically add cylindrical locating pegs with nominal diameter 5 mm and downward length 3 mm. It MUST place one peg at the central junction, then consider positions every 28 mm (two 14 mm official half-grids) along each active arm and emit only positions strictly inside that arm. This MUST keep the maximum initial empty run to two half-grid intervals, avoid dense placement, emit repeated coordinates only once, and fuse every peg to the wall so the result remains one connected solid.

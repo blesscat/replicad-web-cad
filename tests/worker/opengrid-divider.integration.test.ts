@@ -422,6 +422,116 @@ describe('OpenGrid divider CAD kernel integration', () => {
     }
   }, 180_000)
 
+  it('extends every single-arm profile across the central peg', async () => {
+    const cases = [
+      {
+        parameters: {
+          left: 0,
+          right: 1,
+          up: 0,
+          down: 0,
+          height: 20,
+          wallThickness: 2,
+        },
+        axis: 'x',
+        activeDirection: 'right',
+      },
+      {
+        parameters: {
+          left: 1,
+          right: 0,
+          up: 0,
+          down: 0,
+          height: 20,
+          wallThickness: 2,
+        },
+        axis: 'x',
+        activeDirection: 'left',
+      },
+      {
+        parameters: {
+          left: 0,
+          right: 0,
+          up: 1,
+          down: 0,
+          height: 20,
+          wallThickness: 2,
+        },
+        axis: 'y',
+        activeDirection: 'up',
+      },
+      {
+        parameters: {
+          left: 0,
+          right: 0,
+          up: 0,
+          down: 1,
+          height: 20,
+          wallThickness: 2,
+        },
+        axis: 'y',
+        activeDirection: 'down',
+      },
+    ] as const
+
+    for (const { parameters, axis, activeDirection } of cases) {
+      const shape = await buildOpenGridDivider(parameters)
+      try {
+        const [centerX, centerY] = rawPlanCenter(parameters)
+        const endpoints = openGridDividerArmEndpointsFor(parameters)
+        const [[minX, minY], [maxX, maxY]] = horizontalSectionBoundsAt(shape, 4)
+        const centerExtension = OPENGRID_DIVIDER_CONFIGURATION.wallWidth / 2
+        const expectedActiveEndpoint =
+          activeDirection === 'right'
+            ? endpoints.right - centerX
+            : activeDirection === 'left'
+              ? endpoints.left - centerX
+              : activeDirection === 'up'
+                ? endpoints.up - centerY
+                : endpoints.down - centerY
+        const actualActiveEndpoint =
+          activeDirection === 'right'
+            ? maxX
+            : activeDirection === 'left'
+              ? minX
+              : activeDirection === 'up'
+                ? maxY
+                : minY
+        expect(actualActiveEndpoint).toBeCloseTo(expectedActiveEndpoint, 1)
+
+        const actualInactiveEdge =
+          activeDirection === 'right'
+            ? minX
+            : activeDirection === 'left'
+              ? maxX
+              : activeDirection === 'up'
+                ? minY
+                : maxY
+        const expectedInactiveEdge =
+          activeDirection === 'right'
+            ? -centerExtension - centerX
+            : activeDirection === 'left'
+              ? centerExtension - centerX
+              : activeDirection === 'up'
+                ? -centerExtension - centerY
+                : centerExtension - centerY
+        expect(actualInactiveEdge).toBeCloseTo(expectedInactiveEdge, 1)
+
+        const oppositeSideProbe: [number, number] =
+          axis === 'x'
+            ? [-centerX + (activeDirection === 'right' ? -1 : 1), -centerY]
+            : [-centerX, -centerY + (activeDirection === 'up' ? -1 : 1)]
+        for (const z of [0.05, 0.85, 4]) {
+          expect(
+            probeVolumeAt(shape, oppositeSideProbe, z, 0.05),
+          ).toBeGreaterThan(0)
+        }
+      } finally {
+        deleteShape(shape)
+      }
+    }
+  }, 180_000)
+
   it('keeps nominal peg diameter, exposed length, and chamfered wall profile', async () => {
     const parameters = {
       left: 1.5,
