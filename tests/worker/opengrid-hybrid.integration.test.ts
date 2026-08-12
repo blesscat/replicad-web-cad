@@ -79,7 +79,7 @@ function measureIntersectionVolume(
 }
 
 describe('OpenGrid Hybrid product builder', () => {
-  it('adds a full-cell inward sloped transition to the Heavy perimeter', async () => {
+  it('keeps the Heavy perimeter edge vertical without an inward sloped transition', async () => {
     const input = parameters({
       variant: 'Hybrid',
       rows: 3,
@@ -91,24 +91,18 @@ describe('OpenGrid Hybrid product builder', () => {
     const { shape, quality } = await buildAndInspect(input)
     try {
       expect(quality.passed, quality.failures.join(';')).toBe(true)
-      expect(OPENGRID_CONFIGURATION.hybridTransitionSpan).toBe(
-        OPENGRID_CONFIGURATION.gridPitch,
-      )
-
       const fullThickness = OPENGRID_CONFIGURATION.variants.Full.thickness
       const heavyThickness = OPENGRID_CONFIGURATION.variants.Heavy.thickness
-      const transitionSpan = OPENGRID_CONFIGURATION.hybridTransitionSpan
+      const sampleSpan = OPENGRID_CONFIGURATION.gridPitch
       const transitionRise = heavyThickness - fullThickness
       const halfPitch = OPENGRID_CONFIGURATION.gridPitch / 2
-      const transitionStartOffset = -transitionSpan / 2
-      const tangentialOffset =
-        halfPitch - OPENGRID_CONFIGURATION.outsideExtrusion / 2
+      const sampleStartOffset = -sampleSpan / 2
       const [interiorX, interiorY] = cellCenterForOpenGrid(input, 1, 1)
 
       for (const fraction of [0.25, 0.5, 0.75]) {
         const expectedZ = fullThickness + transitionRise * fraction
-        const offset = transitionStartOffset + transitionSpan * fraction
-        const transitionProbes: Array<{
+        const offset = sampleStartOffset + sampleSpan * fraction
+        const upperInteriorProbes: Array<{
           label: string
           minimum: [number, number, number]
           maximum: [number, number, number]
@@ -116,12 +110,12 @@ describe('OpenGrid Hybrid product builder', () => {
           {
             label: 'top',
             minimum: [
-              interiorX + tangentialOffset - 0.5,
+              interiorX - 0.5,
               interiorY + offset - 0.25,
               expectedZ - 0.15,
             ],
             maximum: [
-              interiorX + tangentialOffset + 0.5,
+              interiorX + 0.5,
               interiorY + offset + 0.25,
               expectedZ + 0.15,
             ],
@@ -130,24 +124,24 @@ describe('OpenGrid Hybrid product builder', () => {
             label: 'right',
             minimum: [
               interiorX + offset - 0.25,
-              interiorY + tangentialOffset - 0.5,
+              interiorY - 0.5,
               expectedZ - 0.15,
             ],
             maximum: [
               interiorX + offset + 0.25,
-              interiorY + tangentialOffset + 0.5,
+              interiorY + 0.5,
               expectedZ + 0.15,
             ],
           },
           {
             label: 'bottom',
             minimum: [
-              interiorX + tangentialOffset - 0.5,
+              interiorX - 0.5,
               interiorY - offset - 0.25,
               expectedZ - 0.15,
             ],
             maximum: [
-              interiorX + tangentialOffset + 0.5,
+              interiorX + 0.5,
               interiorY - offset + 0.25,
               expectedZ + 0.15,
             ],
@@ -156,24 +150,24 @@ describe('OpenGrid Hybrid product builder', () => {
             label: 'left',
             minimum: [
               interiorX - offset - 0.25,
-              interiorY + tangentialOffset - 0.5,
+              interiorY - 0.5,
               expectedZ - 0.15,
             ],
             maximum: [
               interiorX - offset + 0.25,
-              interiorY + tangentialOffset + 0.5,
+              interiorY + 0.5,
               expectedZ + 0.15,
             ],
           },
         ]
 
-        for (const probe of transitionProbes) {
+        for (const probe of upperInteriorProbes) {
           const volume = measureIntersectionVolume(
             shape,
             probe.minimum,
             probe.maximum,
           )
-          expect(volume, `${probe.label}:${fraction}`).toBeGreaterThan(0.001)
+          expect(volume, `${probe.label}:${fraction}`).toBeLessThan(0.001)
         }
       }
 
@@ -181,12 +175,12 @@ describe('OpenGrid Hybrid product builder', () => {
         shape,
         [
           interiorX - 0.5,
-          interiorY + halfPitch + transitionSpan / 2 - 0.25,
+          interiorY + halfPitch + sampleSpan / 2 - 0.25,
           fullThickness + transitionRise / 2 - 0.15,
         ],
         [
           interiorX + 0.5,
-          interiorY + halfPitch + transitionSpan / 2 + 0.25,
+          interiorY + halfPitch + sampleSpan / 2 + 0.25,
           fullThickness + transitionRise / 2 + 0.15,
         ],
       )
@@ -241,10 +235,8 @@ describe('OpenGrid Hybrid product builder', () => {
           [diagonalX + 0.35, diagonalY + 0.2, cornerZ + 0.15],
         )
 
-        expect(diagonalVolume, `${corner.label}:diagonal`).toBeGreaterThan(
-          0.001,
-        )
-        const openingOffset = transitionSpan / 2
+        expect(diagonalVolume, `${corner.label}:diagonal`).toBeLessThan(0.001)
+        const openingOffset = sampleSpan / 2
         const openingX = corner.x + corner.horizontalDirection * openingOffset
         const openingY = corner.y + corner.verticalDirection * openingOffset
         const openingVolume = measureIntersectionVolume(
@@ -259,7 +251,7 @@ describe('OpenGrid Hybrid product builder', () => {
     }
   }, 120_000)
 
-  it('keeps feature-enabled transitions on every side of a 5×5 board', async () => {
+  it('keeps feature-enabled Hybrid high areas free of sloped transitions', async () => {
     const input = parameters({
       variant: 'Hybrid',
       rows: 5,
