@@ -2,6 +2,8 @@
   import { calculateOpenGridPrintPlan } from '../../../../features/cad/grid-dimensions'
   import {
     OPENGRID_CONFIGURATION,
+    isOpenGridParameters,
+    normalizeOpenGridParameters,
     openGridBoardConfiguration,
     type HalfCellX,
     type HalfCellY,
@@ -12,6 +14,11 @@
     type OpenGridScrewDimensions,
     type OpenGridScrewPreset,
   } from '../../../../cad-contract/units'
+  import {
+    cloneModelParameters,
+    getSystemPreset,
+    type OpenGridSystemContext,
+  } from '../../../../features/cad/system-entry-context'
   import OpenGridPrintPlanCalculator from './OpenGridPrintPlanCalculator.svelte'
   import ParameterField from '../ParameterField.svelte'
   import RestoreButton from '../RestoreButton.svelte'
@@ -20,6 +27,7 @@
 
   let {
     parameters,
+    systemContext,
     fieldErrors,
     onParametersChange,
     onDimensionCalculationInvalid,
@@ -70,6 +78,37 @@
   let selectedScrewPreset = $derived.by(() => currentScrewPreset())
   let showAdvancedScrewSettings = $state(false)
 
+  function openGridDefinitionDefaults(): OpenGridParameters {
+    return {
+      ...OPENGRID_CONFIGURATION.defaultParameters,
+      chamferCorners: {
+        ...OPENGRID_CONFIGURATION.defaultParameters.chamferCorners,
+      },
+      connectorSides: {
+        ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
+      },
+      customScrewPositions: [],
+    }
+  }
+
+  function effectiveOpenGridDefaults(
+    context: OpenGridSystemContext | undefined,
+  ): OpenGridParameters {
+    let defaults: unknown = openGridDefinitionDefaults()
+    if (context) {
+      const systemPreset = getSystemPreset('opengrid', context)
+      if (systemPreset) defaults = systemPreset
+    }
+    if (!isOpenGridParameters(defaults)) {
+      throw new Error('OPENGRID_SYSTEM_PRESET_INVALID')
+    }
+    return normalizeOpenGridParameters(cloneModelParameters(defaults))
+  }
+
+  let effectiveDefaults = $derived.by(() =>
+    effectiveOpenGridDefaults(systemContext),
+  )
+
   $effect(() => {
     showAdvancedScrewSettings = parameters.screwKind === 'custom'
   })
@@ -105,10 +144,7 @@
   }
 
   function parameterChanged(field: OpenGridParameterKey): boolean {
-    return !valuesEqual(
-      parameters[field],
-      OPENGRID_CONFIGURATION.defaultParameters[field],
-    )
+    return !valuesEqual(parameters[field], effectiveDefaults[field])
   }
 
   function screwConfigurationChanged(): boolean {
@@ -123,12 +159,12 @@
   }
 
   function restoreParameter(field: OpenGridParameterKey): void {
-    const defaultValue = OPENGRID_CONFIGURATION.defaultParameters[field]
+    const defaultValue = effectiveDefaults[field]
     updateParameters({ [field]: defaultValue } as Partial<OpenGridParameters>)
   }
 
   function restoreGridCount(field: 'rows' | 'columns'): void {
-    const defaultValue = OPENGRID_CONFIGURATION.defaultParameters[field]
+    const defaultValue = effectiveDefaults[field]
     updateGridCounts({
       rows: field === 'rows' ? defaultValue : parameters.rows,
       columns: field === 'columns' ? defaultValue : parameters.columns,
@@ -137,17 +173,20 @@
 
   function restoreScrewMode(): void {
     updateParameters({
-      screwMode: OPENGRID_CONFIGURATION.defaultParameters.screwMode,
-      customScrewPositions: [],
+      screwMode: effectiveDefaults.screwMode,
+      customScrewPositions: effectiveDefaults.customScrewPositions,
     })
   }
 
   function restoreScrewConfiguration(): void {
     showAdvancedScrewSettings = false
-    applyScrewDimensions(
-      OPENGRID_CONFIGURATION.defaultParameters.screwKind,
-      OPENGRID_CONFIGURATION.defaultScrew,
-    )
+    applyScrewDimensions(effectiveDefaults.screwKind, {
+      diameter: effectiveDefaults.screwDiameter,
+      headDiameter: effectiveDefaults.screwHeadDiameter,
+      headInset: effectiveDefaults.screwHeadInset,
+      headIsCountersunk: effectiveDefaults.screwHeadIsCountersunk,
+      headCountersunkDegree: effectiveDefaults.screwHeadCountersunkDegree,
+    })
   }
 
   function isScrewPreset(value: string): value is OpenGridScrewPreset {
@@ -664,6 +703,71 @@
   {/if}
 
   <ParameterField
+    label="螺絲孔模式"
+    changed={parameterChanged('screwMode')}
+    error={fieldError('screwMode')}
+    errorId="opengrid-screw-mode-error"
+    restoreLabel="OpenGrid 螺絲孔模式"
+    onRestore={restoreScrewMode}
+  >
+    <select
+      class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+      aria-label="OpenGrid 螺絲孔模式"
+      aria-describedby={fieldError('screwMode')
+        ? 'opengrid-screw-mode-error'
+        : undefined}
+      aria-invalid={Boolean(fieldError('screwMode'))}
+      value={parameters.screwMode}
+      onchange={(event) => updateSelect('screwMode', event)}
+    >
+      <option value="corners">Corners（官方預設）</option>
+      <option value="everywhere">Everywhere（內部交界）</option>
+      <option value="by-row-column">By Row and Column</option>
+      <option value="custom">Custom</option>
+      <option value="none">None</option>
+    </select>
+  </ParameterField>
+
+  {#if parameters.screwMode === 'by-row-column'}
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <ParameterField
+        label="Every X Rows"
+        changed={parameterChanged('screwEveryRows')}
+        restoreLabel="OpenGrid 每幾行螺絲孔"
+        onRestore={() => restoreParameter('screwEveryRows')}
+      >
+        <input
+          class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+          aria-label="OpenGrid 每幾行螺絲孔"
+          type="number"
+          min="1"
+          max={OPENGRID_CONFIGURATION.maxGridCount}
+          step="1"
+          value={parameters.screwEveryRows}
+          oninput={(event) => updateNumber('screwEveryRows', event)}
+        />
+      </ParameterField>
+      <ParameterField
+        label="Every X Columns"
+        changed={parameterChanged('screwEveryColumns')}
+        restoreLabel="OpenGrid 每幾列螺絲孔"
+        onRestore={() => restoreParameter('screwEveryColumns')}
+      >
+        <input
+          class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+          aria-label="OpenGrid 每幾列螺絲孔"
+          type="number"
+          min="1"
+          max={OPENGRID_CONFIGURATION.maxGridCount}
+          step="1"
+          value={parameters.screwEveryColumns}
+          oninput={(event) => updateNumber('screwEveryColumns', event)}
+        />
+      </ParameterField>
+    </div>
+  {/if}
+
+  <ParameterField
     label="螺絲尺寸來源"
     changed={screwConfigurationChanged()}
     restoreLabel="OpenGrid 螺絲尺寸來源"
@@ -770,71 +874,6 @@
         </div>
       </div>
     {/if}
-  {/if}
-
-  <ParameterField
-    label="螺絲孔模式"
-    changed={parameterChanged('screwMode')}
-    error={fieldError('screwMode')}
-    errorId="opengrid-screw-mode-error"
-    restoreLabel="OpenGrid 螺絲孔模式"
-    onRestore={restoreScrewMode}
-  >
-    <select
-      class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-      aria-label="OpenGrid 螺絲孔模式"
-      aria-describedby={fieldError('screwMode')
-        ? 'opengrid-screw-mode-error'
-        : undefined}
-      aria-invalid={Boolean(fieldError('screwMode'))}
-      value={parameters.screwMode}
-      onchange={(event) => updateSelect('screwMode', event)}
-    >
-      <option value="corners">Corners（官方預設）</option>
-      <option value="everywhere">Everywhere（內部交界）</option>
-      <option value="by-row-column">By Row and Column</option>
-      <option value="custom">Custom</option>
-      <option value="none">None</option>
-    </select>
-  </ParameterField>
-
-  {#if parameters.screwMode === 'by-row-column'}
-    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-      <ParameterField
-        label="Every X Rows"
-        changed={parameterChanged('screwEveryRows')}
-        restoreLabel="OpenGrid 每幾行螺絲孔"
-        onRestore={() => restoreParameter('screwEveryRows')}
-      >
-        <input
-          class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-          aria-label="OpenGrid 每幾行螺絲孔"
-          type="number"
-          min="1"
-          max={OPENGRID_CONFIGURATION.maxGridCount}
-          step="1"
-          value={parameters.screwEveryRows}
-          oninput={(event) => updateNumber('screwEveryRows', event)}
-        />
-      </ParameterField>
-      <ParameterField
-        label="Every X Columns"
-        changed={parameterChanged('screwEveryColumns')}
-        restoreLabel="OpenGrid 每幾列螺絲孔"
-        onRestore={() => restoreParameter('screwEveryColumns')}
-      >
-        <input
-          class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-          aria-label="OpenGrid 每幾列螺絲孔"
-          type="number"
-          min="1"
-          max={OPENGRID_CONFIGURATION.maxGridCount}
-          step="1"
-          value={parameters.screwEveryColumns}
-          oninput={(event) => updateNumber('screwEveryColumns', event)}
-        />
-      </ParameterField>
-    </div>
   {/if}
 
   <div class="grid gap-3">

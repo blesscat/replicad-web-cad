@@ -48,11 +48,13 @@ describe('OpenGrid system entry context', () => {
     })
   })
 
-  it('uses a 4 × 4 Desk board preset while keeping Wall board defaults', () => {
+  it('uses a no-feature 4 × 4 Desk board preset while keeping Wall board defaults', () => {
     expect(getSystemPreset('opengrid', 'desk')).toEqual({
       ...OPENGRID_CONFIGURATION.defaultParameters,
       rows: 4,
       columns: 4,
+      chamfers: 'none',
+      screwMode: 'none',
       customScrewPositions: [],
     })
     expect(getSystemPreset('opengrid', 'wall')).toEqual({

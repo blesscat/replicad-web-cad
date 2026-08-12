@@ -99,6 +99,8 @@ export function getSystemPreset(
     if (context === 'desk') {
       boardParameters.rows = 4
       boardParameters.columns = 4
+      boardParameters.chamfers = 'none'
+      boardParameters.screwMode = 'none'
     }
     return cloneModelParameters(boardParameters)
   }
