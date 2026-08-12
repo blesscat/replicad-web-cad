@@ -15,6 +15,7 @@ import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import { initialiseCadKernel } from '../../src/cad-kernel/initialise'
 import {
   buildOpenGridSnap,
+  importOpenGridSnapFixedFootprint,
   importOpenGridSnapReference,
   inspectOpenGridSnapReference,
   openGridSnapPreFootprintBoundsFor,
@@ -319,6 +320,19 @@ function assetBlob(
   ])
 }
 
+function fixedAssetBlob(footprint: 'half' | 'quarter'): Blob {
+  return new Blob([
+    readFileSync(
+      fileURLToPath(
+        new URL(
+          `../../public/downloads/snap-${footprint}.step`,
+          import.meta.url,
+        ),
+      ),
+    ),
+  ])
+}
+
 function snapParameters(
   variant: 'Full' | 'Lite',
   offset: number,
@@ -384,6 +398,41 @@ describe('OpenGrid Snap reference builder', () => {
       reference.delete()
     }
   })
+
+  it.each(['half', 'quarter'] as const)(
+    'uses the repository fixed %s STEP shape for fixed-footprint builds',
+    async (footprint) => {
+      const fixed = await importOpenGridSnapFixedFootprint(
+        fixedAssetBlob(footprint),
+      )
+      let referenceLoads = 0
+      const generated = await buildOpenGridSnap(
+        snapParameters('Lite', 0.4, footprint, {
+          fourCornerLocatingHoles: true,
+          centerRemoverHole: true,
+        }),
+        {
+          getOpenGridSnapFixedFootprint: async () => fixed,
+          getOpenGridSnapReference: async () => {
+            referenceLoads += 1
+            throw new Error(
+              'fixed footprint must not load a generated reference',
+            )
+          },
+        },
+      )
+
+      try {
+        expect(generated).not.toBe(fixed)
+        expect(referenceLoads).toBe(0)
+        expect(countSolids(generated)).toBe(countSolids(fixed))
+        expectBoundsNear(assemblyBounds(generated), assemblyBounds(fixed))
+      } finally {
+        generated.delete()
+        fixed.delete()
+      }
+    },
+  )
 
   it('imports complete Full and Lite nine-solid references with the expected envelope', async () => {
     for (const variant of ['Full', 'Lite'] as const) {

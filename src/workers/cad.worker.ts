@@ -18,7 +18,11 @@ import {
   loadOpenGridPrototypeTemplate,
   type OpenGridBuildContext,
 } from '../cad-kernel/components/opengrid/builder'
-import { loadOpenGridSnapReference } from '../cad-kernel/components/opengrid-snap/builder'
+import {
+  loadOpenGridSnapFixedFootprint,
+  loadOpenGridSnapReference,
+  type OpenGridSnapFixedFootprint,
+} from '../cad-kernel/components/opengrid-snap/builder'
 import { loadOpenGridSnapRemoverAsset } from '../cad-kernel/components/opengrid-snap-remover/builder'
 import { buildModelBRep, type KernelBuildContext } from '../cad-kernel/model'
 import { assertOpenGridShapeQuality } from '../cad-kernel/components/opengrid/quality'
@@ -161,6 +165,10 @@ export class CadWorkerRuntime {
     string,
     Promise<import('replicad').Shape3D>
   >()
+  private readonly openGridSnapFixedFootprints = new Map<
+    OpenGridSnapFixedFootprint,
+    Promise<import('replicad').Shape3D>
+  >()
   private openGridSnapRemoverAsset: Promise<import('replicad').Shape3D> | null =
     null
   private readonly lifetime: RevisionLifetime
@@ -252,6 +260,7 @@ export class CadWorkerRuntime {
           this.disposeOpenGridCanonicalTiles()
           this.disposeOpenGridHalfCellPrototypes()
           this.disposeOpenGridSnapReferences()
+          this.disposeOpenGridSnapFixedFootprints()
           this.disposeOpenGridSnapRemoverAsset()
           this.lastBoxNormalOperationCounts = null
           this.initialized = false
@@ -362,6 +371,8 @@ export class CadWorkerRuntime {
         getOpenGridPrototype: (variant) => this.getOpenGridPrototype(variant),
         getOpenGridSnapReference: (variant, profile) =>
           this.getOpenGridSnapReference(variant, profile),
+        getOpenGridSnapFixedFootprint: (footprint) =>
+          this.getOpenGridSnapFixedFootprint(footprint),
         getOpenGridSnapRemoverAsset: () => this.getOpenGridSnapRemoverAsset(),
         yieldToEventLoop: yieldToWorkerEventLoop,
         isGenerationCurrent: () => this.isGenerationCurrent(command.generation),
@@ -440,7 +451,9 @@ export class CadWorkerRuntime {
         if (!isOpenGridSnapParameters(generationParameters)) {
           throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
         }
-        mesh.bounds = boundsForOpenGridSnap(generationParameters)
+        if (generationParameters.footprint === 'full') {
+          mesh.bounds = boundsForOpenGridSnap(generationParameters)
+        }
       }
       if (command.modelId === 'opengrid') {
         if (!isOpenGridParameters(generationParameters)) {
@@ -454,18 +467,20 @@ export class CadWorkerRuntime {
         if (!isOpenGridSnapParameters(generationParameters)) {
           throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
         }
-        const reference = await this.getOpenGridSnapReference(
-          generationParameters.variant,
-          generationParameters.profile,
-        )
-        timing.measureSync('quality', () =>
-          assertOpenGridSnapShapeQuality(
-            shape,
-            generationParameters,
-            mesh,
-            reference,
-          ),
-        )
+        if (generationParameters.footprint === 'full') {
+          const reference = await this.getOpenGridSnapReference(
+            generationParameters.variant,
+            generationParameters.profile,
+          )
+          timing.measureSync('quality', () =>
+            assertOpenGridSnapShapeQuality(
+              shape,
+              generationParameters,
+              mesh,
+              reference,
+            ),
+          )
+        }
       }
 
       if (command.modelId === 'opengrid-divider') {
@@ -1000,6 +1015,29 @@ export class CadWorkerRuntime {
     return recoverable
   }
 
+  private getOpenGridSnapFixedFootprint(
+    footprint: OpenGridSnapFixedFootprint,
+  ): Promise<import('replicad').Shape3D> {
+    const cached = this.openGridSnapFixedFootprints.get(footprint)
+    if (cached) return cached
+
+    const fixedFootprint = loadOpenGridSnapFixedFootprint(footprint).then(
+      (shape) => {
+        if (this.disposed) {
+          shape.delete()
+          throw new Error('WORKER_TERMINATED')
+        }
+        return shape
+      },
+    )
+    const recoverable = fixedFootprint.catch((error) => {
+      this.openGridSnapFixedFootprints.delete(footprint)
+      throw error
+    })
+    this.openGridSnapFixedFootprints.set(footprint, recoverable)
+    return recoverable
+  }
+
   private getOpenGridSnapRemoverAsset(): Promise<import('replicad').Shape3D> {
     if (!this.openGridSnapRemoverAsset) {
       const assetPromise = loadOpenGridSnapRemoverAsset()
@@ -1106,6 +1144,14 @@ export class CadWorkerRuntime {
     this.openGridSnapReferences.clear()
     for (const reference of references) {
       void reference.then((shape) => shape.delete()).catch(() => undefined)
+    }
+  }
+
+  private disposeOpenGridSnapFixedFootprints(): void {
+    const fixedFootprints = [...this.openGridSnapFixedFootprints.values()]
+    this.openGridSnapFixedFootprints.clear()
+    for (const fixedFootprint of fixedFootprints) {
+      void fixedFootprint.then((shape) => shape.delete()).catch(() => undefined)
     }
   }
 

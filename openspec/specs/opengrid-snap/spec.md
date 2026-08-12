@@ -19,15 +19,15 @@ The system MUST register the independent `opengrid-snap` model with `Full` and `
 
 - **WHEN** a complete Snap snapshot has `variant=Lite`, `profile=Standard`, `offset=0`, `footprint=half`, `fourCornerLocatingHoles=false`, and `centerRemoverHole=false`
 - **THEN** validation MUST accept it
-- **AND** generation MUST use the project-owned canonical `xleft` half-cell derivation
-- **AND** the result MUST fit one 14 mm axis host and one 28 mm axis host
+- **AND** production preview generation MUST use the repository-owned fixed `snap-half.step` asset
+- **AND** the fixed result MUST fit one 14 mm axis host and one 28 mm host axis
 
 #### Scenario: Valid canonical quarter-footprint snapshot
 
-- **WHEN** a complete Snap snapshot has `variant=Lite`, `profile=Directional`, `offset=0.2`, `footprint=quarter`, `fourCornerLocatingHoles=true`, and `centerRemoverHole=false`
+- **WHEN** a complete Snap snapshot has `variant=Lite`, `profile=Directional`, `offset=0`, `footprint=quarter`, `fourCornerLocatingHoles=false`, and `centerRemoverHole=false`
 - **THEN** validation MUST accept it
-- **AND** generation MUST use the Directional Lite profile in its canonical `xleft + ytop` orientation
-- **AND** the four locating-hole option MUST NOT imply the center remover-hole option
+- **AND** production preview generation MUST use the repository-owned fixed `snap-quarter.step` asset
+- **AND** the fixed result MUST fit both 14 mm host axes
 
 #### Scenario: Board or direction fields are rejected by the normalized Snap validator
 
@@ -36,6 +36,8 @@ The system MUST register the independent `opengrid-snap` model with `Full` and `
 - **AND** the Worker MUST NOT route it through the existing OpenGrid board builder
 
 ### Requirement: Complete reference assembly preservation
+
+For production Worker previews, the fixed Half and Quarter asset requirement below takes precedence over the generated half-cell derivation. The canonical derivation remains available for direct builder contexts that do not provide a fixed-footprint asset loader.
 
 For a full-footprint Standard snapshot, the generated Snap result MUST preserve the complete reference assembly, including one Body, four Side Holder solids, and four Snap solids, for a total of nine solids. It MUST remain centered on X/Y and based at Z=0, with the variant-specific Z profile from the Bare Standard reference. At `offset=0`, every member MUST match the selected Bare Standard reference within the documented CAD tolerance. At a positive offset, every non-hole member MUST receive the same canonical X/Y scale transform for its axis; the central Body and Snap interface MUST NOT be held at their zero-offset XY dimensions. Half and quarter snapshots MUST first transform the complete selected assembly and MUST then satisfy the project-owned footprint-fit quality requirement; they MUST NOT be required to retain nine solids after explicit clipping/recomposition. A full-footprint Directional snapshot MUST preserve the topology permitted by its own Directional profile, including a valid fused B-Rep when the source profile is fused, and MUST preserve its canonical asymmetric directional envelope after the offset transform.
 
@@ -76,6 +78,8 @@ For a full-footprint Standard snapshot, the generated Snap result MUST preserve 
 - **AND** the candidate MUST NOT become the committed model
 
 ### Requirement: Total centered outer offset
+
+The production Half and Quarter preview assets MUST ignore offset changes and use their repository-owned fixed geometry; only Full uses the incremental offset transform described below.
 
 `offset` MUST represent one shared total width and depth increment, not a per-side increment. For a Standard full-footprint axis, its nominal Snap envelope MUST be 25.6 mm; for the selected axis of a half footprint and both axes of a quarter footprint, its nominal host envelope MUST be 12.8 mm. The requested Standard bounds MUST be applied symmetrically around the canonical host center. Directional profiles MUST preserve their documented canonical asymmetry while applying the same shared host-dimension policy. For a positive offset, the builder MUST compute an X and Y target span for the complete pre-footprint assembly: an unselected full axis MUST use its source full span plus `offset`, while an axis that will be clipped to a half or quarter footprint MUST use its source full span plus `2 * offset` before clipping. The builder MUST apply the corresponding X/Y scale transform to all non-hole reference geometry about the canonical full-assembly center, with Z unchanged. The offset operation MUST preserve the selected profile, optional hole diameters, optional hole centers, optional cutter dimensions, and selected footprint; the XY dimensions of non-hole central/interface geometry MUST follow the transform rather than remain fixed. The builder MUST NOT implement the offset only by fusing rectangular outer strips, and MUST NOT scale any hole cutter.
 
@@ -148,6 +152,8 @@ The Worker MUST resolve each selected `profile` and `variant` through repository
 
 ### Requirement: Snap quality and committed exports
 
+For Half and Quarter fixed previews, asset validation MUST verify a millimetre STEP source, non-empty solid geometry, finite bounds, and a non-empty mesh; the generated Full-footprint profile quality gate is not applicable.
+
 Before candidate registration, the Worker MUST verify the requested host envelope, the selected profile's expected X/Y transform and Z bounds, directional probes, valid B-Rep, finite non-empty mesh, complete assembly topology, fixed optional-hole dimensions and centers, and the selected optional-hole state. Standard full-footprint snapshots MUST pass the nine-solid topology check; Directional snapshots MUST pass their profile-specific topology check. Half and quarter snapshots MUST pass the project-owned footprint quality requirements instead of the Standard nine-solid check. STEP and binary STL exports MUST use the same committed Snap revision that the viewport displays.
 
 #### Scenario: Valid feature/profile candidate becomes exportable
@@ -209,6 +215,8 @@ Deterministic Snap STEP and STL filenames MUST include the variant, profile, off
 
 ### Requirement: Optional body feature controls
 
+The optional body feature controls apply to Full only. Half and Quarter fixed assets do not apply locating-hole or remover-hole changes.
+
 The generated Body MUST start from the selected Bare Standard or Directional baseline before optional cuts. `fourCornerLocatingHoles=true` MUST add exactly four fixed-profile locating-hole cutters at the selected profile's documented centers, with the documented underside elastic slots connected to those holes. `centerRemoverHole=true` MUST add the selected profile's documented center-remover cutter, which MAY be non-circular. After any requested non-hole XY assembly scaling, the two cutters MUST be applied independently to the transformed Body. Their diameter, slot width, step/profile dimensions, and documented centers MUST remain unchanged for every valid offset and footprint. They MUST NOT duplicate an intrinsic Directional feature already present in the selected source profile.
 
 #### Scenario: Solid body with all optional features disabled
@@ -269,7 +277,7 @@ When `profile=Directional`, generation MUST use the repository-owned Directional
 
 ### Requirement: OpenGrid Snap footprint control
 
-The `/cad/opengrid-snap` workspace MUST expose one footprint control with exactly the user-facing choices Full、1/2、1/4. It MUST NOT expose separate Snap X-half or Y-half direction controls. Selecting 1/2 MUST submit `footprint=half`; selecting 1/4 MUST submit `footprint=quarter`; selecting Full MUST submit `footprint=full`.
+The `/cad/opengrid-snap` workspace MUST expose one footprint control with exactly the user-facing choices Full、Half、Quarter. It MUST NOT expose separate Snap X-half or Y-half direction controls. Selecting Half MUST submit `footprint=half`; selecting Quarter MUST submit `footprint=quarter`; selecting Full MUST submit `footprint=full`.
 
 #### Scenario: Full footprint control
 
@@ -279,7 +287,7 @@ The `/cad/opengrid-snap` workspace MUST expose one footprint control with exactl
 
 #### Scenario: Half and quarter footprint controls
 
-- **WHEN** the user selects 1/2 or 1/4
+- **WHEN** the user selects Half or Quarter
 - **THEN** the accepted normalized snapshot MUST contain `footprint=half` or `footprint=quarter` respectively
 - **AND** no separate X/Y direction input MAY be required or displayed
 
@@ -307,14 +315,38 @@ The project MUST keep a repository-owned copy of `opengrid-lite-2x2-xleft-ytop-o
 
 ### Requirement: Experimental footprint notice
 
-The Snap panel MUST display the red warning `格型測試中 不保證可使用` below the footprint control whenever `footprint=half` or `footprint=quarter` is selected. The warning MUST NOT be displayed for `footprint=full`.
+The Snap panel MUST display the red warning `格型測試中 不保證可使用` below the footprint control whenever `footprint=quarter` is selected. The warning MUST NOT be displayed for `footprint=full` or `footprint=half`.
 
 #### Scenario: Experimental footprint warning
 
-- **WHEN** the user selects 1/2 or 1/4 in the Snap footprint control
+- **WHEN** the user selects Quarter in the Snap footprint control
 - **THEN** the panel MUST show `格型測試中 不保證可使用` in the warning color below that control
 
-#### Scenario: Full footprint has no experimental warning
+#### Scenario: Full and half footprints have no experimental warning
 
-- **WHEN** the user selects Full in the Snap footprint control
+- **WHEN** the user selects Full or Half in the Snap footprint control
 - **THEN** the experimental footprint warning MUST not be shown
+
+### Requirement: Fixed half and quarter STEP downloads
+
+When the user selects `footprint=half`, the Snap workspace MUST provide a fixed repository-owned STEP download named `Half.step`; when the user selects `footprint=quarter`, it MUST provide a fixed repository-owned STEP download named `Quarter.step`. These downloads MUST use `snap-half.step` and `snap-quarter.step` respectively, MUST NOT send an incremental `export.step` request to the Worker, and MUST NOT depend on the profile, variant, optional-hole fields, or offset values. The preview for Half and Quarter MUST also load and display the corresponding fixed STEP asset, without an incremental Worker build. The fixed assets MUST be validated as millimetre STEP B-Reps with non-empty solid geometry. The Snap panel MUST disable the shared X/Y offset control and both optional-hole controls for Half and Quarter, reset the offset and optional-hole parameters to their inactive values when either footprint is selected, and explain that 增量無效、定位孔無效、移除孔無效. Full MUST retain the adjustable offset and optional-hole controls.
+
+#### Scenario: Half uses the fixed STEP asset
+
+- **WHEN** the user selects Half and clicks `下載 STEP`
+- **THEN** the browser MUST download `Half.step` from the repository-owned `snap-half.step` asset
+- **AND** no incremental STEP export request MAY be sent
+
+#### Scenario: Quarter uses the fixed STEP asset while retaining its warning
+
+- **WHEN** the user selects Quarter and clicks `下載 STEP`
+- **THEN** the browser MUST download `Quarter.step` from the repository-owned `snap-quarter.step` asset
+- **AND** no incremental STEP export request MAY be sent
+- **AND** the warning `格型測試中 不保證可使用` MUST remain visible
+
+#### Scenario: Half and Quarter do not expose offset adjustment
+
+- **WHEN** the user selects Half or Quarter
+- **THEN** the shared X/Y offset control MUST be disabled and show zero
+- **AND** the locating-hole and remover-hole controls MUST be disabled and show that they are invalid
+- **AND** selecting Full MUST re-enable the offset control

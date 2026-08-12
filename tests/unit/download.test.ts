@@ -6,6 +6,7 @@ import {
 import {
   validateStepResponse,
   validateStlResponse,
+  triggerFixedStepDownload,
   triggerStlDownload,
 } from '../../src/features/cad/download'
 
@@ -122,6 +123,27 @@ describe('STL response validation', () => {
 })
 
 describe('STL browser download adapter', () => {
+  it('triggers a fixed STEP asset download with its user-facing filename', () => {
+    const click = vi.fn()
+    const anchor = { href: '', download: '', click }
+    vi.stubGlobal('document', {
+      createElement: vi.fn(() => anchor),
+    })
+
+    triggerFixedStepDownload({
+      url: '/downloads/snap-half.step',
+      fileName: 'Half.step',
+    })
+
+    expect(anchor).toMatchObject({
+      href: '/downloads/snap-half.step',
+      download: 'Half.step',
+    })
+    expect(click).toHaveBeenCalledOnce()
+
+    vi.unstubAllGlobals()
+  })
+
   it('triggers one download and returns Object URL cleanup', () => {
     const click = vi.fn()
     const anchor = { href: '', download: '', click }

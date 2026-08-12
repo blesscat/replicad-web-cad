@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   serializeMesh: vi.fn(),
   assertOpenGridSnapShapeQuality: vi.fn(),
   loadOpenGridSnapReference: vi.fn(),
+  loadOpenGridSnapFixedFootprint: vi.fn(),
   exportStepBytes: vi.fn(),
   exportStlBytes: vi.fn(),
 }))
@@ -29,6 +30,7 @@ vi.mock('../../src/cad-kernel/components/opengrid-snap/quality', () => ({
 }))
 vi.mock('../../src/cad-kernel/components/opengrid-snap/builder', () => ({
   loadOpenGridSnapReference: mocks.loadOpenGridSnapReference,
+  loadOpenGridSnapFixedFootprint: mocks.loadOpenGridSnapFixedFootprint,
 }))
 vi.mock('../../src/cad-kernel/export', () => ({
   exportStepBytes: mocks.exportStepBytes,
@@ -116,6 +118,9 @@ function configureMocks() {
   mocks.loadOpenGridSnapReference.mockImplementation(async () => ({
     delete: vi.fn(),
   }))
+  mocks.loadOpenGridSnapFixedFootprint.mockImplementation(async () => ({
+    delete: vi.fn(),
+  }))
   mocks.exportStepBytes.mockResolvedValue(new Uint8Array([1, 2, 3]).buffer)
   mocks.exportStlBytes.mockResolvedValue(new Uint8Array([4, 5, 6]).buffer)
 }
@@ -172,6 +177,55 @@ describe('OpenGrid Snap Worker runtime', () => {
     )
   })
 
+  it('uses fixed footprint assets for Half and Quarter previews', async () => {
+    const fixedShapes = [{ delete: vi.fn() }, { delete: vi.fn() }]
+    mocks.loadOpenGridSnapFixedFootprint
+      .mockResolvedValueOnce(fixedShapes[0])
+      .mockResolvedValueOnce(fixedShapes[1])
+    mocks.buildModelBRep.mockImplementation(
+      async (
+        _modelId: string,
+        parameters: OpenGridSnapParameters,
+        context: {
+          getOpenGridSnapFixedFootprint?: (
+            footprint: 'half' | 'quarter',
+          ) => Promise<unknown>
+        },
+      ) => {
+        if (parameters.footprint !== 'full') {
+          await context.getOpenGridSnapFixedFootprint?.(parameters.footprint)
+        }
+        return { delete: vi.fn() }
+      },
+    )
+
+    const events: unknown[] = []
+    const runtime = new CadWorkerRuntime('epoch-snap-fixed-preview', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(generateCommand(snapParameters('Full', 0, 'half')))
+    await runtime.handle(
+      generateCommand(snapParameters('Lite', 0.4, 'quarter'), 2),
+    )
+
+    expect(mocks.loadOpenGridSnapFixedFootprint).toHaveBeenNthCalledWith(
+      1,
+      'half',
+    )
+    expect(mocks.loadOpenGridSnapFixedFootprint).toHaveBeenNthCalledWith(
+      2,
+      'quarter',
+    )
+    expect(mocks.loadOpenGridSnapReference).not.toHaveBeenCalled()
+    expect(mocks.assertOpenGridSnapShapeQuality).not.toHaveBeenCalled()
+    expect(events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'model.candidate-ready' }),
+      ]),
+    )
+  })
+
   it('removes a failed reference promise so the next generation can retry', async () => {
     const events: unknown[] = []
     const runtime = new CadWorkerRuntime('epoch-snap-retry', (event) =>
@@ -192,6 +246,42 @@ describe('OpenGrid Snap Worker runtime', () => {
         modelId: 'opengrid-snap',
       }),
     )
+  })
+
+  it('disposes fixed footprint assets once', async () => {
+    const fixedShape = { delete: vi.fn() }
+    mocks.loadOpenGridSnapFixedFootprint.mockResolvedValue(fixedShape)
+    mocks.buildModelBRep.mockImplementation(
+      async (
+        _modelId: string,
+        parameters: OpenGridSnapParameters,
+        context: {
+          getOpenGridSnapFixedFootprint?: (
+            footprint: 'half' | 'quarter',
+          ) => Promise<unknown>
+        },
+      ) => {
+        if (parameters.footprint !== 'full') {
+          await context.getOpenGridSnapFixedFootprint?.(parameters.footprint)
+        }
+        return { delete: vi.fn() }
+      },
+    )
+
+    const runtime = new CadWorkerRuntime(
+      'epoch-snap-fixed-dispose',
+      () => undefined,
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(generateCommand(snapParameters('Full', 0, 'half')))
+    await runtime.handle({
+      ...base,
+      requestId: 'snap-fixed-dispose-request',
+      operationId: 'snap-fixed-dispose-operation',
+      kind: 'worker.dispose' as const,
+    })
+
+    expect(fixedShape.delete).toHaveBeenCalledOnce()
   })
 
   it('discards a quality-failed Snap candidate while retaining the next valid one', async () => {

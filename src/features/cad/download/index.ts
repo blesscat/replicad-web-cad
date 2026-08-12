@@ -3,6 +3,11 @@ import { PROTOTYPE_CONFIGURATION } from '../../../cad-contract/units'
 
 export type ExportFormat = 'step' | 'stl'
 
+export type FixedFileDownload = {
+  url: string
+  fileName: string
+}
+
 export function validateStepResponse(
   event: ExportReadyEvent,
   expectedRevision: string,
@@ -40,6 +45,13 @@ export function triggerStepDownload(event: ExportReadyEvent): () => void {
   anchor.download = event.fileName
   anchor.click()
   return () => URL.revokeObjectURL(url)
+}
+
+export function triggerFixedStepDownload(download: FixedFileDownload): void {
+  const anchor = document.createElement('a')
+  anchor.href = download.url
+  anchor.download = download.fileName
+  anchor.click()
 }
 
 export function validateStlResponse(

@@ -17,6 +17,7 @@ import {
   openGridSnapCanonicalAxesFor,
   type ModelBounds,
   type OpenGridSnapParameters,
+  type OpenGridSnapFootprint,
   type OpenGridSnapProfile,
   type OpenGridSnapVariant,
 } from '../../../cad-contract/units'
@@ -47,6 +48,18 @@ export const OPENGRID_SNAP_REFERENCE_URLS: Readonly<
   },
 }
 
+export type OpenGridSnapFixedFootprint = Extract<
+  OpenGridSnapFootprint,
+  'half' | 'quarter'
+>
+
+export const OPENGRID_SNAP_FIXED_FOOTPRINT_URLS: Readonly<
+  Record<OpenGridSnapFixedFootprint, string>
+> = {
+  half: '/downloads/snap-half.step',
+  quarter: '/downloads/snap-quarter.step',
+}
+
 const ASSET_TOLERANCE = 0.05
 
 type PointTuple = [number, number, number]
@@ -56,6 +69,9 @@ export type OpenGridSnapBuildContext = {
   getOpenGridSnapReference?: (
     variant: OpenGridSnapVariant,
     profile: OpenGridSnapProfile,
+  ) => Promise<Shape3D>
+  getOpenGridSnapFixedFootprint?: (
+    footprint: OpenGridSnapFixedFootprint,
   ) => Promise<Shape3D>
   yieldToEventLoop?: () => Promise<void>
   isGenerationCurrent?: () => boolean
@@ -168,6 +184,22 @@ function assertReferenceGeometry(
     bounds,
     solidCount,
     height: bounds.max[2] - bounds.min[2],
+  }
+}
+
+function assertFixedFootprintGeometry(shape: Shape3D): void {
+  const bounds = readBounds(shape)
+  const coordinates = [...bounds.min, ...bounds.max]
+  if (
+    coordinates.some((coordinate) => !Number.isFinite(coordinate)) ||
+    bounds.max[0] <= bounds.min[0] ||
+    bounds.max[1] <= bounds.min[1] ||
+    bounds.max[2] <= bounds.min[2]
+  ) {
+    throw new Error('OPENGRID_SNAP_FIXED_ASSET_INVALID_BOUNDS')
+  }
+  if (countSolids(shape) === 0) {
+    throw new Error('OPENGRID_SNAP_FIXED_ASSET_EMPTY')
   }
 }
 
@@ -804,6 +836,42 @@ export async function loadOpenGridSnapReference(
   return importOpenGridSnapReference(await response.blob(), variant, profile)
 }
 
+export async function importOpenGridSnapFixedFootprint(
+  blob: Blob,
+): Promise<Shape3D> {
+  let source: string
+  try {
+    source = await blob.text()
+  } catch {
+    throw new Error('OPENGRID_SNAP_ASSET_INVALID')
+  }
+  assertMillimetreStepUnits(source)
+
+  let imported: Shape3D
+  try {
+    imported = (await importSTEP(blob)).asShape3D()
+  } catch {
+    throw new Error('OPENGRID_SNAP_ASSET_INVALID')
+  }
+
+  try {
+    assertFixedFootprintGeometry(imported)
+    return imported
+  } catch (error) {
+    deleteShape(imported)
+    throw error
+  }
+}
+
+export async function loadOpenGridSnapFixedFootprint(
+  footprint: OpenGridSnapFixedFootprint,
+  fetcher: typeof fetch = fetch,
+): Promise<Shape3D> {
+  const response = await fetcher(OPENGRID_SNAP_FIXED_FOOTPRINT_URLS[footprint])
+  if (!response.ok) throw new Error('OPENGRID_SNAP_ASSET_LOAD_FAILED')
+  return importOpenGridSnapFixedFootprint(await response.blob())
+}
+
 export function inspectOpenGridSnapReference(
   shape: Shape3D,
   variant: OpenGridSnapVariant,
@@ -819,11 +887,23 @@ export async function buildOpenGridSnap(
   if (!isOpenGridSnapParameters(parameters)) {
     throw new Error('OPENGRID_SNAP_PARAMETERS_INVALID')
   }
+
+  assertGenerationCurrent(context)
+  if (
+    parameters.footprint !== 'full' &&
+    context.getOpenGridSnapFixedFootprint
+  ) {
+    const fixedFootprint = await context.getOpenGridSnapFixedFootprint(
+      parameters.footprint,
+    )
+    assertGenerationCurrent(context)
+    return cloneImportedAssembly(fixedFootprint)
+  }
+
   if (!context.getOpenGridSnapReference) {
     throw new Error('OPENGRID_SNAP_ASSET_REFERENCE_MISSING')
   }
 
-  assertGenerationCurrent(context)
   const reference = await context.getOpenGridSnapReference(
     parameters.variant,
     parameters.profile,

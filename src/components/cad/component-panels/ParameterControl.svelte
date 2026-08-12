@@ -9,16 +9,18 @@
     field: ParameterField
     value: string
     error?: string
+    disabled?: boolean
     onChange: (value: string) => void
   }
 
-  let { field, value, error, onChange }: Props = $props()
+  let { field, value, error, disabled = false, onChange }: Props = $props()
 
   let controlLabel = $derived(displayParameterLabel(field))
 
   let commonProps = $derived({
     'aria-invalid': Boolean(error),
     'aria-describedby': error ? `${field.key}-error` : undefined,
+    disabled,
     min: field.min,
     max: field.max,
     step: field.step,
@@ -42,6 +44,7 @@
         direction={field.sliderDirection}
         {error}
         describedBy={error ? `${field.key}-error` : undefined}
+        {disabled}
         {onChange}
       />
       {#if field.control === 'range'}

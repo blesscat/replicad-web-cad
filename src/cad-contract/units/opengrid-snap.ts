@@ -436,6 +436,8 @@ function directionalBoundsFor(
 export function openGridSnapFileName(
   parameters: OpenGridSnapParameters,
 ): string {
+  if (parameters.footprint === 'half') return 'Half.step'
+  if (parameters.footprint === 'quarter') return 'Quarter.step'
   return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-${parameters.footprint}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}.step`
 }
 

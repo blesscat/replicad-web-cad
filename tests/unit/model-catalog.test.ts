@@ -458,6 +458,42 @@ describe('CAD component catalog', () => {
       }),
     ).toBe('opengrid-snap-standard-lite-offset0.15-full-corners0-center0.stl')
     expect(
+      snap?.fixedStepDownload?.({
+        variant: 'Lite',
+        profile: 'Directional',
+        offset: 0.35,
+        footprint: 'half',
+        fourCornerLocatingHoles: true,
+        centerRemoverHole: true,
+      }),
+    ).toEqual({
+      url: '/downloads/snap-half.step',
+      fileName: 'Half.step',
+    })
+    expect(
+      snap?.fixedStepDownload?.({
+        variant: 'Lite',
+        profile: 'Directional',
+        offset: 0.35,
+        footprint: 'quarter',
+        fourCornerLocatingHoles: true,
+        centerRemoverHole: true,
+      }),
+    ).toEqual({
+      url: '/downloads/snap-quarter.step',
+      fileName: 'Quarter.step',
+    })
+    expect(
+      snap?.fixedStepDownload?.({
+        variant: 'Lite',
+        profile: 'Directional',
+        offset: 0.35,
+        footprint: 'full',
+        fourCornerLocatingHoles: true,
+        centerRemoverHole: true,
+      }),
+    ).toBeNull()
+    expect(
       snap?.validateParameters({
         variant: 'Full',
         profile: 'Directional',

@@ -31,6 +31,11 @@
   let rawOffset = $derived(rawParameters.offset ?? String(parameters.offset))
   let rawProfile = $derived(rawParameters.profile ?? parameters.profile)
   let rawFootprint = $derived(rawParameters.footprint ?? parameters.footprint)
+  let offsetIsAdjustable = $derived(rawFootprint === 'full')
+  let fixedFootprintFeaturesAreDisabled = $derived(rawFootprint !== 'full')
+  let displayedOffset = $derived(
+    offsetIsAdjustable ? rawOffset : String(offsetField.defaultValue),
+  )
   let rawFourCornerLocatingHoles = $derived(
     rawParameters.fourCornerLocatingHoles ??
       String(parameters.fourCornerLocatingHoles),
@@ -41,10 +46,17 @@
 
   function updateFootprint(event: Event): void {
     if (!(event.currentTarget instanceof HTMLSelectElement)) return
-    onInputChange(
-      'footprint',
-      event.currentTarget.value as OpenGridSnapFootprint,
-    )
+    const footprint = event.currentTarget.value as OpenGridSnapFootprint
+    onInputChange('footprint', footprint)
+    if (footprint !== 'full') {
+      onInputChange('offset', String(offsetField.defaultValue))
+      onInputChange('fourCornerLocatingHoles', 'false')
+      onInputChange('centerRemoverHole', 'false')
+    }
+  }
+
+  function restoreOffset(): void {
+    onInputChange('offset', String(offsetField.defaultValue))
   }
 
   function updateBoolean(
@@ -52,6 +64,7 @@
     event: Event,
   ): void {
     if (!(event.currentTarget instanceof HTMLInputElement)) return
+    if (fixedFootprintFeaturesAreDisabled) return
     onInputChange(key, String(event.currentTarget.checked))
   }
 </script>
@@ -109,17 +122,22 @@
   <ParameterField
     label={displayParameterLabel(offsetField)}
     unit={offsetField.unit}
-    changed={rawOffset !== String(offsetField.defaultValue)}
+    changed={offsetIsAdjustable &&
+      rawOffset !== String(offsetField.defaultValue)}
     error={fieldError('offset')}
     errorId="opengrid-snap-offset-error"
-    onRestore={() => onInputChange('offset', String(offsetField.defaultValue))}
+    onRestore={offsetIsAdjustable ? restoreOffset : undefined}
   >
     <ParameterControl
       field={offsetField}
-      value={rawOffset}
+      value={displayedOffset}
       error={fieldError('offset')}
+      disabled={!offsetIsAdjustable}
       onChange={(nextValue) => onInputChange('offset', nextValue)}
     />
+    {#if !offsetIsAdjustable}
+      <p class="m-0 text-sm text-muted" role="status">增量無效</p>
+    {/if}
   </ParameterField>
 
   <ParameterField
@@ -139,10 +157,10 @@
       onchange={updateFootprint}
     >
       <option value="full">Full</option>
-      <option value="half">1/2</option>
-      <option value="quarter">1/4</option>
+      <option value="half">Half</option>
+      <option value="quarter">Quarter</option>
     </select>
-    {#if rawFootprint === 'half' || rawFootprint === 'quarter'}
+    {#if rawFootprint === 'quarter'}
       <p class="m-0 text-sm text-error" role="status">
         格型測試中 不保證可使用
       </p>
@@ -159,11 +177,16 @@
             ? 'opengrid-snap-four-corner-holes-error'
             : undefined}
           aria-invalid={Boolean(fieldError('fourCornerLocatingHoles'))}
-          checked={rawFourCornerLocatingHoles === 'true'}
+          checked={!fixedFootprintFeaturesAreDisabled &&
+            rawFourCornerLocatingHoles === 'true'}
+          disabled={fixedFootprintFeaturesAreDisabled}
           onchange={(event) => updateBoolean('fourCornerLocatingHoles', event)}
         />
         定位孔
       </label>
+      {#if fixedFootprintFeaturesAreDisabled}
+        <p class="m-0 text-sm text-muted" role="status">定位孔無效</p>
+      {/if}
       {#if fieldError('fourCornerLocatingHoles')}
         <span
           id="opengrid-snap-four-corner-holes-error"
@@ -182,11 +205,16 @@
             ? 'opengrid-snap-center-remover-hole-error'
             : undefined}
           aria-invalid={Boolean(fieldError('centerRemoverHole'))}
-          checked={rawCenterRemoverHole === 'true'}
+          checked={!fixedFootprintFeaturesAreDisabled &&
+            rawCenterRemoverHole === 'true'}
+          disabled={fixedFootprintFeaturesAreDisabled}
           onchange={(event) => updateBoolean('centerRemoverHole', event)}
         />
         移除孔
       </label>
+      {#if fixedFootprintFeaturesAreDisabled}
+        <p class="m-0 text-sm text-muted" role="status">移除孔無效</p>
+      {/if}
       {#if fieldError('centerRemoverHole')}
         <span
           id="opengrid-snap-center-remover-hole-error"

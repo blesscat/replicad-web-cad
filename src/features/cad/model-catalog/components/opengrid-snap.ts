@@ -7,7 +7,24 @@ import {
   OPENGRID_SNAP_CONFIGURATION,
   validateOpenGridSnapParameters,
 } from '../../../../cad-contract/units'
-import type { ModelDefinition, ParameterField } from '../types'
+import type {
+  FixedStepDownload,
+  ModelDefinition,
+  ParameterField,
+} from '../types'
+
+const FIXED_STEP_DOWNLOADS: Readonly<
+  Record<'half' | 'quarter', FixedStepDownload>
+> = {
+  half: {
+    url: '/downloads/snap-half.step',
+    fileName: 'Half.step',
+  },
+  quarter: {
+    url: '/downloads/snap-quarter.step',
+    fileName: 'Quarter.step',
+  },
+}
 
 const OPENGRID_SNAP_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
   {
@@ -49,6 +66,16 @@ function openGridSnapStlFileNameFor(parameters: ModelParameterValues): string {
   return openGridSnapStlFileName(parameters)
 }
 
+function fixedStepDownloadFor(
+  parameters: ModelParameterValues,
+): FixedStepDownload | null {
+  if (!isOpenGridSnapParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
+  }
+  if (parameters.footprint === 'full') return null
+  return FIXED_STEP_DOWNLOADS[parameters.footprint]
+}
+
 function boundsForOpenGridSnapDefinition(parameters: ModelParameterValues) {
   if (!isOpenGridSnapParameters(parameters)) {
     throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
@@ -63,7 +90,7 @@ export const opengridSnapDefinition: ModelDefinition = {
   displayName: 'Snap (咔咔)',
   selectionLabel: 'Snap (咔咔)',
   selectionDescription:
-    '提供 Standard 或 Directional 的 Snap (咔咔)，可切換 Full/Lite 的完整、半格或四分之一格，以及四周定位孔與中心 remover 孔。',
+    '提供 Lite／Full、Standard／Directional 的 Snap (咔咔)，可切換 Full、Half 或 Quarter。Half／Quarter 使用固定 STEP；增量、定位孔、移除孔無效。',
   parameterSchema: OPENGRID_SNAP_PARAMETER_SCHEMA,
   defaultParameters: OPENGRID_SNAP_CONFIGURATION.defaultParameters,
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
@@ -77,4 +104,5 @@ export const opengridSnapDefinition: ModelDefinition = {
   boundsForParameters: boundsForOpenGridSnapDefinition,
   exportFileName: openGridSnapFileNameFor,
   stlFileName: openGridSnapStlFileNameFor,
+  fixedStepDownload: fixedStepDownloadFor,
 }

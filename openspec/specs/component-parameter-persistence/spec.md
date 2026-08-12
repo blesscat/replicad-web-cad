@@ -109,7 +109,7 @@ The versioned browser persistence MUST store valid Snap parameters under the sta
 
 - **GIVEN** browser persistence contains a valid `opengrid-snap` entry with a profile, footprint, offset, and optional-hole selections
 - **WHEN** the user opens `/cad/opengrid-snap`
-- **THEN** the controls MUST display the saved typed profile, variant, shared total offset, Full/1/2/1/4 footprint, and both feature selections
+- **THEN** the controls MUST display the saved typed profile, variant, shared total offset, Full/Half/Quarter footprint, and both feature selections
 - **AND** the first generation MUST use those typed values
 
 #### Scenario: Persist a valid Snap update

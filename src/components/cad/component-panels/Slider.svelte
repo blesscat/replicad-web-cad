@@ -8,6 +8,7 @@
     direction?: 'ltr' | 'rtl'
     error?: string
     describedBy?: string
+    disabled?: boolean
     onChange: (value: string) => void
   }
 
@@ -20,6 +21,7 @@
     direction,
     error,
     describedBy,
+    disabled = false,
     onChange,
   }: Props = $props()
 
@@ -34,6 +36,7 @@
   aria-describedby={describedBy}
   aria-invalid={Boolean(error)}
   aria-label={label}
+  {disabled}
   dir={direction}
   type="range"
   {min}

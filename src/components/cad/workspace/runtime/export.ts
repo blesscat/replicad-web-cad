@@ -3,6 +3,7 @@ import type { ExportReadyEvent } from '../../../../cad-contract/messages'
 import { PROTOTYPE_CONFIGURATION } from '../../../../cad-contract/units'
 import {
   type ExportFormat,
+  triggerFixedStepDownload,
   triggerStlDownload,
   triggerStepDownload,
   validateStlResponse,
@@ -113,6 +114,15 @@ export function createExportHandlers(context: RuntimeContext): ExportHandlers {
 
     const definition = getModelDefinition(model.modelId)
     if (!definition) return
+
+    if (format === 'step') {
+      const fixedDownload = definition.fixedStepDownload?.(model.parameters)
+      if (fixedDownload) {
+        triggerFixedStepDownload(fixedDownload)
+        return
+      }
+    }
+
     const operationId = newOperationId(`export-${format}`)
     let fileName: string
     let requestId: string
