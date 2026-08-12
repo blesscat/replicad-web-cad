@@ -1784,10 +1784,23 @@ function hybridTransitionSidesForCell(
   if (parameters.rows < 3 || parameters.columns < 3) return []
 
   const sides: HybridTransitionSide[] = []
-  if (row === 0) sides.push('top')
-  if (column === parameters.columns - 1) sides.push('right')
-  if (row === parameters.rows - 1) sides.push('bottom')
-  if (column === 0) sides.push('left')
+  const addSideWhenNeighborIsInterior = (side: HybridTransitionSide): void => {
+    const [transitionRow, transitionColumn] = hybridTransitionCellForSide(
+      row,
+      column,
+      side,
+    )
+    if (!isHybridPerimeterCell(parameters, transitionRow, transitionColumn)) {
+      sides.push(side)
+    }
+  }
+
+  if (row === 0) addSideWhenNeighborIsInterior('top')
+  if (column === parameters.columns - 1) {
+    addSideWhenNeighborIsInterior('right')
+  }
+  if (row === parameters.rows - 1) addSideWhenNeighborIsInterior('bottom')
+  if (column === 0) addSideWhenNeighborIsInterior('left')
   return sides
 }
 

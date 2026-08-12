@@ -77,7 +77,72 @@ function measureIntersectionVolume(
   }
 }
 
+type TransitionPlaneFact = {
+  minimum: [number, number, number]
+  maximum: [number, number, number]
+}
+
+function transitionPlaneFacts(shape: Shape3D): TransitionPlaneFact[] {
+  const transitionRise =
+    OPENGRID_CONFIGURATION.variants.Heavy.thickness -
+    OPENGRID_CONFIGURATION.variants.Full.thickness
+  return shape.faces.flatMap((face) => {
+    const bounds = face.boundingBox
+    try {
+      const [minimum, maximum] = bounds.bounds as [
+        [number, number, number],
+        [number, number, number],
+      ]
+      const zSpan = maximum[2] - minimum[2]
+      if (
+        face.geomType !== 'PLANE' ||
+        zSpan < transitionRise - 0.25 ||
+        zSpan > transitionRise + 0.25
+      ) {
+        return []
+      }
+      return [{ minimum, maximum }]
+    } finally {
+      bounds.delete()
+      face.delete()
+    }
+  })
+}
+
 describe('OpenGrid Hybrid product builder', () => {
+  it('keeps Hybrid transitions on the four side interiors without corner transitions', async () => {
+    const input = parameters({
+      variant: 'Hybrid',
+      rows: 3,
+      columns: 3,
+      chamfers: 'none',
+      connectorHoles: 'none',
+      screwMode: 'none',
+    })
+    const { shape, quality } = await buildAndInspect(input)
+    try {
+      expect(quality.passed, quality.failures.join(';')).toBe(true)
+      const transitionFaces = transitionPlaneFacts(shape)
+      expect(transitionFaces).toHaveLength(4)
+      for (const face of transitionFaces) {
+        expect(face.minimum[0]).toBeGreaterThanOrEqual(
+          -OPENGRID_CONFIGURATION.tileInnerSize / 2 - 0.05,
+        )
+        expect(face.maximum[0]).toBeLessThanOrEqual(
+          OPENGRID_CONFIGURATION.tileInnerSize / 2 + 0.05,
+        )
+        expect(face.minimum[1]).toBeGreaterThanOrEqual(
+          -OPENGRID_CONFIGURATION.tileInnerSize / 2 - 0.05,
+        )
+        expect(face.maximum[1]).toBeLessThanOrEqual(
+          OPENGRID_CONFIGURATION.tileInnerSize / 2 + 0.05,
+        )
+      }
+    } finally {
+      shape.delete()
+    }
+  }, 120_000)
+
   it('extends the Heavy perimeter transition into the second cell without corner wedges', async () => {
     const input = parameters({
       variant: 'Hybrid',
