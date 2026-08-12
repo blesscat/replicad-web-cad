@@ -28,6 +28,7 @@ test('home, model selection, and docs are static Astro pages', async ({
   ).toHaveCount(0)
   await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
 
+  await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/models')
   await expect(
     page.getByRole('link', { name: 'Shape Shortcut' }),
@@ -38,12 +39,19 @@ test('home, model selection, and docs are static Astro pages', async ({
   await expect(
     page.getByRole('heading', { name: '選擇 CAD 模型' }),
   ).toBeVisible()
+  await expect(page.locator('main')).toHaveCSS('max-width', 'none')
   await expect(page.getByTestId('model-selection').locator('p')).toHaveCount(0)
   await expect(
     page.getByRole('heading', { name: 'OpenGrid 系列' }),
   ).toBeVisible()
   await expect(page.getByRole('heading', { name: 'HSW 系列' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '其他模型' })).toHaveCount(0)
+  await expect(page.getByText('系統入口', { exact: true })).toHaveCount(0)
+  await expect(
+    page.getByTestId('model-family-opengrid').getByText('OpenGrid', {
+      exact: true,
+    }),
+  ).toHaveCount(0)
   const familySections = page.locator('[data-testid^="model-family-"]')
   await expect(familySections).toHaveCount(2)
   await expect(familySections.nth(0)).toHaveAttribute(
@@ -62,14 +70,10 @@ test('home, model selection, and docs are static Astro pages', async ({
   await expect(
     openGridSubgroups.locator(':scope > [data-testid^="model-subgroup-"]'),
   ).toHaveCount(2)
-  const openGridFamilyBounds = await openGridFamily.boundingBox()
-  const openGridSubgroupsBounds = await openGridSubgroups.boundingBox()
-  expect(openGridFamilyBounds).not.toBeNull()
-  expect(openGridSubgroupsBounds).not.toBeNull()
-  if (!openGridFamilyBounds || !openGridSubgroupsBounds) {
-    throw new Error('OpenGrid subgroups must be nested inside the family')
-  }
-  expect(openGridSubgroupsBounds.x).toBeGreaterThan(openGridFamilyBounds.x)
+  await expect(page.getByTestId('model-selection')).toHaveCSS(
+    'border-top-width',
+    '0px',
+  )
 
   const editLinkFor = (
     container: ReturnType<typeof page.locator>,
@@ -147,6 +151,18 @@ test('home, model selection, and docs are static Astro pages', async ({
   }
   expect(snapCardBounds.x).toBeGreaterThan(bottomCardBounds.x)
   expect(snapCardBounds.y).toBeCloseTo(bottomCardBounds.y, 0)
+  const openGridCardPositions = await openGridCards.evaluateAll((cards) =>
+    cards.map((card) => {
+      const bounds = card.getBoundingClientRect()
+      return { x: bounds.x, y: bounds.y }
+    }),
+  )
+  const firstCardPosition = openGridCardPositions[0]
+  if (!firstCardPosition) throw new Error('Expected OpenGrid card positions')
+  const firstRowCount = openGridCardPositions.filter(
+    (position) => Math.abs(position.y - firstCardPosition.y) < 1,
+  ).length
+  expect(firstRowCount).toBeGreaterThanOrEqual(3)
   await expect(wallRelated.locator('[data-model-id]')).toHaveCount(2)
   for (const displayName of [
     '方塊',
@@ -177,6 +193,31 @@ test('home, model selection, and docs are static Astro pages', async ({
     page.getByRole('link', { name: '返回模型選擇' }),
   ).toHaveAttribute('href', '/models')
   await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
+})
+
+test('model selection stacks all cards on narrow screens', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/models')
+
+  const cards = page.getByTestId('model-selection').locator('[data-model-id]')
+  const positions = await cards.evaluateAll((cardElements) =>
+    cardElements.map((card) => {
+      const bounds = card.getBoundingClientRect()
+      return { x: bounds.x, y: bounds.y }
+    }),
+  )
+  expect(positions.length).toBe(10)
+  const cardX = positions[0]?.x
+  if (cardX === undefined) throw new Error('Expected narrow model cards')
+  expect(positions.every((position) => Math.abs(position.x - cardX) < 1)).toBe(
+    true,
+  )
+  expect(
+    positions.every((position, index) => {
+      const previous = positions[index - 1]
+      return index === 0 || (previous !== undefined && position.y > previous.y)
+    }),
+  ).toBe(true)
 })
 
 test('shared navigation exposes the configured support link contract', async ({
