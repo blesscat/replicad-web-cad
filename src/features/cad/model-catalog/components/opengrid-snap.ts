@@ -7,7 +7,24 @@ import {
   OPENGRID_SNAP_CONFIGURATION,
   validateOpenGridSnapParameters,
 } from '../../../../cad-contract/units'
-import type { ModelDefinition, ParameterField } from '../types'
+import type {
+  FixedStepDownload,
+  ModelDefinition,
+  ParameterField,
+} from '../types'
+
+const FIXED_STEP_DOWNLOADS: Readonly<
+  Record<'half' | 'quarter', FixedStepDownload>
+> = {
+  half: {
+    url: '/downloads/snap-half.step',
+    fileName: 'Half.step',
+  },
+  quarter: {
+    url: '/downloads/snap-quarter.step',
+    fileName: 'Quarter.step',
+  },
+}
 
 const OPENGRID_SNAP_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
   {
@@ -49,6 +66,16 @@ function openGridSnapStlFileNameFor(parameters: ModelParameterValues): string {
   return openGridSnapStlFileName(parameters)
 }
 
+function fixedStepDownloadFor(
+  parameters: ModelParameterValues,
+): FixedStepDownload | null {
+  if (!isOpenGridSnapParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
+  }
+  if (parameters.footprint === 'full') return null
+  return FIXED_STEP_DOWNLOADS[parameters.footprint]
+}
+
 function boundsForOpenGridSnapDefinition(parameters: ModelParameterValues) {
   if (!isOpenGridSnapParameters(parameters)) {
     throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
@@ -77,4 +104,5 @@ export const opengridSnapDefinition: ModelDefinition = {
   boundsForParameters: boundsForOpenGridSnapDefinition,
   exportFileName: openGridSnapFileNameFor,
   stlFileName: openGridSnapStlFileNameFor,
+  fixedStepDownload: fixedStepDownloadFor,
 }

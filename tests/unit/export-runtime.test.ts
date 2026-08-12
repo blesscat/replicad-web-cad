@@ -10,30 +10,56 @@ import type { CadWorkerClient } from '../../src/features/cad/worker-client'
 import type {
   ModelBounds,
   ModelParameterValues,
+  OpenGridSnapParameters,
 } from '../../src/cad-contract/units'
-import { boundsForPillar } from '../../src/cad-contract/units'
+import {
+  boundsForOpenGridSnap,
+  boundsForPillar,
+} from '../../src/cad-contract/units'
 
 function createContext(
-  modelId: 'box' | 'opengrid-pillar' = 'box',
+  modelId: 'box' | 'opengrid-pillar' | 'opengrid-snap' = 'box',
   pillarMode: 'standard' | 'thin-shell' = 'standard',
+  snapOffset = 0.35,
+  snapFootprint: 'half' | 'quarter' = 'half',
 ): {
   context: RuntimeContext
   refs: RuntimeRefs
   client: { send: ReturnType<typeof vi.fn> }
   dispatch: ReturnType<typeof vi.fn>
 } {
-  const parameters: ModelParameterValues =
-    modelId === 'opengrid-pillar'
-      ? { mode: pillarMode }
-      : { width: 20, depth: 30, height: 40 }
-  const rawParameters: Record<string, string> =
-    modelId === 'opengrid-pillar'
-      ? { mode: pillarMode }
-      : { width: '20', depth: '30', height: '40' }
-  const bounds: ModelBounds =
-    modelId === 'opengrid-pillar'
-      ? boundsForPillar({ mode: pillarMode })
-      : { min: [-10, -15, 0], max: [10, 15, 40] }
+  let parameters: ModelParameterValues
+  let rawParameters: Record<string, string>
+  let bounds: ModelBounds
+
+  if (modelId === 'opengrid-snap') {
+    const snapParameters: OpenGridSnapParameters = {
+      variant: 'Lite',
+      profile: 'Directional',
+      offset: snapOffset,
+      footprint: snapFootprint,
+      fourCornerLocatingHoles: true,
+      centerRemoverHole: true,
+    }
+    parameters = snapParameters
+    rawParameters = {
+      variant: 'Lite',
+      profile: 'Directional',
+      offset: String(snapOffset),
+      footprint: snapFootprint,
+      fourCornerLocatingHoles: 'true',
+      centerRemoverHole: 'true',
+    }
+    bounds = boundsForOpenGridSnap(snapParameters)
+  } else if (modelId === 'opengrid-pillar') {
+    parameters = { mode: pillarMode }
+    rawParameters = { mode: pillarMode }
+    bounds = boundsForPillar({ mode: pillarMode })
+  } else {
+    parameters = { width: 20, depth: 30, height: 40 }
+    rawParameters = { width: '20', depth: '30', height: '40' }
+    bounds = { min: [-10, -15, 0], max: [10, 15, 40] }
+  }
   const state = {
     ...initialCadState(modelId, parameters),
     status: 'ready' as const,
@@ -135,6 +161,53 @@ describe('CAD export runtime', () => {
         file: { name: 'pillar-5-thin-shell.stl', mime: 'model/stl' },
       }),
     )
+  })
+
+  it('downloads the fixed Half STEP without sending an incremental worker export', () => {
+    const { context, refs, client } = createContext('opengrid-snap')
+    const click = vi.fn()
+    const anchor = { href: '', download: '', click }
+    vi.stubGlobal('document', {
+      createElement: vi.fn(() => anchor),
+    })
+
+    const handlers = createExportHandlers(context)
+    handlers.handleExport('step')
+
+    expect(client.send).not.toHaveBeenCalled()
+    expect(anchor).toMatchObject({
+      href: '/downloads/snap-half.step',
+      download: 'Half.step',
+    })
+    expect(click).toHaveBeenCalledOnce()
+    expect(refs.exportRequest.current).toBeNull()
+
+    vi.unstubAllGlobals()
+  })
+
+  it('downloads the fixed Quarter STEP without sending an incremental worker export', () => {
+    const { context, client } = createContext(
+      'opengrid-snap',
+      'standard',
+      0.35,
+      'quarter',
+    )
+    const click = vi.fn()
+    const anchor = { href: '', download: '', click }
+    vi.stubGlobal('document', {
+      createElement: vi.fn(() => anchor),
+    })
+
+    createExportHandlers(context).handleExport('step')
+
+    expect(client.send).not.toHaveBeenCalled()
+    expect(anchor).toMatchObject({
+      href: '/downloads/snap-quarter.step',
+      download: 'Quarter.step',
+    })
+    expect(click).toHaveBeenCalledOnce()
+
+    vi.unstubAllGlobals()
   })
 
   it('rejects a mismatched STL response without triggering a download', () => {

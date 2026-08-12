@@ -144,12 +144,36 @@ describe('OpenGrid Snap contract', () => {
       centerRemoverHole: true,
     })
 
-    expect(openGridSnapFileName(input)).toBe(
-      'opengrid-snap-directional-lite-offset0.15-quarter-corners1-center1.step',
-    )
+    expect(openGridSnapFileName(input)).toBe('Quarter.step')
     expect(openGridSnapStlFileName(input)).toBe(
       'opengrid-snap-directional-lite-offset0.15-quarter-corners1-center1.stl',
     )
+  })
+
+  it('uses fixed STEP filenames for half and quarter downloads', () => {
+    expect(
+      openGridSnapFileName(
+        parameters({
+          profile: 'Directional',
+          variant: 'Lite',
+          offset: 0.35,
+          footprint: 'half',
+          fourCornerLocatingHoles: true,
+          centerRemoverHole: true,
+        }),
+      ),
+    ).toBe('Half.step')
+    expect(openGridSnapFileName(parameters({ footprint: 'quarter' }))).toBe(
+      'Quarter.step',
+    )
+    expect(
+      openGridSnapStlFileName(
+        parameters({
+          footprint: 'half',
+          offset: 0.35,
+        }),
+      ),
+    ).toContain('offset0.35-half')
   })
 
   it('rejects board-only fields, arbitrary axes, and invalid offsets', () => {

@@ -33,6 +33,7 @@ export type {
   ModelPreviewImage,
   ModelSelectionSubgroup,
   ParameterField,
+  FixedStepDownload,
 } from './types'
 export type { OpenGridSystemContext } from '../system-entry-context'
 export { boxDefinition } from './components/box'

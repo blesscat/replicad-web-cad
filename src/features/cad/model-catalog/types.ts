@@ -48,6 +48,11 @@ export type ModelPreviewImage = {
   height: number
 }
 
+export type FixedStepDownload = {
+  url: string
+  fileName: string
+}
+
 export type ModelDefinition = {
   id: ModelId
   buildKey: ModelId
@@ -63,5 +68,8 @@ export type ModelDefinition = {
   boundsForParameters: (parameters: ModelParameterValues) => ModelBounds
   exportFileName: (parameters: ModelParameterValues) => string
   stlFileName: (parameters: ModelParameterValues) => string
+  fixedStepDownload?: (
+    parameters: ModelParameterValues,
+  ) => FixedStepDownload | null
   systemContext?: OpenGridSystemContext
 }

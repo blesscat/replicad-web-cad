@@ -138,14 +138,22 @@ test('OpenGrid Snap route exposes profiles, features, and one shared outer offse
     name: 'OpenGrid Snap 格型',
   })
   await expect(footprint.locator('option')).toHaveCount(3)
+  await expect(footprint.locator('option[value="half"]')).toHaveText('Half')
   await expect(page.getByText('格型測試中 不保證可使用')).toHaveCount(0)
   await expect(
     page.getByRole('combobox', { name: /Snap.*半格方向|Snap.*X|Snap.*Y/ }),
   ).toHaveCount(0)
+  await footprint.selectOption('full')
+  await offset.press('ArrowRight')
+  await expect(offset).toHaveValue('0.05')
   await footprint.selectOption('half')
-  await expect(page.getByText('格型測試中 不保證可使用')).toBeVisible()
+  await expect(offset).toHaveValue('0')
+  await expect(page.getByText('格型測試中 不保證可使用')).toHaveCount(0)
+  await expect(offset).toBeDisabled()
   await footprint.selectOption('quarter')
+  await expect(offset).toHaveValue('0')
   await expect(page.getByText('格型測試中 不保證可使用')).toBeVisible()
+  await expect(offset).toBeDisabled()
   await expect
     .poll(async () =>
       page.evaluate(() => {
@@ -192,6 +200,7 @@ test('OpenGrid Snap route exposes profiles, features, and one shared outer offse
   expect(persistedSnap).not.toHaveProperty('halfCellY')
   await footprint.selectOption('full')
   await expect(page.getByText('格型測試中 不保證可使用')).toHaveCount(0)
+  await expect(offset).toBeEnabled()
   await expect(page.getByTestId('opengrid-panel')).toHaveCount(0)
   await expect(
     page.getByTestId('opengrid-snap-panel').getByText(/板型|格數|螺絲|連接孔/),

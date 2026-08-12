@@ -269,7 +269,7 @@ When `profile=Directional`, generation MUST use the repository-owned Directional
 
 ### Requirement: OpenGrid Snap footprint control
 
-The `/cad/opengrid-snap` workspace MUST expose one footprint control with exactly the user-facing choices Full、1/2、1/4. It MUST NOT expose separate Snap X-half or Y-half direction controls. Selecting 1/2 MUST submit `footprint=half`; selecting 1/4 MUST submit `footprint=quarter`; selecting Full MUST submit `footprint=full`.
+The `/cad/opengrid-snap` workspace MUST expose one footprint control with exactly the user-facing choices Full、Half、1/4. It MUST NOT expose separate Snap X-half or Y-half direction controls. Selecting Half MUST submit `footprint=half`; selecting 1/4 MUST submit `footprint=quarter`; selecting Full MUST submit `footprint=full`.
 
 #### Scenario: Full footprint control
 
@@ -279,7 +279,7 @@ The `/cad/opengrid-snap` workspace MUST expose one footprint control with exactl
 
 #### Scenario: Half and quarter footprint controls
 
-- **WHEN** the user selects 1/2 or 1/4
+- **WHEN** the user selects Half or 1/4
 - **THEN** the accepted normalized snapshot MUST contain `footprint=half` or `footprint=quarter` respectively
 - **AND** no separate X/Y direction input MAY be required or displayed
 
@@ -307,14 +307,37 @@ The project MUST keep a repository-owned copy of `opengrid-lite-2x2-xleft-ytop-o
 
 ### Requirement: Experimental footprint notice
 
-The Snap panel MUST display the red warning `格型測試中 不保證可使用` below the footprint control whenever `footprint=half` or `footprint=quarter` is selected. The warning MUST NOT be displayed for `footprint=full`.
+The Snap panel MUST display the red warning `格型測試中 不保證可使用` below the footprint control whenever `footprint=quarter` is selected. The warning MUST NOT be displayed for `footprint=full` or `footprint=half`.
 
 #### Scenario: Experimental footprint warning
 
-- **WHEN** the user selects 1/2 or 1/4 in the Snap footprint control
+- **WHEN** the user selects 1/4 in the Snap footprint control
 - **THEN** the panel MUST show `格型測試中 不保證可使用` in the warning color below that control
 
-#### Scenario: Full footprint has no experimental warning
+#### Scenario: Full and half footprints have no experimental warning
 
-- **WHEN** the user selects Full in the Snap footprint control
+- **WHEN** the user selects Full or Half in the Snap footprint control
 - **THEN** the experimental footprint warning MUST not be shown
+
+### Requirement: Fixed half and quarter STEP downloads
+
+When the user selects `footprint=half`, the Snap workspace MUST provide a fixed repository-owned STEP download named `Half.step`; when the user selects `footprint=quarter`, it MUST provide a fixed repository-owned STEP download named `Quarter.step`. These downloads MUST use `snap-half.step` and `snap-quarter.step` respectively, MUST NOT send an incremental `export.step` request to the Worker, and MUST NOT depend on the profile, variant, optional-hole fields, or offset values. The Snap panel MUST disable the shared X/Y offset control for Half and Quarter and reset it to zero when either footprint is selected. Full MUST retain the adjustable offset control.
+
+#### Scenario: Half uses the fixed STEP asset
+
+- **WHEN** the user selects Half and clicks `下載 STEP`
+- **THEN** the browser MUST download `Half.step` from the repository-owned `snap-half.step` asset
+- **AND** no incremental STEP export request MAY be sent
+
+#### Scenario: Quarter uses the fixed STEP asset while retaining its warning
+
+- **WHEN** the user selects 1/4 and clicks `下載 STEP`
+- **THEN** the browser MUST download `Quarter.step` from the repository-owned `snap-quarter.step` asset
+- **AND** no incremental STEP export request MAY be sent
+- **AND** the warning `格型測試中 不保證可使用` MUST remain visible
+
+#### Scenario: Half and Quarter do not expose offset adjustment
+
+- **WHEN** the user selects Half or 1/4
+- **THEN** the shared X/Y offset control MUST be disabled and show zero
+- **AND** selecting Full MUST re-enable the offset control

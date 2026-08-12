@@ -31,6 +31,10 @@
   let rawOffset = $derived(rawParameters.offset ?? String(parameters.offset))
   let rawProfile = $derived(rawParameters.profile ?? parameters.profile)
   let rawFootprint = $derived(rawParameters.footprint ?? parameters.footprint)
+  let offsetIsAdjustable = $derived(rawFootprint === 'full')
+  let displayedOffset = $derived(
+    offsetIsAdjustable ? rawOffset : String(offsetField.defaultValue),
+  )
   let rawFourCornerLocatingHoles = $derived(
     rawParameters.fourCornerLocatingHoles ??
       String(parameters.fourCornerLocatingHoles),
@@ -41,10 +45,15 @@
 
   function updateFootprint(event: Event): void {
     if (!(event.currentTarget instanceof HTMLSelectElement)) return
-    onInputChange(
-      'footprint',
-      event.currentTarget.value as OpenGridSnapFootprint,
-    )
+    const footprint = event.currentTarget.value as OpenGridSnapFootprint
+    onInputChange('footprint', footprint)
+    if (footprint !== 'full') {
+      onInputChange('offset', String(offsetField.defaultValue))
+    }
+  }
+
+  function restoreOffset(): void {
+    onInputChange('offset', String(offsetField.defaultValue))
   }
 
   function updateBoolean(
@@ -109,15 +118,17 @@
   <ParameterField
     label={displayParameterLabel(offsetField)}
     unit={offsetField.unit}
-    changed={rawOffset !== String(offsetField.defaultValue)}
+    changed={offsetIsAdjustable &&
+      rawOffset !== String(offsetField.defaultValue)}
     error={fieldError('offset')}
     errorId="opengrid-snap-offset-error"
-    onRestore={() => onInputChange('offset', String(offsetField.defaultValue))}
+    onRestore={offsetIsAdjustable ? restoreOffset : undefined}
   >
     <ParameterControl
       field={offsetField}
-      value={rawOffset}
+      value={displayedOffset}
       error={fieldError('offset')}
+      disabled={!offsetIsAdjustable}
       onChange={(nextValue) => onInputChange('offset', nextValue)}
     />
   </ParameterField>
@@ -139,10 +150,10 @@
       onchange={updateFootprint}
     >
       <option value="full">Full</option>
-      <option value="half">1/2</option>
+      <option value="half">Half</option>
       <option value="quarter">1/4</option>
     </select>
-    {#if rawFootprint === 'half' || rawFootprint === 'quarter'}
+    {#if rawFootprint === 'quarter'}
       <p class="m-0 text-sm text-error" role="status">
         格型測試中 不保證可使用
       </p>
