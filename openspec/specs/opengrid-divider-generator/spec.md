@@ -6,18 +6,18 @@
 
 ### Requirement: 獨立的分隔牆參數契約
 
-The system MUST expose a runtime-validated component with stable `modelId=opengrid-divider`. Its normalized parameters MUST include non-negative `left`, `right`, `up`, and `down` arm counts that are multiples of 0.5 grid, plus an integer `height` in millimetres. `height` MUST be in the inclusive range 2–500 mm. The normalized parameters MUST also include an integer `wallThickness` from 1 through 5 mm. One full divider grid MUST be 28 mm, one half-grid MUST be 14 mm, and the divider grid definition MUST resolve from the shared official OpenGrid grid contract rather than defining a separate pitch. The divider's planar footprint MUST continue to use its existing 500 mm safety limit independently of the height range. With `gridStep=0.5`, the maximum valid arm count MUST be derived from that planar limit and the official full pitch, yielding 17.5 at the current 500 mm limit. The default `wallThickness` MUST be 2 mm.
+The system MUST expose a runtime-validated component with stable `modelId=opengrid-divider`. Its normalized parameters MUST include non-negative `left`, `right`, `up`, and `down` arm counts that are multiples of 0.5 grid, plus an integer `height` in millimetres. `height` MUST be in the inclusive range 2–500 mm. The normalized parameters MUST also include an integer `wallThickness` from 1 through 5 mm. One full divider grid MUST be 28 mm, one half-grid MUST be 14 mm, and the divider grid definition MUST resolve from the shared official OpenGrid grid contract rather than defining a separate pitch. The divider's planar footprint MUST continue to use its existing 500 mm safety limit independently of the height range. Every directional arm count MUST be no greater than 10 grids, while the combined planar envelope MUST still be checked independently against the 500 mm limit. The default `wallThickness` MUST be 2 mm.
 
 #### Scenario: 合法分隔牆參數
 
-- **WHEN** `left`、`right`、`up`、`down` are non-negative 0.5-grid multiples, at least two adjacent or opposite directions are non-zero, and `height` is an integer from 2 through 500 mm with a planar footprint within 500 mm, and `wallThickness` is an integer from 1 through 5 mm
+- **WHEN** `left`、`right`、`up`、`down` are non-negative 0.5-grid multiples with at least one non-zero direction, and `height` is an integer from 2 through 500 mm with a planar footprint within 500 mm, and `wallThickness` is an integer from 1 through 5 mm
 - **THEN** the component MUST accept the normalized snapshot
 - **AND** the generated arm lengths MUST use 28 mm per configured full grid unit and 14 mm per half-grid unit
 - **AND** the snapshot MUST remain independent from `modelId=opengrid`
 
 #### Scenario: 不支援的形狀被拒絕
 
-- **WHEN** fewer than two directions are non-zero, or the values are not 0.5-grid multiples, negative, non-finite, or outside the supported height, planar footprint, or `wallThickness` range
+- **WHEN** all four directions are zero, or any directional value is not a 0.5-grid multiple, negative, non-finite, greater than 10 grids, or outside the supported height, planar footprint, or `wallThickness` range
 - **THEN** validation MUST fail with field-specific diagnostics
 - **AND** the system MUST NOT send the snapshot for CAD generation or export
 
@@ -28,19 +28,30 @@ The system MUST expose a runtime-validated component with stable `modelId=opengr
 - **AND** the wall top MUST be at Z=500 mm
 - **AND** a shape whose planar footprint exceeds 500 mm MUST remain invalid even when its height is within 2–500 mm
 
-#### Scenario: 官方尺度下的臂長上限
+#### Scenario: 十格臂長上限
 
-- **WHEN** an otherwise valid arm uses `count=17.5`
-- **THEN** the arm MUST be accepted and its grid length MUST be 490 mm or less
+- **WHEN** an otherwise valid directional arm uses `count=10`
+- **THEN** the arm MUST be accepted and its nominal grid length MUST be 280 mm
 
-#### Scenario: 超過平面上限的臂格數
+#### Scenario: 超過十格的臂格數
 
-- **WHEN** an otherwise valid arm uses `count=18`
-- **THEN** validation MUST reject the arm because its 504 mm grid length exceeds the 500 mm planar limit
+- **WHEN** a directional arm uses `count=10.5`
+- **THEN** validation MUST reject that arm because the per-direction maximum is 10 grids
+
+#### Scenario: 組合平面上限仍然獨立生效
+
+- **WHEN** `left=10` and `right=10` produce a 560 mm nominal horizontal span
+- **THEN** validation MUST reject the snapshot because its planar footprint exceeds 500 mm even though each individual arm is within the 10-grid limit
 
 ### Requirement: 依四方向格數判定形狀
 
-The system MUST derive the displayed shape from the non-zero direction counts and MUST NOT require a separate shape selector. Exactly two opposite non-zero directions MUST be classified as a straight line, exactly two adjacent non-zero directions MUST be classified as an L shape, exactly three non-zero directions MUST be classified as a T shape, and all four non-zero directions MUST be classified as a cross shape.
+The system MUST derive the displayed shape from the non-zero direction counts and MUST NOT require a separate shape selector. Exactly one non-zero direction MUST be classified as a single-arm shape, exactly two opposite non-zero directions MUST be classified as a straight line, exactly two adjacent non-zero directions MUST be classified as an L shape, exactly three non-zero directions MUST be classified as a T shape, and all four non-zero directions MUST be classified as a cross shape.
+
+#### Scenario: 單臂型
+
+- **WHEN** `left=0`, `right=1`, `up=0`, and `down=0`
+- **THEN** the UI and normalized geometry metadata MUST identify the result as a single horizontal arm
+- **AND** its centerline span MUST be 28 mm
 
 #### Scenario: 一字型
 
@@ -64,7 +75,7 @@ The system MUST derive the displayed shape from the non-zero direction counts an
 
 ### Requirement: 連續 5 mm 分隔牆幾何
 
-The generated body MUST be a continuous connected divider whose base support has a 5 mm plan width and whose upper wall has the selected `wallThickness` plan width. For a thinner upper wall, the base support MUST retain the configured geometry-safety ledge at `Z=0` before the planar chamfer begins. The arm centerlines MUST meet at the central junction. The body MUST use the configured height, start at `Z=0`, and remain a single connected solid after the arms and profile transitions are joined. The central junction MUST remain the construction anchor even when the four arm counts are asymmetric.
+The generated body MUST be a continuous connected divider whose base support has a 5 mm plan width and whose upper wall has the selected `wallThickness` plan width. For a thinner upper wall, the base support MUST retain the configured geometry-safety ledge at `Z=0` before the planar chamfer begins. The arm centerlines MUST meet at the central junction. The body MUST use the configured height, start at `Z=0`, and remain a single connected solid after the arms and profile transitions are joined. Every non-zero arm MUST end 2.275 mm inward from its nominal grid endpoint along the arm direction; the same retracted endpoint MUST apply to the 5 mm base support, transition profile, and upper wall, leaving a 1 mm target clearance to the normal OpenGrid box inner wall. The central junction MUST remain the construction anchor even when the four arm counts are asymmetric.
 
 #### Scenario: 5 mm 底部與可調上方厚度
 
@@ -80,11 +91,42 @@ The generated body MUST be a continuous connected divider whose base support has
 - **THEN** the divider MUST retain a continuous 5 mm plan width through its full wall profile
 - **AND** no unnecessary base-to-wall reduction transition MUST be introduced
 
+#### Scenario: 臂端整體內縮
+
+- **WHEN** a valid divider has any non-zero arm direction
+- **THEN** the arm's base support, transition, and upper wall MUST share the same 2.275 mm retracted endpoint
+- **AND** no part of that arm's terminal profile MAY remain at the old nominal endpoint
+
 #### Scenario: 不對稱臂長保留方向關係
 
 - **WHEN** the four arm counts are not symmetric
-- **THEN** the relative lengths and directions around the central junction MUST match the input counts
+- **THEN** the relative lengths and directions around the central junction MUST match the input counts after applying the same active-end retraction
 - **AND** the generator MUST NOT silently recenter the junction independently of the generated shape
+
+### Requirement: 單臂中心定位柱上方延續牆體
+
+When exactly one of `left`, `right`, `up`, or `down` is non-zero, the generated
+divider MUST extend its complete profiled wall from the central arm axis
+2.5 mm toward the inactive side. This extension MUST include the 5 mm base
+support, any 45-degree transition, and the selected upper wall, so the central
+5 mm locating peg has wall directly above its center rather than only on the
+active side. The active arm endpoint MUST remain at the existing retracted
+station, and the result MUST remain one connected solid.
+
+#### Scenario: 四個方向的單臂中心牆體
+
+- **WHEN** exactly one directional count is non-zero, for any of the four
+  directions
+- **THEN** the complete wall profile MUST cover the central arm axis and extend
+  2.5 mm toward the inactive side
+- **AND** the central locating peg MUST have divider wall above its center
+- **AND** the active endpoint MUST retain the existing 2.275 mm retraction
+
+#### Scenario: 多臂中心接點維持原狀
+
+- **WHEN** two or more directional counts are non-zero
+- **THEN** the central junction MUST use the existing multi-arm wall geometry
+- **AND** no single-arm-only 2.5 mm extension MAY be added to an inactive side
 
 ### Requirement: 依長度自動配置底部定位柱
 
@@ -165,19 +207,19 @@ When the selected upper wall is thinner than the 5 mm base support, the generato
 
 ### Requirement: 預覽、bounds 與匯出
 
-The committed divider MUST expose finite bounds, a non-empty mesh, and a single B-Rep solid. The wall base MUST be at `Z=0` and the complete bounds MUST include the peg bottom at `Z=-3` and the actual 5 mm base support envelope. STEP and binary STL exports MUST be generated from the committed divider B-Rep and MUST be non-empty. Export filenames MUST identify the selected wall thickness.
+The committed divider MUST expose finite bounds, a non-empty mesh, and a single B-Rep solid. The wall base MUST be at `Z=0` and the complete bounds MUST include the peg bottom at `Z=-3` and the actual shortened 5 mm base support envelope. STEP and binary STL exports MUST be generated from the committed divider B-Rep and MUST be non-empty. Export filenames MUST identify the selected wall thickness and MUST retain the existing identity format for the normalized parameter fields.
 
 #### Scenario: 可預覽的分隔牆
 
 - **WHEN** a valid candidate passes generation
-- **THEN** the viewport MUST display the requested shape, selected upper thickness, 45-degree base chamfer, rounded top, and locating pegs
+- **THEN** the viewport MUST display the requested shape, selected upper thickness, 45-degree base chamfer, rounded top, locating pegs, and retracted active arm ends
 - **AND** the candidate MUST report finite bounds and a non-empty mesh
 
 #### Scenario: STEP 與 STL 匯出
 
 - **WHEN** the user exports a committed divider model
 - **THEN** STEP and STL requests MUST use the committed model revision
-- **AND** both downloads MUST contain non-empty geometry for the same normalized parameters, including wall thickness
+- **AND** both downloads MUST contain non-empty geometry for the same normalized parameters, including wall thickness and the fixed active-end retraction
 - **AND** exports with different wall thicknesses MUST have distinct deterministic filenames
 
 ### Requirement: 底部 45 度斜角過渡

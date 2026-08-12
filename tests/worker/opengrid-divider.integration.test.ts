@@ -11,7 +11,9 @@ import {
 } from 'replicad'
 import {
   boundsForOpenGridDivider,
+  openGridDividerArmEndpointsFor,
   openGridDividerPegCentersFor,
+  openGridDividerPlanBoundsFor,
   OPENGRID_DIVIDER_CONFIGURATION,
   type OpenGridDividerParameters,
   openGridDividerTransitionHeightFor,
@@ -119,12 +121,8 @@ function transitionRoundFaceCount(
 function rawPlanCenter(
   parameters: OpenGridDividerParameters,
 ): [number, number] {
-  const { gridPitch, wallWidth } = OPENGRID_DIVIDER_CONFIGURATION
-  const minX = Math.min(-parameters.left * gridPitch, -wallWidth / 2)
-  const maxX = Math.max(parameters.right * gridPitch, wallWidth / 2)
-  const minY = Math.min(-parameters.down * gridPitch, -wallWidth / 2)
-  const maxY = Math.max(parameters.up * gridPitch, wallWidth / 2)
-  return [(minX + maxX) / 2, (minY + maxY) / 2]
+  const plan = openGridDividerPlanBoundsFor(parameters)
+  return [(plan.minX + plan.maxX) / 2, (plan.minY + plan.maxY) / 2]
 }
 
 function probeVolumeAt(
@@ -157,15 +155,28 @@ function sectionWidthAt(shape: Shape3D, z: number): number {
   }
 }
 
+function horizontalSectionBoundsAt(shape: Shape3D, z: number): number[][] {
+  const probe = makeBox([-100, -100, z], [100, 100, z + 0.02])
+  let section: Shape3D | null = null
+  try {
+    section = shape.intersect(probe)
+    return boundsOf(section)
+  } finally {
+    deleteShape(section)
+    probe.delete()
+  }
+}
+
 describe('OpenGrid divider CAD kernel integration', () => {
   it.each([
     { left: 1, right: 1, up: 0, down: 0, height: 20, wallThickness: 2 },
+    { left: 0, right: 1, up: 0, down: 0, height: 20, wallThickness: 2 },
     { left: 0, right: 0, up: 1, down: 2, height: 12, wallThickness: 2 },
     { left: 1, right: 0, up: 2, down: 0, height: 20, wallThickness: 2 },
     { left: 1, right: 1, up: 2, down: 1, height: 20, wallThickness: 2 },
     { left: 1.5, right: 2, up: 0, down: 0, height: 35, wallThickness: 2 },
     { left: 0.5, right: 0, up: 0.5, down: 0, height: 20, wallThickness: 2 },
-    { left: 17.5, right: 0, up: 0.5, down: 0, height: 500, wallThickness: 2 },
+    { left: 10, right: 0, up: 0.5, down: 0, height: 500, wallThickness: 2 },
   ])(
     'builds a centered one-solid divider for %#',
     async (parameters) => {
@@ -378,6 +389,146 @@ describe('OpenGrid divider CAD kernel integration', () => {
       baseProbe.delete()
       upperProbe.delete()
       deleteShape(shape)
+    }
+  }, 180_000)
+
+  it('retracts the complete active terminal profile by 2.275 mm', async () => {
+    const parameters = {
+      left: 0,
+      right: 1,
+      up: 0,
+      down: 0,
+      height: 20,
+      wallThickness: 2,
+    }
+    const shape = await buildOpenGridDivider(parameters)
+    try {
+      const [centerX] = rawPlanCenter(parameters)
+      const { right: rawEndpoint } = openGridDividerArmEndpointsFor(parameters)
+      const expectedEnd = rawEndpoint - centerX
+      const nominalEnd = OPENGRID_DIVIDER_CONFIGURATION.gridPitch - centerX
+
+      expect(nominalEnd - expectedEnd).toBeCloseTo(
+        OPENGRID_DIVIDER_CONFIGURATION.armEndRetraction,
+        10,
+      )
+
+      for (const z of [0.05, 0.85, 4]) {
+        const [, [maxX]] = horizontalSectionBoundsAt(shape, z)
+        expect(maxX).toBeCloseTo(expectedEnd, 1)
+      }
+    } finally {
+      deleteShape(shape)
+    }
+  }, 180_000)
+
+  it('extends every single-arm profile across the central peg', async () => {
+    const cases = [
+      {
+        parameters: {
+          left: 0,
+          right: 1,
+          up: 0,
+          down: 0,
+          height: 20,
+          wallThickness: 2,
+        },
+        axis: 'x',
+        activeDirection: 'right',
+      },
+      {
+        parameters: {
+          left: 1,
+          right: 0,
+          up: 0,
+          down: 0,
+          height: 20,
+          wallThickness: 2,
+        },
+        axis: 'x',
+        activeDirection: 'left',
+      },
+      {
+        parameters: {
+          left: 0,
+          right: 0,
+          up: 1,
+          down: 0,
+          height: 20,
+          wallThickness: 2,
+        },
+        axis: 'y',
+        activeDirection: 'up',
+      },
+      {
+        parameters: {
+          left: 0,
+          right: 0,
+          up: 0,
+          down: 1,
+          height: 20,
+          wallThickness: 2,
+        },
+        axis: 'y',
+        activeDirection: 'down',
+      },
+    ] as const
+
+    for (const { parameters, axis, activeDirection } of cases) {
+      const shape = await buildOpenGridDivider(parameters)
+      try {
+        const [centerX, centerY] = rawPlanCenter(parameters)
+        const endpoints = openGridDividerArmEndpointsFor(parameters)
+        const [[minX, minY], [maxX, maxY]] = horizontalSectionBoundsAt(shape, 4)
+        const centerExtension = OPENGRID_DIVIDER_CONFIGURATION.wallWidth / 2
+        const expectedActiveEndpoint =
+          activeDirection === 'right'
+            ? endpoints.right - centerX
+            : activeDirection === 'left'
+              ? endpoints.left - centerX
+              : activeDirection === 'up'
+                ? endpoints.up - centerY
+                : endpoints.down - centerY
+        const actualActiveEndpoint =
+          activeDirection === 'right'
+            ? maxX
+            : activeDirection === 'left'
+              ? minX
+              : activeDirection === 'up'
+                ? maxY
+                : minY
+        expect(actualActiveEndpoint).toBeCloseTo(expectedActiveEndpoint, 1)
+
+        const actualInactiveEdge =
+          activeDirection === 'right'
+            ? minX
+            : activeDirection === 'left'
+              ? maxX
+              : activeDirection === 'up'
+                ? minY
+                : maxY
+        const expectedInactiveEdge =
+          activeDirection === 'right'
+            ? -centerExtension - centerX
+            : activeDirection === 'left'
+              ? centerExtension - centerX
+              : activeDirection === 'up'
+                ? -centerExtension - centerY
+                : centerExtension - centerY
+        expect(actualInactiveEdge).toBeCloseTo(expectedInactiveEdge, 1)
+
+        const oppositeSideProbe: [number, number] =
+          axis === 'x'
+            ? [-centerX + (activeDirection === 'right' ? -1 : 1), -centerY]
+            : [-centerX, -centerY + (activeDirection === 'up' ? -1 : 1)]
+        for (const z of [0.05, 0.85, 4]) {
+          expect(
+            probeVolumeAt(shape, oppositeSideProbe, z, 0.05),
+          ).toBeGreaterThan(0)
+        }
+      } finally {
+        deleteShape(shape)
+      }
     }
   }, 180_000)
 

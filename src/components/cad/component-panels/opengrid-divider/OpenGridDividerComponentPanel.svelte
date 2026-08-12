@@ -12,10 +12,6 @@
 </script>
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
-  <p class="m-0 text-sm text-muted">
-    沿用官方 OpenGrid 間距：整格 28 mm、半格 14 mm。分隔牆高度文字輸入為 2–500
-    mm、slider 為 2–200 mm；平面 footprint 上限為 500 mm。
-  </p>
   {#each opengridDividerDefinition.parameterSchema as field (field.key)}
     {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
     <ParameterField

@@ -1,7 +1,7 @@
 import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
 import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from './opengrid-locating-assembly'
 
-export type OpenGridDividerShape = 'straight' | 'L' | 'T' | 'cross'
+export type OpenGridDividerShape = 'single' | 'straight' | 'L' | 'T' | 'cross'
 export type OpenGridDividerAxis = 'horizontal' | 'vertical' | null
 
 export type OpenGridDividerParameterKey =
@@ -27,6 +27,20 @@ export type OpenGridDividerPlanDimensions = {
   baseWallWidth: number
 }
 
+export type OpenGridDividerPlanBounds = {
+  minX: number
+  maxX: number
+  minY: number
+  maxY: number
+}
+
+export type OpenGridDividerArmEndpoints = {
+  left: number
+  right: number
+  up: number
+  down: number
+}
+
 export type OpenGridDividerValidationIssue = {
   field: OpenGridDividerParameterKey | 'parameters'
   message: string
@@ -47,11 +61,7 @@ const DIVIDER_PARAMETER_KEYS: readonly OpenGridDividerParameterKey[] = [
 
 const DIVIDER_GRID_STEP = 0.5
 const DIVIDER_MAX_DIMENSION = 500
-const DIVIDER_MAX_ARM_COUNT =
-  Math.floor(
-    DIVIDER_MAX_DIMENSION /
-      (OPENGRID_GRID_CONFIGURATION.fullPitch * DIVIDER_GRID_STEP),
-  ) * DIVIDER_GRID_STEP
+const DIVIDER_MAX_ARM_COUNT = 10
 
 export const OPENGRID_DIVIDER_CONFIGURATION = {
   gridPitch: OPENGRID_GRID_CONFIGURATION.fullPitch,
@@ -68,6 +78,7 @@ export const OPENGRID_DIVIDER_CONFIGURATION = {
   pegCenterSpacing: OPENGRID_GRID_CONFIGURATION.fullPitch,
   sideFilletRadius: 2.5,
   topFilletRadius: 1,
+  armEndRetraction: 2.275,
   maxDimension: DIVIDER_MAX_DIMENSION,
   maxArmCount: DIVIDER_MAX_ARM_COUNT,
   minHeight: 2,
@@ -138,7 +149,8 @@ export function classifyOpenGridDividerShape(
   parameters: Pick<OpenGridDividerParameters, 'left' | 'right' | 'up' | 'down'>,
 ): OpenGridDividerShape {
   const activeDirections = countActiveDirections(parameters)
-  if (activeDirections < 2) throw new Error('OPENGRID_DIVIDER_SHAPE_INVALID')
+  if (activeDirections < 1) throw new Error('OPENGRID_DIVIDER_SHAPE_INVALID')
+  if (activeDirections === 1) return 'single'
   if (activeDirections === 4) return 'cross'
   if (activeDirections === 3) return 'T'
   if (
@@ -153,25 +165,37 @@ export function classifyOpenGridDividerShape(
 export function openGridDividerAxisFor(
   parameters: Pick<OpenGridDividerParameters, 'left' | 'right' | 'up' | 'down'>,
 ): OpenGridDividerAxis {
-  if (classifyOpenGridDividerShape(parameters) !== 'straight') return null
+  const shape = classifyOpenGridDividerShape(parameters)
+  if (shape !== 'single' && shape !== 'straight') return null
   if (parameters.left > 0 || parameters.right > 0) return 'horizontal'
   return 'vertical'
 }
 
-function rawPlanBoundsFor(
+export function openGridDividerArmEndpointsFor(
   parameters: Pick<OpenGridDividerParameters, 'left' | 'right' | 'up' | 'down'>,
-): {
-  minX: number
-  maxX: number
-  minY: number
-  maxY: number
-} {
-  const { gridPitch, wallWidth } = OPENGRID_DIVIDER_CONFIGURATION
+): OpenGridDividerArmEndpoints {
+  const { gridPitch, armEndRetraction } = OPENGRID_DIVIDER_CONFIGURATION
+  const endpointFor = (count: number, direction: -1 | 1): number =>
+    count > 0 ? direction * (count * gridPitch - armEndRetraction) : 0
+
   return {
-    minX: Math.min(-parameters.left * gridPitch, -wallWidth / 2),
-    maxX: Math.max(parameters.right * gridPitch, wallWidth / 2),
-    minY: Math.min(-parameters.down * gridPitch, -wallWidth / 2),
-    maxY: Math.max(parameters.up * gridPitch, wallWidth / 2),
+    left: endpointFor(parameters.left, -1),
+    right: endpointFor(parameters.right, 1),
+    up: endpointFor(parameters.up, 1),
+    down: endpointFor(parameters.down, -1),
+  }
+}
+
+export function openGridDividerPlanBoundsFor(
+  parameters: Pick<OpenGridDividerParameters, 'left' | 'right' | 'up' | 'down'>,
+): OpenGridDividerPlanBounds {
+  const { wallWidth } = OPENGRID_DIVIDER_CONFIGURATION
+  const endpoints = openGridDividerArmEndpointsFor(parameters)
+  return {
+    minX: Math.min(endpoints.left, -wallWidth / 2),
+    maxX: Math.max(endpoints.right, wallWidth / 2),
+    minY: Math.min(endpoints.down, -wallWidth / 2),
+    maxY: Math.max(endpoints.up, wallWidth / 2),
   }
 }
 
@@ -181,7 +205,7 @@ export function openGridDividerPlanDimensionsFor(
     'left' | 'right' | 'up' | 'down' | 'height' | 'wallThickness'
   >,
 ): OpenGridDividerPlanDimensions {
-  const bounds = rawPlanBoundsFor(parameters)
+  const bounds = openGridDividerPlanBoundsFor(parameters)
   return {
     width: bounds.maxX - bounds.minX,
     depth: bounds.maxY - bounds.minY,
@@ -255,13 +279,13 @@ export function validateOpenGridDividerParameters(
       up: value.up as number,
       down: value.down as number,
     }
-    if (countActiveDirections(candidate) < 2) {
+    if (countActiveDirections(candidate) < 1) {
       issues.push({
         field: 'parameters',
-        message: '至少需要兩個方向才能建立一字型、L 型、T 型或十字型。',
+        message: '至少需要一個方向才能建立分隔器。',
       })
     } else {
-      const plan = rawPlanBoundsFor(candidate)
+      const plan = openGridDividerPlanBoundsFor(candidate)
       if (
         plan.maxX - plan.minX > OPENGRID_DIVIDER_CONFIGURATION.maxDimension ||
         plan.maxY - plan.minY > OPENGRID_DIVIDER_CONFIGURATION.maxDimension
@@ -330,7 +354,7 @@ export function openGridDividerPegCentersFor(
 export function boundsForOpenGridDivider(
   parameters: OpenGridDividerParameters,
 ) {
-  const plan = rawPlanBoundsFor(parameters)
+  const plan = openGridDividerPlanBoundsFor(parameters)
   const centerX = (plan.minX + plan.maxX) / 2
   const centerY = (plan.minY + plan.maxY) / 2
   return {

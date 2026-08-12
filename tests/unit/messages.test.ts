@@ -202,7 +202,7 @@ describe('Worker contract runtime validation', () => {
     ).toBe(false)
   })
 
-  it('accepts only the independent divider arm-count contract', () => {
+  it('accepts the independent divider arm-count contract, including one arm', () => {
     const command = {
       version: PROTOCOL_VERSION,
       kind: 'model.generate' as const,
@@ -234,7 +234,7 @@ describe('Worker contract runtime validation', () => {
           wallThickness: 2,
         },
       }),
-    ).toBe(false)
+    ).toBe(true)
     expect(
       isWorkerCommand({
         ...command,
