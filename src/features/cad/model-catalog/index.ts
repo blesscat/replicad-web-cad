@@ -16,6 +16,7 @@ import { opengridStackableCylinderDefinition } from './components/opengrid-stack
 import { opengridSnapDefinition } from './components/opengrid-snap'
 import { openGridSnapRemoverDefinition } from './components/opengrid-snap-remover'
 import { opengridPillarDefinition } from './components/opengrid-pillar'
+import { opengridOpenShelfDefinition } from './components/opengrid-open-shelf'
 import type {
   ModelDefinition,
   ModelFamily,
@@ -48,6 +49,7 @@ export { opengridStackableCylinderDefinition } from './components/opengrid-stack
 export { opengridSnapDefinition } from './components/opengrid-snap'
 export { openGridSnapRemoverDefinition } from './components/opengrid-snap-remover'
 export { opengridPillarDefinition } from './components/opengrid-pillar'
+export { opengridOpenShelfDefinition } from './components/opengrid-open-shelf'
 
 export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   boxDefinition,
@@ -62,6 +64,7 @@ export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   opengridStackableBoxDefinition,
   opengridStackableCylinderDefinition,
   openGridSnapRemoverDefinition,
+  opengridOpenShelfDefinition,
 ]
 
 export const modelFamilyOrder: ReadonlyArray<ModelFamily> = ['opengrid', 'hsw']

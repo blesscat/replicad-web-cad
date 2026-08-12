@@ -9,6 +9,7 @@ import {
   parseDimensionInput,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
+  type OpenGridOpenShelfParameters,
   PILLAR_CONFIGURATION,
   validateModelParameters,
   validatePillarParameters,
@@ -74,6 +75,14 @@ export const PILLAR_PARAMETER_KEYS: ModelParameterKey[] = [
   'offsetX',
   'offsetY',
 ]
+export const OPENGRID_OPEN_SHELF_PARAMETER_KEYS: ModelParameterKey[] = [
+  'x',
+  'y',
+  'height',
+  'cellX',
+  'cellZ',
+  'angle',
+]
 
 function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'box') return DIMENSION_KEYS
@@ -100,11 +109,17 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'opengrid-snap-remover') return []
   if (modelId === 'opengrid-divider') return OPENGRID_DIVIDER_PARAMETER_KEYS
   if (modelId === 'opengrid-pillar') return PILLAR_PARAMETER_KEYS
+  if (modelId === 'opengrid-open-shelf') {
+    return OPENGRID_OPEN_SHELF_PARAMETER_KEYS
+  }
   throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
 }
 
 function usesHalfStepInput(modelId: ModelId, key: ModelParameterKey): boolean {
   if (modelId === 'opengrid-stackable-box') {
+    return key === 'x' || key === 'y'
+  }
+  if (modelId === 'opengrid-open-shelf') {
     return key === 'x' || key === 'y'
   }
   if (modelId === 'opengrid-divider') {
@@ -307,6 +322,18 @@ export function rawFromParameters(
       mode: parameters.mode,
       offsetX: String(parameters.offsetX),
       offsetY: String(parameters.offsetY),
+    }
+  }
+
+  if ('cellX' in parameters && 'cellZ' in parameters && 'angle' in parameters) {
+    const openShelfParameters = parameters as OpenGridOpenShelfParameters
+    return {
+      x: String(openShelfParameters.x),
+      y: String(openShelfParameters.y),
+      height: String(openShelfParameters.height),
+      cellX: String(openShelfParameters.cellX),
+      cellZ: String(openShelfParameters.cellZ),
+      angle: String(openShelfParameters.angle),
     }
   }
 

@@ -44,7 +44,8 @@ export function systemContextForModel(
     modelId === 'opengrid-divider' ||
     modelId === 'opengrid-stackable-box' ||
     modelId === 'opengrid-stackable-cylinder' ||
-    modelId === 'opengrid-snap-remover'
+    modelId === 'opengrid-snap-remover' ||
+    modelId === 'opengrid-open-shelf'
   if (!isOpenGridModel) return undefined
   if (
     context === 'wall' &&

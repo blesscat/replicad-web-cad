@@ -131,6 +131,7 @@ describe('OpenGrid system entry context', () => {
       'opengrid-stackable-box',
       'opengrid-stackable-cylinder',
       'opengrid-snap-remover',
+      'opengrid-open-shelf',
     ])
     expect(
       openGrid?.subgroups

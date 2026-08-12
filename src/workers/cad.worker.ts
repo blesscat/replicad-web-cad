@@ -29,6 +29,7 @@ import { assertOpenGridShapeQuality } from '../cad-kernel/components/opengrid/qu
 import { assertOpenGridSnapShapeQuality } from '../cad-kernel/components/opengrid-snap/quality'
 import { assertOpenGridDividerShapeQuality } from '../cad-kernel/components/opengrid-divider/quality'
 import { assertPillarShapeQuality } from '../cad-kernel/components/opengrid-pillar/quality'
+import { assertOpenGridOpenShelfShapeQuality } from '../cad-kernel/components/opengrid-open-shelf/quality'
 import { meshBRep, serializeMesh, type MeshData } from '../cad-kernel/mesh'
 import {
   createBooleanOperationReporter,
@@ -56,6 +57,7 @@ import {
   boundsForOpenGridSnap,
   isHswCellParameters,
   isOpenGridDividerModelParameters,
+  isOpenGridOpenShelfParameters,
   isOpenGridParameters,
   normalizeOpenGridDividerParameters,
   normalizeOpenGridParameters,
@@ -497,6 +499,18 @@ export class CadWorkerRuntime {
         }
         timing.measureSync('quality', () =>
           assertPillarShapeQuality(shape, generationParameters, mesh),
+        )
+      }
+      if (command.modelId === 'opengrid-open-shelf') {
+        if (!isOpenGridOpenShelfParameters(generationParameters)) {
+          throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-open-shelf')
+        }
+        timing.measureSync('quality', () =>
+          assertOpenGridOpenShelfShapeQuality(
+            shape,
+            generationParameters,
+            mesh,
+          ),
         )
       }
     } catch (error) {

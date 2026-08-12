@@ -113,6 +113,7 @@ describe('HSW kernel model registration', () => {
       'opengrid',
       'opengrid-stackable-box',
       'opengrid-stackable-cylinder',
+      'opengrid-open-shelf',
       'opengrid-snap',
       'opengrid-snap-remover',
       'opengrid-divider',

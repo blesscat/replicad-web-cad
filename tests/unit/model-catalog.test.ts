@@ -46,6 +46,7 @@ describe('CAD component catalog', () => {
       'opengrid-stackable-box',
       'opengrid-stackable-cylinder',
       'opengrid-snap-remover',
+      'opengrid-open-shelf',
       'opengrid',
       'opengrid-snap',
       'hsw-cell',
@@ -97,6 +98,7 @@ describe('CAD component catalog', () => {
       'opengrid-stackable-box',
       'opengrid-stackable-cylinder',
       'opengrid-snap-remover',
+      'opengrid-open-shelf',
       'opengrid',
       'opengrid-snap',
     ])
@@ -130,6 +132,7 @@ describe('CAD component catalog', () => {
       ['opengrid-stackable-box', 'Grid Box (方盒)'],
       ['opengrid-stackable-cylinder', 'Round Box (圓盒)'],
       ['opengrid-snap-remover', 'Snap Remover'],
+      ['opengrid-open-shelf', 'Open Shelf (斜開格櫃)'],
       ['hsw-cell', '六角蜂巢'],
     ] as const
 
@@ -158,6 +161,7 @@ describe('CAD component catalog', () => {
       'opengrid-stackable-box',
       'opengrid-stackable-cylinder',
       'opengrid-snap-remover',
+      'opengrid-open-shelf',
     ])
 
     const boxNormal = getModelDefinition('box-normal')
