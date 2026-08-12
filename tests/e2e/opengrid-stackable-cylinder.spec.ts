@@ -29,6 +29,30 @@ async function openCylinderSideOpeningGroup(
   await expect(group).toHaveAttribute('open', '')
 }
 
+test('Desk System starts the stackable-cylinder with its thin-shell preset', async ({
+  page,
+  browserName,
+}) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.goto('/cad/opengrid-stackable-cylinder?system=desk')
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+  await waitForCadReady(page)
+
+  await expect(page.getByTestId('cad-system-context')).toHaveText(
+    '目前系統：Desk System',
+  )
+  await expect(page.getByRole('slider', { name: '外徑（直徑）' })).toHaveValue(
+    '60',
+  )
+  await expect(page.getByRole('textbox', { name: '高度（Z）' })).toHaveValue(
+    '50',
+  )
+  await expect(page.getByRole('radio', { name: '薄殼模式' })).toBeChecked()
+  await expect(page.getByRole('radio', { name: '預設模式' })).not.toBeChecked()
+  await expect(page.getByRole('radio', { name: '底版模式' })).not.toBeChecked()
+})
+
 test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
   page,
 }) => {
@@ -41,7 +65,7 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
     'href',
     '/cad/opengrid-stackable-cylinder?system=desk',
   )
-  await modelLink.click()
+  await page.goto('/cad/opengrid-stackable-cylinder')
 
   await expect(page).toHaveURL('/cad/opengrid-stackable-cylinder?system=desk')
   await expect(

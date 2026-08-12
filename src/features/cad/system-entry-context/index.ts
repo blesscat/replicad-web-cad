@@ -1,5 +1,7 @@
 import {
   OPENGRID_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+  OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   type ModelId,
   type ModelParameterValues,
   type OpenGridSnapParameters,
@@ -89,6 +91,25 @@ export function getSystemPreset(
     return cloneModelParameters({
       ...OPENGRID_CONFIGURATION.defaultParameters,
       customScrewPositions: [],
+    })
+  }
+  if (context === 'desk' && modelId === 'opengrid-stackable-box') {
+    return cloneModelParameters({
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+      x: 8,
+      y: 4,
+      height: 50,
+      basePlateMode: false,
+      thinShellMode: true,
+    })
+  }
+  if (context === 'desk' && modelId === 'opengrid-stackable-cylinder') {
+    return cloneModelParameters({
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+      diameter: 60,
+      height: 50,
+      thinBottomMode: true,
+      bottomPlateMode: false,
     })
   }
   return undefined
