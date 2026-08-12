@@ -9,6 +9,7 @@ import {
 } from '../../src/cad-kernel/components/opengrid/builder'
 import { inspectOpenGridShapeQuality } from '../../src/cad-kernel/components/opengrid/quality'
 import { meshBRep } from '../../src/cad-kernel/mesh'
+import { openGridProfileConstants } from '../../src/cad-kernel/components/opengrid/profile'
 import {
   boundsForOpenGrid,
   cellCenterForOpenGrid,
@@ -110,7 +111,7 @@ function transitionPlaneFacts(shape: Shape3D): TransitionPlaneFact[] {
 }
 
 describe('OpenGrid Hybrid product builder', () => {
-  it('keeps Hybrid transitions on the four side interiors without corner transitions', async () => {
+  it('keeps Hybrid transitions on side interiors without outward corners', async () => {
     const input = parameters({
       variant: 'Hybrid',
       rows: 3,
@@ -124,26 +125,36 @@ describe('OpenGrid Hybrid product builder', () => {
       expect(quality.passed, quality.failures.join(';')).toBe(true)
       const transitionFaces = transitionPlaneFacts(shape)
       expect(transitionFaces).toHaveLength(4)
-      for (const face of transitionFaces) {
-        expect(face.minimum[0]).toBeGreaterThanOrEqual(
-          -OPENGRID_CONFIGURATION.tileInnerSize / 2 - 0.05,
+      const innerHalfSize = OPENGRID_CONFIGURATION.tileInnerSize / 2
+      const halfPitch = OPENGRID_CONFIGURATION.gridPitch / 2
+      const centralSideFaces = transitionFaces.filter(
+        (face) =>
+          face.minimum[0] >= -innerHalfSize - 0.05 &&
+          face.maximum[0] <= innerHalfSize + 0.05 &&
+          face.minimum[1] >= -innerHalfSize - 0.05 &&
+          face.maximum[1] <= innerHalfSize + 0.05,
+      )
+      expect(centralSideFaces).toHaveLength(4)
+
+      const extendedCornerFaces = transitionFaces.filter((face) => {
+        const planSpan = Math.max(
+          face.maximum[0] - face.minimum[0],
+          face.maximum[1] - face.minimum[1],
         )
-        expect(face.maximum[0]).toBeLessThanOrEqual(
-          OPENGRID_CONFIGURATION.tileInnerSize / 2 + 0.05,
-        )
-        expect(face.minimum[1]).toBeGreaterThanOrEqual(
-          -OPENGRID_CONFIGURATION.tileInnerSize / 2 - 0.05,
-        )
-        expect(face.maximum[1]).toBeLessThanOrEqual(
-          OPENGRID_CONFIGURATION.tileInnerSize / 2 + 0.05,
-        )
-      }
+        const extendsBeyondInnerCell =
+          face.minimum[0] < -OPENGRID_CONFIGURATION.tileInnerSize / 2 - 0.05 ||
+          face.maximum[0] > OPENGRID_CONFIGURATION.tileInnerSize / 2 + 0.05 ||
+          face.minimum[1] < -OPENGRID_CONFIGURATION.tileInnerSize / 2 - 0.05 ||
+          face.maximum[1] > OPENGRID_CONFIGURATION.tileInnerSize / 2 + 0.05
+        return extendsBeyondInnerCell && planSpan > halfPitch
+      })
+      expect(extendedCornerFaces).toHaveLength(0)
     } finally {
       shape.delete()
     }
   }, 120_000)
 
-  it('extends the Heavy perimeter transition into the second cell without corner wedges', async () => {
+  it('extends the Heavy perimeter transition into the second cell with inner joins', async () => {
     const input = parameters({
       variant: 'Hybrid',
       rows: 3,
@@ -284,7 +295,27 @@ describe('OpenGrid Hybrid product builder', () => {
         },
       ] as const
 
+      const cornerLength = openGridProfileConstants(
+        OPENGRID_CONFIGURATION.gridPitch,
+        fullThickness,
+      ).cornerOffset
+      const cornerJoinOffset = Math.min(cornerLength / 2, 2.5)
+      const cornerTangentialOffset = 0.75
+
       for (const corner of cornerCases) {
+        const diagonalX =
+          corner.x + corner.horizontalDirection * cornerJoinOffset
+        const diagonalY =
+          corner.y + corner.verticalDirection * cornerTangentialOffset
+        const diagonalVolume = measureIntersectionVolume(
+          shape,
+          [diagonalX - 0.35, diagonalY - 0.2, cornerZ - 0.15],
+          [diagonalX + 0.35, diagonalY + 0.2, cornerZ + 0.15],
+        )
+        expect(diagonalVolume, `${corner.label}:diagonal`).toBeGreaterThan(
+          0.001,
+        )
+
         const openingOffset = transitionSpan / 2
         const openingX = corner.x + corner.horizontalDirection * openingOffset
         const openingY = corner.y + corner.verticalDirection * openingOffset
