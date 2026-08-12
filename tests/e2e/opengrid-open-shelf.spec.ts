@@ -19,6 +19,12 @@ test('OpenGrid Open Shelf exposes its Desk controls and front-opening workspace'
   await expect(page.getByTestId('opengrid-open-shelf-help')).toContainText(
     '整體高度包含所有板厚',
   )
+  await expect(
+    page.getByTestId('opengrid-open-shelf-cell-space'),
+  ).toContainText('每格淨空（平行格層）')
+  await expect(
+    page.getByTestId('opengrid-open-shelf-cell-space'),
+  ).toContainText('底部斜角區（不計入 Z 格數）')
   const sliders = page.getByRole('slider')
   await expect(sliders).toHaveCount(6)
   for (const [index, label] of [

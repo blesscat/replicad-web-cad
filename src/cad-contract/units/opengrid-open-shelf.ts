@@ -15,8 +15,21 @@ export type OpenGridOpenShelfParameters = {
 export type OpenGridOpenShelfPoint2D = [number, number]
 
 export type OpenGridOpenShelfCellClearHeights = {
-  front: number
-  rear: number
+  wedge: {
+    front: number
+    rear: number
+  }
+  regular: {
+    front: number
+    rear: number
+  }
+}
+
+export type OpenGridOpenShelfCellSpace = {
+  width: number
+  depth: number
+  wedge: OpenGridOpenShelfCellClearHeights['wedge']
+  regular: OpenGridOpenShelfCellClearHeights['regular']
 }
 
 export type OpenGridOpenShelfValidationIssue = {
@@ -54,6 +67,7 @@ export const OPENGRID_OPEN_SHELF_CONFIGURATION = {
   bottomThickness: 2,
   innerPlateThickness: 1.2,
   outerWallThickness: 1.6,
+  outerCornerRadius: 3.75,
   backboardThickness: 1.2,
   pegDiameter: 4.5,
   pegHeight: 3,
@@ -125,6 +139,20 @@ export function openGridOpenShelfDepthFor(
   return parameters.y * OPENGRID_OPEN_SHELF_CONFIGURATION.gridPitch - 0.15
 }
 
+export function openGridOpenShelfCellClearWidthFor(
+  parameters: Pick<OpenGridOpenShelfParameters, 'x' | 'cellX'>,
+): number {
+  const configuration = OPENGRID_OPEN_SHELF_CONFIGURATION
+  const width = parameters.x * configuration.gridPitch - 0.15
+  const dividerCount = Math.max(0, parameters.cellX - 1)
+  return (
+    (width -
+      2 * configuration.outerWallThickness -
+      dividerCount * configuration.innerPlateThickness) /
+    parameters.cellX
+  )
+}
+
 export function openGridOpenShelfAngleRadiansFor(angle: number): number {
   return (angle * Math.PI) / 180
 }
@@ -180,18 +208,39 @@ export function openGridOpenShelfClearCellHeightsFor(
     configuration.innerPlateThickness,
     parameters.angle,
   )
-  const shelfCount = Math.max(0, parameters.cellZ - 1)
-  const frontAvailable =
-    openGridOpenShelfTopInnerFrontZFor(parameters) -
-    configuration.bottomThickness -
-    shelfCount * shelfVerticalThickness
+  const hasBottomWedge = parameters.angle > 0
+  const shelfCount = hasBottomWedge
+    ? parameters.cellZ
+    : Math.max(0, parameters.cellZ - 1)
   const rearAvailable =
     openGridOpenShelfTopInnerRearZFor(parameters) -
     configuration.bottomThickness -
     shelfCount * shelfVerticalThickness
+  const regularCellHeight = rearAvailable / parameters.cellZ
+  const elevation = openGridOpenShelfFrontToRearElevationFor(parameters)
   return {
-    front: frontAvailable / parameters.cellZ,
-    rear: rearAvailable / parameters.cellZ,
+    wedge: {
+      front: hasBottomWedge ? elevation : 0,
+      rear: 0,
+    },
+    regular: {
+      front: regularCellHeight,
+      rear: regularCellHeight,
+    },
+  }
+}
+
+export function openGridOpenShelfCellSpaceFor(
+  parameters: OpenGridOpenShelfParameters,
+): OpenGridOpenShelfCellSpace {
+  const configuration = OPENGRID_OPEN_SHELF_CONFIGURATION
+  const clearHeights = openGridOpenShelfClearCellHeightsFor(parameters)
+  return {
+    width: openGridOpenShelfCellClearWidthFor(parameters),
+    depth:
+      openGridOpenShelfDepthFor(parameters) - configuration.backboardThickness,
+    wedge: clearHeights.wedge,
+    regular: clearHeights.regular,
   }
 }
 
@@ -205,15 +254,15 @@ export function openGridOpenShelfShelfLowerSurfaceZFor(
     configuration.innerPlateThickness,
     parameters.angle,
   )
+  const elevation = openGridOpenShelfFrontToRearElevationFor(parameters)
   const priorShelves = Math.max(0, shelfIndex - 1)
-  return [
+  const firstShelfLowerRearZ =
     configuration.bottomThickness +
-      shelfIndex * clearHeights.front +
-      priorShelves * shelfVerticalThickness,
-    configuration.bottomThickness +
-      shelfIndex * clearHeights.rear +
-      priorShelves * shelfVerticalThickness,
-  ]
+    (parameters.angle > 0 ? 0 : clearHeights.regular.rear)
+  const lowerRearZ =
+    firstShelfLowerRearZ +
+    priorShelves * (clearHeights.regular.rear + shelfVerticalThickness)
+  return [lowerRearZ + elevation, lowerRearZ]
 }
 
 export function openGridOpenShelfPegCentersFor(
@@ -349,9 +398,14 @@ export function validateOpenGridOpenShelfParameters(
   }
 
   const clearHeights = openGridOpenShelfClearCellHeightsFor(parameters)
+  const clearCellHeights = [
+    clearHeights.regular.front,
+    clearHeights.regular.rear,
+  ]
   if (
-    clearHeights.front < configuration.minimumClearCellHeight ||
-    clearHeights.rear < configuration.minimumClearCellHeight
+    clearCellHeights.some(
+      (height) => height < configuration.minimumClearCellHeight,
+    )
   ) {
     issues.push({
       field: 'angle',

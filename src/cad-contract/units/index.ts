@@ -142,7 +142,9 @@ import {
   OPENGRID_OPEN_SHELF_CONFIGURATION,
   OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
   openGridOpenShelfAngleRadiansFor,
+  openGridOpenShelfCellClearWidthFor,
   openGridOpenShelfClearCellHeightsFor,
+  openGridOpenShelfCellSpaceFor,
   openGridOpenShelfDepthFor,
   openGridOpenShelfFootprintFor,
   openGridOpenShelfFrontToRearElevationFor,
@@ -155,6 +157,7 @@ import {
 } from './opengrid-open-shelf'
 import type {
   OpenGridOpenShelfCellClearHeights,
+  OpenGridOpenShelfCellSpace,
   OpenGridOpenShelfParameterKey,
   OpenGridOpenShelfParameters,
   OpenGridOpenShelfPoint2D,
@@ -189,7 +192,9 @@ export {
   boundsForOpenGridOpenShelf,
   isOpenGridOpenShelfParameters,
   openGridOpenShelfAngleRadiansFor,
+  openGridOpenShelfCellClearWidthFor,
   openGridOpenShelfClearCellHeightsFor,
+  openGridOpenShelfCellSpaceFor,
   openGridOpenShelfDepthFor,
   openGridOpenShelfFileName,
   openGridOpenShelfFootprintFor,

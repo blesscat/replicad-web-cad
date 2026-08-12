@@ -2,6 +2,7 @@ import {
   getOC,
   makeBox,
   makeCylinder,
+  sketchRoundedRectangle,
   Sketcher,
   Solid,
   type Shape3D,
@@ -9,6 +10,7 @@ import {
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForOpenGridOpenShelf,
+  openGridOpenShelfCellClearWidthFor,
   openGridOpenShelfClearCellHeightsFor,
   openGridOpenShelfFootprintFor,
   openGridOpenShelfPegCentersFor,
@@ -278,7 +280,10 @@ function makeAssemblyPieces(
   ]
 
   const innerWidth = width - 2 * configuration.outerWallThickness
-  for (let shelfIndex = 1; shelfIndex < parameters.cellZ; shelfIndex += 1) {
+  const clearCellWidth = openGridOpenShelfCellClearWidthFor(parameters)
+  const shelfCount =
+    parameters.angle > 0 ? parameters.cellZ : Math.max(0, parameters.cellZ - 1)
+  for (let shelfIndex = 1; shelfIndex <= shelfCount; shelfIndex += 1) {
     pieces.push(
       makeShelf(
         parameters,
@@ -292,7 +297,7 @@ function makeAssemblyPieces(
   }
 
   const clearHeights = openGridOpenShelfClearCellHeightsFor(parameters)
-  if (clearHeights.rear <= 0) {
+  if (clearHeights.regular.rear <= 0) {
     throw new Error('OPENGRID_OPEN_SHELF_REAR_CELL_DEGENERATE')
   }
   for (
@@ -301,7 +306,9 @@ function makeAssemblyPieces(
     dividerIndex += 1
   ) {
     const dividerCenter =
-      -innerWidth / 2 + (innerWidth * dividerIndex) / parameters.cellX
+      -innerWidth / 2 +
+      dividerIndex * clearCellWidth +
+      (dividerIndex - 0.5) * configuration.innerPlateThickness
     pieces.push(
       makeVerticalDivider(
         parameters,
@@ -323,13 +330,18 @@ function clipToContractBounds(
   parameters: OpenGridOpenShelfParameters,
 ): Shape3D {
   const bounds = boundsForOpenGridOpenShelf(parameters)
-  const envelope = makeBox(
-    [bounds.min[0], bounds.min[1], bounds.min[2]],
-    [bounds.max[0], bounds.max[1], bounds.max[2] + 0.05],
+  const [width, depth] = openGridOpenShelfFootprintFor(parameters)
+  const envelopeSketch = sketchRoundedRectangle(
+    width,
+    depth,
+    OPENGRID_OPEN_SHELF_CONFIGURATION.outerCornerRadius,
+    { plane: 'XY', origin: [0, 0, bounds.min[2]] },
   )
+  const envelope = envelopeSketch.extrude(bounds.max[2] - bounds.min[2] + 0.05)
   try {
     return shape.intersect(envelope)
   } finally {
+    deleteShape(envelopeSketch)
     deleteShape(envelope)
   }
 }

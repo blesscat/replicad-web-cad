@@ -70,10 +70,10 @@ function inspectGeometryInterfaces(
   const broadPlanarFaces = faces.filter(
     (face) =>
       face.surfaceType === 'PLANE' &&
-      span(face, 0) >= width * 0.5 &&
+      span(face, 0) >= cellWidth * 0.5 &&
       span(face, 1) >= depth * 0.65 &&
       face.min[1] <= yFront + 1 &&
-      face.max[1] >= yRear - 1,
+      face.max[1] >= yRear - configuration.backboardThickness - 0.2,
   )
   const elevation = openGridOpenShelfFrontToRearElevationFor(parameters)
   if (broadPlanarFaces.length < parameters.cellZ) {
@@ -142,6 +142,21 @@ function inspectGeometryInterfaces(
     if (diameter > configuration.pegDiameter + 0.35) {
       failures.push(`peg-shoulder:${index}`)
     }
+  }
+
+  const outerCornerArcFaces = faces.filter(
+    (face) =>
+      face.surfaceType === 'CYLINDRE' &&
+      face.min[2] >= -0.1 &&
+      face.max[2] > 1 &&
+      closeEnough(
+        Math.max(span(face, 0), span(face, 1)),
+        configuration.outerCornerRadius,
+        0.25,
+      ),
+  )
+  if (outerCornerArcFaces.length !== 4) {
+    failures.push('outer-corner-arcs')
   }
 }
 

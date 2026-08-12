@@ -12,8 +12,10 @@ import {
 import {
   boundsForOpenGridOpenShelf,
   openGridOpenShelfDepthFor,
+  openGridOpenShelfFrontToRearElevationFor,
   openGridOpenShelfPegCentersFor,
   openGridOpenShelfShelfLowerSurfaceZFor,
+  OPENGRID_OPEN_SHELF_CONFIGURATION,
   OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
   type OpenGridOpenShelfParameters,
 } from '../../src/cad-contract/units'
@@ -78,6 +80,29 @@ describe('OpenGrid open-shelf CAD kernel integration', () => {
     try {
       expect(shape.constructor.name).toBe('Solid')
       expect(measureVolume(shape)).toBeGreaterThan(0)
+      const cylindricalFaceBounds = shape.faces.flatMap((face) => {
+        const boundingBox = face.boundingBox
+        try {
+          if (face.surface.surfaceType !== 'CYLINDRE') return []
+          const [min, max] = boundingBox.bounds as number[][]
+          return [{ min, max }]
+        } finally {
+          boundingBox.delete()
+          face.delete()
+        }
+      })
+      const outerArcFaces = cylindricalFaceBounds.filter(
+        ({ min, max }) => (min[2] ?? 0) >= -0.1 && (max[2] ?? 0) > 1,
+      )
+      expect(outerArcFaces).toHaveLength(4)
+      for (const { min, max } of outerArcFaces) {
+        expect(
+          Math.max(
+            (max[0] ?? 0) - (min[0] ?? 0),
+            (max[1] ?? 0) - (min[1] ?? 0),
+          ),
+        ).toBeCloseTo(OPENGRID_OPEN_SHELF_CONFIGURATION.outerCornerRadius, 2)
+      }
       expectBoundsClose(boundsOf(shape), boundsForOpenGridOpenShelf(parameters))
       const quality = inspectOpenGridOpenShelfShapeQuality(
         shape,
@@ -148,12 +173,22 @@ describe('OpenGrid open-shelf CAD kernel integration', () => {
     }
     const shape = await buildOpenGridOpenShelf(parameters)
     try {
+      const quality = inspectOpenGridOpenShelfShapeQuality(
+        shape,
+        parameters,
+        meshBRep(shape, { tolerance: 0.05, angularTolerance: 0.1 }),
+      )
+      expect(quality).toMatchObject({ passed: true, failures: [] })
+
       const depth = openGridOpenShelfDepthFor(parameters)
       const yFront = -depth / 2
       const yRear = depth / 2
       const [shelfFrontZ, shelfRearZ] = openGridOpenShelfShelfLowerSurfaceZFor(
         parameters,
         1,
+      )
+      expect(shelfFrontZ - shelfRearZ).toBeCloseTo(
+        openGridOpenShelfFrontToRearElevationFor(parameters),
       )
       const frontProbe = makeBox(
         [-50, yFront, shelfFrontZ - 0.3],
@@ -194,4 +229,26 @@ describe('OpenGrid open-shelf CAD kernel integration', () => {
       deleteShape(shape)
     }
   }, 180_000)
+
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])(
+    'supports the default shelf geometry with cellZ=%i',
+    async (cellZ) => {
+      const parameters: OpenGridOpenShelfParameters = {
+        ...OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
+        cellZ,
+      }
+      const shape = await buildOpenGridOpenShelf(parameters)
+      try {
+        const quality = inspectOpenGridOpenShelfShapeQuality(
+          shape,
+          parameters,
+          meshBRep(shape, { tolerance: 0.05, angularTolerance: 0.1 }),
+        )
+        expect(quality).toMatchObject({ passed: true, failures: [] })
+      } finally {
+        deleteShape(shape)
+      }
+    },
+    180_000,
+  )
 })

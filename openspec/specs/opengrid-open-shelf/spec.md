@@ -1,9 +1,7 @@
 ## Purpose
 
 本文件定義 OpenGrid 前方開口、整體向前上仰的 Open Shelf component contract、幾何與匯出行為。
-
 ## Requirements
-
 ### Requirement: Open Shelf has a stable OpenGrid identity
 
 The system MUST register the new component with modelId, buildKey, catalog component directory, CAD-kernel component directory, and model-specific route slug `opengrid-open-shelf`. Its user-facing catalog display name MUST begin with `OpenGrid `, and its CAD route MUST be `/cad/opengrid-open-shelf`. Existing model ids, build keys, route slugs, catalog entries, and exports MUST remain unchanged.
@@ -23,7 +21,7 @@ The system MUST register the new component with modelId, buildKey, catalog compo
 
 The component MUST expose exactly the typed parameter snapshot `{ x, y, height, cellX, cellZ, angle }`. `x` and `y` MUST use the existing OpenGrid half-grid step and the footprint formula `count * 28 - 0.15`, with a valid range of 0.5–10 grid units and a maximum resulting footprint of 500 mm. `height` MUST be an integer from 10–500 mm. `cellX` and `cellZ` MUST be safe integers from 1–10. `angle` MUST be an integer from 0–75 degrees. The defaults MUST be `x=4`, `y=3`, `height=50`, `cellX=1`, `cellZ=2`, and `angle=15`.
 
-The validator MUST reject non-finite, fractional, unknown, missing, or out-of-range fields, and MUST reject a combination whose derived rear clear cell height is not positive after accounting for the bottom board, top panel, and `depth * tan(angle)` elevation difference. Valid results MUST contain only typed values and MUST not include derived fields.
+The validator MUST reject non-finite, fractional, unknown, missing, or out-of-range fields, and MUST reject a combination whose derived regular rear clear cell height is not positive after accounting for the bottom board, top panel, and `depth * tan(angle)` elevation difference. Valid results MUST contain only typed values and MUST not include derived fields.
 
 #### Scenario: Validate the default snapshot
 
@@ -45,7 +43,7 @@ The validator MUST reject non-finite, fractional, unknown, missing, or out-of-ra
 
 ### Requirement: Open Shelf geometry has a front opening and a shared upward inclination
 
-The generated component MUST be centered on X/Y with front at `-Y` and rear at `+Y`. The bottom board MUST be horizontal with 2 mm thickness and its upper datum MUST be Z=2 mm. The backboard MUST remain vertical and use 1.2 mm thickness. The two outer side walls MUST use 1.6 mm thickness. Horizontal internal shelves, vertical internal X dividers, and the top panel MUST use the common angle, rising toward the front, and MUST span the complete Y depth to the rear backboard. The top panel's highest outer front surface MUST be Z=`height`; its rear end MUST be lower by the derived depth elevation. The model MUST represent a front opening, not an opening on the top face.
+The generated component MUST be centered on X/Y with front at `-Y` and rear at `+Y`. The outer frame MUST use continuous R3.75 mm rounded corners matching the existing OpenGrid outer-corner convention. The bottom board MUST be horizontal with 2 mm thickness and its upper datum MUST be Z=2 mm. The backboard MUST remain vertical and use 1.2 mm thickness. The two outer side walls MUST use 1.6 mm thickness. Horizontal internal shelves, vertical internal X dividers, and the top panel MUST use the common angle, rising toward the front, and MUST span the complete Y depth to the rear backboard. The top panel's highest outer front surface MUST be Z=`height`; its rear end MUST be lower by the derived depth elevation. When `angle > 0`, the bottom horizontal board and the first common-angle shelf MUST form a separate bottom wedge that is not counted in `cellZ`; `cellZ` MUST count only the regular parallel cells above that wedge. When `angle = 0`, no bottom wedge shelf MUST be added. The model MUST represent a front opening, not an opening on the top face.
 
 #### Scenario: Default side profile is front-open
 
@@ -61,6 +59,25 @@ The generated component MUST be centered on X/Y with front at `-Y` and rear at `
 - **THEN** each horizontal shelf and each internal X divider MUST extend across the full declared Y depth
 - **AND** the cell boundary MUST meet or overlap the rear backboard
 - **AND** the opening MUST not be implemented by shortening the cell depth
+
+#### Scenario: Inclined cells start above the bottom wedge
+
+- **WHEN** a valid component has `angle > 0` and `cellZ=Z`
+- **THEN** the component MUST contain `Z` regular cells above the bottom wedge
+- **AND** every regular shelf plane MUST be parallel to the top panel at the full requested angle
+- **AND** the bottom wedge MUST contain the complete front-to-rear elevation difference instead of distributing it across the regular cells
+
+#### Scenario: Panel displays the derived cell space
+
+- **WHEN** the six Open Shelf parameters are valid
+- **THEN** the parameter panel MUST display the per-cell clear width and depth to the rear backboard
+- **AND** it MUST display the regular cell clear height separately from the bottom wedge height
+
+#### Scenario: Outer frame uses rounded corners
+
+- **WHEN** the component is generated at any valid size
+- **THEN** the four outer frame corners MUST be continuous circular arcs with nominal R3.75 mm
+- **AND** the rounded outer profile MUST preserve the declared rectangular X/Y bounds and the four locating peg positions
 
 #### Scenario: Overall height uses the world-Z envelope
 
