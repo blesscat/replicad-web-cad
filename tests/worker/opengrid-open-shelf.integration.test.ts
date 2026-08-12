@@ -146,7 +146,11 @@ describe('OpenGrid open-shelf CAD kernel integration', () => {
       expect(quality).toMatchObject({ passed: true, failures: [] })
 
       for (const center of openGridOpenShelfPegCentersFor(parameters)) {
-        const probe = makeCylinder(2.1, 0.2, [center[0], center[1], -2.95])
+        const probe = makeCylinder(
+          OPENGRID_OPEN_SHELF_CONFIGURATION.pegDiameter / 2 - 0.1,
+          0.2,
+          [center[0], center[1], -2.95],
+        )
         try {
           expect(measureVolume(shape.intersect(probe))).toBeGreaterThan(0)
         } finally {

@@ -89,7 +89,7 @@ The generated component MUST be centered on X/Y with front at `-Y` and rear at `
 
 ### Requirement: Open Shelf has the specified integrated locating pegs
 
-The component MUST include exactly four nominal corner locating pegs integrated with the bottom board. Each peg MUST be a plain cylinder with nominal diameter 4.5 mm and 3 mm exposed height below the bottom board. Peg centers MUST use the existing OpenGrid stackable-box corner placement semantics: nominal X/Y extent is `count * 28 mm` and each corner center is inset 7 mm from that nominal extent. The generated pegs MUST use the existing 4.5 mm interface dimension and MUST NOT include a 7.05 mm retaining shoulder, flange, or separate 7.05 mm positioning feature.
+The component MUST include exactly four nominal corner locating pegs integrated with the bottom board. Each peg MUST be a plain cylinder with nominal diameter 5 mm and 3 mm exposed height below the bottom board. Peg centers MUST use the existing OpenGrid stackable-box corner placement semantics: nominal X/Y extent is `count * 28 mm` and each corner center is inset 7 mm from that nominal extent. The generated pegs MUST use the Open Shelf 5 mm interface dimension and MUST NOT include a 7.05 mm retaining shoulder, flange, or separate 7.05 mm positioning feature.
 
 #### Scenario: Default peg placement matches the OpenGrid interface
 
@@ -98,10 +98,10 @@ The component MUST include exactly four nominal corner locating pegs integrated 
 - **AND** their nominal centers MUST be at the four combinations of `±(4*28/2-7)` and `±(3*28/2-7)` mm
 - **AND** the exposed peg length MUST be 3 mm
 
-#### Scenario: Pegs are plain 4.5 mm cylinders
+#### Scenario: Pegs are plain 5 mm cylinders
 
 - **WHEN** the generated shape is inspected at any valid size
-- **THEN** the peg shaft diameter MUST be 4.5 mm nominal
+- **THEN** the peg shaft diameter MUST be 5 mm nominal
 - **AND** no 7.05 mm retaining shoulder or flange MUST be present
 - **AND** the peg geometry MUST be fused to the bottom board as one printable solid
 

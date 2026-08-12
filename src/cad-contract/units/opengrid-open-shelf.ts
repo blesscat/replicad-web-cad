@@ -70,7 +70,7 @@ export const OPENGRID_OPEN_SHELF_CONFIGURATION = {
   outerCornerRadius: 3.75,
   topOuterEdgeRadius: 0.6,
   backboardThickness: 1.2,
-  pegDiameter: 4.5,
+  pegDiameter: 5,
   pegHeight: 3,
   pegInset: 7,
   pegOverlap: 0.02,
