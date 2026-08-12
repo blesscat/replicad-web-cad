@@ -4,6 +4,7 @@ import {
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   type ModelId,
   type ModelParameterValues,
+  type OpenGridParameters,
   type OpenGridSnapParameters,
 } from '../../../cad-contract/units'
 
@@ -75,7 +76,7 @@ function snapPresetFor(context: OpenGridSystemContext): OpenGridSnapParameters {
   return {
     variant: context === 'desk' ? 'Lite' : 'Full',
     profile: 'Standard',
-    offset: context === 'desk' ? 0.3 : 0,
+    offset: context === 'desk' ? 0.25 : 0,
     footprint: 'full',
     fourCornerLocatingHoles: context === 'desk',
     centerRemoverHole: context === 'desk',
@@ -91,17 +92,22 @@ export function getSystemPreset(
     return { mode: 'thin-shell' }
   }
   if (modelId === 'opengrid') {
-    return cloneModelParameters({
+    const boardParameters: OpenGridParameters = {
       ...OPENGRID_CONFIGURATION.defaultParameters,
       customScrewPositions: [],
-    })
+    }
+    if (context === 'desk') {
+      boardParameters.rows = 4
+      boardParameters.columns = 4
+    }
+    return cloneModelParameters(boardParameters)
   }
   if (context === 'desk' && modelId === 'opengrid-stackable-box') {
     return cloneModelParameters({
       ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
-      x: 8,
-      y: 4,
-      height: 50,
+      x: 4,
+      y: 2,
+      height: 30,
       basePlateMode: false,
       thinShellMode: true,
     })
@@ -110,7 +116,7 @@ export function getSystemPreset(
     return cloneModelParameters({
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       diameter: 60,
-      height: 50,
+      height: 30,
       thinBottomMode: true,
       bottomPlateMode: false,
     })

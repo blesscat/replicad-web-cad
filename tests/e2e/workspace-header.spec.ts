@@ -6,7 +6,7 @@ test('CAD header shows the current model and a return link', async ({
   await page.goto('/cad/opengrid')
 
   await expect(
-    page.getByRole('heading', { name: '目前編輯：OpenGrid 底板' }),
+    page.getByRole('heading', { name: '目前編輯：opengrid board (底版)' }),
   ).toBeVisible()
   await expect(page.getByText('Browser CAD Prototype')).toHaveCount(0)
   await expect(

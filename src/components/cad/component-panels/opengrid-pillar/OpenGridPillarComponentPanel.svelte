@@ -11,7 +11,7 @@
   const PILLAR_MODE_OPTIONS = [
     {
       value: 'standard',
-      label: '標準版',
+      label: '堆疊版',
       length: PILLAR_CONFIGURATION.standardLength,
     },
     {

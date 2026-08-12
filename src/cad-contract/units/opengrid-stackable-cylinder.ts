@@ -92,10 +92,10 @@ export type OpenGridStackableCylinderValidation =
   | { valid: false; issues: OpenGridStackableCylinderValidationIssue[] }
 
 export const OPENGRID_STACKABLE_CYLINDER_CONFIGURATION = {
-  defaultDiameter: 56,
+  defaultDiameter: 60,
   minDiameter: 20,
   maxDiameter: 300,
-  defaultHeight: 30,
+  defaultHeight: 20,
   minHeight: 10,
   maxHeight: 500,
   heightSliderMax: 200,

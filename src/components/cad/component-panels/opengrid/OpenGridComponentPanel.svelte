@@ -572,7 +572,7 @@
   </div>
 
   <p class="m-0 text-sm text-muted">
-    尺寸：{width} × {depth} × {thickness} mm（官方 28 mm pitch；內部淨空 25 mm）
+    尺寸：{width} × {depth} × {thickness} mm
   </p>
   {#if parameters.variant === 'Hybrid'}
     <p class="m-0 text-sm text-muted" data-testid="opengrid-hybrid-description">
@@ -691,9 +691,11 @@
       </optgroup>
       <option value="custom">custom（自訂尺寸）</option>
     </select>
-    <p class="m-0 text-sm text-muted">
-      木螺絲預設採 90° 沉頭；板厚或格內淨空不足的規格會停用。
-    </p>
+    {#if isScrewPreset(selectedScrewPreset)}
+      <p class="m-0 text-sm text-muted">
+        木螺絲預設採 90° 沉頭；板厚或格內淨空不足的規格會停用。
+      </p>
+    {/if}
   </ParameterField>
 
   {#if parameters.screwKind === 'custom'}
@@ -847,12 +849,6 @@
         />
         正中心螺絲孔
       </label>
-      <p class="m-0 text-muted">
-        正中心需要 X、Y 格數都至少為 2，才會對應到內部格線交界。
-      </p>
-      <p class="m-0 text-muted">
-        奇數格會選擇靠近中心、偏向左上的內部格線交界。
-      </p>
     </div>
     <ParameterField
       label="每隔幾格一個孔（0=關閉）"

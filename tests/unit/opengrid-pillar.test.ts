@@ -11,7 +11,7 @@ import {
 describe('pillar contract', () => {
   it('uses the shared shaft, flange, and fixed mode dimensions', () => {
     expect(PILLAR_CONFIGURATION).toMatchObject({
-      standardLength: 9,
+      standardLength: 8,
       thinShellLength: 5,
       bodyDiameter: 4.5,
       baseDiameter: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testFlangeDiameter,
@@ -54,7 +54,7 @@ describe('pillar contract', () => {
 
   it('keeps fixed modes free of a manual length parameter', () => {
     expect(
-      validatePillarParameters({ mode: 'standard', length: 9 }).valid,
+      validatePillarParameters({ mode: 'standard', length: 8 }).valid,
     ).toBe(false)
     expect(
       validatePillarParameters({ mode: 'thin-shell', length: 5 }).valid,
@@ -67,8 +67,8 @@ describe('pillar contract', () => {
       {},
       { mode: 'legacy' },
       { mode: true },
-      { mode: 'standard', length: 9 },
-      { length: 9, baseConnection: true },
+      { mode: 'standard', length: 8 },
+      { length: 8, baseConnection: true },
     ]) {
       expect(validatePillarParameters(value).valid).toBe(false)
     }
@@ -77,7 +77,7 @@ describe('pillar contract', () => {
   it('returns centered fixed bounds for both modes', () => {
     expect(boundsForPillar({ mode: 'standard' })).toEqual({
       min: [-3.5, -3.5, 0],
-      max: [3.5, 3.5, 9],
+      max: [3.5, 3.5, 8],
     })
     expect(boundsForPillar({ mode: 'thin-shell' })).toEqual({
       min: [-3.5, -3.5, 0],
@@ -90,12 +90,12 @@ describe('pillar contract', () => {
   })
 
   it('uses deterministic mode-specific export filenames', () => {
-    expect(pillarFileName({ mode: 'standard' })).toBe('pillar-9-standard.step')
+    expect(pillarFileName({ mode: 'standard' })).toBe('pillar-8-standard.step')
     expect(pillarFileName({ mode: 'thin-shell' })).toBe(
       'pillar-5-thin-shell.step',
     )
     expect(pillarStlFileName({ mode: 'standard' })).toBe(
-      'pillar-9-standard.stl',
+      'pillar-8-standard.stl',
     )
     expect(pillarStlFileName({ mode: 'thin-shell' })).toBe(
       'pillar-5-thin-shell.stl',

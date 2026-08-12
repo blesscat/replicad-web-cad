@@ -121,7 +121,7 @@ describe('CAD export runtime', () => {
     expect(step.client.send).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: 'export.step',
-        file: { name: 'pillar-9-standard.step', mime: 'model/step' },
+        file: { name: 'pillar-8-standard.step', mime: 'model/step' },
       }),
     )
 

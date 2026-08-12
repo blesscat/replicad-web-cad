@@ -22,7 +22,7 @@ export type PillarValidation =
 
 export const PILLAR_CONFIGURATION = {
   defaultMode: 'standard',
-  standardLength: 9,
+  standardLength: 8,
   thinShellLength: 5,
   positioningDefaultLength: 5,
   positioningMinLength: 3,

@@ -147,7 +147,7 @@ describe('component parameter store', () => {
     expect(store.get('opengrid-snap')).toEqual({
       variant: 'Lite',
       profile: 'Standard',
-      offset: 0.3,
+      offset: 0.25,
       footprint: 'full',
       fourCornerLocatingHoles: true,
       centerRemoverHole: true,
@@ -183,16 +183,16 @@ describe('component parameter store', () => {
 
     expect(deskStore.get('opengrid-stackable-box')).toEqual({
       ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
-      x: 8,
-      y: 4,
-      height: 50,
+      x: 4,
+      y: 2,
+      height: 30,
       basePlateMode: false,
       thinShellMode: true,
     })
     expect(deskStore.get('opengrid-stackable-cylinder')).toEqual({
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       diameter: 60,
-      height: 50,
+      height: 30,
       thinBottomMode: true,
       bottomPlateMode: false,
     })

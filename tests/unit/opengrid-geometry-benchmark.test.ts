@@ -68,7 +68,7 @@ function fakeEnvironment() {
 }
 
 describe('OpenGrid geometry benchmark contract', () => {
-  it('exposes every required variant and scale without exceeding the workspace', () => {
+  it('exposes every required variant and scale within the board maximum', () => {
     const fixtures = createOpenGridBenchmarkFixtures()
     expect(new Set(fixtures.map((fixture) => fixture.variant))).toEqual(
       new Set(['Full', 'Lite', 'Heavy', 'Hybrid']),
@@ -78,21 +78,19 @@ describe('OpenGrid geometry benchmark contract', () => {
         fixtures
           .filter((fixture) => fixture.variant === variant)
           .map((fixture) => fixture.scaleId),
-      ).toEqual(['1x1', '2x2', '5x5', '10x10', '17x17-max-500mm'])
+      ).toEqual(['1x1', '2x2', '5x5', '10x10', 'max-grid-custom'])
     }
 
     const largest = fixtures.find(
-      (fixture) => fixture.scaleId === '17x17-max-500mm',
+      (fixture) => fixture.scaleId === 'max-grid-custom',
     )
     expect(largest).toBeDefined()
-    expect(
-      largest!.request.rows * OPENGRID_BENCHMARK_CONFIGURATION.gridPitch,
-    ).toBeLessThanOrEqual(
-      OPENGRID_BENCHMARK_CONFIGURATION.workspaceMaxDimension,
+    expect(largest!.request.rows).toBe(
+      OPENGRID_BENCHMARK_CONFIGURATION.maxGridCount,
     )
-    expect(
-      (largest!.request.rows + 1) * OPENGRID_BENCHMARK_CONFIGURATION.gridPitch,
-    ).toBeGreaterThan(OPENGRID_BENCHMARK_CONFIGURATION.workspaceMaxDimension)
+    expect(largest!.request.columns).toBe(
+      OPENGRID_BENCHMARK_CONFIGURATION.maxGridCount,
+    )
   })
 
   it('keeps official screw lattices deterministic for none, corners, everywhere, and custom loads', () => {

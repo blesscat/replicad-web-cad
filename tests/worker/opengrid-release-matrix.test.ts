@@ -89,12 +89,15 @@ const fixtures = [
     connectorHoles: 'enabled' as const,
   },
   {
-    id: '17x17',
-    rows: 17,
-    columns: 17,
+    id: 'max-grid-custom',
+    rows: OPENGRID_CONFIGURATION.maxGridCount,
+    columns: OPENGRID_CONFIGURATION.maxGridCount,
     screwKind: 'custom' as const,
     screwMode: 'custom' as const,
-    customScrewPositions: deterministicOpenGridCustomScrewPositions(17, 17),
+    customScrewPositions: deterministicOpenGridCustomScrewPositions(
+      OPENGRID_CONFIGURATION.maxGridCount,
+      OPENGRID_CONFIGURATION.maxGridCount,
+    ),
     connectorHoles: 'enabled' as const,
   },
 ] as const

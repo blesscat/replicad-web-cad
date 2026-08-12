@@ -30,7 +30,7 @@ describe('OpenGrid system entry context', () => {
     expect(getSystemPreset('opengrid-snap', 'desk')).toEqual({
       variant: 'Lite',
       profile: 'Standard',
-      offset: 0.3,
+      offset: 0.25,
       footprint: 'full',
       fourCornerLocatingHoles: true,
       centerRemoverHole: true,
@@ -48,22 +48,35 @@ describe('OpenGrid system entry context', () => {
     })
   })
 
+  it('uses a 4 × 4 Desk board preset while keeping Wall board defaults', () => {
+    expect(getSystemPreset('opengrid', 'desk')).toEqual({
+      ...OPENGRID_CONFIGURATION.defaultParameters,
+      rows: 4,
+      columns: 4,
+      customScrewPositions: [],
+    })
+    expect(getSystemPreset('opengrid', 'wall')).toEqual({
+      ...OPENGRID_CONFIGURATION.defaultParameters,
+      customScrewPositions: [],
+    })
+  })
+
   it('resolves isolated Desk container presets without changing model defaults', () => {
     const deskBox = getSystemPreset('opengrid-stackable-box', 'desk')
     const deskCylinder = getSystemPreset('opengrid-stackable-cylinder', 'desk')
 
     expect(deskBox).toEqual({
       ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
-      x: 8,
-      y: 4,
-      height: 50,
+      x: 4,
+      y: 2,
+      height: 30,
       basePlateMode: false,
       thinShellMode: true,
     })
     expect(deskCylinder).toEqual({
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       diameter: 60,
-      height: 50,
+      height: 30,
       thinBottomMode: true,
       bottomPlateMode: false,
     })
@@ -72,10 +85,6 @@ describe('OpenGrid system entry context', () => {
     expect(
       getSystemPreset('opengrid-stackable-cylinder', 'wall'),
     ).toBeUndefined()
-    expect(getSystemPreset('opengrid', 'desk')).toEqual({
-      ...OPENGRID_CONFIGURATION.defaultParameters,
-      customScrewPositions: [],
-    })
 
     expect(getSystemPreset('opengrid-stackable-box', 'desk')).not.toBe(
       getSystemPreset('opengrid-stackable-box', 'desk'),
@@ -86,13 +95,13 @@ describe('OpenGrid system entry context', () => {
     expect(OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS).toMatchObject({
       x: 2,
       y: 2,
-      height: 10,
+      height: 20,
       basePlateMode: false,
       thinShellMode: false,
     })
     expect(OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS).toMatchObject({
-      diameter: 56,
-      height: 30,
+      diameter: 60,
+      height: 20,
       thinBottomMode: false,
       bottomPlateMode: false,
     })

@@ -46,11 +46,11 @@ test('Desk System starts the stackable-cylinder with its thin-shell preset', asy
     '60',
   )
   await expect(page.getByRole('textbox', { name: '高度（Z）' })).toHaveValue(
-    '50',
+    '30',
   )
   await expect(page.getByRole('radio', { name: '薄殼模式' })).toBeChecked()
-  await expect(page.getByRole('radio', { name: '預設模式' })).not.toBeChecked()
-  await expect(page.getByRole('radio', { name: '底版模式' })).not.toBeChecked()
+  await expect(page.getByRole('radio', { name: '堆疊模式' })).not.toBeChecked()
+  await expect(page.getByRole('radio', { name: '底版模式' })).toHaveCount(0)
 })
 
 test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
@@ -58,31 +58,40 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
 }) => {
   await page.goto('/models')
   const modelLink = page
-    .getByRole('heading', { name: '可堆疊圓柱', exact: true })
+    .getByRole('heading', { name: 'Round Box (圓盒)', exact: true })
     .locator('..')
-    .getByRole('link', { name: '編輯 可堆疊圓柱', exact: true })
+    .getByRole('link', { name: '編輯 Round Box (圓盒)', exact: true })
   await expect(modelLink).toHaveAttribute(
     'href',
     '/cad/opengrid-stackable-cylinder?system=desk',
   )
   await page.goto('/cad/opengrid-stackable-cylinder')
 
-  await expect(page).toHaveURL('/cad/opengrid-stackable-cylinder?system=desk')
+  await expect(page).toHaveURL('/cad/opengrid-stackable-cylinder')
   await expect(
-    page.getByRole('heading', { name: '目前編輯：OpenGrid 可堆疊圓柱' }),
+    page.getByRole('heading', { name: '目前編輯：Round Box (圓盒)' }),
   ).toBeVisible()
   await expect(
     page.locator('p').filter({ hasText: '這是開口圓柱容器' }),
   ).toHaveCount(0)
-  await expect(page.getByRole('radio')).toHaveCount(3)
+  await expect(page.getByRole('radio')).toHaveCount(2)
   const modeOptions = page.getByTestId('opengrid-cylinder-mode-options')
-  await expect(modeOptions.getByRole('radio')).toHaveCount(3)
+  await expect(modeOptions.getByRole('radio')).toHaveCount(2)
+  const modeLabels = await modeOptions
+    .getByRole('radio')
+    .evaluateAll((radios) =>
+      radios.map((radio) => radio.getAttribute('aria-label')),
+    )
+  expect(modeLabels).toEqual(['薄殼模式', '堆疊模式'])
   await expect(
     modeOptions.locator(
       'xpath=following-sibling::p[@data-testid="opengrid-cylinder-mode-description"]',
     ),
-  ).toHaveText('預設模式：可堆疊，使用標準8mm固定柱')
-  await expect(page.getByRole('radio', { name: '預設模式' })).toBeChecked()
+  ).toHaveText('預設模式：可堆疊滑動，使用8mm定位柱')
+  await expect(
+    page.getByText(/高度文字輸入為 10–500 mm、slider 為 10–200 mm/),
+  ).toHaveCount(0)
+  await expect(page.getByRole('radio', { name: '堆疊模式' })).toBeChecked()
   await expect(page.getByRole('radio', { name: '薄殼模式' })).not.toBeChecked()
   await expect(page.locator('p').filter({ hasText: '目前模式：' })).toHaveCount(
     0,
@@ -103,6 +112,8 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
   const diameter = page.getByRole('slider', { name: '外徑（直徑）' })
   const height = page.getByRole('slider', { name: '高度（Z）' })
   const heightInput = page.getByRole('textbox', { name: '高度（Z）' })
+  await expect(diameter).toHaveValue('60')
+  await expect(heightInput).toHaveValue('20')
   await expect(diameter).toHaveAttribute('min', '20')
   await expect(diameter).toHaveAttribute('max', '300')
   await expect(diameter).toHaveAttribute('step', '1')
@@ -173,7 +184,7 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
     ).toHaveAttribute('max', '18')
   }
   await diameter.press('ArrowRight')
-  await expect(diameter).toHaveValue('57')
+  await expect(diameter).toHaveValue('61')
 })
 
 test('OpenGrid stackable-cylinder keeps four opening groups independent and restorable', async ({
@@ -242,7 +253,7 @@ test('OpenGrid stackable-cylinder updates and exports deterministic metadata', a
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-stackable-cylinder-d57-h31.step',
+    'opengrid-stackable-cylinder-d61-h31.step',
   )
 })
 
@@ -260,7 +271,7 @@ test('OpenGrid stackable-cylinder exports the selected thin and no-hole state', 
     .uncheck()
   await expect(
     page.getByTestId('opengrid-cylinder-mode-description'),
-  ).toHaveText('薄殼模式：可堆疊，2 mm 底厚、1.6 mm 壁厚')
+  ).toHaveText('薄殼模式：不可堆疊，使用5mm定位柱')
   await expect(page.locator('p').filter({ hasText: '底部孔洞：' })).toHaveCount(
     0,
   )
@@ -270,7 +281,7 @@ test('OpenGrid stackable-cylinder exports the selected thin and no-hole state', 
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-stackable-cylinder-d56-h30-thin-no-holes.step',
+    'opengrid-stackable-cylinder-d60-h20-thin-no-holes.step',
   )
 })
 
@@ -293,31 +304,6 @@ test('OpenGrid stackable-cylinder export identity includes enabled opening setti
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-stackable-cylinder-d56-h30-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
-  )
-})
-
-test('OpenGrid stackable-cylinder exports the clipped bottom-plate mode', async ({
-  page,
-  browserName,
-}) => {
-  skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/opengrid-stackable-cylinder')
-  await waitForCadReady(page)
-
-  await page.getByRole('radio', { name: '薄殼模式' }).check()
-  await waitForCadReady(page)
-  await page.getByRole('radio', { name: '底版模式' }).check()
-  await expect(page.getByRole('radio', { name: '薄殼模式' })).not.toBeChecked()
-  await expect(
-    page.getByTestId('opengrid-cylinder-mode-description'),
-  ).toHaveText('底版模式：不可堆疊，使用6mm固定柱')
-  await waitForCadReady(page)
-
-  const downloadPromise = page.waitForEvent('download')
-  await page.getByRole('button', { name: '下載 STEP' }).click()
-  const download = await downloadPromise
-  expect(download.suggestedFilename()).toBe(
-    'opengrid-stackable-cylinder-d56-h30-bottom-plate.step',
+    'opengrid-stackable-cylinder-d60-h20-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
   )
 })

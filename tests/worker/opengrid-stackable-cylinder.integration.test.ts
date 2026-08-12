@@ -48,6 +48,8 @@ function parameters(
 ): OpenGridStackableCylinderParameters {
   return {
     ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+    diameter: overrides.diameter ?? 56,
+    height: overrides.height ?? 30,
     ...overrides,
   }
 }

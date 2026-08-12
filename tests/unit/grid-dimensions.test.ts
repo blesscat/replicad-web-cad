@@ -353,10 +353,16 @@ describe('OpenGrid print-plan calculation', () => {
         OPENGRID_CONFIGURATION.maxGridCount * OPENGRID_CONFIGURATION.gridPitch,
     })
     if (result.valid) {
-      expect(result.pieceGroups.every((group) => group.columns <= 17)).toBe(
-        true,
-      )
-      expect(result.pieceGroups.every((group) => group.rows <= 17)).toBe(true)
+      expect(
+        result.pieceGroups.every(
+          (group) => group.columns <= OPENGRID_CONFIGURATION.maxGridCount,
+        ),
+      ).toBe(true)
+      expect(
+        result.pieceGroups.every(
+          (group) => group.rows <= OPENGRID_CONFIGURATION.maxGridCount,
+        ),
+      ).toBe(true)
     }
   })
 

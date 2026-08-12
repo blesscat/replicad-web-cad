@@ -11,9 +11,9 @@ test('OpenGrid pillar is listed in its family and exposes fixed and positioning 
   await page.goto('/models')
 
   const modelLink = page
-    .getByRole('heading', { name: '圓柱支柱', exact: true })
+    .getByRole('heading', { name: 'Locating Post (定位柱)', exact: true })
     .locator('..')
-    .getByRole('link', { name: '編輯 圓柱支柱', exact: true })
+    .getByRole('link', { name: '編輯 Locating Post (定位柱)', exact: true })
   await expect(modelLink).toHaveAttribute(
     'href',
     /\/cad\/opengrid-pillar(?:\?system=desk)?$/,
@@ -22,10 +22,10 @@ test('OpenGrid pillar is listed in its family and exposes fixed and positioning 
 
   await expect(page).toHaveURL(/\/cad\/opengrid-pillar(?:\?system=desk)?$/)
   await expect(
-    page.getByRole('heading', { name: '目前編輯：OpenGrid 圓柱支柱' }),
+    page.getByRole('heading', { name: '目前編輯：Locating Post (定位柱)' }),
   ).toBeVisible()
 
-  const standard = page.getByRole('radio', { name: '標準版' })
+  const standard = page.getByRole('radio', { name: '堆疊版' })
   const thinShell = page.getByRole('radio', { name: '薄殼版' })
   const positioning = page.getByRole('radio', { name: '物件定位用' })
   await expect(standard).toBeVisible()
@@ -34,7 +34,7 @@ test('OpenGrid pillar is listed in its family and exposes fixed and positioning 
   await expect(standard).not.toBeChecked()
   await expect(thinShell).toBeChecked()
   await expect(positioning).not.toBeChecked()
-  await expect(page.getByText('固定總長 9 mm')).toBeVisible()
+  await expect(page.getByText('固定總長 8 mm')).toBeVisible()
   await expect(page.getByText('固定總長 5 mm')).toBeVisible()
   await expect(page.getByText(/請選擇支柱版本/)).toHaveCount(0)
   await expect(page.getByRole('textbox', { name: /總長度/ })).toHaveCount(0)
@@ -63,14 +63,14 @@ test('OpenGrid pillar exports deterministic files for all pillar modes', async (
   await page.goto('/cad/opengrid-pillar')
   await waitForCadReady(page)
 
-  const standard = page.getByRole('radio', { name: '標準版' })
+  const standard = page.getByRole('radio', { name: '堆疊版' })
   const thinShell = page.getByRole('radio', { name: '薄殼版' })
   const positioning = page.getByRole('radio', { name: '物件定位用' })
 
   const standardStepPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const standardStep = await standardStepPromise
-  expect(standardStep.suggestedFilename()).toBe('pillar-9-standard.step')
+  expect(standardStep.suggestedFilename()).toBe('pillar-8-standard.step')
   expect((await standardStep.createReadStream())?.readable).toBeTruthy()
 
   await thinShell.check()

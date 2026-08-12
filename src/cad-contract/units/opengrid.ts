@@ -180,14 +180,13 @@ const DEFAULT_CONNECTOR_SIDES: OpenGridSideFlags = {
 }
 
 const OPENGRID_WORKSPACE_MAX_DIMENSION = 500
+const OPENGRID_BOARD_MAX_GRID_COUNT = 10
 
 export const OPENGRID_CONFIGURATION = {
   gridPitch: OPENGRID_GRID_CONFIGURATION.fullPitch,
   hybridTransitionSpan: OPENGRID_GRID_CONFIGURATION.fullPitch,
   workspaceMaxDimension: OPENGRID_WORKSPACE_MAX_DIMENSION,
-  maxGridCount: Math.floor(
-    OPENGRID_WORKSPACE_MAX_DIMENSION / OPENGRID_GRID_CONFIGURATION.fullPitch,
-  ),
+  maxGridCount: OPENGRID_BOARD_MAX_GRID_COUNT,
   tileInnerSize: 25,
   outsideExtrusion: 0.8,
   insideGridTopChamfer: 0.4,
@@ -508,7 +507,10 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
       (interval as number) < 1 ||
       (interval as number) > OPENGRID_CONFIGURATION.maxGridCount
     ) {
-      issues.push({ field, message: '螺絲孔間隔必須是 1–17 的整數。' })
+      issues.push({
+        field,
+        message: `螺絲孔間隔必須是 1–${OPENGRID_CONFIGURATION.maxGridCount} 的整數。`,
+      })
     }
   }
 

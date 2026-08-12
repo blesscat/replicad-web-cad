@@ -94,7 +94,4 @@
       </button>
     {/if}
   </div>
-  <p class="text-sm text-muted">
-    STL 下載後，可在 Bambu Studio 透過本機檔案流程匯入。
-  </p>
 </div>
