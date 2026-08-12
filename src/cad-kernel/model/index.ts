@@ -34,7 +34,10 @@ import { buildOpenGridBRep } from '../components/opengrid/builder'
 import { buildOpenGridDivider } from '../components/opengrid-divider/builder'
 import { buildOpenGridStackableBox } from '../components/opengrid-stackable-box/builder'
 import { buildOpenGridStackableCylinder } from '../components/opengrid-stackable-cylinder/builder'
-import { buildOpenGridSnap } from '../components/opengrid-snap/builder'
+import {
+  buildOpenGridSnap,
+  type OpenGridSnapFixedFootprint,
+} from '../components/opengrid-snap/builder'
 import { buildOpenGridSnapRemover } from '../components/opengrid-snap-remover/builder'
 import { buildPillar } from '../components/opengrid-pillar/builder'
 
@@ -60,6 +63,9 @@ export type KernelBuildContext = {
   getOpenGridSnapReference?: (
     variant: OpenGridSnapVariant,
     profile: OpenGridSnapProfile,
+  ) => Promise<Shape3D>
+  getOpenGridSnapFixedFootprint?: (
+    footprint: OpenGridSnapFixedFootprint,
   ) => Promise<Shape3D>
   getOpenGridSnapRemoverAsset?: () => Promise<Shape3D>
   yieldToEventLoop?: () => Promise<void>
@@ -230,6 +236,7 @@ async function buildOpenGridSnapModel(
   }
   return buildOpenGridSnap(parameters, {
     getOpenGridSnapReference: context.getOpenGridSnapReference,
+    getOpenGridSnapFixedFootprint: context.getOpenGridSnapFixedFootprint,
     yieldToEventLoop: context.yieldToEventLoop,
     isGenerationCurrent: context.isGenerationCurrent,
     booleanOperations: context.booleanOperations,

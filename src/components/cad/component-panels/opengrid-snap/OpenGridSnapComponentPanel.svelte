@@ -32,6 +32,7 @@
   let rawProfile = $derived(rawParameters.profile ?? parameters.profile)
   let rawFootprint = $derived(rawParameters.footprint ?? parameters.footprint)
   let offsetIsAdjustable = $derived(rawFootprint === 'full')
+  let fixedFootprintFeaturesAreDisabled = $derived(rawFootprint !== 'full')
   let displayedOffset = $derived(
     offsetIsAdjustable ? rawOffset : String(offsetField.defaultValue),
   )
@@ -49,6 +50,8 @@
     onInputChange('footprint', footprint)
     if (footprint !== 'full') {
       onInputChange('offset', String(offsetField.defaultValue))
+      onInputChange('fourCornerLocatingHoles', 'false')
+      onInputChange('centerRemoverHole', 'false')
     }
   }
 
@@ -61,6 +64,7 @@
     event: Event,
   ): void {
     if (!(event.currentTarget instanceof HTMLInputElement)) return
+    if (fixedFootprintFeaturesAreDisabled) return
     onInputChange(key, String(event.currentTarget.checked))
   }
 </script>
@@ -131,6 +135,9 @@
       disabled={!offsetIsAdjustable}
       onChange={(nextValue) => onInputChange('offset', nextValue)}
     />
+    {#if !offsetIsAdjustable}
+      <p class="m-0 text-sm text-muted" role="status">增量無效</p>
+    {/if}
   </ParameterField>
 
   <ParameterField
@@ -151,7 +158,7 @@
     >
       <option value="full">Full</option>
       <option value="half">Half</option>
-      <option value="quarter">1/4</option>
+      <option value="quarter">Quarter</option>
     </select>
     {#if rawFootprint === 'quarter'}
       <p class="m-0 text-sm text-error" role="status">
@@ -170,11 +177,16 @@
             ? 'opengrid-snap-four-corner-holes-error'
             : undefined}
           aria-invalid={Boolean(fieldError('fourCornerLocatingHoles'))}
-          checked={rawFourCornerLocatingHoles === 'true'}
+          checked={!fixedFootprintFeaturesAreDisabled &&
+            rawFourCornerLocatingHoles === 'true'}
+          disabled={fixedFootprintFeaturesAreDisabled}
           onchange={(event) => updateBoolean('fourCornerLocatingHoles', event)}
         />
         定位孔
       </label>
+      {#if fixedFootprintFeaturesAreDisabled}
+        <p class="m-0 text-sm text-muted" role="status">定位孔無效</p>
+      {/if}
       {#if fieldError('fourCornerLocatingHoles')}
         <span
           id="opengrid-snap-four-corner-holes-error"
@@ -193,11 +205,16 @@
             ? 'opengrid-snap-center-remover-hole-error'
             : undefined}
           aria-invalid={Boolean(fieldError('centerRemoverHole'))}
-          checked={rawCenterRemoverHole === 'true'}
+          checked={!fixedFootprintFeaturesAreDisabled &&
+            rawCenterRemoverHole === 'true'}
+          disabled={fixedFootprintFeaturesAreDisabled}
           onchange={(event) => updateBoolean('centerRemoverHole', event)}
         />
         移除孔
       </label>
+      {#if fixedFootprintFeaturesAreDisabled}
+        <p class="m-0 text-sm text-muted" role="status">移除孔無效</p>
+      {/if}
       {#if fieldError('centerRemoverHole')}
         <span
           id="opengrid-snap-center-remover-hole-error"

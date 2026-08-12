@@ -139,6 +139,9 @@ test('OpenGrid Snap route exposes profiles, features, and one shared outer offse
   })
   await expect(footprint.locator('option')).toHaveCount(3)
   await expect(footprint.locator('option[value="half"]')).toHaveText('Half')
+  await expect(footprint.locator('option[value="quarter"]')).toHaveText(
+    'Quarter',
+  )
   await expect(page.getByText('格型測試中 不保證可使用')).toHaveCount(0)
   await expect(
     page.getByRole('combobox', { name: /Snap.*半格方向|Snap.*X|Snap.*Y/ }),
@@ -146,14 +149,29 @@ test('OpenGrid Snap route exposes profiles, features, and one shared outer offse
   await footprint.selectOption('full')
   await offset.press('ArrowRight')
   await expect(offset).toHaveValue('0.05')
+  const halfPreviewRequest = page.waitForRequest((request) =>
+    request.url().endsWith('/downloads/snap-half.step'),
+  )
   await footprint.selectOption('half')
+  await halfPreviewRequest
   await expect(offset).toHaveValue('0')
   await expect(page.getByText('格型測試中 不保證可使用')).toHaveCount(0)
   await expect(offset).toBeDisabled()
+  await expect(cornerHoles).toBeDisabled()
+  await expect(centerRemover).toBeDisabled()
+  await expect(page.getByText('增量無效', { exact: true })).toBeVisible()
+  await expect(page.getByText('定位孔無效', { exact: true })).toBeVisible()
+  await expect(page.getByText('移除孔無效', { exact: true })).toBeVisible()
+  const quarterPreviewRequest = page.waitForRequest((request) =>
+    request.url().endsWith('/downloads/snap-quarter.step'),
+  )
   await footprint.selectOption('quarter')
+  await quarterPreviewRequest
   await expect(offset).toHaveValue('0')
   await expect(page.getByText('格型測試中 不保證可使用')).toBeVisible()
   await expect(offset).toBeDisabled()
+  await expect(cornerHoles).toBeDisabled()
+  await expect(centerRemover).toBeDisabled()
   await expect
     .poll(async () =>
       page.evaluate(() => {
@@ -201,6 +219,11 @@ test('OpenGrid Snap route exposes profiles, features, and one shared outer offse
   await footprint.selectOption('full')
   await expect(page.getByText('格型測試中 不保證可使用')).toHaveCount(0)
   await expect(offset).toBeEnabled()
+  await expect(cornerHoles).toBeEnabled()
+  await expect(centerRemover).toBeEnabled()
+  await expect(page.getByText('增量無效', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('定位孔無效', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('移除孔無效', { exact: true })).toHaveCount(0)
   await expect(page.getByTestId('opengrid-panel')).toHaveCount(0)
   await expect(
     page.getByTestId('opengrid-snap-panel').getByText(/板型|格數|螺絲|連接孔/),
