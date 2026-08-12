@@ -20,9 +20,20 @@ not compatible with the current normalized snapshot.
 ### Requirement: OpenGrid product assembly
 
 The existing opengrid product builder MUST use the cell-balanced assembly
-strategy for Full, Lite, and Heavy. Whole-profile, row-block, and
+strategy for Full, Lite, Heavy, and Hybrid. Whole-profile, row-block, and
 prototype-template strategies MAY remain available to explicit benchmark or
 geometry-test requests, but MUST NOT be selected as a silent product fallback.
+
+Hybrid MUST be assembled as a one-cell-wide Heavy perimeter around standard
+Full-profile interior cells. If either full-cell axis has fewer than three
+cells, every full cell is on the perimeter and the result MUST be
+Heavy-equivalent.
+
+At every Heavy-to-Full perimeter boundary on a board with an interior, Hybrid
+MUST include a one-sided sloped transition on the inward-facing Heavy edge.
+The transition MUST rise from the standard Full surface height to the Heavy
+envelope height while preserving the outer Heavy edge and the through-cell
+openings.
 
 #### Scenario: Product generation uses the selected product strategy
 
@@ -31,13 +42,28 @@ geometry-test requests, but MUST NOT be selected as a silent product fallback.
 - **AND** a product-generation failure MUST remain a generation failure rather
   than silently retrying prototype-template
 
+#### Scenario: Hybrid separates perimeter and interior profiles
+
+- **WHEN** a Hybrid board has at least three rows and three columns
+- **THEN** every outer-row or outer-column cell MUST use the Heavy assembly
+  profile
+- **AND** every non-perimeter cell MUST use the standard Full profile
+- **AND** the board MUST remain one valid connected solid
+
+#### Scenario: Small Hybrid board has no interior
+
+- **WHEN** a Hybrid board has one or two full cells on either axis
+- **THEN** every generated full cell MUST use the Heavy assembly profile
+- **AND** its envelope, feature behavior, and mating surfaces MUST match a
+  Heavy board with the same parameters
+
 ### Requirement: OpenGrid normalized parameter contract
 
 The existing catalog model id MUST remain opengrid and its normalized
 parameters MUST include:
 
-- variant Full, Lite, or Heavy;
-- integer rows and columns from 1 through 10;
+- variant Full, Lite, Heavy, or Hybrid;
+- integer rows and columns from 1 through 17;
 - halfCellX none, left, or right, and halfCellY none, top, or bottom;
 - chamfers none, corners, or everywhere plus four outer-corner flags;
 - connectorHoles none or enabled plus independent top, right, bottom, and left
@@ -53,7 +79,9 @@ parameters MUST include:
 The standard pitch MUST be 28 mm. Without half-cell directions, the board
 width and depth MUST be columns times 28 mm and rows times 28 mm. Each
 selected half-cell direction MUST add exactly 14 mm on its axis while keeping
-the board centered and within the 500 mm workspace limit.
+the board centered and within the 500 mm workspace limit. Hybrid MUST use the
+same normalized field shape as the other OpenGrid variants and MUST NOT add a
+variant-specific persistence or Worker field.
 
 The official default MUST be Lite 2 by 2 with corner chamfers, all connector
 sides enabled, corner screws, and screw dimensions 4.1 mm, 7.2 mm, 1 mm,
@@ -69,6 +97,14 @@ the generic dimensions.
 - **WHEN** the opengrid route has no valid saved snapshot
 - **THEN** the workspace MUST use the official default snapshot
 - **AND** the derived board size MUST be 56 by 56 mm with 4 mm thickness
+
+#### Scenario: Hybrid is accepted without schema branching
+
+- **WHEN** a complete OpenGrid snapshot has `variant=Hybrid`
+- **THEN** validation MUST accept it when all existing fields are valid
+- **AND** normalization MUST preserve the Hybrid variant and all feature
+  values
+- **AND** generated requests MUST use the existing `modelId=opengrid`
 
 #### Scenario: Invalid or legacy snapshot
 
@@ -90,7 +126,10 @@ distance, and 25 mm inner tile size.
 Full MUST use 6.8 mm thickness. Lite MUST use the official 4 mm reduced
 profile and connector/snap height behavior. Heavy MUST use the official
 13.8 mm opposing profiled layers around the 0.2 mm gap and projected middle
-layer, rather than a single solid plate.
+layer, rather than a single solid plate. Hybrid MUST use that same Heavy
+two-layer assembly only for its one-cell outer perimeter and MUST use a
+single standard Full 6.8 mm profiled layer for each interior cell. The Hybrid
+board envelope height MUST be 13.8 mm, with its base at Z=0.
 
 #### Scenario: Profiled board envelope
 
@@ -100,6 +139,86 @@ layer, rather than a single solid plate.
 - **AND** its base MUST remain at Z=0
 - **AND** its center opening, capture ledges, corner nodes, and edge rails MUST
   be present
+
+#### Scenario: Hybrid has a Heavy perimeter and Full interior
+
+- **WHEN** a Hybrid board has at least three rows and three columns
+- **THEN** the outer perimeter MUST reach the Heavy 13.8 mm envelope and
+  preserve the opposing profiled layers and middle bridge
+- **AND** the interior cells MUST stop at the standard Full 6.8 mm profile
+- **AND** the standard interior openings MUST remain compatible with normal
+  OpenGrid Full accessories
+- **AND** the inward-facing Heavy edge MUST contain the sloped transition from
+  the Full height to the Heavy height
+
+#### Scenario: Hybrid Heavy-to-Full transition
+
+- **WHEN** a Hybrid board has a Heavy perimeter adjacent to a Full interior
+- **THEN** a section probe moving inward across the perimeter boundary MUST
+  observe a monotonic rise from the Full surface height to the Heavy envelope
+  height
+- **AND** the opposite/outside Heavy edge MUST retain the Heavy profile
+- **AND** no transition material MAY close the through-cell opening
+
+#### Scenario: Hybrid half-cell boundary
+
+- **WHEN** a Hybrid board selects an X half-cell, Y half-cell, or both
+- **THEN** every added half-cell boundary host MUST use the Heavy perimeter
+  profile
+- **AND** the full-cell interior classification and final centered envelope
+  MUST remain unchanged
+
+### Requirement: Hybrid inward perimeter transition
+
+For a Hybrid board, each perimeter-to-interior boundary with an adjacent Full
+cell MUST contain a sloped transition on the Full side of that boundary. The
+transition span MUST be one full 28 mm grid pitch, with the lower end
+matching the Full profile toward the interior and the higher end matching the
+Heavy perimeter at the boundary. The transition MUST NOT create the sloped
+portion in the outward Heavy-side cell.
+
+#### Scenario: Hybrid side transition occupies one full inner cell
+
+- **WHEN** a Hybrid board has at least one Full interior cell and no optional
+  feature cuts
+- **THEN** a probe moving from the interior cell center toward a selected
+  perimeter boundary MUST encounter the Full height first
+- **AND** the height MUST rise across a 28 mm transition span toward the
+  Heavy boundary
+- **AND** the corresponding outward half of the perimeter cell MUST remain at
+  the Heavy profile rather than containing the transition ramp
+- **AND** the through-opening MUST remain open along the probe line
+
+#### Scenario: Hybrid transition retains the official side profiles
+
+- **WHEN** a Hybrid board is generated with its supported profile and bridge
+  settings
+- **THEN** the interior end of each transition MUST meet the 6.8 mm Full
+  profile within quality-gate tolerance
+- **AND** the perimeter end MUST meet the 13.8 mm Heavy profile within
+  quality-gate tolerance
+- **AND** the generated result MUST remain a valid single solid with positive
+  volume
+
+### Requirement: Hybrid inner-corner diagonal transition
+
+At a Hybrid perimeter corner, the two adjacent inward transitions MUST join
+in the adjacent inner corner region and form a continuous diagonal ridge
+toward the Full interior. The corner join MUST remain within the board
+envelope and MUST NOT add an outward diagonal extension or close the
+through-opening.
+
+#### Scenario: Hybrid corner transitions converge inward
+
+- **WHEN** a 3 by 3 or larger Hybrid board is generated with all four
+  perimeter transitions enabled
+- **THEN** each corner's two side transitions MUST be joined by a continuous
+  diagonal transition surface in the inner corner region
+- **AND** the diagonal join MUST extend from the Heavy corner boundary toward
+  the Full interior without entering the through-opening
+- **AND** the outer corner cell MUST retain the Heavy perimeter profile without
+  an outward-facing ramp
+- **AND** the corner through-opening MUST remain measurable
 
 ### Requirement: Official chamfer and connector behavior
 
@@ -111,13 +230,17 @@ Connector holes MUST use an enable flag, independent side flags, official
 inward-facing cutout geometry, and eligible seam placement. The connector
 profile MUST preserve the official primary radius 2.6 mm, dimple radius
 2.7 mm, separation 2.5 mm, cut height 2.4 mm, and variant-specific Z
-placement. A one-cell axis MUST produce no duplicate seam positions.
+placement. A one-cell axis MUST produce no duplicate seam positions. For
+Hybrid, outer perimeter connector cuts MUST reach both Heavy layers, while
+standard interior cells MUST retain the Full interface.
 
 #### Scenario: Selected connector sides
 
 - **WHEN** only selected connector sides are enabled
 - **THEN** only those outer sides MAY receive connector cutouts
 - **AND** unselected edge geometry MUST remain unchanged
+- **AND** Hybrid connector cuts MUST remain present through the applicable
+  Heavy perimeter layers
 
 ### Requirement: Official screw geometry and placement
 
@@ -215,10 +338,10 @@ expected centered bounds and base placement, positive volume, one-solid
 topology, valid B-Rep, finite non-empty mesh, through-cell coverage, official
 outer-rail and inner-capture probes, and selected half-cell boundary probes.
 
-Feature-specific connector, screw, chamfer, Heavy-layer, lifecycle, and
-export behavior MUST remain covered by the contract and Worker integration
-tests. STEP and binary STL exports MUST be produced from the quality-gated
-committed B-Rep revision.
+Feature-specific connector, screw, chamfer, Heavy-layer, Hybrid perimeter /
+Full-interior, lifecycle, and export behavior MUST remain covered by the
+contract and Worker integration tests. STEP and binary STL exports MUST be
+produced from the quality-gated committed B-Rep revision.
 
 #### Scenario: Invalid profile candidate
 
@@ -226,6 +349,14 @@ committed B-Rep revision.
   mesh, through-cell, rail/capture, or half-cell checks
 - **THEN** the candidate MUST be rejected before commit
 - **AND** the previous committed revision MAY remain visible but MUST be stale
+
+#### Scenario: Hybrid quality evidence
+
+- **WHEN** a Hybrid board with an interior cell is quality-checked
+- **THEN** the report MUST verify the 13.8 mm Heavy perimeter envelope
+- **AND** it MUST verify Heavy-layer occupancy on the perimeter and Full-layer
+  occupancy in the interior
+- **AND** it MUST verify all requested cell openings and a single valid solid
 
 ### Requirement: Optional official reference comparison
 
@@ -253,8 +384,8 @@ runtime dependencies.
 ### Requirement: Optional release benchmark
 
 The repository MUST provide an environment-gated benchmark capability that
-covers Full, Lite, and Heavy at 1 by 1, 2 by 2, 5 by 5, and 10 by 10 within the
-500 mm limit. It MUST compare the available assembly strategies,
+covers Full, Lite, Heavy, and Hybrid at 1 by 1, 2 by 2, 5 by 5, 10 by 10,
+and 17 by 17 within the 500 mm limit. It MUST compare the available assembly strategies,
 perform one cold run, one warm-up, and five measured runs, and retain quality
 and export failures.
 
@@ -263,11 +394,11 @@ source commit, environment, selected strategy, fixture results, median, P95,
 and known limitations. It MUST remain internal and MUST NOT add a product
 route, catalog entry, persistence entry, or Worker protocol version.
 
-#### Scenario: Run the optional release benchmark
+#### Scenario: Run the optional reference comparison
 
 - **WHEN** the release benchmark flag is enabled
-- **THEN** the benchmark MUST execute the configured variants and scale
-  fixtures with cold, warm-up, and five measured samples
+- **THEN** the benchmark MUST execute the configured Full, Lite, Heavy, and
+  Hybrid fixtures with cold, warm-up, and five measured samples
 - **AND** quality/export failures MUST remain in the result
 - **AND** report files MUST be written only when report output is explicitly
   enabled
