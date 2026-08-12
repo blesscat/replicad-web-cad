@@ -1,8 +1,4 @@
-## Purpose
-
-This capability gives OpenGrid model entries a stable Desk or Wall context so that entry links, initial presets, saved parameters, and generated preview assets remain aligned without creating duplicate CAD models.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Stable OpenGrid system contexts and effective presets
 
@@ -74,25 +70,3 @@ The OpenGrid board panel MUST use the active context's effective preset as the b
 - **GIVEN** a user is on `/cad/opengrid` and changes the chamfer or screw-hole mode
 - **WHEN** the user activates the corresponding field-level restore control
 - **THEN** that field MUST return to the official defaults `chamfers=corners` or `screwMode=corners`
-
-### Requirement: Context-specific model-selection entries
-
-The `/models` chooser MUST render the OpenGrid entries under `Desk System` and `Wall Related` subgroups before the HSW series. `opengrid` and `opengrid-snap` MUST appear in both subgroups with links carrying the corresponding context; every other visible OpenGrid model MUST appear only in Desk; HSW MUST remain a single context-free entry. The duplicated entries MUST retain the same stable model id and model-specific CAD route.
-
-#### Scenario: OpenGrid entries carry context links
-
-- **WHEN** a user opens `/models`
-- **THEN** the Desk bottom-plate and Snap links MUST be `/cad/opengrid?system=desk` and `/cad/opengrid-snap?system=desk`
-- **AND** the Wall bottom-plate and Snap links MUST be `/cad/opengrid?system=wall` and `/cad/opengrid-snap?system=wall`
-- **AND** the Wall subgroup MUST NOT contain the other OpenGrid components
-
-### Requirement: Context-specific preview identity
-
-Every visible catalog entry MUST expose one static preview image metadata record. A context-specific entry MUST use a deterministic asset identity containing its model id and context, while a context-free entry MUST retain the `<modelId>.png` identity. A preview asset MUST be generated from the entry's effective system preset and a stable thumbnail camera; the asset MUST remain presentation-only and MUST NOT alter Worker or export contracts.
-
-#### Scenario: Desk and Wall Snap previews are distinct assets
-
-- **WHEN** the preview capture workflow processes the Desk and Wall Snap entries
-- **THEN** it MUST visit the corresponding context routes
-- **AND** it MUST write and verify separate assets for `opengrid-snap-desk.png` and `opengrid-snap-wall.png`
-- **AND** each asset MUST be generated from that context's preset rather than the other context's preset or a persisted browser value

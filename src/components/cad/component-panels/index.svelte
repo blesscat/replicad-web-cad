@@ -16,11 +16,13 @@
   import OpenGridStackableCylinderComponentPanel from './opengrid-stackable-cylinder/OpenGridStackableCylinderComponentPanel.svelte'
   import OpenGridSnapComponentPanel from './opengrid-snap/OpenGridSnapComponentPanel.svelte'
   import OpenGridPillarComponentPanel from './opengrid-pillar/OpenGridPillarComponentPanel.svelte'
+  import type { OpenGridSystemContext } from '../../../features/cad/system-entry-context'
   import type { ComponentPanelProps } from './types'
 
   type Props = ComponentPanelProps & {
     modelId: ModelId
     parameters: ModelParameterValues
+    systemContext?: OpenGridSystemContext
     onOpenGridParametersChange: (parameters: OpenGridParameters) => void
     onOpenGridDimensionCalculationInvalid: () => void
   }
@@ -28,6 +30,7 @@
   let {
     modelId,
     parameters,
+    systemContext,
     rawParameters,
     fieldErrors,
     onInputChange,
@@ -59,6 +62,7 @@
 {:else if modelId === 'opengrid'}
   <OpenGridComponentPanel
     parameters={parameters as OpenGridParameters}
+    {systemContext}
     {fieldErrors}
     onParametersChange={onOpenGridParametersChange}
     onDimensionCalculationInvalid={onOpenGridDimensionCalculationInvalid}

@@ -120,6 +120,7 @@
     <CadWorkspacePanel
       state={snapshot.state}
       modelId={snapshot.modelId}
+      {systemContext}
       parameters={snapshot.state.input}
       rawParameters={snapshot.rawParameters}
       fieldErrors={snapshot.fieldErrors}

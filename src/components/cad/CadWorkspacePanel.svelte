@@ -7,6 +7,7 @@
     OpenGridParameters,
   } from '../../cad-contract/units'
   import type { ExportFormat } from '../../features/cad/download'
+  import type { OpenGridSystemContext } from '../../features/cad/system-entry-context'
   import { getModelDefinition } from '../../features/cad/model-catalog'
   import type { RawParameters } from './workspace/types'
   import ComponentParameterPanel from './component-panels/index.svelte'
@@ -18,6 +19,7 @@
   type Props = {
     state: CadState
     modelId: ModelId
+    systemContext?: OpenGridSystemContext
     parameters: ModelParameterValues
     rawParameters: RawParameters
     fieldErrors: Partial<Record<ModelParameterKey | 'parameters', string>>
@@ -34,6 +36,7 @@
   let {
     state,
     modelId,
+    systemContext,
     parameters,
     rawParameters,
     fieldErrors,
@@ -62,6 +65,7 @@
     {#key resetVersion}
       <ComponentParameterPanel
         {modelId}
+        {systemContext}
         {parameters}
         {rawParameters}
         {fieldErrors}

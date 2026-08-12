@@ -13,8 +13,125 @@ test('Desk OpenGrid board starts with a 4 by 4 grid when no value is saved', asy
   await page.evaluate(() => localStorage.clear())
   await page.reload()
 
+  await expect(page.getByTestId('opengrid-panel')).toBeVisible()
   await expect(page.getByRole('slider', { name: 'Y' })).toHaveValue('4')
   await expect(page.getByRole('slider', { name: 'X' })).toHaveValue('4')
+  await expect(
+    page.getByRole('combobox', { name: 'OpenGrid 倒角模式' }),
+  ).toHaveValue('none')
+  await expect(
+    page.getByRole('combobox', { name: 'OpenGrid 螺絲孔模式' }),
+  ).toHaveValue('none')
+  await expect(page.getByText('外角倒角', { exact: true })).toHaveCount(0)
+})
+
+test('Desk OpenGrid restore controls use the Desk effective defaults', async ({
+  page,
+}) => {
+  await page.goto('/cad/opengrid?system=desk')
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+
+  await expect(page.getByTestId('opengrid-panel')).toBeVisible()
+  const chamferMode = page.getByRole('combobox', {
+    name: 'OpenGrid 倒角模式',
+  })
+  const screwMode = page.getByRole('combobox', {
+    name: 'OpenGrid 螺絲孔模式',
+  })
+
+  await chamferMode.selectOption('corners')
+  await expect(
+    page.getByRole('button', { name: '復原OpenGrid 倒角模式' }),
+  ).toBeVisible()
+  await page.getByRole('button', { name: '復原OpenGrid 倒角模式' }).click()
+  await expect(chamferMode).toHaveValue('none')
+  await expect(
+    page.getByRole('button', { name: '復原OpenGrid 倒角模式' }),
+  ).toHaveCount(0)
+
+  await screwMode.selectOption('corners')
+  await expect(
+    page.getByRole('button', { name: '復原OpenGrid 螺絲孔模式' }),
+  ).toBeVisible()
+  await page.getByRole('button', { name: '復原OpenGrid 螺絲孔模式' }).click()
+  await expect(screwMode).toHaveValue('none')
+  await expect(
+    page.getByRole('button', { name: '復原OpenGrid 螺絲孔模式' }),
+  ).toHaveCount(0)
+
+  await chamferMode.selectOption('corners')
+  await screwMode.selectOption('corners')
+  await page.getByRole('button', { name: '全部恢復預設' }).click()
+  await expect(chamferMode).toHaveValue('none')
+  await expect(screwMode).toHaveValue('none')
+})
+
+test('Desk OpenGrid keeps a saved snapshot ahead of its preset', async ({
+  page,
+}) => {
+  await page.goto('/cad/opengrid?system=desk')
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+
+  await expect(page.getByTestId('opengrid-panel')).toBeVisible()
+  const screwMode = page.getByRole('combobox', {
+    name: 'OpenGrid 螺絲孔模式',
+  })
+  await screwMode.selectOption('corners')
+  await expect(screwMode).toHaveValue('corners')
+
+  await page.reload()
+  await expect(screwMode).toHaveValue('corners')
+})
+
+test('OpenGrid restores context-free field values to official defaults', async ({
+  page,
+}) => {
+  await page.goto('/cad/opengrid')
+  await expect(page.getByTestId('opengrid-panel')).toBeVisible()
+
+  const chamferMode = page.getByRole('combobox', {
+    name: 'OpenGrid 倒角模式',
+  })
+  const screwMode = page.getByRole('combobox', {
+    name: 'OpenGrid 螺絲孔模式',
+  })
+
+  await chamferMode.selectOption('none')
+  await page.getByRole('button', { name: '復原OpenGrid 倒角模式' }).click()
+  await expect(chamferMode).toHaveValue('corners')
+
+  await screwMode.selectOption('none')
+  await page.getByRole('button', { name: '復原OpenGrid 螺絲孔模式' }).click()
+  await expect(screwMode).toHaveValue('corners')
+})
+
+test('OpenGrid renders screw mode before screw size and keeps interval controls grouped', async ({
+  page,
+}) => {
+  await page.goto('/cad/opengrid')
+  await expect(page.getByTestId('opengrid-panel')).toBeVisible()
+
+  const labels = await page
+    .getByTestId('opengrid-panel')
+    .locator('select')
+    .evaluateAll((selects) =>
+      selects.map((select) => select.getAttribute('aria-label')),
+    )
+  expect(labels.indexOf('OpenGrid 螺絲孔模式')).toBeLessThan(
+    labels.indexOf('OpenGrid 螺絲尺寸來源'),
+  )
+
+  await page
+    .getByRole('combobox', { name: 'OpenGrid 螺絲孔模式' })
+    .selectOption('by-row-column')
+  await expect(
+    page.getByRole('spinbutton', { name: 'OpenGrid 每幾行螺絲孔' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('spinbutton', { name: 'OpenGrid 每幾列螺絲孔' }),
+  ).toBeVisible()
 })
 
 test('OpenGrid CAD route exposes typed controls and the custom matrix', async ({
