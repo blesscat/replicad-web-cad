@@ -169,6 +169,7 @@
       thinBottomMode: rawParameters.thinBottomMode === 'true',
       bottomPlateMode: rawParameters.bottomPlateMode === 'true',
       bottomSeatMode: seatModeForRawParameters(),
+      honeycombMode: rawParameters.honeycombMode === 'true',
       ...openingValues,
     }
   }
@@ -297,6 +298,20 @@
       </span>
     {/if}
   </fieldset>
+  <label class="flex items-start gap-2 text-sm">
+    <input
+      class="mt-0.5"
+      type="checkbox"
+      aria-label="省料模式（六角鏤空）"
+      data-testid="opengrid-stackable-cylinder-honeycomb-mode"
+      checked={rawParameters.honeycombMode === 'true'}
+      onchange={(event) => {
+        if (!(event.currentTarget instanceof HTMLInputElement)) return
+        onInputChange('honeycombMode', String(event.currentTarget.checked))
+      }}
+    />
+    <span>省料模式（六角鏤空）</span>
+  </label>
   {#each opengridStackableCylinderDefinition.parameterSchema.slice(0, 2) as field (field.key)}
     {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
     <ParameterField

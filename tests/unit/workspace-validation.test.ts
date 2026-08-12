@@ -227,6 +227,7 @@ describe('CAD workspace validation helpers', () => {
       cornerSeatMode: 'hole',
       fullBottomHoleGrid: 'true',
       basePlateMode: 'false',
+      honeycombMode: 'false',
       thinShellMode: 'false',
       openingPlusXDepth: '0',
       openingPlusXBottomLength: '1',
@@ -278,6 +279,32 @@ describe('CAD workspace validation helpers', () => {
       message: '格數必須是 0.5 的倍數。',
       field: 'x',
     })
+  })
+
+  it('round-trips the shared honeycomb checkbox for both stackable boxes', () => {
+    const box = {
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+      honeycombMode: true,
+    }
+    const cylinder = {
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+      honeycombMode: true,
+    }
+
+    expect(rawFromParameters(box).honeycombMode).toBe('true')
+    expect(
+      parseRawParameters(rawFromParameters(box), 'opengrid-stackable-box'),
+    ).toEqual({
+      valid: true,
+      value: box,
+    })
+    expect(rawFromParameters(cylinder).honeycombMode).toBe('true')
+    expect(
+      parseRawParameters(
+        rawFromParameters(cylinder),
+        'opengrid-stackable-cylinder',
+      ),
+    ).toEqual({ valid: true, value: cylinder })
   })
 
   it('round-trips the mutually exclusive thin-shell mode flag', () => {

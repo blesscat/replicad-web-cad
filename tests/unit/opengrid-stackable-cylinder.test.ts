@@ -31,6 +31,29 @@ function parameters(
 }
 
 describe('OpenGrid stackable-cylinder contract', () => {
+  it('defaults material saving to off and preserves the opt-in boolean', () => {
+    expect(OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS.honeycombMode).toBe(
+      false,
+    )
+    const value = parameters({ honeycombMode: true })
+    expect(validateOpenGridStackableCylinderParameters(value)).toEqual({
+      valid: true,
+      value,
+    })
+  })
+
+  it('accepts honeycomb opt-in on a legacy snapshot', () => {
+    const validation = validateOpenGridStackableCylinderParameters({
+      diameter: 56,
+      height: 30,
+      honeycombMode: true,
+    })
+
+    expect(validation.valid).toBe(true)
+    if (!validation.valid) return
+    expect(validation.value.honeycombMode).toBe(true)
+    expect(validation.value.bottomHolesEnabled).toBe(true)
+  })
   it('keeps manual height at 500 mm while limiting the slider to 200 mm', () => {
     expect(OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.heightSliderMax).toBe(200)
     expect(
@@ -57,6 +80,17 @@ describe('OpenGrid stackable-cylinder contract', () => {
         fullBottomHoleGrid: false,
       }),
     ).toBe(false)
+  })
+
+  it('rejects a non-boolean honeycomb mode', () => {
+    const validation = validateOpenGridStackableCylinderParameters(
+      parameters({ honeycombMode: 'true' as never }),
+    )
+
+    expect(validation.valid).toBe(false)
+    if (!validation.valid) {
+      expect(validation.issues[0]?.field).toBe('honeycombMode')
+    }
   })
 
   it('accepts independently configured four-direction openings', () => {
@@ -444,6 +478,35 @@ describe('OpenGrid stackable-cylinder contract', () => {
     )
     expect(openGridStackableCylinderStlFileName(input)).toBe(
       'opengrid-stackable-cylinder-d60-h20-seats-hole-open-8-12-70_0-1-90_0-1-90_0-1-90.stl',
+    )
+  })
+
+  it('adds a deterministic honeycomb suffix only when material saving is enabled', () => {
+    const value = parameters({ honeycombMode: true })
+
+    expect(openGridStackableCylinderFileName(value)).toBe(
+      'opengrid-stackable-cylinder-d60-h20-honeycomb.step',
+    )
+    expect(openGridStackableCylinderStlFileName(value)).toBe(
+      'opengrid-stackable-cylinder-d60-h20-honeycomb.stl',
+    )
+  })
+
+  it('places honeycomb before existing no-hole and opening suffixes', () => {
+    const value = parameters({
+      honeycombMode: true,
+      thinBottomMode: true,
+      bottomHolesEnabled: false,
+      openingPlusXDepth: 8,
+      openingPlusXBottomLength: 12,
+      openingPlusXAngle: 70,
+    })
+
+    expect(openGridStackableCylinderFileName(value)).toBe(
+      'opengrid-stackable-cylinder-d60-h20-thin-honeycomb-no-holes-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
+    )
+    expect(openGridStackableCylinderStlFileName(value)).toBe(
+      'opengrid-stackable-cylinder-d60-h20-thin-honeycomb-no-holes-open-8-12-70_0-1-90_0-1-90_0-1-90.stl',
     )
   })
 

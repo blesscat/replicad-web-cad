@@ -40,6 +40,7 @@ export const OPENGRID_STACKABLE_BOX_PARAMETER_KEYS: ModelParameterKey[] = [
   'fullBottomHoleGrid',
   'basePlateMode',
   'thinShellMode',
+  'honeycombMode',
   ...OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
 ]
 export const OPENGRID_STACKABLE_CYLINDER_PARAMETER_KEYS: ModelParameterKey[] = [
@@ -48,6 +49,7 @@ export const OPENGRID_STACKABLE_CYLINDER_PARAMETER_KEYS: ModelParameterKey[] = [
   'thinBottomMode',
   'bottomPlateMode',
   'bottomSeatMode',
+  'honeycombMode',
   ...OPENGRID_STACKABLE_CYLINDER_OPENING_PARAMETER_KEYS,
 ]
 export const OPENGRID_DIVIDER_PARAMETER_KEYS: ModelParameterKey[] = [
@@ -130,6 +132,13 @@ function legacyParameterDefault(
     return 'hole'
   }
   if (modelId === 'opengrid-stackable-box' && key === 'thinShellMode') {
+    return 'false'
+  }
+  if (
+    (modelId === 'opengrid-stackable-box' ||
+      modelId === 'opengrid-stackable-cylinder') &&
+    key === 'honeycombMode'
+  ) {
     return 'false'
   }
   if (modelId !== 'opengrid-stackable-cylinder') return undefined
@@ -296,6 +305,9 @@ export function rawFromParameters(
       bottomSeatMode: String(
         'bottomSeatMode' in parameters ? parameters.bottomSeatMode : 'hole',
       ),
+      honeycombMode: String(
+        'honeycombMode' in parameters ? parameters.honeycombMode : false,
+      ),
     }
     for (const key of OPENGRID_STACKABLE_CYLINDER_OPENING_PARAMETER_KEYS) {
       raw[key] = String(
@@ -359,6 +371,7 @@ export function rawFromParameters(
       fullBottomHoleGrid: boolean
       basePlateMode: boolean
       thinShellMode: boolean
+      honeycombMode: boolean
     }> &
       Partial<
         Record<
@@ -374,6 +387,7 @@ export function rawFromParameters(
       fullBottomHoleGrid: String(stackableParameters.fullBottomHoleGrid),
       basePlateMode: String(stackableParameters.basePlateMode),
       thinShellMode: String(stackableParameters.thinShellMode ?? false),
+      honeycombMode: String(stackableParameters.honeycombMode ?? false),
     }
     for (const key of OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS) {
       const value =
@@ -569,7 +583,8 @@ export function parseRawParameters(
       key === 'thinBottomMode' ||
       key === 'bottomPlateMode' ||
       key === 'basePlateMode' ||
-      key === 'thinShellMode'
+      key === 'thinShellMode' ||
+      key === 'honeycombMode'
     ) {
       const rawValue = raw[key] ?? legacyParameterDefault(modelId, key)
       if (rawValue !== 'true' && rawValue !== 'false') {

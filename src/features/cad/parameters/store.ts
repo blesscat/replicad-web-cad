@@ -102,6 +102,12 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
         ? value.bottomPlateMode
         : false,
       bottomSeatMode: canonicalCylinderSeatModeFor(value),
+      honeycombMode: Object.prototype.hasOwnProperty.call(
+        value,
+        'honeycombMode',
+      )
+        ? value.honeycombMode
+        : false,
     }
   }
   if (modelId === 'opengrid-divider' && isRecord(value)) {
@@ -133,6 +139,10 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
     value,
     'thinShellMode',
   )
+  const hasHoneycombMode = Object.prototype.hasOwnProperty.call(
+    value,
+    'honeycombMode',
+  )
   const normalized: Record<string, unknown> = {
     ...withoutLegacy,
     cornerSeatMode: canonicalBoxSeatModeFor(value),
@@ -141,6 +151,7 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
       : false,
     basePlateMode: hasBasePlateMode ? value.basePlateMode : false,
     thinShellMode: hasThinShellMode ? value.thinShellMode : false,
+    honeycombMode: hasHoneycombMode ? value.honeycombMode : false,
   }
   for (const key of OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS) {
     if (Object.prototype.hasOwnProperty.call(value, key)) continue

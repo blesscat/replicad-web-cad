@@ -146,6 +146,7 @@
       fullBottomHoleGrid: rawParameters.fullBottomHoleGrid === 'true',
       basePlateMode: rawParameters.basePlateMode === 'true',
       thinShellMode: rawParameters.thinShellMode === 'true',
+      honeycombMode: rawParameters.honeycombMode === 'true',
       ...openingValues,
     }
   }
@@ -258,6 +259,20 @@
         }}
       />
       <span class="font-[650]">底部全孔模式</span>
+    </label>
+    <label class="flex min-w-0 items-start gap-2">
+      <input
+        class="mt-1 accent-primary"
+        type="checkbox"
+        aria-label="省料模式（六角鏤空）"
+        data-testid="opengrid-stackable-box-honeycomb-mode"
+        checked={rawParameters.honeycombMode === 'true'}
+        onchange={(event) => {
+          if (!(event.currentTarget instanceof HTMLInputElement)) return
+          onInputChange('honeycombMode', String(event.currentTarget.checked))
+        }}
+      />
+      <span class="font-[650]">省料模式（六角鏤空）</span>
     </label>
   </div>
   <div

@@ -602,6 +602,102 @@ describe('OpenGrid Worker runtime', () => {
     ).toHaveLength(2)
   })
 
+  it('routes honeycomb snapshots through Worker commit and export identity', async () => {
+    const events: unknown[] = []
+    const runtime = new CadWorkerRuntime('epoch-stackable-honeycomb', (event) =>
+      events.push(event),
+    )
+    const parameters = {
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+      x: 3,
+      y: 3,
+      height: 60,
+      honeycombMode: true,
+    }
+
+    await runtime.handle(initCommand())
+    await runtime.handle(
+      stackableBoxGenerateCommand(1, {
+        parameters,
+      }),
+    )
+    expect(mocks.buildModelBRep).toHaveBeenCalledWith(
+      'opengrid-stackable-box',
+      parameters,
+      expect.any(Object),
+    )
+
+    const candidate = events.find(
+      (event) =>
+        typeof event === 'object' &&
+        event !== null &&
+        'kind' in event &&
+        event.kind === 'model.candidate-ready',
+    ) as { candidateId: string } | undefined
+    expect(candidate).toBeDefined()
+
+    await runtime.handle({
+      ...base,
+      requestId: 'stackable-honeycomb-commit-request',
+      operationId: 'stackable-honeycomb-commit-operation',
+      kind: 'model.commit' as const,
+      generation: 1,
+      candidateId: candidate!.candidateId,
+      workerEpoch: 'epoch-stackable-honeycomb',
+    })
+    const ready = events.find(
+      (event) =>
+        typeof event === 'object' &&
+        event !== null &&
+        'kind' in event &&
+        event.kind === 'model.ready',
+    ) as {
+      modelRevision: string
+      parameters: typeof parameters
+      workerEpoch: string
+    }
+    expect(ready.parameters.honeycombMode).toBe(true)
+
+    await runtime.handle({
+      ...base,
+      requestId: 'stackable-honeycomb-export-step-request',
+      operationId: 'stackable-honeycomb-export-step-operation',
+      kind: 'export.step' as const,
+      modelRevision: ready.modelRevision,
+      workerEpoch: ready.workerEpoch,
+      file: {
+        name: openGridStackableBoxFileName(ready.parameters),
+        mime: 'model/step' as const,
+      },
+    })
+    await runtime.handle({
+      ...base,
+      requestId: 'stackable-honeycomb-export-stl-request',
+      operationId: 'stackable-honeycomb-export-stl-operation',
+      kind: 'export.stl' as const,
+      modelRevision: ready.modelRevision,
+      workerEpoch: ready.workerEpoch,
+      file: {
+        name: openGridStackableBoxStlFileName(ready.parameters),
+        mime: 'model/stl' as const,
+      },
+    })
+    expect(mocks.exportStepBytes).toHaveBeenCalledOnce()
+    expect(mocks.exportStlBytes).toHaveBeenCalledOnce()
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'export.ready',
+        fileName: 'opengrid-stackable-box-3x3-h60-honeycomb.step',
+      }),
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'export.ready',
+        fileName: 'opengrid-stackable-box-3x3-h60-honeycomb.stl',
+      }),
+    )
+  })
+
   it('routes divider commands through its own quality gate and exports', async () => {
     const events: unknown[] = []
     const runtime = new CadWorkerRuntime('epoch-divider', (event) =>

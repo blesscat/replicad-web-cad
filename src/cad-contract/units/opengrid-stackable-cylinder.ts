@@ -11,6 +11,7 @@ export type OpenGridStackableCylinderParameterKey =
   | 'thinBottomMode'
   | 'bottomPlateMode'
   | 'bottomSeatMode'
+  | 'honeycombMode'
   | 'openingPlusXDepth'
   | 'openingPlusXBottomLength'
   | 'openingPlusXAngle'
@@ -36,6 +37,7 @@ export type OpenGridStackableCylinderParameters = {
   thinBottomMode: boolean
   bottomPlateMode: boolean
   bottomSeatMode: OpenGridLocatingSeatMode
+  honeycombMode: boolean
 } & Record<OpenGridStackableCylinderOpeningParameterKey, number>
 
 export type OpenGridStackableCylinderOpeningParameterKey =
@@ -152,6 +154,7 @@ export const OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS = {
   bottomPlateMode: false,
   bottomSeatMode:
     OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultBottomSeatMode,
+  honeycombMode: false,
   openingPlusXDepth:
     OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultOpeningDepth,
   openingPlusXBottomLength:
@@ -288,7 +291,7 @@ function validateIntegerField(
 
 function validateBooleanField(
   value: unknown,
-  field: 'thinBottomMode' | 'bottomPlateMode',
+  field: 'thinBottomMode' | 'bottomPlateMode' | 'honeycombMode',
   issues: OpenGridStackableCylinderValidationIssue[],
 ): void {
   if (typeof value !== 'boolean') {
@@ -315,6 +318,7 @@ const ALL_SUPPORTED_PARAMETER_KEYS = new Set<string>([
   'bottomPlateMode',
   'bottomSeatMode',
   'bottomHolesEnabled',
+  'honeycombMode',
   ...OPENGRID_STACKABLE_CYLINDER_OPENING_PARAMETER_KEYS,
 ])
 
@@ -464,6 +468,9 @@ export function validateOpenGridStackableCylinderParameters(
       })
     }
   }
+  if (hasOwn(value, 'honeycombMode')) {
+    validateBooleanField(value.honeycombMode, 'honeycombMode', issues)
+  }
   if (hasOpeningParameters) {
     for (const key of OPENGRID_STACKABLE_CYLINDER_OPENING_PARAMETER_KEYS) {
       if (!hasOwn(value, key)) continue
@@ -511,6 +518,10 @@ export function validateOpenGridStackableCylinderParameters(
     bottomSeatMode: hasCurrentSeatMode
       ? (value.bottomSeatMode as OpenGridLocatingSeatMode)
       : legacyBottomSeatModeFor(value),
+    honeycombMode:
+      typeof value.honeycombMode === 'boolean'
+        ? (value.honeycombMode as boolean)
+        : false,
     ...openingValues,
   }
   if (issues.length === 0 && hasOpeningParameters) {
@@ -925,6 +936,12 @@ function seatSuffixFor(
   return `-seats-${parameters.bottomSeatMode}`
 }
 
+function honeycombSuffixFor(
+  parameters: OpenGridStackableCylinderParameters,
+): string {
+  return parameters.honeycombMode ? '-honeycomb' : ''
+}
+
 function openingFingerprintFor(
   parameters: OpenGridStackableCylinderParameters,
 ): string {
@@ -950,8 +967,9 @@ export function openGridStackableCylinderFileName(
 ): string {
   const modeSuffix = modeSuffixFor(parameters)
   const seatSuffix = seatSuffixFor(parameters)
+  const honeycombSuffix = honeycombSuffixFor(parameters)
   const openingSuffix = openingFingerprintFor(parameters)
-  return `opengrid-stackable-cylinder-d${parameters.diameter}-h${parameters.height}${seatSuffix}${modeSuffix}${openingSuffix}.step`
+  return `opengrid-stackable-cylinder-d${parameters.diameter}-h${parameters.height}${seatSuffix}${modeSuffix}${honeycombSuffix}${openingSuffix}.step`
 }
 
 export function openGridStackableCylinderStlFileName(
@@ -959,6 +977,7 @@ export function openGridStackableCylinderStlFileName(
 ): string {
   const modeSuffix = modeSuffixFor(parameters)
   const seatSuffix = seatSuffixFor(parameters)
+  const honeycombSuffix = honeycombSuffixFor(parameters)
   const openingSuffix = openingFingerprintFor(parameters)
-  return `opengrid-stackable-cylinder-d${parameters.diameter}-h${parameters.height}${seatSuffix}${modeSuffix}${openingSuffix}.stl`
+  return `opengrid-stackable-cylinder-d${parameters.diameter}-h${parameters.height}${seatSuffix}${modeSuffix}${honeycombSuffix}${openingSuffix}.stl`
 }

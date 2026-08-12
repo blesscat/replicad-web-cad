@@ -329,3 +329,40 @@ test('OpenGrid stackable-cylinder export identity includes enabled opening setti
     'opengrid-stackable-cylinder-d60-h20-seats-hole-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
   )
 })
+
+test('OpenGrid stackable-cylinder persists the honeycomb saving switch and filename', async ({
+  page,
+  browserName,
+}) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.goto('/cad/opengrid-stackable-cylinder')
+  await waitForCadReady(page)
+
+  const honeycomb = page.getByRole('checkbox', {
+    name: '省料模式（六角鏤空）',
+    exact: true,
+  })
+  await expect(honeycomb).toBeVisible()
+  await expect(honeycomb).not.toBeChecked()
+  await expect(page.getByRole('radio', { name: '堆疊模式' })).toBeChecked()
+  await honeycomb.check()
+  await waitForCadReady(page)
+  await expect(honeycomb).toBeChecked()
+
+  await page.reload()
+  await waitForCadReady(page)
+  await expect(
+    page.getByRole('checkbox', {
+      name: '省料模式（六角鏤空）',
+      exact: true,
+    }),
+  ).toBeChecked()
+  await expect(page.getByRole('radio', { name: '堆疊模式' })).toBeChecked()
+
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '下載 STEP' }).click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toBe(
+    'opengrid-stackable-cylinder-d60-h20-honeycomb.step',
+  )
+})

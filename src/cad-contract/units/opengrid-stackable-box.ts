@@ -13,6 +13,7 @@ export type OpenGridStackableBoxParameterKey =
   | 'fullBottomHoleGrid'
   | 'basePlateMode'
   | 'thinShellMode'
+  | 'honeycombMode'
   | 'openingPlusXDepth'
   | 'openingPlusXBottomLength'
   | 'openingPlusXAngle'
@@ -72,6 +73,7 @@ export type OpenGridStackableBoxParameters = {
   fullBottomHoleGrid: boolean
   basePlateMode: boolean
   thinShellMode: boolean
+  honeycombMode: boolean
 } & Record<OpenGridStackableBoxOpeningParameterKey, number>
 
 export type OpenGridStackableBoxProfile = 'normal' | 'base-plate' | 'thin-shell'
@@ -130,6 +132,7 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   defaultFullBottomHoleGrid: false,
   defaultBasePlateMode: false,
   defaultThinShellMode: false,
+  defaultHoneycombMode: false,
   minX: 0.5,
   maxX: 10,
   minY: 0.5,
@@ -218,6 +221,7 @@ export const OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS = {
     OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultFullBottomHoleGrid,
   basePlateMode: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultBasePlateMode,
   thinShellMode: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultThinShellMode,
+  honeycombMode: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHoneycombMode,
   openingPlusXDepth: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultOpeningDepth,
   openingPlusXBottomLength:
     OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultOpeningBottomLength,
@@ -286,6 +290,7 @@ const CURRENT_BASE_PARAMETER_KEYS = [
   'fullBottomHoleGrid',
   'basePlateMode',
   'thinShellMode',
+  'honeycombMode',
 ] as const
 
 const ALL_SUPPORTED_PARAMETER_KEYS = new Set<string>([
@@ -464,6 +469,18 @@ function validateThinShellMode(
     issues.push({
       field: 'thinShellMode',
       message: '薄殼模式必須是布林值。',
+    })
+  }
+}
+
+function validateHoneycombMode(
+  value: unknown,
+  issues: OpenGridStackableBoxValidationIssue[],
+): void {
+  if (typeof value !== 'boolean') {
+    issues.push({
+      field: 'honeycombMode',
+      message: '省料模式必須是布林值。',
     })
   }
 }
@@ -830,6 +847,9 @@ export function validateOpenGridStackableBoxParameters(
   if (hasOwn(value, 'thinShellMode')) {
     validateThinShellMode(value.thinShellMode, issues)
   }
+  if (hasOwn(value, 'honeycombMode')) {
+    validateHoneycombMode(value.honeycombMode, issues)
+  }
 
   if (value.basePlateMode === true && value.thinShellMode === true) {
     issues.push({
@@ -869,6 +889,10 @@ export function validateOpenGridStackableBoxParameters(
       typeof value.thinShellMode === 'boolean'
         ? (value.thinShellMode as boolean)
         : OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultThinShellMode,
+    honeycombMode:
+      typeof value.honeycombMode === 'boolean'
+        ? (value.honeycombMode as boolean)
+        : OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultHoneycombMode,
     ...openingValuesFor(value, hasOpeningParameters),
   }
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
@@ -1069,12 +1093,19 @@ function seatSuffixFor(parameters: OpenGridStackableBoxParameters): string {
   return `-seats-${parameters.cornerSeatMode}`
 }
 
+function honeycombSuffixFor(
+  parameters: OpenGridStackableBoxParameters,
+): string {
+  return parameters.honeycombMode ? '-honeycomb' : ''
+}
+
 export function openGridStackableBoxFileName(
   parameters: OpenGridStackableBoxParameters,
 ): string {
   const modeSuffix = modeSuffixFor(parameters)
   const seatSuffix = seatSuffixFor(parameters)
-  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${seatSuffix}${openingFileSuffixFor(parameters)}${modeSuffix}.step`
+  const honeycombSuffix = honeycombSuffixFor(parameters)
+  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${seatSuffix}${honeycombSuffix}${openingFileSuffixFor(parameters)}${modeSuffix}.step`
 }
 
 export function openGridStackableBoxStlFileName(
@@ -1082,5 +1113,6 @@ export function openGridStackableBoxStlFileName(
 ): string {
   const modeSuffix = modeSuffixFor(parameters)
   const seatSuffix = seatSuffixFor(parameters)
-  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${seatSuffix}${openingFileSuffixFor(parameters)}${modeSuffix}.stl`
+  const honeycombSuffix = honeycombSuffixFor(parameters)
+  return `opengrid-stackable-box-${parameters.x}x${parameters.y}-h${parameters.height}${seatSuffix}${honeycombSuffix}${openingFileSuffixFor(parameters)}${modeSuffix}.stl`
 }

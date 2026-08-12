@@ -19,6 +19,8 @@ export type OpenGridStackableBoxMountingHoleProfile = {
 
 export type OpenGridStackableBoxInterfaceQualityReport = {
   cornerSeatMode: OpenGridLocatingSeatMode
+  honeycombMode: boolean
+  honeycombCellCount: number
   externalHeight: number
   measuredExternalHeight: number
   upperInnerRimZ: number

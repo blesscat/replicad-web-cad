@@ -2,6 +2,7 @@ import {
   getOC,
   makeBox,
   makeCylinder,
+  makeCompound,
   measureVolume,
   Sketcher,
   type Shape3D,
@@ -11,6 +12,7 @@ import {
   boundsForOpenGridStackableCylinder,
   openGridStackableCylinderDerivedGeometryFor,
   openGridStackableCylinderHoleCentersFor,
+  OPENGRID_HONEYCOMB_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_OPENING_DIRECTIONS,
@@ -28,6 +30,11 @@ import {
   type BooleanOperationReporter,
 } from '../../boolean-progress'
 import { filletEdgesAtZ } from '../../bottom-edge-fillet'
+import {
+  makeOpenGridStackableCylinderBottomHoneycombCutters,
+  makeOpenGridStackableCylinderSideHoneycombCutters,
+  openGridStackableCylinderHoneycombCellCountFor,
+} from '../../lattice/opengrid-honeycomb'
 
 export type OpenGridStackableCylinderBuildContext = {
   isGenerationCurrent?: () => boolean
@@ -66,6 +73,8 @@ export type OpenGridStackableCylinderOpeningQuality = {
 }
 
 export type OpenGridStackableCylinderInterfaceQualityReport = {
+  honeycombMode: boolean
+  honeycombCellCount: number
   profile: OpenGridStackableCylinderProfile
   thinBottomMode: boolean
   bottomPlateMode: boolean
@@ -563,6 +572,43 @@ function addSideOpenings(
     }
   }
   return current
+}
+
+function applyHoneycombMode(
+  shape: Shape3D,
+  parameters: OpenGridStackableCylinderParameters,
+  context: OpenGridStackableCylinderBuildContext,
+): Shape3D {
+  if (!parameters.honeycombMode) return shape
+  assertGenerationCurrent(context)
+  const cutters: Shape3D[] = []
+  let cutter: Shape3D | null = null
+  const scope = context.booleanOperations?.createScope(1)
+  try {
+    cutters.push(
+      ...makeOpenGridStackableCylinderSideHoneycombCutters(parameters),
+    )
+    assertGenerationCurrent(context)
+    cutters.push(
+      ...makeOpenGridStackableCylinderBottomHoneycombCutters(parameters),
+    )
+    if (cutters.length === 0) return shape
+    assertGenerationCurrent(context)
+    cutter =
+      cutters.length === 1
+        ? (cutters[0] ?? null)
+        : makeCompound(cutters).asShape3D()
+    if (!cutter) throw new Error('OPENGRID_HONEYCOMB_CUTTER_EMPTY')
+    const activeCutter = cutter
+    const cut = measureBooleanInScope(scope, 'cut', () =>
+      shape.cut(activeCutter),
+    )
+    deleteShape(shape)
+    return cut
+  } finally {
+    cutters.forEach(deleteShape)
+    if (cutter !== cutters[0]) deleteShape(cutter)
+  }
 }
 
 function directionalBoxProbe(
@@ -1338,7 +1384,9 @@ export function inspectOpenGridStackableCylinderInterface(
     0.04,
     floorProbeRadius,
     0,
-    derived.flatFloorZ - 0.04,
+    parameters.honeycombMode
+      ? OPENGRID_HONEYCOMB_CONFIGURATION.bottomSkinThickness / 2
+      : derived.flatFloorZ - 0.04,
   )
   const centralFloorAboveVolume = volumeInOffsetCylindricalProbe(
     shape,
@@ -1529,6 +1577,9 @@ export function inspectOpenGridStackableCylinderInterface(
         }
       : { min: actualBounds[0], max: actualBounds[1] }
   return {
+    honeycombMode: parameters.honeycombMode,
+    honeycombCellCount:
+      openGridStackableCylinderHoneycombCellCountFor(parameters),
     profile: derived.profile,
     thinBottomMode: parameters.thinBottomMode,
     bottomPlateMode: parameters.bottomPlateMode,
@@ -1858,6 +1909,11 @@ export function buildOpenGridStackableCylinder(
       shape = addSideOpenings(shape, normalizedParameters, context)
     } catch (error) {
       throwStageError('OPENGRID_STACKABLE_CYLINDER_OPENINGS_INVALID', error)
+    }
+    try {
+      shape = applyHoneycombMode(shape, normalizedParameters, context)
+    } catch (error) {
+      throwStageError('OPENGRID_STACKABLE_CYLINDER_HONEYCOMB_INVALID', error)
     }
     assertGenerationCurrent(context)
     assertQuality(shape, normalizedParameters)
