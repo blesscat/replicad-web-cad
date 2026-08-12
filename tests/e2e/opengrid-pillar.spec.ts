@@ -34,8 +34,10 @@ test('OpenGrid pillar is listed in its family and exposes fixed and positioning 
   await expect(standard).not.toBeChecked()
   await expect(thinShell).toBeChecked()
   await expect(positioning).not.toBeChecked()
-  await expect(page.getByText('固定總長 8 mm')).toBeVisible()
-  await expect(page.getByText('固定總長 5 mm')).toBeVisible()
+  await expect(page.getByText('固定總長 9 mm')).toBeVisible()
+  await expect(page.getByText('固定總長 6 mm')).toBeVisible()
+  await expect(page.getByRole('slider', { name: /X 偏移/ })).toBeVisible()
+  await expect(page.getByRole('slider', { name: /Y 偏移/ })).toBeVisible()
   await expect(page.getByText(/請選擇支柱版本/)).toHaveCount(0)
   await expect(page.getByRole('textbox', { name: /總長度/ })).toHaveCount(0)
   await expect(page.getByRole('slider', { name: /總長度/ })).toHaveCount(0)
@@ -70,7 +72,7 @@ test('OpenGrid pillar exports deterministic files for all pillar modes', async (
   const standardStepPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const standardStep = await standardStepPromise
-  expect(standardStep.suggestedFilename()).toBe('pillar-8-standard.step')
+  expect(standardStep.suggestedFilename()).toBe('pillar-9-standard.step')
   expect((await standardStep.createReadStream())?.readable).toBeTruthy()
 
   await thinShell.check()
@@ -80,25 +82,35 @@ test('OpenGrid pillar exports deterministic files for all pillar modes', async (
   const thinShellStepPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const thinShellStep = await thinShellStepPromise
-  expect(thinShellStep.suggestedFilename()).toBe('pillar-5-thin-shell.step')
+  expect(thinShellStep.suggestedFilename()).toBe('pillar-6-thin-shell.step')
 
   const stlPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: '下載 STL' }).click()
   const stl = await stlPromise
-  expect(stl.suggestedFilename()).toBe('pillar-5-thin-shell.stl')
+  expect(stl.suggestedFilename()).toBe('pillar-6-thin-shell.stl')
   expect(await readBinaryStlByteLength(stl)).toBeGreaterThan(84)
 
   await positioning.check()
   await page.getByRole('textbox', { name: /總長度/ }).fill('25')
+  await page.getByRole('textbox', { name: /X 偏移/ }).fill('0.25')
+  await page.getByRole('textbox', { name: /Y 偏移/ }).fill('-0.15')
   await waitForCadReady(page)
 
   const positioningStepPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const positioningStep = await positioningStepPromise
-  expect(positioningStep.suggestedFilename()).toBe('pillar-25-positioning.step')
+  expect(positioningStep.suggestedFilename()).toBe(
+    'pillar-25-positioning-x0.25-y-0.15.step',
+  )
 
   await page.reload()
   await waitForCadReady(page)
   await expect(page.getByRole('radio', { name: '物件定位用' })).toBeChecked()
   await expect(page.getByRole('textbox', { name: /總長度/ })).toHaveValue('25')
+  await expect(page.getByRole('textbox', { name: /X 偏移/ })).toHaveValue(
+    '0.25',
+  )
+  await expect(page.getByRole('textbox', { name: /Y 偏移/ })).toHaveValue(
+    '-0.15',
+  )
 })

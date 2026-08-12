@@ -335,7 +335,11 @@ describe('component parameter store', () => {
       height: 25,
       wallThickness: 3,
     })
-    expect(store.get('opengrid-pillar')).toEqual({ mode: 'thin-shell' })
+    expect(store.get('opengrid-pillar')).toEqual({
+      mode: 'thin-shell',
+      offsetX: 0,
+      offsetY: 0,
+    })
     expect(store.get('opengrid-snap')).toEqual({
       variant: 'Lite',
       profile: 'Standard',
@@ -741,6 +745,8 @@ describe('component parameter store', () => {
     expect(store.get('opengrid-pillar')).toEqual({
       mode: 'positioning',
       length: 20,
+      offsetX: 0,
+      offsetY: 0,
     })
     expect(
       store.set('opengrid-pillar', {
@@ -750,6 +756,8 @@ describe('component parameter store', () => {
     expect(store.get('opengrid-pillar')).toEqual({
       mode: 'positioning',
       length: 20,
+      offsetX: 0,
+      offsetY: 0,
     })
 
     store.dispose()

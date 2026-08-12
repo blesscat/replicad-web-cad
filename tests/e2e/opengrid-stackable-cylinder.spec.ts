@@ -87,7 +87,7 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
     modeOptions.locator(
       'xpath=following-sibling::p[@data-testid="opengrid-cylinder-mode-description"]',
     ),
-  ).toHaveText('預設模式：可堆疊滑動，使用8mm定位柱')
+  ).toHaveText('預設模式：可堆疊滑動，使用9mm定位柱')
   await expect(
     page.getByText(/高度文字輸入為 10–500 mm、slider 為 10–200 mm/),
   ).toHaveCount(0)
@@ -271,7 +271,7 @@ test('OpenGrid stackable-cylinder exports the selected thin and no-hole state', 
     .uncheck()
   await expect(
     page.getByTestId('opengrid-cylinder-mode-description'),
-  ).toHaveText('薄殼模式：不可堆疊，使用5mm定位柱')
+  ).toHaveText('薄殼模式：不可堆疊，使用6mm定位柱')
   await expect(page.locator('p').filter({ hasText: '底部孔洞：' })).toHaveCount(
     0,
   )

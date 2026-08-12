@@ -26,6 +26,7 @@
   ] as const
 
   const POSITIONING_LENGTH_FIELD = opengridPillarDefinition.parameterSchema[0]!
+  const OFFSET_FIELDS = opengridPillarDefinition.parameterSchema.slice(1)
 
   let { rawParameters, fieldErrors, onInputChange }: ComponentPanelProps =
     $props()
@@ -87,6 +88,25 @@
       />
     </ParameterField>
   {/if}
+
+  {#each OFFSET_FIELDS as field (field.key)}
+    {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
+    <ParameterField
+      label={displayParameterLabel(field)}
+      unit={field.unit}
+      changed={value !== String(field.defaultValue)}
+      error={fieldErrors[field.key]}
+      errorId={`pillar-${field.key}-error`}
+      onRestore={() => onInputChange(field.key, String(field.defaultValue))}
+    >
+      <ParameterControl
+        {field}
+        {value}
+        error={fieldErrors[field.key]}
+        onChange={(nextValue) => onInputChange(field.key, nextValue)}
+      />
+    </ParameterField>
+  {/each}
 
   {#if fieldErrors.mode}
     <span class="text-sm text-error" id="pillar-mode-error" role="alert">

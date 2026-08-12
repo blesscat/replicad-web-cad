@@ -1180,7 +1180,7 @@ describe('OpenGrid stackable-box B-Rep', () => {
   }, 120_000)
 
   it.each([{ basePlateMode: false }, { basePlateMode: true }])(
-    'retains a Ø4.5 shaft with a Ø7 flange in $basePlateMode mode',
+    'retains a Ø5 shaft with a Ø7 flange in $basePlateMode mode',
     ({ basePlateMode }) => {
       const input = parameters({ x: 1, y: 1, basePlateMode })
       const box = buildOpenGridStackableBox(input)

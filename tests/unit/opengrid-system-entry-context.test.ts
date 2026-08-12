@@ -45,6 +45,8 @@ describe('OpenGrid system entry context', () => {
     })
     expect(getSystemPreset('opengrid-pillar', 'desk')).toEqual({
       mode: 'thin-shell',
+      offsetX: 0,
+      offsetY: 0,
     })
   })
 

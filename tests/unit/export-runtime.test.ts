@@ -52,9 +52,9 @@ function createContext(
     }
     bounds = boundsForOpenGridSnap(snapParameters)
   } else if (modelId === 'opengrid-pillar') {
-    parameters = { mode: pillarMode }
-    rawParameters = { mode: pillarMode }
-    bounds = boundsForPillar({ mode: pillarMode })
+    parameters = { mode: pillarMode, offsetX: 0, offsetY: 0 }
+    rawParameters = { mode: pillarMode, offsetX: '0', offsetY: '0' }
+    bounds = boundsForPillar({ mode: pillarMode, offsetX: 0, offsetY: 0 })
   } else {
     parameters = { width: 20, depth: 30, height: 40 }
     rawParameters = { width: '20', depth: '30', height: '40' }
@@ -147,7 +147,7 @@ describe('CAD export runtime', () => {
     expect(step.client.send).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: 'export.step',
-        file: { name: 'pillar-8-standard.step', mime: 'model/step' },
+        file: { name: 'pillar-9-standard.step', mime: 'model/step' },
       }),
     )
 
@@ -158,7 +158,7 @@ describe('CAD export runtime', () => {
     expect(stl.client.send).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: 'export.stl',
-        file: { name: 'pillar-5-thin-shell.stl', mime: 'model/stl' },
+        file: { name: 'pillar-6-thin-shell.stl', mime: 'model/stl' },
       }),
     )
   })

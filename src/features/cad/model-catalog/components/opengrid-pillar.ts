@@ -23,6 +23,32 @@ const PILLAR_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
     sliderMin: PILLAR_CONFIGURATION.positioningMinLength,
     sliderMax: PILLAR_CONFIGURATION.positioningLengthSliderMax,
   },
+  {
+    key: 'offsetX',
+    label: 'X 偏移',
+    axis: 'X',
+    unit: 'mm',
+    control: 'range-text',
+    defaultValue: 0,
+    min: PILLAR_CONFIGURATION.offsetMin,
+    max: PILLAR_CONFIGURATION.offsetMax,
+    step: PILLAR_CONFIGURATION.offsetStep,
+    sliderMin: PILLAR_CONFIGURATION.offsetMin,
+    sliderMax: PILLAR_CONFIGURATION.offsetMax,
+  },
+  {
+    key: 'offsetY',
+    label: 'Y 偏移',
+    axis: 'Y',
+    unit: 'mm',
+    control: 'range-text',
+    defaultValue: 0,
+    min: PILLAR_CONFIGURATION.offsetMin,
+    max: PILLAR_CONFIGURATION.offsetMax,
+    step: PILLAR_CONFIGURATION.offsetStep,
+    sliderMin: PILLAR_CONFIGURATION.offsetMin,
+    sliderMax: PILLAR_CONFIGURATION.offsetMax,
+  },
 ]
 
 function validatePillarDefinitionParameters(value: unknown) {
@@ -70,7 +96,7 @@ export const opengridPillarDefinition: ModelDefinition = {
   displayName: 'Locating Post (定位柱)',
   selectionLabel: 'Locating Post (定位柱)',
   selectionDescription:
-    'Locating Post：堆疊版 8 mm（Ø4.5 mm）、薄殼版 5 mm（Ø4.5 mm），以及物件定位用的 Ø5 mm 兩端 chamfer 自訂長度版。',
+    'Locating Post：堆疊版 9 mm（Ø5 mm）、薄殼版 6 mm（Ø5 mm），以及物件定位用的 Ø5 mm 兩端 chamfer 自訂長度版；X/Y 可偏移 -0.5～0.5 mm，步進 0.05 mm。',
   parameterSchema: PILLAR_PARAMETER_SCHEMA,
   defaultParameters: { ...PILLAR_CONFIGURATION.defaultParameters },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },

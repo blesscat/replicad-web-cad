@@ -149,6 +149,9 @@ describe('OpenGrid stackable-box contract', () => {
       OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleBottomOpeningDiameter,
     ).toBe(OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter)
     expect(
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleBottomOpeningDiameter,
+    ).toBe(5)
+    expect(
       OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleTopOpeningDiameter,
     ).toBe(OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.retainingOpeningDiameter)
     expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleStepHeight).toBe(3)

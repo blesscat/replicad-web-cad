@@ -53,8 +53,9 @@ function probeVolumeAt(
   x: number,
   z: number,
   probeRadius = 0.05,
+  y = 0,
 ): number {
-  const probe = makeCylinder(probeRadius, 0.02, [x, 0, z])
+  const probe = makeCylinder(probeRadius, 0.02, [x, y, z])
   let intersection: Shape3D | null = null
   try {
     intersection = shape.intersect(probe)
@@ -66,7 +67,10 @@ function probeVolumeAt(
 }
 
 describe('OpenGrid pillar CAD kernel integration', () => {
-  it.each([{ mode: 'standard' }, { mode: 'thin-shell' }] as PillarParameters[])(
+  it.each([
+    { mode: 'standard', offsetX: 0, offsetY: 0 },
+    { mode: 'thin-shell', offsetX: 0, offsetY: 0 },
+  ] as PillarParameters[])(
     'builds a valid centered fixed-mode pillar for %#',
     async (parameters) => {
       const shape = await buildPillar(parameters)
@@ -115,7 +119,12 @@ describe('OpenGrid pillar CAD kernel integration', () => {
   )
 
   it('builds the custom-length Ø5 mm positioning profile with both end chamfers', async () => {
-    const parameters: PillarParameters = { mode: 'positioning', length: 25 }
+    const parameters: PillarParameters = {
+      mode: 'positioning',
+      length: 25,
+      offsetX: 0,
+      offsetY: 0,
+    }
     const shape = await buildPillar(parameters)
     try {
       const actual = shapeBounds(shape)
@@ -137,8 +146,88 @@ describe('OpenGrid pillar CAD kernel integration', () => {
     }
   }, 180_000)
 
-  it.each([{ mode: 'standard' }, { mode: 'thin-shell' }] as PillarParameters[])(
-    'keeps the Ø7 x 0.8 mm flange, sharp shoulder, Ø4.5 mm body, and upper chamfer for %#',
+  it('translates the complete pillar without changing its profile or Z base', async () => {
+    const parameters: PillarParameters = {
+      mode: 'standard',
+      offsetX: 0.25,
+      offsetY: -0.15,
+    }
+    const shape = await buildPillar(parameters)
+    try {
+      const actual = shapeBounds(shape)
+      const expected = boundsForPillar(parameters)
+      expect(actual[0]?.[0]).toBeCloseTo(expected.min[0], 2)
+      expect(actual[0]?.[1]).toBeCloseTo(expected.min[1], 2)
+      expect(actual[0]?.[2]).toBeCloseTo(0, 2)
+      expect(actual[1]?.[0]).toBeCloseTo(expected.max[0], 2)
+      expect(actual[1]?.[1]).toBeCloseTo(expected.max[1], 2)
+      expect(actual[1]?.[2]).toBeCloseTo(9, 2)
+      expect(
+        probeVolumeAt(shape, 3.4 + 0.25, 0.4, 0.05, -0.15),
+      ).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, 3.6 + 0.25, 0.4, 0.05, -0.15)).toBeLessThan(
+        1e-8,
+      )
+      expect(
+        assertPillarShapeQuality(
+          shape,
+          parameters,
+          meshBRep(shape, {
+            tolerance: 0.05,
+            angularTolerance: 0.1,
+          }),
+        ).passed,
+      ).toBe(true)
+    } finally {
+      deleteShape(shape)
+    }
+  }, 180_000)
+
+  it.each([
+    {
+      mode: 'thin-shell',
+      offsetX: -0.5,
+      offsetY: 0.5,
+    },
+    {
+      mode: 'positioning',
+      length: 25,
+      offsetX: -0.5,
+      offsetY: 0.5,
+    },
+  ] as PillarParameters[])(
+    'translates %s geometry bounds and quality probes',
+    async (parameters) => {
+      const shape = await buildPillar(parameters)
+      try {
+        const actual = shapeBounds(shape)
+        const expected = boundsForPillar(parameters)
+        expect(actual[0]?.[0]).toBeCloseTo(expected.min[0], 2)
+        expect(actual[0]?.[1]).toBeCloseTo(expected.min[1], 2)
+        expect(actual[0]?.[2]).toBeCloseTo(expected.min[2], 2)
+        expect(actual[1]?.[0]).toBeCloseTo(expected.max[0], 2)
+        expect(actual[1]?.[1]).toBeCloseTo(expected.max[1], 2)
+        expect(actual[1]?.[2]).toBeCloseTo(expected.max[2], 2)
+
+        const mesh = meshBRep(shape, {
+          tolerance: 0.05,
+          angularTolerance: 0.1,
+        })
+        expect(assertPillarShapeQuality(shape, parameters, mesh).passed).toBe(
+          true,
+        )
+      } finally {
+        deleteShape(shape)
+      }
+    },
+    180_000,
+  )
+
+  it.each([
+    { mode: 'standard', offsetX: 0, offsetY: 0 },
+    { mode: 'thin-shell', offsetX: 0, offsetY: 0 },
+  ] as PillarParameters[])(
+    'keeps the Ø7 x 0.8 mm flange, sharp shoulder, Ø5 mm body, and upper chamfer for %#',
     async (parameters) => {
       const shape = await buildPillar(parameters)
       const totalLength = boundsForPillar(parameters).max[2]

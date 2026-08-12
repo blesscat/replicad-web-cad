@@ -81,22 +81,22 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
   await expect(thinShell).toBeVisible()
   await expect(thinShell).not.toBeChecked()
   await expect(
-    page.getByText(/預設模式：可堆疊滑動，使用8mm定位柱/),
+    page.getByText(/預設模式：可堆疊滑動，使用9mm定位柱/),
   ).toBeVisible()
   await thinShell.check()
   await expect(thinShell).toBeChecked()
   await expect(defaultMode).not.toBeChecked()
   await expect(
-    page.getByText(/薄殼模式：不可堆疊，使用5mm定位柱/),
+    page.getByText(/薄殼模式：不可堆疊，使用6mm定位柱/),
   ).toBeVisible()
   await page.reload()
   await expect(page.getByRole('radio', { name: '薄殼模式' })).toBeChecked()
   await defaultMode.check()
   await expect(defaultMode).toBeChecked()
   await expect(
-    page.getByText(/預設模式：可堆疊滑動，使用8mm定位柱/),
+    page.getByText(/預設模式：可堆疊滑動，使用9mm定位柱/),
   ).toBeVisible()
-  await expect(page.getByText(/薄殼模式：不可堆疊，使用5mm定位柱/)).toHaveCount(
+  await expect(page.getByText(/薄殼模式：不可堆疊，使用6mm定位柱/)).toHaveCount(
     0,
   )
   await cornerHoles.uncheck()

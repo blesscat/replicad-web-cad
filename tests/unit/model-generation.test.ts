@@ -35,7 +35,7 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
     return { height: 8, count: 1, gap: 1, orientation: 'lying' }
   }
   if (modelId === 'opengrid-pillar') {
-    return { mode: 'standard' }
+    return { mode: 'standard', offsetX: 0, offsetY: 0 }
   }
   if (modelId === 'opengrid') {
     return opengridParameters()
@@ -203,7 +203,7 @@ describe('CAD model generation debounce', () => {
       expect.objectContaining({
         kind: 'model.generate',
         modelId: 'opengrid-pillar',
-        parameters: { mode: 'thin-shell' },
+        parameters: { mode: 'thin-shell', offsetX: 0, offsetY: 0 },
       }),
     )
     expect(client.send).toHaveBeenCalledWith(
@@ -213,6 +213,8 @@ describe('CAD model generation debounce', () => {
       'opengrid-pillar',
       {
         mode: 'thin-shell',
+        offsetX: 0,
+        offsetY: 0,
       },
     )
   })
@@ -228,6 +230,35 @@ describe('CAD model generation debounce', () => {
       const handlers = createModelGenerationHandlers(context)
 
       handlers.handleInputChange('mode', value)
+      vi.advanceTimersByTime(500)
+
+      expect(context.dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'input-invalid' }),
+      )
+      expect(client.send).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          kind: 'model.invalidate',
+          reason: 'invalid-input',
+        }),
+      )
+      expect(
+        send.mock.calls.some(([command]) => command.kind === 'model.generate'),
+      ).toBe(false)
+      expect(context.setPersistedParameters).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    ['fractional-step X offset', 'offsetX', '0.03'],
+    ['out-of-range X offset', 'offsetX', '0.55'],
+    ['fractional-step Y offset', 'offsetY', '-0.03'],
+  ] as const)(
+    'invalidates a pillar %s without generating a snapshot',
+    (_label, field, value) => {
+      const { client, send, context } = createRuntimeContext('opengrid-pillar')
+      const handlers = createModelGenerationHandlers(context)
+
+      handlers.handleInputChange(field, value)
       vi.advanceTimersByTime(500)
 
       expect(context.dispatch).toHaveBeenCalledWith(

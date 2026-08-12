@@ -24,20 +24,36 @@ The system MUST expose a shared OpenGrid grid contract whose official full pitch
 
 ### Requirement: Grid pitch 與元件特徵尺寸必須分開
 
-The system MUST keep feature-specific dimensions separate from the official OpenGrid grid contract. Ordinary bottom-grid holes MUST remain straight Ø5.05 mm holes, special Stackable Box and Stackable Cylinder shaft passages MUST use the shared Ø4.55 mm opening, retaining shoulders MUST use Ø7.05 mm openings, and locating-hole centers, geometry clearances, and edge offsets MUST retain their existing component-specific semantics. These values MUST NOT be reinterpreted as the shared full or half pitch merely because they are numeric multiples or fractions of 28 mm.
+The OpenGrid contract MUST keep the 28 mm grid pitch and 14 mm half-pitch independent from the component feature dimensions. The shared nominal locating diameter MUST be 5 mm. The ordinary grid assembly opening MUST remain 5.05 mm, while the lower connection opening used by the special box/cylinder sockets MUST be exactly 5 mm. The retaining opening MUST remain 7.05 mm, and the quality-test shaft MUST be exactly 5 mm with the existing Ø7 mm × 0.8 mm flange. Changing the locating diameter or lower connection opening MUST NOT silently change the official grid pitch or ordinary assembly opening.
 
-#### Scenario: Ordinary and special hole diameters remain distinct
+#### Scenario: Shared contract exposes confirmed dimensions
 
-- **WHEN** an OpenGrid component generates its existing ordinary bottom grid or special stepped mounting holes
-- **THEN** an ordinary Stackable Box bottom-grid hole MUST remain Ø5.05 mm and straight through
-- **AND** a Stackable Box special socket or Stackable Cylinder stepped hole MUST use Ø4.55 mm for its shaft passage and Ø7.05 mm for its retaining section
-- **AND** hole placement grids or offsets MUST continue to follow their owning component contract
+- **WHEN** a component reads the shared OpenGrid locating contract
+- **THEN** nominalDiameter MUST equal 5 mm
+- **AND** shaftOpeningDiameter MUST equal 5 mm
+- **AND** testShaftDiameter MUST equal 5 mm
+- **AND** retainingOpeningDiameter MUST equal 7.05 mm
+- **AND** testFlangeDiameter MUST equal 7 mm
+- **AND** testFlangeHeight MUST equal 0.8 mm
 
-#### Scenario: Feature dimensions do not become grid pitch
+#### Scenario: Ordinary grid opening keeps its clearance
 
-- **WHEN** a box, cylinder, Snap, or other OpenGrid component uses a 4.55 mm shaft opening, 7 mm locating center, edge offset, or clearance
-- **THEN** that value MUST remain a named feature-specific dimension
-- **AND** changing or consuming the official half pitch MUST NOT silently rescale that feature
+- **WHEN** a component requests an ordinary grid assembly opening
+- **THEN** assemblyOpeningDiameter MUST equal 5.05 mm
+- **AND** it MUST remain distinct from the exact 5 mm lower connection opening
+
+#### Scenario: Official grid pitch remains stable
+
+- **WHEN** the locating dimensions are consumed by a box or cylinder generator
+- **THEN** the 28 mm grid pitch and 14 mm half-pitch MUST remain unchanged
+- **AND** the lower special opening MUST be 5 mm without changing the ordinary grid-hole layout
+
+#### Scenario: Fixture contract matches generated sockets
+
+- **WHEN** a quality fixture is generated for a box or cylinder
+- **THEN** its shaft MUST be Ø5 mm
+- **AND** its flange MUST remain Ø7 mm × 0.8 mm
+- **AND** the fixture MUST be suitable for the corresponding 5 mm lower connection opening
 
 ### Requirement: 官方元件的穩定識別必須保留
 

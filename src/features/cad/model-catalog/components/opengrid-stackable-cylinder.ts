@@ -259,7 +259,8 @@ export const opengridStackableCylinderDefinition: ModelDefinition = {
   family: 'opengrid',
   displayName: 'Round Box (圓盒)',
   selectionLabel: 'Round Box (圓盒)',
-  selectionDescription: 'Round Box (圓盒)；提供堆疊與薄殼兩種模式。',
+  selectionDescription:
+    'Round Box (圓盒)；提供堆疊與薄殼兩種模式，中心加四個外側連接孔為 Ø5 mm。',
   parameterSchema: OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA,
   defaultParameters: { ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },

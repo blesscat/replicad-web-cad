@@ -178,6 +178,12 @@ function readBounds(shape: Shape3D): number[][] {
   }
 }
 
+function translateShape(shape: Shape3D, x: number, y: number, z = 0): Shape3D {
+  const translated = shape.translate(x, y, z)
+  if (translated !== shape) deleteShape(shape)
+  return translated
+}
+
 function assertFiniteShape(shape: Shape3D, parameters: PillarParameters): void {
   const bounds = readBounds(shape)
   const values = bounds.flat()
@@ -273,6 +279,8 @@ export async function buildPillar(
         PILLAR_CONFIGURATION.upperChamfer,
       )
     }
+
+    shape = translateShape(shape, parameters.offsetX, parameters.offsetY)
 
     assertGenerationCurrent(context)
     finalSolid = asSingleSolid(shape)
