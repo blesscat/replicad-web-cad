@@ -252,8 +252,17 @@ describe('OpenGrid open-shelf CAD kernel integration', () => {
 
       const center = openGridOpenShelfPegCentersFor(parameters)[0]
       if (!center) throw new Error('Expected a locating peg center')
-      const outer = makeCylinder(3.6, 0.2, [center[0], center[1], -3])
-      const inner = makeCylinder(2.3, 0.2, [center[0], center[1], -3])
+      const pegRadius = OPENGRID_OPEN_SHELF_CONFIGURATION.pegDiameter / 2
+      const outer = makeCylinder(pegRadius + 1.35, 0.2, [
+        center[0],
+        center[1],
+        -3,
+      ])
+      const inner = makeCylinder(pegRadius + 0.05, 0.2, [
+        center[0],
+        center[1],
+        -3,
+      ])
       let annulus: Shape3D | null = null
       try {
         annulus = outer.cut(inner)
