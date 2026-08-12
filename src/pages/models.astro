@@ -18,155 +18,140 @@ function previewImageFor(definition: ModelDefinition) {
 ---
 
 <SiteLayout
+  fullWidth
   title="選擇 CAD 模型 | Shape Shortcut"
   description="選擇要在瀏覽器中調整與匯出的 CAD component。"
 >
   <section
-    class="rounded-2xl border border-border-card bg-panel p-5 shadow-card"
+    class="grid gap-10"
     aria-labelledby="model-selection-title"
     data-testid="model-selection"
   >
-    <h1
-      class="mb-8 text-4xl font-semibold leading-tight"
-      id="model-selection-title"
-    >
-      選擇 CAD 模型
-    </h1>
+    <header>
+      <h1
+        class="text-4xl font-semibold leading-tight"
+        id="model-selection-title"
+      >
+        選擇 CAD 模型
+      </h1>
+    </header>
 
-    <div class="grid gap-8" aria-label="CAD 模型系列">
+    <div class="grid gap-12" aria-label="CAD 模型系列">
       {
-        modelGroups.map((group) => (
-          <section
-            class:list={[
-              group.subgroups &&
-                'rounded-2xl border-2 border-primary/25 bg-viewport/40 p-4 sm:p-5',
-            ]}
-            aria-labelledby={`model-family-${group.key}`}
-            data-testid={`model-family-${group.key}`}
-          >
-            <div
-              class:list={[
-                'flex flex-wrap items-baseline justify-between gap-3',
-                group.subgroups ? 'mb-5' : 'mb-3',
-              ]}
+        modelGroups.map((group) => {
+          const hasSubgroups = Boolean(group.subgroups)
+          const subgroups = group.subgroups ?? [
+            {
+              key: group.key,
+              label: group.label,
+              definitions: group.definitions,
+            },
+          ]
+
+          return (
+            <section
+              class="grid gap-6"
+              aria-labelledby={`model-family-${group.key}`}
+              data-testid={`model-family-${group.key}`}
             >
-              <h2
-                class="text-2xl font-semibold leading-tight"
-                id={`model-family-${group.key}`}
-              >
-                {group.label}
-              </h2>
-              {group.subgroups ? (
-                <span class="rounded-full bg-panel px-3 py-1 text-sm font-semibold text-muted shadow-sm">
-                  系統入口
-                </span>
-              ) : null}
-            </div>
-            <div
-              class:list={[
-                'grid gap-8',
-                group.subgroups && 'border-l-4 border-primary/25 pl-4 sm:pl-6',
-              ]}
-              data-testid={
-                group.subgroups ? `model-subgroups-${group.key}` : undefined
-              }
-            >
-              {(
-                group.subgroups ?? [
-                  {
-                    key: group.key,
-                    label: group.label,
-                    definitions: group.definitions,
-                  },
-                ]
-              ).map((subgroup) => (
-                <section
-                  class:list={[
-                    'mb-6 last:mb-0',
-                    group.subgroups &&
-                      'rounded-xl border border-border-card bg-panel p-4 shadow-sm sm:p-5',
-                  ]}
-                  aria-labelledby={
-                    group.subgroups
-                      ? `model-subgroup-${subgroup.key}-title`
-                      : undefined
-                  }
-                  data-testid={`model-subgroup-${subgroup.key}`}
+              <div class="border-b border-border-card pb-3">
+                <h2
+                  class="text-3xl font-semibold leading-tight"
+                  id={`model-family-${group.key}`}
                 >
-                  {group.subgroups ? (
-                    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border-card pb-3">
-                      <h3
-                        class="text-xl font-semibold leading-tight"
-                        id={`model-subgroup-${subgroup.key}-title`}
-                      >
-                        {subgroup.label}
-                      </h3>
-                      <span class="rounded-full bg-viewport px-2.5 py-1 text-xs font-semibold text-muted">
-                        OpenGrid
-                      </span>
-                    </div>
-                  ) : null}
-                  <div class="grid gap-4 sm:grid-cols-2">
-                    {subgroup.definitions.map((definition) => {
-                      const preview = previewImageFor(definition)
-                      return (
-                        <article
-                          class="grid gap-3 rounded-xl border border-border-card bg-page p-4"
-                          data-model-id={definition.id}
-                          data-entry-key={`${definition.id}-${definition.systemContext ?? 'legacy'}`}
-                          data-system-context={definition.systemContext}
+                  {group.label}
+                </h2>
+              </div>
+              <div
+                class="grid gap-10"
+                data-testid={
+                  hasSubgroups ? `model-subgroups-${group.key}` : undefined
+                }
+              >
+                {subgroups.map((subgroup) => (
+                  <section
+                    class="grid gap-4"
+                    aria-labelledby={
+                      hasSubgroups
+                        ? `model-subgroup-${subgroup.key}-title`
+                        : undefined
+                    }
+                    data-testid={`model-subgroup-${subgroup.key}`}
+                  >
+                    {hasSubgroups ? (
+                      <div class="border-b border-border-card pb-2">
+                        <h3
+                          class="text-xl font-semibold leading-tight"
+                          id={`model-subgroup-${subgroup.key}-title`}
                         >
-                          <div
-                            class="grid aspect-[16/10] place-items-center overflow-hidden rounded-lg border border-border-card bg-viewport"
-                            data-testid="model-preview"
+                          {subgroup.label}
+                        </h3>
+                      </div>
+                    ) : null}
+                    <div class="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,15rem),1fr))]">
+                      {subgroup.definitions.map((definition) => {
+                        const preview = previewImageFor(definition)
+                        const selectionLabel =
+                          modelSelectionLabelFor(definition)
+                        return (
+                          <article
+                            class="grid gap-3 rounded-xl border border-border-card bg-panel p-3 shadow-sm transition-shadow hover:shadow-md sm:p-4"
+                            data-model-id={definition.id}
+                            data-entry-key={`${definition.id}-${definition.systemContext ?? 'legacy'}`}
+                            data-system-context={definition.systemContext}
                           >
                             <div
-                              class="p-4 text-center text-sm text-muted"
-                              data-testid="model-preview-fallback"
-                              hidden
-                              role="img"
-                              aria-label={preview.alt}
+                              class="grid aspect-[16/10] place-items-center overflow-hidden rounded-lg border border-border-card bg-viewport"
+                              data-testid="model-preview"
                             >
-                              預覽圖片暫時無法載入
+                              <div
+                                class="p-4 text-center text-sm text-muted"
+                                data-testid="model-preview-fallback"
+                                hidden
+                                role="img"
+                                aria-label={preview.alt}
+                              >
+                                預覽圖片暫時無法載入
+                              </div>
+                              <img
+                                src={preview.src}
+                                alt={preview.alt}
+                                width={preview.width}
+                                height={preview.height}
+                                loading="lazy"
+                                class="h-full w-full object-contain"
+                                onerror="this.hidden = true; this.previousElementSibling.removeAttribute('hidden')"
+                              />
                             </div>
-                            <img
-                              src={preview.src}
-                              alt={preview.alt}
-                              width={preview.width}
-                              height={preview.height}
-                              loading="lazy"
-                              class="h-full w-full object-contain"
-                              onerror="this.hidden = true; this.previousElementSibling.removeAttribute('hidden')"
-                            />
-                          </div>
-                          {group.subgroups ? (
-                            <h4 class="text-2xl font-semibold leading-tight">
-                              {modelSelectionLabelFor(definition)}
-                            </h4>
-                          ) : (
-                            <h3 class="text-2xl font-semibold leading-tight">
-                              {modelSelectionLabelFor(definition)}
-                            </h3>
-                          )}
-                          <a
-                            class="inline-flex items-center justify-self-start rounded-lg border border-border-card bg-panel px-3 py-2 font-semibold text-ink no-underline shadow-sm hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                            href={cadPathForModel(
-                              definition.id,
-                              definition.systemContext,
+                            {hasSubgroups ? (
+                              <h4 class="text-2xl font-semibold leading-tight">
+                                {selectionLabel}
+                              </h4>
+                            ) : (
+                              <h3 class="text-2xl font-semibold leading-tight">
+                                {selectionLabel}
+                              </h3>
                             )}
-                            aria-label={`編輯 ${modelSelectionLabelFor(definition)}`}
-                          >
-                            編輯 →
-                          </a>
-                        </article>
-                      )
-                    })}
-                  </div>
-                </section>
-              ))}
-            </div>
-          </section>
-        ))
+                            <a
+                              class="inline-flex items-center justify-self-start rounded-lg border border-border-card bg-page px-3 py-2 font-semibold text-ink no-underline shadow-sm hover:bg-viewport focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                              href={cadPathForModel(
+                                definition.id,
+                                definition.systemContext,
+                              )}
+                              aria-label={`編輯 ${selectionLabel}`}
+                            >
+                              編輯 →
+                            </a>
+                          </article>
+                        )
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            </section>
+          )
+        })
       }
     </div>
   </section>

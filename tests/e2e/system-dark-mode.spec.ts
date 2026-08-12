@@ -57,7 +57,9 @@ async function readSurfaceStyles(page: Page): Promise<SurfaceStyles> {
     const root = getComputedStyle(document.documentElement)
     const body = getComputedStyle(document.body)
     const nav = document.querySelector('nav')
-    const panel = document.querySelector('[data-testid="model-selection"]')
+    const panel = document.querySelector(
+      '[data-testid="model-selection"] [data-entry-key]',
+    )
     if (!nav || !panel) throw new Error('Expected navigation and model panel')
 
     const navStyle = getComputedStyle(nav)
