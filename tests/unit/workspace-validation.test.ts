@@ -413,13 +413,27 @@ describe('CAD workspace validation helpers', () => {
     })
     expect(parseRawParameters({ mode: 'legacy' }, 'opengrid-pillar')).toEqual({
       valid: false,
-      message: '模式必須是 standard 或 thin-shell。',
+      message: '模式必須是 standard、thin-shell 或 positioning。',
       field: 'mode',
     })
     expect(parseRawParameters({}, 'opengrid-pillar')).toEqual({
       valid: false,
-      message: '模式必須是 standard 或 thin-shell。',
+      message: '模式必須是 standard、thin-shell 或 positioning。',
       field: 'mode',
+    })
+  })
+
+  it('round-trips the custom-length positioning pillar mode', () => {
+    const parameters: PillarParameters = {
+      mode: 'positioning',
+      length: 25,
+    }
+    const raw = rawFromParameters(parameters)
+
+    expect(raw).toEqual({ mode: 'positioning', length: '25' })
+    expect(parseRawParameters(raw, 'opengrid-pillar')).toEqual({
+      valid: true,
+      value: parameters,
     })
   })
 

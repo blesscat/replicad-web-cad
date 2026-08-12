@@ -242,7 +242,7 @@ The versioned browser-local parameter record MUST store valid `opengrid-divider`
 
 ### Requirement: Pillar parameters are persisted independently
 
-The versioned browser persistence MUST store valid pillar parameters under the stable `opengrid-pillar` model id. Each entry MUST contain only the typed mode value `standard` or `thin-shell` accepted by the pillar validator. The OpenGrid pillar entry MUST remain independent from every other component's parameter entry.
+The versioned browser persistence MUST store valid pillar parameters under the stable `opengrid-pillar` model id. Each entry MUST contain either the typed fixed mode `standard` or `thin-shell`, or the typed `positioning` mode with its integer `length`. The OpenGrid pillar entry MUST remain independent from every other component's parameter entry.
 
 #### Scenario: Restore saved pillar parameters
 
@@ -253,7 +253,7 @@ The versioned browser persistence MUST store valid pillar parameters under the s
 
 #### Scenario: Persist a valid pillar update
 
-- **GIVEN** a pillar snapshot with `mode=standard` or `mode=thin-shell` passes validation
+- **GIVEN** a pillar snapshot with `mode=standard`, `mode=thin-shell`, or `mode=positioning` with a valid length passes validation
 - **WHEN** the workspace accepts the update
 - **THEN** persistence MUST update only the `opengrid-pillar` entry
 - **AND** the stored value MUST remain the typed mode rather than a raw input string
@@ -267,11 +267,18 @@ The versioned browser persistence MUST store valid pillar parameters under the s
 
 #### Scenario: Missing or malformed pillar entry falls back safely
 
-- **GIVEN** the persisted `opengrid-pillar` entry is missing, malformed, or uses the old `{ length, baseConnection }` shape
+- **GIVEN** the persisted `opengrid-pillar` entry is missing or malformed
 - **WHEN** the OpenGrid pillar workspace initializes
 - **THEN** it MUST use `{ mode: 'standard' }`
 - **AND** the invalid entry MUST NOT be sent to the Worker
 - **AND** initialization MUST continue without treating persistence failure as a CAD failure
+
+#### Scenario: Migrate the old positioning snapshot
+
+- **GIVEN** the persisted entry uses the old `{ length, baseConnection: false }` shape with a valid length
+- **WHEN** the OpenGrid pillar workspace initializes
+- **THEN** it MUST use `{ mode: 'positioning', length }`
+- **AND** the old checkbox field MUST NOT remain in the normalized entry
 
 ### Requirement: OpenGrid half-cell parameters are persisted with the board
 

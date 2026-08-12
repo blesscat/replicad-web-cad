@@ -125,7 +125,7 @@ The system MUST download a non-empty binary `.stl` file that can be opened throu
 
 ### Requirement: Pillar STL metadata
 
-The catalog MUST provide deterministic STL metadata for the `opengrid-pillar` component. The filename MUST use the existing `.stl` extension and `model/stl` MIME, and MUST be `pillar-9-standard.stl` or `pillar-5-thin-shell.stl` according to the normalized `mode` value. STL generation MUST continue to use the latest successfully committed OpenGrid pillar B-Rep and the existing export lifecycle gates.
+The catalog MUST provide deterministic STL metadata for the `opengrid-pillar` component. The filename MUST use the existing `.stl` extension and `model/stl` MIME, and MUST be `pillar-9-standard.stl`, `pillar-5-thin-shell.stl`, or `pillar-{length}-positioning.stl` according to the normalized parameter snapshot. STL generation MUST continue to use the latest successfully committed OpenGrid pillar B-Rep and the existing export lifecycle gates.
 
 #### Scenario: Standard pillar STL filename
 
@@ -137,6 +137,12 @@ The catalog MUST provide deterministic STL metadata for the `opengrid-pillar` co
 
 - **WHEN** a committed pillar with `mode=thin-shell` is exported as STL
 - **THEN** the filename MUST be `pillar-5-thin-shell.stl`
+- **AND** the response MUST be generated from the committed pillar revision
+
+#### Scenario: Positioning pillar STL filename
+
+- **WHEN** a committed pillar with `mode=positioning` and `length=25` is exported as STL
+- **THEN** the filename MUST be `pillar-25-positioning.stl`
 - **AND** the response MUST be generated from the committed pillar revision
 
 #### Scenario: Pillar STL follows readiness gates

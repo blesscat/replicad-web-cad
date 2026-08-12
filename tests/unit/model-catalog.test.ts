@@ -645,7 +645,10 @@ describe('CAD component catalog', () => {
     expect(definition?.selectionDescription).toContain('Ø4.5 mm')
     expect(definition?.selectionDescription).toContain('標準版 9 mm')
     expect(definition?.selectionDescription).toContain('薄殼版 5 mm')
-    expect(definition?.parameterSchema).toEqual([])
+    expect(definition?.selectionDescription).toContain('物件定位用')
+    expect(definition?.parameterSchema.map((field) => field.key)).toEqual([
+      'length',
+    ])
     expect(definition?.defaultParameters).toEqual({ mode: 'standard' })
     expect(definition?.validateParameters({ mode: 'standard' })).toEqual({
       valid: true,
@@ -661,6 +664,12 @@ describe('CAD component catalog', () => {
     expect(definition?.boundsForParameters({ mode: 'standard' })).toEqual({
       min: [-3.5, -3.5, 0],
       max: [3.5, 3.5, 9],
+    })
+    expect(
+      definition?.boundsForParameters({ mode: 'positioning', length: 25 }),
+    ).toEqual({
+      min: [-2.5, -2.5, 0],
+      max: [2.5, 2.5, 25],
     })
     expect(definition?.exportFileName({ mode: 'standard' })).toBe(
       'pillar-9-standard.step',

@@ -9,7 +9,7 @@ import {
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForPillar,
-  pillarLengthForMode,
+  pillarLengthForParameters,
   PILLAR_CONFIGURATION,
   validatePillarParameters,
   type PillarParameters,
@@ -207,7 +207,7 @@ function buildFixedPillar(
   parameters: PillarParameters,
   scope: BooleanOperationScope | undefined,
 ): Solid {
-  const totalLength = pillarLengthForMode(parameters.mode)
+  const totalLength = pillarLengthForParameters(parameters)
   const flange = makeCylinder(
     PILLAR_CONFIGURATION.baseDiameter / 2,
     PILLAR_CONFIGURATION.baseHeight,
@@ -219,6 +219,26 @@ function buildFixedPillar(
     [0, 0, PILLAR_CONFIGURATION.baseHeight],
   )
   return fusePartsAsSingleSolid(flange, body, scope)
+}
+
+function buildPositioningPillar(
+  parameters: Extract<PillarParameters, { mode: 'positioning' }>,
+): Shape3D {
+  const cylinder = makeCylinder(
+    PILLAR_CONFIGURATION.positioningBodyDiameter / 2,
+    parameters.length,
+    [0, 0, 0],
+  )
+  const lowerChamfered = chamferAtStations(
+    cylinder,
+    [0],
+    PILLAR_CONFIGURATION.positioningLowerChamfer,
+  )
+  return chamferAtStations(
+    lowerChamfered,
+    [parameters.length],
+    PILLAR_CONFIGURATION.positioningUpperChamfer,
+  )
 }
 
 export async function buildPillar(
@@ -233,18 +253,26 @@ export async function buildPillar(
 
   let shape: Shape3D | null = null
   let finalSolid: Solid | null = null
-  const fuseScope = context.booleanOperations?.createScope(1)
+  const fuseScope =
+    parameters.mode === 'positioning'
+      ? undefined
+      : context.booleanOperations?.createScope(1)
   try {
-    shape = buildFixedPillar(parameters, fuseScope)
+    shape =
+      parameters.mode === 'positioning'
+        ? buildPositioningPillar(parameters)
+        : buildFixedPillar(parameters, fuseScope)
 
     assertGenerationCurrent(context)
     await yieldAtSafeBoundary(context)
 
-    shape = chamferAtStations(
-      shape,
-      [pillarLengthForMode(parameters.mode)],
-      PILLAR_CONFIGURATION.upperChamfer,
-    )
+    if (parameters.mode !== 'positioning') {
+      shape = chamferAtStations(
+        shape,
+        [pillarLengthForParameters(parameters)],
+        PILLAR_CONFIGURATION.upperChamfer,
+      )
+    }
 
     assertGenerationCurrent(context)
     finalSolid = asSingleSolid(shape)

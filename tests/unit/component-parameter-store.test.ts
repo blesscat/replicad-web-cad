@@ -637,7 +637,7 @@ describe('component parameter store', () => {
     unsupportedStore.dispose()
   })
 
-  it('migrates legacy pillar snapshots and does not overwrite them with an invalid draft', () => {
+  it('migrates legacy positioning snapshots and does not overwrite them with an invalid draft', () => {
     const storage = createMemoryStorage(
       createPayload({
         'opengrid-pillar': { length: 20, baseConnection: false },
@@ -645,13 +645,19 @@ describe('component parameter store', () => {
     )
     const store = createComponentParameterStore({ storage })
 
-    expect(store.get('opengrid-pillar')).toEqual({ mode: 'standard' })
+    expect(store.get('opengrid-pillar')).toEqual({
+      mode: 'positioning',
+      length: 20,
+    })
     expect(
       store.set('opengrid-pillar', {
         mode: 'legacy',
       } as never),
     ).toBe(false)
-    expect(store.get('opengrid-pillar')).toEqual({ mode: 'standard' })
+    expect(store.get('opengrid-pillar')).toEqual({
+      mode: 'positioning',
+      length: 20,
+    })
 
     store.dispose()
   })

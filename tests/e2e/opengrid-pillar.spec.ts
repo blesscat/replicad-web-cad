@@ -5,7 +5,7 @@ import {
   waitForCadReady,
 } from './helpers'
 
-test('OpenGrid pillar is listed in its family and exposes fixed mode radios', async ({
+test('OpenGrid pillar is listed in its family and exposes fixed and positioning modes', async ({
   page,
 }) => {
   await page.goto('/models')
@@ -27,13 +27,16 @@ test('OpenGrid pillar is listed in its family and exposes fixed mode radios', as
 
   const standard = page.getByRole('radio', { name: '標準版' })
   const thinShell = page.getByRole('radio', { name: '薄殼版' })
+  const positioning = page.getByRole('radio', { name: '物件定位用' })
   await expect(standard).toBeVisible()
   await expect(thinShell).toBeVisible()
+  await expect(positioning).toBeVisible()
   await expect(standard).toBeChecked()
   await expect(thinShell).not.toBeChecked()
-  await expect(page.getByText(/固定 Ø4\.5 mm/)).toBeVisible()
-  await expect(page.getByText('固定總長 9 mm，適合標準底板。')).toBeVisible()
-  await expect(page.getByText('固定總長 5 mm，適合薄殼板。')).toBeVisible()
+  await expect(positioning).not.toBeChecked()
+  await expect(page.getByText('固定總長 9 mm')).toBeVisible()
+  await expect(page.getByText('固定總長 5 mm')).toBeVisible()
+  await expect(page.getByText(/請選擇支柱版本/)).toHaveCount(0)
   await expect(page.getByRole('textbox', { name: /總長度/ })).toHaveCount(0)
   await expect(page.getByRole('slider', { name: /總長度/ })).toHaveCount(0)
   await expect(page.getByRole('checkbox', { name: '連接底版用' })).toHaveCount(
@@ -43,9 +46,16 @@ test('OpenGrid pillar is listed in its family and exposes fixed mode radios', as
   await thinShell.check()
   await expect(thinShell).toBeChecked()
   await expect(standard).not.toBeChecked()
+
+  await positioning.check()
+  await expect(positioning).toBeChecked()
+  await expect(page.getByRole('textbox', { name: /總長度/ })).toBeVisible()
+  await expect(page.getByRole('slider', { name: /總長度/ })).toBeVisible()
+  await standard.check()
+  await expect(page.getByRole('textbox', { name: /總長度/ })).toHaveCount(0)
 })
 
-test('OpenGrid pillar exports deterministic files for both fixed modes', async ({
+test('OpenGrid pillar exports deterministic files for all pillar modes', async ({
   page,
   browserName,
 }) => {
@@ -55,6 +65,7 @@ test('OpenGrid pillar exports deterministic files for both fixed modes', async (
 
   const standard = page.getByRole('radio', { name: '標準版' })
   const thinShell = page.getByRole('radio', { name: '薄殼版' })
+  const positioning = page.getByRole('radio', { name: '物件定位用' })
 
   const standardStepPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: '下載 STEP' }).click()
@@ -77,7 +88,17 @@ test('OpenGrid pillar exports deterministic files for both fixed modes', async (
   expect(stl.suggestedFilename()).toBe('pillar-5-thin-shell.stl')
   expect(await readBinaryStlByteLength(stl)).toBeGreaterThan(84)
 
+  await positioning.check()
+  await page.getByRole('textbox', { name: /總長度/ }).fill('25')
+  await waitForCadReady(page)
+
+  const positioningStepPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '下載 STEP' }).click()
+  const positioningStep = await positioningStepPromise
+  expect(positioningStep.suggestedFilename()).toBe('pillar-25-positioning.step')
+
   await page.reload()
   await waitForCadReady(page)
-  await expect(page.getByRole('radio', { name: '薄殼版' })).toBeChecked()
+  await expect(page.getByRole('radio', { name: '物件定位用' })).toBeChecked()
+  await expect(page.getByRole('textbox', { name: /總長度/ })).toHaveValue('25')
 })

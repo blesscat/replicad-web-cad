@@ -35,6 +35,33 @@ describe('pillar contract', () => {
     })
   })
 
+  it('accepts a custom-length positioning mode with the legacy Ø5 mm profile', () => {
+    expect(
+      validatePillarParameters({ mode: 'positioning', length: 25 }),
+    ).toEqual({
+      valid: true,
+      value: { mode: 'positioning', length: 25 },
+    })
+    expect(PILLAR_CONFIGURATION).toMatchObject({
+      positioningDefaultLength: 5,
+      positioningMinLength: 3,
+      positioningMaxLength: 500,
+      positioningBodyDiameter: 5,
+      positioningLowerChamfer: 1,
+      positioningUpperChamfer: 0.5,
+    })
+  })
+
+  it('keeps fixed modes free of a manual length parameter', () => {
+    expect(
+      validatePillarParameters({ mode: 'standard', length: 9 }).valid,
+    ).toBe(false)
+    expect(
+      validatePillarParameters({ mode: 'thin-shell', length: 5 }).valid,
+    ).toBe(false)
+    expect(validatePillarParameters({ mode: 'positioning' }).valid).toBe(false)
+  })
+
   it('rejects missing, unsupported, and legacy parameter shapes', () => {
     for (const value of [
       {},
@@ -56,6 +83,10 @@ describe('pillar contract', () => {
       min: [-3.5, -3.5, 0],
       max: [3.5, 3.5, 5],
     })
+    expect(boundsForPillar({ mode: 'positioning', length: 25 })).toEqual({
+      min: [-2.5, -2.5, 0],
+      max: [2.5, 2.5, 25],
+    })
   })
 
   it('uses deterministic mode-specific export filenames', () => {
@@ -68,6 +99,12 @@ describe('pillar contract', () => {
     )
     expect(pillarStlFileName({ mode: 'thin-shell' })).toBe(
       'pillar-5-thin-shell.stl',
+    )
+    expect(pillarFileName({ mode: 'positioning', length: 25 })).toBe(
+      'pillar-25-positioning.step',
+    )
+    expect(pillarStlFileName({ mode: 'positioning', length: 25 })).toBe(
+      'pillar-25-positioning.stl',
     )
   })
 })

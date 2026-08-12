@@ -2,7 +2,7 @@ import { getOC, makeCylinder, measureVolume, type Shape3D } from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForPillar,
-  pillarLengthForMode,
+  pillarLengthForParameters,
   PILLAR_CONFIGURATION,
   type ModelBounds,
   type PillarParameters,
@@ -133,12 +133,12 @@ function expectMaterial(
   }
 }
 
-function inspectEndProfiles(
+function inspectFixedEndProfiles(
   shape: Shape3D,
   parameters: PillarParameters,
   failures: string[],
 ): void {
-  const totalLength = pillarLengthForMode(parameters.mode)
+  const totalLength = pillarLengthForParameters(parameters)
   const upperStraightZ = totalLength - PILLAR_CONFIGURATION.upperChamfer - 0.1
   const upperChamferZ = totalLength - PILLAR_CONFIGURATION.upperChamfer / 2
   const bodyRadius = PILLAR_CONFIGURATION.bodyDiameter / 2
@@ -222,6 +222,101 @@ function inspectEndProfiles(
     upperChamferZ,
     false,
   )
+}
+
+function inspectPositioningEndProfiles(
+  shape: Shape3D,
+  parameters: Extract<PillarParameters, { mode: 'positioning' }>,
+  failures: string[],
+): void {
+  const lowerChamferZ = PILLAR_CONFIGURATION.positioningLowerChamfer * 0.1
+  const lowerStraightZ = PILLAR_CONFIGURATION.positioningLowerChamfer + 0.1
+  const upperStraightZ =
+    parameters.length - PILLAR_CONFIGURATION.positioningUpperChamfer - 0.1
+  const upperChamferZ =
+    parameters.length - PILLAR_CONFIGURATION.positioningUpperChamfer / 2
+  const bodyRadius = PILLAR_CONFIGURATION.positioningBodyDiameter / 2
+  const upperChamferBoundaryRadius =
+    bodyRadius - PILLAR_CONFIGURATION.positioningUpperChamfer / 2
+  const upperChamferInsideRadius = upperChamferBoundaryRadius - 0.15
+  const upperChamferOutsideRadius = upperChamferBoundaryRadius + 0.15
+
+  expectMaterial(
+    shape,
+    failures,
+    'lower-chamfer-inside',
+    1.4,
+    lowerChamferZ,
+    true,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'lower-chamfer-outside',
+    1.7,
+    lowerChamferZ,
+    false,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'lower-straight-inside',
+    2.4,
+    lowerStraightZ,
+    true,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'lower-straight-outside',
+    2.6,
+    lowerStraightZ,
+    false,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'upper-straight-inside',
+    2.4,
+    upperStraightZ,
+    true,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'upper-straight-outside',
+    2.6,
+    upperStraightZ,
+    false,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'upper-chamfer-inside',
+    upperChamferInsideRadius,
+    upperChamferZ,
+    true,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'upper-chamfer-outside',
+    upperChamferOutsideRadius,
+    upperChamferZ,
+    false,
+  )
+}
+
+function inspectEndProfiles(
+  shape: Shape3D,
+  parameters: PillarParameters,
+  failures: string[],
+): void {
+  if (parameters.mode === 'positioning') {
+    inspectPositioningEndProfiles(shape, parameters, failures)
+    return
+  }
+  inspectFixedEndProfiles(shape, parameters, failures)
 }
 
 export function inspectPillarShapeQuality(

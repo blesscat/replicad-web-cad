@@ -114,6 +114,29 @@ describe('OpenGrid pillar CAD kernel integration', () => {
     180_000,
   )
 
+  it('builds the custom-length Ø5 mm positioning profile with both end chamfers', async () => {
+    const parameters: PillarParameters = { mode: 'positioning', length: 25 }
+    const shape = await buildPillar(parameters)
+    try {
+      const actual = shapeBounds(shape)
+      expect(actual[0]?.[0]).toBeCloseTo(-2.5, 2)
+      expect(actual[0]?.[1]).toBeCloseTo(-2.5, 2)
+      expect(actual[0]?.[2]).toBeCloseTo(0, 2)
+      expect(actual[1]?.[0]).toBeCloseTo(2.5, 2)
+      expect(actual[1]?.[1]).toBeCloseTo(2.5, 2)
+      expect(actual[1]?.[2]).toBeCloseTo(25, 2)
+
+      expect(probeVolumeAt(shape, 1.4, 0.1)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, 1.7, 0.1)).toBeLessThan(1e-8)
+      expect(probeVolumeAt(shape, 2.4, 1.1)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, 2.6, 1.1)).toBeLessThan(1e-8)
+      expect(probeVolumeAt(shape, 2.4, 24.4)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, 2.6, 24.4)).toBeLessThan(1e-8)
+    } finally {
+      deleteShape(shape)
+    }
+  }, 180_000)
+
   it.each([{ mode: 'standard' }, { mode: 'thin-shell' }] as PillarParameters[])(
     'keeps the Ø7 x 0.8 mm flange, sharp shoulder, Ø4.5 mm body, and upper chamfer for %#',
     async (parameters) => {
