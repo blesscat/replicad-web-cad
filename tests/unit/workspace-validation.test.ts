@@ -380,8 +380,15 @@ describe('CAD workspace validation helpers', () => {
         'opengrid-divider',
       ),
     ).toEqual({
-      valid: false,
-      message: '至少需要兩個方向才能建立一字型、L 型、T 型或十字型。',
+      valid: true,
+      value: {
+        left: 1,
+        right: 0,
+        up: 0,
+        down: 0,
+        height: 20,
+        wallThickness: 2,
+      },
     })
     expect(
       parseRawParameters(

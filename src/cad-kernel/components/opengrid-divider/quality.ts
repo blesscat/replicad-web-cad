@@ -9,6 +9,7 @@ import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForOpenGridDivider,
   OPENGRID_DIVIDER_CONFIGURATION,
+  openGridDividerPlanBoundsFor,
   openGridDividerPegCentersFor,
   openGridDividerTransitionHeightFor,
   type ModelBounds,
@@ -141,12 +142,8 @@ function transitionFilletFaceCountFor(
 function rawPlanCenter(
   parameters: OpenGridDividerParameters,
 ): [number, number] {
-  const { gridPitch, wallWidth } = OPENGRID_DIVIDER_CONFIGURATION
-  const minX = Math.min(-parameters.left * gridPitch, -wallWidth / 2)
-  const maxX = Math.max(parameters.right * gridPitch, wallWidth / 2)
-  const minY = Math.min(-parameters.down * gridPitch, -wallWidth / 2)
-  const maxY = Math.max(parameters.up * gridPitch, wallWidth / 2)
-  return [(minX + maxX) / 2, (minY + maxY) / 2]
+  const plan = openGridDividerPlanBoundsFor(parameters)
+  return [(plan.minX + plan.maxX) / 2, (plan.minY + plan.maxY) / 2]
 }
 
 function widthProbeFor(

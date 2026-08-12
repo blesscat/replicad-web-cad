@@ -2,6 +2,8 @@ import { getOC, makeCylinder, Sketcher, Solid, type Shape3D } from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   OPENGRID_DIVIDER_CONFIGURATION,
+  openGridDividerArmEndpointsFor,
+  openGridDividerPlanBoundsFor,
   openGridDividerPegCentersFor,
   openGridDividerTransitionHeightFor,
   validateOpenGridDividerParameters,
@@ -211,12 +213,8 @@ function filletRadiusForEdge(
 function rawPlanCenter(
   parameters: OpenGridDividerParameters,
 ): [number, number] {
-  const { gridPitch, wallWidth } = OPENGRID_DIVIDER_CONFIGURATION
-  const minX = Math.min(-parameters.left * gridPitch, -wallWidth / 2)
-  const maxX = Math.max(parameters.right * gridPitch, wallWidth / 2)
-  const minY = Math.min(-parameters.down * gridPitch, -wallWidth / 2)
-  const maxY = Math.max(parameters.up * gridPitch, wallWidth / 2)
-  return [(minX + maxX) / 2, (minY + maxY) / 2]
+  const plan = openGridDividerPlanBoundsFor(parameters)
+  return [(plan.minX + plan.maxX) / 2, (plan.minY + plan.maxY) / 2]
 }
 
 type DividerProfilePlane = 'YZ' | 'XZ'
@@ -269,23 +267,27 @@ function makeProfiledArm(
 }
 
 function makeHorizontalWall(parameters: OpenGridDividerParameters): Shape3D {
-  const { gridPitch } = OPENGRID_DIVIDER_CONFIGURATION
+  const endpoints = openGridDividerArmEndpointsFor(parameters)
+  const start = parameters.left > 0 ? endpoints.left : 0
+  const end = parameters.right > 0 ? endpoints.right : 0
   return makeProfiledArm(
     parameters,
     'YZ',
-    [-parameters.left * gridPitch, 0, 0],
-    (parameters.left + parameters.right) * gridPitch,
+    [start, 0, 0],
+    end - start,
     [1, 0, 0],
   )
 }
 
 function makeVerticalWall(parameters: OpenGridDividerParameters): Shape3D {
-  const { gridPitch } = OPENGRID_DIVIDER_CONFIGURATION
+  const endpoints = openGridDividerArmEndpointsFor(parameters)
+  const start = parameters.down > 0 ? endpoints.down : 0
+  const end = parameters.up > 0 ? endpoints.up : 0
   const wall = makeProfiledArm(
     parameters,
     'YZ',
-    [-parameters.down * gridPitch, 0, 0],
-    (parameters.down + parameters.up) * gridPitch,
+    [start, 0, 0],
+    end - start,
     [1, 0, 0],
   )
   try {

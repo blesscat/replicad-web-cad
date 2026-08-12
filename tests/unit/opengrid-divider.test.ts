@@ -5,6 +5,7 @@ import {
   classifyOpenGridDividerShape,
   isOpenGridDividerParameters,
   normalizeOpenGridDividerParameters,
+  openGridDividerArmEndpointsFor,
   openGridDividerAxisFor,
   openGridDividerFileName,
   openGridDividerPegCentersFor,
@@ -116,6 +117,22 @@ describe('OpenGrid divider contract', () => {
   it('derives L, T, cross, and vertical straight shapes from active arms', () => {
     expect(
       classifyOpenGridDividerShape({
+        left: 0,
+        right: 1,
+        up: 0,
+        down: 0,
+      }),
+    ).toBe('single')
+    expect(
+      openGridDividerAxisFor({
+        left: 0,
+        right: 1,
+        up: 0,
+        down: 0,
+      }),
+    ).toBe('horizontal')
+    expect(
+      classifyOpenGridDividerShape({
         left: 1,
         right: 0,
         up: 2,
@@ -149,14 +166,15 @@ describe('OpenGrid divider contract', () => {
   })
 
   it('rejects incomplete, off-step, negative, and oversized snapshots', () => {
-    expect(OPENGRID_DIVIDER_CONFIGURATION.maxArmCount).toBe(17.5)
+    expect(OPENGRID_DIVIDER_CONFIGURATION.maxArmCount).toBe(10)
     expect(
       validateOpenGridDividerParameters({
-        left: 1,
+        left: 0,
         right: 0,
         up: 0,
         down: 0,
         height: 20,
+        wallThickness: 2,
       }).valid,
     ).toBe(false)
     expect(
@@ -189,17 +207,7 @@ describe('OpenGrid divider contract', () => {
     ).toBe(true)
     expect(
       validateOpenGridDividerParameters({
-        left: 17.5,
-        right: 0,
-        up: 0.5,
-        down: 0,
-        height: 20,
-        wallThickness: 2,
-      }).valid,
-    ).toBe(true)
-    expect(
-      validateOpenGridDividerParameters({
-        left: 18,
+        left: 10.5,
         right: 0,
         up: 0.5,
         down: 0,
@@ -209,8 +217,18 @@ describe('OpenGrid divider contract', () => {
     ).toBe(false)
     expect(
       validateOpenGridDividerParameters({
-        left: OPENGRID_DIVIDER_CONFIGURATION.maxArmCount,
-        right: OPENGRID_DIVIDER_CONFIGURATION.maxArmCount,
+        left: 10,
+        right: 0,
+        up: 0.5,
+        down: 0,
+        height: 20,
+        wallThickness: 2,
+      }).valid,
+    ).toBe(true)
+    expect(
+      validateOpenGridDividerParameters({
+        left: 10,
+        right: 10,
         up: 0,
         down: 0,
         height: 20,
@@ -240,10 +258,22 @@ describe('OpenGrid divider contract', () => {
     })
 
     expect(openGridDividerPlanDimensionsFor(parameters)).toMatchObject({
-      width: 112,
-      depth: 128.5,
       wallHeight: 20,
       totalHeight: 23,
+    })
+    expect(openGridDividerPlanDimensionsFor(parameters).width).toBeCloseTo(
+      107.45,
+      10,
+    )
+    expect(openGridDividerPlanDimensionsFor(parameters).depth).toBeCloseTo(
+      126.225,
+      10,
+    )
+    expect(openGridDividerArmEndpointsFor(parameters)).toEqual({
+      left: -39.725,
+      right: 67.725,
+      up: 123.725,
+      down: 0,
     })
     const centers = openGridDividerPegCentersFor(parameters)
     const { pegCenterSpacing } = OPENGRID_DIVIDER_CONFIGURATION
@@ -284,8 +314,8 @@ describe('OpenGrid divider contract', () => {
     })
 
     expect(bounds).toEqual({
-      min: [-28, -2.5, -3],
-      max: [28, 2.5, 20],
+      min: [-25.725, -2.5, -3],
+      max: [25.725, 2.5, 20],
     })
   })
 

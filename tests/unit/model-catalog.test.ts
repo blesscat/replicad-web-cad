@@ -592,6 +592,14 @@ describe('CAD component catalog', () => {
       'height',
       'wallThickness',
     ])
+    expect(definition?.parameterSchema.slice(0, 4)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'left', min: 0, max: 10, step: 0.5 }),
+        expect.objectContaining({ key: 'right', min: 0, max: 10, step: 0.5 }),
+        expect.objectContaining({ key: 'up', min: 0, max: 10, step: 0.5 }),
+        expect.objectContaining({ key: 'down', min: 0, max: 10, step: 0.5 }),
+      ]),
+    )
     expect(definition?.parameterSchema.at(-1)).toMatchObject({
       key: 'wallThickness',
       control: 'range-text',
@@ -610,11 +618,13 @@ describe('CAD component catalog', () => {
       sliderMin: 2,
       sliderMax: 200,
     })
-    expect(definition?.selectionDescription).toContain(
+    expect(definition?.selectionDescription).not.toContain(
       '官方 OpenGrid 28 mm 整格／14 mm 半格',
     )
-    expect(definition?.selectionDescription).toContain('高度文字輸入 2–500 mm')
-    expect(definition?.selectionDescription).toContain('slider 2–200 mm')
+    expect(definition?.selectionDescription).not.toContain(
+      '高度文字輸入 2–500 mm',
+    )
+    expect(definition?.selectionDescription).not.toContain('slider 2–200 mm')
     expect(definition?.defaultParameters).toEqual({
       left: 1,
       right: 1,

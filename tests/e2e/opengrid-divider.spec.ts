@@ -21,7 +21,7 @@ test('OpenGrid divider is listed with independent directional controls', async (
   ).toBeVisible()
   await expect(
     page.getByText(/官方 OpenGrid 間距：整格 28 mm、半格 14 mm/),
-  ).toBeVisible()
+  ).toHaveCount(0)
   await expect(page.getByText(/自製底座半格 7 mm、整格 14 mm/)).toHaveCount(0)
   await expect(page.getByText(/中心距 28 mm/)).toHaveCount(0)
   await expect(page.getByTestId('opengrid-divider-summary')).toHaveCount(0)
@@ -32,7 +32,7 @@ test('OpenGrid divider is listed with independent directional controls', async (
     await expect(page.getByRole('slider', { name })).toHaveAttribute('min', '0')
     await expect(page.getByRole('slider', { name })).toHaveAttribute(
       'max',
-      '17.5',
+      '10',
     )
     await expect(page.getByRole('slider', { name })).toHaveAttribute(
       'step',
@@ -86,8 +86,8 @@ test('OpenGrid divider rejects a planar footprint above 500 mm', async ({
 
   const left = page.getByRole('slider', { name: '左臂（X）' })
   const right = page.getByRole('slider', { name: '右臂（X）' })
-  await left.fill('17.5')
-  await right.fill('17.5')
+  await left.fill('10')
+  await right.fill('10')
 
   await expect(right).toHaveAttribute('aria-invalid', 'true')
   await expect(page.getByRole('alert')).toContainText('500 mm')

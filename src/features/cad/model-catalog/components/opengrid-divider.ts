@@ -122,8 +122,7 @@ export const opengridDividerDefinition: ModelDefinition = {
   family: 'opengrid',
   displayName: 'OpenGrid 分隔塊',
   selectionLabel: '分隔塊',
-  selectionDescription:
-    '沿用官方 OpenGrid 28 mm 整格／14 mm 半格的分隔塊；高度文字輸入 2–500 mm、slider 2–200 mm，平面 footprint 上限 500 mm。',
+  selectionDescription: 'OpenGrid 分隔塊，可調整方向臂、牆高與牆厚。',
   parameterSchema: OPENGRID_DIVIDER_PARAMETER_SCHEMA,
   defaultParameters: { ...OPENGRID_DIVIDER_CONFIGURATION.defaultParameters },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },

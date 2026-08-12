@@ -11,7 +11,9 @@ import {
 } from 'replicad'
 import {
   boundsForOpenGridDivider,
+  openGridDividerArmEndpointsFor,
   openGridDividerPegCentersFor,
+  openGridDividerPlanBoundsFor,
   OPENGRID_DIVIDER_CONFIGURATION,
   type OpenGridDividerParameters,
   openGridDividerTransitionHeightFor,
@@ -119,12 +121,8 @@ function transitionRoundFaceCount(
 function rawPlanCenter(
   parameters: OpenGridDividerParameters,
 ): [number, number] {
-  const { gridPitch, wallWidth } = OPENGRID_DIVIDER_CONFIGURATION
-  const minX = Math.min(-parameters.left * gridPitch, -wallWidth / 2)
-  const maxX = Math.max(parameters.right * gridPitch, wallWidth / 2)
-  const minY = Math.min(-parameters.down * gridPitch, -wallWidth / 2)
-  const maxY = Math.max(parameters.up * gridPitch, wallWidth / 2)
-  return [(minX + maxX) / 2, (minY + maxY) / 2]
+  const plan = openGridDividerPlanBoundsFor(parameters)
+  return [(plan.minX + plan.maxX) / 2, (plan.minY + plan.maxY) / 2]
 }
 
 function probeVolumeAt(
@@ -157,15 +155,28 @@ function sectionWidthAt(shape: Shape3D, z: number): number {
   }
 }
 
+function horizontalSectionBoundsAt(shape: Shape3D, z: number): number[][] {
+  const probe = makeBox([-100, -100, z], [100, 100, z + 0.02])
+  let section: Shape3D | null = null
+  try {
+    section = shape.intersect(probe)
+    return boundsOf(section)
+  } finally {
+    deleteShape(section)
+    probe.delete()
+  }
+}
+
 describe('OpenGrid divider CAD kernel integration', () => {
   it.each([
     { left: 1, right: 1, up: 0, down: 0, height: 20, wallThickness: 2 },
+    { left: 0, right: 1, up: 0, down: 0, height: 20, wallThickness: 2 },
     { left: 0, right: 0, up: 1, down: 2, height: 12, wallThickness: 2 },
     { left: 1, right: 0, up: 2, down: 0, height: 20, wallThickness: 2 },
     { left: 1, right: 1, up: 2, down: 1, height: 20, wallThickness: 2 },
     { left: 1.5, right: 2, up: 0, down: 0, height: 35, wallThickness: 2 },
     { left: 0.5, right: 0, up: 0.5, down: 0, height: 20, wallThickness: 2 },
-    { left: 17.5, right: 0, up: 0.5, down: 0, height: 500, wallThickness: 2 },
+    { left: 10, right: 0, up: 0.5, down: 0, height: 500, wallThickness: 2 },
   ])(
     'builds a centered one-solid divider for %#',
     async (parameters) => {
@@ -377,6 +388,36 @@ describe('OpenGrid divider CAD kernel integration', () => {
       deleteShape(upperSection)
       baseProbe.delete()
       upperProbe.delete()
+      deleteShape(shape)
+    }
+  }, 180_000)
+
+  it('retracts the complete active terminal profile by 2.275 mm', async () => {
+    const parameters = {
+      left: 0,
+      right: 1,
+      up: 0,
+      down: 0,
+      height: 20,
+      wallThickness: 2,
+    }
+    const shape = await buildOpenGridDivider(parameters)
+    try {
+      const [centerX] = rawPlanCenter(parameters)
+      const { right: rawEndpoint } = openGridDividerArmEndpointsFor(parameters)
+      const expectedEnd = rawEndpoint - centerX
+      const nominalEnd = OPENGRID_DIVIDER_CONFIGURATION.gridPitch - centerX
+
+      expect(nominalEnd - expectedEnd).toBeCloseTo(
+        OPENGRID_DIVIDER_CONFIGURATION.armEndRetraction,
+        10,
+      )
+
+      for (const z of [0.05, 0.85, 4]) {
+        const [, [maxX]] = horizontalSectionBoundsAt(shape, z)
+        expect(maxX).toBeCloseTo(expectedEnd, 1)
+      }
+    } finally {
       deleteShape(shape)
     }
   }, 180_000)
