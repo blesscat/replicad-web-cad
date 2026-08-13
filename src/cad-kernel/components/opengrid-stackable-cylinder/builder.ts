@@ -36,6 +36,8 @@ import {
   openGridStackableCylinderHoneycombCellCountFor,
 } from '../../lattice/opengrid-honeycomb'
 
+const HONEYCOMB_CUT_BATCH_SIZE = 128
+
 export type OpenGridStackableCylinderBuildContext = {
   isGenerationCurrent?: () => boolean
   booleanOperations?: BooleanOperationReporter
@@ -581,33 +583,61 @@ function applyHoneycombMode(
 ): Shape3D {
   if (!parameters.honeycombMode) return shape
   assertGenerationCurrent(context)
-  const cutters: Shape3D[] = []
-  let cutter: Shape3D | null = null
-  const scope = context.booleanOperations?.createScope(1)
+
+  const cutPanel = (current: Shape3D, cutters: Shape3D[]): Shape3D => {
+    const batchCount = Math.ceil(cutters.length / HONEYCOMB_CUT_BATCH_SIZE)
+    const scope = context.booleanOperations?.createScope(batchCount)
+    let result = current
+    try {
+      while (cutters.length > 0) {
+        assertGenerationCurrent(context)
+        const batch = cutters.splice(0, HONEYCOMB_CUT_BATCH_SIZE)
+        let cutter: Shape3D | null = null
+        try {
+          if (batch.length === 1) {
+            cutter = batch[0] ?? null
+          } else {
+            cutter = makeCompound(batch).asShape3D()
+          }
+          if (!cutter) throw new Error('OPENGRID_HONEYCOMB_CUTTER_EMPTY')
+          const activeCutter = cutter
+          const cut = measureBooleanInScope(scope, 'cut', () =>
+            result.cut(activeCutter),
+          )
+          deleteShape(result)
+          result = cut
+        } finally {
+          batch.forEach(deleteShape)
+          if (cutter !== batch[0]) deleteShape(cutter)
+        }
+      }
+      return result
+    } catch (error) {
+      if (result !== current) deleteShape(result)
+      throw error
+    }
+  }
+
+  let sideCutters: Shape3D[] = []
+  let bottomCutters: Shape3D[] = []
+  const inputShape = shape
   try {
-    cutters.push(
-      ...makeOpenGridStackableCylinderSideHoneycombCutters(parameters),
-    )
+    sideCutters = makeOpenGridStackableCylinderSideHoneycombCutters(parameters)
     assertGenerationCurrent(context)
-    cutters.push(
-      ...makeOpenGridStackableCylinderBottomHoneycombCutters(parameters),
-    )
-    if (cutters.length === 0) return shape
+    shape = cutPanel(shape, sideCutters)
+    sideCutters = []
     assertGenerationCurrent(context)
-    cutter =
-      cutters.length === 1
-        ? (cutters[0] ?? null)
-        : makeCompound(cutters).asShape3D()
-    if (!cutter) throw new Error('OPENGRID_HONEYCOMB_CUTTER_EMPTY')
-    const activeCutter = cutter
-    const cut = measureBooleanInScope(scope, 'cut', () =>
-      shape.cut(activeCutter),
-    )
-    deleteShape(shape)
-    return cut
+    bottomCutters =
+      makeOpenGridStackableCylinderBottomHoneycombCutters(parameters)
+    shape = cutPanel(shape, bottomCutters)
+    bottomCutters = []
+    return shape
+  } catch (error) {
+    if (shape !== inputShape) deleteShape(shape)
+    throw error
   } finally {
-    cutters.forEach(deleteShape)
-    if (cutter !== cutters[0]) deleteShape(cutter)
+    sideCutters.forEach(deleteShape)
+    bottomCutters.forEach(deleteShape)
   }
 }
 
@@ -1374,25 +1404,29 @@ export function inspectOpenGridStackableCylinderInterface(
             locatingSeatRadius,
         )
       : []
-  const floorProbeRadius = Math.min(
-    derived.flatFloorRadius - 0.4,
-    largestHoleRadius + 0.5,
-  )
+  const solidFrameProbeInset =
+    (OPENGRID_HONEYCOMB_CONFIGURATION.bottomFrame -
+      OPENGRID_HONEYCOMB_CONFIGURATION.bottomLattice.cellRadius) /
+    2
+  const floorProbeOffset = parameters.honeycombMode
+    ? Math.max(0, derived.flatFloorRadius - solidFrameProbeInset)
+    : Math.min(derived.flatFloorRadius - 0.4, largestHoleRadius + 0.5)
+  const floorProbeZ = parameters.honeycombMode
+    ? Math.max(0.02, derived.flatFloorZ / 2)
+    : derived.flatFloorZ - 0.04
   const centralFloorBelowVolume = volumeInOffsetCylindricalProbe(
     shape,
     0.1,
     0.04,
-    floorProbeRadius,
+    floorProbeOffset,
     0,
-    parameters.honeycombMode
-      ? OPENGRID_HONEYCOMB_CONFIGURATION.bottomSkinThickness / 2
-      : derived.flatFloorZ - 0.04,
+    floorProbeZ,
   )
   const centralFloorAboveVolume = volumeInOffsetCylindricalProbe(
     shape,
     0.1,
     0.04,
-    floorProbeRadius,
+    floorProbeOffset,
     0,
     derived.flatFloorZ + 0.04,
   )

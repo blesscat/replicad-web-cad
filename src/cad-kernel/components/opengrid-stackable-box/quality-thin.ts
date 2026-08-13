@@ -4,6 +4,7 @@ import {
   nominalOpenGridStackableBoxFootprintFor,
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
   openGridStackableBoxSocketCentersFor,
+  OPENGRID_HONEYCOMB_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   type OpenGridStackableBoxParameters,
 } from '../../../cad-contract/units'
@@ -21,6 +22,7 @@ import {
   measureMountingHoleStepVolumes,
 } from './quality-holes'
 import { closeEnough, readBounds } from './shared'
+import { openGridStackableBoxBottomHoneycombCellCountFor } from '../../lattice/opengrid-honeycomb'
 import type { Shape3D } from 'replicad'
 
 export type OpenGridStackableBoxThinShellQualityReport = {
@@ -44,6 +46,7 @@ function floorProbeCenterFor(
   depth: number,
   halfExtent: number,
   parameters: OpenGridStackableBoxParameters,
+  hasFloorHoneycomb: boolean,
 ): [number, number] {
   const holes = [
     ...openGridStackableBoxSocketCentersFor(parameters),
@@ -59,6 +62,35 @@ function floorProbeCenterFor(
     depth / 2 -
     OPENGRID_STACKABLE_BOX_CONFIGURATION.thinShellWallThickness -
     halfExtent
+  const isSafeCandidate = ([x, y]: [number, number]): boolean => {
+    if (Math.abs(x) > xLimit || Math.abs(y) > yLimit) return false
+    return holes.every(
+      ([holeX, holeY]) =>
+        Math.hypot(x - holeX, y - holeY) > holeRadius + halfExtent + 0.1,
+    )
+  }
+
+  if (hasFloorHoneycomb) {
+    const frameInset =
+      OPENGRID_HONEYCOMB_CONFIGURATION.bottomFrame - halfExtent - 0.2
+    const leftX = -width / 2 + frameInset
+    const rightX = width / 2 - frameInset
+    const frontY = -depth / 2 + frameInset
+    const rearY = depth / 2 - frameInset
+    const fractions = [0, -0.25, 0.25, -0.4, 0.4]
+    const frameCandidates: Array<[number, number]> = []
+    for (const fraction of fractions) {
+      frameCandidates.push(
+        [leftX, depth * fraction],
+        [rightX, depth * fraction],
+        [width * fraction, frontY],
+        [width * fraction, rearY],
+      )
+    }
+    const frameCandidate = frameCandidates.find(isSafeCandidate)
+    if (frameCandidate) return frameCandidate
+  }
+
   const candidates: Array<[number, number]> = [
     [0, 0],
     [-width / 4, 0],
@@ -70,15 +102,7 @@ function floorProbeCenterFor(
     [-width / 4, depth / 4],
     [width / 4, depth / 4],
   ]
-  return (
-    candidates.find(([x, y]) => {
-      if (Math.abs(x) > xLimit || Math.abs(y) > yLimit) return false
-      return holes.every(
-        ([holeX, holeY]) =>
-          Math.hypot(x - holeX, y - holeY) > holeRadius + halfExtent + 0.1,
-      )
-    }) ?? [0, 0]
-  )
+  return candidates.find(isSafeCandidate) ?? [0, 0]
 }
 
 function thicknessesFromVolumes(
@@ -137,12 +161,18 @@ export function inspectOpenGridStackableBoxThinShell(
 ): OpenGridStackableBoxThinShellQualityReport {
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
-  const halfExtent = Math.min(1, width / 8, depth / 8)
+  const hasFloorHoneycomb =
+    parameters.honeycombMode &&
+    openGridStackableBoxBottomHoneycombCellCountFor(parameters) > 0
+  const halfExtent = hasFloorHoneycomb
+    ? Math.min(0.2, width / 8, depth / 8)
+    : Math.min(1, width / 8, depth / 8)
   const [centerX, centerY] = floorProbeCenterFor(
     width,
     depth,
     halfExtent,
     parameters,
+    hasFloorHoneycomb,
   )
   const floorProbeVolumes = [
     volumeInBox(

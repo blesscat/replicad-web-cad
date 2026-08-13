@@ -113,6 +113,39 @@ describe('OpenGrid open-shelf contract', () => {
     ).toBe(false)
   })
 
+  it('hydrates legacy snapshots with honeycomb disabled and accepts the new mode', () => {
+    const legacy = {
+      x: 4,
+      y: 3,
+      height: 50,
+      cellX: 1,
+      cellZ: 2,
+      angle: 15,
+    }
+    expect(validateOpenGridOpenShelfParameters(legacy)).toEqual({
+      valid: true,
+      value: { ...legacy, honeycombMode: false },
+    })
+    expect(
+      validateOpenGridOpenShelfParameters({
+        ...legacy,
+        honeycombMode: true,
+      }),
+    ).toEqual({
+      valid: true,
+      value: { ...legacy, honeycombMode: true },
+    })
+    expect(
+      validateOpenGridOpenShelfParameters({
+        ...legacy,
+        honeycombMode: 'true',
+      }),
+    ).toMatchObject({
+      valid: false,
+      issues: [expect.objectContaining({ field: 'honeycombMode' })],
+    })
+  })
+
   it('registers deterministic STEP and STL names for typed parameters', () => {
     const model = {
       modelId: 'opengrid-open-shelf' as const,
@@ -124,6 +157,17 @@ describe('OpenGrid open-shelf contract', () => {
     )
     expect(modelStlFileName(model)).toBe(
       'opengrid-open-shelf-4x3-h50-cx1-cz2-a15.stl',
+    )
+
+    const honeycombModel = {
+      modelId: 'opengrid-open-shelf' as const,
+      parameters: { ...parameters(), honeycombMode: true },
+    }
+    expect(modelFileName(honeycombModel)).toBe(
+      'opengrid-open-shelf-4x3-h50-cx1-cz2-a15-honeycomb.step',
+    )
+    expect(modelStlFileName(honeycombModel)).toBe(
+      'opengrid-open-shelf-4x3-h50-cx1-cz2-a15-honeycomb.stl',
     )
   })
 })

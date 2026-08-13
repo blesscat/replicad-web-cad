@@ -68,7 +68,7 @@ describe('OpenGrid open-shelf workspace integration', () => {
     expect(systemContextForModel('opengrid-open-shelf', 'wall')).toBeUndefined()
   })
 
-  it('round-trips the six typed fields through raw workspace input', () => {
+  it('round-trips the typed fields and honeycomb mode through raw workspace input', () => {
     const value = parameters({
       x: 3.5,
       y: 2.5,
@@ -76,6 +76,7 @@ describe('OpenGrid open-shelf workspace integration', () => {
       cellX: 2,
       cellZ: 3,
       angle: 10,
+      honeycombMode: true,
     })
     const raw = rawFromParameters(value)
 
@@ -86,6 +87,7 @@ describe('OpenGrid open-shelf workspace integration', () => {
       cellX: '2',
       cellZ: '3',
       angle: '10',
+      honeycombMode: 'true',
     })
     expect(parseRawParameters(raw, 'opengrid-open-shelf')).toEqual({
       valid: true,

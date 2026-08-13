@@ -79,6 +79,7 @@ export const OPENGRID_OPEN_SHELF_PARAMETER_KEYS: ModelParameterKey[] = [
   'cellX',
   'cellZ',
   'angle',
+  'honeycombMode',
 ]
 
 function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
@@ -136,7 +137,8 @@ function legacyParameterDefault(
   }
   if (
     (modelId === 'opengrid-stackable-box' ||
-      modelId === 'opengrid-stackable-cylinder') &&
+      modelId === 'opengrid-stackable-cylinder' ||
+      modelId === 'opengrid-open-shelf') &&
     key === 'honeycombMode'
   ) {
     return 'false'
@@ -352,6 +354,7 @@ export function rawFromParameters(
       cellX: String(openShelfParameters.cellX),
       cellZ: String(openShelfParameters.cellZ),
       angle: String(openShelfParameters.angle),
+      honeycombMode: String(openShelfParameters.honeycombMode ?? false),
     }
   }
 

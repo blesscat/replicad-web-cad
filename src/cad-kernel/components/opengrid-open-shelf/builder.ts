@@ -1,6 +1,7 @@
 import {
   getOC,
   makeBox,
+  makeCompound,
   makeCylinder,
   sketchRoundedRectangle,
   Sketcher,
@@ -11,11 +12,12 @@ import type { Edge } from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForOpenGridOpenShelf,
-  openGridOpenShelfCellClearWidthFor,
   openGridOpenShelfClearCellHeightsFor,
+  openGridOpenShelfDividerCentersFor,
   openGridOpenShelfFootprintFor,
   openGridOpenShelfPegCentersFor,
   openGridOpenShelfShelfLowerSurfaceZFor,
+  openGridOpenShelfShelfCountFor,
   openGridOpenShelfTopInnerFrontZFor,
   openGridOpenShelfTopInnerRearZFor,
   openGridOpenShelfTopOuterRearZFor,
@@ -25,6 +27,16 @@ import {
   type OpenGridOpenShelfParameters,
 } from '../../../cad-contract/units'
 import { filletEdgesAtZ } from '../../bottom-edge-fillet'
+import {
+  measureBooleanInScope,
+  type BooleanOperationReporter,
+} from '../../boolean-progress'
+import {
+  makeOpenGridOpenShelfPlateHoneycombCutters,
+  makeOpenGridOpenShelfWallHoneycombCutters,
+} from '../../lattice/opengrid-honeycomb'
+
+const HONEYCOMB_CUT_BATCH_SIZE = 128
 
 export type OpenGridOpenShelfBuildContext = {
   yieldToEventLoop?: () => Promise<void>
@@ -35,6 +47,7 @@ export type OpenGridOpenShelfBuildContext = {
     total?: number
     unit?: 'steps'
   }) => void
+  booleanOperations?: BooleanOperationReporter
 }
 
 type Point2D = [number, number]
@@ -83,6 +96,74 @@ function fuseShapes(first: Shape3D, second: Shape3D): Shape3D {
   } catch (error) {
     if (fused && fused !== first && fused !== second) deleteShape(fused)
     throw error
+  }
+}
+
+async function cutHoneycombGroup(
+  shape: Shape3D,
+  cutters: Shape3D[],
+  context: OpenGridOpenShelfBuildContext,
+): Promise<Shape3D> {
+  const batchCount = Math.ceil(cutters.length / HONEYCOMB_CUT_BATCH_SIZE)
+  const scope = context.booleanOperations?.createScope(batchCount)
+  let result = shape
+  try {
+    while (cutters.length > 0) {
+      assertGenerationCurrent(context)
+      const batch = cutters.splice(0, HONEYCOMB_CUT_BATCH_SIZE)
+      let compound: Shape3D | null = null
+      try {
+        compound =
+          batch.length === 1
+            ? (batch[0] ?? null)
+            : makeCompound(batch).asShape3D()
+        if (!compound) throw new Error('OPENGRID_HONEYCOMB_CUTTER_EMPTY')
+        const activeCompound = compound
+        const cut = measureBooleanInScope(scope, 'cut', () =>
+          result.cut(activeCompound),
+        )
+        if (cut !== result) deleteShape(result)
+        result = cut
+      } finally {
+        batch.forEach(deleteShape)
+        if (compound !== batch[0]) deleteShape(compound)
+      }
+      await yieldAtSafeBoundary(context)
+    }
+    return result
+  } catch (error) {
+    if (result !== shape) deleteShape(result)
+    throw error
+  }
+}
+
+async function applyHoneycombMode(
+  shape: Shape3D,
+  parameters: OpenGridOpenShelfParameters,
+  context: OpenGridOpenShelfBuildContext,
+): Promise<Shape3D> {
+  if (!parameters.honeycombMode) return shape
+  let wallCutters: Shape3D[] = []
+  let plateCutters: Shape3D[] = []
+  try {
+    wallCutters = makeOpenGridOpenShelfWallHoneycombCutters(parameters)
+    shape = await cutHoneycombGroup(shape, wallCutters, context)
+    wallCutters = []
+    assertGenerationCurrent(context)
+    plateCutters = makeOpenGridOpenShelfPlateHoneycombCutters(parameters)
+    shape = await cutHoneycombGroup(shape, plateCutters, context)
+    plateCutters = []
+    return shape
+  } catch (error) {
+    deleteShape(shape)
+    if (error instanceof Error && error.message === 'STALE_GENERATION') {
+      throw error
+    }
+    const message = error instanceof Error ? error.message : String(error)
+    throw new Error(`OPENGRID_OPEN_SHELF_HONEYCOMB_INVALID:${message}`)
+  } finally {
+    wallCutters.forEach(deleteShape)
+    plateCutters.forEach(deleteShape)
   }
 }
 
@@ -370,9 +451,7 @@ function makeAssemblyPieces(
   ]
 
   const innerWidth = width - 2 * configuration.outerWallThickness
-  const clearCellWidth = openGridOpenShelfCellClearWidthFor(parameters)
-  const shelfCount =
-    parameters.angle > 0 ? parameters.cellZ : Math.max(0, parameters.cellZ - 1)
+  const shelfCount = openGridOpenShelfShelfCountFor(parameters)
   for (let shelfIndex = 1; shelfIndex <= shelfCount; shelfIndex += 1) {
     pieces.push(
       makeShelf(
@@ -390,15 +469,7 @@ function makeAssemblyPieces(
   if (clearHeights.regular.rear <= 0) {
     throw new Error('OPENGRID_OPEN_SHELF_REAR_CELL_DEGENERATE')
   }
-  for (
-    let dividerIndex = 1;
-    dividerIndex < parameters.cellX;
-    dividerIndex += 1
-  ) {
-    const dividerCenter =
-      -innerWidth / 2 +
-      dividerIndex * clearCellWidth +
-      (dividerIndex - 0.5) * configuration.innerPlateThickness
+  for (const dividerCenter of openGridOpenShelfDividerCentersFor(parameters)) {
     pieces.push(
       makeVerticalDivider(
         parameters,
@@ -442,10 +513,12 @@ export async function buildOpenGridOpenShelf(
 ): Promise<Solid> {
   const validation = validateOpenGridOpenShelfParameters(parameters)
   if (!validation.valid) throw new Error('INVALID_INPUT')
+  const normalizedParameters = validation.value
   assertGenerationCurrent(context)
 
-  const pieces = makeAssemblyPieces(parameters)
-  const totalSteps = pieces.length + 1
+  const pieces = makeAssemblyPieces(normalizedParameters)
+  const honeycombSteps = normalizedParameters.honeycombMode ? 2 : 0
+  const totalSteps = pieces.length + honeycombSteps
   let completed = 0
   let current: Shape3D | null = pieces.shift() ?? null
   try {
@@ -458,11 +531,16 @@ export async function buildOpenGridOpenShelf(
       await yieldAtSafeBoundary(context)
     }
     assertGenerationCurrent(context)
-    const rounded = roundTopOuterEdges(current, parameters)
+    const rounded = roundTopOuterEdges(current, normalizedParameters)
     current = rounded
-    const clipped = clipToContractBounds(current, parameters)
+    const clipped = clipToContractBounds(current, normalizedParameters)
     if (clipped !== current) deleteShape(current)
     current = clipped
+    current = await applyHoneycombMode(current, normalizedParameters, context)
+    if (normalizedParameters.honeycombMode) {
+      completed += honeycombSteps
+      reportProgress(context, completed, totalSteps)
+    }
     const result = asSingleSolid(current)
     deleteShape(current)
     current = null

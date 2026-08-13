@@ -20,10 +20,12 @@ import {
   type OpenGridStackableBoxBuildContext,
 } from './shared'
 import {
-  makeOpenGridStackableBoxBottomHoneycombCutters,
+  makeOpenGridStackableBoxProtectedBottomHoneycombCutters,
   makeOpenGridStackableBoxSideHoneycombCutters,
 } from '../../lattice/opengrid-honeycomb'
 import { measureBooleanInScope } from '../../boolean-progress'
+
+const HONEYCOMB_CUT_BATCH_SIZE = 128
 
 export type { OpenGridStackableBoxBuildContext } from './shared'
 export type { OpenGridStackableBoxBottomGridSeam } from './geometry'
@@ -89,34 +91,69 @@ function applyHoneycombMode(
 ): Shape3D {
   if (!parameters.honeycombMode) return shape
   assertGenerationCurrent(context)
-  const cutters: Shape3D[] = []
-  let cutter: Shape3D | null = null
-  const scope = context.booleanOperations?.createScope(1)
+
+  const cutPanel = (
+    current: Shape3D,
+    cutters: Shape3D[],
+    batchSize = HONEYCOMB_CUT_BATCH_SIZE,
+  ): Shape3D => {
+    const batchCount = Math.ceil(cutters.length / batchSize)
+    const scope = context.booleanOperations?.createScope(batchCount)
+    let result = current
+    try {
+      while (cutters.length > 0) {
+        assertGenerationCurrent(context)
+        const batch = cutters.splice(0, batchSize)
+        let cutter: Shape3D | null = null
+        try {
+          if (batch.length === 1) {
+            cutter = batch[0] ?? null
+          } else {
+            cutter = makeCompound(batch).asShape3D()
+          }
+          if (!cutter) throw new Error('OPENGRID_HONEYCOMB_CUTTER_EMPTY')
+          const activeCutter = cutter
+          const cut = measureBooleanInScope(scope, 'cut', () =>
+            result.cut(activeCutter),
+          )
+          deleteShape(result)
+          result = cut
+        } finally {
+          batch.forEach(deleteShape)
+          if (cutter !== batch[0]) deleteShape(cutter)
+        }
+      }
+      return result
+    } catch (error) {
+      if (result !== current) deleteShape(result)
+      throw error
+    }
+  }
+
+  let sideCutters: Shape3D[] = []
+  let bottomCutters: Shape3D[] = []
   try {
-    cutters.push(...makeOpenGridStackableBoxSideHoneycombCutters(parameters))
+    sideCutters = makeOpenGridStackableBoxSideHoneycombCutters(parameters)
     assertGenerationCurrent(context)
-    cutters.push(...makeOpenGridStackableBoxBottomHoneycombCutters(parameters))
-    if (cutters.length === 0) return shape
+    shape = cutPanel(shape, sideCutters)
+    sideCutters = []
     assertGenerationCurrent(context)
-    cutter =
-      cutters.length === 1
-        ? (cutters[0] ?? null)
-        : makeCompound(cutters).asShape3D()
-    if (!cutter) throw new Error('OPENGRID_HONEYCOMB_CUTTER_EMPTY')
-    const activeCutter = cutter
-    const cut = measureBooleanInScope(scope, 'cut', () =>
-      shape.cut(activeCutter),
+    bottomCutters = makeOpenGridStackableBoxProtectedBottomHoneycombCutters(
+      parameters,
+      context,
     )
-    deleteShape(shape)
-    return cut
+    shape = cutPanel(shape, bottomCutters, 1)
+    bottomCutters = []
+    return shape
   } catch (error) {
+    deleteShape(shape)
     if (error instanceof Error && error.message === 'STALE_GENERATION') {
       throw error
     }
     const message = error instanceof Error ? error.message : String(error)
     throw new Error(`OPENGRID_STACKABLE_BOX_HONEYCOMB_INVALID:${message}`)
   } finally {
-    cutters.forEach(deleteShape)
-    if (cutter !== cutters[0]) deleteShape(cutter)
+    sideCutters.forEach(deleteShape)
+    bottomCutters.forEach(deleteShape)
   }
 }

@@ -23,12 +23,16 @@
     'cellX',
     'cellZ',
     'angle',
-  ] as const satisfies readonly (keyof OpenGridOpenShelfParameters)[]
+  ] as const satisfies readonly Exclude<
+    keyof OpenGridOpenShelfParameters,
+    'honeycombMode'
+  >[]
 
   function parametersForDisplay(): OpenGridOpenShelfParameters | null {
     if (Object.keys(fieldErrors).length > 0) return null
     const candidate: OpenGridOpenShelfParameters = {
       ...OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
+      honeycombMode: rawParameters.honeycombMode === 'true',
     }
     for (const key of OPEN_SHELF_PARAMETER_KEYS) {
       const rawValue = rawParameters[key]
@@ -88,6 +92,20 @@
       </p>
     </div>
   {/if}
+  <label class="flex items-start gap-2 text-sm">
+    <input
+      class="mt-0.5"
+      type="checkbox"
+      aria-label="省料模式（六角鏤空）"
+      data-testid="opengrid-open-shelf-honeycomb-mode"
+      checked={rawParameters.honeycombMode === 'true'}
+      onchange={(event) => {
+        if (!(event.currentTarget instanceof HTMLInputElement)) return
+        onInputChange('honeycombMode', String(event.currentTarget.checked))
+      }}
+    />
+    <span>省料模式（六角鏤空）</span>
+  </label>
   <fieldset class="m-0 grid gap-3 border-0 p-0">
     {#each opengridOpenShelfDefinition.parameterSchema as field (field.key)}
       {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
