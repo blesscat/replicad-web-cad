@@ -316,7 +316,7 @@ successful results MUST remain previewable and exportable.
 
 The `opengrid-stackable-box` MUST support one top-open access opening at each cardinal direction `+X`, `-X`, `+Y`, and `-Y` in normal, base-plate, and thin-shell modes. Each direction MUST use its own depth, flat-bottom length, and transition-angle values; changing one direction MUST NOT copy, rotate, or otherwise change another direction's values. An opening with depth zero MUST be omitted while the other directions remain independently generatable. The side-opening angle sliders MUST render in reverse visual direction while preserving their numeric values and geometry semantics.
 
-The panel MUST expose one disclosure labelled `四個方向開口設定`, followed by the same four direction groups and control order as the stackable-cylinder interface: `前方`=`-Y`, `後方`=`+Y`, `左方`=`-X`, and `右方`=`+X`; each group MUST expose depth, bottom length, and angle in that order. The outer disclosure MUST be collapsed on first display; after expansion, `前方` MUST be expanded by default and the other three groups MUST be collapsed. Expanding or collapsing the controls MUST NOT change normalized opening values. Existing bottom-hole controls and the two visible mode controls MUST remain available, while the legacy `basePlateMode` field remains non-selectable in the panel.
+The panel MUST expose one disclosure labelled `四個方向開口設定`, followed by the same four direction groups and control order as the stackable-cylinder interface: `前方`=`-Y`, `後方`=`+Y`, `左方`=`-X`, and `右方`=`+X`; each group MUST expose depth, bottom length, and angle in that order. On first display or after persisted parameters are loaded, the outer disclosure MUST be collapsed when all opening values are defaults and MUST be expanded when any opening value is non-default. Each direction group MUST be expanded when any of its three values is non-default and MUST otherwise be collapsed, including `前方`. Users MUST still be able to manually expand or collapse either disclosure without changing normalized opening values. Existing bottom-hole controls and the two visible mode controls MUST remain available, while the legacy `basePlateMode` field remains non-selectable in the panel.
 
 #### Scenario: Four directions retain separate settings
 
@@ -336,9 +336,20 @@ The panel MUST expose one disclosure labelled `四個方向開口設定`, follow
 - **THEN** the visible group labels, direction mapping, field order, degree unit, and angle slider direction MUST match the stackable-cylinder opening interface
 - **AND** the box panel MUST NOT expose circular-radius, radial-angle, or cylinder-specific cut controls
 
+#### Scenario: Opening disclosures follow non-default values
+
+- **WHEN** all four opening groups contain their default depth, bottom length, and angle values
+- **THEN** the outer disclosure and all four direction groups MUST be collapsed on first display
+- **WHEN** one direction contains at least one non-default opening value
+- **THEN** the outer disclosure MUST be expanded and only that direction group MUST be expanded on first display
+- **AND** `前方` MUST follow the same rule as `後方`, `左方`, and `右方`
+- **AND** restoring the direction's values to defaults MUST collapse that direction group and the outer disclosure when no other direction is non-default
+
 ### Requirement: Rounded box-native opening profile
 
 Each enabled opening MUST be generated as a box-native prismatic notch through the selected rectangular side wall, with a horizontal flat bottom of the requested length, fixed 2.5 mm tangent/Z transition arcs at the two sill corners and the two top transitions, and two planar straight side faces derived from the requested angle. In normal and base-plate modes, the opening MUST be open through the selected wall and stepped rail at the external top-edge datum. In thin-shell mode, the opening MUST be open through the selected wall and the continuous outer-high/inner-low 1.6 mm top chamfer at the external top-edge datum without leaving a horizontal rim plane. The profile MUST NOT use radial sectors, revolved profiles, circular-coordinate construction, or a cylinder cutter; its fixed local transition arcs are the only curved profile elements. The requested depth MUST be the vertical distance from the selected side's upper inner-rim datum to the lowest flat-bottom plane. The side-wall angle MUST be measured from the flat bottom; 90 degrees MUST produce vertical straight side segments and 45 degrees MUST produce outward-sloping straight side segments. The cutter MUST be oriented by the box's Cartesian side normal and tangent direction, not by a circular or radial coordinate system. For `+X` and `-X`, the flat-bottom length MUST run along Y; for `+Y` and `-Y`, the flat-bottom length MUST run along X. The opening MUST stop at or above the active interior-floor boundary and MUST leave solid material at both adjacent corners.
+
+Every enabled opening MUST cut completely through the selected wall thickness from the interior face to beyond the exterior face, independently of whether the selected direction is positive or negative, without leaving a thin continuous skin.
 
 #### Scenario: Flat bottom and side faces match the controls
 
@@ -363,6 +374,13 @@ Each enabled opening MUST be generated as a box-native prismatic notch through t
 - **THEN** the cut MUST occur only on the corresponding box wall
 - **AND** its flat-bottom span MUST follow that wall's tangent axis
 - **AND** the opposite wall MUST remain uncut unless its own depth is positive
+
+#### Scenario: Enabled openings fully penetrate every wall direction
+
+- **WHEN** a valid opening with positive depth is generated in normal, base-plate, or thin-shell mode for any of `+X`, `-X`, `+Y`, or `-Y`
+- **THEN** the opening MUST be clear from the selected wall's interior face through its exterior face and the associated top-rim profile
+- **AND** no continuous membrane or thin layer of selected-wall material MAY remain inside the requested opening span
+- **AND** the opposite wall, floor, corner bridges, and unselected rim spans MUST retain their existing material
 
 ### Requirement: Side-opening safety and existing box preservation
 

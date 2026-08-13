@@ -122,6 +122,68 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
   await expect(y).toHaveValue('1')
 })
 
+test('OpenGrid stackable-box expands only opening groups with non-default values', async ({
+  page,
+  browserName,
+}) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.goto('/cad/opengrid-stackable-box')
+
+  const disclosure = page.getByTestId(
+    'opengrid-stackable-box-opening-disclosure',
+  )
+  const openingGroups = ['-Y', '+Y', '-X', '+X'] as const
+
+  await expect(disclosure).not.toHaveAttribute('open', '')
+  for (const direction of openingGroups) {
+    await expect(
+      page.getByTestId(`opengrid-stackable-box-opening-group-${direction}`),
+    ).not.toHaveAttribute('open', '')
+  }
+
+  await disclosure.locator(':scope > summary').click()
+  await expect(disclosure).toHaveAttribute('open', '')
+
+  const frontGroup = page.getByTestId('opengrid-stackable-box-opening-group--Y')
+  const frontDepth = frontGroup.getByRole('textbox', {
+    name: '下切深度（前方）',
+  })
+  await frontGroup.locator(':scope > summary').click()
+  await frontDepth.fill('4')
+  await expect(frontDepth).toHaveValue('4')
+
+  const rearGroup = page.getByTestId('opengrid-stackable-box-opening-group-+Y')
+  const rearDepth = rearGroup.getByRole('textbox', {
+    name: '下切深度（後方）',
+  })
+  await rearGroup.locator(':scope > summary').click()
+  await rearDepth.fill('4')
+  await expect(rearDepth).toHaveValue('4')
+  await waitForCadReady(page)
+
+  await page.goto('/cad/opengrid-stackable-box')
+  await waitForCadReady(page)
+  await expect(disclosure).toHaveAttribute('open', '')
+  await expect(frontGroup).toHaveAttribute('open', '')
+  await expect(rearGroup).toHaveAttribute('open', '')
+  for (const direction of openingGroups.filter(
+    (direction) => direction !== '-Y' && direction !== '+Y',
+  )) {
+    await expect(
+      page.getByTestId(`opengrid-stackable-box-opening-group-${direction}`),
+    ).not.toHaveAttribute('open', '')
+  }
+
+  await frontGroup.getByRole('button', { name: '復原下切深度（前方）' }).click()
+  await expect(frontGroup).not.toHaveAttribute('open', '')
+  await expect(rearGroup).toHaveAttribute('open', '')
+  await expect(disclosure).toHaveAttribute('open', '')
+
+  await rearGroup.getByRole('button', { name: '復原下切深度（後方）' }).click()
+  await expect(rearGroup).not.toHaveAttribute('open', '')
+  await expect(disclosure).not.toHaveAttribute('open', '')
+})
+
 test('OpenGrid stackable-box keeps half-cell dimensions in export metadata', async ({
   page,
   browserName,
