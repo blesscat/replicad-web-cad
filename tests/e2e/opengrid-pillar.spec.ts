@@ -5,9 +5,6 @@ import {
   waitForCadReady,
 } from './helpers'
 
-const THIN_SHELL_RENDER_WARNING =
-  '注意：薄殼模式會明顯降低模型渲染速度。建議先使用一般模式確認形狀，下載前再切換至薄殼模式。'
-
 test('OpenGrid pillar is listed in its family and exposes fixed and positioning modes', async ({
   page,
 }) => {
@@ -39,8 +36,6 @@ test('OpenGrid pillar is listed in its family and exposes fixed and positioning 
   await expect(positioning).not.toBeChecked()
   await expect(page.getByText('固定總長 9 mm')).toBeVisible()
   await expect(page.getByText('固定總長 6 mm')).toBeVisible()
-  const thinShellWarning = page.getByTestId('thin-shell-render-warning')
-  await expect(thinShellWarning).toHaveText(THIN_SHELL_RENDER_WARNING)
   await expect(page.getByRole('slider', { name: /X 偏移/ })).toBeVisible()
   await expect(page.getByRole('slider', { name: /Y 偏移/ })).toBeVisible()
   await expect(page.getByText(/請選擇支柱版本/)).toHaveCount(0)
@@ -56,12 +51,10 @@ test('OpenGrid pillar is listed in its family and exposes fixed and positioning 
 
   await positioning.check()
   await expect(positioning).toBeChecked()
-  await expect(thinShellWarning).toHaveCount(0)
   await expect(page.getByRole('textbox', { name: /總長度/ })).toBeVisible()
   await expect(page.getByRole('slider', { name: /總長度/ })).toBeVisible()
   await standard.check()
   await expect(page.getByRole('textbox', { name: /總長度/ })).toHaveCount(0)
-  await expect(thinShellWarning).toHaveCount(0)
 })
 
 test('OpenGrid pillar exports deterministic files for all pillar modes', async ({

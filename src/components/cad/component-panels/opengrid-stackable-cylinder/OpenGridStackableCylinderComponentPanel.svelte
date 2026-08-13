@@ -11,9 +11,9 @@
     type OpenGridStackableCylinderOpeningParameterKey,
     type OpenGridStackableCylinderParameters,
   } from '../../../../cad-contract/units'
+  import HoneycombRenderWarning from '../HoneycombRenderWarning.svelte'
   import ParameterControl from '../ParameterControl.svelte'
   import ParameterField from '../ParameterField.svelte'
-  import ThinShellRenderWarning from '../ThinShellRenderWarning.svelte'
   import type { ComponentPanelProps } from '../types'
   import type { ParameterField as ParameterFieldDefinition } from '../../../../features/cad/model-catalog'
 
@@ -261,9 +261,6 @@
   >
     {modeSummary(activeMode)}
   </p>
-  {#if activeMode === 'thin'}
-    <ThinShellRenderWarning />
-  {/if}
   <fieldset
     class="grid gap-2 border-0 p-0"
     aria-describedby={fieldErrors.bottomSeatMode
@@ -316,6 +313,9 @@
     />
     <span>省料模式（六角鏤空）</span>
   </label>
+  {#if rawParameters.honeycombMode === 'true'}
+    <HoneycombRenderWarning />
+  {/if}
   {#each opengridStackableCylinderDefinition.parameterSchema.slice(0, 2) as field (field.key)}
     {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
     <ParameterField

@@ -1252,43 +1252,42 @@ The workspace MUST parse the six Open Shelf fields into the typed snapshot requi
 - **THEN** the Worker request MUST contain typed `x`, `y`, `height`, `cellX`, `cellZ`, and `angle`
 - **AND** only the latest valid candidate MUST be eligible for commit
 
-### Requirement: Thin-shell render performance warning
+### Requirement: Honeycomb render performance warning
 
-The CAD workspace MUST show a red, user-visible performance warning when the
-thin-shell profile is selected in each existing OpenGrid stackable-box,
-stackable-cylinder, and pillar parameter panel. The warning MUST use the exact
-text `注意：薄殼模式會明顯降低模型渲染速度。建議先使用一般模式確認形狀，下載前再切換至薄殼模式。`
-and MUST be placed with the selected thin-shell mode's explanatory content.
-The warning MUST be informational only: it MUST NOT prevent mode selection,
-preview generation, parameter persistence, or STEP/STL downloads.
+The CAD workspace MUST show a red, user-visible performance warning when
+`省料模式（六角鏤空）` is enabled in each existing OpenGrid stackable-box,
+stackable-cylinder, and Open Shelf parameter panel. The warning MUST use the
+exact text `注意：省料模式會明顯降低模型渲染速度。建議先使用一般模式確認形狀，下載前再啟用省料模式。`
+and MUST be placed below the saving-mode checkbox. The warning MUST be
+informational only: it MUST NOT prevent mode selection, preview generation,
+parameter persistence, or STEP/STL downloads.
 
-#### Scenario: Stackable-box thin-shell warning
+#### Scenario: Stackable-box honeycomb warning
 
-- **WHEN** a user selects `薄殼模式` in `/cad/opengrid-stackable-box`
+- **WHEN** a user enables `省料模式（六角鏤空）` in `/cad/opengrid-stackable-box`
 - **THEN** the parameter panel MUST display the exact red warning text below
-  the selected mode's description
+  the saving-mode checkbox
 
-#### Scenario: Stackable-cylinder thin-shell warning
+#### Scenario: Stackable-cylinder honeycomb warning
 
-- **WHEN** a user selects `薄殼模式` in `/cad/opengrid-stackable-cylinder`
+- **WHEN** a user enables `省料模式（六角鏤空）` in `/cad/opengrid-stackable-cylinder`
 - **THEN** the parameter panel MUST display the exact red warning text below
-  the selected mode's description
+  the saving-mode checkbox
 
-#### Scenario: Pillar thin-shell warning
+#### Scenario: Open Shelf honeycomb warning
 
-- **WHEN** a user selects `薄殼版` in `/cad/opengrid-pillar`
-- **THEN** the parameter panel MUST display the exact red warning text with
-  the selected thin-shell version details
+- **WHEN** a user enables `省料模式（六角鏤空）` in `/cad/opengrid-open-shelf`
+- **THEN** the parameter panel MUST display the exact red warning text below
+  the saving-mode checkbox
 
-#### Scenario: Warning follows the active profile
+#### Scenario: Warning follows the saving-mode checkbox
 
-- **WHEN** a user switches from a thin-shell profile to a non-thin-shell
-  profile in any of the three OpenGrid panels
-- **THEN** the thin-shell performance warning MUST no longer be visible
+- **WHEN** a user disables `省料模式（六角鏤空）` in any of the three OpenGrid panels
+- **THEN** the honeycomb performance warning MUST no longer be visible
 
 #### Scenario: Warning does not block existing workflow
 
-- **WHEN** the thin-shell performance warning is visible
+- **WHEN** the honeycomb performance warning is visible
 - **THEN** the user MUST still be able to edit parameters, generate the
   preview, persist the selected profile, and request STEP or STL downloads
 

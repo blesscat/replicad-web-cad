@@ -14,9 +14,9 @@
   } from '../../../../cad-contract/units'
   import { calculateOpenGridStackableBoxCounts } from '../../../../features/cad/grid-dimensions'
   import GridDimensionCalculator from '../GridDimensionCalculator.svelte'
+  import HoneycombRenderWarning from '../HoneycombRenderWarning.svelte'
   import ParameterControl from '../ParameterControl.svelte'
   import ParameterField from '../ParameterField.svelte'
-  import ThinShellRenderWarning from '../ThinShellRenderWarning.svelte'
   import type { ComponentPanelProps } from '../types'
   import type { ParameterField as ParameterFieldDefinition } from '../../../../features/cad/model-catalog'
 
@@ -275,6 +275,9 @@
       />
       <span class="font-[650]">省料模式（六角鏤空）</span>
     </label>
+    {#if rawParameters.honeycombMode === 'true'}
+      <HoneycombRenderWarning />
+    {/if}
   </div>
   <div
     aria-describedby={modeErrorDescriptionId()}
@@ -320,7 +323,6 @@
       <span class="text-sm text-muted">
         薄殼模式：不可堆疊，使用6mm定位柱
       </span>
-      <ThinShellRenderWarning />
     {:else}
       <span class="text-sm text-muted">
         預設模式：可堆疊滑動，使用9mm定位柱

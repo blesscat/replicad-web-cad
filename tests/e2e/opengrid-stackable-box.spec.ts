@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test'
 import { skipHeadlessFirefoxWithoutWebGL, waitForCadReady } from './helpers'
 
-const THIN_SHELL_RENDER_WARNING =
-  '注意：薄殼模式會明顯降低模型渲染速度。建議先使用一般模式確認形狀，下載前再切換至薄殼模式。'
+const HONEYCOMB_RENDER_WARNING =
+  '注意：省料模式會明顯降低模型渲染速度。建議先使用一般模式確認形狀，下載前再啟用省料模式。'
 
 test('Desk System starts the stackable-box with its thin-shell preset', async ({
   page,
@@ -86,10 +86,8 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
   await expect(fullGrid).toBeVisible()
   await expect(fullGrid).not.toBeChecked()
   const defaultMode = page.getByRole('radio', { name: '堆疊模式' })
-  const thinShellWarning = page.getByTestId('thin-shell-render-warning')
   await expect(defaultMode).toBeVisible()
   await expect(defaultMode).toBeChecked()
-  await expect(thinShellWarning).toHaveCount(0)
   const thinShell = page.getByRole('radio', { name: '薄殼模式' })
   await expect(thinShell).toBeVisible()
   await expect(thinShell).not.toBeChecked()
@@ -102,10 +100,8 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
   await expect(
     page.getByText(/薄殼模式：不可堆疊，使用6mm定位柱/),
   ).toBeVisible()
-  await expect(thinShellWarning).toHaveText(THIN_SHELL_RENDER_WARNING)
   await page.reload()
   await expect(page.getByRole('radio', { name: '薄殼模式' })).toBeChecked()
-  await expect(thinShellWarning).toHaveText(THIN_SHELL_RENDER_WARNING)
   await defaultMode.check()
   await expect(defaultMode).toBeChecked()
   await expect(
@@ -114,7 +110,6 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
   await expect(page.getByText(/薄殼模式：不可堆疊，使用6mm定位柱/)).toHaveCount(
     0,
   )
-  await expect(thinShellWarning).toHaveCount(0)
   await seatMode.getByRole('radio', { name: '無角座' }).check()
   await expect(seatMode.getByRole('radio', { name: '無角座' })).toBeChecked()
   await fullGrid.check()
@@ -195,12 +190,15 @@ test('OpenGrid stackable-box persists the honeycomb saving switch and filename',
     name: '省料模式（六角鏤空）',
     exact: true,
   })
+  const honeycombWarning = page.getByTestId('honeycomb-render-warning')
   await expect(honeycomb).toBeVisible()
   await expect(honeycomb).not.toBeChecked()
+  await expect(honeycombWarning).toHaveCount(0)
   await expect(page.getByRole('radio', { name: '堆疊模式' })).toBeChecked()
   await honeycomb.check()
   await waitForCadReady(page, 90_000)
   await expect(honeycomb).toBeChecked()
+  await expect(honeycombWarning).toHaveText(HONEYCOMB_RENDER_WARNING)
 
   await page.reload()
   await waitForCadReady(page, 90_000)
@@ -211,6 +209,7 @@ test('OpenGrid stackable-box persists the honeycomb saving switch and filename',
     }),
   ).toBeChecked()
   await expect(page.getByRole('radio', { name: '堆疊模式' })).toBeChecked()
+  await expect(honeycombWarning).toHaveText(HONEYCOMB_RENDER_WARNING)
 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: '下載 STEP' }).click()
@@ -218,4 +217,6 @@ test('OpenGrid stackable-box persists the honeycomb saving switch and filename',
   expect(download.suggestedFilename()).toBe(
     'opengrid-stackable-box-2x2-h20-seats-hole-honeycomb.step',
   )
+  await honeycomb.uncheck()
+  await expect(honeycombWarning).toHaveCount(0)
 })
