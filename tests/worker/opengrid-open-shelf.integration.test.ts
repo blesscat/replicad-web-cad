@@ -133,7 +133,12 @@ describe('OpenGrid open-shelf CAD kernel integration', () => {
           const ySpan = (max[1] ?? 0) - (min[1] ?? 0)
           const zSpan = (max[2] ?? 0) - (min[2] ?? 0)
           const radius = OPENGRID_OPEN_SHELF_CONFIGURATION.topOuterEdgeRadius
-          return xSpan <= radius + 0.2 && ySpan > depth * 0.5 && zSpan > 0.2
+          return (
+            xSpan <= radius + 0.2 &&
+            ySpan > depth * 0.5 &&
+            zSpan > 0.2 &&
+            (max[2] ?? 0) >= parameters.height - radius - 0.2
+          )
         },
       )
       expect(topSideFilletFaces).toHaveLength(2)

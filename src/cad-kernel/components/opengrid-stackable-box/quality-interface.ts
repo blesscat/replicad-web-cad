@@ -65,8 +65,14 @@ function isIntegratedSeatRecordFor(
     closeEnough(diameterX, configuration.integratedSeatDiameter, 0.15) &&
     closeEnough(diameterY, configuration.integratedSeatDiameter, 0.15) &&
     closeEnough(diameterX, diameterY, 0.08) &&
-    closeEnough(zSpan, configuration.integratedSeatHeight, 0.1) &&
-    record.min[2] <= configuration.integratedSeatMinZ + 0.03 &&
+    zSpan >=
+      configuration.integratedSeatHeight -
+        configuration.bottomEdgeFilletRadius -
+        0.1 &&
+    record.min[2] <=
+      configuration.integratedSeatMinZ +
+        configuration.bottomEdgeFilletRadius +
+        0.03 &&
     record.max[2] >= 0 - 0.03
   )
 }

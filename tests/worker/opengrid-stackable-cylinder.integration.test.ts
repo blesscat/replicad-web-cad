@@ -242,8 +242,16 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
         2,
       )
       expect(report.bottomOuterChamferFaceCount).toBeGreaterThan(0)
+      const outerTransitionHeight =
+        derived.outerTransitionEndZ - derived.outerTransitionStartZ
+      const outerTransitionAngle = Math.atan2(
+        outerTransitionHeight,
+        derived.outerTransitionEndRadius - derived.outerTransitionStartRadius,
+      )
       expect(report.bottomOuterChamferHeight).toBeCloseTo(
-        derived.outerTransitionEndZ - derived.outerTransitionStartZ,
+        outerTransitionHeight -
+          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius *
+            (1 - Math.cos(outerTransitionAngle)),
         2,
       )
       expect(report.innerRampFaceCount).toBe(0)
@@ -610,7 +618,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
         derived.topInnerChamfer - 0.05,
       )
       expect(report.bottomFootChamferFaceCount).toBeGreaterThan(0)
-      expect(report.bottomOuterFilletFaceCount).toBe(0)
+      expect(report.bottomOuterFilletFaceCount).toBeGreaterThan(0)
       expect(report.lowerUnexpectedConicalFaceCount).toBe(0)
       expect(report.innerRampFaceCount).toBeGreaterThan(0)
       expect(report.innerRampHeight).toBeGreaterThanOrEqual(
@@ -789,9 +797,11 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
         )
         expect(report.bottomFootChamferFaceCount).toBeGreaterThan(0)
         expect(report.bottomFootChamferHeight).toBeGreaterThanOrEqual(
-          OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.bottomFootBevel - 0.05,
+          OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.bottomFootBevel -
+            OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius -
+            0.05,
         )
-        expect(report.bottomOuterFilletFaceCount).toBe(0)
+        expect(report.bottomOuterFilletFaceCount).toBeGreaterThan(0)
         expect(report.lowerUnexpectedConicalFaceCount).toBe(0)
         if (thinBottomMode) {
           expect(report.innerRampFaceCount).toBeGreaterThan(0)

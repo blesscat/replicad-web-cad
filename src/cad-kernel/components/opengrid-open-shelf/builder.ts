@@ -20,9 +20,11 @@ import {
   openGridOpenShelfTopInnerRearZFor,
   openGridOpenShelfTopOuterRearZFor,
   OPENGRID_OPEN_SHELF_CONFIGURATION,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   validateOpenGridOpenShelfParameters,
   type OpenGridOpenShelfParameters,
 } from '../../../cad-contract/units'
+import { filletEdgesAtZ } from '../../bottom-edge-fillet'
 
 export type OpenGridOpenShelfBuildContext = {
   yieldToEventLoop?: () => Promise<void>
@@ -298,10 +300,28 @@ function makeBackboard(
 
 function makePeg(center: Point2D): Shape3D {
   const configuration = OPENGRID_OPEN_SHELF_CONFIGURATION
-  return makeCylinder(
+  const peg = makeCylinder(
     configuration.pegDiameter / 2,
     configuration.pegHeight + configuration.pegOverlap,
     [center[0], center[1], -configuration.pegHeight],
+  )
+  return filletEdgesAtZ(
+    peg,
+    -configuration.pegHeight,
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
+  )
+}
+
+function makeBottomBase(width: number, yFront: number, yRear: number): Shape3D {
+  const configuration = OPENGRID_OPEN_SHELF_CONFIGURATION
+  const base = makeBox(
+    [-width / 2, yFront, 0],
+    [width / 2, yRear, configuration.bottomThickness],
+  )
+  return filletEdgesAtZ(
+    base,
+    0,
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
   )
 }
 
@@ -337,10 +357,7 @@ function makeAssemblyPieces(
   const yFront = -depth / 2
   const yRear = depth / 2
   const pieces: Shape3D[] = [
-    makeBox(
-      [-width / 2, yFront, 0],
-      [width / 2, yRear, configuration.bottomThickness],
-    ),
+    makeBottomBase(width, yFront, yRear),
     makeSideWall(parameters, yFront, yRear, -width / 2),
     makeSideWall(
       parameters,

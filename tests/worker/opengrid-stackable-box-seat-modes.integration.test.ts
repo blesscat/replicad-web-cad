@@ -11,6 +11,7 @@ import {
   boundsForOpenGridStackableBox,
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
   openGridStackableBoxSocketCentersFor,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   type OpenGridStackableBoxParameters,
 } from '../../src/cad-contract/units'
@@ -100,8 +101,16 @@ describe('OpenGrid stackable-box integrated seat profiles', () => {
           expect(record).toBeDefined()
           expect(record!.max[0] - record!.min[0]).toBeCloseTo(5, 1)
           expect(record!.max[1] - record!.min[1]).toBeCloseTo(5, 1)
-          expect(record!.max[2] - record!.min[2]).toBeCloseTo(3, 1)
-          expect(record!.min[2]).toBeCloseTo(-3, 1)
+          expect(record!.max[2] - record!.min[2]).toBeCloseTo(
+            OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatHeight -
+              OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
+            1,
+          )
+          expect(record!.min[2]).toBeCloseTo(
+            OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ +
+              OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
+            1,
+          )
           expect(record!.max[2]).toBeCloseTo(0, 1)
         }
         expect(

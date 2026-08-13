@@ -27,6 +27,7 @@ import {
   type BooleanOperationScope,
   type BooleanOperationReporter,
 } from '../../boolean-progress'
+import { filletEdgesAtZ } from '../../bottom-edge-fillet'
 import {
   assertGenerationCurrent,
   deleteShape,
@@ -330,7 +331,11 @@ function makeThinShell(parameters: OpenGridStackableBoxParameters): Shape3D {
     shell = null
     const simplified = filleted.simplify()
     if (simplified !== filleted) deleteShape(filleted)
-    return simplified
+    return filletEdgesAtZ(
+      simplified,
+      0,
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
+    )
   } catch (error) {
     deleteShape(outer)
     deleteShape(cavity)
@@ -346,19 +351,33 @@ export function makeBoxShell(
   if (parameters.thinShellMode) return makeThinShell(parameters)
   const outer = loftRoundedSections(outerEnvelopeSections(parameters))
   let cavity: Shape3D | null = null
+  let shell: Shape3D | null = null
   try {
     cavity = loftRoundedSections(innerCavitySections(parameters))
     const activeCavity = cavity
     const cutScope = reporter?.createScope(1)
-    const shell = measureBooleanInScope(cutScope, 'cut', () =>
+    shell = measureBooleanInScope(cutScope, 'cut', () =>
       outer.cut(activeCavity),
     )
     deleteShape(outer)
     deleteShape(cavity)
-    return shell
+    cavity = null
+    if (parameters.basePlateMode) {
+      const result = shell
+      shell = null
+      return result
+    }
+    const rounded = filletEdgesAtZ(
+      shell,
+      0,
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
+    )
+    shell = null
+    return rounded
   } catch (error) {
     deleteShape(outer)
     deleteShape(cavity)
+    deleteShape(shell)
     throw error
   }
 }
@@ -395,7 +414,13 @@ export function applyBasePlateMode(
     deleteShape(shape)
     const result = clipped.translateZ(-cutoffHeight)
     clipped = null
-    return result
+    return filletEdgesAtZ(
+      result,
+      0,
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
+      0.02,
+      configuration.baseHoleTopOpeningDiameter + 0.2,
+    )
   } catch (error) {
     deleteShape(clipped)
     throw error
@@ -1056,10 +1081,15 @@ function makeOrdinaryBottomHoleCutter(
 
 function makeIntegratedSeat(): Shape3D {
   const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
-  return makeCylinder(
+  const seat = makeCylinder(
     configuration.integratedSeatDiameter / 2,
     configuration.integratedSeatHeight,
     [0, 0, configuration.integratedSeatMinZ],
+  )
+  return filletEdgesAtZ(
+    seat,
+    configuration.integratedSeatMinZ,
+    configuration.bottomEdgeFilletRadius,
   )
 }
 

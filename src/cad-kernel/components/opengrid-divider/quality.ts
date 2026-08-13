@@ -9,6 +9,7 @@ import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForOpenGridDivider,
   OPENGRID_DIVIDER_CONFIGURATION,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   openGridDividerPlanBoundsFor,
   openGridDividerPegCentersFor,
   openGridDividerTransitionHeightFor,
@@ -113,7 +114,7 @@ function transitionFilletFaceCountFor(
 ): number {
   const transitionHeight = openGridDividerTransitionHeightFor(parameters)
   if (transitionHeight <= 0) return 0
-  const transitionStart = OPENGRID_DIVIDER_CONFIGURATION.geometrySafetyMargin
+  const transitionStart = OPENGRID_DIVIDER_CONFIGURATION.bottomSupportHeight
   const transitionEnd = transitionStart + transitionHeight
   let count = 0
   for (const face of shape.faces) {
@@ -311,8 +312,11 @@ export function inspectOpenGridDividerShapeQuality(
   const bottomPegFaceCount = faceCountInZBand(
     shape,
     (surfaceType, minZ, maxZ) =>
-      surfaceType === 'CYLINDRE' &&
-      minZ <= -OPENGRID_DIVIDER_CONFIGURATION.pegLength + 0.05 &&
+      (surfaceType === 'CYLINDRE' || surfaceType === 'TORUS') &&
+      minZ <=
+        -OPENGRID_DIVIDER_CONFIGURATION.pegLength +
+          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius +
+          0.05 &&
       maxZ <= 0.1,
   )
   // OpenCascade may split a single peg's cylindrical face at wall intersections;
@@ -343,7 +347,7 @@ export function inspectOpenGridDividerShapeQuality(
   const transitionHeight = openGridDividerTransitionHeightFor(parameters)
   const transitionStartHeight =
     transitionHeight > 0
-      ? OPENGRID_DIVIDER_CONFIGURATION.geometrySafetyMargin
+      ? OPENGRID_DIVIDER_CONFIGURATION.bottomSupportHeight
       : 0
   const transitionEndHeight = transitionStartHeight + transitionHeight
   const upperStraightHeight = Math.max(
@@ -385,7 +389,11 @@ export function inspectOpenGridDividerShapeQuality(
   let profileStage = 'base'
   try {
     const transitionMidpoint = transitionStartHeight + transitionHeight / 2
-    baseProfileWidth = profileWidthAt(shape, parameters, 0)
+    baseProfileWidth = profileWidthAt(
+      shape,
+      parameters,
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius + 0.01,
+    )
     profileStage = 'upper'
     upperProfileWidth = profileWidthAt(
       shape,

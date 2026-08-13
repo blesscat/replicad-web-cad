@@ -62,6 +62,10 @@ const DIVIDER_PARAMETER_KEYS: readonly OpenGridDividerParameterKey[] = [
 const DIVIDER_GRID_STEP = 0.5
 const DIVIDER_MAX_DIMENSION = 500
 const DIVIDER_MAX_ARM_COUNT = 10
+const DIVIDER_GEOMETRY_SAFETY_MARGIN = 0.1
+const DIVIDER_BOTTOM_SUPPORT_HEIGHT =
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius +
+  DIVIDER_GEOMETRY_SAFETY_MARGIN
 
 export const OPENGRID_DIVIDER_CONFIGURATION = {
   gridPitch: OPENGRID_GRID_CONFIGURATION.fullPitch,
@@ -72,7 +76,8 @@ export const OPENGRID_DIVIDER_CONFIGURATION = {
   maxWallThickness: 5,
   transitionChamferAngle: 45,
   transitionFilletRadius: 0.4,
-  geometrySafetyMargin: 0.1,
+  geometrySafetyMargin: DIVIDER_GEOMETRY_SAFETY_MARGIN,
+  bottomSupportHeight: DIVIDER_BOTTOM_SUPPORT_HEIGHT,
   pegDiameter: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter,
   pegLength: 3,
   pegCenterSpacing: OPENGRID_GRID_CONFIGURATION.fullPitch,
@@ -219,11 +224,15 @@ export function openGridDividerPlanDimensionsFor(
 export function openGridDividerTransitionHeightFor(
   parameters: Pick<OpenGridDividerParameters, 'wallThickness' | 'height'>,
 ): number {
-  const { geometrySafetyMargin, wallWidth } = OPENGRID_DIVIDER_CONFIGURATION
+  const { bottomSupportHeight, geometrySafetyMargin, wallWidth } =
+    OPENGRID_DIVIDER_CONFIGURATION
   const halfWidthDifference = (wallWidth - parameters.wallThickness) / 2
   return Math.max(
     0,
-    Math.min(halfWidthDifference, parameters.height - geometrySafetyMargin * 2),
+    Math.min(
+      halfWidthDifference,
+      parameters.height - bottomSupportHeight - geometrySafetyMargin,
+    ),
   )
 }
 

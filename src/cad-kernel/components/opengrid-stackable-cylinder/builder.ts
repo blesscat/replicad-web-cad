@@ -27,6 +27,7 @@ import {
   measureBooleanInScope,
   type BooleanOperationReporter,
 } from '../../boolean-progress'
+import { filletEdgesAtZ } from '../../bottom-edge-fillet'
 
 export type OpenGridStackableCylinderBuildContext = {
   isGenerationCurrent?: () => boolean
@@ -270,7 +271,13 @@ function makeCylinderShell(
     sketcher.lineTo([0, derived.flatFloorZ])
     sketch = sketcher.close()
     const revolved = sketch.revolve([0, 0, 1])
-    if (derived.profile === 'thin') return revolved
+    if (derived.profile === 'thin') {
+      return filletEdgesAtZ(
+        revolved,
+        0,
+        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
+      )
+    }
     const filleted = revolved.fillet(derived.innerFloorFilletRadius, (finder) =>
       finder.when(({ element }) =>
         edgeIsNearZ(element, derived.floorThickness),
@@ -279,7 +286,11 @@ function makeCylinderShell(
     deleteShape(revolved)
     const simplified = filleted.simplify()
     if (simplified !== filleted) deleteShape(filleted)
-    return simplified
+    return filletEdgesAtZ(
+      simplified,
+      0,
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
+    )
   } finally {
     deleteShape(sketch)
     sketcher.delete()
@@ -369,13 +380,22 @@ function addIntegratedSeats(
       configuration.integratedSeatHeight,
       [x, y, configuration.integratedSeatMinZ],
     )
+    let roundedSeat: Shape3D | null = null
     try {
+      roundedSeat = filletEdgesAtZ(
+        seat,
+        configuration.integratedSeatMinZ,
+        configuration.bottomEdgeFilletRadius,
+      )
+      if (!roundedSeat) throw new Error('OPENGRID_INTEGRATED_SEAT_EMPTY')
+      const activeRoundedSeat = roundedSeat
       const fused = measureBooleanInScope(fuseScope, 'fuse', () =>
-        current.fuse(seat, { optimisation: 'commonFace' }),
+        current.fuse(activeRoundedSeat, { optimisation: 'commonFace' }),
       )
       deleteShape(current)
       current = fused
     } finally {
+      deleteShape(roundedSeat)
       deleteShape(seat)
     }
   }
@@ -842,7 +862,10 @@ function readIntegratedSeatRecords(
   const records = readCylindricalFaceRecords(shape).filter(
     (record) =>
       closeEnough(record.diameter, configuration.integratedSeatDiameter, 0.2) &&
-      record.minZ <= configuration.integratedSeatMinZ + 0.1 &&
+      record.minZ <=
+        configuration.integratedSeatMinZ +
+          configuration.bottomEdgeFilletRadius +
+          0.1 &&
       record.maxZ >= -0.1,
   )
   return centers.flatMap((center) =>
@@ -1459,9 +1482,9 @@ export function inspectOpenGridStackableCylinderInterface(
     shape,
     'TORUS',
     -0.05,
-    derived.outerTransitionEndZ + 0.05,
-    derived.outerTransitionStartRadius + 0.1,
-    derived.radius + 0.2,
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius + 0.05,
+    0,
+    Number.POSITIVE_INFINITY,
   )
   const internalFilletFaceCount = countSurfaceFacesInZBand(
     shape,
@@ -1483,7 +1506,6 @@ export function inspectOpenGridStackableCylinderInterface(
   // Normalize that representation only after an outside-radius probe confirms
   // that the physical solid still ends at the requested outer radius.
   const reportBounds =
-    derived.profile !== 'thin' &&
     volumeInAnnularProbe(
       shape,
       derived.radius + 0.12,
@@ -1656,7 +1678,8 @@ function assertQuality(
       ) ||
       !closeEnough(
         seat.minZ,
-        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ,
+        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ +
+          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
       ) ||
       !closeEnough(seat.maxZ, 0)
     ) {
@@ -1710,16 +1733,34 @@ function assertQuality(
     if (report.bottomFootChamferFaceCount === 0) {
       failures.push('bottom-foot-bevel')
     }
-    if (report.bottomFootChamferHeight < configuration.bottomFootBevel - 0.05) {
+    if (
+      report.bottomFootChamferHeight <
+      configuration.bottomFootBevel -
+        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius -
+        0.05
+    ) {
       failures.push('bottom-foot-bevel-height')
     }
   }
   if (report.bottomOuterChamferFaceCount === 0) {
     failures.push('bottom-outer-slope')
   }
+  const outerTransitionHeight =
+    derived.outerTransitionEndZ - derived.outerTransitionStartZ
+  const outerTransitionRun =
+    derived.outerTransitionEndRadius - derived.outerTransitionStartRadius
+  const outerTransitionAngle = Math.atan2(
+    outerTransitionHeight,
+    outerTransitionRun,
+  )
+  const bottomOuterFilletTrim =
+    derived.profile === 'bottom-plate'
+      ? OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius *
+        (1 - Math.cos(outerTransitionAngle))
+      : 0
   if (
     report.bottomOuterChamferHeight <
-    derived.outerTransitionEndZ - derived.outerTransitionStartZ - 0.05
+    outerTransitionHeight - bottomOuterFilletTrim - 0.05
   ) {
     failures.push('bottom-outer-slope-height')
   }
@@ -1766,8 +1807,8 @@ function assertQuality(
   if (report.matingIntersectionVolume > 0.01) {
     failures.push('same-diameter-interference')
   }
-  if (report.bottomOuterFilletFaceCount !== 0) {
-    failures.push('bottom-outer-fillet-present')
+  if (report.bottomOuterFilletFaceCount === 0) {
+    failures.push('bottom-outer-fillet-missing')
   }
   if (
     derived.profile === 'thin' &&
