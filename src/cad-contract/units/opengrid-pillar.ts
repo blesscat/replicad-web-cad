@@ -266,18 +266,31 @@ export function pillarLengthForParameters(
   return pillarLengthForMode(parameters.mode)
 }
 
-export function boundsForPillar(parameters: PillarParameters): PillarBounds {
-  const radius =
+export function pillarBodyDiameterForParameters(
+  parameters: PillarParameters,
+): number {
+  const nominalDiameter =
     parameters.mode === 'positioning'
-      ? PILLAR_CONFIGURATION.positioningBodyDiameter / 2
-      : PILLAR_CONFIGURATION.baseDiameter / 2
+      ? PILLAR_CONFIGURATION.positioningBodyDiameter
+      : PILLAR_CONFIGURATION.bodyDiameter
+  return nominalDiameter + parameters.offset
+}
+
+export function pillarFlangeDiameterForParameters(
+  parameters: PillarParameters,
+): number {
+  return PILLAR_CONFIGURATION.baseDiameter + parameters.offset
+}
+
+export function boundsForPillar(parameters: PillarParameters): PillarBounds {
+  const diameter =
+    parameters.mode === 'positioning'
+      ? pillarBodyDiameterForParameters(parameters)
+      : pillarFlangeDiameterForParameters(parameters)
+  const radius = diameter / 2
   return {
-    min: [parameters.offset - radius, parameters.offset - radius, 0],
-    max: [
-      parameters.offset + radius,
-      parameters.offset + radius,
-      pillarLengthForParameters(parameters),
-    ],
+    min: [-radius, -radius, 0],
+    max: [radius, radius, pillarLengthForParameters(parameters)],
   }
 }
 

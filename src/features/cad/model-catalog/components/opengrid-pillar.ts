@@ -25,7 +25,7 @@ const PILLAR_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
   },
   {
     key: 'offset',
-    label: 'XY 偏移',
+    label: 'XY 直徑增量',
     axis: 'XY',
     unit: 'mm',
     control: 'range-text',
@@ -83,7 +83,7 @@ export const opengridPillarDefinition: ModelDefinition = {
   displayName: 'Locating Post (定位柱)',
   selectionLabel: 'Locating Post (定位柱)',
   selectionDescription:
-    'Locating Post：堆疊版 9 mm（Ø5 mm）、薄殼版 6 mm（Ø5 mm），以及物件定位用的 Ø5 mm 兩端 chamfer 自訂長度版；XY 共用偏移 -0.5～0.5 mm，步進 0.05 mm。',
+    'Locating Post：堆疊版 9 mm（Ø5 mm）、薄殼版 6 mm（Ø5 mm），以及物件定位用的 Ø5 mm 兩端 chamfer 自訂長度版；XY 共用直徑增量 -0.5～0.5 mm，步進 0.05 mm，高度不變。',
   parameterSchema: PILLAR_PARAMETER_SCHEMA,
   defaultParameters: { ...PILLAR_CONFIGURATION.defaultParameters },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },

@@ -708,8 +708,8 @@ describe('CAD component catalog', () => {
         offset: 0.25,
       }),
     ).toEqual({
-      min: [-2.25, -2.25, 0],
-      max: [2.75, 2.75, 25],
+      min: [-2.625, -2.625, 0],
+      max: [2.625, 2.625, 25],
     })
     expect(definition?.exportFileName({ mode: 'standard', offset: 0 })).toBe(
       'pillar-9-standard.step',

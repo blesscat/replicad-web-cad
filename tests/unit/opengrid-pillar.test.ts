@@ -113,7 +113,7 @@ describe('pillar contract', () => {
     }
   })
 
-  it('returns fixed bounds and applies one offset to both XY axes', () => {
+  it('uses the shared offset as an XY diameter increment without moving the center', () => {
     expect(boundsForPillar({ mode: 'standard', offset: 0 })).toEqual({
       min: [-3.5, -3.5, 0],
       max: [3.5, 3.5, 9],
@@ -125,8 +125,12 @@ describe('pillar contract', () => {
     expect(
       boundsForPillar({ mode: 'positioning', length: 25, offset: 0.25 }),
     ).toEqual({
-      min: [-2.25, -2.25, 0],
-      max: [2.75, 2.75, 25],
+      min: [-2.625, -2.625, 0],
+      max: [2.625, 2.625, 25],
+    })
+    expect(boundsForPillar({ mode: 'standard', offset: 0.5 })).toEqual({
+      min: [-3.75, -3.75, 0],
+      max: [3.75, 3.75, 9],
     })
   })
 

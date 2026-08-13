@@ -1,22 +1,23 @@
 ## Context
 
-The existing `opengrid-pillar` contract carries two numeric offsets through the catalog, workspace parser, persistence snapshot, worker builder, quality probes, and export naming. The builder already fuses the Ø7 mm flange with the Ø5 mm body and translates the resulting shape at the end; the change therefore simplifies the parameter plumbing and makes that whole-solid behavior explicit. See `proposal.md` and the delta spec for the user-facing intent and normative behavior.
+The existing `opengrid-pillar` contract carries two numeric offsets through the catalog, workspace parser, persistence snapshot, worker builder, quality probes, and export naming. The builder already fuses the Ø7 mm flange with the Ø5 mm body; the change simplifies the parameter plumbing and makes one shared XY diameter increment explicit. See `proposal.md` and the delta spec for the user-facing intent and normative behavior.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Make one scalar `offset` the canonical locating-post XY parameter and expose one `XY 偏移` control.
-- Apply the scalar identically to world X and Y for every pillar mode.
-- Preserve the complete fixed profile, including the Ø7 mm flange, as one translated solid.
+- Make one scalar `offset` the canonical locating-post XY parameter and expose one `XY 直徑增量` control.
+- Apply the scalar identically as an additive increment to every applicable XY diameter for every pillar mode.
+- Preserve the complete centered fixed profile, including the Ø7 mm flange, while keeping every axial dimension unchanged.
 - Migrate compatible old snapshots deterministically and avoid silently preserving an impossible unequal X/Y position.
 - Keep model IDs, routes, mode dimensions, length limits, mesh quality gates, and export extensions stable unless the shared-offset contract requires an export-stem update.
 
 **Non-Goals:**
 
 - Do not add independent X/Y editing back through a combined control.
-- Do not scale the diameter, flange, chamfers, or Z length; “一起縮放” is treated as translating the complete solid together.
-- Do not change standard, thin-shell, or positioning profile geometry apart from the shared XY translation.
+- Do not translate the post by the offset.
+- Do not expose independent X/Y editing, a proportional scale factor, or any Z/length adjustment through this control.
+- Do not change the standard, thin-shell, or positioning axial profile geometry apart from the shared XY diameter increment.
 - Do not introduce a new component, route, dependency, or persistence store.
 
 ## Decisions
@@ -30,14 +31,14 @@ Alternatives considered:
 - Keep `offsetX` and `offsetY` internally while hiding one UI control: rejected because persistence and worker contracts would still support two independent positions and would not express the requested invariant.
 - Store a string or object vector in one field: rejected because the user wants one shared value, not two values hidden inside a composite input.
 
-### Translate after complete solid construction
+### Apply the increment while constructing the centered solid
 
-Continue constructing and validating the flange/body/chamfer profile at the local origin, then translate the final solid by `(parameters.offset, parameters.offset, 0)`. Bounds and quality probes derive their X and Y coordinates from the same scalar. This keeps the Ø7 mm flange and Ø5 mm body concentric and guarantees they move together without changing dimensions.
+Construct the flange and body at the local origin with effective diameters `nominalDiameter + parameters.offset`. For fixed modes, this means Ø7 and Ø5 become Ø7.5 and Ø5.5 at `offset=0.5`; for positioning mode, the Ø5 body becomes Ø5.5. Keep chamfer distances, flange height, total length, and all Z stations unchanged. Bounds and quality probes derive their centered X/Y envelopes from the same effective diameters.
 
 Alternatives considered:
 
-- Apply the offset to individual cylinders before fusing: rejected because it duplicates placement logic and could permit profile parts to diverge.
-- Scale the profile around the XY plane: rejected because the requested behavior is positional offset, and scaling would change the fixed Ø5/Ø7 dimensions.
+- Translate the completed solid by `(offset, offset, 0)`: rejected because the requested value changes Ø7 to Ø7.5 and Ø5 to Ø5.5 rather than moving the center.
+- Use a proportional XY scale factor: rejected because scaling Ø5 to Ø5.5 would make Ø7 become Ø7.7, not Ø7.5.
 
 ### Migrate old snapshots conservatively
 
@@ -49,7 +50,7 @@ Keep zero-offset stems unchanged. For non-zero snapshots, use `-xy{offset}` so t
 
 ### Verify behavior before implementation cleanup
 
-Add or update contract, workspace, catalog, persistence, worker geometry, and end-to-end tests to assert the single field, equal X/Y bounds, complete flange translation, migration behavior, and export identity. Run the focused tests after each contract/build slice, then run the project type, format, build, and OpenSpec checks.
+Add or update contract, workspace, catalog, persistence, worker geometry, and end-to-end tests to assert the single field, centered effective diameters, unchanged Z bounds, migration behavior, and export identity. Run the focused tests after each contract/build slice, then run the project type, format, build, and OpenSpec checks.
 
 ## Risks / Trade-offs
 
@@ -59,9 +60,9 @@ Add or update contract, workspace, catalog, persistence, worker geometry, and en
 
 ## Migration Plan
 
-1. Add failing behavior tests for the shared contract, UI field, equal-axis translation, migration, and export stem.
+1. Add failing behavior tests for the shared contract, UI field, centered XY diameter increment, migration, and export stem.
 2. Change the canonical pillar type, validation, normalization, raw parsing, catalog schema, and panel to use `offset`.
-3. Update worker translation and quality/bounds/export helpers, then run focused unit and worker tests.
+3. Update worker effective-diameter construction and quality/bounds/export helpers, then run focused unit and worker tests.
 4. Update persistence, runtime, and end-to-end regressions; run typecheck, formatting, build, and strict OpenSpec validation.
 5. If rollback is needed before merge, revert the change commit; old snapshots remain readable through the migration branch while the old two-field contract is no longer emitted.
 

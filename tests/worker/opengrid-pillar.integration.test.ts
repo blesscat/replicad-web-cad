@@ -145,10 +145,32 @@ describe('OpenGrid pillar CAD kernel integration', () => {
     }
   }, 180_000)
 
-  it('translates the complete pillar without changing its profile or Z base', async () => {
+  it('expands the custom-length positioning body in XY while keeping height fixed', async () => {
+    const parameters: PillarParameters = {
+      mode: 'positioning',
+      length: 25,
+      offset: 0.5,
+    }
+    const shape = await buildPillar(parameters)
+    try {
+      const actual = shapeBounds(shape)
+      expect(actual[0]?.[0]).toBeCloseTo(-2.75, 2)
+      expect(actual[0]?.[1]).toBeCloseTo(-2.75, 2)
+      expect(actual[0]?.[2]).toBeCloseTo(0, 2)
+      expect(actual[1]?.[0]).toBeCloseTo(2.75, 2)
+      expect(actual[1]?.[1]).toBeCloseTo(2.75, 2)
+      expect(actual[1]?.[2]).toBeCloseTo(25, 2)
+      expect(probeVolumeAt(shape, 2.7, 2)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, 2.8, 2)).toBeLessThan(1e-8)
+    } finally {
+      deleteShape(shape)
+    }
+  }, 180_000)
+
+  it('expands the complete pillar in XY without moving its center or Z base', async () => {
     const parameters: PillarParameters = {
       mode: 'standard',
-      offset: 0.25,
+      offset: 0.5,
     }
     const shape = await buildPillar(parameters)
     try {
@@ -160,12 +182,10 @@ describe('OpenGrid pillar CAD kernel integration', () => {
       expect(actual[1]?.[0]).toBeCloseTo(expected.max[0], 2)
       expect(actual[1]?.[1]).toBeCloseTo(expected.max[1], 2)
       expect(actual[1]?.[2]).toBeCloseTo(9, 2)
-      expect(probeVolumeAt(shape, 3.4 + 0.25, 0.4, 0.05, 0.25)).toBeGreaterThan(
-        0,
-      )
-      expect(probeVolumeAt(shape, 3.6 + 0.25, 0.4, 0.05, 0.25)).toBeLessThan(
-        1e-8,
-      )
+      expect(probeVolumeAt(shape, 3.7, 0.4)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, 3.8, 0.4)).toBeLessThan(1e-8)
+      expect(probeVolumeAt(shape, 2.7, 1)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, 2.8, 1)).toBeLessThan(1e-8)
       expect(
         assertPillarShapeQuality(
           shape,
@@ -192,7 +212,7 @@ describe('OpenGrid pillar CAD kernel integration', () => {
       offset: -0.5,
     },
   ] as PillarParameters[])(
-    'translates %s geometry bounds and quality probes',
+    'resizes %s geometry bounds and quality probes',
     async (parameters) => {
       const shape = await buildPillar(parameters)
       try {

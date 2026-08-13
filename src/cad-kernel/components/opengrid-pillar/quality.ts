@@ -2,6 +2,8 @@ import { getOC, makeCylinder, measureVolume, type Shape3D } from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForPillar,
+  pillarBodyDiameterForParameters,
+  pillarFlangeDiameterForParameters,
   pillarLengthForParameters,
   PILLAR_CONFIGURATION,
   type ModelBounds,
@@ -120,11 +122,9 @@ function expectMaterial(
   x: number,
   z: number,
   expected: boolean,
-  offset = 0,
 ): void {
   try {
-    const hasMaterial =
-      volumeAt(shape, x + offset, offset, z) > PROBE_VOLUME_EPSILON
+    const hasMaterial = volumeAt(shape, x, 0, z) > PROBE_VOLUME_EPSILON
     if (hasMaterial !== expected) {
       failures.push(`profile:${label}`)
     }
@@ -143,26 +143,27 @@ function inspectFixedEndProfiles(
   const totalLength = pillarLengthForParameters(parameters)
   const upperStraightZ = totalLength - PILLAR_CONFIGURATION.upperChamfer - 0.1
   const upperChamferZ = totalLength - PILLAR_CONFIGURATION.upperChamfer / 2
-  const bodyRadius = PILLAR_CONFIGURATION.bodyDiameter / 2
+  const bodyRadius = pillarBodyDiameterForParameters(parameters) / 2
+  const flangeRadius = pillarFlangeDiameterForParameters(parameters) / 2
   const upperChamferBoundaryRadius =
     bodyRadius - PILLAR_CONFIGURATION.upperChamfer / 2
   const upperChamferInsideRadius = upperChamferBoundaryRadius - 0.15
   const upperChamferOutsideRadius = upperChamferBoundaryRadius + 0.15
 
   const probe = (label: string, x: number, z: number, expected: boolean) =>
-    expectMaterial(shape, failures, label, x, z, expected, parameters.offset)
+    expectMaterial(shape, failures, label, x, z, expected)
 
-  probe('base-flange-inside', 3.4, 0.4, true)
-  probe('base-flange-outside', 3.6, 0.4, false)
+  probe('base-flange-inside', flangeRadius - 0.1, 0.4, true)
+  probe('base-flange-outside', flangeRadius + 0.1, 0.4, false)
   probe(
     'shoulder-below-wide',
-    3.4,
+    flangeRadius - 0.1,
     PILLAR_CONFIGURATION.baseHeight - 0.02,
     true,
   )
   probe(
     'shoulder-above-wide',
-    3.4,
+    flangeRadius - 0.1,
     PILLAR_CONFIGURATION.baseHeight + 0.02,
     false,
   )
@@ -207,21 +208,23 @@ function inspectPositioningEndProfiles(
     parameters.length - PILLAR_CONFIGURATION.positioningUpperChamfer - 0.1
   const upperChamferZ =
     parameters.length - PILLAR_CONFIGURATION.positioningUpperChamfer / 2
-  const bodyRadius = PILLAR_CONFIGURATION.positioningBodyDiameter / 2
+  const bodyRadius = pillarBodyDiameterForParameters(parameters) / 2
   const upperChamferBoundaryRadius =
     bodyRadius - PILLAR_CONFIGURATION.positioningUpperChamfer / 2
   const upperChamferInsideRadius = upperChamferBoundaryRadius - 0.15
   const upperChamferOutsideRadius = upperChamferBoundaryRadius + 0.15
+  const lowerChamferRadius =
+    bodyRadius - PILLAR_CONFIGURATION.positioningLowerChamfer + lowerChamferZ
 
   const probe = (label: string, x: number, z: number, expected: boolean) =>
-    expectMaterial(shape, failures, label, x, z, expected, parameters.offset)
+    expectMaterial(shape, failures, label, x, z, expected)
 
-  probe('lower-chamfer-inside', 1.4, lowerChamferZ, true)
-  probe('lower-chamfer-outside', 1.7, lowerChamferZ, false)
-  probe('lower-straight-inside', 2.4, lowerStraightZ, true)
-  probe('lower-straight-outside', 2.6, lowerStraightZ, false)
-  probe('upper-straight-inside', 2.4, upperStraightZ, true)
-  probe('upper-straight-outside', 2.6, upperStraightZ, false)
+  probe('lower-chamfer-inside', lowerChamferRadius - 0.1, lowerChamferZ, true)
+  probe('lower-chamfer-outside', lowerChamferRadius + 0.1, lowerChamferZ, false)
+  probe('lower-straight-inside', bodyRadius - 0.1, lowerStraightZ, true)
+  probe('lower-straight-outside', bodyRadius + 0.1, lowerStraightZ, false)
+  probe('upper-straight-inside', bodyRadius - 0.1, upperStraightZ, true)
+  probe('upper-straight-outside', bodyRadius + 0.1, upperStraightZ, false)
   probe('upper-chamfer-inside', upperChamferInsideRadius, upperChamferZ, true)
   probe(
     'upper-chamfer-outside',
