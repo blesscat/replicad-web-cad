@@ -11,11 +11,15 @@ import {
   type Shape3D,
 } from 'replicad'
 import {
+  openGridOpenShelfDividerCentersFor,
+  openGridOpenShelfFootprintFor,
+  openGridOpenShelfShelfLowerSurfaceZFor,
   openGridStackableBoxActiveFloorTopZFor,
   openGridStackableCylinderDerivedGeometryFor,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   OPENGRID_HONEYCOMB_CONFIGURATION,
+  OPENGRID_OPEN_SHELF_CONFIGURATION,
   OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
 } from '../../src/cad-contract/units'
 import {
@@ -66,6 +70,30 @@ function boundsOf(shape: Shape3D): number[][] {
     return bounds.bounds as number[][]
   } finally {
     bounds.delete()
+  }
+}
+
+function cutterBoundsDescriptor(cutter: Shape3D) {
+  const bounds = boundsOf(cutter)
+  return {
+    cutter,
+    minimum: bounds[0]!,
+    maximum: bounds[1]!,
+    centerX: (bounds[0]![0]! + bounds[1]![0]!) / 2,
+    centerY: (bounds[0]![1]! + bounds[1]![1]!) / 2,
+    centerZ: (bounds[0]![2]! + bounds[1]![2]!) / 2,
+    spanX: bounds[1]![0]! - bounds[0]![0]!,
+    spanY: bounds[1]![1]! - bounds[0]![1]!,
+    spanZ: bounds[1]![2]! - bounds[0]![2]!,
+  }
+}
+
+function hasCylindricalFace(shape: Shape3D): boolean {
+  const faces = shape.faces
+  try {
+    return faces.some((face) => face.surface.surfaceType === 'CYLINDRE')
+  } finally {
+    faces.forEach((face) => face.delete())
   }
 }
 
@@ -299,8 +327,20 @@ describe('OpenGrid honeycomb material-saving builders', () => {
       0,
     )
 
-    const wallOpening = positiveXSideCutterDescriptors(wallCutters)[0]
-    const bottomOpeningBounds = boundsOf(plateCutters[0]!)
+    const wallOpening = positiveXSideCutterDescriptors(wallCutters).toSorted(
+      (first, second) =>
+        second.spanY * second.spanZ - first.spanY * first.spanZ,
+    )[0]
+    const bottomOpeningBounds = plateCutters
+      .map((cutter) => boundsOf(cutter))
+      .filter((bounds) => bounds[0]![2]! < 0)
+      .toSorted((first, second) => {
+        const firstArea =
+          (first[1]![0]! - first[0]![0]!) * (first[1]![1]! - first[0]![1]!)
+        const secondArea =
+          (second[1]![0]! - second[0]![0]!) * (second[1]![1]! - second[0]![1]!)
+        return secondArea - firstArea
+      })[0]!
     const bottomSpanX =
       bottomOpeningBounds[1]![0]! - bottomOpeningBounds[0]![0]!
     const bottomSpanY =
@@ -308,6 +348,189 @@ describe('OpenGrid honeycomb material-saving builders', () => {
     expect(wallOpening).toBeDefined()
     expect(bottomSpanX).toBeLessThan(wallOpening!.spanY)
     expect(bottomSpanY).toBeLessThan(wallOpening!.spanZ)
+  })
+
+  it('clips Open Shelf openings at every panel family and exact peg keep-out', () => {
+    const parameters = {
+      ...OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
+      cellX: 2,
+      honeycombMode: true,
+    }
+    const wallCutters = makeOpenGridOpenShelfWallHoneycombCutters(parameters)
+    const plateCutters = makeOpenGridOpenShelfPlateHoneycombCutters(parameters)
+    ;[...wallCutters, ...plateCutters].forEach((cutter) =>
+      createdShapes.push(cutter),
+    )
+
+    const [width] = openGridOpenShelfFootprintFor(parameters)
+    const shelfConfiguration = OPENGRID_OPEN_SHELF_CONFIGURATION
+    const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
+    const wallDescriptors = wallCutters.map(cutterBoundsDescriptor)
+    const plateDescriptors = plateCutters.map(cutterBoundsDescriptor)
+    const dividerCenter = openGridOpenShelfDividerCentersFor(parameters)[0]!
+    const outerWalls = wallDescriptors.filter(
+      (entry) =>
+        entry.spanX < entry.spanY &&
+        Math.abs(entry.centerX) >
+          width / 2 - shelfConfiguration.outerWallThickness - 0.2,
+    )
+    const dividers = wallDescriptors.filter(
+      (entry) =>
+        entry.spanX < entry.spanY &&
+        Math.abs(entry.centerX - dividerCenter) < 0.2,
+    )
+    const backboard = wallDescriptors.filter(
+      (entry) => entry.spanY < entry.spanX,
+    )
+
+    const angle = (parameters.angle * Math.PI) / 180
+    const completeWallSpanY =
+      Math.sqrt(3) * honeycomb.cellRadius * Math.cos(angle) +
+      honeycomb.cellRadius * 2 * Math.sin(angle)
+    const completeWallSpanZ =
+      Math.sqrt(3) * honeycomb.cellRadius * Math.sin(angle) +
+      honeycomb.cellRadius * 2 * Math.cos(angle)
+    const hasClippedVerticalCell = (
+      entries: ReturnType<typeof cutterBoundsDescriptor>[],
+    ) =>
+      entries.some(
+        (entry) =>
+          entry.spanY < completeWallSpanY - 0.05 ||
+          entry.spanZ < completeWallSpanZ - 0.05,
+      )
+    expect(hasClippedVerticalCell(outerWalls), 'outer side walls').toBe(true)
+    expect(hasClippedVerticalCell(dividers), 'internal dividers').toBe(true)
+
+    const completeSideSpanX = Math.sqrt(3) * honeycomb.cellRadius
+    const completeSideSpanZ = honeycomb.cellRadius * 2
+    expect(
+      backboard.some(
+        (entry) =>
+          entry.spanX < completeSideSpanX - 0.05 ||
+          entry.spanZ < completeSideSpanZ - 0.05,
+      ),
+      'backboard',
+    ).toBe(true)
+
+    const bottom = plateDescriptors.filter((entry) => entry.minimum[2]! < 0)
+    const slopedPlates = plateDescriptors.filter(
+      (entry) => entry.minimum[2]! >= 0,
+    )
+    const completePlateSpanX = Math.sqrt(3) * honeycomb.bottomLattice.cellRadius
+    const completePlateSpanY = honeycomb.bottomLattice.cellRadius * 2
+    expect(
+      bottom.some(
+        (entry) =>
+          entry.spanX < completePlateSpanX - 0.05 ||
+          entry.spanY < completePlateSpanY - 0.05,
+      ),
+      'bottom panel',
+    ).toBe(true)
+    expect(
+      slopedPlates.some((entry) => entry.spanX < completePlateSpanX - 0.05),
+      'inclined shelves and top panel',
+    ).toBe(true)
+    expect(
+      bottom.some((entry) => hasCylindricalFace(entry.cutter)),
+      'exact circular locating-peg keep-out',
+    ).toBe(true)
+  })
+
+  it('opens the inclined bottom wedge on outer walls and dividers', () => {
+    const parameters = {
+      ...OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
+      cellX: 2,
+      honeycombMode: true,
+    }
+    const cutters = makeOpenGridOpenShelfWallHoneycombCutters(parameters)
+    cutters.forEach((cutter) => createdShapes.push(cutter))
+
+    const descriptors = cutters.map(cutterBoundsDescriptor)
+    const [width, depth] = openGridOpenShelfFootprintFor(parameters)
+    const dividerCenter = openGridOpenShelfDividerCentersFor(parameters)[0]!
+    const [shelfFrontZ, shelfRearZ] = openGridOpenShelfShelfLowerSurfaceZFor(
+      parameters,
+      1,
+    )
+    const yFront = -depth / 2
+    const firstShelfLowerZAt = (y: number) =>
+      shelfFrontZ + ((y - yFront) / depth) * (shelfRearZ - shelfFrontZ)
+    const wedgeCutters = descriptors.filter(
+      (entry) =>
+        entry.spanX < entry.spanY &&
+        entry.maximum[2]! < firstShelfLowerZAt(entry.centerY) - 0.05,
+    )
+    const outerWedgeCutter = wedgeCutters.find(
+      (entry) =>
+        Math.abs(entry.centerX) >
+        width / 2 - OPENGRID_OPEN_SHELF_CONFIGURATION.outerWallThickness - 0.2,
+    )
+    const dividerWedgeCutter = wedgeCutters.find(
+      (entry) => Math.abs(entry.centerX - dividerCenter) < 0.2,
+    )
+
+    expect(outerWedgeCutter, 'outer side bottom wedge').toBeDefined()
+    expect(dividerWedgeCutter, 'divider bottom wedge').toBeDefined()
+    const bridge = OPENGRID_HONEYCOMB_CONFIGURATION.ribThickness / 2
+    for (const entry of [outerWedgeCutter, dividerWedgeCutter]) {
+      if (!entry) continue
+      expect(entry.minimum[2]!).toBeGreaterThanOrEqual(
+        OPENGRID_OPEN_SHELF_CONFIGURATION.bottomThickness + bridge - 0.01,
+      )
+      expect(entry.maximum[2]!).toBeLessThanOrEqual(
+        firstShelfLowerZAt(entry.minimum[1]!) - bridge + 0.01,
+      )
+    }
+  })
+
+  it('keeps inclined Open Shelf front and rear rails outside every wall cutter', () => {
+    const parameters = {
+      ...OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
+      height: 200,
+      cellX: 2,
+      cellZ: 2,
+      angle: 15,
+      honeycombMode: true,
+    }
+    const cutters = makeOpenGridOpenShelfWallHoneycombCutters(parameters)
+    cutters.forEach((cutter) => createdShapes.push(cutter))
+
+    const descriptors = cutters.map(cutterBoundsDescriptor)
+    const [width, depth] = openGridOpenShelfFootprintFor(parameters)
+    const shelfConfiguration = OPENGRID_OPEN_SHELF_CONFIGURATION
+    const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
+    const outerWallSpan =
+      shelfConfiguration.outerWallThickness + honeycomb.cutterMargin * 2
+    const dividerSpan =
+      shelfConfiguration.innerPlateThickness + honeycomb.cutterMargin * 2
+    const outerWallCenters = [
+      -width / 2 + shelfConfiguration.outerWallThickness / 2,
+      width / 2 - shelfConfiguration.outerWallThickness / 2,
+    ]
+    const dividerCenters = openGridOpenShelfDividerCentersFor(parameters)
+    const verticalPanelCutters = descriptors.filter((entry) => {
+      const isOuterWall =
+        Math.abs(entry.spanX - outerWallSpan) < 0.01 &&
+        outerWallCenters.some(
+          (center) => Math.abs(entry.centerX - center) < 0.01,
+        )
+      const isDivider =
+        Math.abs(entry.spanX - dividerSpan) < 0.01 &&
+        dividerCenters.some((center) => Math.abs(entry.centerX - center) < 0.01)
+      return isOuterWall || isDivider
+    })
+    expect(verticalPanelCutters.length).toBeGreaterThan(0)
+
+    const safeFrontY = -depth / 2 + honeycomb.sideFrame
+    const safeRearY = depth / 2 - honeycomb.sideFrame
+    for (const entry of verticalPanelCutters) {
+      expect(entry.minimum[1]!, 'front rail').toBeGreaterThanOrEqual(
+        safeFrontY - 0.01,
+      )
+      expect(entry.maximum[1]!, 'rear rail').toBeLessThanOrEqual(
+        safeRearY + 0.01,
+      )
+    }
   })
 
   it('centers every staggered row within a box panel', () => {

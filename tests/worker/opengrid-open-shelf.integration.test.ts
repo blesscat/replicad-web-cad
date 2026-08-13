@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { beforeAll, describe, expect, it } from 'vitest'
 import {
   makeBox,
+  makeCompound,
   makeCylinder,
   measureVolume,
   setOC,
@@ -11,6 +12,7 @@ import {
 } from 'replicad'
 import {
   boundsForOpenGridOpenShelf,
+  openGridOpenShelfDividerCentersFor,
   openGridOpenShelfDepthFor,
   openGridOpenShelfFootprintFor,
   openGridOpenShelfFrontToRearElevationFor,
@@ -65,6 +67,43 @@ function deleteShape(shape: Shape3D | null | undefined): void {
   }
 }
 
+function expectCutterRemovedFromShape(
+  cutter: Shape3D,
+  baseline: Shape3D,
+  honeycomb: Shape3D,
+): void {
+  let baselineIntersection: Shape3D | null = null
+  let honeycombIntersection: Shape3D | null = null
+  try {
+    baselineIntersection = baseline.intersect(cutter)
+    honeycombIntersection = honeycomb.intersect(cutter)
+    expect(measureVolume(baselineIntersection)).toBeGreaterThan(0)
+    expect(measureVolume(honeycombIntersection)).toBeCloseTo(0, 4)
+  } finally {
+    deleteShape(baselineIntersection)
+    deleteShape(honeycombIntersection)
+  }
+}
+
+function expectProbePreservedInShape(
+  probe: Shape3D,
+  baseline: Shape3D,
+  honeycomb: Shape3D,
+): void {
+  let baselineIntersection: Shape3D | null = null
+  let honeycombIntersection: Shape3D | null = null
+  try {
+    baselineIntersection = baseline.intersect(probe)
+    honeycombIntersection = honeycomb.intersect(probe)
+    const baselineVolume = measureVolume(baselineIntersection)
+    expect(baselineVolume).toBeGreaterThan(0)
+    expect(measureVolume(honeycombIntersection)).toBeCloseTo(baselineVolume, 4)
+  } finally {
+    deleteShape(baselineIntersection)
+    deleteShape(honeycombIntersection)
+  }
+}
+
 function expectBoundsClose(
   actual: number[][],
   expected: ReturnType<typeof boundsForOpenGridOpenShelf>,
@@ -81,6 +120,7 @@ describe('OpenGrid open-shelf CAD kernel integration', () => {
   it('uses protected Hex Mesh to reduce material without changing bounds or pegs', async () => {
     const baselineParameters: OpenGridOpenShelfParameters = {
       ...OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
+      cellX: 2,
       honeycombMode: false,
     }
     const honeycombParameters: OpenGridOpenShelfParameters = {
@@ -146,12 +186,25 @@ describe('OpenGrid open-shelf CAD kernel integration', () => {
 
       const wallCutters =
         makeOpenGridOpenShelfWallHoneycombCutters(honeycombParameters)
-      let wallProbe: Shape3D | null = null
-      let baselineWallIntersection: Shape3D | null = null
-      let honeycombWallIntersection: Shape3D | null = null
       try {
-        const [width] = openGridOpenShelfFootprintFor(honeycombParameters)
-        const sideWallCutter = wallCutters.find((cutter) => {
+        const [width, depth] =
+          openGridOpenShelfFootprintFor(honeycombParameters)
+        const dividerCenter =
+          openGridOpenShelfDividerCentersFor(honeycombParameters)[0]
+        const [shelfFrontZ, shelfRearZ] =
+          openGridOpenShelfShelfLowerSurfaceZFor(honeycombParameters, 1)
+        const yFront = -depth / 2
+        const firstShelfLowerZAt = (y: number) =>
+          shelfFrontZ + ((y - yFront) / depth) * (shelfRearZ - shelfFrontZ)
+        const wedgeCutters = wallCutters.filter((cutter) => {
+          const bounds = boundsOf(cutter)
+          return (
+            bounds[1]![0]! - bounds[0]![0]! < bounds[1]![1]! - bounds[0]![1]! &&
+            bounds[1]![2]! <
+              firstShelfLowerZAt((bounds[0]![1]! + bounds[1]![1]!) / 2) - 0.05
+          )
+        })
+        const sideWallCutter = wedgeCutters.find((cutter) => {
           const bounds = boundsOf(cutter)
           return (
             bounds[0]![0]! >
@@ -160,24 +213,62 @@ describe('OpenGrid open-shelf CAD kernel integration', () => {
               0.1
           )
         })
-        expect(sideWallCutter).toBeDefined()
-        const cutterBounds = boundsOf(sideWallCutter!)
-        const centerX = (cutterBounds[0]![0]! + cutterBounds[1]![0]!) / 2
-        const centerY = (cutterBounds[0]![1]! + cutterBounds[1]![1]!) / 2
-        const centerZ = (cutterBounds[0]![2]! + cutterBounds[1]![2]!) / 2
-        wallProbe = makeBox(
-          [centerX - 0.2, centerY - 0.2, centerZ - 0.2],
-          [centerX + 0.2, centerY + 0.2, centerZ + 0.2],
-        )
-        baselineWallIntersection = baseline.intersect(wallProbe)
-        honeycombWallIntersection = honeycomb.intersect(wallProbe)
-        expect(measureVolume(baselineWallIntersection)).toBeGreaterThan(0)
-        expect(measureVolume(honeycombWallIntersection)).toBeCloseTo(0, 4)
+        const dividerCutter = wedgeCutters.find((cutter) => {
+          if (dividerCenter === undefined) return false
+          const bounds = boundsOf(cutter)
+          const centerX = (bounds[0]![0]! + bounds[1]![0]!) / 2
+          return Math.abs(centerX - dividerCenter) < 0.1
+        })
+        expect(sideWallCutter, 'outer-side bottom wedge').toBeDefined()
+        expect(dividerCutter, 'divider bottom wedge').toBeDefined()
+        for (const cutter of [sideWallCutter, dividerCutter]) {
+          if (!cutter) continue
+          expectCutterRemovedFromShape(cutter, baseline, honeycomb)
+        }
+
+        const [secondShelfFrontZ, secondShelfRearZ] =
+          openGridOpenShelfShelfLowerSurfaceZFor(honeycombParameters, 2)
+        const shelfVerticalThickness =
+          OPENGRID_OPEN_SHELF_CONFIGURATION.innerPlateThickness *
+          Math.cos((honeycombParameters.angle * Math.PI) / 180)
+        const railYs = [yFront + 3, -yFront - 3]
+        const panelCenters = [
+          width / 2 - OPENGRID_OPEN_SHELF_CONFIGURATION.outerWallThickness / 2,
+          dividerCenter,
+        ]
+        const railProbes: Shape3D[] = []
+        let railProbeGroup: Shape3D | null = null
+        try {
+          for (const centerX of panelCenters) {
+            if (centerX === undefined) continue
+            for (const centerY of railYs) {
+              const interpolation = (centerY - yFront) / depth
+              const firstShelfLowerZ =
+                shelfFrontZ + interpolation * (shelfRearZ - shelfFrontZ)
+              const secondShelfLowerZ =
+                secondShelfFrontZ +
+                interpolation * (secondShelfRearZ - secondShelfFrontZ)
+              const centerZ =
+                (firstShelfLowerZ +
+                  shelfVerticalThickness +
+                  secondShelfLowerZ) /
+                2
+              railProbes.push(
+                makeBox(
+                  [centerX - 0.2, centerY - 0.2, centerZ - 0.2],
+                  [centerX + 0.2, centerY + 0.2, centerZ + 0.2],
+                ),
+              )
+            }
+          }
+          railProbeGroup = makeCompound(railProbes).asShape3D()
+          expectProbePreservedInShape(railProbeGroup, baseline, honeycomb)
+        } finally {
+          deleteShape(railProbeGroup)
+          railProbes.forEach(deleteShape)
+        }
       } finally {
         wallCutters.forEach(deleteShape)
-        deleteShape(wallProbe)
-        deleteShape(baselineWallIntersection)
-        deleteShape(honeycombWallIntersection)
       }
 
       for (const center of openGridOpenShelfPegCentersFor(
@@ -211,7 +302,7 @@ describe('OpenGrid open-shelf CAD kernel integration', () => {
       deleteShape(baseline)
       deleteShape(honeycomb)
     }
-  }, 180_000)
+  }, 240_000)
 
   it('keeps a valid solid when protected panels have no complete Hex Mesh cells', async () => {
     const baselineParameters: OpenGridOpenShelfParameters = {

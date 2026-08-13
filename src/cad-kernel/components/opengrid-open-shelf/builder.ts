@@ -146,11 +146,14 @@ async function applyHoneycombMode(
   let wallCutters: Shape3D[] = []
   let plateCutters: Shape3D[] = []
   try {
-    wallCutters = makeOpenGridOpenShelfWallHoneycombCutters(parameters)
+    wallCutters = makeOpenGridOpenShelfWallHoneycombCutters(parameters, context)
     shape = await cutHoneycombGroup(shape, wallCutters, context)
     wallCutters = []
     assertGenerationCurrent(context)
-    plateCutters = makeOpenGridOpenShelfPlateHoneycombCutters(parameters)
+    plateCutters = makeOpenGridOpenShelfPlateHoneycombCutters(
+      parameters,
+      context,
+    )
     shape = await cutHoneycombGroup(shape, plateCutters, context)
     plateCutters = []
     return shape

@@ -34,7 +34,7 @@ The validator MUST reject non-finite, fractional, unknown, missing geometric, ou
 
 ### Requirement: Open Shelf has a protected Hex Mesh material-saving mode
 
-When `honeycombMode=true`, Open Shelf MUST use the same point-up, complete-cell Hex Mesh derivation as the stackable containers. Eligible outer side walls, internal X dividers, and backboard MUST use the side-cell lattice. Eligible bottom, inclined shelf, and top panels MUST use the smaller floor-cell lattice. The mode MUST retain continuous printable ribs and MUST NOT implement the separate vertical-groove Ribbed style.
+When `honeycombMode=true`, Open Shelf MUST use the same point-up Hex Mesh derivation and protected-boundary clipping behavior as the stackable containers. Eligible outer side walls, internal X dividers, and backboard MUST use the side-cell lattice. Eligible bottom, inclined shelf, and top panels MUST use the smaller floor-cell lattice. Complete and clipped openings MUST retain continuous printable ribs, and the mode MUST NOT implement the separate vertical-groove Ribbed style.
 
 #### Scenario: Disabled mode preserves the merged Open Shelf geometry
 
@@ -44,16 +44,27 @@ When `honeycombMode=true`, Open Shelf MUST use the same point-up, complete-cell 
 #### Scenario: Vertical panels use protected side Hex Mesh
 
 - **WHEN** a valid Open Shelf has `honeycombMode=true`
-- **THEN** eligible outer side walls, internal X dividers, and backboard MUST contain complete staggered side-lattice openings
+- **THEN** eligible outer side walls, internal X dividers, and backboard MUST contain complete and safely clipped staggered side-lattice openings
 - **AND** the rounded outer perimeter, front and rear rails, top and bottom rails, shelf-contact bridges, divider-contact bridges, and backboard contacts MUST remain solid
+- **AND** cells intersecting those protected boundaries MUST be clipped to the safe region instead of discarded wholesale
+- **AND** usable vertical-panel areas MUST NOT contain avoidable broad solid bands caused only by complete-cell rejection
+
+#### Scenario: Inclined shelves open the usable bottom-wedge sides
+
+- **WHEN** a valid Open Shelf has `honeycombMode=true`, `angle>0`, and safe opening area between the bottom rail and first inclined shelf bridge
+- **THEN** each eligible outer side wall and internal X divider MUST contain side-lattice openings in that bottom-wedge area
+- **AND** cells crossing the horizontal bottom boundary or inclined first-shelf boundary MUST be clipped while both structural bridges remain solid
+- **AND** the wedge MUST remain solid only where no valid protected opening area fits
 
 #### Scenario: Bottom and shelf panels use finer Hex Mesh
 
 - **WHEN** a valid Open Shelf has `honeycombMode=true`
-- **THEN** eligible bottom, inclined shelf, and top panels MUST contain complete staggered openings smaller than the side-wall openings
+- **THEN** eligible bottom, inclined shelf, and top panels MUST contain complete and safely clipped staggered openings smaller than the side-wall openings
 - **AND** eligible plate openings MUST pass through their panel so the Hex Mesh remains visible from either exposed face
 - **AND** side, front, rear, divider, and panel-intersection bridges MUST remain solid
 - **AND** no bottom opening may intersect a locating peg or its structural keep-out
+- **AND** cells intersecting a protected perimeter, bridge, or locating-peg keep-out MUST be clipped to that boundary instead of discarded wholesale
+- **AND** usable plate areas MUST NOT contain avoidable broad solid bands caused only by complete-cell rejection
 
 #### Scenario: Material-saving Open Shelf preserves its contract
 
@@ -65,6 +76,6 @@ When `honeycombMode=true`, Open Shelf MUST use the same point-up, complete-cell 
 
 #### Scenario: Small protected panels use a valid no-cell fallback
 
-- **WHEN** a panel cannot contain a complete cell after all frames and structural keep-outs
+- **WHEN** a panel or bottom-wedge side cannot contain a valid opening after all frames and structural keep-outs are applied
 - **THEN** that panel MUST remain solid
-- **AND** other eligible Open Shelf panels MAY still use Hex Mesh
+- **AND** other eligible Open Shelf panels MUST still use Hex Mesh where valid protected opening area remains

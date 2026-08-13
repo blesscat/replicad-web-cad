@@ -1,6 +1,6 @@
 ## Why
 
-The first honeycomb implementation preserves the existing container shell and cuts widely separated hexagons from it. That produces isolated openings instead of the continuous, printable Hex Mesh structure intended for the material-saving mode.
+The first honeycomb implementation preserves the existing container shell and cuts widely separated hexagons from it. That produces isolated openings instead of the continuous, printable Hex Mesh structure intended for the material-saving mode. Open Shelf also rejects every boundary-crossing cell and omits the sloped cabinet's bottom wedge from its side lattice, leaving avoidable solid bands that do not match the container behavior.
 
 ## What Changes
 
@@ -13,6 +13,8 @@ The first honeycomb implementation preserves the existing container shell and cu
 - Extend container side-wall patterns to their protected perimeter and side-opening bridges by clipping intersecting boundary cells instead of leaving avoidable whole-cell solid bands.
 - Compensate cylinder side cutters for inner-wall curvature across the full hex width so clipped and complete openings cut cleanly through both curved wall faces.
 - Add the same optional `honeycombMode` to the newly merged Open Shelf, including its side/divider walls, backboard, bottom, shelves, and top panel, with the locating pegs and panel intersections protected.
+- Extend Open Shelf Hex Mesh across every eligible panel boundary by clipping intersecting cells at perimeter frames, panel-contact bridges, divider bridges, and locating-peg keep-outs instead of discarding the whole cell.
+- Include the usable side and divider area of the bottom wedge whenever the Open Shelf has a positive angle, while retaining the bottom and first-shelf structural bridges and a valid solid fallback when no printable opening fits.
 - Preserve existing model IDs, routes, legacy parameter hydration, normal-mode geometry, bottom holes, mounting/stacking interfaces, side openings, preview lifecycle, and STEP/STL export behavior.
 - Add behavior-focused geometry tests for rib spacing, connected mesh coverage, interface keep-outs, valid solids, and material reduction.
 
@@ -26,7 +28,7 @@ None.
 
 - `opengrid-stackable-box`: require `honeycombMode` to generate a continuous Hex Mesh profile on eligible walls/floor regions while preserving existing interfaces and openings.
 - `opengrid-stackable-cylinder`: require `honeycombMode` to generate a continuous Hex Mesh profile on eligible cylindrical wall/floor regions while preserving existing interfaces and openings.
-- `opengrid-open-shelf`: add an optional protected Hex Mesh profile while preserving its front opening, shared inclination, panel intersections, rounded frame, and locating pegs.
+- `opengrid-open-shelf`: add an optional protected Hex Mesh profile whose complete and clipped cells cover every eligible panel, including the usable bottom-wedge sides of an inclined shelf, while preserving its front opening, shared inclination, panel intersections, rounded frame, and locating pegs.
 - `cad-workspace`: expose and type the Open Shelf material-saving toggle without changing its six geometric controls.
 - `component-parameter-persistence`: persist the Open Shelf toggle and hydrate six-field legacy snapshots with the mode disabled.
 
@@ -34,4 +36,4 @@ None.
 
 - Updates the shared honeycomb geometry contract and Worker-only lattice construction in `src/cad-kernel/lattice/opengrid-honeycomb.ts`.
 - Adjusts the box, cylinder, and Open Shelf honeycomb application stages and their native-shape cleanup paths.
-- Extends contract, workspace, unit, and Worker geometry coverage without adding dependencies or changing public model identifiers.
+- Extends contract, workspace, unit, and Worker geometry coverage, including clipped-cell and inclined bottom-wedge regressions, without adding dependencies or changing public model identifiers.
