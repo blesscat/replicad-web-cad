@@ -52,7 +52,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
     expect(validation.valid).toBe(true)
     if (!validation.valid) return
     expect(validation.value.honeycombMode).toBe(true)
-    expect(validation.value.bottomHolesEnabled).toBe(true)
+    expect(validation.value.bottomSeatMode).toBe('hole')
   })
   it('keeps manual height at 500 mm while limiting the slider to 200 mm', () => {
     expect(OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.heightSliderMax).toBe(200)
@@ -485,10 +485,10 @@ describe('OpenGrid stackable-cylinder contract', () => {
     const value = parameters({ honeycombMode: true })
 
     expect(openGridStackableCylinderFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-honeycomb.step',
+      'opengrid-stackable-cylinder-d60-h20-seats-hole-honeycomb.step',
     )
     expect(openGridStackableCylinderStlFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-honeycomb.stl',
+      'opengrid-stackable-cylinder-d60-h20-seats-hole-honeycomb.stl',
     )
   })
 
@@ -496,17 +496,17 @@ describe('OpenGrid stackable-cylinder contract', () => {
     const value = parameters({
       honeycombMode: true,
       thinBottomMode: true,
-      bottomHolesEnabled: false,
+      bottomSeatMode: 'none',
       openingPlusXDepth: 8,
       openingPlusXBottomLength: 12,
       openingPlusXAngle: 70,
     })
 
     expect(openGridStackableCylinderFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-thin-honeycomb-no-holes-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
+      'opengrid-stackable-cylinder-d60-h20-seats-none-thin-honeycomb-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
     )
     expect(openGridStackableCylinderStlFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-thin-honeycomb-no-holes-open-8-12-70_0-1-90_0-1-90_0-1-90.stl',
+      'opengrid-stackable-cylinder-d60-h20-seats-none-thin-honeycomb-open-8-12-70_0-1-90_0-1-90_0-1-90.stl',
     )
   })
 

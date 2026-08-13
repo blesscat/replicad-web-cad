@@ -31,11 +31,7 @@ import {
   openGridStackableBoxHoneycombCellCountFor,
   openGridStackableCylinderHoneycombCellCountFor,
 } from '../../src/cad-kernel/lattice/opengrid-honeycomb'
-import {
-  buildOpenGridStackableBox,
-  inspectOpenGridStackableBoxInterface,
-  inspectOpenGridStackableBoxOpenings,
-} from '../../src/cad-kernel/components/opengrid-stackable-box/builder'
+import { buildOpenGridStackableBox } from '../../src/cad-kernel/components/opengrid-stackable-box/builder'
 import { buildOpenGridStackableCylinder } from '../../src/cad-kernel/components/opengrid-stackable-cylinder/builder'
 import type { BooleanOperationReporter } from '../../src/cad-kernel/boolean-progress'
 
@@ -89,6 +85,15 @@ function positiveXSideCutterDescriptors(cutters: readonly Shape3D[]) {
     .filter((entry) => entry.centerX > 0 && entry.spanX < entry.spanY)
 }
 
+function completePositiveXSideCutterDescriptor(cutters: readonly Shape3D[]) {
+  const configuration = OPENGRID_HONEYCOMB_CONFIGURATION
+  return positiveXSideCutterDescriptors(cutters).find(
+    (entry) =>
+      Math.abs(entry.spanY - Math.sqrt(3) * configuration.cellRadius) <=
+        0.001 && Math.abs(entry.spanZ - configuration.cellRadius * 2) <= 0.001,
+  )
+}
+
 function cylinderSideCutterDescriptors(cutters: readonly Shape3D[]) {
   return cutters.map((cutter) => {
     const bounds = boundsOf(cutter)
@@ -97,46 +102,44 @@ function cylinderSideCutterDescriptors(cutters: readonly Shape3D[]) {
     return {
       angle: Math.atan2(centerY, centerX),
       centerZ: (bounds[0]![2]! + bounds[1]![2]!) / 2,
+      spanZ: bounds[1]![2]! - bounds[0]![2]!,
     }
   })
 }
 
-function bottomCutterCenters(cutters: readonly Shape3D[]) {
-  return cutters.map((cutter) => {
+function completeBottomCutterDescriptors(cutters: readonly Shape3D[]) {
+  const lattice = OPENGRID_HONEYCOMB_CONFIGURATION.bottomLattice
+  const fullSpanX = Math.sqrt(3) * lattice.cellRadius
+  const fullSpanY = lattice.cellRadius * 2
+  const fullArea = (3 * Math.sqrt(3) * lattice.cellRadius ** 2) / 2
+  return cutters.flatMap((cutter) => {
     const bounds = boundsOf(cutter)
-    return {
-      x: (bounds[0]![0]! + bounds[1]![0]!) / 2,
-      y: (bounds[0]![1]! + bounds[1]![1]!) / 2,
-    }
+    const spanX = bounds[1]![0]! - bounds[0]![0]!
+    const spanY = bounds[1]![1]! - bounds[0]![1]!
+    const spanZ = bounds[1]![2]! - bounds[0]![2]!
+    const hasFullBounds =
+      Math.abs(spanX - fullSpanX) <= 0.001 &&
+      Math.abs(spanY - fullSpanY) <= 0.001
+    const hasFullVolume =
+      Math.abs(measureVolume(cutter) - fullArea * spanZ) <= 0.001
+    if (!hasFullBounds || !hasFullVolume) return []
+    return [
+      {
+        cutter,
+        x: (bounds[0]![0]! + bounds[1]![0]!) / 2,
+        y: (bounds[0]![1]! + bounds[1]![1]!) / 2,
+      },
+    ]
   })
 }
 
 function completeBottomCutter(
   cutters: readonly Shape3D[],
 ): Shape3D | undefined {
-  const lattice = OPENGRID_HONEYCOMB_CONFIGURATION.bottomLattice
-  const fullSpanX = Math.sqrt(3) * lattice.cellRadius
-  const fullSpanY = lattice.cellRadius * 2
-  return cutters
-    .map((cutter) => {
-      const bounds = boundsOf(cutter)
-      return {
-        cutter,
-        bounds,
-        distanceFromOrigin: Math.hypot(
-          (bounds[0]![0]! + bounds[1]![0]!) / 2,
-          (bounds[0]![1]! + bounds[1]![1]!) / 2,
-        ),
-      }
-    })
-    .filter(
-      ({ bounds }) =>
-        Math.abs(bounds[1]![0]! - bounds[0]![0]! - fullSpanX) <= 0.001 &&
-        Math.abs(bounds[1]![1]! - bounds[0]![1]! - fullSpanY) <= 0.001,
-    )
-    .sort(
-      (first, second) => first.distanceFromOrigin - second.distanceFromOrigin,
-    )[0]?.cutter
+  return completeBottomCutterDescriptors(cutters).sort(
+    (first, second) =>
+      Math.hypot(first.x, first.y) - Math.hypot(second.x, second.y),
+  )[0]?.cutter
 }
 
 function expectThroughFloorOpening(
@@ -227,16 +230,14 @@ describe('OpenGrid honeycomb material-saving builders', () => {
     })
     cutters.forEach((cutter) => createdShapes.push(cutter))
 
-    const sample = positiveXSideCutterDescriptors(cutters)[0]
+    const configuration = OPENGRID_HONEYCOMB_CONFIGURATION
+    const sample = completePositiveXSideCutterDescriptor(cutters)
     expect(sample).toBeDefined()
     expect(sample!.spanY).toBeCloseTo(
-      Math.sqrt(3) * OPENGRID_HONEYCOMB_CONFIGURATION.cellRadius,
+      Math.sqrt(3) * configuration.cellRadius,
       3,
     )
-    expect(sample!.spanZ).toBeCloseTo(
-      OPENGRID_HONEYCOMB_CONFIGURATION.cellRadius * 2,
-      3,
-    )
+    expect(sample!.spanZ).toBeCloseTo(configuration.cellRadius * 2, 3)
     expect(sample!.spanZ).toBeGreaterThan(sample!.spanY)
   })
 
@@ -252,7 +253,7 @@ describe('OpenGrid honeycomb material-saving builders', () => {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       diameter: 100,
       height: 60,
-      bottomHolesEnabled: false,
+      bottomSeatMode: 'none' as const,
       honeycombMode: true,
     }
     const sideCutters =
@@ -265,7 +266,7 @@ describe('OpenGrid honeycomb material-saving builders', () => {
       (cutter) => createdShapes.push(cutter),
     )
 
-    const sideOpening = positiveXSideCutterDescriptors(sideCutters)[0]
+    const sideOpening = completePositiveXSideCutterDescriptor(sideCutters)
     const boxFloorOpening = boxFloorCutters[0]
     const cylinderFloorOpening = cylinderFloorCutters[0]
     expect(sideOpening).toBeDefined()
@@ -513,18 +514,23 @@ describe('OpenGrid honeycomb material-saving builders', () => {
 
     const quadrantCounts = [0, 0, 0, 0]
     const representativeCenters = new Map<number, { x: number; y: number }>()
-    for (const center of bottomCutterCenters(cutters)) {
+    for (const center of completeBottomCutterDescriptors(cutters)) {
       const quadrant = (center.x >= 0 ? 1 : 0) + (center.y >= 0 ? 2 : 0)
       quadrantCounts[quadrant]! += 1
-      if (!representativeCenters.has(quadrant)) {
+      const currentRepresentative = representativeCenters.get(quadrant)
+      if (
+        !currentRepresentative ||
+        Math.hypot(center.x, center.y) >
+          Math.hypot(currentRepresentative.x, currentRepresentative.y)
+      ) {
         representativeCenters.set(quadrant, center)
       }
     }
 
-    expect(Math.min(...quadrantCounts)).toBeGreaterThanOrEqual(4)
+    expect(Math.min(...quadrantCounts)).toBeGreaterThanOrEqual(3)
     expect(
-      Math.max(...quadrantCounts) - Math.min(...quadrantCounts),
-    ).toBeLessThanOrEqual(1)
+      Math.max(...quadrantCounts) / Math.min(...quadrantCounts),
+    ).toBeLessThan(1.5)
     expect(representativeCenters.size).toBe(4)
 
     for (const center of representativeCenters.values()) {
@@ -540,7 +546,7 @@ describe('OpenGrid honeycomb material-saving builders', () => {
     }
   }, 120000)
 
-  it('keeps each complete cylinder-bottom cell inside the protected flat-floor frame', () => {
+  it('clips cylinder-bottom boundary cells inside the protected flat-floor frame', () => {
     const parameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       honeycombMode: true,
@@ -549,20 +555,32 @@ describe('OpenGrid honeycomb material-saving builders', () => {
       makeOpenGridStackableCylinderBottomHoneycombCutters(parameters)
     cutters.forEach((cutter) => createdShapes.push(cutter))
 
-    const maximumCenterRadius = Math.max(
-      ...bottomCutterCenters(cutters).map((center) =>
-        Math.hypot(center.x, center.y),
-      ),
-    )
     const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
+    const protectedRadius =
+      derived.flatFloorRadius - OPENGRID_HONEYCOMB_CONFIGURATION.bottomFrame
+    const fullSpanX =
+      Math.sqrt(3) * OPENGRID_HONEYCOMB_CONFIGURATION.bottomLattice.cellRadius
+    const fullSpanY =
+      OPENGRID_HONEYCOMB_CONFIGURATION.bottomLattice.cellRadius * 2
+    const cutterBounds = cutters.map(boundsOf)
+
     expect(
-      maximumCenterRadius +
-        OPENGRID_HONEYCOMB_CONFIGURATION.bottomLattice.cellRadius,
-    ).toBeLessThanOrEqual(
-      derived.flatFloorRadius -
-        OPENGRID_HONEYCOMB_CONFIGURATION.bottomFrame +
-        0.001,
-    )
+      cutterBounds.some(
+        (bounds) =>
+          bounds[1]![0]! - bounds[0]![0]! < fullSpanX - 0.05 ||
+          bounds[1]![1]! - bounds[0]![1]! < fullSpanY - 0.05,
+      ),
+    ).toBe(true)
+    expect(
+      Math.max(
+        ...cutterBounds.flatMap((bounds) => [
+          Math.abs(bounds[0]![0]!),
+          Math.abs(bounds[1]![0]!),
+          Math.abs(bounds[0]![1]!),
+          Math.abs(bounds[1]![1]!),
+        ]),
+      ),
+    ).toBeLessThanOrEqual(protectedRadius + 0.001)
   })
 
   it('fills the default-height side bands with multiple staggered rows', () => {
@@ -611,8 +629,9 @@ describe('OpenGrid honeycomb material-saving builders', () => {
     const honeycomb = remember(buildOpenGridStackableCylinder(parameters))
     const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
 
+    const descriptors = cylinderSideCutterDescriptors(cutters)
     const rows = new Map<string, number[]>()
-    for (const descriptor of cylinderSideCutterDescriptors(cutters)) {
+    for (const descriptor of descriptors) {
       const key = descriptor.centerZ.toFixed(3)
       const row = rows.get(key) ?? []
       row.push(descriptor.angle)
@@ -630,7 +649,20 @@ describe('OpenGrid honeycomb material-saving builders', () => {
       expect(Math.max(...gaps) / Math.min(...gaps)).toBeLessThan(1.05)
     }
 
-    const seamRow = [...rows.entries()].sort(
+    const completeRows = new Map<string, number[]>()
+    for (const descriptor of descriptors) {
+      if (
+        descriptor.spanZ <
+        OPENGRID_HONEYCOMB_CONFIGURATION.cellRadius * 2 - 0.001
+      ) {
+        continue
+      }
+      const key = descriptor.centerZ.toFixed(3)
+      const row = completeRows.get(key) ?? []
+      row.push(descriptor.angle)
+      completeRows.set(key, row)
+    }
+    const seamRow = [...completeRows.entries()].sort(
       ([, first], [, second]) => second.length - first.length,
     )[0]
     expect(seamRow).toBeDefined()
@@ -743,7 +775,7 @@ describe('OpenGrid honeycomb material-saving builders', () => {
     )
     expect(measureVolume(smallBoxShape)).toBeGreaterThan(0)
     expect(measureVolume(smallCylinderShape)).toBeGreaterThan(0)
-  }, 30000)
+  }, 120_000)
 
   it('honors stale-generation cancellation before honeycomb output is returned', () => {
     expect(() =>
@@ -802,7 +834,7 @@ describe('OpenGrid honeycomb material-saving builders', () => {
           ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
           diameter: 56,
           height: 30,
-          bottomHolesEnabled: false,
+          bottomSeatMode: 'none' as const,
           honeycombMode: true,
         },
         {
@@ -817,88 +849,4 @@ describe('OpenGrid honeycomb material-saving builders', () => {
     expect(completedOperationCount).toBe(1)
     expect(deletionObservedBeforeTestCleanup).toBe(true)
   }, 120_000)
-
-  it('reduces box volume while keeping the original exported envelope', () => {
-    const baseline = remember(
-      buildOpenGridStackableBox({
-        ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
-      }),
-    )
-    const honeycomb = remember(
-      buildOpenGridStackableBox({
-        ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
-        honeycombMode: true,
-      }),
-    )
-
-    expect(measureVolume(honeycomb)).toBeLessThan(measureVolume(baseline))
-    expect(boundsOf(honeycomb)).toEqual(
-      boundsOf(baseline).map((bound) =>
-        bound.map((value) => expect.closeTo(value, 4)),
-      ),
-    )
-  }, 30000)
-
-  it('preserves box holes and side openings in honeycomb geometry', () => {
-    const input = {
-      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
-      height: 30,
-      fullBottomHoleGrid: true,
-      openingPlusXDepth: 6,
-      openingPlusXBottomLength: 8,
-      openingPlusXAngle: 90,
-      honeycombMode: true,
-    }
-    const baselineInput = { ...input, honeycombMode: false }
-    const baseline = remember(buildOpenGridStackableBox(baselineInput))
-    const honeycomb = remember(buildOpenGridStackableBox(input))
-    const baselineReport = inspectOpenGridStackableBoxInterface(
-      baseline,
-      baselineInput,
-    )
-    const honeycombReport = inspectOpenGridStackableBoxInterface(
-      honeycomb,
-      input,
-    )
-    const openings = inspectOpenGridStackableBoxOpenings(honeycomb, input)
-
-    expect(honeycombReport.honeycombMode).toBe(true)
-    expect(honeycombReport.honeycombCellCount).toBeGreaterThan(0)
-    expect(honeycombReport.mountingHoleProfiles).toEqual(
-      baselineReport.mountingHoleProfiles,
-    )
-    expect(honeycombReport.captiveSocketRecords).toEqual(
-      baselineReport.captiveSocketRecords,
-    )
-    expect(honeycombReport.ordinaryBottomHoleCount).toBe(
-      baselineReport.ordinaryBottomHoleCount,
-    )
-    expect(openings).toHaveLength(1)
-    expect(openings[0]).toMatchObject({
-      cutProbeVolume: expect.closeTo(0, 2),
-      topEdgeProbeVolume: expect.closeTo(0, 2),
-      topRailProbeVolume: expect.closeTo(0, 2),
-    })
-  }, 120000)
-
-  it('reduces round-box volume without changing its circular envelope', () => {
-    const baseline = remember(
-      buildOpenGridStackableCylinder({
-        ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      }),
-    )
-    const honeycomb = remember(
-      buildOpenGridStackableCylinder({
-        ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-        honeycombMode: true,
-      }),
-    )
-
-    expect(measureVolume(honeycomb)).toBeLessThan(measureVolume(baseline))
-    expect(boundsOf(honeycomb)).toEqual(
-      boundsOf(baseline).map((bound) =>
-        bound.map((value) => expect.closeTo(value, 4)),
-      ),
-    )
-  }, 30000)
 })

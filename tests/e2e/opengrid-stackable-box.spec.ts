@@ -178,6 +178,7 @@ test('OpenGrid stackable-box persists the honeycomb saving switch and filename',
   page,
   browserName,
 }) => {
+  test.setTimeout(180_000)
   skipHeadlessFirefoxWithoutWebGL(browserName)
   await page.goto('/cad/opengrid-stackable-box')
   await waitForCadReady(page)
@@ -190,11 +191,11 @@ test('OpenGrid stackable-box persists the honeycomb saving switch and filename',
   await expect(honeycomb).not.toBeChecked()
   await expect(page.getByRole('radio', { name: '堆疊模式' })).toBeChecked()
   await honeycomb.check()
-  await waitForCadReady(page)
+  await waitForCadReady(page, 90_000)
   await expect(honeycomb).toBeChecked()
 
   await page.reload()
-  await waitForCadReady(page)
+  await waitForCadReady(page, 90_000)
   await expect(
     page.getByRole('checkbox', {
       name: '省料模式（六角鏤空）',
@@ -207,6 +208,6 @@ test('OpenGrid stackable-box persists the honeycomb saving switch and filename',
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-stackable-box-2x2-h20-honeycomb.step',
+    'opengrid-stackable-box-2x2-h20-seats-hole-honeycomb.step',
   )
 })

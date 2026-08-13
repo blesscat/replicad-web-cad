@@ -44,6 +44,12 @@ type HoneycombLattice = Readonly<{
   rowPitch: number
   cellRadius: number
 }>
+type Rectangle2D = Readonly<{
+  minimumU: number
+  maximumU: number
+  minimumV: number
+  maximumV: number
+}>
 
 const EPSILON = 0.0001
 const BOX_BOTTOM_CLIP_BATCH_SIZE = 128
@@ -106,6 +112,28 @@ function extrudePolygon(
   }
 }
 
+function extrudePolygonGroup(
+  plane: Plane,
+  origin: [number, number, number],
+  polygons: readonly (readonly Point2D[])[],
+  distance: number,
+  direction?: [number, number, number],
+): Shape3D {
+  const parts: Shape3D[] = []
+  try {
+    for (const polygon of polygons) {
+      parts.push(extrudePolygon(plane, origin, polygon, distance, direction))
+    }
+    if (parts.length === 0) {
+      throw new Error('OPENGRID_HONEYCOMB_PROFILE_EMPTY')
+    }
+    if (parts.length === 1) return parts.pop()!
+    return makeCompound(parts).asShape3D()
+  } finally {
+    parts.forEach(deleteShape)
+  }
+}
+
 function latticeCenters(
   spanU: number,
   spanV: number,
@@ -161,6 +189,36 @@ function boundaryOverlappingLatticeCenters(
   )
 }
 
+function sideBoundaryOverlappingLatticeCenters(
+  spanU: number,
+  spanV: number,
+  lattice: HoneycombLattice,
+): Point2D[] {
+  const horizontalCellExtent = (Math.sqrt(3) * lattice.cellRadius) / 2
+  const minimumU = -spanU / 2 - horizontalCellExtent + EPSILON
+  const maximumU = spanU / 2 + horizontalCellExtent - EPSILON
+  const rowCount = Math.ceil(spanV / lattice.rowPitch) + 1
+  const firstRowV = -((rowCount - 1) * lattice.rowPitch) / 2
+  const centers: Point2D[] = []
+
+  for (let row = 0; row < rowCount; row += 1) {
+    const offset = row % 2 === 0 ? 0 : lattice.anchorPitch / 2
+    const firstColumn = Math.ceil(
+      (minimumU - offset - EPSILON) / lattice.anchorPitch,
+    )
+    const lastColumn = Math.floor(
+      (maximumU - offset + EPSILON) / lattice.anchorPitch,
+    )
+    for (let column = firstColumn; column <= lastColumn; column += 1) {
+      centers.push([
+        column * lattice.anchorPitch + offset,
+        firstRowV + row * lattice.rowPitch,
+      ])
+    }
+  }
+  return centers
+}
+
 function clipPolygonToAxisBoundary(
   points: readonly Point2D[],
   axis: 0 | 1,
@@ -208,6 +266,19 @@ function clipPolygonToRectangle(
   return clipPolygonToAxisBoundary(clipped, 1, maximumV, false)
 }
 
+function clipPolygonToBounds(
+  points: readonly Point2D[],
+  bounds: Rectangle2D,
+): Point2D[] {
+  return clipPolygonToRectangle(
+    points,
+    bounds.minimumU,
+    bounds.maximumU,
+    bounds.minimumV,
+    bounds.maximumV,
+  )
+}
+
 function polygonArea(points: readonly Point2D[]): number {
   let doubledArea = 0
   for (let index = 0; index < points.length; index += 1) {
@@ -218,40 +289,106 @@ function polygonArea(points: readonly Point2D[]): number {
   return Math.abs(doubledArea) / 2
 }
 
+function polygonBounds(points: readonly Point2D[]): Rectangle2D {
+  const uCoordinates = points.map((point) => point[0])
+  const vCoordinates = points.map((point) => point[1])
+  return {
+    minimumU: Math.min(...uCoordinates),
+    maximumU: Math.max(...uCoordinates),
+    minimumV: Math.min(...vCoordinates),
+    maximumV: Math.max(...vCoordinates),
+  }
+}
+
+function rectangleIntersectsPolygon(
+  rectangle: Rectangle2D,
+  polygon: readonly Point2D[],
+): boolean {
+  const bounds = polygonBounds(polygon)
+  return (
+    bounds.minimumU < rectangle.maximumU - EPSILON &&
+    bounds.maximumU > rectangle.minimumU + EPSILON &&
+    bounds.minimumV < rectangle.maximumV - EPSILON &&
+    bounds.maximumV > rectangle.minimumV + EPSILON
+  )
+}
+
+function nonEmptyPolygons(
+  polygons: readonly (readonly Point2D[])[],
+): Point2D[][] {
+  return polygons
+    .filter((polygon) => polygon.length >= 3 && polygonArea(polygon) > EPSILON)
+    .map((polygon) => [...polygon])
+}
+
+function subtractRectangleFromPolygon(
+  polygon: readonly Point2D[],
+  rectangle: Rectangle2D,
+): Point2D[][] {
+  if (!rectangleIntersectsPolygon(rectangle, polygon)) return [[...polygon]]
+
+  const left = clipPolygonToAxisBoundary(polygon, 0, rectangle.minimumU, false)
+  const right = clipPolygonToAxisBoundary(polygon, 0, rectangle.maximumU, true)
+  let middle = clipPolygonToAxisBoundary(polygon, 0, rectangle.minimumU, true)
+  middle = clipPolygonToAxisBoundary(middle, 0, rectangle.maximumU, false)
+  const lowerMiddle = clipPolygonToAxisBoundary(
+    middle,
+    1,
+    rectangle.minimumV,
+    false,
+  )
+  const upperMiddle = clipPolygonToAxisBoundary(
+    middle,
+    1,
+    rectangle.maximumV,
+    true,
+  )
+  return nonEmptyPolygons([left, right, lowerMiddle, upperMiddle])
+}
+
+function subtractRectanglesFromPolygons(
+  polygons: readonly (readonly Point2D[])[],
+  rectangles: readonly Rectangle2D[],
+): Point2D[][] {
+  let result = nonEmptyPolygons(polygons)
+  for (const rectangle of rectangles) {
+    result = result.flatMap((polygon) =>
+      subtractRectangleFromPolygon(polygon, rectangle),
+    )
+    if (result.length === 0) break
+  }
+  return result
+}
+
 function wrapAroundCenter(value: number, period: number): number {
   const shifted = value + period / 2
   const positiveRemainder = ((shifted % period) + period) % period
   return positiveRemainder - period / 2
 }
 
-function periodicLatticeCenters(
+function periodicBoundaryOverlappingLatticeCenters(
   circumference: number,
   spanV: number,
-  frameV: number,
   lattice: HoneycombLattice,
 ): Point2D[] {
-  const minimumV = -spanV / 2 + frameV + lattice.cellRadius
-  const maximumV = spanV / 2 - frameV - lattice.cellRadius
   const columnCount = Math.floor(
     (circumference + EPSILON) / lattice.anchorPitch,
   )
-  if (maximumV < minimumV || columnCount < 1) return []
+  if (columnCount < 1) return []
 
-  const availableRowSpan = maximumV - minimumV
-  const rowCount =
-    Math.floor((availableRowSpan + EPSILON) / lattice.rowPitch) + 1
-  const usedRowSpan = (rowCount - 1) * lattice.rowPitch
-  const firstRowV = (minimumV + maximumV - usedRowSpan) / 2
+  const rowCount = Math.ceil(spanV / lattice.rowPitch) + 1
+  const firstRowV = -((rowCount - 1) * lattice.rowPitch) / 2
   const periodicPitch = circumference / columnCount
   const centers: Point2D[] = []
-
   for (let row = 0; row < rowCount; row += 1) {
     const rowOffset = row % 2 === 0 ? 0 : periodicPitch / 2
     for (let column = 0; column < columnCount; column += 1) {
       const unwrappedU =
         -circumference / 2 + (column + 0.5) * periodicPitch + rowOffset
-      const wrappedU = wrapAroundCenter(unwrappedU, circumference)
-      centers.push([wrappedU, firstRowV + row * lattice.rowPitch])
+      centers.push([
+        wrapAroundCenter(unwrappedU, circumference),
+        firstRowV + row * lattice.rowPitch,
+      ])
     }
   }
   return centers
@@ -283,31 +420,77 @@ function intersectsProtectedBand(
   return Math.abs(center[axis] - position) <= halfWidth + radius
 }
 
-function boxOpeningKeepout(
+function boxSidePanelBounds(
   parameters: OpenGridStackableBoxParameters,
   side: BoxSide,
-  center: Point2D,
-): boolean {
+): Rectangle2D {
+  const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
+  const derived = openGridStackableBoxDerivedGeometryFor(parameters)
+  const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
+  const lowerFrame = parameters.thinShellMode ? 3.5 : honeycomb.lowerFrame
+  const tangentSpan = side === '+X' || side === '-X' ? depth : width
+  return {
+    minimumU: -tangentSpan / 2 + honeycomb.sideFrame,
+    maximumU: tangentSpan / 2 - honeycomb.sideFrame,
+    minimumV: derived.activeFloorTopZ + lowerFrame,
+    maximumV: derived.activeUpperInnerRimZ - honeycomb.topFrame,
+  }
+}
+
+function boxSideOpeningKeepout(
+  parameters: OpenGridStackableBoxParameters,
+  side: BoxSide,
+  panel: Rectangle2D,
+): Rectangle2D | null {
   const opening =
     openGridStackableBoxDerivedGeometryFor(parameters).openings[side]
-  if (!opening.enabled) return false
+  if (!opening.enabled) return null
 
-  const configuration = OPENGRID_HONEYCOMB_CONFIGURATION
-  const protectedHalfWidth =
-    opening.upperWidth / 2 +
-    configuration.featureClearance +
-    configuration.cellRadius
-  const protectedBottom =
-    opening.bottomZ - configuration.featureClearance - configuration.cellRadius
-  return (
-    Math.abs(center[0]) <= protectedHalfWidth && center[1] >= protectedBottom
+  const clearance = OPENGRID_HONEYCOMB_CONFIGURATION.featureClearance
+  const protectedHalfWidth = opening.upperWidth / 2 + clearance
+  return {
+    minimumU: -protectedHalfWidth,
+    maximumU: protectedHalfWidth,
+    minimumV: opening.bottomZ - clearance,
+    maximumV: panel.maximumV,
+  }
+}
+
+function boxSideCellPolygonGroups(
+  parameters: OpenGridStackableBoxParameters,
+  side: BoxSide,
+): Point2D[][][] {
+  const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
+  const panel = boxSidePanelBounds(parameters, side)
+  const panelTangentSpan = panel.maximumU - panel.minimumU
+  const panelHeight = panel.maximumV - panel.minimumV
+  if (panelTangentSpan < honeycomb.minimumPanelSpan) return []
+  if (panelHeight < honeycomb.minimumPanelSpan) return []
+
+  const openingKeepout = boxSideOpeningKeepout(parameters, side, panel)
+  const groups: Point2D[][][] = []
+  const centers = sideBoundaryOverlappingLatticeCenters(
+    panelTangentSpan,
+    panelHeight,
+    honeycomb,
   )
+  const panelCenterV = (panel.minimumV + panel.maximumV) / 2
+  for (const [tangent, localV] of centers) {
+    const center: Point2D = [tangent, localV + panelCenterV]
+    const clipped = clipPolygonToBounds(hexagonPoints(center, honeycomb), panel)
+    let polygons = nonEmptyPolygons([clipped])
+    if (openingKeepout) {
+      polygons = subtractRectanglesFromPolygons(polygons, [openingKeepout])
+    }
+    if (polygons.length > 0) groups.push(polygons)
+  }
+  return groups
 }
 
 function boxSideCutter(
   parameters: OpenGridStackableBoxParameters,
   side: BoxSide,
-  center: Point2D,
+  polygons: readonly (readonly Point2D[])[],
 ): Shape3D {
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
@@ -320,58 +503,24 @@ function boxSideCutter(
   if (normalIsX) {
     const x =
       side === '+X' ? width / 2 - wallThickness - margin : -width / 2 - margin
-    return extrudePolygon(
-      'YZ',
-      [x, 0, 0],
-      hexagonPoints(center, OPENGRID_HONEYCOMB_CONFIGURATION),
-      distance,
-      [1, 0, 0],
-    )
+    return extrudePolygonGroup('YZ', [x, 0, 0], polygons, distance, [1, 0, 0])
   }
 
   const y =
     side === '+Y' ? depth / 2 - wallThickness - margin : -depth / 2 - margin
-  return extrudePolygon(
-    'XZ',
-    [0, y, 0],
-    hexagonPoints(center, OPENGRID_HONEYCOMB_CONFIGURATION),
-    distance,
-    [0, 1, 0],
-  )
+  return extrudePolygonGroup('XZ', [0, y, 0], polygons, distance, [0, 1, 0])
 }
 
 export function makeOpenGridStackableBoxSideHoneycombCutters(
   parameters: OpenGridStackableBoxParameters,
+  context: OpenGridHoneycombBuildContext = {},
 ): Shape3D[] {
-  const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
-  const derived = openGridStackableBoxDerivedGeometryFor(parameters)
-  const lowerFrame = parameters.thinShellMode
-    ? 3.5
-    : OPENGRID_HONEYCOMB_CONFIGURATION.lowerFrame
-  const lowerZ = derived.activeFloorTopZ + lowerFrame
-  const upperZ =
-    derived.activeUpperInnerRimZ - OPENGRID_HONEYCOMB_CONFIGURATION.topFrame
   const cutters: Shape3D[] = []
   try {
     for (const side of ['+X', '-X', '+Y', '-Y'] as const) {
-      const tangentSpan = side === '+X' || side === '-X' ? depth : width
-      const panelHeight = upperZ - lowerZ
-      if (tangentSpan < OPENGRID_HONEYCOMB_CONFIGURATION.minimumPanelSpan)
-        continue
-      if (panelHeight < OPENGRID_HONEYCOMB_CONFIGURATION.minimumPanelSpan)
-        continue
-
-      const centers = latticeCenters(
-        tangentSpan,
-        panelHeight,
-        OPENGRID_HONEYCOMB_CONFIGURATION.sideFrame,
-        0,
-        OPENGRID_HONEYCOMB_CONFIGURATION,
-      )
-      for (const [tangent, localZ] of centers) {
-        const center: Point2D = [tangent, localZ + (lowerZ + upperZ) / 2]
-        if (boxOpeningKeepout(parameters, side, center)) continue
-        cutters.push(boxSideCutter(parameters, side, center))
+      for (const polygons of boxSideCellPolygonGroups(parameters, side)) {
+        assertHoneycombGenerationCurrent(context)
+        cutters.push(boxSideCutter(parameters, side, polygons))
       }
     }
     return cutters
@@ -785,21 +934,15 @@ export function openGridStackableBoxBottomHoneycombCellCountFor(
   return boxBottomHoneycombCenters(parameters).length
 }
 
-function normalizedAngle(angle: number): number {
-  return Math.atan2(Math.sin(angle), Math.cos(angle))
-}
-
-function angularDistance(first: number, second: number): number {
-  return Math.abs(normalizedAngle(first - second))
-}
-
-function cylinderOpeningKeepout(
+function cylinderSideOpeningKeepouts(
   parameters: OpenGridStackableCylinderParameters,
-  center: Point2D,
-): boolean {
+  lowerZ: number,
+  upperZ: number,
+): Rectangle2D[] {
   const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
   const radius = parameters.diameter / 2
-  const angle = center[0] / radius
+  const circumference = 2 * Math.PI * radius
+  const clearance = OPENGRID_HONEYCOMB_CONFIGURATION.featureClearance
   const directions: ReadonlyArray<
     readonly [OpenGridStackableCylinderOpeningDirection, number]
   > = [
@@ -808,25 +951,78 @@ function cylinderOpeningKeepout(
     ['-X', Math.PI],
     ['-Y', -Math.PI / 2],
   ]
+  const keepouts: Rectangle2D[] = []
   for (const [direction, directionAngle] of directions) {
     const opening = derived.openings[direction]
     if (!opening.enabled) continue
-    const angularKeepout =
-      opening.angularHalfWidth +
-      (OPENGRID_HONEYCOMB_CONFIGURATION.cellRadius +
-        OPENGRID_HONEYCOMB_CONFIGURATION.featureClearance) /
-        radius
-    if (
-      center[1] >=
-        opening.bottomZ -
-          OPENGRID_HONEYCOMB_CONFIGURATION.featureClearance -
-          OPENGRID_HONEYCOMB_CONFIGURATION.cellRadius &&
-      angularDistance(angle, directionAngle) <= angularKeepout
-    ) {
-      return true
+    const centerTangent = directionAngle * radius
+    const protectedHalfWidth = opening.angularHalfWidth * radius + clearance
+    for (const periodOffset of [-circumference, 0, circumference]) {
+      const protectedCenter = centerTangent + periodOffset
+      keepouts.push({
+        minimumU: protectedCenter - protectedHalfWidth,
+        maximumU: protectedCenter + protectedHalfWidth,
+        minimumV: Math.max(lowerZ, opening.bottomZ - clearance),
+        maximumV: upperZ,
+      })
     }
   }
-  return false
+  return keepouts
+}
+
+type CylinderSideCellGroup = Readonly<{
+  tangent: number
+  polygons: Point2D[][]
+}>
+
+function cylinderSideCellGroups(
+  parameters: OpenGridStackableCylinderParameters,
+): CylinderSideCellGroup[] {
+  const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
+  const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
+  const radius = parameters.diameter / 2
+  const lowerZ = derived.outerTransitionEndZ + honeycomb.lowerFrame
+  const topProtectedHeight = Math.max(
+    honeycomb.topFrame,
+    derived.topInnerChamfer,
+  )
+  const upperZ = parameters.height - topProtectedHeight
+  const circumference = 2 * Math.PI * radius
+  const panelHeight = upperZ - lowerZ
+  if (panelHeight < honeycomb.minimumPanelSpan) return []
+  if (circumference < honeycomb.minimumPanelSpan) return []
+
+  const centers = periodicBoundaryOverlappingLatticeCenters(
+    circumference,
+    panelHeight,
+    honeycomb,
+  )
+  const keepouts = cylinderSideOpeningKeepouts(parameters, lowerZ, upperZ)
+  const centerZ = (lowerZ + upperZ) / 2
+  const groups: CylinderSideCellGroup[] = []
+  for (const [tangent, localZ] of centers) {
+    const center: Point2D = [tangent, localZ + centerZ]
+    let clipped = clipPolygonToAxisBoundary(
+      hexagonPoints(center, honeycomb),
+      1,
+      lowerZ,
+      true,
+    )
+    clipped = clipPolygonToAxisBoundary(clipped, 1, upperZ, false)
+    const unwrappedPolygons = subtractRectanglesFromPolygons(
+      nonEmptyPolygons([clipped]),
+      keepouts,
+    )
+    const localPolygons = unwrappedPolygons.map((polygon) =>
+      polygon.map(
+        ([unwrappedTangent, z]) => [unwrappedTangent - tangent, z] as Point2D,
+      ),
+    )
+    if (localPolygons.length > 0) {
+      groups.push({ tangent, polygons: localPolygons })
+    }
+  }
+  return groups
 }
 
 function rotateAroundZ(shape: Shape3D, angleDegrees: number): Shape3D {
@@ -838,39 +1034,37 @@ function rotateAroundZ(shape: Shape3D, angleDegrees: number): Shape3D {
 
 export function makeOpenGridStackableCylinderSideHoneycombCutters(
   parameters: OpenGridStackableCylinderParameters,
+  context: OpenGridHoneycombBuildContext = {},
 ): Shape3D[] {
-  const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
   const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
   const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
   const radius = parameters.diameter / 2
-  const lowerZ = derived.outerTransitionEndZ + honeycomb.lowerFrame
-  const topProtectedHeight = Math.max(
-    honeycomb.topFrame,
-    derived.topInnerChamfer,
-  )
-  const upperZ = parameters.height - topProtectedHeight
-  const tangentSpan = 2 * Math.PI * radius
-  const panelHeight = upperZ - lowerZ
-  if (panelHeight < honeycomb.minimumPanelSpan) return []
-  if (tangentSpan < honeycomb.minimumPanelSpan) return []
-
-  const wallDistance = derived.wallThickness + honeycomb.cutterMargin * 2
-  const centers = periodicLatticeCenters(tangentSpan, panelHeight, 0, honeycomb)
   const cutters: Shape3D[] = []
   try {
-    for (const [tangent, localZ] of centers) {
-      const center: Point2D = [tangent, localZ + (lowerZ + upperZ) / 2]
-      if (cylinderOpeningKeepout(parameters, center)) continue
+    for (const group of cylinderSideCellGroups(parameters)) {
+      assertHoneycombGenerationCurrent(context)
+      const maximumTangentExtent = Math.max(
+        ...group.polygons.flatMap((polygon) =>
+          polygon.map(([tangent]) => Math.abs(tangent)),
+        ),
+      )
+      const innerWallStart =
+        Math.sqrt(
+          Math.max(0, derived.innerRadius ** 2 - maximumTangentExtent ** 2),
+        ) - honeycomb.cutterMargin
+      const wallDistance = radius + honeycomb.cutterMargin - innerWallStart
       let base: Shape3D | null = null
       try {
-        base = extrudePolygon(
+        base = extrudePolygonGroup(
           'YZ',
-          [radius - derived.wallThickness - honeycomb.cutterMargin, 0, 0],
-          hexagonPoints([0, center[1]], honeycomb),
+          [innerWallStart, 0, 0],
+          group.polygons,
           wallDistance,
           [1, 0, 0],
         )
-        cutters.push(rotateAroundZ(base, (tangent / radius) * (180 / Math.PI)))
+        cutters.push(
+          rotateAroundZ(base, (group.tangent / radius) * (180 / Math.PI)),
+        )
         base = null
       } finally {
         deleteShape(base)
@@ -883,95 +1077,178 @@ export function makeOpenGridStackableCylinderSideHoneycombCutters(
   }
 }
 
-function cylinderBottomProtected(
+type CylinderBottomCell = Readonly<{
+  points: Point2D[]
+  clippedAtFrame: boolean
+  protectedCircleIndices: number[]
+}>
+
+function cylinderBottomOpeningRadius(
   parameters: OpenGridStackableCylinderParameters,
-  center: Point2D,
-): boolean {
+): number {
   const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
   const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
-  const bottomLattice = honeycomb.bottomLattice
   const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
   const radius = parameters.diameter / 2
+  return Math.max(
+    0,
+    Math.min(
+      derived.flatFloorRadius - honeycomb.bottomFrame,
+      radius - configuration.outerEdgeClearance,
+    ),
+  )
+}
 
+function cylinderBottomProtectedCircles(
+  parameters: OpenGridStackableCylinderParameters,
+): ProtectedCircle[] {
+  const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
+  const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
   const protectedRadius =
     Math.max(
       configuration.bottomHoleDiameter,
       configuration.innerHoleDiameter,
     ) /
       2 +
-    honeycomb.bottomFeatureClearance
-  if (
-    openGridStackableCylinderHoleCentersFor(parameters).some((hole) =>
-      intersectsProtectedCircle(
-        center,
-        bottomLattice.cellRadius,
-        hole,
-        protectedRadius,
-      ),
-    )
-  ) {
-    return true
-  }
-
-  const maximumCenterRadius = Math.max(
-    0,
-    derived.flatFloorRadius - honeycomb.bottomFrame - bottomLattice.cellRadius,
-  )
-  if (Math.hypot(center[0], center[1]) > maximumCenterRadius) return true
-  return (
-    Math.hypot(center[0], center[1]) + bottomLattice.cellRadius >
-    radius - configuration.outerEdgeClearance
-  )
+    honeycomb.bottomHoleSafetyRing
+  return openGridStackableCylinderHoleCentersFor(parameters).map((center) => ({
+    center,
+    radius: protectedRadius,
+  }))
 }
 
-function cylinderBottomHoneycombCenters(
+function cylinderBottomHoneycombCells(
   parameters: OpenGridStackableCylinderParameters,
-): Point2D[] {
-  const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
-  const radius = parameters.diameter / 2
-  const span = Math.max(0, derived.flatFloorRadius * 2)
-  const bottomLattice = OPENGRID_HONEYCOMB_CONFIGURATION.bottomLattice
-  const centers = latticeCenters(
+): CylinderBottomCell[] {
+  const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
+  const bottomLattice = honeycomb.bottomLattice
+  const openingCircle: ProtectedCircle = {
+    center: [0, 0],
+    radius: cylinderBottomOpeningRadius(parameters),
+  }
+  if (openingCircle.radius <= EPSILON) return []
+
+  const protectedCircles = cylinderBottomProtectedCircles(parameters)
+  const span = openingCircle.radius * 2
+  const centers = boundaryOverlappingLatticeCenters(
     span,
     span,
-    OPENGRID_HONEYCOMB_CONFIGURATION.bottomFrame,
-    OPENGRID_HONEYCOMB_CONFIGURATION.bottomFrame,
+    0,
+    0,
     bottomLattice,
   )
-  return centers.filter((center) => {
+  const cells: CylinderBottomCell[] = []
+  for (const center of centers) {
+    const points = hexagonPoints(center, bottomLattice)
+    if (!polygonIntersectsCircle(points, openingCircle)) continue
     if (
-      Math.hypot(center[0], center[1]) + bottomLattice.cellRadius >
-      radius - OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.outerEdgeClearance
+      protectedCircles.some((circle) => polygonIsInsideCircle(points, circle))
     ) {
-      return false
+      continue
     }
-    return !cylinderBottomProtected(parameters, center)
-  })
+    const protectedCircleIndices = protectedCircles.flatMap((circle, index) =>
+      polygonIntersectsCircle(points, circle) ? [index] : [],
+    )
+    cells.push({
+      points,
+      clippedAtFrame: !polygonIsInsideCircle(points, openingCircle),
+      protectedCircleIndices,
+    })
+  }
+  const hasCompleteSafeCell = cells.some(
+    (cell) => !cell.clippedAtFrame && cell.protectedCircleIndices.length === 0,
+  )
+  return hasCompleteSafeCell ? cells : []
 }
 
 export function makeOpenGridStackableCylinderBottomHoneycombCutters(
   parameters: OpenGridStackableCylinderParameters,
+  context: OpenGridHoneycombBuildContext = {},
 ): Shape3D[] {
   const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
   const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
   const margin = honeycomb.cutterMargin
-  const centers = cylinderBottomHoneycombCenters(parameters)
+  const cells = cylinderBottomHoneycombCells(parameters)
+  if (cells.length === 0) return []
+  const protectedCircles = cylinderBottomProtectedCircles(parameters)
+  const operationCount = cells.reduce(
+    (count, cell) =>
+      count +
+      (cell.clippedAtFrame ? 1 : 0) +
+      cell.protectedCircleIndices.length,
+    0,
+  )
+  const scope = context.booleanOperations?.createScope(operationCount)
   const cutters: Shape3D[] = []
+  let openingMask: Shape3D | null = null
+  const circleProtectors: Shape3D[] = []
   try {
-    for (const center of centers) {
-      cutters.push(
-        extrudePolygon(
-          'XY',
-          [0, 0, -margin],
-          hexagonPoints(center, honeycomb.bottomLattice),
-          derived.floorThickness + margin * 2,
-        ),
+    openingMask = makeCylinder(
+      cylinderBottomOpeningRadius(parameters),
+      derived.floorThickness + margin * 2,
+      [0, 0, -margin],
+    )
+    for (const circle of protectedCircles) {
+      circleProtectors.push(
+        makeCylinder(circle.radius, derived.floorThickness + margin * 2, [
+          circle.center[0],
+          circle.center[1],
+          -margin,
+        ]),
       )
+    }
+
+    for (const cell of cells) {
+      assertHoneycombGenerationCurrent(context)
+      let active: Shape3D | null = extrudePolygon(
+        'XY',
+        [0, 0, -margin],
+        cell.points,
+        derived.floorThickness + margin * 2,
+      )
+      try {
+        if (cell.clippedAtFrame) {
+          assertHoneycombGenerationCurrent(context)
+          const current: Shape3D | null = active
+          const activeOpeningMask: Shape3D | null = openingMask
+          if (!current || !activeOpeningMask) {
+            throw new Error('OPENGRID_HONEYCOMB_CUTTER_EMPTY')
+          }
+          const clipped: Shape3D = measureBooleanInScope(
+            scope,
+            'intersect',
+            () => current.intersect(activeOpeningMask),
+          )
+          deleteShape(current)
+          active = clipped
+        }
+        for (const protectorIndex of cell.protectedCircleIndices) {
+          assertHoneycombGenerationCurrent(context)
+          const current: Shape3D | null = active
+          const protector = circleProtectors[protectorIndex]
+          if (!current || !protector) {
+            throw new Error('OPENGRID_HONEYCOMB_PROTECTOR_EMPTY')
+          }
+          const clipped: Shape3D = measureBooleanInScope(scope, 'cut', () =>
+            current.cut(protector),
+          )
+          deleteShape(current)
+          active = clipped
+        }
+        if (!active) throw new Error('OPENGRID_HONEYCOMB_CUTTER_EMPTY')
+        cutters.push(active)
+        active = null
+      } finally {
+        deleteShape(active)
+      }
     }
     return cutters
   } catch (error) {
     cutters.forEach(deleteShape)
     throw error
+  } finally {
+    deleteShape(openingMask)
+    circleProtectors.forEach(deleteShape)
   }
 }
 
@@ -979,39 +1256,16 @@ export function openGridStackableCylinderBottomHoneycombCellCountFor(
   parameters: OpenGridStackableCylinderParameters,
 ): number {
   if (!parameters.honeycombMode) return 0
-  return cylinderBottomHoneycombCenters(parameters).length
+  return cylinderBottomHoneycombCells(parameters).length
 }
 
 export function openGridStackableBoxHoneycombCellCountFor(
   parameters: OpenGridStackableBoxParameters,
 ): number {
   if (!parameters.honeycombMode) return 0
-  const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
-  const derived = openGridStackableBoxDerivedGeometryFor(parameters)
-  const lowerFrame = parameters.thinShellMode
-    ? 3.5
-    : OPENGRID_HONEYCOMB_CONFIGURATION.lowerFrame
-  const lowerZ = derived.activeFloorTopZ + lowerFrame
-  const upperZ =
-    derived.activeUpperInnerRimZ - OPENGRID_HONEYCOMB_CONFIGURATION.topFrame
   let count = 0
   for (const side of ['+X', '-X', '+Y', '-Y'] as const) {
-    const tangentSpan = side === '+X' || side === '-X' ? depth : width
-    const panelHeight = upperZ - lowerZ
-    if (tangentSpan < OPENGRID_HONEYCOMB_CONFIGURATION.minimumPanelSpan)
-      continue
-    if (panelHeight < OPENGRID_HONEYCOMB_CONFIGURATION.minimumPanelSpan)
-      continue
-    for (const [tangent, localZ] of latticeCenters(
-      tangentSpan,
-      panelHeight,
-      OPENGRID_HONEYCOMB_CONFIGURATION.sideFrame,
-      0,
-      OPENGRID_HONEYCOMB_CONFIGURATION,
-    )) {
-      const center: Point2D = [tangent, localZ + (lowerZ + upperZ) / 2]
-      if (!boxOpeningKeepout(parameters, side, center)) count += 1
-    }
+    count += boxSideCellPolygonGroups(parameters, side).length
   }
 
   count += boxBottomHoneycombCenters(parameters).length
@@ -1022,32 +1276,7 @@ export function openGridStackableCylinderHoneycombCellCountFor(
   parameters: OpenGridStackableCylinderParameters,
 ): number {
   if (!parameters.honeycombMode) return 0
-  const configuration = OPENGRID_HONEYCOMB_CONFIGURATION
-  const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
-  const radius = parameters.diameter / 2
-  const lowerZ = derived.outerTransitionEndZ + configuration.lowerFrame
-  const topProtectedHeight = Math.max(
-    configuration.topFrame,
-    derived.topInnerChamfer,
-  )
-  const upperZ = parameters.height - topProtectedHeight
-  const tangentSpan = 2 * Math.PI * radius
-  const panelHeight = upperZ - lowerZ
-  let count = 0
-  if (
-    panelHeight >= configuration.minimumPanelSpan &&
-    tangentSpan >= configuration.minimumPanelSpan
-  ) {
-    for (const [tangent, localZ] of periodicLatticeCenters(
-      tangentSpan,
-      panelHeight,
-      0,
-      configuration,
-    )) {
-      const center: Point2D = [tangent, localZ + (lowerZ + upperZ) / 2]
-      if (!cylinderOpeningKeepout(parameters, center)) count += 1
-    }
-  }
+  let count = cylinderSideCellGroups(parameters).length
 
   count += openGridStackableCylinderBottomHoneycombCellCountFor(parameters)
   return count

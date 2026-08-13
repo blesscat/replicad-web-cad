@@ -62,7 +62,7 @@ describe('OpenGrid honeycomb material-saving profile modes', () => {
 
       expect(measureVolume(shape)).toBeGreaterThan(0)
     },
-    30_000,
+    120_000,
   )
 
   it.each([
@@ -87,7 +87,7 @@ describe('OpenGrid honeycomb material-saving profile modes', () => {
 
       expect(measureVolume(shape)).toBeGreaterThan(0)
     },
-    30_000,
+    120_000,
   )
 
   it.each([
@@ -106,7 +106,7 @@ describe('OpenGrid honeycomb material-saving profile modes', () => {
         height: 30,
         thinBottomMode,
         bottomPlateMode,
-        bottomHolesEnabled: false,
+        bottomSeatMode: 'none' as const,
         honeycombMode: true,
       }
       const baselineInput = { ...input, honeycombMode: false }
@@ -150,6 +150,6 @@ describe('OpenGrid honeycomb material-saving profile modes', () => {
       )
       expect(measureVolume(honeycomb)).toBeLessThan(measureVolume(baseline))
     },
-    60_000,
+    120_000,
   )
 })

@@ -687,13 +687,13 @@ describe('OpenGrid Worker runtime', () => {
     expect(events).toContainEqual(
       expect.objectContaining({
         kind: 'export.ready',
-        fileName: 'opengrid-stackable-box-3x3-h60-honeycomb.step',
+        fileName: 'opengrid-stackable-box-3x3-h60-seats-hole-honeycomb.step',
       }),
     )
     expect(events).toContainEqual(
       expect.objectContaining({
         kind: 'export.ready',
-        fileName: 'opengrid-stackable-box-3x3-h60-honeycomb.stl',
+        fileName: 'opengrid-stackable-box-3x3-h60-seats-hole-honeycomb.stl',
       }),
     )
   })

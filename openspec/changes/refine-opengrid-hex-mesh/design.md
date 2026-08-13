@@ -34,7 +34,7 @@ Keep the exported side-lattice fields for compatibility and represent each trian
 
 `rowPitch = √3 / 2 × neighborPitch`
 
-Rows are offset by half `anchorPitch`. A cell therefore has horizontal neighbors at `anchorPitch` and diagonal neighbors at `(anchorPitch / 2, rowPitch)`; both are exactly `neighborPitch` apart and leave the configured nominal rib normal to their shared edges. Side-wall, cylinder-floor, and Open Shelf candidate bounds use the point-up hex width `√3 × cellRadius` horizontally and height `2 × cellRadius` vertically, so those cutters remain complete cells. Box-floor candidates may cross a protected boundary and are clipped there to continue the visible pattern without cutting the protected material. The legacy 14 mm OpenGrid half-pitch remains the mounting/grid contract, but it is not the Hex Mesh cell pitch.
+Rows are offset by half `anchorPitch`. A cell therefore has horizontal neighbors at `anchorPitch` and diagonal neighbors at `(anchorPitch / 2, rowPitch)`; both are exactly `neighborPitch` apart and leave the configured nominal rib normal to their shared edges. Open Shelf candidate bounds use the point-up hex width `√3 × cellRadius` horizontally and height `2 × cellRadius` vertically, so those cutters remain complete cells. Box-floor, cylinder-floor, and container side-wall candidates may cross a protected boundary and are clipped there to continue the visible pattern without cutting the protected material. The legacy 14 mm OpenGrid half-pitch remains the mounting/grid contract, but it is not the Hex Mesh cell pitch.
 
 Use a 3.1 mm side-cell radius with the existing 1.25 mm printable rib. Keep a rib-width lower bridge above the cylinder transition and reserve the cylinder's full top-inner-chamfer height. This keeps complete cells and protected frames while fitting at least two staggered rows in the default 20 mm-height side-wall bands.
 
@@ -46,13 +46,15 @@ The builders continue to start from the validated normal geometry and cut one or
 
 ### Keep-outs are local to the functional feature
 
-An enabled box or cylinder side opening reserves only its actual tangent/height envelope plus the configured feature clearance and cell radius. The rest of that face remains eligible for mesh cells. Frames, corners, rims, lower transitions, circular edges, holes, sockets, seams, and mating features retain their existing conservative protected regions.
+An enabled box or cylinder side opening reserves only its actual tangent/height envelope plus the configured feature clearance. Side cells that cross the protected perimeter or opening boundary are clipped to that boundary rather than rejected wholesale. The rest of that face remains eligible for mesh cells. Frames, corners, rims, lower transitions, circular edges, holes, sockets, seams, and mating features retain their existing conservative protected regions.
 
-Floor cells use the same smaller floor-specific radius. Existing mounting and drainage holes keep their normalized profiles without changing hole count, diameter, location, or through-path. Box-floor cutters cover the whole safe pattern and are clipped at the outer frame, required stacking-seam support, and an exact circular keep-out extending 2 mm beyond each hole's maximum opening radius; intersecting cells are not discarded wholesale. Cylinder and Open Shelf floors continue to use complete protected cells. Box, cylinder, and Open Shelf floor cutters pass through each eligible active floor, including the Desk thin-floor box and cylinder profiles, while leaving the peripheral stacking boundary and floor transitions intact. A floor remains solid only when no safe opening area remains.
+Floor cells use the same smaller floor-specific radius. Existing mounting and drainage holes keep their normalized profiles without changing hole count, diameter, location, or through-path. Box-floor cutters cover the whole safe pattern and are clipped at the outer frame, required stacking-seam support, and an exact circular keep-out extending 2 mm beyond each hole's maximum opening radius; intersecting cells are not discarded wholesale. Cylinder-floor cutters use the same treatment at the protected circular frame and exact 2 mm hole rings, with the mask bounded by the flat-floor and peripheral stacking-interface limits. Open Shelf floors continue to use complete protected cells. Box, cylinder, and Open Shelf floor cutters pass through each eligible active floor, including the Desk thin-floor box and cylinder profiles, while leaving the peripheral stacking boundary and floor transitions intact. A floor remains solid only when no safe opening area remains.
 
 ### Cylinder panels use the same local pattern in tangent space
 
-Cylinder wall cells are created as local planar hex prisms and rotated around Z according to their tangent center. The circumference is treated as periodic: each row uses the largest whole cell count that retains at least the configured pitch, distributes the small remainder evenly, staggers alternate rows by half that periodic pitch, and wraps the final neighbor back to the first. Opening keep-outs still reject local cells. This preserves a circular outer boundary without polygonalizing the container or leaving an artificial tangent-layout seam.
+Cylinder wall cells are created as local planar hex prisms and rotated around Z according to their tangent center. The circumference is treated as periodic: each row uses the largest whole cell count that retains at least the configured pitch, distributes the small remainder evenly, staggers alternate rows by half that periodic pitch, and wraps the final neighbor back to the first. Opening keep-outs clip intersecting local polygons at the protected boundary. This preserves a circular outer boundary without polygonalizing the container or leaving an artificial tangent-layout seam.
+
+Each cylinder side prism starts inward of the curved inner wall by the sagitta required at the side cell's maximum tangent extent, plus the normal cutter margin. A straight radial extrusion based only on nominal wall thickness can otherwise leave a thin uncut crescent at the lateral portions of a hex opening. The compensated prism still ends only beyond the existing outer radius and does not change the container envelope.
 
 ### Open Shelf cutters stay local to each panel
 
@@ -64,7 +66,7 @@ Open Shelf wall-family and plate-family cutter groups use separate bounded compo
 
 ### Verification is behavioral
 
-Tests assert the derived spacing relationship, observable cutter separation, positive cell coverage, clipped box-floor contact at protected boundaries, an intact 2 mm circular hole ring, lower volume with unchanged bounds, preserved holes/openings/pegs/panel bridges, and valid exportable solids. Tests do not inspect source text or require a particular helper implementation.
+Tests assert the derived spacing relationship, observable cutter separation, positive cell coverage, clipped box-floor, cylinder-floor, and container-side contact at protected boundaries, intact 2 mm circular hole rings, lower volume with unchanged bounds, preserved holes/openings/pegs/panel bridges, and valid exportable solids. Tests do not inspect source text or require a particular helper implementation.
 
 ## Risks / Trade-offs
 

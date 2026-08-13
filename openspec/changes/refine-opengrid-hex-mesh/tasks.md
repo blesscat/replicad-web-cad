@@ -42,3 +42,15 @@
 - [x] 7.1 Add behavior tests requiring the Desk box lattice to reach every protected floor edge with clipped cells and retain an exact 2 mm circular safety ring around existing holes.
 - [x] 7.2 Generate and trim box-floor boundary cells at the outer frame, required seam supports, and hole safety rings instead of rejecting each intersecting hexagon wholesale.
 - [x] 7.3 Confirm the denser floor remains one valid through-cut solid with unchanged holes, interfaces, bounds, and export behavior.
+
+## 8. Full container-side coverage with clipped cells
+
+- [x] 8.1 Add behavior tests requiring box and cylinder side lattices to reach their protected wall boundaries with clipped partial cells, retain side-opening bridges, and cut through the cylinder inner curve at each cell's lateral extent.
+- [x] 8.2 Generate and trim side-wall boundary cells at perimeter frames, vertical bands, and active side-opening keep-outs instead of rejecting each intersecting hexagon wholesale; compensate cylinder cutter depth for the inner-wall sagitta across the cell width.
+- [x] 8.3 Confirm the denser side mesh remains one valid solid with unchanged openings, interfaces, bounds, cancellation/progress behavior, and export output.
+
+## 9. Full cylinder-floor coverage with clipped cells
+
+- [x] 9.1 Add behavior tests requiring the cylinder floor lattice to reach its protected circular frame with clipped cells and retain an exact 2 mm circular safety ring around every enabled bottom hole.
+- [x] 9.2 Generate and trim cylinder-floor boundary cells at the circular frame and hole safety rings instead of rejecting each intersecting hexagon wholesale, while retaining bounded Boolean progress, cancellation, and native-shape cleanup.
+- [x] 9.3 Confirm the denser cylinder floor remains one valid through-cut solid with unchanged holes, lower stacking interface, bounds, and STEP/STL output.

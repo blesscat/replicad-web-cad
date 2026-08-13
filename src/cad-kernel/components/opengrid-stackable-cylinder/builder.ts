@@ -622,13 +622,18 @@ function applyHoneycombMode(
   let bottomCutters: Shape3D[] = []
   const inputShape = shape
   try {
-    sideCutters = makeOpenGridStackableCylinderSideHoneycombCutters(parameters)
+    sideCutters = makeOpenGridStackableCylinderSideHoneycombCutters(
+      parameters,
+      context,
+    )
     assertGenerationCurrent(context)
     shape = cutPanel(shape, sideCutters)
     sideCutters = []
     assertGenerationCurrent(context)
-    bottomCutters =
-      makeOpenGridStackableCylinderBottomHoneycombCutters(parameters)
+    bottomCutters = makeOpenGridStackableCylinderBottomHoneycombCutters(
+      parameters,
+      context,
+    )
     shape = cutPanel(shape, bottomCutters)
     bottomCutters = []
     return shape

@@ -25,6 +25,8 @@ The existing `opengrid-stackable-box` model MUST expose a `honeycombMode` boolea
 - **AND** neighboring openings MUST use the configured printable rib thickness rather than the legacy 14 mm cell-center spacing
 - **AND** the default 20 mm-height profile MUST show at least two staggered rows on each eligible side panel
 - **AND** the outer perimeter frame, rounded corners, top rim or rail, lower structural transition, and all active side-opening boundary bridges MUST remain solid
+- **AND** the lattice MUST extend to each protected side-panel boundary, with intersecting cells clipped at the perimeter frame and active side-opening bridge instead of discarded wholesale
+- **AND** the usable side-wall area outside those protected regions MUST NOT contain avoidable broad solid bands caused only by whole-cell rejection
 - **AND** the lattice MUST remain within the existing X/Y/Z envelope and MUST NOT change the requested clear internal height
 
 #### Scenario: Box bottom faces use protected Hex Mesh openings
@@ -56,6 +58,7 @@ The existing `opengrid-stackable-box` model MUST expose a `honeycombMode` boolea
 - **AND** the builder MUST NOT enlarge, move, merge, or remove any existing hole, opening, or interface feature merely to fit a lattice cell
 - **AND** thin-shell mode alone MUST NOT force a no-cell fallback when complete protected floor cells fit
 - **AND** a box-floor boundary MAY use a clipped partial cell when the retained frame and safety-ring constraints remain satisfied
+- **AND** a box side-panel or side-opening boundary MAY use a clipped partial cell when every retained frame and structural-bridge constraint remains satisfied
 
 #### Scenario: Honeycomb box output is distinguishable and materially lighter
 

@@ -429,10 +429,10 @@ describe('OpenGrid stackable-box contract', () => {
     }
 
     expect(modelFileName(model)).toBe(
-      'opengrid-stackable-box-1x1-h10-honeycomb.step',
+      'opengrid-stackable-box-1x1-h10-seats-hole-honeycomb.step',
     )
     expect(modelStlFileName(model)).toBe(
-      'opengrid-stackable-box-1x1-h10-honeycomb.stl',
+      'opengrid-stackable-box-1x1-h10-seats-hole-honeycomb.stl',
     )
   })
 
@@ -449,10 +449,10 @@ describe('OpenGrid stackable-box contract', () => {
     }
 
     expect(modelFileName(model)).toBe(
-      'opengrid-stackable-box-1x1-h10-honeycomb-open-8-12-70-0-1-90-0-1-90-0-1-90-thin-shell.step',
+      'opengrid-stackable-box-1x1-h10-seats-hole-honeycomb-open-8-12-70-0-1-90-0-1-90-0-1-90-thin-shell.step',
     )
     expect(modelStlFileName(model)).toBe(
-      'opengrid-stackable-box-1x1-h10-honeycomb-open-8-12-70-0-1-90-0-1-90-0-1-90-thin-shell.stl',
+      'opengrid-stackable-box-1x1-h10-seats-hole-honeycomb-open-8-12-70-0-1-90-0-1-90-0-1-90-thin-shell.stl',
     )
   })
 

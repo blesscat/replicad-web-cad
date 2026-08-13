@@ -133,7 +133,10 @@ function applyHoneycombMode(
   let sideCutters: Shape3D[] = []
   let bottomCutters: Shape3D[] = []
   try {
-    sideCutters = makeOpenGridStackableBoxSideHoneycombCutters(parameters)
+    sideCutters = makeOpenGridStackableBoxSideHoneycombCutters(
+      parameters,
+      context,
+    )
     assertGenerationCurrent(context)
     shape = cutPanel(shape, sideCutters)
     sideCutters = []

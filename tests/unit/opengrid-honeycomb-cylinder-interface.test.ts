@@ -95,7 +95,7 @@ describe('OpenGrid cylinder honeycomb interfaces', () => {
       valid: true,
     })
 
-    const noHoleInput = { ...input, bottomHolesEnabled: false }
+    const noHoleInput = { ...input, bottomSeatMode: 'none' as const }
     const noHoleShape = remember(buildOpenGridStackableCylinder(noHoleInput))
     const noHoleReport = inspectOpenGridStackableCylinderInterface(
       noHoleShape,

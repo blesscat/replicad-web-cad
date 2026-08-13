@@ -15,9 +15,11 @@ import {
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
   openGridStackableBoxSocketCentersFor,
   openGridStackableCylinderDerivedGeometryFor,
+  openGridStackableCylinderHoleCentersFor,
   OPENGRID_HONEYCOMB_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+  OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
 } from '../../src/cad-contract/units'
 import { buildOpenGridStackableBox } from '../../src/cad-kernel/components/opengrid-stackable-box/builder'
@@ -175,7 +177,7 @@ describe('OpenGrid honeycomb visible bottom floors', () => {
       x: 4,
       y: 2,
       height: 30,
-      cornerBottomHoles: false,
+      cornerSeatMode: 'none' as const,
       thinShellMode: true,
       honeycombMode: true,
     }
@@ -390,5 +392,124 @@ describe('OpenGrid honeycomb visible bottom floors', () => {
       completeBottomCutter(cutters),
       openGridStackableCylinderDerivedGeometryFor(parameters).floorThickness,
     )
+
+    const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
+    const protectedFloorRadius = Math.min(
+      derived.flatFloorRadius - OPENGRID_HONEYCOMB_CONFIGURATION.bottomFrame,
+      parameters.diameter / 2 -
+        OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.outerEdgeClearance,
+    )
+    const boundaryProbe = makeAnnularProbe(
+      { x: 0, y: 0 },
+      protectedFloorRadius - 0.04,
+      protectedFloorRadius - 0.01,
+      derived.floorThickness,
+    )
+    const baselineBoundary = remember(baseline.intersect(boundaryProbe))
+    const honeycombBoundary = remember(honeycomb.intersect(boundaryProbe))
+    expect(measureVolume(baselineBoundary)).toBeGreaterThan(0)
+    expect(measureVolume(honeycombBoundary)).toBeLessThan(
+      measureVolume(baselineBoundary) - 0.01,
+    )
+
+    const protectedFrameProbe = makeAnnularProbe(
+      { x: 0, y: 0 },
+      protectedFloorRadius + 0.05,
+      protectedFloorRadius + 0.3,
+      derived.floorThickness,
+    )
+    const baselineFrame = remember(baseline.intersect(protectedFrameProbe))
+    const honeycombFrame = remember(honeycomb.intersect(protectedFrameProbe))
+    expect(measureVolume(honeycombFrame)).toBeCloseTo(
+      measureVolume(baselineFrame),
+      3,
+    )
+
+    const holeRadius =
+      Math.max(
+        OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.bottomHoleDiameter,
+        OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.innerHoleDiameter,
+      ) / 2
+    const holeCenters = openGridStackableCylinderHoleCentersFor(parameters)
+    expect(holeCenters.length).toBeGreaterThan(0)
+    for (const [x, y] of holeCenters) {
+      const safetyRing = makeAnnularProbe(
+        { x, y },
+        holeRadius + 0.05,
+        holeRadius + 1.95,
+        derived.floorThickness,
+      )
+      const baselineRing = remember(baseline.intersect(safetyRing))
+      const honeycombRing = remember(honeycomb.intersect(safetyRing))
+      expect(measureVolume(honeycombRing)).toBeCloseTo(
+        measureVolume(baselineRing),
+        3,
+      )
+
+      const outsideRing = makeAnnularProbe(
+        { x, y },
+        holeRadius + 2.05,
+        holeRadius + 2.35,
+        derived.floorThickness,
+      )
+      const baselineOutside = remember(baseline.intersect(outsideRing))
+      const honeycombOutside = remember(honeycomb.intersect(outsideRing))
+      const outsideRingMaterialRemoved =
+        measureVolume(baselineOutside) - measureVolume(honeycombOutside)
+      expect(outsideRingMaterialRemoved).toBeGreaterThan(0.001)
+    }
+  }, 120_000)
+
+  it('cancels and cleans up cylinder-floor circular clipping operations', () => {
+    const parameters = {
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+      diameter: 60,
+      height: 30,
+      thinBottomMode: true,
+      honeycombMode: true,
+    }
+    let completedOperationCount = 0
+    let reportedTotal: number | undefined
+    let activeResultDeleted = false
+    let disposeTrackedResult: (() => void) | undefined
+    let returnedCutters: Shape3D[] = []
+    const reporter: BooleanOperationReporter = {
+      createScope(total) {
+        reportedTotal = total
+        return {
+          measure<T>(_kind: 'cut' | 'fuse' | 'intersect', operation: () => T) {
+            const result = operation()
+            completedOperationCount += 1
+            if (completedOperationCount === 1) {
+              const trackedResult = result as unknown as Shape3D
+              const originalDelete = trackedResult.delete.bind(trackedResult)
+              disposeTrackedResult = originalDelete
+              trackedResult.delete = () => {
+                activeResultDeleted = true
+                originalDelete()
+              }
+            }
+            return result
+          },
+        }
+      },
+    }
+
+    expect(() => {
+      returnedCutters = makeOpenGridStackableCylinderBottomHoneycombCutters(
+        parameters,
+        {
+          isGenerationCurrent: () => completedOperationCount === 0,
+          booleanOperations: reporter,
+        },
+      )
+    }).toThrow('STALE_GENERATION')
+
+    const deletionObservedBeforeTestCleanup = activeResultDeleted
+    if (!activeResultDeleted) disposeTrackedResult?.()
+    returnedCutters.forEach((cutter) => createdShapes.push(cutter))
+    expect(reportedTotal).toBeGreaterThan(1)
+    expect(completedOperationCount).toBe(1)
+    expect(deletionObservedBeforeTestCleanup).toBe(true)
   }, 120_000)
 })

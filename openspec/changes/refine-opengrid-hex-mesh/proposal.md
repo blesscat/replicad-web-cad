@@ -9,6 +9,9 @@ The first honeycomb implementation preserves the existing container shell and cu
 - Apply the same connected mesh behavior to the supported planar box walls, cylindrical wall, and eligible floor regions while retaining conservative frames and protected functional interfaces.
 - Keep the finer floor Hex Mesh visible in eligible normal, base/bottom-plate, and thin-floor profiles; thin floors may fall back to solid only when no complete protected cell fits.
 - Extend the box-floor pattern to its protected frame and to a 2 mm circular safety ring around each existing hole by clipping boundary cells instead of dropping every intersecting hexagon.
+- Extend the cylinder-floor pattern to its protected circular frame and to a 2 mm circular safety ring around each existing hole with the same clipped-cell treatment.
+- Extend container side-wall patterns to their protected perimeter and side-opening bridges by clipping intersecting boundary cells instead of leaving avoidable whole-cell solid bands.
+- Compensate cylinder side cutters for inner-wall curvature across the full hex width so clipped and complete openings cut cleanly through both curved wall faces.
 - Add the same optional `honeycombMode` to the newly merged Open Shelf, including its side/divider walls, backboard, bottom, shelves, and top panel, with the locating pegs and panel intersections protected.
 - Preserve existing model IDs, routes, legacy parameter hydration, normal-mode geometry, bottom holes, mounting/stacking interfaces, side openings, preview lifecycle, and STEP/STL export behavior.
 - Add behavior-focused geometry tests for rib spacing, connected mesh coverage, interface keep-outs, valid solids, and material reduction.
