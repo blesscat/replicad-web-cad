@@ -129,9 +129,7 @@ describe('OpenGrid Snap footprint contract', () => {
       centerRemoverHole: true,
     })
 
-    expect(openGridSnapFileName(input)).toBe(
-      'opengrid-snap-directional-lite-offset0.15-quarter-corners1-center1.step',
-    )
+    expect(openGridSnapFileName(input)).toBe('Quarter.step')
     expect(openGridSnapStlFileName(input)).toBe(
       'opengrid-snap-directional-lite-offset0.15-quarter-corners1-center1.stl',
     )

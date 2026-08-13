@@ -11,7 +11,6 @@ import {
 
 const REPRESENTATIVE_MODEL_ROUTES = [
   '/cad/box',
-  '/cad/box-normal',
   '/cad/hsw-cell',
   '/cad/opengrid',
 ] as const

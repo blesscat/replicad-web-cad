@@ -114,12 +114,7 @@ describe('CAD component catalog', () => {
       group.definitions.map((definition) => definition.id),
     )
     expect(groupedIds).not.toEqual(
-      expect.arrayContaining([
-        'box',
-        'box-normal',
-        'modular-grid-base',
-        'hexagonal-column',
-      ]),
+      expect.arrayContaining(['box', 'modular-grid-base', 'hexagonal-column']),
     )
   })
 
@@ -147,10 +142,9 @@ describe('CAD component catalog', () => {
     expect(getModelDefinition('hsw-cell')?.displayName).toBe('HSW 六角蜂巢')
   })
 
-  it('exposes independent model definitions including box-normal and OpenGrid', () => {
+  it('exposes independent model definitions including OpenGrid', () => {
     expect(modelDefinitions.map((definition) => definition.id)).toEqual([
       'box',
-      'box-normal',
       'modular-grid-base',
       'hsw-cell',
       'hexagonal-column',
@@ -163,47 +157,6 @@ describe('CAD component catalog', () => {
       'opengrid-snap-remover',
       'opengrid-open-shelf',
     ])
-
-    const boxNormal = getModelDefinition('box-normal')
-    expect(boxNormal?.displayName).toBe('標準開口盒')
-    expect(boxNormal?.parameterSchema.map((field) => field.key)).toEqual([
-      'x',
-      'y',
-      'height',
-    ])
-    expect(boxNormal?.parameterSchema.map((field) => field.max)).toEqual([
-      40, 35, 500,
-    ])
-    expect(boxNormal?.parameterSchema.at(2)).toMatchObject({
-      key: 'height',
-      max: 500,
-      sliderMin: 10,
-      sliderMax: 200,
-    })
-    expect(boxNormal?.defaultParameters).toEqual({
-      x: 2,
-      y: 2,
-      height: 10,
-      cornerPosts: true,
-    })
-    expect(
-      boxNormal?.exportFileName({ x: 2, y: 2, height: 10, cornerPosts: true }),
-    ).toBe('box-normal-2x2-h10-posts.step')
-    expect(
-      boxNormal?.stlFileName({ x: 2, y: 2, height: 10, cornerPosts: false }),
-    ).toBe('box-normal-2x2-h10-plain.stl')
-    const bounds = boxNormal?.boundsForParameters({
-      x: 2,
-      y: 2,
-      height: 10,
-      cornerPosts: true,
-    })
-    expect(bounds?.min[0]).toBeCloseTo(-10.144, 10)
-    expect(bounds?.min[1]).toBeCloseTo(-11.725, 10)
-    expect(bounds?.min[2]).toBe(0)
-    expect(bounds?.max[0]).toBeCloseTo(10.144, 10)
-    expect(bounds?.max[1]).toBeCloseTo(11.725, 10)
-    expect(bounds?.max[2]).toBe(17)
 
     const grid = getModelDefinition('modular-grid-base')
     expect(grid?.displayName).toBe('模組化網格底板')
@@ -340,12 +293,10 @@ describe('CAD component catalog', () => {
 
   it('maps registered models to dedicated CAD routes and rejects unknown paths', () => {
     expect(cadPathForModel('box')).toBe('/cad/box')
-    expect(cadPathForModel('box-normal')).toBe('/cad/box-normal')
     expect(cadPathForModel('modular-grid-base')).toBe('/cad/modular-grid-base')
     expect(cadPathForModel('hsw-cell')).toBe('/cad/hsw-cell')
     expect(cadPathForModel('hexagonal-column')).toBe('/cad/hexagonal-column')
     expect(modelIdForCadPath('/cad/box')).toBe('box')
-    expect(modelIdForCadPath('/cad/box-normal/')).toBe('box-normal')
     expect(modelIdForCadPath('/cad/modular-grid-base/')).toBe(
       'modular-grid-base',
     )
@@ -368,6 +319,7 @@ describe('CAD component catalog', () => {
       'opengrid-snap-remover',
     )
     expect(modelIdForCadPath('/cad/unknown')).toBeUndefined()
+    expect(modelIdForCadPath('/cad/box-normal')).toBeUndefined()
     expect(modelIdForCadPath('/docs/box')).toBeUndefined()
   })
 
@@ -578,14 +530,15 @@ describe('CAD component catalog', () => {
     expect(definition?.defaultParameters).toEqual(
       OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
     )
-    expect(definition?.selectionDescription).toContain('四角連接孔為 Ø5 mm')
+    expect(definition?.selectionDescription).toContain('無角座、角座孔')
+    expect(definition?.selectionDescription).toContain('Ø5 × 3 mm')
     expect(
       definition?.validateParameters({
         ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
         x: 0.5,
         y: 1,
         height: 20,
-        cornerBottomHoles: true,
+        cornerSeatMode: 'hole',
         fullBottomHoleGrid: false,
         basePlateMode: false,
       }),
@@ -598,7 +551,7 @@ describe('CAD component catalog', () => {
           x: 0.5,
           y: 1,
           height: 20,
-          cornerBottomHoles: true,
+          cornerSeatMode: 'hole',
           fullBottomHoleGrid: false,
           basePlateMode: false,
         },
@@ -610,22 +563,22 @@ describe('CAD component catalog', () => {
         x: 1.5,
         y: 2,
         height: 30,
-        cornerBottomHoles: true,
+        cornerSeatMode: 'hole',
         fullBottomHoleGrid: false,
         basePlateMode: false,
       }),
-    ).toBe('opengrid-stackable-box-1.5x2-h30.step')
+    ).toBe('opengrid-stackable-box-1.5x2-h30-seats-hole.step')
     expect(
       definition?.stlFileName({
         ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
         x: 1.5,
         y: 2,
         height: 30,
-        cornerBottomHoles: true,
+        cornerSeatMode: 'hole',
         fullBottomHoleGrid: false,
         basePlateMode: false,
       }),
-    ).toBe('opengrid-stackable-box-1.5x2-h30.stl')
+    ).toBe('opengrid-stackable-box-1.5x2-h30-seats-hole.stl')
   })
 
   it('exposes the independent OpenGrid divider definition and route', () => {
@@ -815,9 +768,8 @@ describe('CAD component catalog', () => {
     expect(definition?.defaultParameters).toEqual(
       OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
     )
-    expect(definition?.selectionDescription).toContain(
-      '中心加四個外側連接孔為 Ø5 mm',
-    )
+    expect(definition?.selectionDescription).toContain('無角座、角座孔')
+    expect(definition?.selectionDescription).toContain('Ø5 × 3 mm')
     expect(
       definition?.validateParameters({ diameter: 60, height: 20 }),
     ).toEqual({
@@ -833,19 +785,19 @@ describe('CAD component catalog', () => {
       definition?.exportFileName(
         OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       ),
-    ).toBe('opengrid-stackable-cylinder-d60-h20.step')
+    ).toBe('opengrid-stackable-cylinder-d60-h20-seats-hole.step')
     expect(
       definition?.stlFileName({
         ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
         thinBottomMode: true,
-        bottomHolesEnabled: false,
+        bottomSeatMode: 'none',
       }),
-    ).toBe('opengrid-stackable-cylinder-d60-h20-thin-no-holes.stl')
+    ).toBe('opengrid-stackable-cylinder-d60-h20-seats-none-thin.stl')
     expect(
       definition?.exportFileName({
         ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
         bottomPlateMode: true,
       }),
-    ).toBe('opengrid-stackable-cylinder-d60-h20-bottom-plate.step')
+    ).toBe('opengrid-stackable-cylinder-d60-h20-seats-hole-bottom-plate.step')
   })
 })

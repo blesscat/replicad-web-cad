@@ -13,11 +13,6 @@ describe('CAD Worker error mapping', () => {
     ['GRID_TEMPLATE_INVALID_BOUNDS', 'model.generate', 'MODEL_ASSET_INVALID'],
     ['HSW_CELL_ASSET_INVALID_BOUNDS', 'model.generate', 'MODEL_ASSET_INVALID'],
     [
-      'BOX_NORMAL_ASSET_INVALID_BOUNDS',
-      'model.generate',
-      'MODEL_ASSET_INVALID',
-    ],
-    [
       'HEXAGONAL_COLUMN_ASSET_INVALID_BOUNDS',
       'model.generate',
       'MODEL_ASSET_INVALID',

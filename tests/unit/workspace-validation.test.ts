@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import type {
-  BoxNormalParameters,
   BoxParameters,
   HexagonalColumnParameters,
   HswCellParameters,
@@ -116,44 +115,6 @@ describe('CAD workspace validation helpers', () => {
     })
   })
 
-  it('round-trips box-normal grid values and its typed checkbox', () => {
-    const parameters: BoxNormalParameters = {
-      x: 2,
-      y: 2,
-      height: 10,
-      cornerPosts: true,
-    }
-    const raw = rawFromParameters(parameters)
-
-    expect(raw).toEqual({
-      x: '2',
-      y: '2',
-      height: '10',
-      cornerPosts: 'true',
-    })
-    expect(parseRawParameters(raw, 'box-normal')).toEqual({
-      valid: true,
-      value: parameters,
-    })
-    expect(
-      parseRawParameters(
-        { x: '2', y: '2', height: '10', cornerPosts: 'yes' },
-        'box-normal',
-      ),
-    ).toEqual({
-      valid: false,
-      message: '必須是 true 或 false。',
-      field: 'cornerPosts',
-    })
-    expect(
-      parseRawParameters({ x: '2', y: '2', height: '10' }, 'box-normal'),
-    ).toEqual({
-      valid: false,
-      message: '必須是 true 或 false。',
-      field: 'cornerPosts',
-    })
-  })
-
   it('parses decimal OpenGrid Snap offsets without accepting board fields', () => {
     const parameters: OpenGridSnapParameters = {
       variant: 'Lite',
@@ -253,7 +214,7 @@ describe('CAD workspace validation helpers', () => {
       x: 0.5,
       y: 1.5,
       height: 25,
-      cornerBottomHoles: true,
+      cornerSeatMode: 'hole',
       fullBottomHoleGrid: true,
       basePlateMode: false,
     }
@@ -263,7 +224,7 @@ describe('CAD workspace validation helpers', () => {
       x: '0.5',
       y: '1.5',
       height: '25',
-      cornerBottomHoles: 'true',
+      cornerSeatMode: 'hole',
       fullBottomHoleGrid: 'true',
       basePlateMode: 'false',
       thinShellMode: 'false',
@@ -290,7 +251,7 @@ describe('CAD workspace validation helpers', () => {
           x: '0.5',
           y: '1.5',
           height: '25',
-          cornerBottomHoles: 'true',
+          cornerSeatMode: 'hole',
           fullBottomHoleGrid: 'true',
           basePlateMode: 'false',
         },
@@ -306,7 +267,7 @@ describe('CAD workspace validation helpers', () => {
           x: '0.25',
           y: '1',
           height: '25',
-          cornerBottomHoles: 'true',
+          cornerSeatMode: 'hole',
           fullBottomHoleGrid: 'true',
           basePlateMode: 'false',
         },
@@ -526,7 +487,7 @@ describe('CAD workspace validation helpers', () => {
           diameter: '56.5',
           height: '30',
           thinBottomMode: 'false',
-          bottomHolesEnabled: 'true',
+          bottomSeatMode: 'hole',
         },
         'opengrid-stackable-cylinder',
       ),

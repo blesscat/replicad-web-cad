@@ -25,9 +25,6 @@ import type {
 
 function defaultInputForModel(modelId: ModelId): ModelParameterValues {
   if (modelId === 'box') return { width: 20, depth: 30, height: 40 }
-  if (modelId === 'box-normal') {
-    return { x: 2, y: 2, height: 10, cornerPosts: true }
-  }
   if (modelId === 'modular-grid-base' || modelId === 'hsw-cell') {
     return { rows: 1, columns: 1 }
   }
@@ -480,7 +477,7 @@ describe('CAD model generation debounce', () => {
         x: 0.5,
         y: 1,
         height: 10,
-        cornerBottomHoles: true,
+        cornerSeatMode: 'hole',
         fullBottomHoleGrid: false,
         basePlateMode: false,
       },
@@ -499,7 +496,7 @@ describe('CAD model generation debounce', () => {
           x: 1.5,
           y: 1,
           height: 10,
-          cornerBottomHoles: true,
+          cornerSeatMode: 'hole',
           fullBottomHoleGrid: false,
           basePlateMode: false,
         },
@@ -573,7 +570,7 @@ describe('CAD model generation debounce', () => {
         height: 30,
         thinBottomMode: false,
         bottomPlateMode: false,
-        bottomHolesEnabled: true,
+        bottomSeatMode: 'hole',
       },
     )
     const handlers = createModelGenerationHandlers(context)
@@ -634,14 +631,14 @@ describe('CAD model generation debounce', () => {
     )
   })
 
-  it('keeps cylinder mode and all-hole toggles in the generation snapshot', () => {
+  it('keeps cylinder profile and seat mode in the generation snapshot', () => {
     const { send, context } = createRuntimeContext(
       'opengrid-stackable-cylinder',
     )
     const handlers = createModelGenerationHandlers(context)
 
     handlers.handleInputChange('thinBottomMode', 'true')
-    handlers.handleInputChange('bottomHolesEnabled', 'false')
+    handlers.handleInputChange('bottomSeatMode', 'none')
     vi.advanceTimersByTime(500)
 
     expect(send).toHaveBeenLastCalledWith(
@@ -651,7 +648,7 @@ describe('CAD model generation debounce', () => {
         parameters: {
           ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
           thinBottomMode: true,
-          bottomHolesEnabled: false,
+          bottomSeatMode: 'none',
         },
       }),
     )

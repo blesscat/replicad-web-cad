@@ -291,7 +291,10 @@ export {
   snapNominalAxisSize,
 } from './half-cell'
 export { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
-export { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from './opengrid-locating-assembly'
+export {
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
+  OPENGRID_LOCATING_SEAT_MODES,
+} from './opengrid-locating-assembly'
 export type { HalfCellDirection, HalfCellX, HalfCellY } from './half-cell'
 export type {
   OpenGridSnapBounds,
@@ -327,6 +330,7 @@ export type {
   OpenGridStackableCylinderValidation,
   OpenGridStackableCylinderValidationIssue,
 } from './opengrid-stackable-cylinder'
+export type { OpenGridLocatingSeatMode } from './opengrid-locating-assembly'
 export type {
   OpenGridBoardConfiguration,
   OpenGridChamferMode,
@@ -397,31 +401,6 @@ export const HSW_CELL_CONFIGURATION = {
   staggerY: 11.80000024901162,
 } as const
 
-export const BOX_NORMAL_CONFIGURATION = {
-  gridX: 10.219,
-  gridY: 11.8,
-  defaultX: 2,
-  defaultY: 2,
-  defaultHeight: 10,
-  minX: 2,
-  maxX: 40,
-  minY: 2,
-  maxY: 35,
-  minHeight: 10,
-  maxHeight: 500,
-  heightSliderMax: 200,
-  clearanceTotal: 0.15,
-  cornerPostHeight: 7,
-  cornerPostCrossSectionRotationDegrees: 0,
-  cornerPostAttachmentTransitionLength: 0,
-  wallThickness: 1,
-  floorThickness: 1,
-  outerCornerRadius: 1,
-  canonicalWidth: 20.438,
-  canonicalDepth: 23.6,
-  canonicalHeight: 10,
-} as const
-
 export type HexagonalColumnOrientation = 'lying' | 'standing'
 
 export const HEXAGONAL_COLUMN_CONFIGURATION = {
@@ -473,7 +452,6 @@ export const PROTOTYPE_CONFIGURATION = {
   },
   hswCell: HSW_CELL_CONFIGURATION,
   opengrid: OPENGRID_CONFIGURATION,
-  boxNormal: BOX_NORMAL_CONFIGURATION,
   opengridStackableBox: OPENGRID_STACKABLE_BOX_CONFIGURATION,
   opengridStackableCylinder: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
   opengridDivider: OPENGRID_DIVIDER_CONFIGURATION,
@@ -482,13 +460,11 @@ export const PROTOTYPE_CONFIGURATION = {
 
 export type DimensionKey = 'width' | 'depth' | 'height'
 export type GridParameterKey = 'rows' | 'columns'
-export type BoxNormalParameterKey = 'x' | 'y' | 'height' | 'cornerPosts'
 export type HexagonalColumnParameterKey =
   'height' | 'count' | 'gap' | 'orientation'
 export type ModelParameterKey =
   | DimensionKey
   | GridParameterKey
-  | BoxNormalParameterKey
   | HexagonalColumnParameterKey
   | OpenGridParameterKey
   | OpenGridStackableBoxParameterKey
@@ -506,7 +482,6 @@ export type ScalarModelParameterKey =
   | 'offset'
 export type ModelId =
   | 'box'
-  | 'box-normal'
   | 'modular-grid-base'
   | 'hsw-cell'
   | 'hexagonal-column'
@@ -522,12 +497,6 @@ export type ModelId =
 export type BoxParameters = Record<DimensionKey, number>
 export type ModularGridBaseParameters = Record<GridParameterKey, number>
 export type HswCellParameters = Record<GridParameterKey, number>
-export type BoxNormalParameters = {
-  x: number
-  y: number
-  height: number
-  cornerPosts: boolean
-}
 export type HexagonalColumnParameters = {
   height: number
   count: number
@@ -538,7 +507,6 @@ export type OpenGridSnapRemoverParameters = Record<never, never>
 
 export type ModelParameters =
   | { modelId: 'box'; parameters: BoxParameters }
-  | { modelId: 'box-normal'; parameters: BoxNormalParameters }
   | {
       modelId: 'modular-grid-base'
       parameters: ModularGridBaseParameters
@@ -580,7 +548,6 @@ export type ModelBounds = {
 }
 
 export type BoxBounds = ModelBounds
-export type BoxNormalBounds = ModelBounds
 
 export type ValidationIssue = {
   field: ModelParameterKey | 'parameters'
@@ -597,10 +564,6 @@ export type ModularGridBaseValidation =
 
 export type HswCellValidation =
   | { valid: true; value: HswCellParameters }
-  | { valid: false; issues: ValidationIssue[] }
-
-export type BoxNormalValidation =
-  | { valid: true; value: BoxNormalParameters }
   | { valid: false; issues: ValidationIssue[] }
 
 export type OpenGridStackableBoxModelValidation =
@@ -657,12 +620,6 @@ export type ModelValidation =
 
 const DIMENSIONS: DimensionKey[] = ['width', 'depth', 'height']
 const GRID_PARAMETERS: GridParameterKey[] = ['rows', 'columns']
-const BOX_NORMAL_PARAMETERS: BoxNormalParameterKey[] = [
-  'x',
-  'y',
-  'height',
-  'cornerPosts',
-]
 const HEXAGONAL_COLUMN_PARAMETERS: HexagonalColumnParameterKey[] = [
   'height',
   'count',
@@ -745,83 +702,6 @@ export function validateBoxParameters(value: unknown): BoxValidation {
       width: candidate.width as number,
       depth: candidate.depth as number,
       height: candidate.height as number,
-    },
-  }
-}
-
-export function validateBoxNormalParameters(
-  value: unknown,
-): BoxNormalValidation {
-  if (!value || typeof value !== 'object') {
-    return {
-      valid: false,
-      issues: [{ field: 'parameters', message: '需要提供 box-normal 參數。' }],
-    }
-  }
-
-  const candidate = value as Partial<Record<BoxNormalParameterKey, unknown>> &
-    Record<string, unknown>
-  const issues: ValidationIssue[] = []
-  const configuration = BOX_NORMAL_CONFIGURATION
-
-  if (!hasExactKeys(candidate, BOX_NORMAL_PARAMETERS)) {
-    issues.push({ field: 'parameters', message: '包含不支援的參數欄位。' })
-  }
-
-  const integerFields: Array<{
-    field: 'x' | 'y' | 'height'
-    min: number
-    max: number
-    label: string
-  }> = [
-    {
-      field: 'x',
-      min: configuration.minX,
-      max: configuration.maxX,
-      label: 'X 格數',
-    },
-    {
-      field: 'y',
-      min: configuration.minY,
-      max: configuration.maxY,
-      label: 'Y 格數',
-    },
-    {
-      field: 'height',
-      min: configuration.minHeight,
-      max: configuration.maxHeight,
-      label: '盒體高度',
-    },
-  ]
-
-  for (const { field, min, max, label } of integerFields) {
-    const number = candidate[field]
-    if (typeof number !== 'number' || !Number.isFinite(number)) {
-      issues.push({ field, message: '必須是有限的整數。' })
-      continue
-    }
-    if (!Number.isSafeInteger(number)) {
-      issues.push({ field, message: '只接受安全範圍內的整數。' })
-      continue
-    }
-    if (number < min || number > max) {
-      issues.push({ field, message: `${label}必須介於 ${min}–${max}。` })
-    }
-  }
-
-  if (typeof candidate.cornerPosts !== 'boolean') {
-    issues.push({ field: 'cornerPosts', message: '必須是布林值。' })
-  }
-
-  if (issues.length > 0) return { valid: false, issues }
-
-  return {
-    valid: true,
-    value: {
-      x: candidate.x as number,
-      y: candidate.y as number,
-      height: candidate.height as number,
-      cornerPosts: candidate.cornerPosts as boolean,
     },
   }
 }
@@ -1112,12 +992,6 @@ export function validateModelParameters(
     return { valid: true, value: { modelId, parameters: validation.value } }
   }
 
-  if (modelId === 'box-normal') {
-    const validation = validateBoxNormalParameters(value)
-    if (!validation.valid) return validation
-    return { valid: true, value: { modelId, parameters: validation.value } }
-  }
-
   if (modelId === 'modular-grid-base') {
     const validation = validateModularGridBaseParameters(value)
     if (!validation.valid) return validation
@@ -1251,44 +1125,6 @@ export function boundsForBox(parameters: BoxParameters): BoxBounds {
   }
 }
 
-export function boxNormalNominalFootprintFor(
-  parameters: BoxNormalParameters,
-): [number, number] {
-  return [
-    parameters.x * BOX_NORMAL_CONFIGURATION.gridX,
-    parameters.y * BOX_NORMAL_CONFIGURATION.gridY,
-  ]
-}
-
-export function boxNormalPostCentersFor(
-  parameters: BoxNormalParameters,
-): Array<[number, number]> {
-  const xOffset = ((parameters.x - 1) * BOX_NORMAL_CONFIGURATION.gridX) / 2
-  const yOffset = ((parameters.y - 1) * BOX_NORMAL_CONFIGURATION.gridY) / 2
-  return [
-    [-xOffset, -yOffset],
-    [-xOffset, yOffset],
-    [xOffset, -yOffset],
-    [xOffset, yOffset],
-  ]
-}
-
-export function boundsForBoxNormal(
-  parameters: BoxNormalParameters,
-): BoxNormalBounds {
-  const [nominalWidth, nominalDepth] = boxNormalNominalFootprintFor(parameters)
-  const width = nominalWidth - BOX_NORMAL_CONFIGURATION.clearanceTotal
-  const depth = nominalDepth - BOX_NORMAL_CONFIGURATION.clearanceTotal
-  const baseHeight = parameters.cornerPosts
-    ? BOX_NORMAL_CONFIGURATION.cornerPostHeight
-    : 0
-
-  return {
-    min: [-width / 2, -depth / 2, 0],
-    max: [width / 2, depth / 2, baseHeight + parameters.height],
-  }
-}
-
 export function boundsForModularGridBase(
   parameters: ModularGridBaseParameters,
 ): ModelBounds {
@@ -1379,16 +1215,6 @@ export function boxStlFileName(parameters: BoxParameters): string {
   return `box-${parameters.width}x${parameters.depth}x${parameters.height}${PROTOTYPE_CONFIGURATION.stlExtension}`
 }
 
-export function boxNormalFileName(parameters: BoxNormalParameters): string {
-  const postMode = parameters.cornerPosts ? 'posts' : 'plain'
-  return `box-normal-${parameters.x}x${parameters.y}-h${parameters.height}-${postMode}${PROTOTYPE_CONFIGURATION.stepExtension}`
-}
-
-export function boxNormalStlFileName(parameters: BoxNormalParameters): string {
-  const postMode = parameters.cornerPosts ? 'posts' : 'plain'
-  return `box-normal-${parameters.x}x${parameters.y}-h${parameters.height}-${postMode}${PROTOTYPE_CONFIGURATION.stlExtension}`
-}
-
 export function modularGridBaseFileName(
   parameters: ModularGridBaseParameters,
 ): string {
@@ -1454,12 +1280,6 @@ export function boundsForOpenGridSnapRemover(
 
 export function isBoxParameters(value: unknown): value is BoxParameters {
   return validateBoxParameters(value).valid
-}
-
-export function isBoxNormalParameters(
-  value: unknown,
-): value is BoxNormalParameters {
-  return validateBoxNormalParameters(value).valid
 }
 
 export function isModularGridBaseParameters(
@@ -1538,8 +1358,6 @@ export function boundsForModel(model: ModelParameters): ModelBounds {
   switch (model.modelId) {
     case 'box':
       return boundsForBox(model.parameters)
-    case 'box-normal':
-      return boundsForBoxNormal(model.parameters)
     case 'modular-grid-base':
       return boundsForModularGridBase(model.parameters)
     case 'hsw-cell':
@@ -1569,8 +1387,6 @@ export function modelFileName(model: ModelParameters): string {
   switch (model.modelId) {
     case 'box':
       return boxFileName(model.parameters)
-    case 'box-normal':
-      return boxNormalFileName(model.parameters)
     case 'modular-grid-base':
       return modularGridBaseFileName(model.parameters)
     case 'hsw-cell':
@@ -1600,8 +1416,6 @@ export function modelStlFileName(model: ModelParameters): string {
   switch (model.modelId) {
     case 'box':
       return boxStlFileName(model.parameters)
-    case 'box-normal':
-      return boxNormalStlFileName(model.parameters)
     case 'modular-grid-base':
       return modularGridBaseStlFileName(model.parameters)
     case 'hsw-cell':

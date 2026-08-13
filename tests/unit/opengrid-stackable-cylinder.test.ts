@@ -347,8 +347,8 @@ describe('OpenGrid stackable-cylinder contract', () => {
   it.each([
     ['thinBottomMode', 'true'],
     ['bottomPlateMode', 1],
-    ['bottomHolesEnabled', 1],
-  ] as const)('rejects a non-boolean %s flag', (field, value) => {
+    ['bottomSeatMode', 'invalid'],
+  ] as const)('rejects an invalid %s value', (field, value) => {
     const validation = validateOpenGridStackableCylinderParameters({
       ...parameters(),
       [field]: value,
@@ -382,10 +382,10 @@ describe('OpenGrid stackable-cylinder contract', () => {
       max: [30, 30, 20],
     })
     expect(openGridStackableCylinderFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d60-h20.step',
+      'opengrid-stackable-cylinder-d60-h20-seats-hole.step',
     )
     expect(openGridStackableCylinderStlFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d60-h20.stl',
+      'opengrid-stackable-cylinder-d60-h20-seats-hole.stl',
     )
     const model = {
       modelId: 'opengrid-stackable-cylinder' as const,
@@ -395,10 +395,10 @@ describe('OpenGrid stackable-cylinder contract', () => {
       boundsForOpenGridStackableCylinder(value),
     )
     expect(modelFileName(model)).toBe(
-      'opengrid-stackable-cylinder-d60-h20.step',
+      'opengrid-stackable-cylinder-d60-h20-seats-hole.step',
     )
     expect(modelStlFileName(model)).toBe(
-      'opengrid-stackable-cylinder-d60-h20.stl',
+      'opengrid-stackable-cylinder-d60-h20-seats-hole.stl',
     )
     expect(validateModelParameters(model.modelId, value)).toEqual({
       valid: true,
@@ -406,26 +406,30 @@ describe('OpenGrid stackable-cylinder contract', () => {
     })
   })
 
-  it('suffixes thin and no-hole exports without changing model identity', () => {
+  it('suffixes seat and profile modes without changing model identity', () => {
     const thin = parameters({ thinBottomMode: true })
-    const noHoles = parameters({ bottomHolesEnabled: false })
+    const noSeats = parameters({ bottomSeatMode: 'none' })
+    const integrated = parameters({ bottomSeatMode: 'integrated' })
     const thinNoHoles = {
       ...thin,
-      bottomHolesEnabled: false,
+      bottomSeatMode: 'none' as const,
     }
 
     expect(openGridStackableCylinderFileName(thin)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-thin.step',
+      'opengrid-stackable-cylinder-d60-h20-seats-hole-thin.step',
     )
-    expect(openGridStackableCylinderStlFileName(noHoles)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-no-holes.stl',
+    expect(openGridStackableCylinderStlFileName(noSeats)).toBe(
+      'opengrid-stackable-cylinder-d60-h20-seats-none.stl',
     )
     expect(openGridStackableCylinderFileName(thinNoHoles)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-thin-no-holes.step',
+      'opengrid-stackable-cylinder-d60-h20-seats-none-thin.step',
+    )
+    expect(openGridStackableCylinderFileName(integrated)).toBe(
+      'opengrid-stackable-cylinder-d60-h20-seats-integrated.step',
     )
     expect(
       openGridStackableCylinderFileName(parameters({ bottomPlateMode: true })),
-    ).toBe('opengrid-stackable-cylinder-d60-h20-bottom-plate.step')
+    ).toBe('opengrid-stackable-cylinder-d60-h20-seats-hole-bottom-plate.step')
   })
 
   it('adds a deterministic opening fingerprint only when a side opening is enabled', () => {
@@ -436,10 +440,10 @@ describe('OpenGrid stackable-cylinder contract', () => {
     })
 
     expect(openGridStackableCylinderFileName(input)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
+      'opengrid-stackable-cylinder-d60-h20-seats-hole-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
     )
     expect(openGridStackableCylinderStlFileName(input)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-open-8-12-70_0-1-90_0-1-90_0-1-90.stl',
+      'opengrid-stackable-cylinder-d60-h20-seats-hole-open-8-12-70_0-1-90_0-1-90_0-1-90.stl',
     )
   })
 
@@ -502,10 +506,10 @@ describe('OpenGrid stackable-cylinder contract', () => {
     },
   )
 
-  it('disables the complete bottom-hole group with one flag', () => {
+  it('supports the no-seat mode without locating holes', () => {
     expect(
       openGridStackableCylinderHoleCentersFor(
-        parameters({ bottomHolesEnabled: false }),
+        parameters({ bottomSeatMode: 'none' }),
       ),
     ).toEqual([])
   })

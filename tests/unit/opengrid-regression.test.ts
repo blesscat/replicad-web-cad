@@ -49,7 +49,7 @@ describe('existing OpenGrid regression contract', () => {
       x: 0.5,
       y: 1.5,
       height: 20,
-      cornerBottomHoles: true,
+      cornerSeatMode: 'hole',
       fullBottomHoleGrid: false,
       basePlateMode: false,
     }
@@ -78,10 +78,10 @@ describe('existing OpenGrid regression contract', () => {
       'opengrid-lite-2x2-xnone-ynone-official-default-corners-corners-enabled.stl',
     )
     expect(stackable?.exportFileName(stackableValues)).toBe(
-      'opengrid-stackable-box-0.5x1.5-h20.step',
+      'opengrid-stackable-box-0.5x1.5-h20-seats-hole.step',
     )
     expect(stackable?.stlFileName(stackableValues)).toBe(
-      'opengrid-stackable-box-0.5x1.5-h20.stl',
+      'opengrid-stackable-box-0.5x1.5-h20-seats-hole.stl',
     )
   })
 
@@ -108,7 +108,7 @@ describe('existing OpenGrid regression contract', () => {
       x: 1,
       y: 2,
       height: 30,
-      cornerBottomHoles: true,
+      cornerSeatMode: 'hole',
       fullBottomHoleGrid: false,
       basePlateMode: false,
     }

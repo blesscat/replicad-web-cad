@@ -355,6 +355,11 @@ describe('OpenGrid divider contract', () => {
     ).toBe(0)
     expect(
       openGridDividerTransitionHeightFor({ wallThickness: 1, height: 2 }),
-    ).toBeCloseTo(1.8, 10)
+    ).toBeCloseTo(
+      2 -
+        OPENGRID_DIVIDER_CONFIGURATION.bottomSupportHeight -
+        OPENGRID_DIVIDER_CONFIGURATION.geometrySafetyMargin,
+      10,
+    )
   })
 })

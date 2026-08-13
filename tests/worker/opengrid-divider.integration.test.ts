@@ -15,6 +15,7 @@ import {
   openGridDividerPegCentersFor,
   openGridDividerPlanBoundsFor,
   OPENGRID_DIVIDER_CONFIGURATION,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   type OpenGridDividerParameters,
   openGridDividerTransitionHeightFor,
 } from '../../src/cad-contract/units'
@@ -92,7 +93,7 @@ function transitionRoundFaceCount(
 ): number {
   const transitionHeight = openGridDividerTransitionHeightFor(parameters)
   if (transitionHeight <= 0) return 0
-  const transitionStart = OPENGRID_DIVIDER_CONFIGURATION.geometrySafetyMargin
+  const transitionStart = OPENGRID_DIVIDER_CONFIGURATION.bottomSupportHeight
   const transitionEnd = transitionStart + transitionHeight
   let count = 0
   for (const face of shape.faces) {
@@ -284,17 +285,20 @@ describe('OpenGrid divider CAD kernel integration', () => {
           parameters,
           mesh,
         )
-        expect(sectionWidthAt(shape, 0)).toBeCloseTo(
-          OPENGRID_DIVIDER_CONFIGURATION.wallWidth,
-          2,
-        )
+        expect(
+          sectionWidthAt(
+            shape,
+            OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius +
+              0.01,
+          ),
+        ).toBeCloseTo(OPENGRID_DIVIDER_CONFIGURATION.wallWidth, 2)
         expect(sectionWidthAt(shape, 4)).toBeCloseTo(wallThickness, 2)
         const transitionHeight = openGridDividerTransitionHeightFor(parameters)
         if (transitionHeight > 0) {
           expect(
             sectionWidthAt(
               shape,
-              OPENGRID_DIVIDER_CONFIGURATION.geometrySafetyMargin +
+              OPENGRID_DIVIDER_CONFIGURATION.bottomSupportHeight +
                 transitionHeight / 2,
             ),
           ).toBeCloseTo(
@@ -369,7 +373,9 @@ describe('OpenGrid divider CAD kernel integration', () => {
       wallThickness: 2,
     }
     const shape = await buildOpenGridDivider(parameters)
-    const baseProbe = makeBox([0, -10, 0], [7, 10, 0.1])
+    const baseProbeZ =
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius + 0.01
+    const baseProbe = makeBox([0, -10, baseProbeZ], [7, 10, baseProbeZ + 0.01])
     const upperProbe = makeBox([0, -10, 10], [7, 10, 10.1])
     let baseSection: Shape3D | null = null
     let upperSection: Shape3D | null = null

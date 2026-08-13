@@ -5,7 +5,6 @@ import {
   type OpenGridSystemContext,
 } from '../system-entry-context'
 import { boxDefinition } from './components/box'
-import { boxNormalDefinition } from './components/box-normal'
 import { hexagonalColumnDefinition } from './components/hexagonal-column'
 import { hswCellDefinition } from './components/hsw-cell'
 import { modularGridBaseDefinition } from './components/modular-grid-base'
@@ -38,7 +37,6 @@ export type {
 } from './types'
 export type { OpenGridSystemContext } from '../system-entry-context'
 export { boxDefinition } from './components/box'
-export { boxNormalDefinition } from './components/box-normal'
 export { hexagonalColumnDefinition } from './components/hexagonal-column'
 export { hswCellDefinition } from './components/hsw-cell'
 export { modularGridBaseDefinition } from './components/modular-grid-base'
@@ -53,7 +51,6 @@ export { opengridOpenShelfDefinition } from './components/opengrid-open-shelf'
 
 export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   boxDefinition,
-  boxNormalDefinition,
   modularGridBaseDefinition,
   hswCellDefinition,
   hexagonalColumnDefinition,

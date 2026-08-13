@@ -68,9 +68,17 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
   await expect(height).toHaveAttribute('max', '500')
   await expect(heightSlider).toHaveAttribute('min', '10')
   await expect(heightSlider).toHaveAttribute('max', '200')
-  const cornerHoles = page.getByRole('checkbox', { name: '底部四角孔' })
-  await expect(cornerHoles).toBeVisible()
-  await expect(cornerHoles).toBeChecked()
+  const seatMode = page.getByTestId('opengrid-stackable-box-seat-mode')
+  await expect(seatMode).toBeVisible()
+  await expect(seatMode.getByRole('radio')).toHaveCount(3)
+  const seatModeLabels = await seatMode
+    .getByRole('radio')
+    .evaluateAll((radios) =>
+      radios.map((radio) => radio.getAttribute('aria-label')),
+    )
+  expect(seatModeLabels).toEqual(['無角座', '角座孔', '內建角座'])
+  const cornerHoleMode = seatMode.getByRole('radio', { name: '角座孔' })
+  await expect(cornerHoleMode).toBeChecked()
   const fullGrid = page.getByRole('checkbox', { name: '底部全孔模式' })
   await expect(fullGrid).toBeVisible()
   await expect(fullGrid).not.toBeChecked()
@@ -99,8 +107,8 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
   await expect(page.getByText(/薄殼模式：不可堆疊，使用6mm定位柱/)).toHaveCount(
     0,
   )
-  await cornerHoles.uncheck()
-  await expect(cornerHoles).not.toBeChecked()
+  await seatMode.getByRole('radio', { name: '無角座' }).check()
+  await expect(seatMode.getByRole('radio', { name: '無角座' })).toBeChecked()
   await fullGrid.check()
   await expect(fullGrid).toBeChecked()
   await expect(page.getByText(/增加 14 mm 中心距/)).toHaveCount(0)
@@ -134,7 +142,7 @@ test('OpenGrid stackable-box keeps half-cell dimensions in export metadata', asy
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-stackable-box-1.5x1.5-h20.step',
+    'opengrid-stackable-box-1.5x1.5-h20-seats-hole.step',
   )
 
   await page.getByRole('radio', { name: '薄殼模式' }).check()
@@ -143,6 +151,25 @@ test('OpenGrid stackable-box keeps half-cell dimensions in export metadata', asy
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const thinDownload = await thinDownloadPromise
   expect(thinDownload.suggestedFilename()).toBe(
-    'opengrid-stackable-box-1.5x1.5-h20-thin-shell.step',
+    'opengrid-stackable-box-1.5x1.5-h20-seats-hole-thin-shell.step',
+  )
+})
+
+test('OpenGrid stackable-box exports the integrated seat mode', async ({
+  page,
+  browserName,
+}) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.goto('/cad/opengrid-stackable-box')
+  await waitForCadReady(page)
+
+  await page.getByRole('radio', { name: '內建角座' }).check()
+  await waitForCadReady(page)
+
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '下載 STEP' }).click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toBe(
+    'opengrid-stackable-box-2x2-h20-seats-integrated.step',
   )
 })

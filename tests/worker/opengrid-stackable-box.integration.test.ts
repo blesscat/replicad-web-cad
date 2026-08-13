@@ -77,7 +77,7 @@ function parameters(
     x: overrides.x ?? 2,
     y: overrides.y ?? 2,
     height: overrides.height ?? 10,
-    cornerBottomHoles: overrides.cornerBottomHoles ?? true,
+    cornerSeatMode: overrides.cornerSeatMode ?? 'hole',
     fullBottomHoleGrid: overrides.fullBottomHoleGrid ?? false,
     basePlateMode: overrides.basePlateMode ?? false,
     ...overrides,
@@ -507,7 +507,7 @@ describe('OpenGrid stackable-box B-Rep', () => {
       x: 1,
       y: 1,
       thinShellMode: true,
-      cornerBottomHoles: false,
+      cornerSeatMode: 'none',
       fullBottomHoleGrid: true,
     })
     const shape = buildOpenGridStackableBox(input)
@@ -767,10 +767,10 @@ describe('OpenGrid stackable-box B-Rep', () => {
   }, 120_000)
 
   it.each([
-    { cornerBottomHoles: false, fullBottomHoleGrid: false },
-    { cornerBottomHoles: false, fullBottomHoleGrid: true },
+    { cornerSeatMode: 'none' as const, fullBottomHoleGrid: false },
+    { cornerSeatMode: 'none' as const, fullBottomHoleGrid: true },
   ])(
-    'builds bottom-hole mode with cornerBottomHoles=$cornerBottomHoles and fullBottomHoleGrid=$fullBottomHoleGrid',
+    'builds no-seat mode with fullBottomHoleGrid=$fullBottomHoleGrid',
     (holeMode) => {
       const input = parameters({ x: 1, y: 1, ...holeMode })
       const shape = buildOpenGridStackableBox(input)
@@ -1302,7 +1302,7 @@ describe('OpenGrid stackable-box B-Rep', () => {
             x: 0.5,
             y: 0.5,
             height: 10,
-            cornerBottomHoles: true,
+            cornerSeatMode: 'hole',
             fullBottomHoleGrid: false,
             basePlateMode: false,
           }),
@@ -1324,4 +1324,28 @@ describe('OpenGrid stackable-box B-Rep', () => {
     ).toHaveLength(2)
     expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleDiameter).toBe(5)
   })
+
+  it('fuses integrated seats through the normal bottom and preserves ordinary grid holes', () => {
+    const input = parameters({
+      x: 1,
+      y: 1,
+      cornerSeatMode: 'integrated',
+      fullBottomHoleGrid: true,
+    })
+    const shape = buildOpenGridStackableBox(input)
+    try {
+      const report = inspectOpenGridStackableBoxInterface(shape, input)
+      const ordinaryCenters =
+        openGridStackableBoxOrdinaryBottomHoleCentersFor(input)
+      expect(report.cornerSeatMode).toBe('integrated')
+      expect(report.integratedSeatRecordCount).toBe(
+        openGridStackableBoxSocketCentersFor(input).length,
+      )
+      expect(report.captiveSocketRecords).toHaveLength(0)
+      expect(report.ordinaryBottomHoleCount).toBe(ordinaryCenters.length)
+      expect(boundsOf(shape)[0]?.[2]).toBeCloseTo(-3, 2)
+    } finally {
+      deleteShape(shape)
+    }
+  }, 120_000)
 })

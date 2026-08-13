@@ -143,51 +143,6 @@ The system MUST expose a runtime-validated component catalog. Each catalog entry
 - **And** modular-grid-base MUST 提供 rows、columns 欄位，並明示合法範圍 1–20 格、每格 20 × 20 mm 及固定高度 5 mm
 - **And** UI MUST NOT 顯示另一個 component 的參數欄位
 
-### Requirement: box-normal workspace integration
-
-The system MUST register `box-normal` as an independent runtime-validated model definition and MUST route `/cad/box-normal` to that definition. The definition MUST expose `x`, `y`, and `height` through numeric parameter fields plus `cornerPosts` through an independent custom checkbox control, centered X/Y preview metadata, deterministic STEP/STL metadata, and the bounds contract defined by the `box-normal` capability. The Worker MUST dispatch `modelId=box-normal` to a box-normal-specific builder and MUST NOT fall through to `box`, `modular-grid-base`, `hsw-cell`, or `hexagonal-column`.
-
-#### Scenario: box-normal initial generation
-
-- **GIVEN** a user opens `/cad/box-normal` in a supported browser
-- **WHEN** the Worker emits `engine.ready`
-- **THEN** the main thread MUST send generation 1 using valid saved box-normal parameters or the definition defaults
-- **AND** the Worker MUST route the request to the independent box-normal builder
-- **AND** the committed model MUST expose box-normal bounds, mesh and model metadata
-
-#### Scenario: box-normal parameter controls
-
-- **GIVEN** a user views the `/cad/box-normal` workspace
-- **WHEN** the parameter panel is rendered
-- **THEN** it MUST expose X slider values 2–40, Y slider values 2–35, integer height values 10–500 mm, and a checked-by-default corner-post checkbox
-- **AND** it MUST NOT expose parameters belonging to another component
-- **AND** the checkbox MUST expose an accessible label, checked state, and field-specific validation error when its raw value is not `true` or `false`
-
-#### Scenario: box-normal route isolation
-
-- **GIVEN** a `model.generate` request carries `modelId=box-normal`
-- **WHEN** the Worker validates and builds the request
-- **THEN** it MUST reject mismatched or unknown parameter shapes
-- **AND** it MUST NOT resolve the request through another component's builder or template cache
-
-### Requirement: box-normal parameter validation and generation lifecycle
-
-The workspace MUST parse X/Y/height as safe integers, parse `cornerPosts` as a boolean, and validate the complete box-normal snapshot before sending `model.generate`. Invalid or incomplete snapshots MUST follow the existing invalid-input and model-invalidate lifecycle. Valid snapshots MUST preserve the existing debounce, latest-wins, stale candidate, commit, mesh, and export gates.
-
-#### Scenario: Invalid box-normal input
-
-- **WHEN** a user enters a fractional, empty, non-finite, or out-of-range X, Y, or height value, or an invalid checkbox value
-- **THEN** the workspace MUST show a diagnosable validation error
-- **AND** it MUST send `model.invalidate` rather than `model.generate` for that snapshot
-- **AND** export MUST remain disabled while the input is invalid or stale
-
-#### Scenario: Valid box-normal input commit
-
-- **WHEN** a complete box-normal snapshot passes validation and the input debounce settles
-- **THEN** the workspace MUST send a generation request with typed `x`, `y`, `height`, and `cornerPosts`
-- **AND** only the latest valid candidate MUST be eligible for commit
-- **AND** the committed mesh bounds MUST match the box-normal contract within tolerance
-
 ### Requirement: OpenGrid board workspace integration
 
 The runtime-validated catalog MUST keep the existing opengrid model id and
@@ -269,39 +224,6 @@ replace the last committed OpenGrid revision or enable exports.
   newer generation
 - **AND** the older candidate MUST not commit
 - **AND** the last committed preview MAY remain visible but MUST be stale
-
-### Requirement: box-normal reference cache and disposal
-
-The Worker MUST load and validate the component-local `box-normal.step` reference at most once per Worker epoch, cache it independently from every other component reference/template, reuse it for later `box-normal` generations, and release it during Worker disposal. The box-normal builder MUST NOT delete or own the cached reference. A failed or missing reference MUST invalidate the cache and return a diagnosable asset error; pending cache cleanup MUST remain safe if disposal races asset loading.
-
-#### Scenario: Reference cache reuse
-
-- **WHEN** multiple `box-normal` generations run within one Worker epoch
-- **THEN** the Worker MUST load and validate `box-normal.step` only once
-- **AND** later generations MUST reuse the validated reference without using another component's cache
-
-#### Scenario: Reference disposal
-
-- **WHEN** the Worker is disposed while the reference is loaded or still pending
-- **THEN** the reference MUST be released once it becomes available
-- **AND** no later generation MUST reuse that disposed or failed reference
-
-#### Scenario: Reference load failure can be retried
-
-- **WHEN** loading or validating `box-normal.step` fails for one generation and a later generation is requested in the same Worker epoch
-- **THEN** the rejected reference promise MUST have been removed from the cache
-- **AND** the later generation MUST be allowed to retry the asset load
-
-### Requirement: box-normal documentation
-
-The Prototype documentation page MUST list `box-normal` as an available component and describe its X/Y grid ranges, 10–500 mm manual body-height input, 10–200 mm body-height slider, total 0.15 mm X/Y clearance, default four 7 mm corner posts, localStorage persistence, and STEP/STL export behavior.
-
-#### Scenario: Documentation describes box-normal
-
-- **WHEN** a user opens the Prototype documentation page
-- **THEN** the page MUST mention `box-normal` and its confirmed controls and geometry behavior
-- **AND** the page MUST describe the distinct 10–200 mm slider range and 10–500 mm manual input range
-- **AND** the page MUST NOT describe `box` as the only available solid model
 
 ### Requirement: 參數驗證與 generation
 
@@ -924,34 +846,46 @@ CAD workspace MUST 提供可辨識且可用的 component-level「全部恢復預
 
 ### Requirement: OpenGrid stackable-box workspace integration
 
-The runtime-validated catalog MUST register `opengrid-stackable-box` as an independent model definition in the OpenGrid series, and the model-specific CAD route MUST bind `/cad/opengrid-stackable-box` to that definition. The Worker MUST dispatch this model to its own parameter validation and geometry boundary without falling through to `opengrid`, `box-normal`, or another component. The workspace MUST preserve the existing latest-wins generation, preview, commit, STEP, and STL lifecycle.
+The CAD workspace MUST bind `/cad/opengrid-stackable-box` exclusively to
+`modelId=opengrid-stackable-box`. The catalog entry MUST expose the existing
+OpenGrid X/Y, height, profile, opening, and full-grid controls plus exactly one
+visible locating-seat radio group with `無角座`, `角座孔`, and `內建角座`. The
+panel MUST keep the existing thin-shell/stackable profile choices, MUST NOT
+expose `basePlateMode` as a selectable profile, and MUST preserve the existing
+latest-wins, preview, commit, STEP, and STL lifecycle. The Worker MUST validate
+the canonical enum parameter and route this model ID to the independent
+stackable-box builder.
 
-#### Scenario: Direct stackable-box navigation
+#### Scenario: Stackable-box route initializes
 
-- **WHEN** a user opens `/cad/opengrid-stackable-box` with browser CAD prerequisites available
-- **THEN** the page MUST load the stackable-box workspace
-- **AND** the initial generation MUST use valid saved stackable-box parameters when available, otherwise the model definition defaults
-- **AND** the committed revision MUST be identified as `opengrid-stackable-box`
+- **WHEN** a user opens `/cad/opengrid-stackable-box`
+- **THEN** the workspace MUST initialize with the stable stackable-box model ID
+- **AND** the first valid generation MUST use valid saved parameters or the
+  model defaults, including `cornerSeatMode='hole'` when no seat value exists
+
+#### Scenario: Stackable-box seat controls
+
+- **WHEN** a user views the stackable-box parameter panel
+- **THEN** it MUST show exactly the three mutually exclusive seat labels
+  `無角座`, `角座孔`, and `內建角座`
+- **AND** the selected value MUST be reflected in the typed snapshot
+- **AND** the existing full-bottom-hole grid control MUST remain independent
 
 #### Scenario: Stackable-box route isolation
 
-- **WHEN** a `model.generate` request carries `modelId=opengrid-stackable-box`
+- **WHEN** a `model.generate` request carries
+  `modelId=opengrid-stackable-box`
 - **THEN** the Worker MUST validate the stackable-box parameter shape
 - **AND** it MUST use the stackable-box builder boundary
-- **AND** it MUST reject mismatched parameters rather than resolving the request through the official OpenGrid board or another model
+- **AND** mismatched parameters MUST be rejected rather than resolved through
+  another model
 
-#### Scenario: Stackable-box controls
+#### Scenario: Stackable-box exports retain lifecycle gates
 
-- **WHEN** a user views `/cad/opengrid-stackable-box`
-- **THEN** the panel MUST expose the stackable box's X, Y, and height controls with OpenGrid 28 mm and half-cell semantics
-- **AND** it MUST describe the integrated side guide, centered per-cell bottom receiving grooves, and four-corner Snap mounting interface
-- **AND** it MUST NOT expose an upper-box/lower-box variant selector or a permanently protruding stacking-post toggle
-
-#### Scenario: Stackable-box export
-
-- **WHEN** a valid stackable-box candidate is committed
-- **THEN** the workspace MUST make its STEP and STL exports available using stackable-box metadata
-- **AND** exports MUST remain disabled while the current snapshot is invalid, stale, or failed geometry validation
+- **WHEN** a seat-mode candidate is valid and committed
+- **THEN** STEP and STL export MUST use the selected seat-mode metadata
+- **AND** exports MUST remain disabled while the current snapshot is invalid,
+  stale, generating, or failed geometry validation
 
 ### Requirement: OpenGrid Snap workspace controls
 
@@ -1143,45 +1077,57 @@ The runtime-validated component catalog MUST register `opengrid-pillar` as an in
 
 ### Requirement: OpenGrid locating model descriptions
 
-The runtime model-card descriptions for the affected OpenGrid components MUST state the confirmed locating dimensions. The pillar description MUST identify standard as 9 mm and thin-shell as 6 mm, both with a Ø5 mm body, and MUST mention the positioning mode's configurable XY offset range of -0.5～0.5 mm in 0.05 mm steps. The box description MUST state that its four corner connection holes are Ø5 mm. The cylinder description MUST state that its center hole and four outer cardinal connection holes are Ø5 mm. These descriptions MUST remain consistent with the generated geometry and parameter controls.
+The system MUST ensure that the OpenGrid stackable-box and stackable-cylinder
+panels and model descriptions describe the three locating-seat choices with the
+exact labels `無角座`,
+`角座孔`, and `內建角座`. The integrated description MUST communicate that the
+selected positions receive a solid Ø5 mm round seat extending 3 mm outward
+from the bottom. Existing model display names and OpenGrid identities MUST
+remain unchanged.
 
-#### Scenario: Pillar description exposes current contract
+#### Scenario: Integrated seat description is visible
 
-- **WHEN** the `opengrid-pillar` model card is rendered
-- **THEN** its description MUST state `堆疊版 9 mm`, `薄殼版 6 mm`, and Ø5 mm body dimensions
-- **AND** it MUST state that XY offsets range from -0.5～0.5 mm with 0.05 mm increments
-
-#### Scenario: Box and cylinder descriptions expose current holes
-
-- **WHEN** the box and cylinder model cards are rendered
-- **THEN** the box description MUST identify its four corner connection holes as Ø5 mm
-- **AND** the cylinder description MUST identify its center plus four outer cardinal connection holes as Ø5 mm
+- **WHEN** the user selects `內建角座` in either OpenGrid stackable model
+- **THEN** the panel MUST identify the result as a Ø5 mm, 3 mm-high outward
+  round seat
+- **AND** the panel MUST continue to show the other two mutually exclusive
+  choices
 
 ### Requirement: OpenGrid stackable-cylinder workspace integration
 
-The CAD workspace MUST bind `/cad/opengrid-stackable-cylinder` exclusively to `modelId=opengrid-stackable-cylinder`. The catalog entry MUST expose typed diameter and height fields with 1 mm slider increments and direct numeric input, two mutually exclusive visible mode choices `薄殼模式` and `堆疊模式`, a bottom-hole toggle, and a four-direction opening disclosure containing depth, bottom-length, and angle controls. The visible panel MUST NOT expose `bottomPlateMode` as a selectable radio choice, while the normalized legacy field MAY remain supported for persisted or programmatic snapshots. The Worker MUST route this model ID to the independent cylinder builder and MUST NOT fall through to `box`, `opengrid-stackable-box`, or another component.
+The CAD workspace MUST bind `/cad/opengrid-stackable-cylinder` exclusively to
+`modelId=opengrid-stackable-cylinder`. The catalog entry MUST expose the
+existing typed diameter, height, profile, and opening controls plus exactly one
+visible locating-seat radio group with `無角座`, `角座孔`, and `內建角座`.
+The visible panel MUST NOT expose `bottomPlateMode` as a selectable profile,
+and MUST NOT expose individual center or outer-hole toggles. The Worker MUST
+validate the canonical enum and route this model ID to the independent cylinder
+builder without falling through to another model.
 
 #### Scenario: Cylinder route initializes
 
 - **WHEN** a user opens `/cad/opengrid-stackable-cylinder`
-- **THEN** the workspace MUST initialize with `modelId=opengrid-stackable-cylinder`
-- **AND** the first valid generation MUST use the cylinder defaults or valid saved cylinder parameters
+- **THEN** the workspace MUST initialize with
+  `modelId=opengrid-stackable-cylinder`
+- **AND** the first valid generation MUST use valid saved parameters or the
+  defaults, including `bottomSeatMode='hole'` when no seat value exists
 
-#### Scenario: Cylinder panel exposes only cylinder fields
+#### Scenario: Cylinder seat controls
 
-- **WHEN** the user views the cylinder parameter panel
-- **THEN** it MUST show outer diameter and height controls
-- **AND** both controls MUST use a 1 mm step
-- **AND** it MUST show the two visible mode choices, the bottom-hole toggle, and the four direction opening controls
-- **AND** the selected default-mode description MUST read `預設模式：可堆疊滑動，使用9mm定位柱`
-- **AND** the selected thin-shell description MUST read `薄殼模式：不可堆疊，使用6mm定位柱`
-- **AND** it MUST NOT show rectangular X/Y cell, OpenGrid board, or stackable-box full-grid controls
+- **WHEN** a user views the cylinder parameter panel
+- **THEN** it MUST show exactly `無角座`, `角座孔`, and `內建角座` as mutually
+  exclusive radio choices
+- **AND** the existing selected profile descriptions MUST remain unchanged
+- **AND** it MUST not show rectangular X/Y, box full-grid, or individual-hole
+  controls
 
-#### Scenario: Worker dispatch is component-specific
+#### Scenario: Cylinder Worker dispatch is component-specific
 
-- **WHEN** the Worker receives a model-generation request with `modelId=opengrid-stackable-cylinder`
-- **THEN** it MUST validate the cylinder parameter shape and invoke the cylinder builder
-- **AND** a mismatched parameter shape MUST be rejected with a diagnosable validation error
+- **WHEN** the Worker receives a cylinder generation request with a seat mode
+- **THEN** it MUST validate the cylinder parameter shape and invoke the cylinder
+  builder
+- **AND** a mismatched or unsupported seat value MUST be rejected with a
+  diagnosable validation error
 
 ### Requirement: Cylinder workspace lifecycle and export gates
 

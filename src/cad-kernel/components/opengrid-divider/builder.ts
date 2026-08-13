@@ -2,6 +2,7 @@ import { getOC, makeCylinder, Sketcher, Solid, type Shape3D } from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   OPENGRID_DIVIDER_CONFIGURATION,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   classifyOpenGridDividerShape,
   openGridDividerArmEndpointsFor,
   openGridDividerPlanBoundsFor,
@@ -10,6 +11,7 @@ import {
   validateOpenGridDividerParameters,
   type OpenGridDividerParameters,
 } from '../../../cad-contract/units'
+import { filletEdgesAtZ } from '../../bottom-edge-fillet'
 import {
   measureBooleanInScope,
   type BooleanOperationScope,
@@ -76,7 +78,7 @@ function transitionSupportHeightFor(
   parameters: OpenGridDividerParameters,
 ): number {
   return openGridDividerTransitionHeightFor(parameters) > FILLET_RADIUS_EPSILON
-    ? OPENGRID_DIVIDER_CONFIGURATION.geometrySafetyMargin
+    ? OPENGRID_DIVIDER_CONFIGURATION.bottomSupportHeight
     : 0
 }
 
@@ -180,7 +182,10 @@ function filletRadiusForEdge(
     if (isVertical) {
       const transitionHeight = openGridDividerTransitionHeightFor(parameters)
       const lowerZ = Math.min(start.z ?? 0, end.z ?? 0)
-      if (transitionHeight > FILLET_RADIUS_EPSILON && lowerZ <= tolerance) {
+      if (
+        transitionHeight > FILLET_RADIUS_EPSILON &&
+        lowerZ <= transitionSupportHeightFor(parameters) + tolerance
+      ) {
         return null
       }
       return sideFilletRadiusForGeometry(parameters)
@@ -194,12 +199,19 @@ function filletRadiusForEdge(
       armAxis === 'x'
         ? Math.abs((end.y ?? 0) - (start.y ?? 0))
         : Math.abs((end.x ?? 0) - (start.x ?? 0))
+    const lowerZ = Math.min(start.z ?? 0, end.z ?? 0)
+    const upperZ = Math.max(start.z ?? 0, end.z ?? 0)
     const isTransitionSlope =
       armCoordinateDelta <= tolerance &&
       transverseCoordinateDelta > tolerance &&
       start.z !== undefined &&
       end.z !== undefined &&
-      Math.abs(end.z - start.z) > tolerance
+      Math.abs(end.z - start.z) > tolerance &&
+      lowerZ >= transitionSupportHeightFor(parameters) - tolerance &&
+      upperZ <=
+        transitionSupportHeightFor(parameters) +
+          openGridDividerTransitionHeightFor(parameters) +
+          tolerance
     if (isTransitionSlope) {
       return transitionFilletRadiusForGeometry(parameters)
     }
@@ -311,6 +323,100 @@ function makeVerticalWall(parameters: OpenGridDividerParameters): Shape3D {
   }
 }
 
+function armSpanFor(
+  parameters: OpenGridDividerParameters,
+  armAxis: 'x' | 'y',
+): { start: number; end: number } {
+  const endpoints = openGridDividerArmEndpointsFor(parameters)
+  const centerExtension = singleArmCenterExtensionFor(parameters)
+  if (armAxis === 'x') {
+    return {
+      start: parameters.left > 0 ? endpoints.left : -centerExtension,
+      end: parameters.right > 0 ? endpoints.right : centerExtension,
+    }
+  }
+  return {
+    start: parameters.down > 0 ? endpoints.down : -centerExtension,
+    end: parameters.up > 0 ? endpoints.up : centerExtension,
+  }
+}
+
+function makeBottomCornerCutter(
+  parameters: OpenGridDividerParameters,
+  armAxis: 'x' | 'y',
+  side: -1 | 1,
+): Shape3D {
+  const { wallWidth } = OPENGRID_DIVIDER_CONFIGURATION
+  const radius = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius
+  const halfBaseWidth = wallWidth / 2
+  const diagonal = radius / Math.sqrt(2)
+  const span = armSpanFor(parameters, armAxis)
+  const extension = 0.02
+  const origin: [number, number, number] = [span.start - extension, 0, 0]
+  const distance = span.end - span.start + extension * 2
+  const sketcher = new Sketcher('YZ', origin)
+  let sketch: ReturnType<Sketcher['close']> | null = null
+  let extruded: Shape3D | null = null
+
+  try {
+    if (side > 0) {
+      sketcher.movePointerTo([halfBaseWidth - radius, 0])
+      sketcher.lineTo([halfBaseWidth, 0])
+      sketcher.lineTo([halfBaseWidth, radius])
+      sketcher.threePointsArcTo(
+        [halfBaseWidth - radius, 0],
+        [halfBaseWidth - radius + diagonal, radius - diagonal],
+      )
+    } else {
+      sketcher.movePointerTo([-halfBaseWidth + radius, 0])
+      sketcher.lineTo([-halfBaseWidth, 0])
+      sketcher.lineTo([-halfBaseWidth, radius])
+      sketcher.threePointsArcTo(
+        [-halfBaseWidth + radius, 0],
+        [-halfBaseWidth + radius - diagonal, radius - diagonal],
+      )
+    }
+    sketch = sketcher.close()
+    extruded = sketch.extrude(distance, {
+      extrusionDirection: [1, 0, 0],
+    })
+  } finally {
+    deleteShape(sketch)
+    sketcher.delete()
+  }
+
+  if (!extruded) throw new Error('OPENGRID_DIVIDER_BOTTOM_CUTTER_EMPTY')
+  if (armAxis === 'x') return extruded
+
+  try {
+    const rotated = extruded.rotate(90, [0, 0, 0], [0, 0, 1])
+    if (rotated !== extruded) deleteShape(extruded)
+    return rotated
+  } catch (error) {
+    deleteShape(extruded)
+    throw error
+  }
+}
+
+function cutDividerBottomCorners(
+  shape: Shape3D,
+  parameters: OpenGridDividerParameters,
+  armAxis: 'x' | 'y',
+): Shape3D {
+  let current = shape
+  for (const side of [-1, 1] as const) {
+    const cutter = makeBottomCornerCutter(parameters, armAxis, side)
+    try {
+      const cut = current.cut(cutter)
+      if (cut !== current) deleteShape(current)
+      current = cut
+    } finally {
+      deleteShape(cutter)
+    }
+  }
+  return current
+}
+
 function fuseShapes(first: Shape3D, second: Shape3D): Shape3D {
   let fused: Shape3D | null = null
   try {
@@ -370,31 +476,38 @@ function roundedWallPart(
   parameters: OpenGridDividerParameters,
   armAxis: 'x' | 'y',
 ): Solid {
-  let rounded: Shape3D | null = null
+  let current: Shape3D = wall
   let solid: Solid | null = null
   try {
-    if (
-      topFilletRadiusForGeometry(parameters) <= FILLET_RADIUS_EPSILON &&
-      sideFilletRadiusForGeometry(parameters) <= FILLET_RADIUS_EPSILON &&
-      transitionFilletRadiusForGeometry(parameters) <= FILLET_RADIUS_EPSILON
-    ) {
-      solid = asSingleSolid(wall)
-      return solid
+    const hasOtherFillets =
+      topFilletRadiusForGeometry(parameters) > FILLET_RADIUS_EPSILON ||
+      sideFilletRadiusForGeometry(parameters) > FILLET_RADIUS_EPSILON ||
+      transitionFilletRadiusForGeometry(parameters) > FILLET_RADIUS_EPSILON
+    if (hasOtherFillets) {
+      try {
+        current = current.fillet((edge) => {
+          return filletRadiusForEdge(edge, parameters, armAxis)
+        })
+      } catch (error) {
+        throw new Error(`OPENGRID_DIVIDER_FILLET_FAILED:${armAxis}`, {
+          cause: error,
+        })
+      }
     }
+
     try {
-      rounded = wall.fillet((edge) => {
-        return filletRadiusForEdge(edge, parameters, armAxis)
-      })
+      current = cutDividerBottomCorners(current, parameters, armAxis)
     } catch (error) {
-      throw new Error(`OPENGRID_DIVIDER_FILLET_FAILED:${armAxis}`, {
+      throw new Error(`OPENGRID_DIVIDER_BOTTOM_FILLET_FAILED:${armAxis}`, {
         cause: error,
       })
     }
-    solid = asSingleSolid(rounded)
+
+    solid = asSingleSolid(current)
     return solid
   } finally {
     deleteShape(wall)
-    if (rounded && rounded !== solid) deleteShape(rounded)
+    if (current && current !== solid) deleteShape(current)
   }
 }
 
@@ -486,11 +599,17 @@ function translateToCenteredEnvelope(
 
 function makePeg(center: [number, number]): Shape3D {
   const overlapIntoWall = 0.02
-  return makeCylinder(
+  const peg = makeCylinder(
     OPENGRID_DIVIDER_CONFIGURATION.pegDiameter / 2,
     OPENGRID_DIVIDER_CONFIGURATION.pegLength + overlapIntoWall,
     [center[0], center[1], -OPENGRID_DIVIDER_CONFIGURATION.pegLength],
   )
+  const rounded = filletEdgesAtZ(
+    peg,
+    -OPENGRID_DIVIDER_CONFIGURATION.pegLength,
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
+  )
+  return rounded
 }
 
 export async function buildOpenGridDivider(

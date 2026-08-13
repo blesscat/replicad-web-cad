@@ -16,6 +16,7 @@ import {
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
   OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS,
   openGridStackableBoxSocketCentersFor,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   type OpenGridStackableBoxOpeningDirection,
   type OpenGridStackableBoxDerivedOpening,
@@ -26,6 +27,7 @@ import {
   type BooleanOperationScope,
   type BooleanOperationReporter,
 } from '../../boolean-progress'
+import { filletEdgesAtZ } from '../../bottom-edge-fillet'
 import {
   assertGenerationCurrent,
   deleteShape,
@@ -329,7 +331,11 @@ function makeThinShell(parameters: OpenGridStackableBoxParameters): Shape3D {
     shell = null
     const simplified = filleted.simplify()
     if (simplified !== filleted) deleteShape(filleted)
-    return simplified
+    return filletEdgesAtZ(
+      simplified,
+      0,
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
+    )
   } catch (error) {
     deleteShape(outer)
     deleteShape(cavity)
@@ -345,19 +351,33 @@ export function makeBoxShell(
   if (parameters.thinShellMode) return makeThinShell(parameters)
   const outer = loftRoundedSections(outerEnvelopeSections(parameters))
   let cavity: Shape3D | null = null
+  let shell: Shape3D | null = null
   try {
     cavity = loftRoundedSections(innerCavitySections(parameters))
     const activeCavity = cavity
     const cutScope = reporter?.createScope(1)
-    const shell = measureBooleanInScope(cutScope, 'cut', () =>
+    shell = measureBooleanInScope(cutScope, 'cut', () =>
       outer.cut(activeCavity),
     )
     deleteShape(outer)
     deleteShape(cavity)
-    return shell
+    cavity = null
+    if (parameters.basePlateMode) {
+      const result = shell
+      shell = null
+      return result
+    }
+    const rounded = filletEdgesAtZ(
+      shell,
+      0,
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
+    )
+    shell = null
+    return rounded
   } catch (error) {
     deleteShape(outer)
     deleteShape(cavity)
+    deleteShape(shell)
     throw error
   }
 }
@@ -394,7 +414,13 @@ export function applyBasePlateMode(
     deleteShape(shape)
     const result = clipped.translateZ(-cutoffHeight)
     clipped = null
-    return result
+    return filletEdgesAtZ(
+      result,
+      0,
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
+      0.02,
+      configuration.baseHoleTopOpeningDiameter + 0.2,
+    )
   } catch (error) {
     deleteShape(clipped)
     throw error
@@ -888,12 +914,37 @@ function cutWithToolBatch(
   if (tools.length === 0) return shape
 
   const tool = tools.length === 1 ? tools[0] : makeCompound(tools).asShape3D()
-  if (!tool) return shape
+  if (!tool) {
+    return shape
+  }
 
   try {
     const cut = measureBooleanInScope(scope, 'cut', () => shape.cut(tool))
     deleteShape(shape)
     return cut
+  } finally {
+    deleteShape(tool)
+  }
+}
+
+function fuseWithToolBatch(
+  shape: Shape3D,
+  tools: Shape3D[],
+  scope: BooleanOperationScope | undefined,
+): Shape3D {
+  if (tools.length === 0) return shape
+
+  const tool = tools.length === 1 ? tools[0] : makeCompound(tools).asShape3D()
+  if (!tool) {
+    return shape
+  }
+
+  try {
+    const fused = measureBooleanInScope(scope, 'fuse', () =>
+      shape.fuse(tool, { optimisation: 'commonFace' }),
+    )
+    deleteShape(shape)
+    return fused
   } finally {
     deleteShape(tool)
   }
@@ -1028,6 +1079,29 @@ function makeOrdinaryBottomHoleCutter(
   )
 }
 
+function makeIntegratedSeat(): Shape3D {
+  const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
+  const seat = makeCylinder(
+    configuration.integratedSeatDiameter / 2,
+    configuration.integratedSeatHeight,
+    [0, 0, configuration.integratedSeatMinZ],
+  )
+  return filletEdgesAtZ(
+    seat,
+    configuration.integratedSeatMinZ,
+    configuration.bottomEdgeFilletRadius,
+  )
+}
+
+function translateShape(
+  shape: Shape3D,
+  x: number,
+  y: number,
+  z: number,
+): Shape3D {
+  return shape.translate(x, y, z)
+}
+
 export function addMountingSockets(
   shape: Shape3D,
   parameters: OpenGridStackableBoxParameters,
@@ -1038,23 +1112,40 @@ export function addMountingSockets(
     centers.length > 0
       ? context.booleanOperations?.createScope(centers.length)
       : undefined
-  const socketCutters = centers.map(([x, y]) =>
-    makeMountingHoleCutter(parameters, fuseScope).translate(x, y, 0),
-  )
+  const integratedSeats =
+    parameters.cornerSeatMode === 'integrated'
+      ? centers.map(([x, y]) => translateShape(makeIntegratedSeat(), x, y, 0))
+      : []
+  const socketCutters =
+    parameters.cornerSeatMode === 'hole'
+      ? centers.map(([x, y]) =>
+          translateShape(
+            makeMountingHoleCutter(parameters, fuseScope),
+            x,
+            y,
+            0,
+          ),
+        )
+      : []
   const ordinaryCenters =
     openGridStackableBoxOrdinaryBottomHoleCentersFor(parameters)
-  const cutTotal =
-    Number(socketCutters.length > 0) + Number(ordinaryCenters.length > 0)
-  const cutScope =
-    cutTotal > 0 ? context.booleanOperations?.createScope(cutTotal) : undefined
+  const operationTotal =
+    Number(integratedSeats.length > 0) +
+    Number(socketCutters.length > 0) +
+    Number(ordinaryCenters.length > 0)
+  const operationScope =
+    operationTotal > 0
+      ? context.booleanOperations?.createScope(operationTotal)
+      : undefined
   assertGenerationCurrent(context)
-  let current = cutWithToolBatch(shape, socketCutters, cutScope)
+  let current = fuseWithToolBatch(shape, integratedSeats, operationScope)
+  current = cutWithToolBatch(current, socketCutters, operationScope)
 
   const ordinaryCutters = ordinaryCenters.map(([x, y]) =>
-    makeOrdinaryBottomHoleCutter(parameters).translate(x, y, 0),
+    translateShape(makeOrdinaryBottomHoleCutter(parameters), x, y, 0),
   )
   assertGenerationCurrent(context)
-  current = cutWithToolBatch(current, ordinaryCutters, cutScope)
+  current = cutWithToolBatch(current, ordinaryCutters, operationScope)
 
   return current
 }

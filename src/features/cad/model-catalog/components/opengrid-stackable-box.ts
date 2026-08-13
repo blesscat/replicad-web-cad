@@ -168,7 +168,7 @@ export const opengridStackableBoxDefinition: ModelDefinition = {
   displayName: 'Grid Box (方盒)',
   selectionLabel: 'Grid Box (方盒)',
   selectionDescription:
-    'Grid Box (方盒)；提供堆疊與薄殼兩種模式，四角連接孔為 Ø5 mm。',
+    'Grid Box (方盒)；角座可選無角座、角座孔或向下凸出的 Ø5 × 3 mm 內建角座。',
   parameterSchema: OPENGRID_STACKABLE_BOX_PARAMETER_SCHEMA,
   defaultParameters: {
     ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,

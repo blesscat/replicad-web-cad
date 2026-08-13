@@ -21,10 +21,10 @@ Astro site shell（layouts/ + pages/）
          ├─ OpenCascade WASM / replicad initialization
          ├─ component registry
          ├─ box B-Rep builder
-         ├─ box-normal builder + STEP template
          ├─ modular-grid-base builder + STEP template
          ├─ hsw-cell builder + STEP template
          ├─ hexagonal-column builder + STEP template
+         ├─ OpenGrid stackable-box / stackable-cylinder builders
          ├─ preview mesh generation
          └─ STEP / binary STL export
 ```
@@ -88,19 +88,19 @@ pages/
 
 ## Prototype 範圍
 
-- 內建 component：X/Y 置中於世界原點、底面位於 Z=0 的 `box`、獨立的 `box-normal`、`modular-grid-base`、`hsw-cell` 與 `hexagonal-column`。
+- 內建 component：X/Y 置中於世界原點、底面位於 Z=0 的 `box`、`modular-grid-base`、`hsw-cell`、`hexagonal-column` 與 OpenGrid stackable models。
 - `box` 參數：`width`、`depth`、`height`，單位為 mm。
-- `box-normal` 參數：`x`=2–40、`y`=2–35 格，`height` 文字輸入=10–500 mm、slider=10–200 mm，以及預設勾選的四角定位柱。X/Y 每軸總共內縮 0.15 mm；定位柱使用平頂/底六角截面，外露高度為 7 mm，盒底接合端不做端部斜角。路由為 `/cad/box-normal`，輸出檔名為 `box-normal-{x}x{y}-h{height}-{posts|plain}.step` 與對應的 `.stl`。
 - `modular-grid-base` 參數：`rows`、`columns` 格數 slider，範圍為 1–20 格；每格為 20 × 20 mm，高度固定 5 mm，最大寬/深為 400 mm。預切除 `cell-template.step` 會複製、平移、融合後，只對整體外側四角套用 R2.5 mm 圓角。
 - `hsw-cell` 參數：`rows`、`columns` 格數 slider，範圍為 1–20 格；使用固定約 27.25 × 23.60 × 8 mm 的平頂六角 canonical `hsw-cell.step`，columns 沿 X 方向交錯排列成蜂巢，整體不套用額外圓角。路由為 `/cad/hsw-cell`，輸出檔名為 `hsw-cell-{columns}x{rows}.step` 與 `hsw-cell-{columns}x{rows}.stl`。
-- `hexagonal-column` 參數：`height` 文字輸入=1–500 mm、slider=1–200 mm、`count`、`gap` 與 `orientation`，路由為 `/cad/hexagonal-column`；它與 `box-normal` 共用低階六角柱 profile helper，但保持獨立 component contract，列平面 footprint 安全上限維持 500 mm。
+- `hexagonal-column` 參數：`height` 文字輸入=1–500 mm、slider=1–200 mm、`count`、`gap` 與 `orientation`，路由為 `/cad/hexagonal-column`；它保持獨立 component contract，列平面 footprint 安全上限維持 500 mm。
+- OpenGrid stackable-box 與 stackable-cylinder 都以 `hole`（`角座孔`）為預設，並提供 `none`（`無角座`）、`hole`、`integrated`（`內建角座`）三種互斥座模式。`integrated` 會在既有定位位置融合 Ø5 mm × 3 mm、由 Z=-3 mm 延伸至 Z=0 的實體圓座；兩者的 STEP/STL 檔名都包含唯一的 `-seats-none`、`-seats-hole` 或 `-seats-integrated` 後綴。
 - 預覽：由 Worker 產生的 B-Rep mesh。
 - 匯出：由 Worker 目前 committed B-Rep 產生 STEP 或 binary STL。
 - 不包含模型匯入、3MF/G-code、儲存、帳號、後端、多人協作或自動啟動 Bambu Studio。
 
 ## 使用 Prototype
 
-先在首頁選擇模型，再進入對應的 CAD workspace：`box` 使用 `/cad/box`、`box-normal` 使用 `/cad/box-normal`、`modular-grid-base` 使用 `/cad/modular-grid-base`、`hsw-cell` 使用 `/cad/hsw-cell`、`hexagonal-column` 使用 `/cad/hexagonal-column`、`opengrid` 使用 `/cad/opengrid`、`opengrid-stackable-box` 使用 `/cad/opengrid-stackable-box`。CAD workspace 只調整目前 route 的 component；要切換模型必須返回模型選擇頁。`box-normal` 的 `x`、`y`、`height` 是整數，合法範圍為 `2–40`、`2–35` 格與 `10–500 mm`，其中 height slider 為 `10–200 mm`；預設為 `2 × 2 × 10` 且啟用四角定位柱。各目標高度／長度欄位的文字輸入上限為 500 mm、slider 上限為 200 mm；OpenGrid 堆疊盒的 X/Y footprint 與其他平面 workspace 安全上限維持 500 mm，外徑欄位維持 20–300 mm。OpenGrid 堆疊盒的 `x`、`y` 支援 `0.5` 格步進，外部 footprint 為 `x × 28 − 0.15 mm`、`y × 28 − 0.15 mm`；`height` 是盒內淨高，外部 Z 高度為 `height + 5 + 7.55 mm`。固定底部總高 5 mm（內層地板 1.2 mm）、主側壁 1.2 mm，盒頂階梯滑軌依序為 1.75／45°、垂直 1.2、0.8／45°、垂直 1.8、2／45°；底部依序為 0.8／45°、垂直 1.8、1.2／45° 導入支撐地板。每條內部 28 mm 格線交界採逐段收窄、斜面收進地板的可列印避讓，止於底板下表面並保留連續內部地板；0.25 mm 名義滑動間隙讓相同盒體可以堆疊並滑動。四角 Snap 固定孔為距名義邊 7 mm 的兩段階梯孔：外側 Ø5.05 mm 深 3 mm，內側 Ø7.05 mm 深 2 mm。輸入停止 500 ms 後才會送出建模；每個新 snapshot 會先使舊 generation 失效，連續 slider 變更只會對最後合法值送出建模；無效外部 snapshot 不會送出 `model.generate` 或匯出 request。
+先在首頁選擇模型，再進入對應的 CAD workspace。CAD workspace 只調整目前 route 的 component；要切換模型必須返回模型選擇頁。各目標高度／長度欄位的文字輸入上限為 500 mm、slider 上限為 200 mm；OpenGrid 堆疊盒的 X/Y footprint 與其他平面 workspace 安全上限維持 500 mm，外徑欄位維持 20–300 mm。OpenGrid 堆疊盒的 `x`、`y` 支援 `0.5` 格步進，外部 footprint 為 `x × 28 − 0.15 mm`、`y × 28 − 0.15 mm`；`height` 是盒內淨高，外部 Z 高度為 `height + 5 + 7.55 mm`。固定底部總高 5 mm（內層地板 1.2 mm）、主側壁 1.2 mm，盒頂階梯滑軌依序為 1.75／45°、垂直 1.2、0.8／45°、垂直 1.8、2／45°；底部依序為 0.8／45°、垂直 1.8、1.2／45° 導入支撐地板。每條內部 28 mm 格線交界採逐段收窄、斜面收進地板的可列印避讓，止於底板下表面並保留連續內部地板；0.25 mm 名義滑動間隙讓相同盒體可以堆疊並滑動。四角 Snap 固定孔為距名義邊 7 mm 的兩段階梯孔：外側 Ø5.05 mm 深 3 mm，內側 Ø7.05 mm 深 2 mm；座模式則由 `無角座`、`角座孔`、`內建角座` 三選一，Grid Box 的 full-bottom-hole-grid 仍獨立。輸入停止 500 ms 後才會送出建模；每個新 snapshot 會先使舊 generation 失效，連續 slider 變更只會對最後合法值送出建模；無效外部 snapshot 不會送出 `model.generate` 或匯出 request。
 
 輸入高度直接控制盒內淨高；5 mm 底部與 7.55 mm 上部堆疊介面固定加在外部高度，外部 footprint、參數快照與匯出檔名維持不變。
 
@@ -110,7 +110,7 @@ pages/
 
 目前 3D component 的 canonical asset 使用 STEP，而不是 STL 或 DXF：STEP 保留可供 clone、fuse、fillet 與 STEP export 使用的精確 B-Rep；STL 只有三角網格，DXF 則是 2D profile，兩者都不適合這個 3D boolean pipeline。
 
-`board-cell-template.step` 是已完成中央貫穿切除的 `modular-grid-base` component-local 預處理檔案；`box-normal.step`、`hsw-cell.step` 與 `hexagonal.step` 則分別是各自 component 的 canonical asset。各 Worker epoch 都只 import/cache 各自的 asset 一次；`box-normal` 會依 canonical profile 建立 rounded body、底部 chamfer、開口 cavity，再以固定數量的柱體 clone/平移/fuse 組裝，其他模板型 component 則依各自 builder 產生。`modular-grid-base` 才會對整體外角做圓角，`hsw-cell` 不執行額外 fillet，`box-normal` 只保留其 canonical profile 的圓角與斜角。不會依賴 Downloads 路徑，也不會在每次生成重新建立 cutter。未來新增 component 時，builder 與它自己的預切除資產放在同一個 `cad-kernel/components/<component>/` 目錄。
+`board-cell-template.step` 是已完成中央貫穿切除的 `modular-grid-base` component-local 預處理檔案；`hsw-cell.step` 與 `hexagonal.step` 則分別是各自 component 的 canonical asset。各 Worker epoch 都只 import/cache 各自的 asset 一次，模板型 component 依各自 builder 產生。不會依賴 Downloads 路徑，也不會在每次生成重新建立 cutter。未來新增 component 時，builder 與它自己的預切除資產放在同一個 `cad-kernel/components/<component>/` 目錄。
 
 ## STEP 匯出
 
@@ -118,10 +118,11 @@ pages/
 
 ```text
 box-{width}x{depth}x{height}.step
-box-normal-{x}x{y}-h{height}-{posts|plain}.step
 modular-grid-base-{columns}x{rows}.step
 hsw-cell-{columns}x{rows}.step
 hexagonal-column-{height}x{count}-g{gap}-{standing|lying}.step
+opengrid-stackable-box-{x}x{y}-h{height}-seats-{none|hole|integrated}.step
+opengrid-stackable-cylinder-d{diameter}-h{height}-seats-{none|hole|integrated}.step
 ```
 
 這個 Prototype 不提供任意 STEP 的產品匯入或 round-trip parser；目前的 `board-cell-template.step` 是 repository 內受控的 canonical asset，並由 CAD kernel integration tests 驗證其 single-solid、尺寸與幾何條件。
@@ -134,10 +135,11 @@ STL 使用專案的 mm 座標 convention，檔名為：
 
 ```text
 box-{width}x{depth}x{height}.stl
-box-normal-{x}x{y}-h{height}-{posts|plain}.stl
 modular-grid-base-{columns}x{rows}.stl
 hsw-cell-{columns}x{rows}.stl
 hexagonal-column-{height}x{count}-g{gap}-{standing|lying}.stl
+opengrid-stackable-box-{x}x{y}-h{height}-seats-{none|hole|integrated}.stl
+opengrid-stackable-cylinder-d{diameter}-h{height}-seats-{none|hole|integrated}.stl
 ```
 
 下載完成後，使用者可在 Bambu Studio 透過一般的本機檔案開啟/匯入流程載入 STL。瀏覽器不會直接啟動或控制 Bambu Studio，也不會產生 3MF、G-code 或印表機設定檔。初始 STL tessellation 設定為 `tolerance = 0.001 mm`、`angularTolerance = 0.1`；這些設定與 viewport preview mesh 分開管理。
@@ -192,7 +194,7 @@ Prototype 驗收使用的自動化瀏覽器 binary 為 Chromium `151.0.7922.34` 
 
 ## 未來模型 catalog 的擴充
 
-目前 catalog 有 `box`、`box-normal`、`modular-grid-base`、`hsw-cell`、`hexagonal-column`、`opengrid` 與 `opengrid-stackable-box`。新增 component 時，在 `features/cad/model-catalog/components/` 建立獨立 `ModelDefinition`，在 `components/cad/component-panels/<component>/` 建立專屬調整頁面，再在 Worker-only 的 `cad-kernel/components/<component>/` 放 builder 與資產，最後由 catalog/kernel registry 掛入。UI 只消費 schema，不應把 B-Rep 邏輯放進 `CadWorkspace`。新模型必須另開 OpenSpec change，明確驗收參數單位、bounds、mesh、revision lifetime、STEP/STL filename 與錯誤流程，並維持既有 versioned Worker contract 與主執行緒/CAD Worker 邊界。
+目前 catalog 有 `box`、`modular-grid-base`、`hsw-cell`、`hexagonal-column`、`opengrid` 與 OpenGrid stackable models。新增 component 時，在 `features/cad/model-catalog/components/` 建立獨立 `ModelDefinition`，在 `components/cad/component-panels/<component>/` 建立專屬調整頁面，再在 Worker-only 的 `cad-kernel/components/<component>/` 放 builder 與資產，最後由 catalog/kernel registry 掛入。UI 只消費 schema，不應把 B-Rep 邏輯放進 `CadWorkspace`。新模型必須另開 OpenSpec change，明確驗收參數單位、bounds、mesh、revision lifetime、STEP/STL filename 與錯誤流程，並維持既有 versioned Worker contract 與主執行緒/CAD Worker 邊界。
 
 ## OpenSpec 文件
 

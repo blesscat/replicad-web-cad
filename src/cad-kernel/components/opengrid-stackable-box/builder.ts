@@ -50,8 +50,13 @@ export function buildOpenGridStackableBox(
   let shape = makeBoxShell(parameters, context.booleanOperations)
   assertGenerationCurrent(context)
   shape = applyStackingProfile(shape, parameters, context)
-  shape = addMountingSockets(shape, parameters, context)
-  shape = applyBasePlateMode(shape, parameters, context.booleanOperations)
+  if (parameters.basePlateMode && parameters.cornerSeatMode === 'integrated') {
+    shape = applyBasePlateMode(shape, parameters, context.booleanOperations)
+    shape = addMountingSockets(shape, parameters, context)
+  } else {
+    shape = addMountingSockets(shape, parameters, context)
+    shape = applyBasePlateMode(shape, parameters, context.booleanOperations)
+  }
   shape = addSideOpenings(shape, parameters, context)
   assertGenerationCurrent(context)
   assertOpenGridStackableBoxGeometry(shape, parameters)

@@ -111,23 +111,4 @@ test('restore actions keep narrow controls stable and usable', async ({
     orientationBefore,
     await readControlBox(orientation),
   )
-
-  await page.goto('/cad/box-normal')
-  const cornerPosts = page.getByRole('checkbox', { name: '四角六角定位柱' })
-  const cornerPostsBefore = await readControlBox(cornerPosts)
-  await cornerPosts.uncheck()
-  await expect(
-    page.getByRole('button', { name: '復原四角六角定位柱' }),
-  ).toHaveCount(0)
-  expectControlBoxToStayStable(
-    cornerPostsBefore,
-    await readControlBox(cornerPosts),
-  )
-  await expectNoHorizontalOverflow(page)
-  await page.getByRole('button', { name: '全部恢復預設' }).click()
-  await expect(cornerPosts).toBeChecked()
-  expectControlBoxToStayStable(
-    cornerPostsBefore,
-    await readControlBox(cornerPosts),
-  )
 })

@@ -74,7 +74,6 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
   await expect(
     page.locator('p').filter({ hasText: '這是開口圓柱容器' }),
   ).toHaveCount(0)
-  await expect(page.getByRole('radio')).toHaveCount(2)
   const modeOptions = page.getByTestId('opengrid-cylinder-mode-options')
   await expect(modeOptions.getByRole('radio')).toHaveCount(2)
   const modeLabels = await modeOptions
@@ -83,6 +82,14 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
       radios.map((radio) => radio.getAttribute('aria-label')),
     )
   expect(modeLabels).toEqual(['薄殼模式', '堆疊模式'])
+  const seatMode = page.getByTestId('opengrid-stackable-cylinder-seat-mode')
+  await expect(seatMode.getByRole('radio')).toHaveCount(3)
+  const seatModeLabels = await seatMode
+    .getByRole('radio')
+    .evaluateAll((radios) =>
+      radios.map((radio) => radio.getAttribute('aria-label')),
+    )
+  expect(seatModeLabels).toEqual(['無角座', '角座孔', '內建角座'])
   await expect(
     modeOptions.locator(
       'xpath=following-sibling::p[@data-testid="opengrid-cylinder-mode-description"]',
@@ -99,9 +106,7 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
   await expect(page.locator('p').filter({ hasText: '底部孔洞：' })).toHaveCount(
     0,
   )
-  await expect(
-    page.getByRole('checkbox', { name: '開啟底部全部孔洞', exact: true }),
-  ).toBeChecked()
+  await expect(seatMode.getByRole('radio', { name: '角座孔' })).toBeChecked()
   const openingDisclosure = page.getByTestId(
     'opengrid-cylinder-opening-disclosure',
   )
@@ -145,7 +150,7 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
     ).toHaveValue('1')
     await expect(
       group.getByRole('slider', { name: `下切深度（${label}）` }),
-    ).toHaveAttribute('max', '25')
+    ).toHaveAttribute('max', '15')
     await expect(
       group.getByRole('slider', { name: `側壁角度（${label}）` }),
     ).toHaveAttribute('min', '1')
@@ -165,7 +170,7 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
   })
   await rightDepth.fill('12')
   await expect(rightBottomLength).toHaveAttribute('min', '1')
-  await expect(rightBottomLength).toHaveAttribute('max', '45')
+  await expect(rightBottomLength).toHaveAttribute('max', '49')
   await page.getByRole('textbox', { name: '切口底部長度（右方）' }).fill('1')
   await page.getByRole('textbox', { name: '高度（Z）' }).fill('20')
   for (const { direction, label } of sideOpeningGroups) {
@@ -253,11 +258,11 @@ test('OpenGrid stackable-cylinder updates and exports deterministic metadata', a
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-stackable-cylinder-d61-h31.step',
+    'opengrid-stackable-cylinder-d61-h31-seats-hole.step',
   )
 })
 
-test('OpenGrid stackable-cylinder exports the selected thin and no-hole state', async ({
+test('OpenGrid stackable-cylinder exports the selected thin and no-seat state', async ({
   page,
   browserName,
 }) => {
@@ -266,9 +271,7 @@ test('OpenGrid stackable-cylinder exports the selected thin and no-hole state', 
   await waitForCadReady(page)
 
   await page.getByRole('radio', { name: '薄殼模式' }).check()
-  await page
-    .getByRole('checkbox', { name: '開啟底部全部孔洞', exact: true })
-    .uncheck()
+  await page.getByRole('radio', { name: '無角座' }).check()
   await expect(
     page.getByTestId('opengrid-cylinder-mode-description'),
   ).toHaveText('薄殼模式：不可堆疊，使用6mm定位柱')
@@ -281,7 +284,26 @@ test('OpenGrid stackable-cylinder exports the selected thin and no-hole state', 
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-stackable-cylinder-d60-h20-thin-no-holes.step',
+    'opengrid-stackable-cylinder-d60-h20-seats-none-thin.step',
+  )
+})
+
+test('OpenGrid stackable-cylinder exports the integrated seat mode', async ({
+  page,
+  browserName,
+}) => {
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.goto('/cad/opengrid-stackable-cylinder')
+  await waitForCadReady(page)
+
+  await page.getByRole('radio', { name: '內建角座' }).check()
+  await waitForCadReady(page)
+
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '下載 STEP' }).click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toBe(
+    'opengrid-stackable-cylinder-d60-h20-seats-integrated.step',
   )
 })
 
@@ -304,6 +326,6 @@ test('OpenGrid stackable-cylinder export identity includes enabled opening setti
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-stackable-cylinder-d60-h20-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
+    'opengrid-stackable-cylinder-d60-h20-seats-hole-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
   )
 })

@@ -1,7 +1,6 @@
 import type { CadError } from '../../../cad-contract/errors'
 import type { MeshSnapshot } from '../../../cad-contract/messages'
 import {
-  BOX_NORMAL_CONFIGURATION,
   HEXAGONAL_COLUMN_CONFIGURATION,
   OPENGRID_DIVIDER_CONFIGURATION,
   OPENGRID_CONFIGURATION,
@@ -54,14 +53,6 @@ export const INITIAL_PARAMETERS: BoxParameters = {
 
 function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
   if (modelId === 'box') return { ...INITIAL_PARAMETERS }
-  if (modelId === 'box-normal') {
-    return {
-      x: BOX_NORMAL_CONFIGURATION.defaultX,
-      y: BOX_NORMAL_CONFIGURATION.defaultY,
-      height: BOX_NORMAL_CONFIGURATION.defaultHeight,
-      cornerPosts: true,
-    }
-  }
   if (modelId === 'modular-grid-base') return { rows: 1, columns: 1 }
   if (modelId === 'hsw-cell') return { rows: 1, columns: 1 }
   if (modelId === 'hexagonal-column') {
