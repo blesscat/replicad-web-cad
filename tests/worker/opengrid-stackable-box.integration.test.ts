@@ -28,12 +28,16 @@ import {
 import {
   boundsForOpenGridStackableBox,
   externalOpenGridStackableBoxHeightFor,
+  nominalOpenGridStackableBoxFootprintFor,
+  openGridStackableBoxDerivedGeometryFor,
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
   openGridStackableBoxActiveFloorTopZFor,
   openGridStackableBoxSocketCentersFor,
+  OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+  type OpenGridStackableBoxOpeningDirection,
   type OpenGridStackableBoxParameters,
   validateOpenGridStackableBoxParameters,
 } from '../../src/cad-contract/units'
@@ -113,6 +117,46 @@ function cylindricalFaceCount(shape: Shape3D): number {
     }
   }
   return count
+}
+
+type Point3D = [number, number, number]
+type Bounds3D = [Point3D, Point3D]
+
+function openingWallPenetrationProbeFor(
+  parameters: OpenGridStackableBoxParameters,
+  direction: OpenGridStackableBoxOpeningDirection,
+): Bounds3D {
+  const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
+  const derived = openGridStackableBoxDerivedGeometryFor(parameters)
+  const opening = derived.openings[direction]
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const wallThickness = parameters.thinShellMode
+    ? configuration.thinShellWallThickness
+    : configuration.wallThickness
+  const probeOverlap = 0.1
+  const sideHalfExtent =
+    direction === '+X' || direction === '-X' ? width / 2 : depth / 2
+  const positiveDirection = direction === '+X' || direction === '+Y'
+  const normalMin = positiveDirection
+    ? sideHalfExtent - wallThickness - probeOverlap
+    : -sideHalfExtent - probeOverlap
+  const normalMax = positiveDirection
+    ? sideHalfExtent + probeOverlap
+    : -sideHalfExtent + wallThickness + probeOverlap
+  const tangentHalf = Math.min(0.25, opening.bottomLength / 4)
+  const zMin = opening.bottomZ + 0.05
+  const zMax = derived.activeUpperInnerRimZ - 0.05
+
+  if (direction === '+X' || direction === '-X') {
+    return [
+      [normalMin, -tangentHalf, zMin],
+      [normalMax, tangentHalf, zMax],
+    ]
+  }
+  return [
+    [-tangentHalf, normalMin, zMin],
+    [tangentHalf, normalMax, zMax],
+  ]
 }
 
 function deleteShape(shape: Shape3D | null | undefined): void {
@@ -718,6 +762,76 @@ describe('OpenGrid stackable-box B-Rep', () => {
       deleteShape(shape)
     }
   }, 120_000)
+
+  it.each([
+    { profile: 'normal', basePlateMode: false, thinShellMode: false },
+    { profile: 'base-plate', basePlateMode: true, thinShellMode: false },
+    { profile: 'thin-shell', basePlateMode: false, thinShellMode: true },
+  ])(
+    'cuts every $profile opening completely through its wall',
+    ({ basePlateMode, thinShellMode }) => {
+      const input = parameters({
+        x: 2,
+        y: 2,
+        height: 20,
+        basePlateMode,
+        thinShellMode,
+        openingPlusXDepth: 6,
+        openingPlusXBottomLength: 8,
+        openingPlusXAngle: 90,
+        openingMinusXDepth: 4,
+        openingMinusXBottomLength: 6,
+        openingMinusXAngle: 60,
+        openingPlusYDepth: 5,
+        openingPlusYBottomLength: 7,
+        openingPlusYAngle: 45,
+        openingMinusYDepth: 5,
+        openingMinusYBottomLength: 9,
+        openingMinusYAngle: 75,
+      })
+      const shape = buildOpenGridStackableBox(input)
+      try {
+        const quality = inspectOpenGridStackableBoxOpenings(shape, input)
+        expect(quality.map((record) => record.direction)).toEqual(
+          OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS,
+        )
+        expect(quality.every((record) => record.cutProbeVolume <= 0.01)).toBe(
+          true,
+        )
+        expect(quality.every((record) => record.planarSillFaceCount >= 1)).toBe(
+          true,
+        )
+        expect(quality.every((record) => record.planarSideFaceCount >= 2)).toBe(
+          true,
+        )
+        for (const direction of OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS) {
+          const [min, max] = openingWallPenetrationProbeFor(input, direction)
+          expect(volumeInBox(shape, min, max)).toBeLessThanOrEqual(0.01)
+        }
+
+        const expectedBounds = boundsForOpenGridStackableBox(input)
+        const actualBounds = boundsOf(shape)
+        expect(actualBounds[0]).toEqual(
+          expect.arrayContaining([
+            expect.closeTo(expectedBounds.min[0], 3),
+            expect.closeTo(expectedBounds.min[1], 3),
+            expect.closeTo(expectedBounds.min[2], 3),
+          ]),
+        )
+        expect(actualBounds[1]).toEqual(
+          expect.arrayContaining([
+            expect.closeTo(expectedBounds.max[0], 3),
+            expect.closeTo(expectedBounds.max[1], 3),
+            expect.closeTo(expectedBounds.max[2], 3),
+          ]),
+        )
+        expect(measureVolume(shape)).toBeGreaterThan(0)
+      } finally {
+        deleteShape(shape)
+      }
+    },
+    120_000,
+  )
 
   it('keeps a zero-depth opposite wall solid when one side is open', () => {
     const input = parameters({
