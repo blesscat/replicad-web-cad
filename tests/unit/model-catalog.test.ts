@@ -665,32 +665,28 @@ describe('CAD component catalog', () => {
     expect(definition?.selectionDescription).toContain('物件定位用')
     expect(definition?.parameterSchema.map((field) => field.key)).toEqual([
       'length',
-      'offsetX',
-      'offsetY',
+      'offset',
     ])
     expect(definition?.defaultParameters).toEqual({
       mode: 'standard',
-      offsetX: 0,
-      offsetY: 0,
+      offset: 0,
     })
     expect(
       definition?.validateParameters({
         mode: 'standard',
-        offsetX: 0,
-        offsetY: 0,
+        offset: 0,
       }),
     ).toEqual({
       valid: true,
       value: {
         modelId: 'opengrid-pillar',
-        parameters: { mode: 'standard', offsetX: 0, offsetY: 0 },
+        parameters: { mode: 'standard', offset: 0 },
       },
     })
     expect(
       definition?.boundsForParameters({
         mode: 'thin-shell',
-        offsetX: 0,
-        offsetY: 0,
+        offset: 0,
       }),
     ).toEqual({
       min: [-3.5, -3.5, 0],
@@ -699,8 +695,7 @@ describe('CAD component catalog', () => {
     expect(
       definition?.boundsForParameters({
         mode: 'standard',
-        offsetX: 0,
-        offsetY: 0,
+        offset: 0,
       }),
     ).toEqual({
       min: [-3.5, -3.5, 0],
@@ -710,19 +705,18 @@ describe('CAD component catalog', () => {
       definition?.boundsForParameters({
         mode: 'positioning',
         length: 25,
-        offsetX: 0.25,
-        offsetY: -0.15,
+        offset: 0.25,
       }),
     ).toEqual({
-      min: [-2.25, -2.65, 0],
-      max: [2.75, 2.35, 25],
+      min: [-2.625, -2.625, 0],
+      max: [2.625, 2.625, 25],
     })
-    expect(
-      definition?.exportFileName({ mode: 'standard', offsetX: 0, offsetY: 0 }),
-    ).toBe('pillar-9-standard.step')
-    expect(
-      definition?.stlFileName({ mode: 'thin-shell', offsetX: 0, offsetY: 0 }),
-    ).toBe('pillar-6-thin-shell.stl')
+    expect(definition?.exportFileName({ mode: 'standard', offset: 0 })).toBe(
+      'pillar-9-standard.step',
+    )
+    expect(definition?.stlFileName({ mode: 'thin-shell', offset: 0 })).toBe(
+      'pillar-6-thin-shell.stl',
+    )
     expect(cadPathForModel('opengrid-pillar')).toBe('/cad/opengrid-pillar')
     expect(modelIdForCadPath('/cad/opengrid-pillar/')).toBe('opengrid-pillar')
   })

@@ -36,8 +36,13 @@ test('OpenGrid pillar is listed in its family and exposes fixed and positioning 
   await expect(positioning).not.toBeChecked()
   await expect(page.getByText('固定總長 9 mm')).toBeVisible()
   await expect(page.getByText('固定總長 6 mm')).toBeVisible()
-  await expect(page.getByRole('slider', { name: /X 偏移/ })).toBeVisible()
-  await expect(page.getByRole('slider', { name: /Y 偏移/ })).toBeVisible()
+  await expect(page.getByRole('slider', { name: /XY 直徑增量/ })).toBeVisible()
+  await expect(
+    page.getByRole('slider', { name: 'X 偏移', exact: true }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole('slider', { name: 'Y 偏移', exact: true }),
+  ).toHaveCount(0)
   await expect(page.getByText(/請選擇支柱版本/)).toHaveCount(0)
   await expect(page.getByRole('textbox', { name: /總長度/ })).toHaveCount(0)
   await expect(page.getByRole('slider', { name: /總長度/ })).toHaveCount(0)
@@ -92,25 +97,21 @@ test('OpenGrid pillar exports deterministic files for all pillar modes', async (
 
   await positioning.check()
   await page.getByRole('textbox', { name: /總長度/ }).fill('25')
-  await page.getByRole('textbox', { name: /X 偏移/ }).fill('0.25')
-  await page.getByRole('textbox', { name: /Y 偏移/ }).fill('-0.15')
+  await page.getByRole('textbox', { name: /XY 直徑增量/ }).fill('0.25')
   await waitForCadReady(page)
 
   const positioningStepPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const positioningStep = await positioningStepPromise
   expect(positioningStep.suggestedFilename()).toBe(
-    'pillar-25-positioning-x0.25-y-0.15.step',
+    'pillar-25-positioning-xy0.25.step',
   )
 
   await page.reload()
   await waitForCadReady(page)
   await expect(page.getByRole('radio', { name: '物件定位用' })).toBeChecked()
   await expect(page.getByRole('textbox', { name: /總長度/ })).toHaveValue('25')
-  await expect(page.getByRole('textbox', { name: /X 偏移/ })).toHaveValue(
+  await expect(page.getByRole('textbox', { name: /XY 直徑增量/ })).toHaveValue(
     '0.25',
-  )
-  await expect(page.getByRole('textbox', { name: /Y 偏移/ })).toHaveValue(
-    '-0.15',
   )
 })

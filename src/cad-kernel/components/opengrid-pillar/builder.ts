@@ -9,6 +9,8 @@ import {
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForPillar,
+  pillarBodyDiameterForParameters,
+  pillarFlangeDiameterForParameters,
   pillarLengthForParameters,
   PILLAR_CONFIGURATION,
   validatePillarParameters,
@@ -178,12 +180,6 @@ function readBounds(shape: Shape3D): number[][] {
   }
 }
 
-function translateShape(shape: Shape3D, x: number, y: number, z = 0): Shape3D {
-  const translated = shape.translate(x, y, z)
-  if (translated !== shape) deleteShape(shape)
-  return translated
-}
-
 function assertFiniteShape(shape: Shape3D, parameters: PillarParameters): void {
   const bounds = readBounds(shape)
   const values = bounds.flat()
@@ -215,12 +211,12 @@ function buildFixedPillar(
 ): Solid {
   const totalLength = pillarLengthForParameters(parameters)
   const flange = makeCylinder(
-    PILLAR_CONFIGURATION.baseDiameter / 2,
+    pillarFlangeDiameterForParameters(parameters) / 2,
     PILLAR_CONFIGURATION.baseHeight,
     [0, 0, 0],
   )
   const body = makeCylinder(
-    PILLAR_CONFIGURATION.bodyDiameter / 2,
+    pillarBodyDiameterForParameters(parameters) / 2,
     totalLength - PILLAR_CONFIGURATION.baseHeight,
     [0, 0, PILLAR_CONFIGURATION.baseHeight],
   )
@@ -231,7 +227,7 @@ function buildPositioningPillar(
   parameters: Extract<PillarParameters, { mode: 'positioning' }>,
 ): Shape3D {
   const cylinder = makeCylinder(
-    PILLAR_CONFIGURATION.positioningBodyDiameter / 2,
+    pillarBodyDiameterForParameters(parameters) / 2,
     parameters.length,
     [0, 0, 0],
   )
@@ -279,8 +275,6 @@ export async function buildPillar(
         PILLAR_CONFIGURATION.upperChamfer,
       )
     }
-
-    shape = translateShape(shape, parameters.offsetX, parameters.offsetY)
 
     assertGenerationCurrent(context)
     finalSolid = asSingleSolid(shape)

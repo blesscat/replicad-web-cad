@@ -69,8 +69,7 @@ export const HEXAGONAL_COLUMN_PARAMETER_KEYS: ScalarModelParameterKey[] = [
 export const PILLAR_PARAMETER_KEYS: ModelParameterKey[] = [
   'mode',
   'length',
-  'offsetX',
-  'offsetY',
+  'offset',
 ]
 export const OPENGRID_OPEN_SHELF_PARAMETER_KEYS: ModelParameterKey[] = [
   'x',
@@ -223,7 +222,7 @@ function parsePillarRawParameters(
     }
   }
 
-  const rawOffset = (field: 'offsetX' | 'offsetY'): number | null => {
+  const rawOffset = (field: 'offset'): number | null => {
     const value = raw[field] ?? '0'
     const trimmed = value.trim()
     if (!/^-?(?:\d+\.?\d*|\.\d+)$/.test(trimmed)) return null
@@ -231,25 +230,17 @@ function parsePillarRawParameters(
     return Number.isFinite(parsed) ? parsed : null
   }
 
-  const offsetX = rawOffset('offsetX')
-  if (offsetX === null) {
+  const offset = rawOffset('offset')
+  if (offset === null) {
     return {
       valid: false,
-      message: 'X 偏移必須是有限的小數 mm。',
-      field: 'offsetX',
-    }
-  }
-  const offsetY = rawOffset('offsetY')
-  if (offsetY === null) {
-    return {
-      valid: false,
-      message: 'Y 偏移必須是有限的小數 mm。',
-      field: 'offsetY',
+      message: 'offset 必須是有限的小數 mm。',
+      field: 'offset',
     }
   }
 
   if (mode !== 'positioning') {
-    const validation = validatePillarParameters({ mode, offsetX, offsetY })
+    const validation = validatePillarParameters({ mode, offset })
     if (!validation.valid) {
       const issue = validation.issues[0]
       return {
@@ -275,8 +266,7 @@ function parsePillarRawParameters(
   const validation = validatePillarParameters({
     mode,
     length,
-    offsetX,
-    offsetY,
+    offset,
   })
   if (!validation.valid) {
     const issue = validation.issues[0]
@@ -334,14 +324,12 @@ export function rawFromParameters(
       return {
         mode: parameters.mode,
         length: String(parameters.length),
-        offsetX: String(parameters.offsetX),
-        offsetY: String(parameters.offsetY),
+        offset: String(parameters.offset),
       }
     }
     return {
       mode: parameters.mode,
-      offsetX: String(parameters.offsetX),
-      offsetY: String(parameters.offsetY),
+      offset: String(parameters.offset),
     }
   }
 

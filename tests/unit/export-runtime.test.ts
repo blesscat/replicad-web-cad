@@ -52,9 +52,9 @@ function createContext(
     }
     bounds = boundsForOpenGridSnap(snapParameters)
   } else if (modelId === 'opengrid-pillar') {
-    parameters = { mode: pillarMode, offsetX: 0, offsetY: 0 }
-    rawParameters = { mode: pillarMode, offsetX: '0', offsetY: '0' }
-    bounds = boundsForPillar({ mode: pillarMode, offsetX: 0, offsetY: 0 })
+    parameters = { mode: pillarMode, offset: 0 }
+    rawParameters = { mode: pillarMode, offset: '0' }
+    bounds = boundsForPillar({ mode: pillarMode, offset: 0 })
   } else {
     parameters = { width: 20, depth: 30, height: 40 }
     rawParameters = { width: '20', depth: '30', height: '40' }

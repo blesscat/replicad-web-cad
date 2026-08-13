@@ -32,7 +32,7 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
     return { height: 8, count: 1, gap: 1, orientation: 'lying' }
   }
   if (modelId === 'opengrid-pillar') {
-    return { mode: 'standard', offsetX: 0, offsetY: 0 }
+    return { mode: 'standard', offset: 0 }
   }
   if (modelId === 'opengrid') {
     return opengridParameters()
@@ -200,7 +200,7 @@ describe('CAD model generation debounce', () => {
       expect.objectContaining({
         kind: 'model.generate',
         modelId: 'opengrid-pillar',
-        parameters: { mode: 'thin-shell', offsetX: 0, offsetY: 0 },
+        parameters: { mode: 'thin-shell', offset: 0 },
       }),
     )
     expect(client.send).toHaveBeenCalledWith(
@@ -210,8 +210,7 @@ describe('CAD model generation debounce', () => {
       'opengrid-pillar',
       {
         mode: 'thin-shell',
-        offsetX: 0,
-        offsetY: 0,
+        offset: 0,
       },
     )
   })
@@ -246,9 +245,9 @@ describe('CAD model generation debounce', () => {
   )
 
   it.each([
-    ['fractional-step X offset', 'offsetX', '0.03'],
-    ['out-of-range X offset', 'offsetX', '0.55'],
-    ['fractional-step Y offset', 'offsetY', '-0.03'],
+    ['fractional-step XY offset', 'offset', '0.03'],
+    ['out-of-range XY offset', 'offset', '0.55'],
+    ['fractional-step negative XY offset', 'offset', '-0.03'],
   ] as const)(
     'invalidates a pillar %s without generating a snapshot',
     (_label, field, value) => {
