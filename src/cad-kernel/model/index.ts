@@ -253,6 +253,7 @@ async function buildOpenGridOpenShelfModel(
     isGenerationCurrent: context.isGenerationCurrent,
     yieldToEventLoop: context.yieldToEventLoop,
     reportProgress: context.reportProgress,
+    booleanOperations: context.booleanOperations,
   })
 }
 

@@ -25,6 +25,9 @@ test('OpenGrid Open Shelf exposes its Desk controls and front-opening workspace'
   await expect(
     page.getByTestId('opengrid-open-shelf-cell-space'),
   ).toContainText('底部斜角區（不計入 Z 格數）')
+  await expect(
+    page.getByTestId('opengrid-open-shelf-honeycomb-mode'),
+  ).not.toBeChecked()
   const sliders = page.getByRole('slider')
   await expect(sliders).toHaveCount(6)
   for (const [index, label] of [

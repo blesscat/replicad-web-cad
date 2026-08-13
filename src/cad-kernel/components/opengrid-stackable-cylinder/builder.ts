@@ -2,6 +2,7 @@ import {
   getOC,
   makeBox,
   makeCylinder,
+  makeCompound,
   measureVolume,
   Sketcher,
   type Shape3D,
@@ -11,6 +12,7 @@ import {
   boundsForOpenGridStackableCylinder,
   openGridStackableCylinderDerivedGeometryFor,
   openGridStackableCylinderHoleCentersFor,
+  OPENGRID_HONEYCOMB_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_OPENING_DIRECTIONS,
@@ -28,6 +30,13 @@ import {
   type BooleanOperationReporter,
 } from '../../boolean-progress'
 import { filletEdgesAtZ } from '../../bottom-edge-fillet'
+import {
+  makeOpenGridStackableCylinderBottomHoneycombCutters,
+  makeOpenGridStackableCylinderSideHoneycombCutters,
+  openGridStackableCylinderHoneycombCellCountFor,
+} from '../../lattice/opengrid-honeycomb'
+
+const HONEYCOMB_CUT_BATCH_SIZE = 128
 
 export type OpenGridStackableCylinderBuildContext = {
   isGenerationCurrent?: () => boolean
@@ -66,6 +75,8 @@ export type OpenGridStackableCylinderOpeningQuality = {
 }
 
 export type OpenGridStackableCylinderInterfaceQualityReport = {
+  honeycombMode: boolean
+  honeycombCellCount: number
   profile: OpenGridStackableCylinderProfile
   thinBottomMode: boolean
   bottomPlateMode: boolean
@@ -563,6 +574,76 @@ function addSideOpenings(
     }
   }
   return current
+}
+
+function applyHoneycombMode(
+  shape: Shape3D,
+  parameters: OpenGridStackableCylinderParameters,
+  context: OpenGridStackableCylinderBuildContext,
+): Shape3D {
+  if (!parameters.honeycombMode) return shape
+  assertGenerationCurrent(context)
+
+  const cutPanel = (current: Shape3D, cutters: Shape3D[]): Shape3D => {
+    const batchCount = Math.ceil(cutters.length / HONEYCOMB_CUT_BATCH_SIZE)
+    const scope = context.booleanOperations?.createScope(batchCount)
+    let result = current
+    try {
+      while (cutters.length > 0) {
+        assertGenerationCurrent(context)
+        const batch = cutters.splice(0, HONEYCOMB_CUT_BATCH_SIZE)
+        let cutter: Shape3D | null = null
+        try {
+          if (batch.length === 1) {
+            cutter = batch[0] ?? null
+          } else {
+            cutter = makeCompound(batch).asShape3D()
+          }
+          if (!cutter) throw new Error('OPENGRID_HONEYCOMB_CUTTER_EMPTY')
+          const activeCutter = cutter
+          const cut = measureBooleanInScope(scope, 'cut', () =>
+            result.cut(activeCutter),
+          )
+          deleteShape(result)
+          result = cut
+        } finally {
+          batch.forEach(deleteShape)
+          if (cutter !== batch[0]) deleteShape(cutter)
+        }
+      }
+      return result
+    } catch (error) {
+      if (result !== current) deleteShape(result)
+      throw error
+    }
+  }
+
+  let sideCutters: Shape3D[] = []
+  let bottomCutters: Shape3D[] = []
+  const inputShape = shape
+  try {
+    sideCutters = makeOpenGridStackableCylinderSideHoneycombCutters(
+      parameters,
+      context,
+    )
+    assertGenerationCurrent(context)
+    shape = cutPanel(shape, sideCutters)
+    sideCutters = []
+    assertGenerationCurrent(context)
+    bottomCutters = makeOpenGridStackableCylinderBottomHoneycombCutters(
+      parameters,
+      context,
+    )
+    shape = cutPanel(shape, bottomCutters)
+    bottomCutters = []
+    return shape
+  } catch (error) {
+    if (shape !== inputShape) deleteShape(shape)
+    throw error
+  } finally {
+    sideCutters.forEach(deleteShape)
+    bottomCutters.forEach(deleteShape)
+  }
 }
 
 function directionalBoxProbe(
@@ -1328,23 +1409,29 @@ export function inspectOpenGridStackableCylinderInterface(
             locatingSeatRadius,
         )
       : []
-  const floorProbeRadius = Math.min(
-    derived.flatFloorRadius - 0.4,
-    largestHoleRadius + 0.5,
-  )
+  const solidFrameProbeInset =
+    (OPENGRID_HONEYCOMB_CONFIGURATION.bottomFrame -
+      OPENGRID_HONEYCOMB_CONFIGURATION.bottomLattice.cellRadius) /
+    2
+  const floorProbeOffset = parameters.honeycombMode
+    ? Math.max(0, derived.flatFloorRadius - solidFrameProbeInset)
+    : Math.min(derived.flatFloorRadius - 0.4, largestHoleRadius + 0.5)
+  const floorProbeZ = parameters.honeycombMode
+    ? Math.max(0.02, derived.flatFloorZ / 2)
+    : derived.flatFloorZ - 0.04
   const centralFloorBelowVolume = volumeInOffsetCylindricalProbe(
     shape,
     0.1,
     0.04,
-    floorProbeRadius,
+    floorProbeOffset,
     0,
-    derived.flatFloorZ - 0.04,
+    floorProbeZ,
   )
   const centralFloorAboveVolume = volumeInOffsetCylindricalProbe(
     shape,
     0.1,
     0.04,
-    floorProbeRadius,
+    floorProbeOffset,
     0,
     derived.flatFloorZ + 0.04,
   )
@@ -1529,6 +1616,9 @@ export function inspectOpenGridStackableCylinderInterface(
         }
       : { min: actualBounds[0], max: actualBounds[1] }
   return {
+    honeycombMode: parameters.honeycombMode,
+    honeycombCellCount:
+      openGridStackableCylinderHoneycombCellCountFor(parameters),
     profile: derived.profile,
     thinBottomMode: parameters.thinBottomMode,
     bottomPlateMode: parameters.bottomPlateMode,
@@ -1858,6 +1948,11 @@ export function buildOpenGridStackableCylinder(
       shape = addSideOpenings(shape, normalizedParameters, context)
     } catch (error) {
       throwStageError('OPENGRID_STACKABLE_CYLINDER_OPENINGS_INVALID', error)
+    }
+    try {
+      shape = applyHoneycombMode(shape, normalizedParameters, context)
+    } catch (error) {
+      throwStageError('OPENGRID_STACKABLE_CYLINDER_HONEYCOMB_INVALID', error)
     }
     assertGenerationCurrent(context)
     assertQuality(shape, normalizedParameters)

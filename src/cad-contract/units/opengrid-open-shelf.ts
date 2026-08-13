@@ -1,7 +1,7 @@
 import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
 
 export type OpenGridOpenShelfParameterKey =
-  'x' | 'y' | 'height' | 'cellX' | 'cellZ' | 'angle'
+  'x' | 'y' | 'height' | 'cellX' | 'cellZ' | 'angle' | 'honeycombMode'
 
 export type OpenGridOpenShelfParameters = {
   x: number
@@ -10,6 +10,7 @@ export type OpenGridOpenShelfParameters = {
   cellX: number
   cellZ: number
   angle: number
+  honeycombMode: boolean
 }
 
 export type OpenGridOpenShelfPoint2D = [number, number]
@@ -51,6 +52,7 @@ export const OPENGRID_OPEN_SHELF_CONFIGURATION = {
   defaultCellX: 1,
   defaultCellZ: 2,
   defaultAngle: 15,
+  defaultHoneycombMode: false,
   minX: 0.5,
   maxX: 10,
   minY: 0.5,
@@ -84,10 +86,13 @@ export const OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS = {
   cellX: OPENGRID_OPEN_SHELF_CONFIGURATION.defaultCellX,
   cellZ: OPENGRID_OPEN_SHELF_CONFIGURATION.defaultCellZ,
   angle: OPENGRID_OPEN_SHELF_CONFIGURATION.defaultAngle,
+  honeycombMode: OPENGRID_OPEN_SHELF_CONFIGURATION.defaultHoneycombMode,
 } as const satisfies OpenGridOpenShelfParameters
 
-const OPENGRID_OPEN_SHELF_PARAMETER_KEYS: readonly OpenGridOpenShelfParameterKey[] =
+const OPENGRID_OPEN_SHELF_LEGACY_PARAMETER_KEYS: readonly OpenGridOpenShelfParameterKey[] =
   ['x', 'y', 'height', 'cellX', 'cellZ', 'angle']
+const OPENGRID_OPEN_SHELF_PARAMETER_KEYS: readonly OpenGridOpenShelfParameterKey[] =
+  [...OPENGRID_OPEN_SHELF_LEGACY_PARAMETER_KEYS, 'honeycombMode']
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -282,6 +287,34 @@ export function openGridOpenShelfPegCentersFor(
   ]
 }
 
+export function openGridOpenShelfShelfCountFor(
+  parameters: Pick<OpenGridOpenShelfParameters, 'angle' | 'cellZ'>,
+): number {
+  return parameters.angle > 0
+    ? parameters.cellZ
+    : Math.max(0, parameters.cellZ - 1)
+}
+
+export function openGridOpenShelfDividerCentersFor(
+  parameters: Pick<OpenGridOpenShelfParameters, 'x' | 'cellX'>,
+): number[] {
+  const configuration = OPENGRID_OPEN_SHELF_CONFIGURATION
+  const width = parameters.x * configuration.gridPitch - 0.15
+  const innerWidth = width - 2 * configuration.outerWallThickness
+  const clearCellWidth = openGridOpenShelfCellClearWidthFor(parameters)
+  return Array.from(
+    { length: Math.max(0, parameters.cellX - 1) },
+    (_, index) => {
+      const dividerIndex = index + 1
+      return (
+        -innerWidth / 2 +
+        dividerIndex * clearCellWidth +
+        (dividerIndex - 0.5) * configuration.innerPlateThickness
+      )
+    },
+  )
+}
+
 function validateGridAxis(
   value: unknown,
   field: 'x' | 'y',
@@ -331,7 +364,15 @@ export function validateOpenGridOpenShelfParameters(
   }
 
   const issues: OpenGridOpenShelfValidationIssue[] = []
-  if (!hasExactKeys(value, OPENGRID_OPEN_SHELF_PARAMETER_KEYS)) {
+  const hasCurrentParameters = hasExactKeys(
+    value,
+    OPENGRID_OPEN_SHELF_PARAMETER_KEYS,
+  )
+  const hasLegacyParameters = hasExactKeys(
+    value,
+    OPENGRID_OPEN_SHELF_LEGACY_PARAMETER_KEYS,
+  )
+  if (!hasCurrentParameters && !hasLegacyParameters) {
     issues.push({
       field: 'parameters',
       message: '包含不支援或缺少的參數欄位。',
@@ -349,6 +390,12 @@ export function validateOpenGridOpenShelfParameters(
     ' mm',
     issues,
   )
+  if (hasCurrentParameters && typeof value.honeycombMode !== 'boolean') {
+    issues.push({
+      field: 'honeycombMode',
+      message: '省料模式必須是布林值。',
+    })
+  }
   validateIntegerField(
     value.cellX,
     'cellX',
@@ -383,6 +430,9 @@ export function validateOpenGridOpenShelfParameters(
     cellX: value.cellX as number,
     cellZ: value.cellZ as number,
     angle: value.angle as number,
+    honeycombMode: hasCurrentParameters
+      ? (value.honeycombMode as boolean)
+      : OPENGRID_OPEN_SHELF_CONFIGURATION.defaultHoneycombMode,
   }
   const [width, depth] = openGridOpenShelfFootprintFor(parameters)
   if (width > configuration.workspaceMaxDimension) {
@@ -441,7 +491,8 @@ export function boundsForOpenGridOpenShelf(
 export function openGridOpenShelfFileName(
   parameters: OpenGridOpenShelfParameters,
 ): string {
-  return `opengrid-open-shelf-${parameters.x}x${parameters.y}-h${parameters.height}-cx${parameters.cellX}-cz${parameters.cellZ}-a${parameters.angle}.step`
+  const honeycombSuffix = parameters.honeycombMode ? '-honeycomb' : ''
+  return `opengrid-open-shelf-${parameters.x}x${parameters.y}-h${parameters.height}-cx${parameters.cellX}-cz${parameters.cellZ}-a${parameters.angle}${honeycombSuffix}.step`
 }
 
 export function openGridOpenShelfStlFileName(

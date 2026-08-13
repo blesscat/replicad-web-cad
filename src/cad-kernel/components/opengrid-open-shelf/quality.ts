@@ -10,6 +10,7 @@ import {
   OPENGRID_OPEN_SHELF_CONFIGURATION,
   type OpenGridOpenShelfParameters,
 } from '../../../cad-contract/units'
+import { openGridOpenShelfHoneycombCellCountFor } from '../../lattice/opengrid-honeycomb'
 
 type MeshLike = {
   bounds: { min: number[]; max: number[] }
@@ -19,6 +20,8 @@ export type OpenGridOpenShelfQualityReport = {
   passed: boolean
   failures: string[]
   volume: number
+  honeycombMode: boolean
+  honeycombCellCount: number
 }
 
 function closeEnough(first: number, second: number, tolerance = 0.15): boolean {
@@ -231,6 +234,7 @@ export function inspectOpenGridOpenShelfShapeQuality(
   if (countSolids(shape) !== 1) failures.push('single-solid')
   const volume = measureVolume(shape)
   if (volume <= 0) failures.push('positive-volume')
+  const honeycombCellCount = openGridOpenShelfHoneycombCellCountFor(parameters)
   if (
     OPENGRID_OPEN_SHELF_CONFIGURATION.pegHeight <= 0 ||
     OPENGRID_OPEN_SHELF_CONFIGURATION.pegDiameter <= 0
@@ -240,7 +244,13 @@ export function inspectOpenGridOpenShelfShapeQuality(
 
   inspectGeometryInterfaces(shape, parameters, failures)
 
-  return { passed: failures.length === 0, failures, volume }
+  return {
+    passed: failures.length === 0,
+    failures,
+    volume,
+    honeycombMode: parameters.honeycombMode,
+    honeycombCellCount,
+  }
 }
 
 export function assertOpenGridOpenShelfShapeQuality(

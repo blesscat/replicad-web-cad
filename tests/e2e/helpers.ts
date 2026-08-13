@@ -415,9 +415,12 @@ export async function readBinaryStlByteLength(
   return byteLength
 }
 
-export async function waitForCadReady(page: Page): Promise<void> {
+export async function waitForCadReady(
+  page: Page,
+  timeout = 30_000,
+): Promise<void> {
   await expect(page.getByRole('button', { name: '下載 STEP' })).toBeEnabled({
-    timeout: 30_000,
+    timeout,
   })
 }
 

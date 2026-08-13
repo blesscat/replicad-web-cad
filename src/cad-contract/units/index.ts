@@ -146,10 +146,12 @@ import {
   openGridOpenShelfClearCellHeightsFor,
   openGridOpenShelfCellSpaceFor,
   openGridOpenShelfDepthFor,
+  openGridOpenShelfDividerCentersFor,
   openGridOpenShelfFootprintFor,
   openGridOpenShelfFrontToRearElevationFor,
   openGridOpenShelfPegCentersFor,
   openGridOpenShelfShelfLowerSurfaceZFor,
+  openGridOpenShelfShelfCountFor,
   openGridOpenShelfTopInnerFrontZFor,
   openGridOpenShelfTopInnerRearZFor,
   openGridOpenShelfTopOuterRearZFor,
@@ -196,11 +198,13 @@ export {
   openGridOpenShelfClearCellHeightsFor,
   openGridOpenShelfCellSpaceFor,
   openGridOpenShelfDepthFor,
+  openGridOpenShelfDividerCentersFor,
   openGridOpenShelfFileName,
   openGridOpenShelfFootprintFor,
   openGridOpenShelfFrontToRearElevationFor,
   openGridOpenShelfPegCentersFor,
   openGridOpenShelfShelfLowerSurfaceZFor,
+  openGridOpenShelfShelfCountFor,
   openGridOpenShelfStlFileName,
   openGridOpenShelfTopInnerFrontZFor,
   openGridOpenShelfTopInnerRearZFor,
@@ -291,6 +295,7 @@ export {
   snapNominalAxisSize,
 } from './half-cell'
 export { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
+export { OPENGRID_HONEYCOMB_CONFIGURATION } from './opengrid-honeycomb'
 export {
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_LOCATING_SEAT_MODES,

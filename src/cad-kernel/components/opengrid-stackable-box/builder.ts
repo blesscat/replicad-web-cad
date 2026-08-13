@@ -1,4 +1,4 @@
-import { type Shape3D } from 'replicad'
+import { makeCompound, type Shape3D } from 'replicad'
 import {
   validateOpenGridStackableBoxParameters,
   type OpenGridStackableBoxParameters,
@@ -16,8 +16,16 @@ import {
 } from './quality'
 import {
   assertGenerationCurrent,
+  deleteShape,
   type OpenGridStackableBoxBuildContext,
 } from './shared'
+import {
+  makeOpenGridStackableBoxProtectedBottomHoneycombCutters,
+  makeOpenGridStackableBoxSideHoneycombCutters,
+} from '../../lattice/opengrid-honeycomb'
+import { measureBooleanInScope } from '../../boolean-progress'
+
+const HONEYCOMB_CUT_BATCH_SIZE = 128
 
 export type { OpenGridStackableBoxBuildContext } from './shared'
 export type { OpenGridStackableBoxBottomGridSeam } from './geometry'
@@ -45,20 +53,110 @@ export function buildOpenGridStackableBox(
 ): Shape3D {
   const validation = validateOpenGridStackableBoxParameters(parameters)
   if (!validation.valid) throw new Error('INVALID_INPUT')
+  const normalizedParameters = validation.value
   assertGenerationCurrent(context)
 
-  let shape = makeBoxShell(parameters, context.booleanOperations)
+  let shape = makeBoxShell(normalizedParameters, context.booleanOperations)
   assertGenerationCurrent(context)
-  shape = applyStackingProfile(shape, parameters, context)
-  if (parameters.basePlateMode && parameters.cornerSeatMode === 'integrated') {
-    shape = applyBasePlateMode(shape, parameters, context.booleanOperations)
-    shape = addMountingSockets(shape, parameters, context)
+  shape = applyStackingProfile(shape, normalizedParameters, context)
+  if (
+    normalizedParameters.basePlateMode &&
+    normalizedParameters.cornerSeatMode === 'integrated'
+  ) {
+    shape = applyBasePlateMode(
+      shape,
+      normalizedParameters,
+      context.booleanOperations,
+    )
+    shape = addMountingSockets(shape, normalizedParameters, context)
   } else {
-    shape = addMountingSockets(shape, parameters, context)
-    shape = applyBasePlateMode(shape, parameters, context.booleanOperations)
+    shape = addMountingSockets(shape, normalizedParameters, context)
+    shape = applyBasePlateMode(
+      shape,
+      normalizedParameters,
+      context.booleanOperations,
+    )
   }
-  shape = addSideOpenings(shape, parameters, context)
+  shape = addSideOpenings(shape, normalizedParameters, context)
+  shape = applyHoneycombMode(shape, normalizedParameters, context)
   assertGenerationCurrent(context)
-  assertOpenGridStackableBoxGeometry(shape, parameters)
+  assertOpenGridStackableBoxGeometry(shape, normalizedParameters)
   return shape
+}
+
+function applyHoneycombMode(
+  shape: Shape3D,
+  parameters: OpenGridStackableBoxParameters,
+  context: OpenGridStackableBoxBuildContext,
+): Shape3D {
+  if (!parameters.honeycombMode) return shape
+  assertGenerationCurrent(context)
+
+  const cutPanel = (
+    current: Shape3D,
+    cutters: Shape3D[],
+    batchSize = HONEYCOMB_CUT_BATCH_SIZE,
+  ): Shape3D => {
+    const batchCount = Math.ceil(cutters.length / batchSize)
+    const scope = context.booleanOperations?.createScope(batchCount)
+    let result = current
+    try {
+      while (cutters.length > 0) {
+        assertGenerationCurrent(context)
+        const batch = cutters.splice(0, batchSize)
+        let cutter: Shape3D | null = null
+        try {
+          if (batch.length === 1) {
+            cutter = batch[0] ?? null
+          } else {
+            cutter = makeCompound(batch).asShape3D()
+          }
+          if (!cutter) throw new Error('OPENGRID_HONEYCOMB_CUTTER_EMPTY')
+          const activeCutter = cutter
+          const cut = measureBooleanInScope(scope, 'cut', () =>
+            result.cut(activeCutter),
+          )
+          deleteShape(result)
+          result = cut
+        } finally {
+          batch.forEach(deleteShape)
+          if (cutter !== batch[0]) deleteShape(cutter)
+        }
+      }
+      return result
+    } catch (error) {
+      if (result !== current) deleteShape(result)
+      throw error
+    }
+  }
+
+  let sideCutters: Shape3D[] = []
+  let bottomCutters: Shape3D[] = []
+  try {
+    sideCutters = makeOpenGridStackableBoxSideHoneycombCutters(
+      parameters,
+      context,
+    )
+    assertGenerationCurrent(context)
+    shape = cutPanel(shape, sideCutters)
+    sideCutters = []
+    assertGenerationCurrent(context)
+    bottomCutters = makeOpenGridStackableBoxProtectedBottomHoneycombCutters(
+      parameters,
+      context,
+    )
+    shape = cutPanel(shape, bottomCutters, 1)
+    bottomCutters = []
+    return shape
+  } catch (error) {
+    deleteShape(shape)
+    if (error instanceof Error && error.message === 'STALE_GENERATION') {
+      throw error
+    }
+    const message = error instanceof Error ? error.message : String(error)
+    throw new Error(`OPENGRID_STACKABLE_BOX_HONEYCOMB_INVALID:${message}`)
+  } finally {
+    sideCutters.forEach(deleteShape)
+    bottomCutters.forEach(deleteShape)
+  }
 }

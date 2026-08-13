@@ -12,6 +12,7 @@ import {
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   type OpenGridStackableBoxParameters,
 } from '../../../cad-contract/units'
+import { openGridStackableBoxHoneycombCellCountFor } from '../../lattice/opengrid-honeycomb'
 import {
   applyStackingProfile,
   bottomGridSeamApexTopZ,
@@ -787,6 +788,8 @@ export function inspectOpenGridStackableBoxInterface(
 
   return {
     cornerSeatMode: parameters.cornerSeatMode,
+    honeycombMode: parameters.honeycombMode,
+    honeycombCellCount: openGridStackableBoxHoneycombCellCountFor(parameters),
     externalHeight: externalOpenGridStackableBoxHeightFor(parameters),
     measuredExternalHeight: readBounds(shape)[1][2],
     upperInnerRimZ,

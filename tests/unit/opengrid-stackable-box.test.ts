@@ -35,6 +35,7 @@ function parameters(
     fullBottomHoleGrid: false,
     basePlateMode: false,
     thinShellMode: false,
+    honeycombMode: false,
     openingPlusXDepth: 0,
     openingPlusXBottomLength: 1,
     openingPlusXAngle: 90,
@@ -257,6 +258,33 @@ describe('OpenGrid stackable-box contract', () => {
     expect(validation.value.openingMinusYBottomLength).toBe(1)
     expect(validation.value.openingPlusYAngle).toBe(90)
     expect(validation.value.thinShellMode).toBe(false)
+    expect(validation.value.honeycombMode).toBe(false)
+  })
+
+  it('accepts the opt-in honeycomb mode without changing the typed snapshot', () => {
+    const value = parameters({ honeycombMode: true })
+
+    expect(validateOpenGridStackableBoxParameters(value)).toEqual({
+      valid: true,
+      value,
+    })
+  })
+
+  it('accepts honeycomb opt-in on a legacy snapshot', () => {
+    const validation = validateOpenGridStackableBoxParameters({
+      x: 1,
+      y: 1,
+      height: 20,
+      cornerBottomHoles: true,
+      fullBottomHoleGrid: false,
+      basePlateMode: false,
+      honeycombMode: true,
+    })
+
+    expect(validation.valid).toBe(true)
+    if (!validation.valid) return
+    expect(validation.value.honeycombMode).toBe(true)
+    expect(validation.value.thinShellMode).toBe(false)
   })
 
   it('normalizes a pre-thin current snapshot without changing its openings', () => {
@@ -394,6 +422,40 @@ describe('OpenGrid stackable-box contract', () => {
     expect(modelStlFileName(changedInertValue)).not.toBe(modelStlFileName(open))
   })
 
+  it('adds a deterministic honeycomb suffix only when material saving is enabled', () => {
+    const model = {
+      modelId: 'opengrid-stackable-box' as const,
+      parameters: parameters({ honeycombMode: true }),
+    }
+
+    expect(modelFileName(model)).toBe(
+      'opengrid-stackable-box-1x1-h10-seats-hole-honeycomb.step',
+    )
+    expect(modelStlFileName(model)).toBe(
+      'opengrid-stackable-box-1x1-h10-seats-hole-honeycomb.stl',
+    )
+  })
+
+  it('places honeycomb before existing opening and profile suffixes', () => {
+    const model = {
+      modelId: 'opengrid-stackable-box' as const,
+      parameters: parameters({
+        honeycombMode: true,
+        thinShellMode: true,
+        openingPlusXDepth: 8,
+        openingPlusXBottomLength: 12,
+        openingPlusXAngle: 70,
+      }),
+    }
+
+    expect(modelFileName(model)).toBe(
+      'opengrid-stackable-box-1x1-h10-seats-hole-honeycomb-open-8-12-70-0-1-90-0-1-90-0-1-90-thin-shell.step',
+    )
+    expect(modelStlFileName(model)).toBe(
+      'opengrid-stackable-box-1x1-h10-seats-hole-honeycomb-open-8-12-70-0-1-90-0-1-90-0-1-90-thin-shell.stl',
+    )
+  })
+
   it.each([
     [parameters({ x: 0.25 }), 'x'],
     [parameters({ y: 0 }), 'y'],
@@ -404,6 +466,7 @@ describe('OpenGrid stackable-box contract', () => {
     [parameters({ fullBottomHoleGrid: 'true' as never }), 'fullBottomHoleGrid'],
     [parameters({ basePlateMode: 'true' as never }), 'basePlateMode'],
     [parameters({ thinShellMode: 'true' as never }), 'thinShellMode'],
+    [parameters({ honeycombMode: 'true' as never }), 'honeycombMode'],
   ])(
     'rejects invalid %s values with a field-specific issue',
     (value, field) => {

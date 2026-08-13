@@ -1246,19 +1246,26 @@ describe('OpenGrid stackable-box B-Rep', () => {
   )
 
   it('exports successful full-cell geometry as STEP and STL', async () => {
-    const shape = buildOpenGridStackableBox(
-      parameters({ fullBottomHoleGrid: true }),
-    )
+    const input = parameters({
+      height: 30,
+      fullBottomHoleGrid: true,
+      honeycombMode: true,
+    })
+    const shape = buildOpenGridStackableBox(input)
     try {
+      const report = inspectOpenGridStackableBoxInterface(shape, input)
+      expect(report.honeycombMode).toBe(true)
+      expect(report.honeycombCellCount).toBeGreaterThan(0)
       const mesh = meshBRep(shape, {
         tolerance: 0.05,
         angularTolerance: 0.1,
       })
       expect(mesh.triangleCount).toBeGreaterThan(0)
-      const [step, stl] = await Promise.all([
-        exportStepBytes(shape),
-        exportStlBytes(shape, { tolerance: 0.01, angularTolerance: 0.1 }),
-      ])
+      const step = await exportStepBytes(shape)
+      const stl = await exportStlBytes(shape, {
+        tolerance: 0.01,
+        angularTolerance: 0.1,
+      })
       expect(step.byteLength).toBeGreaterThan(0)
       expect(stl.byteLength).toBeGreaterThan(84)
     } finally {
