@@ -14,6 +14,7 @@
   } from '../../../../cad-contract/units'
   import { calculateOpenGridStackableBoxCounts } from '../../../../features/cad/grid-dimensions'
   import GridDimensionCalculator from '../GridDimensionCalculator.svelte'
+  import HoneycombRenderWarning from '../HoneycombRenderWarning.svelte'
   import ParameterControl from '../ParameterControl.svelte'
   import ParameterField from '../ParameterField.svelte'
   import type { ComponentPanelProps } from '../types'
@@ -317,6 +318,9 @@
       />
       <span class="font-[650]">省料模式（六角鏤空）</span>
     </label>
+    {#if rawParameters.honeycombMode === 'true'}
+      <HoneycombRenderWarning />
+    {/if}
   </div>
   <div
     aria-describedby={modeErrorDescriptionId()}

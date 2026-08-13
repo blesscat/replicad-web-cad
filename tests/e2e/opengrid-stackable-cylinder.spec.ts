@@ -1,6 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
 import { skipHeadlessFirefoxWithoutWebGL, waitForCadReady } from './helpers'
 
+const HONEYCOMB_RENDER_WARNING =
+  '注意：省料模式會明顯降低模型渲染速度。建議先使用一般模式確認形狀，下載前再啟用省料模式。'
+
 const sideOpeningGroups = [
   { direction: '-Y', label: '前方' },
   { direction: '+Y', label: '後方' },
@@ -181,6 +184,8 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
     ).toHaveAttribute('max', '15')
   }
   await page.getByRole('radio', { name: '薄殼模式' }).check()
+  await page.getByRole('radio', { name: '堆疊模式' }).check()
+  await page.getByRole('radio', { name: '薄殼模式' }).check()
   for (const { direction, label } of sideOpeningGroups) {
     await expect(
       page
@@ -343,12 +348,15 @@ test('OpenGrid stackable-cylinder persists the honeycomb saving switch and filen
     name: '省料模式（六角鏤空）',
     exact: true,
   })
+  const honeycombWarning = page.getByTestId('honeycomb-render-warning')
   await expect(honeycomb).toBeVisible()
   await expect(honeycomb).not.toBeChecked()
+  await expect(honeycombWarning).toHaveCount(0)
   await expect(page.getByRole('radio', { name: '堆疊模式' })).toBeChecked()
   await honeycomb.check()
   await waitForCadReady(page, 90_000)
   await expect(honeycomb).toBeChecked()
+  await expect(honeycombWarning).toHaveText(HONEYCOMB_RENDER_WARNING)
 
   await page.reload()
   await waitForCadReady(page, 90_000)
@@ -359,6 +367,7 @@ test('OpenGrid stackable-cylinder persists the honeycomb saving switch and filen
     }),
   ).toBeChecked()
   await expect(page.getByRole('radio', { name: '堆疊模式' })).toBeChecked()
+  await expect(honeycombWarning).toHaveText(HONEYCOMB_RENDER_WARNING)
 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: '下載 STEP' }).click()
@@ -366,4 +375,6 @@ test('OpenGrid stackable-cylinder persists the honeycomb saving switch and filen
   expect(download.suggestedFilename()).toBe(
     'opengrid-stackable-cylinder-d60-h20-seats-hole-honeycomb.step',
   )
+  await honeycomb.uncheck()
+  await expect(honeycombWarning).toHaveCount(0)
 })

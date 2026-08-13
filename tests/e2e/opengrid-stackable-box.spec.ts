@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test'
 import { skipHeadlessFirefoxWithoutWebGL, waitForCadReady } from './helpers'
 
+const HONEYCOMB_RENDER_WARNING =
+  '注意：省料模式會明顯降低模型渲染速度。建議先使用一般模式確認形狀，下載前再啟用省料模式。'
+
 test('Desk System starts the stackable-box with its thin-shell preset', async ({
   page,
   browserName,
@@ -249,12 +252,15 @@ test('OpenGrid stackable-box persists the honeycomb saving switch and filename',
     name: '省料模式（六角鏤空）',
     exact: true,
   })
+  const honeycombWarning = page.getByTestId('honeycomb-render-warning')
   await expect(honeycomb).toBeVisible()
   await expect(honeycomb).not.toBeChecked()
+  await expect(honeycombWarning).toHaveCount(0)
   await expect(page.getByRole('radio', { name: '堆疊模式' })).toBeChecked()
   await honeycomb.check()
   await waitForCadReady(page, 90_000)
   await expect(honeycomb).toBeChecked()
+  await expect(honeycombWarning).toHaveText(HONEYCOMB_RENDER_WARNING)
 
   await page.reload()
   await waitForCadReady(page, 90_000)
@@ -265,6 +271,7 @@ test('OpenGrid stackable-box persists the honeycomb saving switch and filename',
     }),
   ).toBeChecked()
   await expect(page.getByRole('radio', { name: '堆疊模式' })).toBeChecked()
+  await expect(honeycombWarning).toHaveText(HONEYCOMB_RENDER_WARNING)
 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: '下載 STEP' }).click()
@@ -272,4 +279,6 @@ test('OpenGrid stackable-box persists the honeycomb saving switch and filename',
   expect(download.suggestedFilename()).toBe(
     'opengrid-stackable-box-2x2-h20-seats-hole-honeycomb.step',
   )
+  await honeycomb.uncheck()
+  await expect(honeycombWarning).toHaveCount(0)
 })

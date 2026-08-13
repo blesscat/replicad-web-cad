@@ -9,6 +9,7 @@
     validateOpenGridOpenShelfParameters,
     type OpenGridOpenShelfParameters,
   } from '../../../../cad-contract/units'
+  import HoneycombRenderWarning from '../HoneycombRenderWarning.svelte'
   import ParameterControl from '../ParameterControl.svelte'
   import ParameterField from '../ParameterField.svelte'
   import type { ComponentPanelProps } from '../types'
@@ -106,6 +107,9 @@
     />
     <span>省料模式（六角鏤空）</span>
   </label>
+  {#if rawParameters.honeycombMode === 'true'}
+    <HoneycombRenderWarning />
+  {/if}
   <fieldset class="m-0 grid gap-3 border-0 p-0">
     {#each opengridOpenShelfDefinition.parameterSchema as field (field.key)}
       {@const value = rawParameters[field.key] ?? String(field.defaultValue)}

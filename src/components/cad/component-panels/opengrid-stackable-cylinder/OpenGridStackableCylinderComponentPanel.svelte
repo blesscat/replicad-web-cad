@@ -11,6 +11,7 @@
     type OpenGridStackableCylinderOpeningParameterKey,
     type OpenGridStackableCylinderParameters,
   } from '../../../../cad-contract/units'
+  import HoneycombRenderWarning from '../HoneycombRenderWarning.svelte'
   import ParameterControl from '../ParameterControl.svelte'
   import ParameterField from '../ParameterField.svelte'
   import type { ComponentPanelProps } from '../types'
@@ -312,6 +313,9 @@
     />
     <span>省料模式（六角鏤空）</span>
   </label>
+  {#if rawParameters.honeycombMode === 'true'}
+    <HoneycombRenderWarning />
+  {/if}
   {#each opengridStackableCylinderDefinition.parameterSchema.slice(0, 2) as field (field.key)}
     {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
     <ParameterField
