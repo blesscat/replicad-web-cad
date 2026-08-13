@@ -316,7 +316,7 @@ successful results MUST remain previewable and exportable.
 
 The `opengrid-stackable-box` MUST support one top-open access opening at each cardinal direction `+X`, `-X`, `+Y`, and `-Y` in normal, base-plate, and thin-shell modes. Each direction MUST use its own depth, flat-bottom length, and transition-angle values; changing one direction MUST NOT copy, rotate, or otherwise change another direction's values. An opening with depth zero MUST be omitted while the other directions remain independently generatable. The side-opening angle sliders MUST render in reverse visual direction while preserving their numeric values and geometry semantics.
 
-The panel MUST expose one disclosure labelled `四個方向開口設定`, followed by the same four direction groups and control order as the stackable-cylinder interface: `前方`=`-Y`, `後方`=`+Y`, `左方`=`-X`, and `右方`=`+X`; each group MUST expose depth, bottom length, and angle in that order. The outer disclosure MUST be collapsed on first display; after expansion, `前方` MUST be expanded by default and the other three groups MUST be collapsed. Expanding or collapsing the controls MUST NOT change normalized opening values. Existing bottom-hole controls and the two visible mode controls MUST remain available, while the legacy `basePlateMode` field remains non-selectable in the panel.
+The panel MUST expose one disclosure labelled `四個方向開口設定`, followed by the same four direction groups and control order as the stackable-cylinder interface: `前方`=`-Y`, `後方`=`+Y`, `左方`=`-X`, and `右方`=`+X`; each group MUST expose depth, bottom length, and angle in that order. On first display or after persisted parameters are loaded, the outer disclosure MUST be collapsed when all opening values are defaults and MUST be expanded when any opening value is non-default. Each direction group MUST be expanded when any of its three values is non-default and MUST otherwise be collapsed, including `前方`. Users MUST still be able to manually expand or collapse either disclosure without changing normalized opening values. Existing bottom-hole controls and the two visible mode controls MUST remain available, while the legacy `basePlateMode` field remains non-selectable in the panel.
 
 #### Scenario: Four directions retain separate settings
 
@@ -335,6 +335,15 @@ The panel MUST expose one disclosure labelled `四個方向開口設定`, follow
 - **WHEN** a user opens the side-opening disclosure on the stackable-box panel
 - **THEN** the visible group labels, direction mapping, field order, degree unit, and angle slider direction MUST match the stackable-cylinder opening interface
 - **AND** the box panel MUST NOT expose circular-radius, radial-angle, or cylinder-specific cut controls
+
+#### Scenario: Opening disclosures follow non-default values
+
+- **WHEN** all four opening groups contain their default depth, bottom length, and angle values
+- **THEN** the outer disclosure and all four direction groups MUST be collapsed on first display
+- **WHEN** one direction contains at least one non-default opening value
+- **THEN** the outer disclosure MUST be expanded and only that direction group MUST be expanded on first display
+- **AND** `前方` MUST follow the same rule as `後方`, `左方`, and `右方`
+- **AND** restoring the direction's values to defaults MUST collapse that direction group and the outer disclosure when no other direction is non-default
 
 ### Requirement: Rounded box-native opening profile
 
