@@ -1,8 +1,4 @@
-## Purpose
-
-提供堆疊版、薄殼版與物件定位用自訂長度版的圓柱支柱 component，讓使用者能產生可預覽、可驗證並可匯出的單一 CAD solid。
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Pillar parameter contract
 

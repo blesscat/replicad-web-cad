@@ -400,15 +400,13 @@ describe('CAD workspace validation helpers', () => {
   it('round-trips the typed pillar mode radio value', () => {
     const parameters: PillarParameters = {
       mode: 'thin-shell',
-      offsetX: 0.15,
-      offsetY: -0.1,
+      offset: 0.15,
     }
     const raw = rawFromParameters(parameters)
 
     expect(raw).toEqual({
       mode: 'thin-shell',
-      offsetX: '0.15',
-      offsetY: '-0.1',
+      offset: '0.15',
     })
     expect(parseRawParameters(raw, 'opengrid-pillar')).toEqual({
       valid: true,
@@ -430,16 +428,14 @@ describe('CAD workspace validation helpers', () => {
     const parameters: PillarParameters = {
       mode: 'positioning',
       length: 25,
-      offsetX: 0,
-      offsetY: 0.05,
+      offset: 0.05,
     }
     const raw = rawFromParameters(parameters)
 
     expect(raw).toEqual({
       mode: 'positioning',
       length: '25',
-      offsetX: '0',
-      offsetY: '0.05',
+      offset: '0.05',
     })
     expect(parseRawParameters(raw, 'opengrid-pillar')).toEqual({
       valid: true,
@@ -450,23 +446,23 @@ describe('CAD workspace validation helpers', () => {
   it('rejects pillar offsets that are outside the range or step', () => {
     expect(
       parseRawParameters(
-        { mode: 'standard', offsetX: '0.03', offsetY: '0' },
+        { mode: 'standard', offset: '0.03' },
         'opengrid-pillar',
       ),
     ).toEqual({
       valid: false,
-      message: 'offsetX 必須以 0.05 mm 為步進。',
-      field: 'offsetX',
+      message: 'offset 必須以 0.05 mm 為步進。',
+      field: 'offset',
     })
     expect(
       parseRawParameters(
-        { mode: 'standard', offsetX: '0.55', offsetY: '0' },
+        { mode: 'standard', offset: '0.55' },
         'opengrid-pillar',
       ),
     ).toEqual({
       valid: false,
-      message: 'offsetX 必須介於 -0.5–0.5 mm。',
-      field: 'offsetX',
+      message: 'offset 必須介於 -0.5–0.5 mm。',
+      field: 'offset',
     })
   })
 

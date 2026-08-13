@@ -280,7 +280,7 @@ export async function buildPillar(
       )
     }
 
-    shape = translateShape(shape, parameters.offsetX, parameters.offsetY)
+    shape = translateShape(shape, parameters.offset, parameters.offset)
 
     assertGenerationCurrent(context)
     finalSolid = asSingleSolid(shape)

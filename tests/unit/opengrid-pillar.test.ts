@@ -21,29 +21,23 @@ describe('pillar contract', () => {
       offsetMin: -0.5,
       offsetMax: 0.5,
       offsetStep: 0.05,
-      defaultParameters: { mode: 'standard', offsetX: 0, offsetY: 0 },
+      defaultParameters: { mode: 'standard', offset: 0 },
     })
     expect(PILLAR_CONFIGURATION.bodyDiameter).toBe(
       OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftDiameter,
     )
   })
 
-  it('accepts exactly the standard and thin-shell modes with offsets', () => {
-    expect(
-      validatePillarParameters({ mode: 'standard', offsetX: 0, offsetY: 0 }),
-    ).toEqual({
+  it('accepts exactly the fixed modes with one shared XY offset', () => {
+    expect(validatePillarParameters({ mode: 'standard', offset: 0 })).toEqual({
       valid: true,
-      value: { mode: 'standard', offsetX: 0, offsetY: 0 },
+      value: { mode: 'standard', offset: 0 },
     })
     expect(
-      validatePillarParameters({
-        mode: 'thin-shell',
-        offsetX: 0.15,
-        offsetY: -0.1,
-      }),
+      validatePillarParameters({ mode: 'thin-shell', offset: 0.15 }),
     ).toEqual({
       valid: true,
-      value: { mode: 'thin-shell', offsetX: 0.15, offsetY: -0.1 },
+      value: { mode: 'thin-shell', offset: 0.15 },
     })
   })
 
@@ -52,12 +46,11 @@ describe('pillar contract', () => {
       validatePillarParameters({
         mode: 'positioning',
         length: 25,
-        offsetX: 0,
-        offsetY: 0,
+        offset: 0,
       }),
     ).toEqual({
       valid: true,
-      value: { mode: 'positioning', length: 25, offsetX: 0, offsetY: 0 },
+      value: { mode: 'positioning', length: 25, offset: 0 },
     })
     expect(PILLAR_CONFIGURATION).toMatchObject({
       positioningDefaultLength: 5,
@@ -74,163 +67,133 @@ describe('pillar contract', () => {
       validatePillarParameters({
         mode: 'standard',
         length: 9,
-        offsetX: 0,
-        offsetY: 0,
+        offset: 0,
       }).valid,
     ).toBe(false)
     expect(
       validatePillarParameters({
         mode: 'thin-shell',
         length: 6,
-        offsetX: 0,
-        offsetY: 0,
+        offset: 0,
       }).valid,
     ).toBe(false)
     expect(
-      validatePillarParameters({ mode: 'positioning', offsetX: 0, offsetY: 0 })
-        .valid,
+      validatePillarParameters({ mode: 'positioning', offset: 0 }).valid,
     ).toBe(false)
   })
 
-  it('validates both offset range and 0.05 mm steps', () => {
+  it('validates the shared offset range and 0.05 mm steps', () => {
     expect(
-      validatePillarParameters({
-        mode: 'standard',
-        offsetX: 0.1,
-        offsetY: -0.5,
-      }).valid,
+      validatePillarParameters({ mode: 'standard', offset: 0.1 }).valid,
     ).toBe(true)
     expect(
-      validatePillarParameters({
-        mode: 'standard',
-        offsetX: 0.12,
-        offsetY: 0,
-      }),
+      validatePillarParameters({ mode: 'standard', offset: 0.12 }),
     ).toMatchObject({
       valid: false,
-      issues: [expect.objectContaining({ field: 'offsetX' })],
+      issues: [expect.objectContaining({ field: 'offset' })],
     })
     expect(
-      validatePillarParameters({
-        mode: 'standard',
-        offsetX: 0.55,
-        offsetY: 0,
-      }),
+      validatePillarParameters({ mode: 'standard', offset: 0.55 }),
     ).toMatchObject({
       valid: false,
-      issues: [expect.objectContaining({ field: 'offsetX' })],
+      issues: [expect.objectContaining({ field: 'offset' })],
     })
   })
 
-  it('rejects missing, unsupported, and legacy parameter shapes', () => {
+  it('rejects missing, unsupported, and removed two-offset parameter shapes', () => {
     for (const value of [
       {},
       { mode: 'legacy' },
       { mode: true },
-      { mode: 'standard', length: 9, offsetX: 0, offsetY: 0 },
+      { mode: 'standard', offsetX: 0, offsetY: 0 },
+      { mode: 'standard', length: 9, offset: 0 },
       { length: 8, baseConnection: true },
     ]) {
       expect(validatePillarParameters(value).valid).toBe(false)
     }
   })
 
-  it('returns fixed bounds and applies typed XY offsets', () => {
-    expect(
-      boundsForPillar({ mode: 'standard', offsetX: 0, offsetY: 0 }),
-    ).toEqual({
+  it('returns fixed bounds and applies one offset to both XY axes', () => {
+    expect(boundsForPillar({ mode: 'standard', offset: 0 })).toEqual({
       min: [-3.5, -3.5, 0],
       max: [3.5, 3.5, 9],
     })
-    expect(
-      boundsForPillar({ mode: 'thin-shell', offsetX: 0, offsetY: 0 }),
-    ).toEqual({
+    expect(boundsForPillar({ mode: 'thin-shell', offset: 0 })).toEqual({
       min: [-3.5, -3.5, 0],
       max: [3.5, 3.5, 6],
     })
     expect(
-      boundsForPillar({
+      boundsForPillar({ mode: 'positioning', length: 25, offset: 0.25 }),
+    ).toEqual({
+      min: [-2.25, -2.25, 0],
+      max: [2.75, 2.75, 25],
+    })
+  })
+
+  it('migrates legacy snapshots to the shared offset contract', () => {
+    expect(normalizePillarParameters({ mode: 'standard' })).toEqual({
+      mode: 'standard',
+      offset: 0,
+    })
+    expect(
+      normalizePillarParameters({
+        mode: 'thin-shell',
+        offsetX: 0.25,
+        offsetY: 0.25,
+      }),
+    ).toEqual({ mode: 'thin-shell', offset: 0.25 })
+    expect(
+      normalizePillarParameters({
         mode: 'positioning',
         length: 25,
         offsetX: 0.25,
         offsetY: -0.15,
       }),
-    ).toEqual({
-      min: [-2.25, -2.65, 0],
-      max: [2.75, 2.35, 25],
-    })
-  })
-
-  it('migrates old snapshots to zero-offset typed snapshots', () => {
-    expect(normalizePillarParameters({ mode: 'standard' })).toEqual({
-      mode: 'standard',
-      offsetX: 0,
-      offsetY: 0,
-    })
+    ).toEqual({ mode: 'positioning', length: 25, offset: 0 })
     expect(
       normalizePillarParameters({ mode: 'positioning', length: 25 }),
-    ).toEqual({
-      mode: 'positioning',
-      length: 25,
-      offsetX: 0,
-      offsetY: 0,
-    })
+    ).toEqual({ mode: 'positioning', length: 25, offset: 0 })
     expect(
       normalizePillarParameters({ length: 25, baseConnection: false }),
-    ).toEqual({
-      mode: 'positioning',
-      length: 25,
-      offsetX: 0,
-      offsetY: 0,
+    ).toEqual({ mode: 'positioning', length: 25, offset: 0 })
+    expect(normalizePillarParameters({ mode: 'positioning' })).toEqual({
+      mode: 'standard',
+      offset: 0,
     })
   })
 
   it('uses deterministic mode-specific export filenames', () => {
-    expect(pillarFileName({ mode: 'standard', offsetX: 0, offsetY: 0 })).toBe(
+    expect(pillarFileName({ mode: 'standard', offset: 0 })).toBe(
       'pillar-9-standard.step',
     )
-    expect(pillarFileName({ mode: 'thin-shell', offsetX: 0, offsetY: 0 })).toBe(
+    expect(pillarFileName({ mode: 'thin-shell', offset: 0 })).toBe(
       'pillar-6-thin-shell.step',
     )
+    expect(pillarStlFileName({ mode: 'standard', offset: 0 })).toBe(
+      'pillar-9-standard.stl',
+    )
+    expect(pillarStlFileName({ mode: 'thin-shell', offset: 0 })).toBe(
+      'pillar-6-thin-shell.stl',
+    )
+    expect(pillarFileName({ mode: 'positioning', length: 25, offset: 0 })).toBe(
+      'pillar-25-positioning.step',
+    )
     expect(
-      pillarStlFileName({ mode: 'standard', offsetX: 0, offsetY: 0 }),
-    ).toBe('pillar-9-standard.stl')
+      pillarStlFileName({ mode: 'positioning', length: 25, offset: 0.25 }),
+    ).toBe('pillar-25-positioning-xy0.25.stl')
     expect(
-      pillarStlFileName({ mode: 'thin-shell', offsetX: 0, offsetY: 0 }),
-    ).toBe('pillar-6-thin-shell.stl')
-    expect(
-      pillarFileName({
-        mode: 'positioning',
-        length: 25,
-        offsetX: 0,
-        offsetY: 0,
-      }),
-    ).toBe('pillar-25-positioning.step')
-    expect(
-      pillarStlFileName({
-        mode: 'positioning',
-        length: 25,
-        offsetX: 0.25,
-        offsetY: -0.15,
-      }),
-    ).toBe('pillar-25-positioning-x0.25-y-0.15.stl')
-    expect(
-      pillarStlFileName({
-        mode: 'positioning',
-        length: 25,
-        offsetX: 0,
-        offsetY: 0,
-      }),
+      pillarStlFileName({ mode: 'positioning', length: 25, offset: 0 }),
     ).toBe('pillar-25-positioning.stl')
 
     for (const parameters of [
-      { mode: 'standard', offsetX: 0.25, offsetY: -0.15 },
-      { mode: 'thin-shell', offsetX: 0.25, offsetY: -0.15 },
+      { mode: 'standard', offset: 0.25 },
+      { mode: 'thin-shell', offset: 0.25 },
     ] as const) {
       expect(pillarFileName(parameters)).toBe(
-        `pillar-${parameters.mode === 'standard' ? 9 : 6}-${parameters.mode}-x0.25-y-0.15.step`,
+        `pillar-${parameters.mode === 'standard' ? 9 : 6}-${parameters.mode}-xy0.25.step`,
       )
       expect(pillarStlFileName(parameters)).toBe(
-        `pillar-${parameters.mode === 'standard' ? 9 : 6}-${parameters.mode}-x0.25-y-0.15.stl`,
+        `pillar-${parameters.mode === 'standard' ? 9 : 6}-${parameters.mode}-xy0.25.stl`,
       )
     }
   })

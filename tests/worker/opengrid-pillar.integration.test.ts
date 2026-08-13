@@ -68,8 +68,8 @@ function probeVolumeAt(
 
 describe('OpenGrid pillar CAD kernel integration', () => {
   it.each([
-    { mode: 'standard', offsetX: 0, offsetY: 0 },
-    { mode: 'thin-shell', offsetX: 0, offsetY: 0 },
+    { mode: 'standard', offset: 0 },
+    { mode: 'thin-shell', offset: 0 },
   ] as PillarParameters[])(
     'builds a valid centered fixed-mode pillar for %#',
     async (parameters) => {
@@ -122,8 +122,7 @@ describe('OpenGrid pillar CAD kernel integration', () => {
     const parameters: PillarParameters = {
       mode: 'positioning',
       length: 25,
-      offsetX: 0,
-      offsetY: 0,
+      offset: 0,
     }
     const shape = await buildPillar(parameters)
     try {
@@ -149,8 +148,7 @@ describe('OpenGrid pillar CAD kernel integration', () => {
   it('translates the complete pillar without changing its profile or Z base', async () => {
     const parameters: PillarParameters = {
       mode: 'standard',
-      offsetX: 0.25,
-      offsetY: -0.15,
+      offset: 0.25,
     }
     const shape = await buildPillar(parameters)
     try {
@@ -162,10 +160,10 @@ describe('OpenGrid pillar CAD kernel integration', () => {
       expect(actual[1]?.[0]).toBeCloseTo(expected.max[0], 2)
       expect(actual[1]?.[1]).toBeCloseTo(expected.max[1], 2)
       expect(actual[1]?.[2]).toBeCloseTo(9, 2)
-      expect(
-        probeVolumeAt(shape, 3.4 + 0.25, 0.4, 0.05, -0.15),
-      ).toBeGreaterThan(0)
-      expect(probeVolumeAt(shape, 3.6 + 0.25, 0.4, 0.05, -0.15)).toBeLessThan(
+      expect(probeVolumeAt(shape, 3.4 + 0.25, 0.4, 0.05, 0.25)).toBeGreaterThan(
+        0,
+      )
+      expect(probeVolumeAt(shape, 3.6 + 0.25, 0.4, 0.05, 0.25)).toBeLessThan(
         1e-8,
       )
       expect(
@@ -186,14 +184,12 @@ describe('OpenGrid pillar CAD kernel integration', () => {
   it.each([
     {
       mode: 'thin-shell',
-      offsetX: -0.5,
-      offsetY: 0.5,
+      offset: -0.5,
     },
     {
       mode: 'positioning',
       length: 25,
-      offsetX: -0.5,
-      offsetY: 0.5,
+      offset: -0.5,
     },
   ] as PillarParameters[])(
     'translates %s geometry bounds and quality probes',
@@ -224,8 +220,8 @@ describe('OpenGrid pillar CAD kernel integration', () => {
   )
 
   it.each([
-    { mode: 'standard', offsetX: 0, offsetY: 0 },
-    { mode: 'thin-shell', offsetX: 0, offsetY: 0 },
+    { mode: 'standard', offset: 0 },
+    { mode: 'thin-shell', offset: 0 },
   ] as PillarParameters[])(
     'keeps the Ø7 x 0.8 mm flange, sharp shoulder, Ø5 mm body, and upper chamfer for %#',
     async (parameters) => {

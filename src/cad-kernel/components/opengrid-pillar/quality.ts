@@ -120,12 +120,11 @@ function expectMaterial(
   x: number,
   z: number,
   expected: boolean,
-  offsetX = 0,
-  offsetY = 0,
+  offset = 0,
 ): void {
   try {
     const hasMaterial =
-      volumeAt(shape, x + offsetX, offsetY, z) > PROBE_VOLUME_EPSILON
+      volumeAt(shape, x + offset, offset, z) > PROBE_VOLUME_EPSILON
     if (hasMaterial !== expected) {
       failures.push(`profile:${label}`)
     }
@@ -151,16 +150,7 @@ function inspectFixedEndProfiles(
   const upperChamferOutsideRadius = upperChamferBoundaryRadius + 0.15
 
   const probe = (label: string, x: number, z: number, expected: boolean) =>
-    expectMaterial(
-      shape,
-      failures,
-      label,
-      x,
-      z,
-      expected,
-      parameters.offsetX,
-      parameters.offsetY,
-    )
+    expectMaterial(shape, failures, label, x, z, expected, parameters.offset)
 
   probe('base-flange-inside', 3.4, 0.4, true)
   probe('base-flange-outside', 3.6, 0.4, false)
@@ -224,16 +214,7 @@ function inspectPositioningEndProfiles(
   const upperChamferOutsideRadius = upperChamferBoundaryRadius + 0.15
 
   const probe = (label: string, x: number, z: number, expected: boolean) =>
-    expectMaterial(
-      shape,
-      failures,
-      label,
-      x,
-      z,
-      expected,
-      parameters.offsetX,
-      parameters.offsetY,
-    )
+    expectMaterial(shape, failures, label, x, z, expected, parameters.offset)
 
   probe('lower-chamfer-inside', 1.4, lowerChamferZ, true)
   probe('lower-chamfer-outside', 1.7, lowerChamferZ, false)
