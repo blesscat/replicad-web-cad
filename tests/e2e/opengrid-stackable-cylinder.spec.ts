@@ -1,6 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
 import { skipHeadlessFirefoxWithoutWebGL, waitForCadReady } from './helpers'
 
+const THIN_SHELL_RENDER_WARNING =
+  '注意：薄殼模式會明顯降低模型渲染速度。建議先使用一般模式確認形狀，下載前再切換至薄殼模式。'
+
 const sideOpeningGroups = [
   { direction: '-Y', label: '前方' },
   { direction: '+Y', label: '後方' },
@@ -100,6 +103,8 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
   ).toHaveCount(0)
   await expect(page.getByRole('radio', { name: '堆疊模式' })).toBeChecked()
   await expect(page.getByRole('radio', { name: '薄殼模式' })).not.toBeChecked()
+  const thinShellWarning = page.getByTestId('thin-shell-render-warning')
+  await expect(thinShellWarning).toHaveCount(0)
   await expect(page.locator('p').filter({ hasText: '目前模式：' })).toHaveCount(
     0,
   )
@@ -180,6 +185,10 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
         .getByRole('slider', { name: `下切深度（${label}）` }),
     ).toHaveAttribute('max', '15')
   }
+  await page.getByRole('radio', { name: '薄殼模式' }).check()
+  await expect(thinShellWarning).toHaveText(THIN_SHELL_RENDER_WARNING)
+  await page.getByRole('radio', { name: '堆疊模式' }).check()
+  await expect(thinShellWarning).toHaveCount(0)
   await page.getByRole('radio', { name: '薄殼模式' }).check()
   for (const { direction, label } of sideOpeningGroups) {
     await expect(

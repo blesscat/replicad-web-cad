@@ -6,6 +6,7 @@
   import { PILLAR_CONFIGURATION } from '../../../../cad-contract/units'
   import ParameterControl from '../ParameterControl.svelte'
   import ParameterField from '../ParameterField.svelte'
+  import ThinShellRenderWarning from '../ThinShellRenderWarning.svelte'
   import type { ComponentPanelProps } from '../types'
 
   const PILLAR_MODE_OPTIONS = [
@@ -61,6 +62,9 @@
           <span class="font-[650]">{option.label}</span>
           {#if option.value !== 'positioning'}
             <span class="text-sm text-muted">固定總長 {option.length} mm</span>
+          {/if}
+          {#if option.value === 'thin-shell' && rawParameters.mode === 'thin-shell'}
+            <ThinShellRenderWarning />
           {/if}
         </span>
       </label>
