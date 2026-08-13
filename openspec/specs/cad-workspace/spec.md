@@ -1213,20 +1213,20 @@ The CAD edit page MUST show the validated active system name above the model tit
 
 ### Requirement: Open Shelf workspace integration
 
-The CAD workspace MUST register `opengrid-open-shelf` as an independent model definition, expose only its `x`, `y`, `height`, `cellX`, `cellZ`, and `angle` controls, route `/cad/opengrid-open-shelf` to that definition, and dispatch Worker generation to the `opengrid-open-shelf` kernel builder. The component MUST use the existing debounce, latest-wins candidate, commit, mesh, STEP, and STL gates.
+The CAD workspace MUST register `opengrid-open-shelf` as an independent model definition, expose its existing `x`, `y`, `height`, `cellX`, `cellZ`, and `angle` geometric controls plus a `honeycombMode` toggle labelled `省料模式（六角鏤空）`, route `/cad/opengrid-open-shelf` to that definition, and dispatch Worker generation to the `opengrid-open-shelf` kernel builder. The component MUST use the existing debounce, latest-wins candidate, commit, mesh, STEP, and STL gates.
 
 #### Scenario: Open Shelf route initializes independently
 
 - **WHEN** a user opens `/cad/opengrid-open-shelf` with browser CAD prerequisites
 - **THEN** the workspace MUST initialize `modelId=opengrid-open-shelf`
 - **AND** generation 1 MUST use a valid saved snapshot or the Open Shelf defaults
-- **AND** the Worker MUST not fall through to `box-normal`, `opengrid`, or `opengrid-stackable-box`
+- **AND** the Worker MUST not fall through to another model builder
 
-#### Scenario: Open Shelf controls expose only its parameters
+#### Scenario: Open Shelf controls expose its geometric fields and material mode
 
 - **WHEN** the Open Shelf parameter panel is rendered
-- **THEN** it MUST expose outer X/Y grid counts, total height, internal X/Z cell counts, and angle controls
-- **AND** it MUST show the 0–75° angle limit and the total-height meaning
+- **THEN** it MUST expose outer X/Y grid counts, total height, internal X/Z cell counts, angle controls, and the Hex Mesh toggle
+- **AND** the toggle MUST default to unchecked without changing the six slider controls
 - **AND** it MUST not expose stackable-box modes, ordinary OpenGrid board fields, or another component's controls
 
 #### Scenario: Open Shelf uses the existing export lifecycle
@@ -1237,19 +1237,19 @@ The CAD workspace MUST register `opengrid-open-shelf` as an independent model de
 
 ### Requirement: Open Shelf raw input validation follows the workspace lifecycle
 
-The workspace MUST parse the six Open Shelf fields into the typed snapshot required by the component contract. Empty, fractional, non-finite, unknown, or out-of-range raw input MUST produce field-specific validation feedback and `model.invalidate`; valid input MUST use the existing debounce and Worker generation lifecycle.
+The workspace MUST parse the six Open Shelf geometric fields and `honeycombMode` into the typed snapshot required by the component contract. Empty, fractional, non-finite, unknown, out-of-range, or invalid boolean raw input MUST produce field-specific validation feedback and `model.invalidate`; valid input MUST use the existing debounce and Worker generation lifecycle.
 
 #### Scenario: Invalid Open Shelf input is invalidated
 
-- **WHEN** a user enters an invalid X/Y/height/cell-count/angle value
+- **WHEN** a user enters an invalid X/Y/height/cell-count/angle/mode value
 - **THEN** the workspace MUST show a diagnosable field error
 - **AND** it MUST invalidate the pending generation rather than build native geometry
 - **AND** export MUST remain disabled while the input is invalid or stale
 
 #### Scenario: Valid Open Shelf input generates typed parameters
 
-- **WHEN** all six fields form a valid snapshot and the debounce settles
-- **THEN** the Worker request MUST contain typed `x`, `y`, `height`, `cellX`, `cellZ`, and `angle`
+- **WHEN** all fields form a valid snapshot and the debounce settles
+- **THEN** the Worker request MUST contain typed `x`, `y`, `height`, `cellX`, `cellZ`, `angle`, and `honeycombMode`
 - **AND** only the latest valid candidate MUST be eligible for commit
 
 ## 可追溯性

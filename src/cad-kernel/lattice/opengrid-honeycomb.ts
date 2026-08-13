@@ -279,14 +279,85 @@ function clipPolygonToBounds(
   )
 }
 
-function polygonArea(points: readonly Point2D[]): number {
+function signedPolygonArea(points: readonly Point2D[]): number {
   let doubledArea = 0
   for (let index = 0; index < points.length; index += 1) {
     const current = points[index]!
     const next = points[(index + 1) % points.length]!
     doubledArea += current[0] * next[1] - next[0] * current[1]
   }
-  return Math.abs(doubledArea) / 2
+  return doubledArea / 2
+}
+
+function edgeCrossProduct(
+  edgeStart: Point2D,
+  edgeEnd: Point2D,
+  point: Point2D,
+): number {
+  return (
+    (edgeEnd[0] - edgeStart[0]) * (point[1] - edgeStart[1]) -
+    (edgeEnd[1] - edgeStart[1]) * (point[0] - edgeStart[0])
+  )
+}
+
+function segmentLineIntersection(
+  segmentStart: Point2D,
+  segmentEnd: Point2D,
+  lineStart: Point2D,
+  lineEnd: Point2D,
+): Point2D {
+  const segmentX = segmentEnd[0] - segmentStart[0]
+  const segmentY = segmentEnd[1] - segmentStart[1]
+  const lineX = lineEnd[0] - lineStart[0]
+  const lineY = lineEnd[1] - lineStart[1]
+  const denominator = segmentX * lineY - segmentY * lineX
+  if (Math.abs(denominator) <= EPSILON) return [...segmentEnd]
+
+  const startDeltaX = lineStart[0] - segmentStart[0]
+  const startDeltaY = lineStart[1] - segmentStart[1]
+  const ratio = (startDeltaX * lineY - startDeltaY * lineX) / denominator
+  return [
+    segmentStart[0] + segmentX * ratio,
+    segmentStart[1] + segmentY * ratio,
+  ]
+}
+
+function clipPolygonToConvexPolygon(
+  points: readonly Point2D[],
+  boundary: readonly Point2D[],
+): Point2D[] {
+  if (points.length === 0 || boundary.length < 3) return []
+  const orientation = signedPolygonArea(boundary) >= 0 ? 1 : -1
+  let clipped = [...points]
+
+  for (let edgeIndex = 0; edgeIndex < boundary.length; edgeIndex += 1) {
+    if (clipped.length === 0) break
+    const edgeStart = boundary[edgeIndex]!
+    const edgeEnd = boundary[(edgeIndex + 1) % boundary.length]!
+    const input = clipped
+    clipped = []
+    let previous = input.at(-1)!
+    let previousInside =
+      orientation * edgeCrossProduct(edgeStart, edgeEnd, previous) >= -EPSILON
+
+    for (const current of input) {
+      const currentInside =
+        orientation * edgeCrossProduct(edgeStart, edgeEnd, current) >= -EPSILON
+      if (currentInside !== previousInside) {
+        clipped.push(
+          segmentLineIntersection(previous, current, edgeStart, edgeEnd),
+        )
+      }
+      if (currentInside) clipped.push(current)
+      previous = current
+      previousInside = currentInside
+    }
+  }
+  return clipped
+}
+
+function polygonArea(points: readonly Point2D[]): number {
+  return Math.abs(signedPolygonArea(points))
 }
 
 function polygonBounds(points: readonly Point2D[]): Rectangle2D {
@@ -1295,6 +1366,83 @@ type OpenShelfParallelBand = {
   upperNormalOffset: number
 }
 
+type ClippedLatticeCell = {
+  polygons: Point2D[][]
+  isComplete: boolean
+}
+
+type OpenShelfBottomCell = ClippedLatticeCell & {
+  protectedPegIndices: number[]
+}
+
+function polygonGroupArea(polygons: readonly (readonly Point2D[])[]): number {
+  return polygons.reduce((area, polygon) => area + polygonArea(polygon), 0)
+}
+
+function rectangularLatticeCells(
+  bounds: Rectangle2D,
+  lattice: HoneycombLattice,
+  keepouts: readonly Rectangle2D[] = [],
+): ClippedLatticeCell[] {
+  const spanU = bounds.maximumU - bounds.minimumU
+  const spanV = bounds.maximumV - bounds.minimumV
+  if (spanU <= EPSILON || spanV <= EPSILON) return []
+
+  const centerU = (bounds.minimumU + bounds.maximumU) / 2
+  const centerV = (bounds.minimumV + bounds.maximumV) / 2
+  const cells: ClippedLatticeCell[] = []
+  for (const [localU, localV] of boundaryOverlappingLatticeCenters(
+    spanU,
+    spanV,
+    0,
+    0,
+    lattice,
+  )) {
+    const points = hexagonPoints([localU + centerU, localV + centerV], lattice)
+    const clipped = clipPolygonToBounds(points, bounds)
+    const polygons = subtractRectanglesFromPolygons([clipped], keepouts)
+    if (polygons.length === 0) continue
+    cells.push({
+      polygons,
+      isComplete:
+        Math.abs(polygonGroupArea(polygons) - polygonArea(points)) <= EPSILON,
+    })
+  }
+  return cells.some((cell) => cell.isComplete) ? cells : []
+}
+
+function convexLatticeCells(
+  boundary: readonly Point2D[],
+  lattice: HoneycombLattice,
+): ClippedLatticeCell[] {
+  if (boundary.length < 3 || polygonArea(boundary) <= EPSILON) return []
+  const bounds = polygonBounds(boundary)
+  const spanU = bounds.maximumU - bounds.minimumU
+  const spanV = bounds.maximumV - bounds.minimumV
+  const centerU = (bounds.minimumU + bounds.maximumU) / 2
+  const centerV = (bounds.minimumV + bounds.maximumV) / 2
+  const cells: ClippedLatticeCell[] = []
+
+  for (const [localU, localV] of boundaryOverlappingLatticeCenters(
+    spanU,
+    spanV,
+    0,
+    0,
+    lattice,
+  )) {
+    const points = hexagonPoints([localU + centerU, localV + centerV], lattice)
+    const clipped = clipPolygonToConvexPolygon(points, boundary)
+    const polygons = nonEmptyPolygons([clipped])
+    if (polygons.length === 0) continue
+    cells.push({
+      polygons,
+      isComplete:
+        Math.abs(polygonGroupArea(polygons) - polygonArea(points)) <= EPSILON,
+    })
+  }
+  return cells.some((cell) => cell.isComplete) ? cells : []
+}
+
 function openShelfShelfNormalOffsets(
   parameters: OpenGridOpenShelfParameters,
 ): Array<{ lower: number; upper: number }> {
@@ -1352,65 +1500,128 @@ function openShelfRegularBands(
   })
 }
 
-function openShelfLocalPointToVerticalPanel(
-  point: Point2D,
-  centerNormalOffset: number,
-  angle: number,
-): Point2D {
+function openShelfWorldPointToPanel(point: Point2D, angle: number): Point2D {
   const tangentY = Math.cos(angle)
   const tangentZ = -Math.sin(angle)
   const normalY = Math.sin(angle)
   const normalZ = Math.cos(angle)
-  const centerZ = centerNormalOffset / normalZ
   return [
-    point[0] * tangentY + point[1] * normalY,
-    centerZ + point[0] * tangentZ + point[1] * normalZ,
+    point[0] * tangentY + point[1] * tangentZ,
+    point[0] * normalY + point[1] * normalZ,
   ]
 }
 
-function openShelfVerticalPanelCells(
+function openShelfPanelPointToWorld(point: Point2D, angle: number): Point2D {
+  const tangentY = Math.cos(angle)
+  const tangentZ = -Math.sin(angle)
+  const normalY = Math.sin(angle)
+  const normalZ = Math.cos(angle)
+  return [
+    point[0] * tangentY + point[1] * normalY,
+    point[0] * tangentZ + point[1] * normalZ,
+  ]
+}
+
+function openShelfRegularVerticalCellPolygonGroups(
   parameters: OpenGridOpenShelfParameters,
-): Point2D[][] {
+): Point2D[][][] {
   const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
   const [, depth] = openGridOpenShelfFootprintFor(parameters)
-  const yFront = -depth / 2
-  const yRear = depth / 2
   const angle = openGridOpenShelfAngleRadiansFor(parameters.angle)
-  const slopeLength = depth / Math.cos(angle)
+  const tangentY = Math.cos(angle)
+  const normalY = Math.sin(angle)
   const bridge = honeycomb.ribThickness / 2
-  const cells: Point2D[][] = []
+  const safeFrontY = -depth / 2 + honeycomb.sideFrame
+  const safeRearY = depth / 2 - honeycomb.sideFrame
+  const cells: Point2D[][][] = []
 
   for (const band of openShelfRegularBands(parameters)) {
-    const bandHeight = band.upperNormalOffset - band.lowerNormalOffset
-    if (bandHeight < honeycomb.minimumPanelSpan + bridge * 2) continue
-    const centerNormalOffset =
-      (band.lowerNormalOffset + band.upperNormalOffset) / 2
-    const centers = latticeCenters(
-      slopeLength,
-      bandHeight,
-      honeycomb.sideFrame,
-      bridge,
-      honeycomb,
-    )
-    for (const center of centers) {
-      const points = hexagonPoints(center, honeycomb).map((point) =>
-        openShelfLocalPointToVerticalPanel(point, centerNormalOffset, angle),
+    const lowerNormalOffset = band.lowerNormalOffset + bridge
+    const upperNormalOffset = band.upperNormalOffset - bridge
+    if (upperNormalOffset <= lowerNormalOffset + EPSILON) continue
+    const tangentAt = (worldY: number, normalOffset: number) =>
+      (worldY - normalOffset * normalY) / tangentY
+    const boundary: Point2D[] = [
+      [tangentAt(safeFrontY, lowerNormalOffset), lowerNormalOffset],
+      [tangentAt(safeRearY, lowerNormalOffset), lowerNormalOffset],
+      [tangentAt(safeRearY, upperNormalOffset), upperNormalOffset],
+      [tangentAt(safeFrontY, upperNormalOffset), upperNormalOffset],
+    ]
+    for (const cell of convexLatticeCells(boundary, honeycomb)) {
+      cells.push(
+        cell.polygons.map((polygon) =>
+          polygon.map((point) => openShelfPanelPointToWorld(point, angle)),
+        ),
       )
-      const fitsDepth = points.every(
-        ([y]) =>
-          y >= yFront + honeycomb.sideFrame - EPSILON &&
-          y <= yRear - honeycomb.sideFrame + EPSILON,
-      )
-      if (fitsDepth) cells.push(points)
     }
   }
 
   return cells
 }
 
-function openShelfBackboardCenters(
+function openShelfBottomWedgeBoundary(
   parameters: OpenGridOpenShelfParameters,
 ): Point2D[] {
+  if (parameters.angle <= 0) return []
+  const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
+  const configuration = OPENGRID_OPEN_SHELF_CONFIGURATION
+  const [, depth] = openGridOpenShelfFootprintFor(parameters)
+  const angle = openGridOpenShelfAngleRadiansFor(parameters.angle)
+  const normalY = Math.sin(angle)
+  const normalZ = Math.cos(angle)
+  if (normalY <= EPSILON) return []
+
+  const firstShelf = openShelfShelfNormalOffsets(parameters)[0]
+  if (!firstShelf) return []
+  const bridge = honeycomb.ribThickness / 2
+  const yFront = -depth / 2 + honeycomb.sideFrame
+  const yRear = depth / 2 - honeycomb.sideFrame
+  const lowerZ = configuration.bottomThickness + bridge
+  const upperNormalOffset = firstShelf.lower - bridge
+  const upperZAt = (y: number) => (upperNormalOffset - y * normalY) / normalZ
+  const crossingY = (upperNormalOffset - lowerZ * normalZ) / normalY
+  const maximumY = Math.min(yRear, crossingY)
+  if (maximumY <= yFront + EPSILON) return []
+
+  const upperFrontZ = upperZAt(yFront)
+  const upperRearZ = upperZAt(maximumY)
+  if (upperFrontZ <= lowerZ + EPSILON) return []
+  const worldBoundary: Point2D[] = [
+    [yFront, lowerZ],
+    [maximumY, lowerZ],
+  ]
+  if (upperRearZ > lowerZ + EPSILON) {
+    worldBoundary.push([maximumY, upperRearZ])
+  }
+  worldBoundary.push([yFront, upperFrontZ])
+  return worldBoundary.map((point) => openShelfWorldPointToPanel(point, angle))
+}
+
+function openShelfBottomWedgeCellPolygonGroups(
+  parameters: OpenGridOpenShelfParameters,
+): Point2D[][][] {
+  const angle = openGridOpenShelfAngleRadiansFor(parameters.angle)
+  const boundary = openShelfBottomWedgeBoundary(parameters)
+  return convexLatticeCells(boundary, OPENGRID_HONEYCOMB_CONFIGURATION).map(
+    (cell) =>
+      cell.polygons.map((polygon) =>
+        polygon.map((point) => openShelfPanelPointToWorld(point, angle)),
+      ),
+  )
+}
+
+function openShelfVerticalPanelCellPolygonGroups(
+  parameters: OpenGridOpenShelfParameters,
+): Point2D[][][] {
+  return [
+    ...openShelfBottomWedgeCellPolygonGroups(parameters),
+    ...openShelfRegularVerticalCellPolygonGroups(parameters),
+  ]
+}
+
+function openShelfBackboardCellPolygonGroups(
+  parameters: OpenGridOpenShelfParameters,
+): Point2D[][][] {
   const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
   const configuration = OPENGRID_OPEN_SHELF_CONFIGURATION
   const [width] = openGridOpenShelfFootprintFor(parameters)
@@ -1418,7 +1629,7 @@ function openShelfBackboardCenters(
   const upperZ =
     openGridOpenShelfTopOuterRearZFor(parameters) - honeycomb.topFrame
   const panelHeight = upperZ - lowerZ
-  if (panelHeight < honeycomb.minimumPanelSpan) return []
+  if (panelHeight <= EPSILON) return []
 
   const dividerCenters = openGridOpenShelfDividerCentersFor(parameters)
   const dividerHalfWidth =
@@ -1439,77 +1650,99 @@ function openShelfBackboardCenters(
       )
     },
   )
-
-  return latticeCenters(width, panelHeight, honeycomb.sideFrame, 0, honeycomb)
-    .map(([x, localZ]) => [x, localZ + (lowerZ + upperZ) / 2] as Point2D)
-    .filter((center) => {
-      const intersectsDivider = dividerCenters.some((dividerCenter) =>
-        intersectsProtectedBand(
-          center,
-          honeycomb.cellRadius,
-          0,
-          dividerCenter,
-          dividerHalfWidth,
-        ),
-      )
-      const intersectsShelf = shelfCenterZs.some((shelfCenterZ) =>
-        intersectsProtectedBand(
-          center,
-          honeycomb.cellRadius,
-          1,
-          shelfCenterZ,
-          shelfHalfHeight,
-        ),
-      )
-      return !intersectsDivider && !intersectsShelf
-    })
+  const bounds: Rectangle2D = {
+    minimumU: -width / 2 + honeycomb.sideFrame,
+    maximumU: width / 2 - honeycomb.sideFrame,
+    minimumV: lowerZ,
+    maximumV: upperZ,
+  }
+  const keepouts: Rectangle2D[] = [
+    ...dividerCenters.map((dividerCenter) => ({
+      minimumU: dividerCenter - dividerHalfWidth,
+      maximumU: dividerCenter + dividerHalfWidth,
+      minimumV: lowerZ,
+      maximumV: upperZ,
+    })),
+    ...shelfCenterZs.map((shelfCenterZ) => ({
+      minimumU: bounds.minimumU,
+      maximumU: bounds.maximumU,
+      minimumV: shelfCenterZ - shelfHalfHeight,
+      maximumV: shelfCenterZ + shelfHalfHeight,
+    })),
+  ]
+  return rectangularLatticeCells(bounds, honeycomb, keepouts).map(
+    (cell) => cell.polygons,
+  )
 }
 
-function openShelfBottomCenters(
+function openShelfBottomProtectedCircles(
   parameters: OpenGridOpenShelfParameters,
-): Point2D[] {
+): ProtectedCircle[] {
+  const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
+  const configuration = OPENGRID_OPEN_SHELF_CONFIGURATION
+  const protectedPegRadius =
+    configuration.pegDiameter / 2 + honeycomb.bottomFeatureClearance
+  return openGridOpenShelfPegCentersFor(parameters).map((center) => ({
+    center,
+    radius: protectedPegRadius,
+  }))
+}
+
+function openShelfBottomCells(
+  parameters: OpenGridOpenShelfParameters,
+): OpenShelfBottomCell[] {
   const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
   const bottomLattice = honeycomb.bottomLattice
   const configuration = OPENGRID_OPEN_SHELF_CONFIGURATION
   const [width, depth] = openGridOpenShelfFootprintFor(parameters)
   const dividerHalfWidth =
     configuration.innerPlateThickness / 2 + bottomLattice.ribThickness / 2
-  const protectedPegRadius =
-    configuration.pegDiameter / 2 + honeycomb.bottomFeatureClearance
-  const pegCenters = openGridOpenShelfPegCentersFor(parameters)
-  const dividerCenters = openGridOpenShelfDividerCentersFor(parameters)
+  const bounds: Rectangle2D = {
+    minimumU: -width / 2 + honeycomb.bottomFrame,
+    maximumU: width / 2 - honeycomb.bottomFrame,
+    minimumV: -depth / 2 + honeycomb.bottomFrame,
+    maximumV: depth / 2 - honeycomb.bottomFrame,
+  }
+  const dividerKeepouts = openGridOpenShelfDividerCentersFor(parameters).map(
+    (dividerCenter): Rectangle2D => ({
+      minimumU: dividerCenter - dividerHalfWidth,
+      maximumU: dividerCenter + dividerHalfWidth,
+      minimumV: bounds.minimumV,
+      maximumV: bounds.maximumV,
+    }),
+  )
+  const protectedCircles = openShelfBottomProtectedCircles(parameters)
+  const cells: OpenShelfBottomCell[] = []
 
-  return latticeCenters(
-    width,
-    depth,
-    honeycomb.bottomFrame,
-    honeycomb.bottomFrame,
+  for (const cell of rectangularLatticeCells(
+    bounds,
     bottomLattice,
-  ).filter((center) => {
-    const intersectsPeg = pegCenters.some((pegCenter) =>
-      intersectsProtectedCircle(
-        center,
-        bottomLattice.cellRadius,
-        pegCenter,
-        protectedPegRadius,
-      ),
+    dividerKeepouts,
+  )) {
+    const polygons = cell.polygons.filter(
+      (polygon) =>
+        !protectedCircles.some((circle) =>
+          polygonIsInsideCircle(polygon, circle),
+        ),
     )
-    const intersectsDivider = dividerCenters.some((dividerCenter) =>
-      intersectsProtectedBand(
-        center,
-        bottomLattice.cellRadius,
-        0,
-        dividerCenter,
-        dividerHalfWidth,
-      ),
+    if (polygons.length === 0) continue
+    const protectedPegIndices = protectedCircles.flatMap((circle, index) =>
+      polygons.some((polygon) => polygonIntersectsCircle(polygon, circle))
+        ? [index]
+        : [],
     )
-    return !intersectsPeg && !intersectsDivider
-  })
+    cells.push({
+      polygons,
+      protectedPegIndices,
+      isComplete: cell.isComplete && protectedPegIndices.length === 0,
+    })
+  }
+  return cells.some((cell) => cell.isComplete) ? cells : []
 }
 
-function openShelfSlopedPlateCenters(
+function openShelfSlopedPlateCellPolygonGroups(
   parameters: OpenGridOpenShelfParameters,
-): Point2D[] {
+): Point2D[][][] {
   const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
   const bottomLattice = honeycomb.bottomLattice
   const configuration = OPENGRID_OPEN_SHELF_CONFIGURATION
@@ -1518,25 +1751,22 @@ function openShelfSlopedPlateCenters(
   const slopeLength = depth / Math.cos(angle)
   const dividerHalfWidth =
     configuration.innerPlateThickness / 2 + bottomLattice.ribThickness / 2
-  const dividerCenters = openGridOpenShelfDividerCentersFor(parameters)
-
-  return latticeCenters(
-    width,
-    slopeLength,
-    honeycomb.bottomFrame,
-    honeycomb.bottomFrame,
-    bottomLattice,
-  ).filter(
-    (center) =>
-      !dividerCenters.some((dividerCenter) =>
-        intersectsProtectedBand(
-          center,
-          bottomLattice.cellRadius,
-          0,
-          dividerCenter,
-          dividerHalfWidth,
-        ),
-      ),
+  const bounds: Rectangle2D = {
+    minimumU: -width / 2 + honeycomb.bottomFrame,
+    maximumU: width / 2 - honeycomb.bottomFrame,
+    minimumV: -slopeLength / 2 + honeycomb.bottomFrame,
+    maximumV: slopeLength / 2 - honeycomb.bottomFrame,
+  }
+  const dividerKeepouts = openGridOpenShelfDividerCentersFor(parameters).map(
+    (dividerCenter): Rectangle2D => ({
+      minimumU: dividerCenter - dividerHalfWidth,
+      maximumU: dividerCenter + dividerHalfWidth,
+      minimumV: bounds.minimumV,
+      maximumV: bounds.maximumV,
+    }),
+  )
+  return rectangularLatticeCells(bounds, bottomLattice, dividerKeepouts).map(
+    (cell) => cell.polygons,
   )
 }
 
@@ -1603,16 +1833,16 @@ function transformSlopedPlateCutter(
 }
 
 function openShelfSlopedPlateCutter(
-  center: Point2D,
+  polygons: readonly (readonly Point2D[])[],
   panel: OpenShelfSlopedPanel,
   parameters: OpenGridOpenShelfParameters,
 ): Shape3D {
   const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
   const margin = honeycomb.cutterMargin
-  const base = extrudePolygon(
+  const base = extrudePolygonGroup(
     'XY',
     [0, 0, -margin],
-    hexagonPoints(center, honeycomb.bottomLattice),
+    polygons,
     panel.thickness + margin * 2,
   )
   return transformSlopedPlateCutter(base, parameters.angle, [
@@ -1624,6 +1854,7 @@ function openShelfSlopedPlateCutter(
 
 export function makeOpenGridOpenShelfWallHoneycombCutters(
   parameters: OpenGridOpenShelfParameters,
+  context: OpenGridHoneycombBuildContext = {},
 ): Shape3D[] {
   if (!parameters.honeycombMode) return []
   const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
@@ -1631,34 +1862,35 @@ export function makeOpenGridOpenShelfWallHoneycombCutters(
   const [width, depth] = openGridOpenShelfFootprintFor(parameters)
   const yRear = depth / 2
   const margin = honeycomb.cutterMargin
-  const verticalCells = openShelfVerticalPanelCells(parameters)
+  const verticalCellGroups = openShelfVerticalPanelCellPolygonGroups(parameters)
   const wallLayouts = [
     {
       xStart: -width / 2 - margin,
       thickness: configuration.outerWallThickness,
-      cells: verticalCells,
+      cells: verticalCellGroups,
     },
     {
       xStart: width / 2 - configuration.outerWallThickness - margin,
       thickness: configuration.outerWallThickness,
-      cells: verticalCells,
+      cells: verticalCellGroups,
     },
     ...openGridOpenShelfDividerCentersFor(parameters).map((centerX) => ({
       xStart: centerX - configuration.innerPlateThickness / 2 - margin,
       thickness: configuration.innerPlateThickness,
-      cells: verticalCells,
+      cells: verticalCellGroups,
     })),
   ]
 
   const cutters: Shape3D[] = []
   try {
     for (const layout of wallLayouts) {
-      for (const points of layout.cells) {
+      for (const polygons of layout.cells) {
+        assertHoneycombGenerationCurrent(context)
         cutters.push(
-          extrudePolygon(
+          extrudePolygonGroup(
             'YZ',
             [layout.xStart, 0, 0],
-            points,
+            polygons,
             layout.thickness + margin * 2,
             [1, 0, 0],
           ),
@@ -1666,12 +1898,13 @@ export function makeOpenGridOpenShelfWallHoneycombCutters(
       }
     }
 
-    for (const center of openShelfBackboardCenters(parameters)) {
+    for (const polygons of openShelfBackboardCellPolygonGroups(parameters)) {
+      assertHoneycombGenerationCurrent(context)
       cutters.push(
-        extrudePolygon(
+        extrudePolygonGroup(
           'XZ',
           [0, yRear - configuration.backboardThickness - margin, 0],
-          hexagonPoints(center, honeycomb),
+          polygons,
           configuration.backboardThickness + margin * 2,
           [0, 1, 0],
         ),
@@ -1686,34 +1919,81 @@ export function makeOpenGridOpenShelfWallHoneycombCutters(
 
 export function makeOpenGridOpenShelfPlateHoneycombCutters(
   parameters: OpenGridOpenShelfParameters,
+  context: OpenGridHoneycombBuildContext = {},
 ): Shape3D[] {
   if (!parameters.honeycombMode) return []
   const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
   const configuration = OPENGRID_OPEN_SHELF_CONFIGURATION
   const margin = honeycomb.cutterMargin
+  const bottomCells = openShelfBottomCells(parameters)
+  const protectedCircles = openShelfBottomProtectedCircles(parameters)
+  const protectorOperationCount = bottomCells.reduce(
+    (count, cell) => count + cell.protectedPegIndices.length,
+    0,
+  )
+  const protectorScope = context.booleanOperations?.createScope(
+    protectorOperationCount,
+  )
   const cutters: Shape3D[] = []
+  const pegProtectors: Shape3D[] = []
   try {
-    for (const center of openShelfBottomCenters(parameters)) {
-      cutters.push(
-        extrudePolygon(
-          'XY',
-          [0, 0, -margin],
-          hexagonPoints(center, honeycomb.bottomLattice),
-          configuration.bottomThickness + margin * 2,
-        ),
-      )
+    if (protectorOperationCount > 0) {
+      for (const circle of protectedCircles) {
+        pegProtectors.push(
+          makeCylinder(
+            circle.radius,
+            configuration.bottomThickness + margin * 2,
+            [circle.center[0], circle.center[1], -margin],
+          ),
+        )
+      }
     }
 
-    const slopedCenters = openShelfSlopedPlateCenters(parameters)
+    for (const cell of bottomCells) {
+      assertHoneycombGenerationCurrent(context)
+      let active: Shape3D | null = extrudePolygonGroup(
+        'XY',
+        [0, 0, -margin],
+        cell.polygons,
+        configuration.bottomThickness + margin * 2,
+      )
+      try {
+        for (const protectorIndex of cell.protectedPegIndices) {
+          assertHoneycombGenerationCurrent(context)
+          const current: Shape3D | null = active
+          const protector = pegProtectors[protectorIndex]
+          if (!current || !protector) {
+            throw new Error('OPENGRID_HONEYCOMB_PROTECTOR_EMPTY')
+          }
+          const clipped: Shape3D = measureBooleanInScope(
+            protectorScope,
+            'cut',
+            () => current.cut(protector),
+          )
+          deleteShape(current)
+          active = clipped
+        }
+        if (!active) throw new Error('OPENGRID_HONEYCOMB_CUTTER_EMPTY')
+        cutters.push(active)
+        active = null
+      } finally {
+        deleteShape(active)
+      }
+    }
+
+    const slopedCellGroups = openShelfSlopedPlateCellPolygonGroups(parameters)
     for (const panel of openShelfSlopedPanels(parameters)) {
-      for (const center of slopedCenters) {
-        cutters.push(openShelfSlopedPlateCutter(center, panel, parameters))
+      for (const polygons of slopedCellGroups) {
+        assertHoneycombGenerationCurrent(context)
+        cutters.push(openShelfSlopedPlateCutter(polygons, panel, parameters))
       }
     }
     return cutters
   } catch (error) {
     cutters.forEach(deleteShape)
     throw error
+  } finally {
+    pegProtectors.forEach(deleteShape)
   }
 }
 
@@ -1721,15 +2001,16 @@ export function openGridOpenShelfHoneycombCellCountFor(
   parameters: OpenGridOpenShelfParameters,
 ): number {
   if (!parameters.honeycombMode) return 0
-  const verticalCellCount = openShelfVerticalPanelCells(parameters).length
+  const verticalCellCount =
+    openShelfVerticalPanelCellPolygonGroups(parameters).length
   const outerWallCount = verticalCellCount * 2
   const dividerWallCount =
     verticalCellCount * openGridOpenShelfDividerCentersFor(parameters).length
-  const backboardCount = openShelfBackboardCenters(parameters).length
-  const bottomCount = openShelfBottomCenters(parameters).length
+  const backboardCount = openShelfBackboardCellPolygonGroups(parameters).length
+  const bottomCount = openShelfBottomCells(parameters).length
   const slopedPanelCount = openShelfSlopedPanels(parameters).length
   const slopedCellCount =
-    openShelfSlopedPlateCenters(parameters).length * slopedPanelCount
+    openShelfSlopedPlateCellPolygonGroups(parameters).length * slopedPanelCount
   return (
     outerWallCount +
     dividerWallCount +

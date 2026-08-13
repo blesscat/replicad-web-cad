@@ -54,3 +54,9 @@
 - [x] 9.1 Add behavior tests requiring the cylinder floor lattice to reach its protected circular frame with clipped cells and retain an exact 2 mm circular safety ring around every enabled bottom hole.
 - [x] 9.2 Generate and trim cylinder-floor boundary cells at the circular frame and hole safety rings instead of rejecting each intersecting hexagon wholesale, while retaining bounded Boolean progress, cancellation, and native-shape cleanup.
 - [x] 9.3 Confirm the denser cylinder floor remains one valid through-cut solid with unchanged holes, lower stacking interface, bounds, and STEP/STL output.
+
+## 10. Full Open Shelf coverage and inclined bottom wedge
+
+- [x] 10.1 Add behavior-focused tests requiring clipped Hex Mesh cells at every Open Shelf panel family's protected boundaries and through the usable outer-side and divider regions of an inclined bottom wedge; confirm the new assertions fail before implementation while protected rails, bridges, and locating pegs remain covered.
+- [x] 10.2 Generate Open Shelf boundary-overlapping candidates, clip them in each panel's local safe mask, trim bottom cells at exact locating-peg keep-outs, and include the non-degenerate bottom-wedge side masks while preserving bounded batches, cancellation, progress, cleanup, and disabled-mode geometry.
+- [x] 10.3 Confirm the result remains one valid lower-volume solid with unchanged bounds, front opening, inclination, panel contacts, locating pegs, preview, and STEP/STL output; run focused geometry, Worker/export, type, format, build, strict OpenSpec, and independent compliance-review gates.
