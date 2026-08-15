@@ -40,6 +40,7 @@ test('model chooser keeps full parameter ranges collapsed until requested', asyn
   await expect(parameters).toHaveCount(1)
   const summary = parameters.locator(':scope > summary')
   await expect(summary).toContainText('Adjustable parameters')
+  await expect(summary).toContainText('View full parameters')
   await expect(parameters.locator('ul')).toBeHidden()
 
   await summary.click()

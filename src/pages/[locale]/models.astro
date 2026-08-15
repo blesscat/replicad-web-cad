@@ -202,6 +202,9 @@ function parameterSummaryLabel(definition: ModelDefinition): string {
                             <details class="grid gap-2 text-sm leading-normal">
                               <summary class="cursor-pointer font-semibold">
                                 {parameterSummaryLabel(definition)}
+                                <span class="font-normal text-muted">
+                                  · {t('models.parametersDetails')}
+                                </span>
                               </summary>
                               <div class="grid gap-2 pt-2">
                                 <h5 class="m-0 font-semibold">
