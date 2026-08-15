@@ -66,6 +66,15 @@ function parameterSummary(definition: ModelDefinition) {
     }),
   )
 }
+
+function parameterSummaryLabel(definition: ModelDefinition): string {
+  if (definition.parameterSchema.length === 0) {
+    return t('models.fixedParameters')
+  }
+  return t('models.parametersSummary', {
+    count: definition.parameterSchema.length,
+  })
+}
 ---
 
 <SiteLayout
@@ -190,22 +199,29 @@ function parameterSummary(definition: ModelDefinition) {
                             <p class="m-0 text-sm leading-normal text-muted">
                               {description}
                             </p>
-                            <div class="grid gap-2 text-sm leading-normal">
-                              <h5 class="m-0 font-semibold">
-                                {t('models.parameters')}
-                              </h5>
-                              <ul class="m-0 grid gap-1 pl-5">
-                                {parameterSummary(definition).map((summary) => (
-                                  <li>{summary}</li>
-                                ))}
-                              </ul>
-                              <p class="m-0 text-muted">
-                                {t('models.exportFormatsLine', {
-                                  label: t('models.exportFormats'),
-                                  value: t('models.exportFormatsValue'),
-                                })}
-                              </p>
-                            </div>
+                            <details class="grid gap-2 text-sm leading-normal">
+                              <summary class="cursor-pointer font-semibold">
+                                {parameterSummaryLabel(definition)}
+                              </summary>
+                              <div class="grid gap-2 pt-2">
+                                <h5 class="m-0 font-semibold">
+                                  {t('models.parameters')}
+                                </h5>
+                                <ul class="m-0 grid gap-1 pl-5">
+                                  {parameterSummary(definition).map(
+                                    (summary) => (
+                                      <li>{summary}</li>
+                                    ),
+                                  )}
+                                </ul>
+                                <p class="m-0 text-muted">
+                                  {t('models.exportFormatsLine', {
+                                    label: t('models.exportFormats'),
+                                    value: t('models.exportFormatsValue'),
+                                  })}
+                                </p>
+                              </div>
+                            </details>
                             <a
                               class="inline-flex items-center justify-self-start rounded-lg border border-border-card bg-page px-3 py-2 font-semibold text-ink no-underline shadow-sm hover:bg-viewport focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                               href={localizedCadPathFor(

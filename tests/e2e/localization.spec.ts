@@ -29,6 +29,26 @@ test('localized model chooser exposes localized shell and search metadata', asyn
   ).toHaveAttribute('href', '/zh-Hant/models')
 })
 
+test('model chooser keeps full parameter ranges collapsed until requested', async ({
+  page,
+}) => {
+  await page.goto('/en/models')
+
+  const parameters = page.locator(
+    '[data-model-id="opengrid-stackable-box"] details',
+  )
+  await expect(parameters).toHaveCount(1)
+  const summary = parameters.locator(':scope > summary')
+  await expect(summary).toContainText('Adjustable parameters')
+  await expect(parameters.locator('ul')).toBeHidden()
+
+  await summary.click()
+
+  await expect(parameters).toHaveAttribute('open', '')
+  await expect(parameters.locator('ul')).toBeVisible()
+  await expect(parameters.locator('ul')).toContainText('Inner clear height')
+})
+
 test('localized public pages and CAD controls expose both locales', async ({
   page,
 }) => {

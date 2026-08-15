@@ -25,6 +25,7 @@ export const zhHantMessages = {
   'models.title': '選擇 CAD 模型',
   'models.description': '選擇要在瀏覽器中調整與匯出的 CAD component。',
   'models.series': 'CAD 模型系列',
+  'models.parametersSummary': '可調整參數（{count} 項）',
   'models.parameters': '可調參數與範圍',
   'models.parameterRange': '{label}：{min}–{max} {unit}',
   'models.fixedParameters': '固定幾何，沒有可調參數。',
@@ -446,6 +447,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'models.description':
     'Choose a CAD component to adjust and export in the browser.',
   'models.series': 'CAD model series',
+  'models.parametersSummary': 'Adjustable parameters ({count})',
   'models.parameters': 'Adjustable parameters and ranges',
   'models.parameterRange': '{label}: {min}–{max} {unit}',
   'models.fixedParameters': 'Fixed geometry with no adjustable parameters.',
