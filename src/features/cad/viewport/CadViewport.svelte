@@ -14,8 +14,10 @@
     CAD_VIEWPORT_TIMING_EVENT,
     type ViewportGeometryTiming,
   } from './geometry-timing'
+  import { translate, type Locale } from '../../../i18n'
 
   type Props = {
+    locale: Locale
     mesh: MeshSnapshot | null
     modelRevision: string | null
     parameters: ModelParameterValues | null
@@ -25,6 +27,7 @@
   }
 
   let {
+    locale,
     mesh,
     modelRevision,
     parameters,
@@ -67,7 +70,7 @@
   data-testid="cad-viewport"
   data-presentation={presentation}
   role="img"
-  aria-label="3D CAD 預覽"
+  aria-label={translate(locale, 'cad.viewport.aria')}
 >
   <div id="cad-viewport-surface" class="viewport-surface">
     {#if !webglSupported}
@@ -75,7 +78,7 @@
         class="flex h-full items-center justify-center text-muted"
         role="alert"
       >
-        無法建立 3D 預覽，請確認瀏覽器支援 WebGL。
+        {translate(locale, 'cad.viewport.webglUnsupported')}
       </div>
     {:else if mesh && modelRevision}
       <!-- Threlte owns the canvas lifecycle and Three.js render loop. -->
@@ -84,6 +87,7 @@
           {mesh}
           {modelRevision}
           {parameters}
+          {locale}
           theme={viewportTheme}
           {presentation}
           onPreparationTiming={reportPreparationTiming}
@@ -91,7 +95,7 @@
       </Canvas>
     {:else}
       <div class="flex h-full items-center justify-center text-muted">
-        尚未有可預覽的模型。
+        {translate(locale, 'cad.viewport.empty')}
       </div>
     {/if}
   </div>
@@ -99,7 +103,7 @@
     <span
       class="absolute bottom-4 left-4 rounded-full border border-stale bg-stale-background px-[0.7rem] py-[0.35rem] text-[0.85rem] text-stale-text"
     >
-      預覽與目前輸入不同步
+      {translate(locale, 'cad.viewport.stale')}
     </span>
   {/if}
 </div>

@@ -10,9 +10,11 @@
     type CadProgress,
     type CadProgressDetails,
   } from '../../features/cad/progress'
+  import { translate, type Locale } from '../../i18n'
 
   type Props = {
     progress: CadProgress
+    locale: Locale
   }
 
   function getValueMin(hasCounters: boolean): number {
@@ -40,25 +42,49 @@
 
   function getValueText(
     current: CadProgressDetails,
+    currentLabel: string,
     countLabel: string | null,
     booleanLabel: string | null,
     stageElapsedLabel: string | null,
+    locale: Locale,
   ): string {
-    let valueText = `${current.label}，第 ${current.step} / ${current.totalSteps} 階段`
-    if (countLabel !== null) valueText = `${current.label}，${countLabel}`
-    if (booleanLabel !== null) valueText = `${valueText}，${booleanLabel}`
+    let valueText = translate(locale, 'cad.progress.step', {
+      label: currentLabel,
+      step: current.step,
+      total: current.totalSteps,
+    })
+    if (countLabel !== null)
+      valueText = translate(locale, 'cad.progress.count', {
+        label: currentLabel,
+        count: countLabel,
+      })
+    if (booleanLabel !== null)
+      valueText = translate(locale, 'cad.progress.withDetail', {
+        value: valueText,
+        detail: booleanLabel,
+      })
     if (stageElapsedLabel !== null)
-      valueText = `${valueText}，${stageElapsedLabel}`
+      valueText = translate(locale, 'cad.progress.withDetail', {
+        value: valueText,
+        detail: stageElapsedLabel,
+      })
     return valueText
   }
 
   function stageElapsedDescription(
     stage: CadProgress['stage'],
     elapsedLabel: string | null,
+    locale: Locale,
   ): string | null {
     if (elapsedLabel === null) return null
-    if (stage === 'building') return `建模總計已耗時 ${elapsedLabel}`
-    if (stage === 'meshing') return `mesh 階段已耗時 ${elapsedLabel}`
+    if (stage === 'building')
+      return translate(locale, 'cad.progress.elapsed.building', {
+        elapsed: elapsedLabel,
+      })
+    if (stage === 'meshing')
+      return translate(locale, 'cad.progress.elapsed.meshing', {
+        elapsed: elapsedLabel,
+      })
     return null
   }
 
@@ -67,7 +93,7 @@
     return Date.now()
   }
 
-  let { progress }: Props = $props()
+  let { progress, locale }: Props = $props()
   let now = $state(clockNow())
   let trackedStage = progress.stage
   let trackedOperationId = progress.operationId
@@ -75,8 +101,9 @@
     progress.stage === 'building' || progress.stage === 'meshing' ? now : null,
   )
   let current = $derived(progressDetails(progress.stage))
-  let countLabel = $derived(progressCountLabel(progress))
-  let booleanLabel = $derived(booleanProgressLabel(progress))
+  let currentLabel = $derived(translate(locale, current.labelKey))
+  let countLabel = $derived(progressCountLabel(progress, locale))
+  let booleanLabel = $derived(booleanProgressLabel(progress, locale))
   let stageElapsedMs = $derived.by(() => {
     return stageProgressElapsedMs(progress.stage, stageStartedAt, now)
   })
@@ -84,7 +111,7 @@
     stageElapsedMs === null ? null : formatProgressElapsed(stageElapsedMs),
   )
   let stageElapsedDescriptionText = $derived(
-    stageElapsedDescription(progress.stage, stageElapsedLabel),
+    stageElapsedDescription(progress.stage, stageElapsedLabel, locale),
   )
   let hasCounters = $derived(countLabel !== null)
   let valueMin = $derived(getValueMin(hasCounters))
@@ -94,9 +121,11 @@
   let valueText = $derived(
     getValueText(
       current,
+      currentLabel,
       countLabel,
       booleanLabel,
       stageElapsedDescriptionText,
+      locale,
     ),
   )
 
@@ -126,12 +155,12 @@
 </script>
 
 <section
-  aria-label="CAD 載入進度"
+  aria-label={translate(locale, 'cad.progress.aria')}
   class="fixed bottom-4 right-4 z-40 grid w-[min(24rem,calc(100vw-2rem))] gap-3 rounded-2xl border border-border-card bg-panel p-4 shadow-card"
   data-testid="cad-progress"
 >
   <div class="flex items-center justify-between gap-4 text-sm">
-    <strong class="text-ink">處理進度</strong>
+    <strong class="text-ink">{translate(locale, 'cad.progress.title')}</strong>
     <span class="text-muted" data-testid="cad-progress-count"
       >{countLabel ?? `${current.step} / ${current.totalSteps}`}</span
     >
@@ -147,7 +176,7 @@
     </p>
   {/if}
   <div
-    aria-label={current.label}
+    aria-label={currentLabel}
     aria-valuemax={valueMax}
     aria-valuemin={valueMin}
     aria-valuenow={valueNow}
@@ -180,7 +209,7 @@
           class={`grid h-5 w-5 place-items-center rounded-full text-[0.7rem] font-semibold ${markerClassName}`}
           >{isComplete ? '✓' : details.step}</span
         >
-        <span>{details.label}</span>
+        <span>{translate(locale, details.labelKey)}</span>
       </li>
     {/each}
   </ol>

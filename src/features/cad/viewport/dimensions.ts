@@ -3,6 +3,7 @@ import type {
   DimensionKey,
   ModelParameterValues,
 } from '../../../cad-contract/units'
+import { DEFAULT_LOCALE, translate, type Locale } from '../../../i18n'
 
 export type Point3 = [number, number, number]
 export type LineSegment = readonly [Point3, Point3]
@@ -40,8 +41,11 @@ function createAnnotation({
   extensionLines,
   endTicks,
   labelPosition,
-}: Omit<DimensionAnnotation, 'valueLabel' | 'ariaLabel'>): DimensionAnnotation {
-  const valueLabel = `${value} mm`
+  locale,
+}: Omit<DimensionAnnotation, 'valueLabel' | 'ariaLabel'> & {
+  locale: Locale
+}): DimensionAnnotation {
+  const valueLabel = `${value} ${translate(locale, 'unit.mm')}`
   return {
     key,
     axis,
@@ -61,6 +65,7 @@ function createWidthAnnotation(
   value: number,
   offset: number,
   tickSize: number,
+  locale: Locale,
 ): DimensionAnnotation {
   const lineStart = point(bounds.min[0], bounds.min[1] - offset, bounds.min[2])
   const lineEnd = point(bounds.max[0], bounds.min[1] - offset, bounds.min[2])
@@ -68,7 +73,8 @@ function createWidthAnnotation(
   return createAnnotation({
     key: 'width',
     axis: 'X',
-    label: '寬度',
+    label: translate(locale, 'viewport.dimension.width'),
+    locale,
     value,
     dimensionLine: segment(lineStart, lineEnd),
     extensionLines: [
@@ -98,6 +104,7 @@ function createDepthAnnotation(
   value: number,
   offset: number,
   tickSize: number,
+  locale: Locale,
 ): DimensionAnnotation {
   const lineStart = point(bounds.max[0] + offset, bounds.min[1], bounds.min[2])
   const lineEnd = point(bounds.max[0] + offset, bounds.max[1], bounds.min[2])
@@ -105,7 +112,8 @@ function createDepthAnnotation(
   return createAnnotation({
     key: 'depth',
     axis: 'Y',
-    label: '深度',
+    label: translate(locale, 'viewport.dimension.depth'),
+    locale,
     value,
     dimensionLine: segment(lineStart, lineEnd),
     extensionLines: [
@@ -135,6 +143,7 @@ function createHeightAnnotation(
   value: number,
   offset: number,
   tickSize: number,
+  locale: Locale,
 ): DimensionAnnotation {
   const lineStart = point(
     bounds.max[0] + offset,
@@ -150,7 +159,8 @@ function createHeightAnnotation(
   return createAnnotation({
     key: 'height',
     axis: 'Z',
-    label: '高度',
+    label: translate(locale, 'viewport.dimension.height'),
+    locale,
     value,
     dimensionLine: segment(lineStart, lineEnd),
     extensionLines: [
@@ -178,6 +188,7 @@ function createHeightAnnotation(
 export function createDimensionAnnotations(
   bounds: BoxBounds,
   _parameters?: ModelParameterValues,
+  locale: Locale = DEFAULT_LOCALE,
 ): DimensionAnnotation[] {
   const sizeX = bounds.max[0] - bounds.min[0]
   const sizeY = bounds.max[1] - bounds.min[1]
@@ -189,8 +200,8 @@ export function createDimensionAnnotations(
   const tickSize = offset * END_TICK_RATIO
 
   return [
-    createWidthAnnotation(bounds, displayedSizeX, offset, tickSize),
-    createDepthAnnotation(bounds, displayedSizeY, offset, tickSize),
-    createHeightAnnotation(bounds, displayedSizeZ, offset, tickSize),
+    createWidthAnnotation(bounds, displayedSizeX, offset, tickSize, locale),
+    createDepthAnnotation(bounds, displayedSizeY, offset, tickSize, locale),
+    createHeightAnnotation(bounds, displayedSizeZ, offset, tickSize, locale),
   ]
 }

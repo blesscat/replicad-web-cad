@@ -20,6 +20,6 @@ export function errorToastKey(error: CadError | null): string | null {
     error.operationId ?? null,
     error.generation ?? null,
     error.modelRevision ?? null,
-    error.userMessage,
+    error.message,
   ])
 }

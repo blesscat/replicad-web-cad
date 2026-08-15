@@ -97,7 +97,7 @@ function progressEvent(
   },
 ) {
   const event: ProgressEvent = {
-    version: 1 as const,
+    version: 2 as const,
     kind: 'operation.progress' as const,
     requestId: `progress-request-${generation}`,
     operationId,
@@ -117,7 +117,7 @@ function faceProgressEvent(
   completed: number,
 ): ProgressEvent {
   return {
-    version: 1,
+    version: 2,
     kind: 'operation.progress',
     requestId: `face-progress-request-${generation}`,
     operationId,
@@ -193,7 +193,7 @@ describe('CAD Worker progress lifecycle', () => {
     })
 
     handle({
-      version: 1,
+      version: 2,
       kind: 'operation.superseded',
       requestId: 'superseded-response',
       operationId: 'operation-2',
@@ -210,7 +210,7 @@ describe('CAD Worker progress lifecycle', () => {
 
     handle(progressEvent(2, 'operation-2'))
     handle({
-      version: 1,
+      version: 2,
       kind: 'model.invalidated',
       requestId: 'invalidate-response',
       operationId: 'invalidate-operation',
@@ -221,7 +221,7 @@ describe('CAD Worker progress lifecycle', () => {
 
     handle(progressEvent(2, 'operation-2'))
     handle({
-      version: 1,
+      version: 2,
       kind: 'operation.superseded',
       requestId: 'superseded-response',
       operationId: 'operation-2',
@@ -241,14 +241,14 @@ describe('CAD Worker progress lifecycle', () => {
     })
     handle(progressEvent(2, 'operation-2'))
     handle({
-      version: 1,
+      version: 2,
       kind: 'operation.error',
       requestId: 'error-response',
       operationId: 'operation-2',
       terminalForRequestId: 'request-2',
       stage: 'building',
       code: 'MODEL_BUILD_FAILED',
-      userMessage: '建模失敗',
+      messageId: 'diagnostic.modelBuildFailed',
       recoverable: true,
       generation: 2,
     })
@@ -263,18 +263,18 @@ describe('CAD Worker progress lifecycle', () => {
     const callsBeforeOlderTerminals = setProgress.mock.calls.length
 
     handle({
-      version: 1,
+      version: 2,
       kind: 'operation.error',
       requestId: 'old-error-response',
       operationId: 'operation-1',
       terminalForRequestId: 'request-1',
       stage: 'building',
       code: 'MODEL_BUILD_FAILED',
-      userMessage: '舊建模失敗',
+      messageId: 'diagnostic.modelBuildFailed',
       recoverable: true,
     })
     handle({
-      version: 1,
+      version: 2,
       kind: 'operation.superseded',
       requestId: 'old-superseded-response',
       operationId: 'operation-1',
@@ -300,21 +300,21 @@ describe('CAD Worker progress lifecycle', () => {
       downloaded: false,
     }
     handle({
-      version: 1,
+      version: 2,
       kind: 'operation.progress',
       requestId: 'old-export-progress',
       operationId: 'export-old',
       stage: 'exporting',
     })
     handle({
-      version: 1,
+      version: 2,
       kind: 'operation.error',
       requestId: 'old-export-error',
       operationId: 'export-old',
       terminalForRequestId: 'request-export-old',
       stage: 'exporting',
       code: 'STEP_EXPORT_FAILED',
-      userMessage: '舊匯出失敗',
+      messageId: 'diagnostic.exportInvalid',
       recoverable: true,
     })
 
@@ -336,7 +336,7 @@ describe('CAD Worker progress lifecycle', () => {
     }
 
     handle({
-      version: 1,
+      version: 2,
       kind: 'model.candidate-ready',
       requestId: 'candidate-response',
       operationId: 'operation-2',
@@ -354,7 +354,7 @@ describe('CAD Worker progress lifecycle', () => {
     expect(refs.operations.current.get('operation-2')?.candidateMesh).toBe(mesh)
 
     handle({
-      version: 1,
+      version: 2,
       kind: 'model.ready',
       requestId: 'ready-response',
       operationId: 'operation-2',

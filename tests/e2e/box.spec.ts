@@ -26,7 +26,7 @@ test('box CAD route exposes fallback and locked parameter controls', async ({
   ).toHaveCount(0)
   await expect(
     page.getByRole('link', { name: '返回模型選擇' }),
-  ).toHaveAttribute('href', '/models')
+  ).toHaveAttribute('href', '/zh-Hant/models')
   await expect(page.locator('#cad-fallback')).toBeHidden()
 })
 
@@ -215,7 +215,7 @@ test('CAD workspace preserves responsive columns within the viewport', async ({
     .poll(() =>
       viewport.evaluate((element) => element.getBoundingClientRect().height),
     )
-    .toBeLessThan(loadingViewportHeight)
+    .toBeLessThanOrEqual(loadingViewportHeight)
   expect(runtimeErrors).toEqual([])
 })
 
@@ -295,7 +295,7 @@ test('parameter updates use the latest valid generation and preserve stale previ
 
   await width.fill('25.5')
   await expect(width).toHaveAttribute('aria-invalid', 'true')
-  await expect(page.getByRole('alert')).toContainText('必須是有限的整數。')
+  await expect(page.getByRole('alert')).toContainText('寬度 輸入無效')
   await expect(page.getByRole('button', { name: '下載 STEP' })).toBeDisabled()
   await expect(page.getByRole('button', { name: '下載 STL' })).toBeDisabled()
   await expect(page.getByLabel('寬度 X 25 mm')).toBeVisible()

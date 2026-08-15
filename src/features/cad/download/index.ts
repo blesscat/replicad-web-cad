@@ -1,4 +1,8 @@
 import type { ExportReadyEvent } from '../../../cad-contract/messages'
+import {
+  diagnostic,
+  type DiagnosticDescriptor,
+} from '../../../cad-contract/diagnostics'
 import { PROTOTYPE_CONFIGURATION } from '../../../cad-contract/units'
 
 export type ExportFormat = 'step' | 'stl'
@@ -13,26 +17,26 @@ export function validateStepResponse(
   expectedRevision: string,
   expectedWorkerEpoch?: string,
   expectedFileName?: string,
-): { valid: true } | { valid: false; message: string } {
+): { valid: true } | { valid: false; message: DiagnosticDescriptor } {
   if (event.modelRevision !== expectedRevision)
-    return { valid: false, message: 'STEP revision 已過期。' }
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
   if (expectedWorkerEpoch && event.workerEpoch !== expectedWorkerEpoch) {
-    return { valid: false, message: 'STEP Worker revision 已過期。' }
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
   }
   if (
     event.format !== 'step' ||
     event.mime !== PROTOTYPE_CONFIGURATION.stepMime
   ) {
-    return { valid: false, message: 'STEP metadata 不正確。' }
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
   }
   if (!event.fileName.endsWith(PROTOTYPE_CONFIGURATION.stepExtension)) {
-    return { valid: false, message: 'STEP 副檔名不正確。' }
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
   }
   if (expectedFileName && event.fileName !== expectedFileName) {
-    return { valid: false, message: 'STEP 檔名與目前模型不一致。' }
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
   }
   if (!(event.bytes instanceof ArrayBuffer) || event.bytes.byteLength === 0) {
-    return { valid: false, message: 'STEP 檔案是空的。' }
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
   }
   return { valid: true }
 }
@@ -59,26 +63,26 @@ export function validateStlResponse(
   expectedRevision: string,
   expectedWorkerEpoch?: string,
   expectedFileName?: string,
-): { valid: true } | { valid: false; message: string } {
+): { valid: true } | { valid: false; message: DiagnosticDescriptor } {
   if (event.modelRevision !== expectedRevision)
-    return { valid: false, message: 'STL revision 已過期。' }
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
   if (expectedWorkerEpoch && event.workerEpoch !== expectedWorkerEpoch) {
-    return { valid: false, message: 'STL Worker revision 已過期。' }
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
   }
   if (
     event.format !== 'stl' ||
     event.mime !== PROTOTYPE_CONFIGURATION.stlMime
   ) {
-    return { valid: false, message: 'STL metadata 不正確。' }
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
   }
   if (!event.fileName.endsWith(PROTOTYPE_CONFIGURATION.stlExtension)) {
-    return { valid: false, message: 'STL 副檔名不正確。' }
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
   }
   if (expectedFileName && event.fileName !== expectedFileName) {
-    return { valid: false, message: 'STL 檔名與目前模型不一致。' }
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
   }
   if (!(event.bytes instanceof ArrayBuffer) || event.bytes.byteLength === 0) {
-    return { valid: false, message: 'STL 檔案是空的。' }
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
   }
 
   const structuralValidation = validateBinaryStl(event.bytes)
@@ -88,22 +92,22 @@ export function validateStlResponse(
 
 function validateBinaryStl(
   bytes: ArrayBuffer,
-): { valid: true } | { valid: false; message: string } {
+): { valid: true } | { valid: false; message: DiagnosticDescriptor } {
   const headerBytes = 80
   const countBytes = 4
   const facetBytes = 50
   const minimumBytes = headerBytes + countBytes
   if (bytes.byteLength < minimumBytes) {
-    return { valid: false, message: 'STL 檔案結構不正確。' }
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
   }
 
   const triangleCount = new DataView(bytes).getUint32(headerBytes, true)
   if (triangleCount === 0) {
-    return { valid: false, message: 'STL 檔案沒有三角形。' }
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
   }
   const expectedByteLength = minimumBytes + triangleCount * facetBytes
   if (expectedByteLength !== bytes.byteLength) {
-    return { valid: false, message: 'STL 檔案結構不正確。' }
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
   }
   return { valid: true }
 }

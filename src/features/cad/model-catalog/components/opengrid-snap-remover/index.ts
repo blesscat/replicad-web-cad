@@ -45,9 +45,9 @@ export const openGridSnapRemoverDefinition: ModelDefinition = {
   id: 'opengrid-snap-remover',
   buildKey: 'opengrid-snap-remover',
   family: 'opengrid',
-  displayName: 'OpenGrid Snap Remover',
-  selectionLabel: 'Snap Remover',
-  selectionDescription: '固定 STEP 預覽，不提供參數調整。',
+  displayName: 'models.model.opengrid-snap-remover.name',
+  selectionLabel: 'models.model.opengrid-snap-remover.selection',
+  selectionDescription: 'models.model.opengrid-snap-remover.description',
   parameterSchema: [],
   defaultParameters: {},
   previewMetadata: {
@@ -56,7 +56,7 @@ export const openGridSnapRemoverDefinition: ModelDefinition = {
   },
   previewImage: {
     src: '/model-previews/opengrid-snap-remover.png',
-    alt: 'OpenGrid Snap Remover 預覽',
+    alt: 'models.model.opengrid-snap-remover.alt',
     width: 640,
     height: 400,
   },

@@ -1,4 +1,5 @@
 import { normalizeError } from '../../../../cad-contract/errors'
+import { diagnostic } from '../../../../cad-contract/diagnostics'
 import type { ExportReadyEvent } from '../../../../cad-contract/messages'
 import { PROTOTYPE_CONFIGURATION } from '../../../../cad-contract/units'
 import {
@@ -52,9 +53,9 @@ function metadataErrorCode(format: ExportFormat) {
   return 'STEP_METADATA_INVALID' as const
 }
 
-function exportTimeoutMessage(format: ExportFormat): string {
-  if (format === 'stl') return 'STL 匯出超時，請重試。'
-  return 'STEP 匯出超時，請重試。'
+function exportTimeoutDiagnostic(format: ExportFormat) {
+  if (format === 'stl') return diagnostic('diagnostic.stlExportTimeout')
+  return diagnostic('diagnostic.stepExportTimeout')
 }
 
 export function createExportHandlers(context: RuntimeContext): ExportHandlers {
@@ -71,10 +72,10 @@ export function createExportHandlers(context: RuntimeContext): ExportHandlers {
     if (!validation.valid) {
       context.dispatch({
         type: 'recoverable-error',
-        error: normalizeError(new Error(validation.message), {
+        error: normalizeError(undefined, {
           stage: 'exporting',
           code: metadataErrorCode(request.format),
-          userMessage: validation.message,
+          message: validation.message,
           recoverable: true,
           modelRevision: request.revision,
           operationId: request.operationId,
@@ -172,7 +173,7 @@ export function createExportHandlers(context: RuntimeContext): ExportHandlers {
           normalizeError(new Error(`${format.toUpperCase()} export timeout`), {
             stage: 'exporting',
             code: 'WORKER_TIMEOUT',
-            userMessage: exportTimeoutMessage(format),
+            message: exportTimeoutDiagnostic(format),
             recoverable: true,
             modelRevision: model.revision,
             operationId,

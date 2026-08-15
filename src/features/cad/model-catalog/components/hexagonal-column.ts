@@ -13,7 +13,7 @@ import type { ModelDefinition, ParameterField } from '../types'
 const HEXAGONAL_COLUMN_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
   {
     key: 'height',
-    label: '整體長度',
+    label: 'parameter.overallLength',
     axis: 'X/Z',
     unit: 'mm',
     control: 'range-text',
@@ -26,9 +26,9 @@ const HEXAGONAL_COLUMN_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
   },
   {
     key: 'count',
-    label: '支數',
+    label: 'parameter.count',
     axis: 'Y',
-    unit: '支',
+    unit: 'count',
     control: 'range',
     defaultValue: HEXAGONAL_COLUMN_CONFIGURATION.defaultCount,
     min: HEXAGONAL_COLUMN_CONFIGURATION.minCount,
@@ -37,7 +37,7 @@ const HEXAGONAL_COLUMN_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
   },
   {
     key: 'gap',
-    label: '柱間隙',
+    label: 'parameter.gap',
     axis: 'Y',
     unit: 'mm',
     control: 'range-text',
@@ -82,9 +82,8 @@ export const hexagonalColumnDefinition: ModelDefinition = {
   id: 'hexagonal-column',
   buildKey: 'hexagonal-column',
   family: 'other',
-  displayName: '可調六角柱',
-  selectionDescription:
-    '以參考六角柱截面建立固定端部倒角的直柱；長度文字輸入 1–500 mm、slider 1–200 mm，可調整支數與間隙，預設躺下排列（間隙 1 mm）。',
+  displayName: 'models.model.hexagonal-column.name',
+  selectionDescription: 'models.model.hexagonal-column.description',
   parameterSchema: HEXAGONAL_COLUMN_PARAMETER_SCHEMA,
   defaultParameters: {
     height: HEXAGONAL_COLUMN_CONFIGURATION.defaultHeight,

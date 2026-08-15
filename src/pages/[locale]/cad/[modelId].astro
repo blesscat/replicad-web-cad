@@ -1,0 +1,118 @@
+---
+import SiteLayout from '../../../layouts/SiteLayout.astro'
+import CadSystemContextLabel from '../../../components/cad/CadSystemContextLabel.svelte'
+import CadWorkspace from '../../../components/cad/CadWorkspace.svelte'
+import {
+  displayParameterLabel,
+  getModelDefinition,
+  modelDefinitions,
+  unitLabelFor,
+} from '../../../features/cad/model-catalog'
+import {
+  SUPPORTED_LOCALES,
+  isLocale,
+  translate,
+  type Locale,
+} from '../../../i18n'
+import type { ModelId } from '../../../cad-contract/units'
+import { publicPathFor } from '../../../i18n/routes'
+
+export function getStaticPaths() {
+  return SUPPORTED_LOCALES.flatMap((locale) =>
+    modelDefinitions.map((definition) => ({
+      params: { locale, modelId: definition.id },
+      props: { locale, modelId: definition.id },
+    })),
+  )
+}
+
+const locale = Astro.props.locale as Locale
+const modelId = Astro.props.modelId as ModelId
+if (!isLocale(locale)) throw new Error(`UNSUPPORTED_LOCALE:${locale}`)
+
+const definition = getModelDefinition(modelId)
+if (!definition) throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
+
+const t = (key: string, values?: Record<string, string | number | boolean>) =>
+  translate(locale, key, values)
+const modelName = t(`models.model.${definition.id}.name`)
+const modelDescription = t(`models.model.${definition.id}.description`)
+
+function parameterSummary() {
+  if (definition.parameterSchema.length === 0) {
+    const staticSummary = t(`models.model.${definition.id}.staticParameters`)
+    if (!staticSummary.startsWith('⟦')) return [staticSummary]
+    return [t('cad.fixedParameters')]
+  }
+
+  return definition.parameterSchema.map((field) =>
+    t('models.parameterRange', {
+      label: displayParameterLabel(field, locale),
+      min: field.min,
+      max: field.max,
+      unit: unitLabelFor(locale, field.unit),
+    }),
+  )
+}
+---
+
+<SiteLayout
+  {locale}
+  fullWidth
+  title={t('cad.pageTitle', { name: modelName })}
+  description={modelDescription}
+>
+  <section aria-labelledby="cad-title">
+    <header
+      class="mb-4 flex flex-wrap items-center justify-between gap-3"
+      data-testid="cad-header"
+    >
+      <div class="min-w-0">
+        <CadSystemContextLabel
+          client:only="svelte"
+          modelId={modelId}
+          locale={locale}
+        />
+        <h1 class="m-0 text-4xl font-semibold leading-tight" id="cad-title">
+          {t('cad.currentlyEditing', { name: modelName })}
+        </h1>
+      </div>
+      <a
+        class="rounded-lg border border-border-card bg-panel px-[0.8rem] py-[0.6rem] text-base text-ink no-underline hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        href={publicPathFor(locale, 'models')}
+      >
+        {t('common.backToModels')}
+      </a>
+    </header>
+    <div
+      class="rounded-2xl border border-border-card bg-panel p-5 shadow-card"
+      id="cad-fallback"
+    >
+      <h2 class="mb-4 text-2xl font-semibold leading-tight">
+        {t('cad.loading', { name: modelName })}
+      </h2>
+      <p class="mb-4 leading-normal">{modelDescription}</p>
+      <section class="mb-4 grid gap-2" data-testid="cad-static-summary">
+        <h2 class="m-0 text-xl font-semibold leading-tight">
+          {t('cad.staticSummary')}
+        </h2>
+        <h3 class="m-0 text-base font-semibold">
+          {t('cad.parametersHeading')}
+        </h3>
+        <ul class="m-0 grid gap-1 pl-5 leading-normal">
+          {parameterSummary().map((summary) => <li>{summary}</li>)}
+        </ul>
+        <p class="m-0 leading-normal">{t('cad.exportFormats')}</p>
+      </section>
+      <p class="mb-4 leading-normal">{t('cad.requirements')}</p>
+      <p class="mb-0">
+        <a
+          class="text-ink underline underline-offset-4"
+          href={publicPathFor(locale, 'models')}
+          >{t('common.backToModelsArrow')}</a
+        >
+      </p>
+    </div>
+    <CadWorkspace client:only="svelte" modelId={modelId} locale={locale} />
+  </section>
+</SiteLayout>

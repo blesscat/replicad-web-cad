@@ -3,13 +3,19 @@
   import {
     displayParameterLabel,
     hexagonalColumnDefinition,
+    unitLabelFor,
   } from '../../../../features/cad/model-catalog'
   import ParameterField from '../ParameterField.svelte'
   import ParameterControl from '../ParameterControl.svelte'
   import type { ComponentPanelProps } from '../types'
+  import { translate } from '../../../../i18n'
 
-  let { rawParameters, fieldErrors, onInputChange }: ComponentPanelProps =
-    $props()
+  let {
+    locale,
+    rawParameters,
+    fieldErrors,
+    onInputChange,
+  }: ComponentPanelProps = $props()
 
   const defaultOrientation = HEXAGONAL_COLUMN_CONFIGURATION.defaultOrientation
 
@@ -21,22 +27,21 @@
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
   <p class="m-0 text-sm text-muted">
-    長度包含兩端固定 0.2 mm 過渡；長度可用 slider 調整 1–200 mm 或輸入 1–500
-    mm，間隙可用 slider 調整 1–10 mm 或輸入 1–99 mm；支數沿 Y
-    軸排列，預設躺下（長軸沿 X），也可切換站立（長軸沿 Z）；預設柱間隙為 1
-    mm，不融合。
+    {translate(locale, 'panel.hexagonalColumn.description')}
   </p>
   {#each hexagonalColumnDefinition.parameterSchema as field (field.key)}
     {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
     <ParameterField
-      label={displayParameterLabel(field)}
-      unit={field.unit}
+      {locale}
+      label={displayParameterLabel(field, locale)}
+      unit={unitLabelFor(locale, field.unit)}
       changed={value !== String(field.defaultValue)}
       error={fieldErrors[field.key]}
       errorId={`${field.key}-error`}
       onRestore={() => onInputChange(field.key, String(field.defaultValue))}
     >
       <ParameterControl
+        {locale}
         {field}
         {value}
         error={fieldErrors[field.key]}
@@ -45,7 +50,8 @@
     </ParameterField>
   {/each}
   <ParameterField
-    label="擺放方向"
+    {locale}
+    label={translate(locale, 'panel.hexagonalColumn.orientation')}
     unit="orientation"
     changed={(rawParameters.orientation ?? defaultOrientation) !==
       defaultOrientation}
@@ -55,12 +61,16 @@
   >
     <select
       class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-      aria-label="擺放方向"
+      aria-label={translate(locale, 'panel.hexagonalColumn.orientation')}
       value={rawParameters.orientation ?? defaultOrientation}
       onchange={handleOrientationChange}
     >
-      <option value="lying">躺下（長軸 X）</option>
-      <option value="standing">站立（長軸 Z）</option>
+      <option value="lying"
+        >{translate(locale, 'panel.hexagonalColumn.lying')}</option
+      >
+      <option value="standing"
+        >{translate(locale, 'panel.hexagonalColumn.standing')}</option
+      >
     </select>
   </ParameterField>
 </fieldset>

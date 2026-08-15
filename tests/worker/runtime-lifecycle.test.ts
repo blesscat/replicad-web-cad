@@ -38,7 +38,7 @@ import { assertPillarShapeQuality } from '../../src/cad-kernel/components/opengr
 import { meshBRep, serializeMesh } from '../../src/cad-kernel/mesh'
 
 const base = {
-  version: 1 as const,
+  version: 2 as const,
   requestId: 'request-1',
   operationId: 'operation-1',
 }

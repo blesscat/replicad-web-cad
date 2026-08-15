@@ -1,0 +1,60 @@
+import { describe, expect, it } from 'vitest'
+import {
+  displayParameterLabel,
+  modelDefinitions,
+  unitLabelFor,
+} from '../../src/features/cad/model-catalog'
+import { translate } from '../../src/i18n'
+
+describe('localized model catalog copy', () => {
+  it('resolves names, descriptions, and preview alt text in both locales', () => {
+    for (const definition of modelDefinitions) {
+      for (const locale of ['zh-Hant', 'en'] as const) {
+        expect(translate(locale, definition.displayName)).not.toContain('⟦')
+        if (definition.selectionLabel) {
+          expect(translate(locale, definition.selectionLabel)).not.toContain(
+            '⟦',
+          )
+        }
+        expect(
+          translate(locale, definition.selectionDescription),
+        ).not.toContain('⟦')
+        if (definition.previewImage) {
+          expect(translate(locale, definition.previewImage.alt)).not.toContain(
+            '⟦',
+          )
+        }
+      }
+    }
+  })
+
+  it('uses semantic parameter fields rather than translated text for label layout', () => {
+    const box = modelDefinitions.find((definition) => definition.id === 'box')!
+    const rows = modelDefinitions
+      .find((definition) => definition.id === 'hsw-cell')!
+      .parameterSchema.find((field) => field.key === 'rows')!
+
+    expect(displayParameterLabel(box.parameterSchema[0]!, 'zh-Hant')).toBe(
+      '寬度（X）',
+    )
+    expect(displayParameterLabel(box.parameterSchema[0]!, 'en')).toBe(
+      'Width（X）',
+    )
+    expect(displayParameterLabel(rows, 'zh-Hant')).toBe('Y')
+    expect(displayParameterLabel(rows, 'en')).toBe('Y')
+  })
+
+  it('localizes units without changing parameter or model identifiers', () => {
+    const definition = modelDefinitions.find(
+      (candidate) => candidate.id === 'hexagonal-column',
+    )!
+    const count = definition.parameterSchema.find(
+      (field) => field.key === 'count',
+    )!
+
+    expect(unitLabelFor('zh-Hant', count.unit)).toBe('支')
+    expect(unitLabelFor('en', count.unit)).toBe('columns')
+    expect(definition.id).toBe('hexagonal-column')
+    expect(definition.buildKey).toBe('hexagonal-column')
+  })
+})

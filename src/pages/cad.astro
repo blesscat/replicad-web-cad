@@ -1,21 +1,26 @@
 ---
-const modelSelectionPath = '/models'
+import { translate } from '../i18n'
+const targetPath = '/zh-Hant/models'
 ---
 
 <html lang="zh-Hant">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="refresh" content={`0;url=${modelSelectionPath}`} />
-    <title>選擇 CAD 模型 | Shape Shortcut</title>
+    <meta name="robots" content="noindex" />
+    <meta http-equiv="refresh" content={`0;url=${targetPath}`} />
+    <link rel="canonical" href={targetPath} />
+    <title>
+      {translate('zh-Hant', 'cad.selectModel.title')} | Shape Shortcut
+    </title>
     <script is:inline>
-      window.location.replace('/models')
+      window.location.replace('/zh-Hant/models' + window.location.search)
     </script>
   </head>
   <body>
     <main>
-      <h1>請先選擇 CAD 模型</h1>
-      <p>CAD workspace 需要指定模型後才能開啟。</p>
-      <a href={modelSelectionPath}>返回模型選擇 →</a>
+      <h1>{translate('zh-Hant', 'cad.selectModel.title')}</h1>
+      <p>{translate('zh-Hant', 'cad.selectModel.description')}</p>
+      <a href={targetPath}>{translate('zh-Hant', 'cad.selectModel.link')}</a>
     </main>
   </body>
 </html>

@@ -10,7 +10,7 @@ function modelError(overrides: Partial<CadError> = {}): CadError {
   return normalizeError(new Error('model build failed'), {
     stage: 'building',
     code: 'MODEL_BUILD_FAILED',
-    userMessage: '模型建立失敗：幾何無效。',
+    message: { messageId: 'diagnostic.modelBuildFailed' },
     recoverable: true,
     generation: 2,
     operationId: 'model-operation-2',
@@ -30,7 +30,7 @@ describe('CAD error toast selection', () => {
     const fatal = modelError({
       code: 'WORKER_TERMINATED',
       stage: 'worker',
-      userMessage: 'CAD Worker 已終止。',
+      message: { messageId: 'diagnostic.workerTerminated' },
     })
     const fatalState = cadReducer(initialCadState(), {
       type: 'fatal-worker-error',
@@ -46,7 +46,7 @@ describe('CAD error toast selection', () => {
       error: modelError({
         stage: 'validation',
         code: 'INVALID_INPUT',
-        userMessage: '尺寸輸入無效。',
+        message: { messageId: 'validation.invalid' },
       }),
     })
     expect(toastErrorForState(invalidInputState)).toBeNull()
@@ -57,7 +57,7 @@ describe('CAD error toast selection', () => {
     const replacement = modelError({
       operationId: 'model-operation-3',
       generation: 3,
-      userMessage: '模型建立失敗：新的幾何無效。',
+      message: { messageId: 'diagnostic.modelBuildFailed' },
     })
 
     expect(errorToastKey(first)).toBe(errorToastKey(first))

@@ -90,7 +90,7 @@ export type OpenGridStackableCylinderDerivedOpening = {
 
 export type OpenGridStackableCylinderValidationIssue = {
   field: OpenGridStackableCylinderParameterKey | 'parameters'
-  message: string
+  messageId: string
 }
 
 export type OpenGridStackableCylinderValidation =
@@ -277,15 +277,15 @@ function validateIntegerField(
 ): void {
   const unitSuffix = unit === '°' ? ' °' : ''
   if (typeof value !== 'number' || !Number.isFinite(value)) {
-    issues.push({ field, message: `必須是有限的整數${unitSuffix}。` })
+    issues.push({ field, messageId: 'validation.invalid' })
     return
   }
   if (!Number.isSafeInteger(value)) {
-    issues.push({ field, message: `只接受安全範圍內的整數${unitSuffix}。` })
+    issues.push({ field, messageId: 'validation.invalid' })
     return
   }
   if (value < min || value > max) {
-    issues.push({ field, message: `必須介於 ${min}–${max}${unitSuffix}。` })
+    issues.push({ field, messageId: 'validation.invalid' })
   }
 }
 
@@ -295,7 +295,7 @@ function validateBooleanField(
   issues: OpenGridStackableCylinderValidationIssue[],
 ): void {
   if (typeof value !== 'boolean') {
-    issues.push({ field, message: '必須是布林值。' })
+    issues.push({ field, messageId: 'validation.invalid' })
   }
 }
 
@@ -306,7 +306,7 @@ function validateBottomSeatMode(
   if (!isOpenGridLocatingSeatMode(value)) {
     issues.push({
       field: 'bottomSeatMode',
-      message: '角座模式必須是 none、hole 或 integrated。',
+      messageId: 'validation.invalid',
     })
   }
 }
@@ -355,19 +355,19 @@ function openingValidationIssuesFor(
     if (opening.bottomLength < configuration.openingBottomLengthMin) {
       issues.push({
         field: keys.bottomLength,
-        message: '啟用開口時，平底長度至少需要 1 mm。',
+        messageId: 'validation.invalid',
       })
     }
     if (opening.verticalSideHeight <= 1e-9) {
       issues.push({
         field: keys.depth,
-        message: `固定 ${configuration.openingCornerRadius} mm 圓角之間需要保留直壁，目前下切深度不足。`,
+        messageId: 'validation.invalid',
       })
     }
     if (opening.bottomZ < derived.floorThickness) {
       issues.push({
         field: keys.depth,
-        message: '開口底部不可切入目前底板。',
+        messageId: 'validation.invalid',
       })
     }
     if (
@@ -376,7 +376,7 @@ function openingValidationIssuesFor(
     ) {
       issues.push({
         field: keys.bottomLength,
-        message: '開口寬度超過圓柱可用範圍。',
+        messageId: 'validation.invalid',
       })
     }
   }
@@ -388,7 +388,7 @@ function openingValidationIssuesFor(
     if (first.angularHalfWidth + second.angularHalfWidth >= Math.PI / 2) {
       issues.push({
         field: OPENING_KEYS_BY_DIRECTION[secondDirection].depth,
-        message: '相鄰開口重疊，必須保留外壁結構間隔。',
+        messageId: 'validation.invalid',
       })
     }
   }
@@ -405,7 +405,7 @@ export function validateOpenGridStackableCylinderParameters(
       issues: [
         {
           field: 'parameters',
-          message: '需要提供 OpenGrid 可堆疊圓柱參數。',
+          messageId: 'validation.invalid',
         },
       ],
     }
@@ -431,7 +431,7 @@ export function validateOpenGridStackableCylinderParameters(
       hasOwn(value, key),
     )
   if (!hasLegacyShape && !hasCurrentShape) {
-    issues.push({ field: 'parameters', message: '包含不支援的參數欄位。' })
+    issues.push({ field: 'parameters', messageId: 'validation.invalid' })
   }
 
   validateIntegerField(
@@ -464,7 +464,7 @@ export function validateOpenGridStackableCylinderParameters(
     if (!hasCurrentSeatMode) {
       issues.push({
         field: 'bottomSeatMode',
-        message: '舊版底部孔洞開關必須是布林值。',
+        messageId: 'validation.invalid',
       })
     }
   }
@@ -499,7 +499,7 @@ export function validateOpenGridStackableCylinderParameters(
   ) {
     issues.push({
       field: 'parameters',
-      message: '薄底模式與底板模式不可同時開啟。',
+      messageId: 'validation.invalid',
     })
   }
 

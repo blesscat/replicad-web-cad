@@ -2,34 +2,41 @@
   import {
     displayParameterLabel,
     opengridPillarDefinition,
+    unitLabelFor,
   } from '../../../../features/cad/model-catalog'
   import { PILLAR_CONFIGURATION } from '../../../../cad-contract/units'
   import ParameterControl from '../ParameterControl.svelte'
   import ParameterField from '../ParameterField.svelte'
   import type { ComponentPanelProps } from '../types'
+  import { formatValidationIssue } from '../../../../i18n/diagnostics'
+  import { translate } from '../../../../i18n'
 
   const PILLAR_MODE_OPTIONS = [
     {
       value: 'standard',
-      label: '堆疊版',
+      labelKey: 'panel.pillar.stacking',
       length: PILLAR_CONFIGURATION.standardLength,
     },
     {
       value: 'thin-shell',
-      label: '薄殼版',
+      labelKey: 'panel.pillar.thinShell',
       length: PILLAR_CONFIGURATION.thinShellLength,
     },
     {
       value: 'positioning',
-      label: '物件定位用',
+      labelKey: 'panel.pillar.positioning',
     },
   ] as const
 
   const POSITIONING_LENGTH_FIELD = opengridPillarDefinition.parameterSchema[0]!
   const OFFSET_FIELDS = opengridPillarDefinition.parameterSchema.slice(1)
 
-  let { rawParameters, fieldErrors, onInputChange }: ComponentPanelProps =
-    $props()
+  let {
+    locale,
+    rawParameters,
+    fieldErrors,
+    onInputChange,
+  }: ComponentPanelProps = $props()
 
   function handleModeChange(event: Event): void {
     if (!(event.currentTarget instanceof HTMLInputElement)) return
@@ -39,7 +46,7 @@
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
   <div
-    aria-label="支柱版本"
+    aria-label={translate(locale, 'panel.pillar.version')}
     class="grid gap-2 rounded-lg border border-border-field p-3"
     role="radiogroup"
   >
@@ -47,7 +54,7 @@
       <label class="flex min-w-0 grow items-start gap-2">
         <input
           aria-describedby={fieldErrors.mode ? 'pillar-mode-error' : undefined}
-          aria-label={option.label}
+          aria-label={translate(locale, option.labelKey)}
           class="mt-1 accent-primary"
           data-testid={`opengrid-pillar-mode-${option.value}`}
           name="opengrid-pillar-mode"
@@ -58,9 +65,13 @@
           onchange={handleModeChange}
         />
         <span class="grid gap-1">
-          <span class="font-[650]">{option.label}</span>
+          <span class="font-[650]">{translate(locale, option.labelKey)}</span>
           {#if option.value !== 'positioning'}
-            <span class="text-sm text-muted">固定總長 {option.length} mm</span>
+            <span class="text-sm text-muted">
+              {translate(locale, 'panel.pillar.fixedLength', {
+                length: option.length,
+              })}
+            </span>
           {/if}
         </span>
       </label>
@@ -72,8 +83,9 @@
       rawParameters.length ??
       String(PILLAR_CONFIGURATION.positioningDefaultLength)}
     <ParameterField
-      label={displayParameterLabel(POSITIONING_LENGTH_FIELD)}
-      unit={POSITIONING_LENGTH_FIELD.unit}
+      {locale}
+      label={displayParameterLabel(POSITIONING_LENGTH_FIELD, locale)}
+      unit={unitLabelFor(locale, POSITIONING_LENGTH_FIELD.unit)}
       changed={value !== String(POSITIONING_LENGTH_FIELD.defaultValue)}
       error={fieldErrors.length}
       errorId="pillar-positioning-length-error"
@@ -81,6 +93,7 @@
         onInputChange('length', String(POSITIONING_LENGTH_FIELD.defaultValue))}
     >
       <ParameterControl
+        {locale}
         field={POSITIONING_LENGTH_FIELD}
         {value}
         error={fieldErrors.length}
@@ -92,14 +105,16 @@
   {#each OFFSET_FIELDS as field (field.key)}
     {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
     <ParameterField
-      label={displayParameterLabel(field)}
-      unit={field.unit}
+      {locale}
+      label={displayParameterLabel(field, locale)}
+      unit={unitLabelFor(locale, field.unit)}
       changed={value !== String(field.defaultValue)}
       error={fieldErrors[field.key]}
       errorId={`pillar-${field.key}-error`}
       onRestore={() => onInputChange(field.key, String(field.defaultValue))}
     >
       <ParameterControl
+        {locale}
         {field}
         {value}
         error={fieldErrors[field.key]}
@@ -110,7 +125,7 @@
 
   {#if fieldErrors.mode}
     <span class="text-sm text-error" id="pillar-mode-error" role="alert">
-      {fieldErrors.mode}
+      {formatValidationIssue(locale, fieldErrors.mode)}
     </span>
   {/if}
 </fieldset>

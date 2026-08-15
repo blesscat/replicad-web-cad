@@ -29,7 +29,7 @@ const FIXED_STEP_DOWNLOADS: Readonly<
 const OPENGRID_SNAP_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
   {
     key: 'offset',
-    label: '外框總增量',
+    label: 'parameter.frameIncrement',
     axis: 'X/Y',
     unit: 'mm',
     control: 'range',
@@ -87,16 +87,15 @@ export const opengridSnapDefinition: ModelDefinition = {
   id: 'opengrid-snap',
   buildKey: 'opengrid-snap',
   family: 'opengrid',
-  displayName: 'Snap (咔咔)',
-  selectionLabel: 'Snap (咔咔)',
-  selectionDescription:
-    '提供 Lite／Full、Standard／Directional 的 Snap (咔咔)，可切換 Full、Half 或 Quarter。Half／Quarter 使用固定 STEP；增量、定位孔、移除孔無效。',
+  displayName: 'models.model.opengrid-snap.name',
+  selectionLabel: 'models.model.opengrid-snap.selection',
+  selectionDescription: 'models.model.opengrid-snap.description',
   parameterSchema: OPENGRID_SNAP_PARAMETER_SCHEMA,
   defaultParameters: OPENGRID_SNAP_CONFIGURATION.defaultParameters,
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {
     src: '/model-previews/opengrid-snap.png',
-    alt: 'Snap (咔咔) 預覽',
+    alt: 'models.model.opengrid-snap.alt',
     width: 640,
     height: 400,
   },

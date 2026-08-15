@@ -275,7 +275,7 @@ const OPEN_GRID_PARAMETER_KEYS: readonly OpenGridParameterKey[] = [
 
 export type OpenGridValidationIssue = {
   field: OpenGridParameterKey | 'parameters'
-  message: string
+  messageId: string
 }
 
 export type OpenGridValidation =
@@ -394,9 +394,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
   if (!isRecord(value)) {
     return {
       valid: false,
-      issues: [
-        { field: 'parameters', message: '需要提供完整的 OpenGrid 參數。' },
-      ],
+      issues: [{ field: 'parameters', messageId: 'validation.invalid' }],
     }
   }
 
@@ -404,35 +402,34 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
   if (!hasExactKeys(value, OPEN_GRID_PARAMETER_KEYS)) {
     issues.push({
       field: 'parameters',
-      message:
-        '包含不支援或缺少的 OpenGrid 參數欄位；請使用官方 SCAD 對應的欄位。',
+      messageId: 'validation.invalid',
     })
   }
 
   if (!isOpenGridVariant(value.variant)) {
     issues.push({
       field: 'variant',
-      message: '板型必須是 Full、Lite、Heavy 或 Hybrid。',
+      messageId: 'validation.invalid',
     })
   }
 
   if (!isHalfCellX(value.halfCellX)) {
     issues.push({
       field: 'halfCellX',
-      message: 'X 半格方向必須是 none、left 或 right。',
+      messageId: 'validation.invalid',
     })
   }
   if (!isHalfCellY(value.halfCellY)) {
     issues.push({
       field: 'halfCellY',
-      message: 'Y 半格方向必須是 none、top 或 bottom。',
+      messageId: 'validation.invalid',
     })
   }
 
   for (const field of ['rows', 'columns'] as const) {
     const count = value[field]
     if (!Number.isSafeInteger(count)) {
-      issues.push({ field, message: '格數必須是安全範圍內的整數。' })
+      issues.push({ field, messageId: 'validation.invalid' })
       continue
     }
     if (
@@ -441,13 +438,13 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     ) {
       issues.push({
         field,
-        message: `格數必須介於 1–${OPENGRID_CONFIGURATION.maxGridCount}。`,
+        messageId: 'validation.invalid',
       })
     }
   }
 
   if (!isOpenGridChamferMode(value.chamfers)) {
-    issues.push({ field: 'chamfers', message: '倒角模式不受支援。' })
+    issues.push({ field: 'chamfers', messageId: 'validation.invalid' })
   }
   if (
     !isBooleanRecord(value.chamferCorners, [
@@ -459,33 +456,33 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
   ) {
     issues.push({
       field: 'chamferCorners',
-      message: '外角倒角旗標格式不正確。',
+      messageId: 'validation.invalid',
     })
   }
 
   if (!isOpenGridConnectorHoles(value.connectorHoles)) {
-    issues.push({ field: 'connectorHoles', message: '連接孔模式不受支援。' })
+    issues.push({ field: 'connectorHoles', messageId: 'validation.invalid' })
   }
   if (
     !isBooleanRecord(value.connectorSides, ['top', 'right', 'bottom', 'left'])
   ) {
     issues.push({
       field: 'connectorSides',
-      message: '連接孔側邊旗標格式不正確。',
+      messageId: 'validation.invalid',
     })
   }
 
   if (!isOpenGridScrewKind(value.screwKind)) {
-    issues.push({ field: 'screwKind', message: '螺絲種類不受支援。' })
+    issues.push({ field: 'screwKind', messageId: 'validation.invalid' })
   }
   if (!isOpenGridScrewMode(value.screwMode)) {
-    issues.push({ field: 'screwMode', message: '螺絲孔模式不受支援。' })
+    issues.push({ field: 'screwMode', messageId: 'validation.invalid' })
   }
 
   if (typeof value.screwCenter !== 'boolean') {
     issues.push({
       field: 'screwCenter',
-      message: '正中心螺絲孔旗標必須是布林值。',
+      messageId: 'validation.invalid',
     })
   }
 
@@ -496,7 +493,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
   ) {
     issues.push({
       field: 'screwEvery',
-      message: `螺絲孔間隔必須是 0–${OPENGRID_CONFIGURATION.maxGridCount} 的整數；0 代表關閉。`,
+      messageId: 'validation.invalid',
     })
   }
 
@@ -509,7 +506,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     ) {
       issues.push({
         field,
-        message: `螺絲孔間隔必須是 1–${OPENGRID_CONFIGURATION.maxGridCount} 的整數。`,
+        messageId: 'validation.invalid',
       })
     }
   }
@@ -521,13 +518,13 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     'screwHeadCountersunkDegree',
   ] as const) {
     if (!isFiniteNumber(value[field])) {
-      issues.push({ field, message: '螺絲尺寸必須是有限數值。' })
+      issues.push({ field, messageId: 'validation.invalid' })
     }
   }
   if (typeof value.screwHeadIsCountersunk !== 'boolean') {
     issues.push({
       field: 'screwHeadIsCountersunk',
-      message: '是否沉頭必須是布林值。',
+      messageId: 'validation.invalid',
     })
   }
 
@@ -548,7 +545,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
   ) {
     issues.push({
       field: 'screwCenter',
-      message: '正中心螺絲孔需要 X、Y 格數都至少為 2。',
+      messageId: 'validation.invalid',
     })
   }
   const screwDiameter = isFiniteNumber(value.screwDiameter)
@@ -575,7 +572,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     if (screwDiameter <= 0 || screwDiameter > screwHeadDiameter) {
       issues.push({
         field: 'screwDiameter',
-        message: '螺絲通孔直徑必須大於 0 且不大於頭部直徑。',
+        messageId: 'validation.invalid',
       })
     }
     if (
@@ -584,19 +581,19 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     ) {
       issues.push({
         field: 'screwHeadDiameter',
-        message: '螺絲頭直徑必須大於 0 且不超過格距。',
+        messageId: 'validation.invalid',
       })
     }
     if (screwHeadInset < 0) {
       issues.push({
         field: 'screwHeadInset',
-        message: '螺絲頭內縮不可小於 0。',
+        messageId: 'validation.invalid',
       })
     }
     if (screwHeadCountersunkDegree <= 0 || screwHeadCountersunkDegree >= 180) {
       issues.push({
         field: 'screwHeadCountersunkDegree',
-        message: '沉頭角度必須介於 0–180 度之間。',
+        messageId: 'validation.invalid',
       })
     }
     if (
@@ -605,7 +602,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     ) {
       issues.push({
         field: 'screwHeadInset',
-        message: '螺絲頭內縮不可超過板材厚度。',
+        messageId: 'validation.invalid',
       })
     }
   }
@@ -621,8 +618,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     if (!areEqualScrewDimensions(candidate, DEFAULT_SCREW_DIMENSIONS)) {
       issues.push({
         field: 'screwKind',
-        message:
-          'official-default 必須使用官方 SCAD 的螺絲尺寸；其他尺寸請選 custom。',
+        messageId: 'validation.invalid',
       })
     }
   }
@@ -632,7 +628,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
   if (!Array.isArray(customPositions)) {
     issues.push({
       field: 'customScrewPositions',
-      message: 'customScrewPositions 必須是陣列。',
+      messageId: 'validation.invalid',
     })
   } else if (rowsAreValid && columnsAreValid) {
     const seen = new Set<string>()
@@ -646,7 +642,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
       ) {
         issues.push({
           field: 'customScrewPositions',
-          message: '自訂螺絲孔位必須位於內部交界格點。',
+          messageId: 'validation.invalid',
         })
         continue
       }
@@ -658,7 +654,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
       if (seen.has(key)) {
         issues.push({
           field: 'customScrewPositions',
-          message: '自訂螺絲孔位不可重複。',
+          messageId: 'validation.invalid',
         })
         continue
       }
@@ -670,7 +666,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
   if (value.screwMode !== 'custom' && positions.length > 0) {
     issues.push({
       field: 'customScrewPositions',
-      message: '只有 custom 模式可以保存自訂螺絲孔位。',
+      messageId: 'validation.invalid',
     })
   }
 

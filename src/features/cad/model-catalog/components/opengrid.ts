@@ -46,10 +46,9 @@ export const opengridDefinition: ModelDefinition = {
   id: 'opengrid',
   buildKey: 'opengrid',
   family: 'opengrid',
-  displayName: 'opengrid board (底版)',
-  selectionLabel: 'Board (底版)',
-  selectionDescription:
-    '依官方 OpenGrid SCAD 與公開 Hybrid 定義產生 Full、Lite、Heavy、Hybrid 四種 28 mm 網格底板；Hybrid 為外圍 Heavy、內部 Full，可調整 X/Y 半格方向、倒角、側邊接頭與交界螺絲孔。',
+  displayName: 'models.model.opengrid.name',
+  selectionLabel: 'models.model.opengrid.selection',
+  selectionDescription: 'models.model.opengrid.description',
   parameterSchema: [],
   defaultParameters: {
     ...OPENGRID_CONFIGURATION.defaultParameters,
@@ -58,7 +57,7 @@ export const opengridDefinition: ModelDefinition = {
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {
     src: '/model-previews/opengrid.png',
-    alt: 'opengrid board (底版) 預覽',
+    alt: 'models.model.opengrid.alt',
     width: 640,
     height: 400,
   },

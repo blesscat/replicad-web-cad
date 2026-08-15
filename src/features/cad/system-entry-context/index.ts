@@ -15,13 +15,13 @@ export const OPEN_GRID_SYSTEM_CONTEXTS: readonly OpenGridSystemContext[] = [
   'wall',
 ]
 
-const SYSTEM_CONTEXT_LABELS: Record<OpenGridSystemContext, string> = {
-  desk: 'Desk System',
-  wall: 'Wall Related',
+const SYSTEM_CONTEXT_LABEL_KEYS: Record<OpenGridSystemContext, string> = {
+  desk: 'models.context.desk',
+  wall: 'models.context.wall',
 }
 
-export function systemContextLabel(context: OpenGridSystemContext): string {
-  return SYSTEM_CONTEXT_LABELS[context]
+export function systemContextLabelKey(context: OpenGridSystemContext): string {
+  return SYSTEM_CONTEXT_LABEL_KEYS[context]
 }
 
 export function parseSystemContext(

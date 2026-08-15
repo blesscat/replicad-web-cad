@@ -1,7 +1,7 @@
 import type { ModelId } from '../../../cad-contract/units'
 import {
   systemContextQuery,
-  systemContextLabel,
+  systemContextLabelKey,
   type OpenGridSystemContext,
 } from '../system-entry-context'
 import { boxDefinition } from './components/box'
@@ -25,6 +25,7 @@ import type {
 } from './types'
 
 export { displayParameterLabel } from './labels'
+export { unitLabelFor } from './labels'
 export type {
   ModelDefinition,
   ModelFamily,
@@ -71,18 +72,18 @@ export const modelFamilyMetadata: Readonly<
 > = {
   hsw: {
     key: 'hsw',
-    label: 'HSW 系列',
-    description: '適合 HSW 六角蜂巢系統的模型。',
+    label: 'models.family.hsw',
+    description: 'models.family.hswDescription',
   },
   opengrid: {
     key: 'opengrid',
-    label: 'OpenGrid 系列',
-    description: '包含官方 OpenGrid 網格模型與自製相容配件。',
+    label: 'models.family.opengrid',
+    description: 'models.family.opengridDescription',
   },
   other: {
     key: 'other',
-    label: '其他模型',
-    description: '其他獨立的 CAD component。',
+    label: 'models.family.other',
+    description: 'models.family.otherDescription',
   },
 }
 
@@ -94,7 +95,7 @@ function contextPreviewFor(
   return {
     ...definition.previewImage,
     src: `/model-previews/${definition.id}-${context}.png`,
-    alt: `${definition.previewImage.alt}（${systemContextLabel(context)}）`,
+    alt: definition.previewImage.alt,
   }
 }
 
@@ -127,12 +128,12 @@ function openGridSubgroups(
   return [
     {
       key: 'desk',
-      label: systemContextLabel('desk'),
+      label: 'models.context.desk',
       definitions: desk,
     },
     {
       key: 'wall',
-      label: systemContextLabel('wall'),
+      label: 'models.context.wall',
       definitions: wall,
     },
   ]

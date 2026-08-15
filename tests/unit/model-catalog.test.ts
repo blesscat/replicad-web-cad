@@ -86,8 +86,8 @@ describe('CAD component catalog', () => {
 
     expect(groups.map((group) => group.key)).toEqual(['opengrid', 'hsw'])
     expect(groups.map((group) => group.label)).toEqual([
-      'OpenGrid 系列',
-      'HSW 系列',
+      'models.family.opengrid',
+      'models.family.hsw',
     ])
 
     expect(groups[0]?.definitions.map((definition) => definition.id)).toEqual([
@@ -120,15 +120,21 @@ describe('CAD component catalog', () => {
 
   it('provides family-relative selection labels without changing full names', () => {
     const expectedLabels = [
-      ['opengrid', 'Board (底版)'],
-      ['opengrid-snap', 'Snap (咔咔)'],
-      ['opengrid-pillar', 'Locating Post (定位柱)'],
-      ['opengrid-divider', 'divider (分隔牆)'],
-      ['opengrid-stackable-box', 'Grid Box (方盒)'],
-      ['opengrid-stackable-cylinder', 'Round Box (圓盒)'],
-      ['opengrid-snap-remover', 'Snap Remover'],
-      ['opengrid-open-shelf', 'Open Shelf (斜開格櫃)'],
-      ['hsw-cell', '六角蜂巢'],
+      ['opengrid', 'models.model.opengrid.selection'],
+      ['opengrid-snap', 'models.model.opengrid-snap.selection'],
+      ['opengrid-pillar', 'models.model.opengrid-pillar.selection'],
+      ['opengrid-divider', 'models.model.opengrid-divider.selection'],
+      [
+        'opengrid-stackable-box',
+        'models.model.opengrid-stackable-box.selection',
+      ],
+      [
+        'opengrid-stackable-cylinder',
+        'models.model.opengrid-stackable-cylinder.selection',
+      ],
+      ['opengrid-snap-remover', 'models.model.opengrid-snap-remover.selection'],
+      ['opengrid-open-shelf', 'models.model.opengrid-open-shelf.selection'],
+      ['hsw-cell', 'models.model.hsw-cell.selection'],
     ] as const
 
     for (const [id, selectionLabel] of expectedLabels) {
@@ -136,10 +142,14 @@ describe('CAD component catalog', () => {
     }
 
     expect(getModelDefinition('opengrid')?.displayName).toBe(
-      'opengrid board (底版)',
+      'models.model.opengrid.name',
     )
-    expect(getModelDefinition('opengrid-snap')?.displayName).toBe('Snap (咔咔)')
-    expect(getModelDefinition('hsw-cell')?.displayName).toBe('HSW 六角蜂巢')
+    expect(getModelDefinition('opengrid-snap')?.displayName).toBe(
+      'models.model.opengrid-snap.name',
+    )
+    expect(getModelDefinition('hsw-cell')?.displayName).toBe(
+      'models.model.hsw-cell.name',
+    )
   })
 
   it('exposes independent model definitions including OpenGrid', () => {
@@ -159,8 +169,10 @@ describe('CAD component catalog', () => {
     ])
 
     const grid = getModelDefinition('modular-grid-base')
-    expect(grid?.displayName).toBe('模組化網格底板')
-    expect(grid?.selectionDescription).toContain('網格')
+    expect(grid?.displayName).toBe('models.model.modular-grid-base.name')
+    expect(grid?.selectionDescription).toBe(
+      'models.model.modular-grid-base.description',
+    )
     expect(grid?.parameterSchema.map((field) => field.key)).toEqual([
       'rows',
       'columns',
@@ -185,8 +197,8 @@ describe('CAD component catalog', () => {
     })
 
     const hsw = getModelDefinition('hsw-cell')
-    expect(hsw?.displayName).toBe('HSW 六角蜂巢')
-    expect(hsw?.selectionDescription).toContain('平頂六角')
+    expect(hsw?.displayName).toBe('models.model.hsw-cell.name')
+    expect(hsw?.selectionDescription).toBe('models.model.hsw-cell.description')
     expect(hsw?.parameterSchema).toEqual([
       expect.objectContaining({
         key: 'rows',
@@ -217,7 +229,9 @@ describe('CAD component catalog', () => {
     })
 
     const hexagonalColumn = getModelDefinition('hexagonal-column')
-    expect(hexagonalColumn?.displayName).toBe('可調六角柱')
+    expect(hexagonalColumn?.displayName).toBe(
+      'models.model.hexagonal-column.name',
+    )
     expect(hexagonalColumn?.parameterSchema).toEqual([
       expect.objectContaining({
         key: 'height',
@@ -325,7 +339,7 @@ describe('CAD component catalog', () => {
 
   it('keeps OpenGrid parameters isolated from other model definitions', () => {
     const opengrid = getModelDefinition('opengrid')
-    expect(opengrid?.displayName).toContain('opengrid board')
+    expect(opengrid?.displayName).toBe('models.model.opengrid.name')
     expect(opengrid?.defaultParameters).toEqual(opengridParameters())
     const parameters = opengridParameters({
       variant: 'Lite' as const,
@@ -361,10 +375,10 @@ describe('CAD component catalog', () => {
 
   it('registers Snap profiles and optional body features', () => {
     const snap = getModelDefinition('opengrid-snap')
-    expect(snap?.displayName).toBe('Snap (咔咔)')
-    expect(snap?.selectionDescription).toContain('Full')
-    expect(snap?.selectionDescription).toContain('Lite')
-    expect(snap?.selectionDescription).toContain('Directional')
+    expect(snap?.displayName).toBe('models.model.opengrid-snap.name')
+    expect(snap?.selectionDescription).toBe(
+      'models.model.opengrid-snap.description',
+    )
     expect(snap?.parameterSchema.map((field) => field.key)).toEqual(['offset'])
     expect(snap?.parameterSchema[0]).toMatchObject({
       control: 'range',
@@ -481,7 +495,7 @@ describe('CAD component catalog', () => {
       id: 'opengrid-stackable-box',
       buildKey: 'opengrid-stackable-box',
       family: 'opengrid',
-      displayName: 'Grid Box (方盒)',
+      displayName: 'models.model.opengrid-stackable-box.name',
     })
     expect(definition?.parameterSchema.slice(0, 3)).toEqual([
       expect.objectContaining({
@@ -524,14 +538,15 @@ describe('CAD component catalog', () => {
     ])
     expect(definition?.parameterSchema.at(5)).toMatchObject({
       key: 'openingPlusXAngle',
-      unit: '°',
+      unit: 'degree',
       sliderDirection: 'rtl',
     })
     expect(definition?.defaultParameters).toEqual(
       OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
     )
-    expect(definition?.selectionDescription).toContain('無角座、角座孔')
-    expect(definition?.selectionDescription).toContain('Ø5 × 3 mm')
+    expect(definition?.selectionDescription).toBe(
+      'models.model.opengrid-stackable-box.description',
+    )
     expect(
       definition?.validateParameters({
         ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
@@ -588,7 +603,7 @@ describe('CAD component catalog', () => {
       id: 'opengrid-divider',
       buildKey: 'opengrid-divider',
       family: 'opengrid',
-      displayName: 'divider (分隔牆)',
+      displayName: 'models.model.opengrid-divider.name',
     })
     expect(definition?.parameterSchema.map((field) => field.key)).toEqual([
       'left',
@@ -624,13 +639,9 @@ describe('CAD component catalog', () => {
       sliderMin: 2,
       sliderMax: 200,
     })
-    expect(definition?.selectionDescription).not.toContain(
-      '官方 OpenGrid 28 mm 整格／14 mm 半格',
+    expect(definition?.selectionDescription).toBe(
+      'models.model.opengrid-divider.description',
     )
-    expect(definition?.selectionDescription).not.toContain(
-      '高度文字輸入 2–500 mm',
-    )
-    expect(definition?.selectionDescription).not.toContain('slider 2–200 mm')
     expect(definition?.defaultParameters).toEqual({
       left: 1.5,
       right: 1.5,
@@ -656,13 +667,11 @@ describe('CAD component catalog', () => {
       id: 'opengrid-pillar',
       buildKey: 'opengrid-pillar',
       family: 'opengrid',
-      displayName: 'Locating Post (定位柱)',
+      displayName: 'models.model.opengrid-pillar.name',
     })
-    expect(definition?.selectionDescription).toContain('Ø5 mm')
-    expect(definition?.selectionDescription).toContain('堆疊版 9 mm')
-    expect(definition?.selectionDescription).toContain('薄殼版 6 mm')
-    expect(definition?.selectionDescription).toContain('-0.5～0.5 mm')
-    expect(definition?.selectionDescription).toContain('物件定位用')
+    expect(definition?.selectionDescription).toBe(
+      'models.model.opengrid-pillar.description',
+    )
     expect(definition?.parameterSchema.map((field) => field.key)).toEqual([
       'length',
       'offset',
@@ -728,7 +737,7 @@ describe('CAD component catalog', () => {
       id: 'opengrid-stackable-cylinder',
       buildKey: 'opengrid-stackable-cylinder',
       family: 'opengrid',
-      displayName: 'Round Box (圓盒)',
+      displayName: 'models.model.opengrid-stackable-cylinder.name',
     })
     expect(definition?.parameterSchema).toHaveLength(14)
     expect(definition?.parameterSchema).toEqual(
@@ -751,7 +760,7 @@ describe('CAD component catalog', () => {
         }),
         expect.objectContaining({
           key: 'openingPlusXAngle',
-          unit: '°',
+          unit: 'degree',
           min: 1,
           max: 90,
           step: 1,
@@ -762,8 +771,9 @@ describe('CAD component catalog', () => {
     expect(definition?.defaultParameters).toEqual(
       OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
     )
-    expect(definition?.selectionDescription).toContain('無角座、角座孔')
-    expect(definition?.selectionDescription).toContain('Ø5 × 3 mm')
+    expect(definition?.selectionDescription).toBe(
+      'models.model.opengrid-stackable-cylinder.description',
+    )
     expect(
       definition?.validateParameters({ diameter: 60, height: 20 }),
     ).toEqual({

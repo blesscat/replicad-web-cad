@@ -33,7 +33,7 @@ import { OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS } from '../../src/cad-contract/u
 import { CadWorkerRuntime } from '../../src/workers/cad.worker'
 
 const base = {
-  version: 1 as const,
+  version: 2 as const,
   requestId: 'open-shelf-base-request',
   operationId: 'open-shelf-base-operation',
 }

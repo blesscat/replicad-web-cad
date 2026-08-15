@@ -1,15 +1,17 @@
 <script lang="ts">
   type Props = {
+    locale: import('../../../i18n').Locale
     onRestore: () => void
   }
 
-  let { onRestore }: Props = $props()
+  let { locale, onRestore }: Props = $props()
+  import { translate } from '../../../i18n'
 </script>
 
 <button
   class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-border-field bg-panel px-3 py-2 text-sm font-semibold text-ink hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
   type="button"
-  aria-label="全部恢復預設"
+  aria-label={translate(locale, 'common.restoreAll')}
   onclick={onRestore}
 >
   <svg
@@ -25,5 +27,5 @@
     <path d="M9 14 4 9l5-5" />
     <path d="M4 9h10a6 6 0 0 1 6 6v1" />
   </svg>
-  全部恢復預設
+  {translate(locale, 'common.restoreAll')}
 </button>

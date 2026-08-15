@@ -1,12 +1,7 @@
 ---
-import SiteLayout from '../../layouts/SiteLayout.astro'
-import CadSystemContextLabel from '../../components/cad/CadSystemContextLabel.svelte'
-import CadWorkspace from '../../components/cad/CadWorkspace.svelte'
-import {
-  getModelDefinition,
-  modelDefinitions,
-} from '../../features/cad/model-catalog'
+import { modelDefinitions } from '../../features/cad/model-catalog'
 import type { ModelId } from '../../cad-contract/units'
+import { translate } from '../../i18n'
 
 interface Props {
   modelId: ModelId
@@ -19,53 +14,32 @@ export function getStaticPaths() {
   }))
 }
 
-const { modelId } = Astro.props
-const definition = getModelDefinition(modelId)
-
-if (!definition) {
-  throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
-}
+const { modelId } = Astro.props as Props
+const targetPath = `/zh-Hant/cad/${modelId}`
+const modelDefinition = modelDefinitions.find(
+  (definition) => definition.id === modelId,
+)
+const legacyTitle = modelDefinition
+  ? translate('zh-Hant', modelDefinition.displayName)
+  : translate('zh-Hant', 'cad.selectModel.title')
 ---
 
-<SiteLayout
-  fullWidth
-  title={`${definition.displayName} CAD workspace | Shape Shortcut`}
-  description={`Browser-based ${definition.displayName} CAD workspace.`}
->
-  <section aria-labelledby="cad-title">
-    <header
-      class="mb-4 flex flex-wrap items-center justify-between gap-3"
-      data-testid="cad-header"
-    >
-      <div class="min-w-0">
-        <CadSystemContextLabel client:only="svelte" modelId={modelId} />
-        <h1 class="m-0 text-4xl font-semibold leading-tight" id="cad-title">
-          目前編輯：{definition.displayName}
-        </h1>
-      </div>
-      <a
-        class="rounded-lg border border-border-card bg-panel px-[0.8rem] py-[0.6rem] text-base text-ink no-underline hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-        href="/models"
-      >
-        返回模型選擇
-      </a>
-    </header>
-    <div
-      class="rounded-2xl border border-border-card bg-panel p-5 shadow-card"
-      id="cad-fallback"
-    >
-      <h2 class="mb-4 text-2xl font-semibold leading-tight">
-        正在載入 {definition.displayName} CAD workspace
-      </h2>
-      <p class="mb-4 leading-normal">
-        需要 JavaScript、WebAssembly、Web Worker 與 WebGL 才能顯示互動式預覽。
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex" />
+    <meta http-equiv="refresh" content={`0;url=${targetPath}`} />
+    <link rel="canonical" href={targetPath} />
+    <title>{legacyTitle} | Shape Shortcut</title>
+    <script is:inline define:vars={{ targetPath }}>
+      window.location.replace(targetPath + window.location.search)
+    </script>
+  </head>
+  <body>
+    <main>
+      <p>
+        <a href={targetPath}>{translate('zh-Hant', 'common.backToModels')}</a>
       </p>
-      <p class="mb-0">
-        <a class="text-ink underline underline-offset-4" href="/models"
-          >返回模型選擇 →</a
-        >
-      </p>
-    </div>
-    <CadWorkspace client:only="svelte" modelId={modelId} />
-  </section>
-</SiteLayout>
+    </main>
+  </body>
+</html>

@@ -21,7 +21,7 @@ export type PillarBounds = {
 
 export type PillarValidationIssue = {
   field: PillarParameterKey | 'parameters'
-  message: string
+  messageId: string
 }
 
 export type PillarValidation =
@@ -97,7 +97,7 @@ export function validatePillarParameters(value: unknown): PillarValidation {
   if (!isRecord(value)) {
     return {
       valid: false,
-      issues: [{ field: 'parameters', message: '需要提供圓柱支柱參數。' }],
+      issues: [{ field: 'parameters', messageId: 'validation.invalid' }],
     }
   }
 
@@ -110,16 +110,14 @@ export function validatePillarParameters(value: unknown): PillarValidation {
   if (!hasExactKeys(value, expectedKeys)) {
     issues.push({
       field: 'parameters',
-      message: isPositioningMode
-        ? '物件定位用支柱只接受 mode、length、offset。'
-        : '固定版支柱只接受 mode、offset。',
+      messageId: 'validation.invalid',
     })
   }
 
   if (mode !== 'standard' && mode !== 'thin-shell' && !isPositioningMode) {
     issues.push({
       field: 'mode',
-      message: '模式必須是 standard、thin-shell 或 positioning。',
+      messageId: 'validation.invalid',
     })
   }
 
@@ -128,12 +126,12 @@ export function validatePillarParameters(value: unknown): PillarValidation {
     if (typeof length !== 'number' || !Number.isFinite(length)) {
       issues.push({
         field: 'length',
-        message: '物件定位用支柱長度必須是有限的整數 mm。',
+        messageId: 'validation.invalid',
       })
     } else if (!Number.isSafeInteger(length)) {
       issues.push({
         field: 'length',
-        message: '物件定位用支柱長度只接受整數 mm。',
+        messageId: 'validation.invalid',
       })
     } else if (
       length < PILLAR_CONFIGURATION.positioningMinLength ||
@@ -141,7 +139,7 @@ export function validatePillarParameters(value: unknown): PillarValidation {
     ) {
       issues.push({
         field: 'length',
-        message: `物件定位用支柱長度必須介於 ${PILLAR_CONFIGURATION.positioningMinLength}–${PILLAR_CONFIGURATION.positioningMaxLength} mm。`,
+        messageId: 'validation.invalid',
       })
     }
   }
@@ -150,7 +148,7 @@ export function validatePillarParameters(value: unknown): PillarValidation {
   if (typeof offset !== 'number' || !Number.isFinite(offset)) {
     issues.push({
       field: 'offset',
-      message: 'offset 必須是有限的小數 mm。',
+      messageId: 'validation.invalid',
     })
   } else if (
     offset < PILLAR_CONFIGURATION.offsetMin ||
@@ -158,12 +156,12 @@ export function validatePillarParameters(value: unknown): PillarValidation {
   ) {
     issues.push({
       field: 'offset',
-      message: `offset 必須介於 ${PILLAR_CONFIGURATION.offsetMin}–${PILLAR_CONFIGURATION.offsetMax} mm。`,
+      messageId: 'validation.invalid',
     })
   } else if (!isValidOffset(offset)) {
     issues.push({
       field: 'offset',
-      message: `offset 必須以 ${PILLAR_CONFIGURATION.offsetStep} mm 為步進。`,
+      messageId: 'validation.invalid',
     })
   }
 

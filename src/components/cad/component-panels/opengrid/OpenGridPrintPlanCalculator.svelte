@@ -6,6 +6,7 @@
     OpenGridPrintPlanSuccess,
   } from '../../../../features/cad/grid-dimensions'
   import ParameterField from '../ParameterField.svelte'
+  import { translate, type Locale } from '../../../../i18n'
 
   type PrimaryPiece = {
     rows: number
@@ -13,12 +14,13 @@
   }
 
   type Props = {
+    locale: Locale
     calculate: (input: OpenGridPrintPlanInput) => OpenGridPrintPlanResult
     onApply: (piece: PrimaryPiece) => void
     onInvalid?: () => void
   }
 
-  let { calculate, onApply, onInvalid }: Props = $props()
+  let { locale, calculate, onApply, onInvalid }: Props = $props()
 
   let targetX = $state('')
   let targetY = $state('')
@@ -65,9 +67,10 @@
   function groupLabel(
     role: OpenGridPrintPlanSuccess['pieceGroups'][number]['role'],
   ): string {
-    if (role === 'primary') return '主要片'
-    if (role === 'edge') return '邊緣片'
-    return '角落片'
+    if (role === 'primary')
+      return translate(locale, 'panel.printPlan.role.primary')
+    if (role === 'edge') return translate(locale, 'panel.printPlan.role.edge')
+    return translate(locale, 'panel.printPlan.role.corner')
   }
 </script>
 
@@ -76,17 +79,20 @@
   data-testid="grid-dimension-calculator"
 >
   <div>
-    <h3 class="m-0 text-base font-semibold">列印分片計算</h3>
+    <h3 class="m-0 text-base font-semibold">
+      {translate(locale, 'panel.printPlan.title')}
+    </h3>
     <p class="mt-1 mb-0 text-sm text-muted">
-      輸入目標與列印機可用尺寸，推薦 OpenGrid 分片方案。
+      {translate(locale, 'panel.printPlan.description')}
     </p>
   </div>
 
   <div class="grid min-w-0 gap-2">
     <div class="grid min-w-0 grid-cols-2 gap-2">
       <ParameterField
-        label="目標 X"
-        unit="mm"
+        {locale}
+        label={translate(locale, 'panel.printPlan.targetX')}
+        unit={translate(locale, 'unit.mm')}
         error={errors.targetX}
         errorId="opengrid-print-plan-target-x-error"
       >
@@ -95,7 +101,7 @@
             ? 'opengrid-print-plan-target-x-error'
             : undefined}
           aria-invalid={Boolean(errors.targetX)}
-          aria-label="目標 X（mm）"
+          aria-label={`${translate(locale, 'panel.printPlan.targetX')}（${translate(locale, 'unit.mm')}）`}
           class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
           inputmode="decimal"
           type="text"
@@ -105,8 +111,9 @@
       </ParameterField>
 
       <ParameterField
-        label="目標 Y"
-        unit="mm"
+        {locale}
+        label={translate(locale, 'panel.printPlan.targetY')}
+        unit={translate(locale, 'unit.mm')}
         error={errors.targetY}
         errorId="opengrid-print-plan-target-y-error"
       >
@@ -115,7 +122,7 @@
             ? 'opengrid-print-plan-target-y-error'
             : undefined}
           aria-invalid={Boolean(errors.targetY)}
-          aria-label="目標 Y（mm）"
+          aria-label={`${translate(locale, 'panel.printPlan.targetY')}（${translate(locale, 'unit.mm')}）`}
           class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
           inputmode="decimal"
           type="text"
@@ -127,8 +134,9 @@
 
     <div class="grid min-w-0 grid-cols-2 gap-2">
       <ParameterField
-        label="列印機 X"
-        unit="mm"
+        {locale}
+        label={translate(locale, 'panel.printPlan.printerX')}
+        unit={translate(locale, 'unit.mm')}
         error={errors.printerX}
         errorId="opengrid-print-plan-printer-x-error"
       >
@@ -137,7 +145,7 @@
             ? 'opengrid-print-plan-printer-x-error'
             : undefined}
           aria-invalid={Boolean(errors.printerX)}
-          aria-label="列印機 X（mm）"
+          aria-label={`${translate(locale, 'panel.printPlan.printerX')}（${translate(locale, 'unit.mm')}）`}
           class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
           inputmode="decimal"
           type="text"
@@ -147,8 +155,9 @@
       </ParameterField>
 
       <ParameterField
-        label="列印機 Y"
-        unit="mm"
+        {locale}
+        label={translate(locale, 'panel.printPlan.printerY')}
+        unit={translate(locale, 'unit.mm')}
         error={errors.printerY}
         errorId="opengrid-print-plan-printer-y-error"
       >
@@ -157,7 +166,7 @@
             ? 'opengrid-print-plan-printer-y-error'
             : undefined}
           aria-invalid={Boolean(errors.printerY)}
-          aria-label="列印機 Y（mm）"
+          aria-label={`${translate(locale, 'panel.printPlan.printerY')}（${translate(locale, 'unit.mm')}）`}
           class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
           inputmode="decimal"
           type="text"
@@ -173,7 +182,7 @@
     type="button"
     onclick={handleCalculate}
   >
-    計算列印分片
+    {translate(locale, 'panel.printPlan.calculate')}
   </button>
 
   {#if plan}
@@ -183,32 +192,50 @@
       aria-live="polite"
     >
       <p class="m-0">
-        目標：{plan.target.columns} × {plan.target.rows} 格（完整格數；{formatDimension(
-          plan.target.width,
-        )} × {formatDimension(plan.target.depth)} mm）
+        {translate(locale, 'panel.printPlan.target', {
+          columns: plan.target.columns,
+          rows: plan.target.rows,
+          width: formatDimension(plan.target.width),
+          depth: formatDimension(plan.target.depth),
+        })}
       </p>
       <p class="m-0">
-        列印機上限：{plan.printer.columns} × {plan.printer.rows} 格（完整格數；{formatDimension(
-          plan.printer.width,
-        )} × {formatDimension(plan.printer.depth)} mm）
+        {translate(locale, 'panel.printPlan.printer', {
+          columns: plan.printer.columns,
+          rows: plan.printer.rows,
+          width: formatDimension(plan.printer.width),
+          depth: formatDimension(plan.printer.depth),
+        })}
       </p>
       <p class="m-0 font-semibold">
-        主要片：{plan.primary.columns} × {plan.primary.rows} 格（完整格數；{formatDimension(
-          plan.primary.width,
-        )} × {formatDimension(plan.primary.depth)} mm）
+        {translate(locale, 'panel.printPlan.primary', {
+          columns: plan.primary.columns,
+          rows: plan.primary.rows,
+          width: formatDimension(plan.primary.width),
+          depth: formatDimension(plan.primary.depth),
+        })}
       </p>
       <ul class="m-0 grid gap-1 pl-5">
         {#each plan.pieceGroups as group}
           <li>
-            {groupLabel(group.role)}：{group.columns} × {group.rows} 格（完整格數；{formatDimension(
-              group.width,
-            )} × {formatDimension(group.depth)} mm）× {group.quantity} 片
+            {translate(locale, 'panel.printPlan.group', {
+              role: groupLabel(group.role),
+              columns: group.columns,
+              rows: group.rows,
+              width: formatDimension(group.width),
+              depth: formatDimension(group.depth),
+              quantity: group.quantity,
+            })}
           </li>
         {/each}
       </ul>
-      <p class="m-0 font-semibold">共 {plan.totalPieces} 片</p>
+      <p class="m-0 font-semibold">
+        {translate(locale, 'panel.printPlan.total', {
+          count: plan.totalPieces,
+        })}
+      </p>
       <p class="m-0 text-muted">
-        目前預覽套用主要片；其他收尾片需依方案個別設定。
+        {translate(locale, 'panel.printPlan.note')}
       </p>
     </div>
   {/if}

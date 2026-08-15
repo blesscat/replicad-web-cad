@@ -4,6 +4,7 @@ import type {
   ModelParameterKey,
   ModelParameterValues,
   OpenGridParameters,
+  ValidationIssue,
 } from '../../../../cad-contract/units'
 import type { CadAction, CadState } from '../../../../features/cad/state'
 import type { CadProgress } from '../../../../features/cad/progress'
@@ -11,7 +12,7 @@ import type { CadWorkerClient } from '../../../../features/cad/worker-client'
 import type { ExportRequest, OperationRecord, RawParameters } from '../types'
 
 export type FieldErrors = Partial<
-  Record<ModelParameterKey | 'parameters', string>
+  Record<ModelParameterKey | 'parameters', ValidationIssue>
 >
 
 export type MutableRef<T> = { current: T }

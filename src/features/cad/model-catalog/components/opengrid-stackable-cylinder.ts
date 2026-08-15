@@ -14,8 +14,8 @@ const OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA: ReadonlyArray<ParameterField
   [
     {
       key: 'diameter',
-      label: '外徑',
-      axis: '直徑',
+      label: 'parameter.outerDiameter',
+      axis: 'D',
       unit: 'mm',
       control: 'range-text',
       defaultValue: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultDiameter,
@@ -27,7 +27,7 @@ const OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA: ReadonlyArray<ParameterField
     },
     {
       key: 'height',
-      label: '高度',
+      label: 'parameter.height',
       axis: 'Z',
       unit: 'mm',
       control: 'range-text',
@@ -40,7 +40,7 @@ const OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA: ReadonlyArray<ParameterField
     },
     {
       key: 'openingPlusXDepth',
-      label: '下切深度',
+      label: 'parameter.openingDepth',
       axis: '+X',
       unit: 'mm',
       control: 'range-text',
@@ -54,7 +54,7 @@ const OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA: ReadonlyArray<ParameterField
     },
     {
       key: 'openingPlusXBottomLength',
-      label: '切口底部長度',
+      label: 'parameter.openingBottomLength',
       axis: '+X',
       unit: 'mm',
       control: 'range-text',
@@ -70,9 +70,9 @@ const OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA: ReadonlyArray<ParameterField
     },
     {
       key: 'openingPlusXAngle',
-      label: '側壁角度',
+      label: 'parameter.sideWallAngle',
       axis: '+X',
-      unit: '°',
+      unit: 'degree',
       control: 'range-text',
       defaultValue:
         OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultOpeningAngle,
@@ -85,7 +85,7 @@ const OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA: ReadonlyArray<ParameterField
     },
     {
       key: 'openingMinusXDepth',
-      label: '下切深度',
+      label: 'parameter.openingDepth',
       axis: '-X',
       unit: 'mm',
       control: 'range-text',
@@ -99,7 +99,7 @@ const OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA: ReadonlyArray<ParameterField
     },
     {
       key: 'openingMinusXBottomLength',
-      label: '切口底部長度',
+      label: 'parameter.openingBottomLength',
       axis: '-X',
       unit: 'mm',
       control: 'range-text',
@@ -115,9 +115,9 @@ const OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA: ReadonlyArray<ParameterField
     },
     {
       key: 'openingMinusXAngle',
-      label: '側壁角度',
+      label: 'parameter.sideWallAngle',
       axis: '-X',
-      unit: '°',
+      unit: 'degree',
       control: 'range-text',
       defaultValue:
         OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultOpeningAngle,
@@ -130,7 +130,7 @@ const OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA: ReadonlyArray<ParameterField
     },
     {
       key: 'openingPlusYDepth',
-      label: '下切深度',
+      label: 'parameter.openingDepth',
       axis: '+Y',
       unit: 'mm',
       control: 'range-text',
@@ -144,7 +144,7 @@ const OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA: ReadonlyArray<ParameterField
     },
     {
       key: 'openingPlusYBottomLength',
-      label: '切口底部長度',
+      label: 'parameter.openingBottomLength',
       axis: '+Y',
       unit: 'mm',
       control: 'range-text',
@@ -160,9 +160,9 @@ const OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA: ReadonlyArray<ParameterField
     },
     {
       key: 'openingPlusYAngle',
-      label: '側壁角度',
+      label: 'parameter.sideWallAngle',
       axis: '+Y',
-      unit: '°',
+      unit: 'degree',
       control: 'range-text',
       defaultValue:
         OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultOpeningAngle,
@@ -175,7 +175,7 @@ const OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA: ReadonlyArray<ParameterField
     },
     {
       key: 'openingMinusYDepth',
-      label: '下切深度',
+      label: 'parameter.openingDepth',
       axis: '-Y',
       unit: 'mm',
       control: 'range-text',
@@ -189,7 +189,7 @@ const OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA: ReadonlyArray<ParameterField
     },
     {
       key: 'openingMinusYBottomLength',
-      label: '切口底部長度',
+      label: 'parameter.openingBottomLength',
       axis: '-Y',
       unit: 'mm',
       control: 'range-text',
@@ -205,9 +205,9 @@ const OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA: ReadonlyArray<ParameterField
     },
     {
       key: 'openingMinusYAngle',
-      label: '側壁角度',
+      label: 'parameter.sideWallAngle',
       axis: '-Y',
-      unit: '°',
+      unit: 'degree',
       control: 'range-text',
       defaultValue:
         OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultOpeningAngle,
@@ -257,16 +257,15 @@ export const opengridStackableCylinderDefinition: ModelDefinition = {
   id: 'opengrid-stackable-cylinder',
   buildKey: 'opengrid-stackable-cylinder',
   family: 'opengrid',
-  displayName: 'Round Box (圓盒)',
-  selectionLabel: 'Round Box (圓盒)',
-  selectionDescription:
-    'Round Box (圓盒)；角座可選無角座、角座孔或向下凸出的 Ø5 × 3 mm 內建角座。',
+  displayName: 'models.model.opengrid-stackable-cylinder.name',
+  selectionLabel: 'models.model.opengrid-stackable-cylinder.selection',
+  selectionDescription: 'models.model.opengrid-stackable-cylinder.description',
   parameterSchema: OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA,
   defaultParameters: { ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {
     src: '/model-previews/opengrid-stackable-cylinder.png',
-    alt: 'Round Box (圓盒) 預覽',
+    alt: 'models.model.opengrid-stackable-cylinder.alt',
     width: 640,
     height: 400,
   },

@@ -1,4 +1,5 @@
 import type { CadError, CadErrorCode, CadErrorStage } from '../errors'
+import { isDiagnosticParams, type DiagnosticParams } from '../diagnostics'
 import type { PreviewTiming } from '../preview-timing'
 import {
   PROTOTYPE_CONFIGURATION,
@@ -9,7 +10,7 @@ import {
   type BoxBounds,
 } from '../units'
 
-export const PROTOCOL_VERSION = 1 as const
+export const PROTOCOL_VERSION = 2 as const
 
 export type ProtocolVersion = typeof PROTOCOL_VERSION
 
@@ -198,7 +199,8 @@ export type OperationErrorEvent = Envelope<'operation.error'> & {
   terminalForRequestId: string
   stage: CadErrorStage
   code: CadErrorCode
-  userMessage: string
+  messageId: string
+  messageParams?: DiagnosticParams
   recoverable: boolean
   generation?: number
   modelRevision?: string
@@ -631,7 +633,10 @@ export function isWorkerEvent(value: unknown): value is WorkerEvent {
         isNonEmptyString(value.terminalForRequestId) &&
         isCadErrorStage(value.stage) &&
         isCadErrorCode(value.code) &&
-        isNonEmptyString(value.userMessage) &&
+        !('userMessage' in value) &&
+        isNonEmptyString(value.messageId) &&
+        (value.messageParams === undefined ||
+          isDiagnosticParams(value.messageParams)) &&
         typeof value.recoverable === 'boolean' &&
         (value.generation === undefined ||
           isPositiveInteger(value.generation)) &&
@@ -667,7 +672,8 @@ export function errorEvent(
     terminalForRequestId,
     stage: error.stage,
     code: error.code,
-    userMessage: error.userMessage,
+    messageId: error.message.messageId,
+    messageParams: error.message.params,
     recoverable: error.recoverable,
     generation: 'generation' in command ? command.generation : undefined,
     modelRevision:

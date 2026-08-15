@@ -24,8 +24,11 @@
   import RestoreButton from '../RestoreButton.svelte'
   import Slider from '../Slider.svelte'
   import type { OpenGridComponentPanelProps } from '../types'
+  import { translate } from '../../../../i18n'
+  import { formatValidationIssue } from '../../../../i18n/diagnostics'
 
   let {
+    locale,
     parameters,
     systemContext,
     fieldErrors,
@@ -477,20 +480,26 @@
   function fieldError(field: keyof OpenGridParameters | 'parameters') {
     return fieldErrors[field]
   }
+
+  function fieldErrorMessage(field: keyof OpenGridParameters | 'parameters') {
+    const issue = fieldError(field)
+    return issue ? formatValidationIssue(locale, issue) : ''
+  }
 </script>
 
 <fieldset class="m-0 grid gap-3 border-0 p-0" data-testid="opengrid-panel">
   <ParameterField
-    label="板型"
+    {locale}
+    label={translate(locale, 'panel.opengrid.profile')}
     changed={parameterChanged('variant')}
     error={fieldError('variant')}
     errorId="opengrid-variant-error"
-    restoreLabel="OpenGrid 板型"
+    restoreLabel={translate(locale, 'panel.opengrid.profileAria')}
     onRestore={() => restoreParameter('variant')}
   >
     <select
       class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-      aria-label="OpenGrid 板型"
+      aria-label={translate(locale, 'panel.opengrid.profileAria')}
       aria-describedby={fieldError('variant')
         ? 'opengrid-variant-error'
         : undefined}
@@ -498,16 +507,23 @@
       value={parameters.variant}
       onchange={(event) => updateSelect('variant', event)}
     >
-      <option value="Lite">Lite（4 mm）</option>
-      <option value="Full">Full（6.8 mm）</option>
-      <option value="Heavy">Heavy（13.8 mm，雙面）</option>
+      <option value="Lite"
+        >{translate(locale, 'panel.opengrid.variant.lite')}</option
+      >
+      <option value="Full"
+        >{translate(locale, 'panel.opengrid.variant.full')}</option
+      >
+      <option value="Heavy"
+        >{translate(locale, 'panel.opengrid.variant.heavy')}</option
+      >
       <option value="Hybrid"
-        >Hybrid（13.8 mm max，外圍 Heavy／內部 Full）</option
+        >{translate(locale, 'panel.opengrid.variant.hybrid')}</option
       >
     </select>
   </ParameterField>
 
   <OpenGridPrintPlanCalculator
+    {locale}
     calculate={calculateOpenGridPrintPlan}
     onApply={handlePrintPlanCalculation}
     onInvalid={onDimensionCalculationInvalid}
@@ -515,16 +531,17 @@
 
   <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
     <ParameterField
-      label="X 半格方向"
+      {locale}
+      label={translate(locale, 'panel.opengrid.halfX')}
       changed={parameterChanged('halfCellX')}
       error={fieldError('halfCellX')}
       errorId="opengrid-half-cell-x-error"
-      restoreLabel="OpenGrid X 半格方向"
+      restoreLabel={translate(locale, 'panel.opengrid.halfXRestore')}
       onRestore={() => restoreParameter('halfCellX')}
     >
       <select
         class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-        aria-label="OpenGrid X 半格方向"
+        aria-label={translate(locale, 'panel.opengrid.halfXRestore')}
         aria-describedby={fieldError('halfCellX')
           ? 'opengrid-half-cell-x-error'
           : undefined}
@@ -532,23 +549,26 @@
         value={parameters.halfCellX}
         onchange={updateHalfCellX}
       >
-        <option value="none">無</option>
-        <option value="left">左</option>
-        <option value="right">右</option>
+        <option value="none">{translate(locale, 'panel.opengrid.none')}</option>
+        <option value="left">{translate(locale, 'panel.opengrid.left')}</option>
+        <option value="right"
+          >{translate(locale, 'panel.opengrid.right')}</option
+        >
       </select>
     </ParameterField>
 
     <ParameterField
-      label="Y 半格方向"
+      {locale}
+      label={translate(locale, 'panel.opengrid.halfY')}
       changed={parameterChanged('halfCellY')}
       error={fieldError('halfCellY')}
       errorId="opengrid-half-cell-y-error"
-      restoreLabel="OpenGrid Y 半格方向"
+      restoreLabel={translate(locale, 'panel.opengrid.halfYRestore')}
       onRestore={() => restoreParameter('halfCellY')}
     >
       <select
         class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-        aria-label="OpenGrid Y 半格方向"
+        aria-label={translate(locale, 'panel.opengrid.halfYRestore')}
         aria-describedby={fieldError('halfCellY')
           ? 'opengrid-half-cell-y-error'
           : undefined}
@@ -556,17 +576,20 @@
         value={parameters.halfCellY}
         onchange={updateHalfCellY}
       >
-        <option value="none">無</option>
-        <option value="top">上</option>
-        <option value="bottom">下</option>
+        <option value="none">{translate(locale, 'panel.opengrid.none')}</option>
+        <option value="top">{translate(locale, 'panel.opengrid.top')}</option>
+        <option value="bottom"
+          >{translate(locale, 'panel.opengrid.bottom')}</option
+        >
       </select>
     </ParameterField>
   </div>
 
   <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
     <ParameterField
+      {locale}
       label="X"
-      unit={`${formatGridCount('x')} 格`}
+      unit={`${formatGridCount('x')} ${translate(locale, 'unit.grid')}`}
       unitAriaLive
       changed={parameterChanged('columns')}
       error={fieldError('columns')}
@@ -588,8 +611,9 @@
       />
     </ParameterField>
     <ParameterField
+      {locale}
       label="Y"
-      unit={`${formatGridCount('y')} 格`}
+      unit={`${formatGridCount('y')} ${translate(locale, 'unit.grid')}`}
       unitAriaLive
       changed={parameterChanged('rows')}
       error={fieldError('rows')}
@@ -611,37 +635,48 @@
   </div>
 
   <p class="m-0 text-sm text-muted">
-    尺寸：{width} × {depth} × {thickness} mm
+    {translate(locale, 'panel.opengrid.dimensions', {
+      width,
+      depth,
+      thickness,
+    })}
   </p>
   {#if parameters.variant === 'Hybrid'}
     <p class="m-0 text-sm text-muted" data-testid="opengrid-hybrid-description">
-      Hybrid：13.8 mm 最大包絡；外圍使用 Heavy 雙層，內部保留標準 Full 介面。
+      {translate(locale, 'panel.opengrid.hybridDescription')}
     </p>
   {/if}
 
   <ParameterField
-    label="倒角模式"
+    {locale}
+    label={translate(locale, 'panel.opengrid.chamfer')}
     changed={parameterChanged('chamfers')}
-    restoreLabel="OpenGrid 倒角模式"
+    restoreLabel={translate(locale, 'panel.opengrid.chamferRestore')}
     onRestore={() => restoreParameter('chamfers')}
   >
     <select
       class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-      aria-label="OpenGrid 倒角模式"
+      aria-label={translate(locale, 'panel.opengrid.chamferRestore')}
       value={parameters.chamfers}
       onchange={(event) => updateSelect('chamfers', event)}
     >
-      <option value="corners">Corners（官方預設）</option>
-      <option value="everywhere">Everywhere</option>
-      <option value="none">None</option>
+      <option value="corners"
+        >{translate(locale, 'panel.opengrid.chamferCorners')}</option
+      >
+      <option value="everywhere"
+        >{translate(locale, 'panel.opengrid.chamferEverywhere')}</option
+      >
+      <option value="none">{translate(locale, 'panel.opengrid.none')}</option>
     </select>
   </ParameterField>
 
   {#if parameters.chamfers !== 'none'}
     <div class="grid gap-2 rounded-lg border border-border-card p-2">
-      <span class="font-[650]">外角倒角</span>
+      <span class="font-[650]"
+        >{translate(locale, 'panel.opengrid.outerChamfer')}</span
+      >
       <div class="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-        {#each [['topLeft', '左上'], ['topRight', '右上'], ['bottomLeft', '左下'], ['bottomRight', '右下']] as item}
+        {#each [['topLeft', 'panel.opengrid.topLeft'], ['topRight', 'panel.opengrid.topRight'], ['bottomLeft', 'panel.opengrid.bottomLeft'], ['bottomRight', 'panel.opengrid.bottomRight']] as item}
           {@const corner = item[0] as keyof OpenGridCornerFlags}
           <div class="relative min-w-0 flex items-center gap-2">
             <label class="flex min-w-0 grow items-center gap-2">
@@ -650,7 +685,7 @@
                 checked={parameters.chamferCorners[corner]}
                 onchange={(event) => updateCorner(corner, event)}
               />
-              {item[1]}
+              {translate(locale, item[1])}
             </label>
           </div>
         {/each}
@@ -659,16 +694,17 @@
   {/if}
 
   <ParameterField
-    label="連接孔"
+    {locale}
+    label={translate(locale, 'panel.opengrid.connector')}
     changed={parameterChanged('connectorHoles')}
     error={fieldError('connectorHoles')}
     errorId="opengrid-connector-holes-error"
-    restoreLabel="OpenGrid 連接孔"
+    restoreLabel={translate(locale, 'panel.opengrid.connectorRestore')}
     onRestore={() => restoreParameter('connectorHoles')}
   >
     <select
       class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-      aria-label="OpenGrid 連接孔"
+      aria-label={translate(locale, 'panel.opengrid.connectorRestore')}
       aria-describedby={fieldError('connectorHoles')
         ? 'opengrid-connector-holes-error'
         : undefined}
@@ -676,16 +712,20 @@
       value={parameters.connectorHoles}
       onchange={(event) => updateSelect('connectorHoles', event)}
     >
-      <option value="enabled">啟用官方接頭孔</option>
-      <option value="none">無</option>
+      <option value="enabled"
+        >{translate(locale, 'panel.opengrid.connectorEnabled')}</option
+      >
+      <option value="none">{translate(locale, 'panel.opengrid.none')}</option>
     </select>
   </ParameterField>
 
   {#if parameters.connectorHoles === 'enabled'}
     <div class="grid gap-2 rounded-lg border border-border-card p-2">
-      <span class="font-[650]">接頭孔側邊</span>
+      <span class="font-[650]"
+        >{translate(locale, 'panel.opengrid.connectorSide')}</span
+      >
       <div class="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-        {#each [['top', '上'], ['right', '右'], ['bottom', '下'], ['left', '左']] as item}
+        {#each [['top', 'panel.opengrid.top'], ['right', 'panel.opengrid.right'], ['bottom', 'panel.opengrid.bottom'], ['left', 'panel.opengrid.left']] as item}
           {@const side = item[0] as keyof OpenGridSideFlags}
           <div class="relative min-w-0 flex items-center gap-2">
             <label class="flex min-w-0 grow items-center gap-2">
@@ -694,7 +734,7 @@
                 checked={parameters.connectorSides[side]}
                 onchange={(event) => updateSide(side, event)}
               />
-              {item[1]}
+              {translate(locale, item[1])}
             </label>
           </div>
         {/each}
@@ -703,16 +743,17 @@
   {/if}
 
   <ParameterField
-    label="螺絲孔模式"
+    {locale}
+    label={translate(locale, 'panel.opengrid.screwMode')}
     changed={parameterChanged('screwMode')}
     error={fieldError('screwMode')}
     errorId="opengrid-screw-mode-error"
-    restoreLabel="OpenGrid 螺絲孔模式"
+    restoreLabel={translate(locale, 'panel.opengrid.screwModeRestore')}
     onRestore={restoreScrewMode}
   >
     <select
       class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-      aria-label="OpenGrid 螺絲孔模式"
+      aria-label={translate(locale, 'panel.opengrid.screwModeRestore')}
       aria-describedby={fieldError('screwMode')
         ? 'opengrid-screw-mode-error'
         : undefined}
@@ -720,25 +761,34 @@
       value={parameters.screwMode}
       onchange={(event) => updateSelect('screwMode', event)}
     >
-      <option value="corners">Corners（官方預設）</option>
-      <option value="everywhere">Everywhere（內部交界）</option>
-      <option value="by-row-column">By Row and Column</option>
-      <option value="custom">Custom</option>
-      <option value="none">None</option>
+      <option value="corners"
+        >{translate(locale, 'panel.opengrid.screwCorners')}</option
+      >
+      <option value="everywhere"
+        >{translate(locale, 'panel.opengrid.screwEverywhere')}</option
+      >
+      <option value="by-row-column"
+        >{translate(locale, 'panel.opengrid.screwByRowColumn')}</option
+      >
+      <option value="custom"
+        >{translate(locale, 'panel.opengrid.custom')}</option
+      >
+      <option value="none">{translate(locale, 'panel.opengrid.none')}</option>
     </select>
   </ParameterField>
 
   {#if parameters.screwMode === 'by-row-column'}
     <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
       <ParameterField
-        label="Every X Rows"
+        {locale}
+        label={translate(locale, 'panel.opengrid.everyRows')}
         changed={parameterChanged('screwEveryRows')}
-        restoreLabel="OpenGrid 每幾行螺絲孔"
+        restoreLabel={translate(locale, 'panel.opengrid.everyRows')}
         onRestore={() => restoreParameter('screwEveryRows')}
       >
         <input
           class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-          aria-label="OpenGrid 每幾行螺絲孔"
+          aria-label={translate(locale, 'panel.opengrid.everyRows')}
           type="number"
           min="1"
           max={OPENGRID_CONFIGURATION.maxGridCount}
@@ -748,14 +798,15 @@
         />
       </ParameterField>
       <ParameterField
-        label="Every X Columns"
+        {locale}
+        label={translate(locale, 'panel.opengrid.everyColumns')}
         changed={parameterChanged('screwEveryColumns')}
-        restoreLabel="OpenGrid 每幾列螺絲孔"
+        restoreLabel={translate(locale, 'panel.opengrid.everyColumns')}
         onRestore={() => restoreParameter('screwEveryColumns')}
       >
         <input
           class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-          aria-label="OpenGrid 每幾列螺絲孔"
+          aria-label={translate(locale, 'panel.opengrid.everyColumns')}
           type="number"
           min="1"
           max={OPENGRID_CONFIGURATION.maxGridCount}
@@ -768,36 +819,43 @@
   {/if}
 
   <ParameterField
-    label="螺絲尺寸來源"
+    {locale}
+    label={translate(locale, 'panel.opengrid.screwSource')}
     changed={screwConfigurationChanged()}
-    restoreLabel="OpenGrid 螺絲尺寸來源"
+    restoreLabel={translate(locale, 'panel.opengrid.screwSourceRestore')}
     onRestore={restoreScrewConfiguration}
   >
     <select
       class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-      aria-label="OpenGrid 螺絲尺寸來源"
+      aria-label={translate(locale, 'panel.opengrid.screwSourceRestore')}
       value={selectedScrewPreset}
       onchange={(event) => updateSelect('screwKind', event)}
     >
       <option value="official-default">
-        官方 SCAD 預設（Ø4.1 / 頭Ø7.2）
+        {translate(locale, 'panel.opengrid.officialDefault')}
       </option>
-      <optgroup label="常見沉頭木螺絲（DIN 7997）">
+      <optgroup label={translate(locale, 'panel.opengrid.woodScrewGroup')}>
         {#each screwPresetKeys as preset}
           {@const dimensions = OPENGRID_CONFIGURATION.screwPresets[preset]}
           <option
             value={preset}
             disabled={!screwPresetFitsCurrentBoard(dimensions)}
           >
-            {preset.toUpperCase()} 木螺絲（通孔 Ø{dimensions.diameter} / 頭Ø{dimensions.headDiameter}）
+            {translate(locale, 'panel.opengrid.woodScrewOption', {
+              size: preset.toUpperCase(),
+              diameter: dimensions.diameter,
+              headDiameter: dimensions.headDiameter,
+            })}
           </option>
         {/each}
       </optgroup>
-      <option value="custom">custom（自訂尺寸）</option>
+      <option value="custom"
+        >{translate(locale, 'panel.opengrid.customSize')}</option
+      >
     </select>
     {#if isScrewPreset(selectedScrewPreset)}
       <p class="m-0 text-sm text-muted">
-        木螺絲預設採 90° 沉頭；板厚或格內淨空不足的規格會停用。
+        {translate(locale, 'panel.opengrid.woodScrewDescription')}
       </p>
     {/if}
   </ParameterField>
@@ -806,11 +864,11 @@
     <label class="flex items-center gap-2 text-sm">
       <input
         type="checkbox"
-        aria-label="進階設定"
+        aria-label={translate(locale, 'panel.opengrid.advanced')}
         checked={showAdvancedScrewSettings}
         onchange={updateAdvancedScrewSettings}
       />
-      進階設定
+      {translate(locale, 'panel.opengrid.advanced')}
     </label>
 
     {#if showAdvancedScrewSettings}
@@ -818,17 +876,20 @@
         <label class="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
-            aria-label="OpenGrid 是否沉頭"
+            aria-label={translate(locale, 'panel.opengrid.countersink')}
             checked={parameters.screwHeadIsCountersunk}
             onchange={updateCountersunk}
           />
-          使用沉頭孔
+          {translate(locale, 'panel.opengrid.countersink')}
         </label>
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <ParameterField label="通孔直徑（mm）">
+          <ParameterField
+            {locale}
+            label={translate(locale, 'panel.opengrid.throughDiameter')}
+          >
             <input
               class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-              aria-label="OpenGrid 螺絲通孔直徑"
+              aria-label={translate(locale, 'panel.opengrid.throughDiameter')}
               type="number"
               min="0.1"
               step="0.1"
@@ -836,10 +897,13 @@
               oninput={(event) => updateNumber('screwDiameter', event)}
             />
           </ParameterField>
-          <ParameterField label="頭部直徑（mm）">
+          <ParameterField
+            {locale}
+            label={translate(locale, 'panel.opengrid.headDiameter')}
+          >
             <input
               class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-              aria-label="OpenGrid 螺絲頭直徑"
+              aria-label={translate(locale, 'panel.opengrid.headDiameter')}
               type="number"
               min="0.1"
               step="0.1"
@@ -847,10 +911,13 @@
               oninput={(event) => updateNumber('screwHeadDiameter', event)}
             />
           </ParameterField>
-          <ParameterField label="頭部內縮（mm）">
+          <ParameterField
+            {locale}
+            label={translate(locale, 'panel.opengrid.headInset')}
+          >
             <input
               class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-              aria-label="OpenGrid 螺絲頭內縮"
+              aria-label={translate(locale, 'panel.opengrid.headInset')}
               type="number"
               min="0"
               step="0.1"
@@ -858,10 +925,13 @@
               oninput={(event) => updateNumber('screwHeadInset', event)}
             />
           </ParameterField>
-          <ParameterField label="沉頭角度（°）">
+          <ParameterField
+            {locale}
+            label={translate(locale, 'panel.opengrid.countersinkAngle')}
+          >
             <input
               class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-              aria-label="OpenGrid 螺絲沉頭角度"
+              aria-label={translate(locale, 'panel.opengrid.countersinkAngle')}
               type="number"
               min="1"
               max="179"
@@ -881,23 +951,24 @@
       <label class="flex min-w-0 grow items-center gap-2">
         <input
           type="checkbox"
-          aria-label="OpenGrid 正中心螺絲孔"
+          aria-label={translate(locale, 'panel.opengrid.centerScrew')}
           checked={parameters.screwCenter}
           disabled={!centerScrewAvailable(parameters.rows, parameters.columns)}
           onchange={updateScrewCenter}
         />
-        正中心螺絲孔
+        {translate(locale, 'panel.opengrid.centerScrew')}
       </label>
     </div>
     <ParameterField
-      label="每隔幾格一個孔（0=關閉）"
+      {locale}
+      label={translate(locale, 'panel.opengrid.everyGridHole')}
       changed={parameterChanged('screwEvery')}
-      restoreLabel="OpenGrid 每隔幾格一個螺絲孔"
+      restoreLabel={translate(locale, 'panel.opengrid.everyGridHoleRestore')}
       onRestore={() => restoreParameter('screwEvery')}
     >
       <input
         class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-        aria-label="OpenGrid 每隔幾格一個螺絲孔"
+        aria-label={translate(locale, 'panel.opengrid.everyGridHoleRestore')}
         type="number"
         min="0"
         max={OPENGRID_CONFIGURATION.maxGridCount}
@@ -910,23 +981,30 @@
   {#if parameters.screwMode === 'custom'}
     <div class="grid gap-2" data-testid="opengrid-custom-matrix">
       <div class="relative flex items-center justify-between gap-2">
-        <span class="min-w-0 font-[650]">自訂內部交界螺絲孔</span>
+        <span class="min-w-0 font-[650]">
+          {translate(locale, 'panel.opengrid.customPositions')}
+        </span>
         <div class="flex shrink-0 items-center gap-1">
           <RestoreButton
-            label="OpenGrid 自訂內部交界螺絲孔"
+            {locale}
+            label={translate(locale, 'panel.opengrid.customPositions')}
             visible={parameterChanged('customScrewPositions')}
             onRestore={() => restoreParameter('customScrewPositions')}
           />
           <span class="text-sm text-muted" aria-live="polite"
-            >已選 {selectedCount} 孔</span
+            >{translate(locale, 'panel.opengrid.selectedHoles', {
+              count: selectedCount,
+            })}</span
           >
         </div>
       </div>
       <p class="m-0 text-sm text-muted">
-        按官方 SCAD 的左至右、上至下順序選取；只有內部格線交界可選。
+        {translate(locale, 'panel.opengrid.customPositionsDescription')}
       </p>
       {#if latticeRows === 0 || latticeColumns === 0}
-        <p class="m-0 text-sm text-muted">目前沒有內部交界格點。</p>
+        <p class="m-0 text-sm text-muted">
+          {translate(locale, 'panel.opengrid.noIntersections')}
+        </p>
       {:else}
         <div class="grid max-h-96 gap-2 overflow-auto pr-1">
           {#each Array.from({ length: latticeRows }) as _, row}
@@ -938,10 +1016,16 @@
                 class:text-white={hasPosition(row, column)}
                 type="button"
                 aria-pressed={hasPosition(row, column)}
-                aria-label={`內部交界第 ${row + 1} 行第 ${column + 1} 列`}
+                aria-label={translate(locale, 'panel.opengrid.intersection', {
+                  row: row + 1,
+                  column: column + 1,
+                })}
                 onclick={() => togglePosition(row, column)}
               >
-                交界 {row + 1} × {column + 1}
+                {translate(locale, 'panel.opengrid.intersection', {
+                  row: row + 1,
+                  column: column + 1,
+                })}
               </button>
             {/each}
           {/each}
@@ -949,7 +1033,7 @@
       {/if}
       {#if fieldError('customScrewPositions')}<span
           class="text-sm text-error"
-          role="alert">{fieldError('customScrewPositions')}</span
+          role="alert">{fieldErrorMessage('customScrewPositions')}</span
         >{/if}
     </div>
   {/if}
@@ -957,10 +1041,11 @@
   {#each ['variant', 'chamfers', 'connectorHoles', 'screwKind', 'screwMode', 'screwCenter', 'screwEvery', 'screwDiameter', 'screwHeadDiameter', 'screwHeadInset', 'screwHeadCountersunkDegree'] as field}
     {#if fieldError(field as keyof OpenGridParameters)}<span
         class="text-sm text-error"
-        role="alert">{fieldError(field as keyof OpenGridParameters)}</span
+        role="alert"
+        >{fieldErrorMessage(field as keyof OpenGridParameters)}</span
       >{/if}
   {/each}
   {#if fieldError('parameters')}<span class="text-sm text-error" role="alert"
-      >{fieldError('parameters')}</span
+      >{fieldErrorMessage('parameters')}</span
     >{/if}
 </fieldset>

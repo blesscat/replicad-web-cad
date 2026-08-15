@@ -1,3 +1,6 @@
+import type { DiagnosticDescriptor } from '../diagnostics'
+import { diagnostic } from '../diagnostics'
+
 export type CadErrorCode =
   | 'PROTOCOL_UNSUPPORTED'
   | 'PROTOCOL_INVALID'
@@ -39,7 +42,7 @@ export type CadErrorStage =
 export type CadError = {
   stage: CadErrorStage
   code: CadErrorCode
-  userMessage: string
+  message: DiagnosticDescriptor
   recoverable: boolean
   generation?: number
   modelRevision?: string
@@ -51,11 +54,11 @@ export function normalizeError(
   error: unknown,
   fallback: Partial<CadError> = {},
 ): CadError {
-  const message = error instanceof Error ? error.message : String(error)
+  void error
   return {
     stage: fallback.stage ?? 'worker',
     code: fallback.code ?? 'UNKNOWN_ERROR',
-    userMessage: fallback.userMessage ?? message,
+    message: fallback.message ?? diagnostic('diagnostic.unexpected'),
     recoverable: fallback.recoverable ?? true,
     generation: fallback.generation,
     modelRevision: fallback.modelRevision,

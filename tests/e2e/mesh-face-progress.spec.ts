@@ -14,7 +14,7 @@ test('CAD UI shows face progress and clears it at terminal state', async ({
             this.dispatchEvent(
               new MessageEvent('message', {
                 data: {
-                  version: 1,
+                  version: 2,
                   kind: 'engine.ready',
                   requestId: message.requestId,
                   operationId: message.operationId,
@@ -30,7 +30,7 @@ test('CAD UI shows face progress and clears it at terminal state', async ({
         if (message.kind !== 'model.generate') return
 
         const progress = {
-          version: 1,
+          version: 2,
           kind: 'operation.progress',
           requestId: 'e2e-face-progress-request',
           operationId: message.operationId,
@@ -54,7 +54,7 @@ test('CAD UI shows face progress and clears it at terminal state', async ({
           this.dispatchEvent(
             new MessageEvent('message', {
               data: {
-                version: 1,
+                version: 2,
                 kind: 'operation.superseded',
                 requestId: 'e2e-face-progress-terminal',
                 operationId: message.operationId,

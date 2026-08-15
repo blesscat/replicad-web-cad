@@ -36,7 +36,7 @@ import { openGridDividerFileName } from '../../src/cad-contract/units'
 import { CadWorkerRuntime } from '../../src/workers/cad.worker'
 
 const base = {
-  version: 1 as const,
+  version: 2 as const,
   requestId: 'divider-lifecycle-base-request',
   operationId: 'divider-lifecycle-base-operation',
 }

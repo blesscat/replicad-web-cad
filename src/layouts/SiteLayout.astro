@@ -1,49 +1,107 @@
 ---
 import '../styles/global.css'
 import { portalySupportUrl } from '../features/support/config'
+import { localeAlternatesFor, absoluteUrlFor } from '../i18n/seo'
+import {
+  localizedPathFor,
+  publicPathFor,
+  switchLocalePath,
+  unlocalizedPathFor,
+} from '../i18n/routes'
+import { translate, type Locale } from '../i18n'
 
 interface Props {
+  locale: Locale
   title: string
   description?: string
   fullWidth?: boolean
 }
 
-const { title, description, fullWidth = false } = Astro.props
-const normalizedPath = Astro.url.pathname.replace(/\/+$/, '') || '/'
-const isDocsPage = normalizedPath.startsWith('/docs')
-const isHomePage = normalizedPath === '/'
-const isModelSelectionPage = normalizedPath === '/models'
+const { locale, title, description, fullWidth = false } = Astro.props
+const currentPath = Astro.url.pathname
+const currentSearch = new URL(Astro.request.url).search
+const routePath = unlocalizedPathFor(currentPath)
+const isDocsPage = routePath === '/docs' || routePath.startsWith('/docs/')
+const isHomePage = routePath === '/'
+const isModelSelectionPage = routePath === '/models'
+const canonicalPath = localizedPathFor(locale, currentPath)
+// System/view query parameters are UI state, not indexable page variants. Keep
+// hreflang and canonical links on the stable localized route; the language-switch
+// link below preserves the query for the user.
+const alternateLinks = localeAlternatesFor(currentPath)
+const alternateLocale = alternateLinks.find(
+  (alternate) => alternate.locale !== locale,
+)
+const t = (key: string) => translate(locale, key)
 ---
 
-<html lang="zh-Hant">
+<html lang={locale}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
+    <link rel="canonical" href={absoluteUrlFor(canonicalPath)} />
+    {
+      alternateLinks.map((alternate) => (
+        <link
+          rel="alternate"
+          hreflang={alternate.locale}
+          href={alternate.url}
+        />
+      ))
+    }
+    <link
+      rel="alternate"
+      hreflang="x-default"
+      href={absoluteUrlFor(alternateLinks[0]?.path ?? canonicalPath)}
+    />
   </head>
   <body>
     <div class="min-h-screen">
       <nav
         class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 bg-nav px-[clamp(1rem,4vw,4rem)] py-4 text-nav-foreground"
-        aria-label="主要導覽"
+        aria-label={t('navigation.primary')}
       >
         <a
           class="no-underline"
-          href="/"
+          href={publicPathFor(locale, 'home')}
           aria-current={isHomePage ? 'page' : undefined}>Shape Shortcut</a
         >
         <div class="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
           <a
             class="no-underline"
-            href="/docs/"
-            aria-current={isDocsPage ? 'page' : undefined}>文件</a
+            href={publicPathFor(locale, 'docs')}
+            aria-current={isDocsPage ? 'page' : undefined}
+            >{t('navigation.docs')}</a
           >
           <a
             class="no-underline"
-            href="/models"
-            aria-current={isModelSelectionPage ? 'page' : undefined}>選擇模型</a
+            href={publicPathFor(locale, 'models')}
+            aria-current={isModelSelectionPage ? 'page' : undefined}
+            >{t('navigation.models')}</a
           >
+          {
+            alternateLocale && (
+              <a
+                class="no-underline"
+                href={switchLocalePath(
+                  currentPath,
+                  currentSearch,
+                  alternateLocale.locale,
+                )}
+                data-locale-switch
+                aria-label={t('navigation.language')}
+              >
+                {translate(
+                  locale,
+                  alternateLocale.locale === 'en'
+                    ? 'navigation.switchToEnglish'
+                    : 'navigation.switchToZhHant',
+                )}
+              </a>
+            )
+          }
           {
             portalySupportUrl && (
               <a
@@ -52,12 +110,21 @@ const isModelSelectionPage = normalizedPath === '/models'
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                支持這個專案
+                {t('navigation.support')}
               </a>
             )
           }
         </div>
       </nav>
+      <script is:inline>
+        for (const link of document.querySelectorAll('[data-locale-switch]')) {
+          const url = new URL(link.href, window.location.href)
+          if (window.location.search) {
+            url.search = window.location.search
+            link.href = url.pathname + url.search + url.hash
+          }
+        }
+      </script>
       <main
         class:list={[
           'p-[clamp(1.5rem,4vw,4rem)]',

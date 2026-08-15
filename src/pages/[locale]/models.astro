@@ -1,0 +1,235 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro'
+import {
+  displayParameterLabel,
+  groupModelDefinitions,
+  modelSelectionLabelFor,
+  unitLabelFor,
+  type ModelDefinition,
+} from '../../features/cad/model-catalog'
+import { SUPPORTED_LOCALES, isLocale, translate, type Locale } from '../../i18n'
+import { localizedCadPathFor } from '../../i18n/routes'
+
+export function getStaticPaths() {
+  return SUPPORTED_LOCALES.map((locale) => ({
+    params: { locale },
+    props: { locale },
+  }))
+}
+
+const locale = Astro.props.locale as Locale
+if (!isLocale(locale)) throw new Error(`UNSUPPORTED_LOCALE:${locale}`)
+const t = (key: string, values?: Record<string, string | number | boolean>) =>
+  translate(locale, key, values)
+const modelGroups = groupModelDefinitions()
+
+function previewImageFor(definition: ModelDefinition) {
+  if (!definition.previewImage) {
+    throw new Error(`MODEL_PREVIEW_MISSING:${definition.id}`)
+  }
+  return definition.previewImage
+}
+
+function modelText(
+  definition: ModelDefinition,
+  field: 'name' | 'description' | 'alt',
+) {
+  return t(`models.model.${definition.id}.${field}`)
+}
+
+function groupText(groupKey: string): string {
+  return t(`models.family.${groupKey}`)
+}
+
+function subgroupText(
+  groupKey: string,
+  subgroupKey: string,
+  hasSubgroups: boolean,
+): string {
+  if (hasSubgroups) return t(`models.context.${subgroupKey}`)
+  return groupText(groupKey)
+}
+
+function parameterSummary(definition: ModelDefinition) {
+  if (definition.parameterSchema.length === 0) {
+    const staticSummary = t(`models.model.${definition.id}.staticParameters`)
+    if (!staticSummary.startsWith('⟦')) return [staticSummary]
+    return [t('models.fixedParameters')]
+  }
+
+  return definition.parameterSchema.map((field) =>
+    t('models.parameterRange', {
+      label: displayParameterLabel(field, locale),
+      min: field.min,
+      max: field.max,
+      unit: unitLabelFor(locale, field.unit),
+    }),
+  )
+}
+---
+
+<SiteLayout
+  {locale}
+  fullWidth
+  title={`${t('models.title')} | Shape Shortcut`}
+  description={t('models.description')}
+>
+  <section
+    class="grid gap-10"
+    aria-labelledby="model-selection-title"
+    data-testid="model-selection"
+  >
+    <header>
+      <h1
+        class="text-4xl font-semibold leading-tight"
+        id="model-selection-title"
+      >
+        {t('models.title')}
+      </h1>
+    </header>
+
+    <div class="grid gap-12" aria-label={t('models.series')}>
+      {
+        modelGroups.map((group) => {
+          const hasSubgroups = Boolean(group.subgroups)
+          const subgroups = group.subgroups ?? [
+            {
+              key: group.key,
+              label: group.label,
+              definitions: group.definitions,
+            },
+          ]
+
+          return (
+            <section
+              class="grid gap-6"
+              aria-labelledby={`model-family-${group.key}`}
+              data-testid={`model-family-${group.key}`}
+            >
+              <div class="border-b border-border-card pb-3">
+                <h2
+                  class="text-3xl font-semibold leading-tight"
+                  id={`model-family-${group.key}`}
+                >
+                  {groupText(group.key)}
+                </h2>
+              </div>
+              <div
+                class="grid gap-10"
+                data-testid={
+                  hasSubgroups ? `model-subgroups-${group.key}` : undefined
+                }
+              >
+                {subgroups.map((subgroup) => (
+                  <section
+                    class="grid gap-4"
+                    aria-labelledby={
+                      hasSubgroups
+                        ? `model-subgroup-${subgroup.key}-title`
+                        : undefined
+                    }
+                    data-testid={`model-subgroup-${subgroup.key}`}
+                  >
+                    {hasSubgroups ? (
+                      <div class="border-b border-border-card pb-2">
+                        <h3
+                          class="text-xl font-semibold leading-tight"
+                          id={`model-subgroup-${subgroup.key}-title`}
+                        >
+                          {subgroupText(group.key, subgroup.key, hasSubgroups)}
+                        </h3>
+                      </div>
+                    ) : null}
+                    <div class="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,18rem),1fr))]">
+                      {subgroup.definitions.map((definition) => {
+                        const preview = previewImageFor(definition)
+                        const selectionLabel = t(
+                          modelSelectionLabelFor(definition),
+                        )
+                        const description = modelText(definition, 'description')
+                        const previewAlt = modelText(definition, 'alt')
+                        return (
+                          <article
+                            class="grid gap-3 rounded-xl border border-border-card bg-panel p-3 shadow-sm transition-shadow hover:shadow-md sm:p-4"
+                            data-model-id={definition.id}
+                            data-entry-key={`${definition.id}-${definition.systemContext ?? 'legacy'}`}
+                            data-system-context={definition.systemContext}
+                          >
+                            <div
+                              class="grid aspect-[16/10] place-items-center overflow-hidden rounded-lg border border-border-card bg-viewport"
+                              data-testid="model-preview"
+                            >
+                              <div
+                                class="p-4 text-center text-sm text-muted"
+                                data-testid="model-preview-fallback"
+                                hidden
+                                role="img"
+                                aria-label={previewAlt}
+                              >
+                                {t('models.previewUnavailable')}
+                              </div>
+                              <img
+                                src={preview.src}
+                                alt={previewAlt}
+                                width={preview.width}
+                                height={preview.height}
+                                loading="lazy"
+                                class="h-full w-full object-contain"
+                                onerror="this.hidden = true; this.previousElementSibling.removeAttribute('hidden')"
+                              />
+                            </div>
+                            {hasSubgroups ? (
+                              <h4 class="text-2xl font-semibold leading-tight">
+                                {selectionLabel}
+                              </h4>
+                            ) : (
+                              <h3 class="text-2xl font-semibold leading-tight">
+                                {selectionLabel}
+                              </h3>
+                            )}
+                            <p class="m-0 text-sm leading-normal text-muted">
+                              {description}
+                            </p>
+                            <div class="grid gap-2 text-sm leading-normal">
+                              <h5 class="m-0 font-semibold">
+                                {t('models.parameters')}
+                              </h5>
+                              <ul class="m-0 grid gap-1 pl-5">
+                                {parameterSummary(definition).map((summary) => (
+                                  <li>{summary}</li>
+                                ))}
+                              </ul>
+                              <p class="m-0 text-muted">
+                                {t('models.exportFormatsLine', {
+                                  label: t('models.exportFormats'),
+                                  value: t('models.exportFormatsValue'),
+                                })}
+                              </p>
+                            </div>
+                            <a
+                              class="inline-flex items-center justify-self-start rounded-lg border border-border-card bg-page px-3 py-2 font-semibold text-ink no-underline shadow-sm hover:bg-viewport focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                              href={localizedCadPathFor(
+                                locale,
+                                definition.id,
+                                definition.systemContext,
+                              )}
+                              aria-label={t('models.editAria', {
+                                name: selectionLabel,
+                              })}
+                            >
+                              {t('models.edit')}
+                            </a>
+                          </article>
+                        )
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            </section>
+          )
+        })
+      }
+    </div>
+  </section>
+</SiteLayout>

@@ -160,7 +160,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
     if (!validation.valid) {
       expect(validation.issues[0]).toEqual({
         field: 'openingPlusXDepth',
-        message: '必須介於 0–30。',
+        messageId: 'validation.invalid',
       })
     }
   })
@@ -402,7 +402,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
       issues: [
         {
           field: 'parameters',
-          message: '薄底模式與底板模式不可同時開啟。',
+          messageId: 'validation.invalid',
         },
       ],
     })

@@ -43,7 +43,7 @@ export type OpenGridSnapBounds = {
 
 export type OpenGridSnapValidationIssue = {
   field: OpenGridSnapParameterKey | 'parameters'
-  message: string
+  messageId: string
 }
 
 export type OpenGridSnapValidation =
@@ -188,9 +188,7 @@ export function validateOpenGridSnapParameters(
   if (!isRecord(value)) {
     return {
       valid: false,
-      issues: [
-        { field: 'parameters', message: '需要提供 OpenGrid Snap 參數。' },
-      ],
+      issues: [{ field: 'parameters', messageId: 'validation.invalid' }],
     }
   }
 
@@ -198,42 +196,41 @@ export function validateOpenGridSnapParameters(
   if (!hasExactKeys(value, PARAMETER_KEYS)) {
     issues.push({
       field: 'parameters',
-      message:
-        'OpenGrid Snap 只接受 variant、profile、offset、footprint、fourCornerLocatingHoles、centerRemoverHole。',
+      messageId: 'validation.invalid',
     })
   }
 
   if (!isOpenGridSnapVariant(value.variant)) {
-    issues.push({ field: 'variant', message: '型號必須是 Full 或 Lite。' })
+    issues.push({ field: 'variant', messageId: 'validation.invalid' })
   }
   if (!isOpenGridSnapProfile(value.profile)) {
     issues.push({
       field: 'profile',
-      message: '幾何 profile 必須是 Standard 或 Directional。',
+      messageId: 'validation.invalid',
     })
   }
   if (!isOpenGridSnapFootprint(value.footprint)) {
     issues.push({
       field: 'footprint',
-      message: '格型必須是 full、half 或 quarter。',
+      messageId: 'validation.invalid',
     })
   }
   if (typeof value.fourCornerLocatingHoles !== 'boolean') {
     issues.push({
       field: 'fourCornerLocatingHoles',
-      message: '四周定位孔選項必須是 boolean。',
+      messageId: 'validation.invalid',
     })
   }
   if (typeof value.centerRemoverHole !== 'boolean') {
     issues.push({
       field: 'centerRemoverHole',
-      message: '中心 remover 孔選項必須是 boolean。',
+      messageId: 'validation.invalid',
     })
   }
 
   const offset = value.offset
   if (typeof offset !== 'number' || !Number.isFinite(offset)) {
-    issues.push({ field: 'offset', message: '外框增量必須是有限數值。' })
+    issues.push({ field: 'offset', messageId: 'validation.invalid' })
   } else {
     if (
       offset < OPENGRID_SNAP_CONFIGURATION.minOffset ||
@@ -241,7 +238,7 @@ export function validateOpenGridSnapParameters(
     ) {
       issues.push({
         field: 'offset',
-        message: `外框增量必須介於 ${OPENGRID_SNAP_CONFIGURATION.minOffset}–${OPENGRID_SNAP_CONFIGURATION.maxOffset} mm。`,
+        messageId: 'validation.invalid',
       })
     }
 
@@ -255,7 +252,7 @@ export function validateOpenGridSnapParameters(
     if (Math.abs(offset - snappedOffset) > 1e-9) {
       issues.push({
         field: 'offset',
-        message: `外框增量必須以 ${OPENGRID_SNAP_CONFIGURATION.offsetStep} mm 為步進。`,
+        messageId: 'validation.invalid',
       })
     }
 
@@ -288,13 +285,13 @@ export function validateOpenGridSnapParameters(
       if (intrudesIntoFixedCore) {
         issues.push({
           field: 'offset',
-          message: '外框增量會侵入中央 Snap 固定區域。',
+          messageId: 'validation.invalid',
         })
       }
       if (exceedsHostPitch) {
         issues.push({
           field: 'offset',
-          message: '外框增量會超過所選格型的宿主格距。',
+          messageId: 'validation.invalid',
         })
       }
     }

@@ -695,7 +695,12 @@ describe('CAD model generation debounce', () => {
       }),
     )
     expect(context.setFieldErrors).toHaveBeenCalledWith(
-      expect.objectContaining({ rows: expect.any(String) }),
+      expect.objectContaining({
+        rows: expect.objectContaining({
+          field: 'rows',
+          messageId: expect.any(String),
+        }),
+      }),
     )
     vi.advanceTimersByTime(500)
     expect(
