@@ -6,7 +6,7 @@
 
 ## 多語系與搜尋 metadata
 
-公開頁面使用 `/zh-Hant/` 與 `/en/` 前綴；未帶 locale 的舊網址會導向繁體中文版本。正式 build/deploy 必須設定 `PUBLIC_SITE_URL` 為不含結尾斜線的正式 `https` 網站 origin，讓 canonical、`hreflang` 與 `/sitemap.xml` 使用正式網址；本機開發與測試未設定時才會使用 `http://localhost:3456` fallback。由於目前輸出是無 adapter 的靜態檔案，正式 hosting 也必須把未帶 locale 的舊路徑設定為保留 query string 的永久 redirect；靜態 fallback 會使用 `noindex`、canonical、meta refresh 與 JavaScript 導向，其中 JavaScript 會保留 query string，靜態 meta refresh 與無 JavaScript anchor 僅能導向穩定路徑。
+公開頁面使用 `/zh-Hant/` 與 `/en/` 前綴；未帶 locale 的舊網址會導向繁體中文版本。production 預設 origin 設定在 `.env.production` 的 `PUBLIC_SITE_URL`（目前為 `https://shape-shortcut.blesscat.dev`），其他部署環境可用同名環境變數覆寫，讓 canonical、`hreflang` 與 `/sitemap.xml` 使用正確網址；本機開發與測試未設定時才會使用 `http://localhost:3456` fallback。Cloudflare Pages 會讀取 `public/_redirects`，以同 origin 的相對路徑發出保留 query string 的 308 redirect；其他 static hosting 需要用等效的 redirect 設定。靜態 fallback 仍會使用 `noindex`、canonical、meta refresh 與 JavaScript 導向，其中 JavaScript 會保留 query string，靜態 meta refresh 與無 JavaScript anchor 僅能導向穩定路徑。
 
 ## 主要架構
 
