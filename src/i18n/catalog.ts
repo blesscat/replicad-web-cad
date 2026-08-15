@@ -302,6 +302,8 @@ export const zhHantMessages = {
   'panel.stackableDescription': '預設模式：可堆疊滑動，使用 9mm 定位柱',
   'panel.fullBottomHole': '底部全孔模式',
   'panel.honeycomb': '省料模式（六角鏤空）',
+  'panel.honeycombWarning':
+    '省料模式會明顯降低模型渲染速度。建議先使用一般模式確認形狀，下載前再啟用省料模式。',
   'panel.pillar.version': '支柱版本',
   'panel.pillar.stacking': '堆疊版',
   'panel.pillar.thinShell': '薄殼版',
@@ -738,6 +740,8 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'Default mode: stackable slide fit; uses 9 mm locating posts',
   'panel.fullBottomHole': 'Full-bottom hole mode',
   'panel.honeycomb': 'Material-saving mode (hexagonal voids)',
+  'panel.honeycombWarning':
+    'Material-saving mode can significantly slow model rendering. Check the shape in normal mode first, then enable material-saving mode before downloading.',
   'panel.pillar.version': 'Post version',
   'panel.pillar.stacking': 'Stacking',
   'panel.pillar.thinShell': 'Thin shell',

@@ -12,6 +12,7 @@
     type OpenGridStackableCylinderOpeningParameterKey,
     type OpenGridStackableCylinderParameters,
   } from '../../../../cad-contract/units'
+  import HoneycombRenderWarning from '../HoneycombRenderWarning.svelte'
   import ParameterControl from '../ParameterControl.svelte'
   import ParameterField from '../ParameterField.svelte'
   import type { ComponentPanelProps } from '../types'
@@ -57,6 +58,13 @@
     const value = rawParameters.bottomSeatMode
     if (value === 'none' || value === 'integrated') return value
     return 'hole'
+  }
+
+  function seatModeDescription(): string {
+    const option = seatModeOptions.find(
+      (candidate) => candidate.value === seatModeForRawParameters(),
+    )
+    return option ? translate(locale, option.descriptionKey) : ''
   }
 
   function onSeatModeChange(event: Event): void {
@@ -302,9 +310,7 @@
       {/each}
     </div>
     <span class="text-sm text-muted">
-      {#if seatModeOptions.find((option) => option.value === seatModeForRawParameters()) as option}
-        {translate(locale, option.descriptionKey)}
-      {/if}
+      {seatModeDescription()}
     </span>
     {#if fieldErrors.bottomSeatMode}
       <span class="text-sm text-error" id="bottomSeatMode-error" role="alert">
@@ -326,6 +332,9 @@
     />
     <span>{translate(locale, 'panel.honeycomb')}</span>
   </label>
+  {#if rawParameters.honeycombMode === 'true'}
+    <HoneycombRenderWarning {locale} />
+  {/if}
   {#each opengridStackableCylinderDefinition.parameterSchema.slice(0, 2) as field (field.key)}
     {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
     <ParameterField
@@ -365,7 +374,7 @@
             {translate(locale, group.labelKey)}
           </summary>
           <fieldset class="grid gap-3 border-0 p-0 pt-1">
-            {#each fieldsFor(group.keys, group.direction, group.label) as field (field.key)}
+            {#each fieldsFor(group.keys, group.direction, translate(locale, group.labelKey)) as field (field.key)}
               {@const value =
                 rawParameters[field.key] ?? String(field.defaultValue)}
               <ParameterField

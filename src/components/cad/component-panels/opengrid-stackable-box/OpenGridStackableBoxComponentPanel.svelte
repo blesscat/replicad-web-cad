@@ -15,6 +15,7 @@
   } from '../../../../cad-contract/units'
   import { calculateOpenGridStackableBoxCounts } from '../../../../features/cad/grid-dimensions'
   import GridDimensionCalculator from '../GridDimensionCalculator.svelte'
+  import HoneycombRenderWarning from '../HoneycombRenderWarning.svelte'
   import ParameterControl from '../ParameterControl.svelte'
   import ParameterField from '../ParameterField.svelte'
   import type { ComponentPanelProps } from '../types'
@@ -92,7 +93,6 @@
     {
       direction: '-Y',
       labelKey: 'panel.opening.direction.front',
-      defaultOpen: true,
       keys: [
         'openingMinusYDepth',
         'openingMinusYBottomLength',
@@ -102,7 +102,6 @@
     {
       direction: '+Y',
       labelKey: 'panel.opening.direction.back',
-      defaultOpen: false,
       keys: [
         'openingPlusYDepth',
         'openingPlusYBottomLength',
@@ -112,7 +111,6 @@
     {
       direction: '-X',
       labelKey: 'panel.opening.direction.left',
-      defaultOpen: false,
       keys: [
         'openingMinusXDepth',
         'openingMinusXBottomLength',
@@ -122,7 +120,6 @@
     {
       direction: '+X',
       labelKey: 'panel.opening.direction.right',
-      defaultOpen: false,
       keys: [
         'openingPlusXDepth',
         'openingPlusXBottomLength',
@@ -131,12 +128,59 @@
     },
   ] as const
 
+  type OpeningGroupOpenState = Record<
+    OpenGridStackableBoxOpeningDirection,
+    boolean
+  >
+
+  let openingDisclosureOpen = $state(false)
+  let openingGroupOpen = $state<OpeningGroupOpenState>({
+    '-Y': false,
+    '+Y': false,
+    '-X': false,
+    '+X': false,
+  })
+  let previousOpeningValueSignature: string | undefined
+
   function rawNumberFor(key: string): number | null {
     const rawValue = rawParameters[key as keyof typeof rawParameters]
     if (rawValue === undefined || rawValue.trim() === '') return null
     const value = Number(rawValue)
     return Number.isFinite(value) ? value : null
   }
+
+  function openingGroupHasNonDefaultValue(
+    group: (typeof openingGroups)[number],
+  ): boolean {
+    return group.keys.some((key) => {
+      const rawValue = rawParameters[key]
+      if (rawValue === undefined || rawValue.trim() === '') return false
+      const value = Number(rawValue)
+      if (!Number.isFinite(value)) return true
+      return value !== OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS[key]
+    })
+  }
+
+  function hasNonDefaultOpeningValues(): boolean {
+    return openingGroups.some(openingGroupHasNonDefaultValue)
+  }
+
+  function openingValueSignatureForRawParameters(): string {
+    return OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS.map(
+      (key) => rawParameters[key] ?? '',
+    ).join('|')
+  }
+
+  $effect(() => {
+    const signature = openingValueSignatureForRawParameters()
+    if (signature === previousOpeningValueSignature) return
+    previousOpeningValueSignature = signature
+
+    for (const group of openingGroups) {
+      openingGroupOpen[group.direction] = openingGroupHasNonDefaultValue(group)
+    }
+    openingDisclosureOpen = hasNonDefaultOpeningValues()
+  })
 
   function parametersForRange(): OpenGridStackableBoxParameters | null {
     const x = rawNumberFor('x')
@@ -298,6 +342,9 @@
       />
       <span class="font-[650]">{translate(locale, 'panel.honeycomb')}</span>
     </label>
+    {#if rawParameters.honeycombMode === 'true'}
+      <HoneycombRenderWarning {locale} />
+    {/if}
   </div>
   <div
     aria-describedby={modeErrorDescriptionId()}
@@ -392,6 +439,7 @@
   <details
     class="grid gap-3 rounded-lg border border-border-field p-3"
     data-testid="opengrid-stackable-box-opening-disclosure"
+    bind:open={openingDisclosureOpen}
   >
     <summary class="cursor-pointer font-[650]">
       {translate(locale, 'panel.opening.settings')}
@@ -402,13 +450,13 @@
           class="grid gap-3 rounded-lg border border-border-field p-3"
           data-direction={group.direction}
           data-testid={`opengrid-stackable-box-opening-group-${group.direction}`}
-          open={group.defaultOpen}
+          bind:open={openingGroupOpen[group.direction]}
         >
           <summary class="cursor-pointer font-[650]">
             {translate(locale, group.labelKey)}
           </summary>
           <fieldset class="grid gap-3 border-0 p-0 pt-1">
-            {#each fieldsFor(group.keys, group.direction, group.label) as field (field.key)}
+            {#each fieldsFor(group.keys, group.direction, translate(locale, group.labelKey)) as field (field.key)}
               {@const value =
                 rawParameters[field.key] ?? String(field.defaultValue)}
               <ParameterField

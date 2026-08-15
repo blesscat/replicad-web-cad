@@ -661,7 +661,7 @@ function makeSideOpeningCutter(
   const margin = 0.04
   if (parameters.thinShellMode) {
     const wallStart =
-      OPENGRID_STACKABLE_BOX_CONFIGURATION.thinShellWallThickness - margin
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.thinShellWallThickness + margin
     const wallDistance =
       OPENGRID_STACKABLE_BOX_CONFIGURATION.thinShellWallThickness + 2 * margin
     const topZ = derived.activeUpperOuterEdgeZ
@@ -707,7 +707,7 @@ function makeSideOpeningCutter(
   }
   const upperRailInnerInset =
     configuration.wallThickness + configuration.topRailInnerChamfer
-  const wallStart = configuration.wallThickness - margin
+  const wallStart = configuration.wallThickness + margin
   const topZ = derived.activeUpperOuterEdgeZ
   const railStartZ = derived.activeUpperInnerRimZ - margin
   const wallDistance = configuration.wallThickness + 2 * margin
