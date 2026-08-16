@@ -79,15 +79,14 @@ for (const locale of locales) {
 
     await expect(page.locator('img[src^="/docs/desk-system/"]')).toHaveCount(3)
     const diagramAltPatterns = [
-      ['desk-system-flow.svg', /Board|流程圖/],
-      ['desk-system-board-snap.svg', /Board|俯視/],
-      ['desk-system-locating-options.svg', /Locating Post|比較圖/],
+      ['desk-system-flow', /Board|流程圖/],
+      ['desk-system-board-snap', /Board|俯視/],
+      ['desk-system-locating-options', /Locating Post|比較圖/],
     ] as const
     for (const [asset, altPattern] of diagramAltPatterns) {
-      await expect(page.locator(`img[src$="${asset}"]`)).toHaveAttribute(
-        'alt',
-        altPattern,
-      )
+      await expect(
+        page.locator(`img[src$="${asset}.${locale.code}.svg"]`),
+      ).toHaveAttribute('alt', altPattern)
     }
   })
 }

@@ -23,6 +23,8 @@ const locale = Astro.props.locale as Locale
 if (!isLocale(locale)) throw new Error(`UNSUPPORTED_LOCALE:${locale}`)
 const t = (key: string) => translate(locale, key)
 const quickStartEntries = deskQuickStartEntries(locale)
+const deskDiagramPathFor = (name: string) =>
+  `/docs/desk-system/${name}.${locale}.svg`
 function entryFor(role: DeskQuickStartRole) {
   const entry = quickStartEntries.find((candidate) => candidate.role === role)
   if (!entry) throw new Error(`DESK_QUICK_START_ROLE_MISSING:${role}`)
@@ -68,7 +70,7 @@ const roundBoxEntry = entryFor('round-box')
       <figure class="grid gap-3">
         <img
           class="w-full rounded-xl border border-border-card bg-viewport"
-          src="/docs/desk-system/desk-system-flow.svg"
+          src={deskDiagramPathFor('desk-system-flow')}
           width="1400"
           height="820"
           loading="eager"
@@ -152,7 +154,7 @@ const roundBoxEntry = entryFor('round-box')
       <figure class="grid gap-3">
         <img
           class="w-full rounded-xl border border-border-card bg-viewport"
-          src="/docs/desk-system/desk-system-board-snap.svg"
+          src={deskDiagramPathFor('desk-system-board-snap')}
           width="1000"
           height="560"
           loading="lazy"
@@ -197,7 +199,7 @@ const roundBoxEntry = entryFor('round-box')
       <figure class="grid gap-3">
         <img
           class="w-full rounded-xl border border-border-card bg-viewport"
-          src="/docs/desk-system/desk-system-locating-options.svg"
+          src={deskDiagramPathFor('desk-system-locating-options')}
           width="1100"
           height="560"
           loading="lazy"
