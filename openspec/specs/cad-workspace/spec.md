@@ -6,15 +6,10 @@
 
 本文件定義瀏覽器端 CAD 雛形的可觀察行為與驗收情境。
 
-Prototype 目前包含：
-
-- 由 model catalog 管理的內建 CAD models，包括 box、modular-grid-base、hsw-cell、hexagonal-column 與 OpenGrid。
-- 各模型自己的有效參數與 browser-local 參數保存。
-- `box` 實心方塊模型，提供寬、深、高三個 mm 參數。
-- `box-normal` 網格開口盒模型，提供 X/Y 格數、盒體高度與四角定位柱選項。
-- `modular-grid-base`、`hsw-cell`、`hexagonal-column` 與 OpenGrid 的獨立模型與各自參數。
-- 瀏覽器內的 B-Rep 建模與 3D 預覽。
-- 從目前成功模型下載 STEP 與 STL。
+Prototype 目前包含由 model catalog 管理的多個獨立 CAD component、各 component
+自己的有效參數與 browser-local 參數保存、瀏覽器內的 B-Rep 建模與 3D 預覽，
+以及從目前成功模型下載 STEP 與 STL；catalog、route 與 component-specific
+參數契約由各自 capability 規格負責。
 
 未註冊的模型、3MF、G-code、任意 CAD 匯入、生成檔案/模型的專案儲存、auth、collaboration 與後端 CAD 服務不屬於本 Prototype；目前可用模型以 model catalog 與其 capability specs 為準，各 component 的 STL、參數保存與模型選擇行為由其 capability 規格定義。
 
@@ -87,211 +82,68 @@ CAD workspace 必須是 Svelte 5 + Threlte/Three.js 的瀏覽器端 island，預
 - **Then** 必須看到載入 fallback、JavaScript/WASM/WebGL 必要條件或狀態提示
 - **And** 不得只有空白畫面或沒有說明的永久 spinner
 
-### Requirement: Prototype 方塊模型
-
-The system MUST expose a runtime-validated component catalog. Each catalog entry MUST have an independent definition with a stable `modelId`, display metadata, parameter schema and builder boundary. The existing `box`, `modular-grid-base`, `hsw-cell`, and `hexagonal-column` entries MUST remain available, and `box-normal` MUST be registered as an additional independent entry. Each model-specific CAD route MUST bind to exactly one catalog definition: `/cad/box` to `box`, `/cad/box-normal` to `box-normal`, `/cad/modular-grid-base` to `modular-grid-base`, `/cad/hsw-cell` to `hsw-cell`, and `/cad/hexagonal-column` to `hexagonal-column`. The CAD workspace MUST NOT provide an in-place model selector; changing the selected model MUST require navigation to `/models` and entry through another model-specific route.
-
-#### Scenario: `/cad/box` 初始方塊建模
-
-- **Given** 使用者開啟 `/cad/box`，且使用 Prototype 支援的桌面版 Chrome 或 Firefox，WebAssembly、Worker 與 WebGL 可用
-- **When** Worker 回傳 engine.ready
-- **Then** 主執行緒 MUST 以該 route 的有效保存參數送出 generation 1、modelId=box 的 model.generate；若沒有有效保存參數，MUST 使用 box definition 的預設參數
-- **And** Worker MUST 回傳 candidate-ready，且不得先修改 current model
-- **And** 主執行緒驗證 candidate mesh 後 MUST 送出 model.commit
-- **And** Worker MUST 回傳非空 mesh、bounds、generation 與 model revision
-- **And** 沒有有效保存參數時，Prototype 驗收 fixture MUST 使用 20 × 30 × 40 mm 方塊，且 X/Y 中心位於世界原點、底面位於 Z=0
-- **And** viewport MUST 顯示方塊，UI 進入 ready
-
-#### Scenario: `/cad/modular-grid-base` 初始網格建模
-
-- **Given** 使用者開啟 `/cad/modular-grid-base`，且 WebAssembly、Worker 與 WebGL 可用
-- **When** Worker 回傳 engine.ready
-- **Then** 主執行緒 MUST 以該 route 的有效保存 rows 與 columns 送出 generation 1、modelId=modular-grid-base 的 model.generate；若沒有有效保存參數，MUST 使用該 component 的預設 rows 與 columns
-- **And** Worker MUST 以 modular-grid-base component-local builder 建立 candidate
-- **And** commit 後 viewport、bounds 與可匯出的 model revision MUST 屬於 modular-grid-base
-
-#### Scenario: `/cad/box-normal` 初始開口盒建模
-
-- **Given** 使用者開啟 `/cad/box-normal`，且 WebAssembly、Worker 與 WebGL 可用
-- **When** Worker 回傳 engine.ready
-- **Then** 主執行緒 MUST 以該 route 的有效保存 `x`、`y`、`height` 與 `cornerPosts` 送出 generation 1、modelId=box-normal 的 model.generate；若沒有有效保存參數，MUST 使用 box-normal definition 的預設參數
-- **And** Worker MUST 以 box-normal component-local builder 建立 candidate
-- **And** commit 後 viewport、bounds 與可匯出的 model revision MUST 屬於 box-normal
-
-#### Scenario: CAD workspace 鎖定 route model
-
-- **Given** 使用者已進入任一合法的 model-specific CAD route
-- **When** 使用者查看模型控制區
-- **Then** UI MUST 顯示 route 對應的 component 名稱
-- **And** UI MUST 只顯示該 component 定義的參數欄位
-- **And** UI MUST NOT 顯示可切換 model id 的選擇器
-- **And** UI MUST 提供導向 `/models` 的模型選擇入口
-
-#### Scenario: 初始化不重複建模
-
-- **Given** Worker 已回傳 engine.ready，但尚未收到目前 route model 的 generation 1 model.ready
-- **When** Svelte lifecycle 或重試流程再次觸發初始化
-- **Then** 主執行緒不得重複送出目前 route model 的 generation 1 model.generate
-- **And** Worker 不得建立第二個初始 current model
-
-#### Scenario: Component 參數欄位
-
-- **Given** 使用者位於 `/cad/box`、`/cad/box-normal` 或 `/cad/modular-grid-base`
-- **When** 使用者查看或修改參數
-        - **Then** box MUST 提供 width、depth、height 欄位並明示 mm，且每個文字輸入 MUST 接受 1–500 mm
-        - **And** box-normal MUST 提供 X=2–40、Y=2–35 格數、height 文字輸入=10–500 mm 並搭配 height slider=10–200 mm，以及預設勾選的 cornerPosts checkbox
-- **And** modular-grid-base MUST 提供 rows、columns 欄位，並明示合法範圍 1–20 格、每格 20 × 20 mm 及固定高度 5 mm
-- **And** UI MUST NOT 顯示另一個 component 的參數欄位
-
-### Requirement: OpenGrid board workspace integration
-
-The runtime-validated catalog MUST keep the existing opengrid model id and
-route /cad/opengrid bound to the official OpenGrid board definition. The route
-MUST use the board's normalized parameter validator and component-local
-builder, and MUST preserve the existing candidate, commit, preview, STEP, and
-binary STL lifecycle.
-
-#### Scenario: OpenGrid route initial generation
-
-- **GIVEN** a user opens /cad/opengrid with browser CAD prerequisites
-- **WHEN** the Worker reports engine.ready
-- **THEN** the workspace MUST send generation 1 with modelId=opengrid and a
-  valid saved snapshot, or the current OpenGrid defaults when no valid entry
-  exists
-- **AND** the Worker MUST route the request to the OpenGrid board builder
-- **AND** the committed revision, bounds, preview, and exports MUST belong to
-  opengrid
-
-#### Scenario: OpenGrid model contract
-
-- **GIVEN** the Worker receives model.generate with modelId=opengrid
-- **WHEN** the parameters contain a valid normalized OpenGrid snapshot
-- **THEN** the Worker MUST validate the variant, grid, half-cell, chamfer,
-  connector, screw, and custom-position fields together
-- **AND** a mismatched or invalid snapshot MUST be rejected with a diagnostic
-  validation error
-
-### Requirement: OpenGrid board controls
-
-The /cad/opengrid workspace MUST expose Full/Lite/Heavy/Hybrid variant,
-rows, columns, X/Y half-cell directions, chamfer mode and corner flags,
-connector enable and side flags, generic screw dimensions, screw mode,
-center/interval modifiers, and an internal-intersection custom screw matrix.
-It MUST display derived width, depth, and maximum board thickness in
-millimetres. The Hybrid description MUST identify its Heavy outer perimeter
-and standard Full interior rather than presenting it as a uniform 13.8 mm
-plate. The accessible screw-mode control MUST be rendered before the
-screw-size-source control, and any conditional row/column interval controls
-MUST remain associated with the screw-mode control.
-
-#### Scenario: Configure current OpenGrid controls
-
-- **WHEN** a user changes variant, grid, half-cell, chamfer, connector, screw,
-  or custom-intersection values
-- **THEN** the pending typed snapshot MUST contain those normalized fields
-- **AND** selecting Hybrid MUST preserve the existing rows, columns,
-  half-cell, feature, and persistence fields
-- **AND** derived dimensions MUST use the final half-cell envelope
-- **AND** the derived dimensions MUST show Hybrid's 13.8 mm maximum thickness
-- **AND** the settled input MUST use the existing debounce and Worker lifecycle
-
-#### Scenario: Screw mode appears before screw size source
-
-- **WHEN** a user views the `/cad/opengrid` parameter panel
-- **THEN** the accessible `OpenGrid 螺絲孔模式` select MUST appear before the accessible `OpenGrid 螺絲尺寸來源` select
-- **AND** selecting `by-row-column` MUST show its row and column interval controls as part of the screw-mode section
-
-#### Scenario: Hybrid control remains compatible with existing accessories
-
-- **WHEN** a user selects Hybrid and generates a board with an interior cell
-- **THEN** the panel MUST explain that interior cells use standard Full
-  OpenGrid interfaces
-- **AND** the route MUST continue using modelId=opengrid and the existing
-  preview, STEP, and STL export controls
-
-### Requirement: OpenGrid board persistence and stale preview
-
-The OpenGrid workspace MUST use the existing per-component persistence and
-latest-wins behavior. Invalid input MUST invalidate a newer generation rather
-than generating native geometry, and a stale or invalid generation MUST NOT
-replace the last committed OpenGrid revision or enable exports.
-
-#### Scenario: OpenGrid invalidation
-
-- **WHEN** a newer OpenGrid draft is invalid or supersedes a running
-  generation
-- **THEN** the workspace MUST send parameter-free model.invalidate with the
-  newer generation
-- **AND** the older candidate MUST not commit
-- **AND** the last committed preview MAY remain visible but MUST be stale
-
 ### Requirement: 參數驗證與 generation
 
-The system MUST validate the selected `modelId` and its component-specific parameters before sending any model request to the Worker. Basic `box` dimensional parameters MUST be finite, positive integer millimetres in the inclusive range 1–500. Component-specific validators MUST enforce their own input ranges, including each 500 mm height or length range covered by this change. The hexagonal-column height MUST be an integer in the inclusive range 1–500 while its row-envelope safety check remains 500 mm. `modular-grid-base` `rows` and `columns` MUST be integers from 1 through 20 whose derived width and depth do not exceed 400 mm, and all grid/OpenGrid planar footprint safety limits MUST remain unchanged at their existing 500 mm bounds. Decimal values MUST be rejected without rounding. Every parameter snapshot, including an invalid snapshot, MUST receive a new generation; a valid snapshot MUST send `model.generate` only after all fields stop changing for 150 ms.
+The workspace MUST ask the selected component definition to validate every
+parameter snapshot before sending a model request to the Worker. Every snapshot,
+including an invalid snapshot, MUST receive a new generation. A valid snapshot
+MUST send `model.generate` only after all fields stop changing for 150 ms; an
+invalid snapshot MUST send `model.invalidate`, show the component-defined
+diagnostic, and keep export disabled. Component-specific ranges, bounds, and
+normalization rules MUST be owned by the corresponding catalog or component
+capability specification.
 
-#### Scenario: 合法方塊參數變更
+#### Scenario: Valid component snapshot generates after debounce
 
-- **Given** workspace 已顯示一個 committed model
-- **When** 使用者輸入合法的 width、depth 或 height，且所有欄位停止變更 150 ms
-- **Then** UI 必須送出大於目前 generation 的建模要求
-- **And** Worker 必須依新的 mm 參數建立方塊 B-Rep 與 mesh
-- **And** commit 後 viewport bounds 必須符合新參數的尺寸 tolerance
-- **And** 方塊的 X/Y 中心必須維持在世界原點，且最低 Z 必須維持為 0
+- **WHEN** a selected component snapshot passes its owning validator and all fields stop changing for 150 ms
+- **THEN** the workspace MUST send a `model.generate` request with a generation greater than the previous snapshot
+- **AND** the Worker request MUST retain the selected stable `modelId`
+- **AND** the component-specific capability MUST define the accepted parameters and bounds
 
-#### Scenario: 合法網格參數變更
+#### Scenario: Invalid component snapshot is invalidated
 
-- **Given** workspace 已選取 modular-grid-base
-- **When** 使用者輸入合法的 rows 或 columns，且所有欄位停止變更 150 ms
-- **Then** UI 必須送出大於目前 generation 的 `model.generate`
-- **And** Worker 必須依 `columns × 20`、`rows × 20`、5 mm 建立網格底板 B-Rep 與 mesh
-- **And** commit 後 bounds 必須符合 component 規格的尺寸 tolerance
+- **WHEN** a snapshot is empty, non-finite, out of range, mismatched, or otherwise rejected by its owning validator
+- **THEN** the workspace MUST show the component-defined diagnostic
+- **AND** it MUST send `model.invalidate` rather than `model.generate`
+- **AND** the previous committed preview MAY remain visible but MUST be marked stale
+- **AND** STEP/STL export MUST remain disabled for the invalid or stale generation
 
-#### Scenario: Debounce 最新 snapshot
+#### Scenario: Debounce keeps only the latest valid snapshot
 
-- **Given** 使用者在 150 ms 內連續修改同一個參數欄位
-- **When** 使用者停止輸入至少 150 ms
-- **Then** UI 只能為最後一個合法 snapshot 送出 model.generate
-- **And** 中間 snapshot 不得各自觸發建模
+- **WHEN** the user changes a parameter repeatedly within the 150 ms settling window
+- **THEN** the workspace MUST assign generations to the snapshots
+- **AND** it MUST send at most one `model.generate` for the latest valid settled snapshot
+- **AND** intermediate snapshots MUST NOT each start CAD generation
 
-#### Scenario: 非法參數或 component
-
-- **Given** 使用者輸入空值、非有限數值、零、負值、小數、超出範圍的值，或未知 modelId
-- **When** UI 驗證輸入
-- **Then** 欄位或 component selector 附近必須顯示可理解的驗證錯誤
-- **And** 不得為該 snapshot 送出 model.generate 或匯出 request
-- **And** UI 必須立即進入 invalid-input、停用匯出，並送出 model.invalidate 使較舊 generation 失效
-- **And** 既有成功預覽可以保留，但必須標示為 stale
-
-#### Scenario: 500 mm 手動輸入
-
-- **Given** 使用者在支援 500 mm 的長度／高度文字欄位輸入合法整數 `500`
-- **When** 輸入完成且 debounce 結束
-- **Then** 該 snapshot MUST 通過數值範圍驗證並送出 model.generate
-- **And** 對應模型的生成 bounds MUST 使用 500 mm 的請求尺寸
-- **And** slider MUST 仍然把可拖曳的最大值限制在 200 mm
 
 ### Requirement: Separate slider and manual-input limits
 
-For a numeric field that exposes both a slider and a text input, the workspace MUST treat the slider maximum as a navigation aid rather than the component's validation maximum. Fields targeted by this change MUST expose a 200 mm slider maximum while retaining their component-specific manual-input maximum of 500 mm; fields with a smaller existing domain MUST retain that smaller domain. The `box` text-only dimensions MUST expose their 500 mm manual-input maximum without requiring a slider.
+For a numeric field that exposes both a slider and a text input, the workspace
+MUST treat the slider as a navigation aid rather than as the component's
+validation contract. The owning catalog or component capability MUST define the
+manual-input domain; a valid manual value above the slider's navigation maximum
+MUST remain acceptable when that capability permits it. Fields with a smaller
+existing domain MUST retain that domain, and text-only fields MUST use their
+owner's manual-input rules.
 
 #### Scenario: Slider and text input expose distinct limits
 
-- **WHEN** a user views a targeted height or length field
-- **THEN** the range input MUST expose a maximum of 200 mm
-- **AND** the text input MUST expose a maximum of 500 mm
-- **AND** entering a valid value above 200 mm through the text input MUST remain possible
+- **WHEN** a user views a numeric field whose component spec allows manual values beyond the slider range
+- **THEN** the range input MUST expose the component-defined navigation maximum
+- **AND** the text input MUST accept every valid value in the component-defined manual domain
+- **AND** entering a valid value above the slider maximum MUST remain possible
 
 #### Scenario: Smaller domains remain bounded
 
-- **WHEN** a numeric control has an existing maximum below 200 mm
-- **THEN** its slider and manual input MUST retain the component's existing smaller maximum
-- **AND** this change MUST NOT create new values outside that component's declared domain
+- **WHEN** a numeric control has an existing smaller domain
+- **THEN** its slider and manual input MUST retain the component's declared limits
+- **AND** the workspace MUST NOT create values outside that domain
 
-#### Scenario: Planar workspace limits remain unchanged
+#### Scenario: Planar workspace limits remain independent
 
-- **WHEN** a user enters a height or length of 500 mm for a component whose X/Y footprint remains within its existing workspace limit
-- **THEN** the component MUST be eligible for generation
-- **AND** entering a planar footprint beyond the existing 500 mm safety limit MUST still be rejected independently of the height or length input range
+- **WHEN** a component has separate planar and height/length limits
+- **THEN** the component MUST validate each domain independently
+- **AND** a valid height or length MUST NOT bypass an invalid planar footprint
 
 ### Requirement: Worker 初始化與 CAD 所有權
 The system MUST satisfy the following behavior:
@@ -588,49 +440,46 @@ The viewport MUST render a restrained edge-line overlay together with every vali
 
 ### Requirement: STEP 匯出
 
-The system MUST generate STEP from the selected component's existing, pinned committed model revision in the Worker. It MUST never reconstruct STEP from the viewport mesh. Export metadata and filename MUST be supplied by the selected catalog definition; the existing box filename format MUST remain `box-{width}x{depth}x{height}.step`, and modular-grid-base MUST use `modular-grid-base-{columns}x{rows}.step`.
+The system MUST generate STEP from the selected component's pinned committed model
+revision in the Worker and MUST never reconstruct STEP from the viewport mesh.
+The selected catalog or component capability MUST supply the export metadata and
+deterministic filename; the generic workspace MUST not hardcode a
+component-specific filename.
 
 #### Scenario: Component STEP 匯出成功
 
 - **Given** workspace 為 ready，且指定 component model revision 仍存在
-- **When** 使用者按下下載 STEP
+- **When** 使用者按下 STEP 下載
 - **Then** UI 必須建立綁定該 component model revision 的 export request
-- **And** Worker 接受並驗證 request 後必須先回傳 export.accepted，並 pin 該 model revision
-- **And** Worker 必須從該已 pin 的 B-Rep 產生非空 STEP bytes
-- **And** 主執行緒必須驗證 bytes 與 metadata 後以 model/step MIME 觸發一次 .step 下載
-- **And** modular-grid-base 的預設檔名必須符合 `modular-grid-base-{columns}x{rows}.step`
+- **And** Worker 必須由該 revision 的 B-Rep 產生非空 STEP bytes
+- **And** 下載檔名 MUST come from the selected component capability
 
 #### Scenario: STEP 匯出失敗
 
-- **Given** writer 失敗、回傳空資料或指定 revision 不存在
-- **When** 匯出流程結束
-- **Then** 不得下載空檔或錯誤檔案
-- **And** UI 必須顯示 STEP 匯出失敗與重試方式
-- **And** 既有 B-Rep 與預覽不得被無條件清除
+- **Given** Worker 無法由指定 component revision 產生 STEP
+- **When** export operation 結束
+- **Then** UI 必須顯示可理解錯誤
+- **And** 不得產生空檔或宣稱下載成功
 
 #### Scenario: 匯出期間 component 更新
 
 - **Given** 使用者對 component revision R1 開始 STEP 匯出
-- **When** 後續參數更新並成功 commit 為 R2
-- **Then** R1 export 必須仍明確標示為 R1
-- **And** Worker 必須在匯出完成前保留被 pin 的 R1
-- **And** 不得把 R1 檔案命名或通知成 R2
+- **When** 新的參數 snapshot 產生 revision R2
+- **Then** R1 export MUST continue using R1's pinned revision
+- **And** R2 MUST NOT 竄改進行中的 R1 export
 
 #### Scenario: Prototype 瀏覽器範圍
 
-- **Given** 執行 Prototype 驗收
 - **When** 測試完整的初始化、component 建模、預覽與 STEP 匯出流程
-- **Then** 必須在桌面版 Chrome 與桌面版 Firefox 通過
-- **And** 驗收時必須記錄實際 stable 版本
-- **And** Safari、Edge 與行動瀏覽器不列入本變更的通過條件
+- **Then** 測試 MUST use the selected component's documented export metadata
+- **And** Worker MUST remain the only owner of B-Rep and STEP generation
 
 #### Scenario: Export 尚未被接受
 
-- **Given** 使用者對 component revision R1 發出 STEP export request，但 Worker 尚未接受該 request
-- **When** 後續 R2 成功 commit 並釋放未被 pin 的 R1
-- **Then** R1 export 必須回傳 stale/missing model error
-- **And** 不得改用 R2 靜默產生檔案
-- **And** 若 Worker 先接受 R1，則必須先回傳 export.accepted 並保留 R1 到 export terminal response
+- **Given** 使用者對 component revision 發出 STEP export request，但 Worker 尚未接受該 request
+- **When** request 尚未進入 accepted state
+- **Then** UI MUST NOT report a successful download
+- **And** export gate MUST remain tied to the accepted committed revision
 
 ### Requirement: 狀態與錯誤
 The system MUST satisfy the following behavior:
@@ -704,25 +553,37 @@ replicad、OpenCascade、B-Rep 操作、mesh 產生與 STEP writer 不得在主�
 
 ### Requirement: 明確非目標
 
-The system MUST provide the registered `box`, `box-normal`, `modular-grid-base`, `hsw-cell`, and `hexagonal-column` through the component catalog. This change MUST provide STEP and STL downloads, and MAY preserve validated component parameter preferences in browser-local persistence as defined by the component-parameter-persistence capability, but MUST NOT add arbitrary CAD file import, 3MF/G-code workflows, saving generated CAD files or models, authentication, collaboration, automatic Bambu Studio launching, or native desktop-app integration.
+The system MUST expose the runtime-validated component catalog and the component
+capabilities documented by this project, including their STEP and STL download
+flows. It MAY preserve validated component parameter preferences in
+browser-local persistence as defined by the component-parameter-persistence
+capability, but MUST NOT add arbitrary CAD file import, 3MF/G-code workflows,
+saving generated CAD files or models, authentication, collaboration, automatic
+Bambu Studio launching, or native desktop-app integration.
 
 #### Scenario: Prototype 功能清單
 
 - **Given** 使用者查看 Prototype UI 與文件
 - **When** 檢查模型與輸出功能
-- **Then** 必須提供 component catalog、box、box-normal、modular-grid-base、hsw-cell、hexagonal-column、各自的 mm/數量參數、3D 預覽、STEP 下載與 STL 下載
-- **And** 可以存在 component 參數的 browser-local persistence
+- **Then** 每個 catalog entry MUST expose only its own documented parameters, preview, and export actions
+- **And** component parameter persistence MAY exist under the persistence capability
 - **And** 不得出現 arbitrary import、3MF、G-code、generated CAD file/model saving、auth、collaboration、自動啟動 Bambu Studio 或 native desktop bridge 入口
 
 ### Requirement: Fine-grained Worker progress
 
-The versioned Worker contract MUST allow `operation.progress` to carry optional `completed`, `total`, and `unit` fields in addition to its existing stage and operation correlation fields. For modular-grid assembly, the Worker MUST report valid completed/total counts at cell or batch boundaries; stages without a natural count MAY report only their stage. The UI MUST show the current stage and, when counts are available, a determinate progress value without presenting stale or unrelated operation progress.
+The versioned Worker contract MUST allow `operation.progress` to carry optional
+`completed`, `total`, and `unit` fields in addition to its existing stage
+and operation-correlation fields. A component with logical assembly work MUST
+report valid completed/total counts at cell or batch boundaries; stages without a
+natural count MAY report only their stage. The UI MUST show the current stage
+and, when counts are available, a determinate progress value without presenting
+stale or unrelated operation progress.
 
-#### Scenario: Grid assembly reports completed work
+#### Scenario: Component assembly reports completed work
 
-- **GIVEN** the Worker is generating a modular-grid-base model
-- **WHEN** a cell or fuse batch completes
-- **THEN** it MUST emit operation.progress with the current operationId and generation
+- **GIVEN** the Worker is generating a component with measurable assembly work
+- **WHEN** a logical cell or batch completes
+- **THEN** it MUST emit `operation.progress` with the current operationId and generation
 - **AND** completed MUST be a non-negative integer no greater than total
 - **AND** total MUST be a positive integer representing the current assembly work
 - **AND** the UI MUST update the visible progress indicator with the current stage and count
@@ -751,63 +612,6 @@ The UI MUST clear the active progress indicator when the associated operation re
 - **WHEN** that generation returns an error or superseded terminal response
 - **THEN** the UI MUST leave the active progress state
 - **AND** it MUST show the existing recoverable/error or stale status without an indefinitely running progress indicator
-
-### Requirement: HSW component catalog and route
-
-The runtime-validated component catalog MUST expose an independent `hsw-cell` definition with stable model id, display metadata, rows/columns parameter schema, default parameters `{ rows: 1, columns: 1 }`, bounds metadata, and export filename metadata. The model-specific route `/cad/hsw-cell` MUST bind only to this definition, and the CAD workspace MUST remain route-locked without an in-place model selector.
-
-#### Scenario: HSW route starts the correct component
-
-- **WHEN** a user opens `/cad/hsw-cell` and the CAD runtime is available
-- **THEN** the workspace MUST initialize with `modelId=hsw-cell`
-- **AND** generation 1 MUST use valid saved HSW rows and columns when available, otherwise the HSW definition's default rows and columns
-- **AND** the Worker MUST route the request to the HSW component-local builder
-
-#### Scenario: HSW workspace shows only HSW controls
-
-- **WHEN** a user views the `/cad/hsw-cell` workspace
-- **THEN** the UI MUST identify the HSW component
-- **AND** it MUST show rows and columns controls for the HSW grid
-- **AND** it MUST NOT show box dimensions or a model selector
-
-### Requirement: HSW slider controls and contract validation
-
-The HSW workspace MUST expose `rows` and `columns` as range controls with minimum 1, maximum 20, and step 1. Normal UI interaction MUST use these sliders rather than free-form text input, so the workspace does not need a separate decimal or empty-string input path. Before sending `model.generate`, the main thread MUST still validate the resulting snapshot against the HSW contract; non-finite, out-of-range, mismatched, or programmatically malformed snapshots MUST be rejected without rounding, must advance generation/invalidation semantics, and must not start HSW CAD geometry. A valid HSW snapshot MUST use the existing settled-input debounce behavior.
-
-#### Scenario: Valid HSW parameter change
-
-- **WHEN** a user changes HSW rows or columns to a legal integer and the input settles
-- **THEN** the workspace MUST send a newer `model.generate` with `modelId=hsw-cell`
-- **AND** the resulting committed bounds MUST match the HSW layout contract within tolerance
-
-#### Scenario: Invalid HSW snapshot is rejected at the contract boundary
-
-- **WHEN** the workspace receives a zero, negative, non-finite, out-of-range, or mismatched HSW snapshot from any source
-- **THEN** the workspace MUST show a component-specific validation error
-- **AND** it MUST send `model.invalidate` rather than `model.generate`
-- **AND** export MUST remain disabled while the input is invalid or stale
-
-### Requirement: HSW Worker preview and revision contract
-
-The Worker MUST return HSW candidate and committed model events with `modelId=hsw-cell`, the validated rows/columns parameters, non-empty mesh, and bounds matching the HSW component contract. The main thread MUST keep the existing candidate commit, stale preview, model revision, and Worker ownership lifecycle for HSW exactly as for other catalog components.
-
-#### Scenario: HSW candidate becomes ready
-
-- **WHEN** a valid HSW generation completes in the Worker
-- **THEN** the Worker MUST emit a candidate containing HSW parameters, mesh, and bounds
-- **AND** the main thread MUST validate and commit only the latest candidate
-- **AND** the viewport MUST display the committed HSW geometry and dimension annotations
-
-### Requirement: HSW STEP metadata
-
-The HSW catalog definition MUST provide the deterministic STEP filename `hsw-cell-{columns}x{rows}.step`. STEP generation MUST use the selected committed HSW B-Rep revision in the Worker and MUST NOT reconstruct the file from the viewport mesh.
-
-#### Scenario: HSW STEP export
-
-- **WHEN** a ready `hsw-cell` revision with `rows=2` and `columns=2` is exported
-- **THEN** the request MUST be correlated to that HSW model revision and Worker epoch
-- **AND** the suggested filename MUST be `hsw-cell-2x2.step`
-- **AND** the downloaded bytes MUST be non-empty exact STEP output from the committed HSW B-Rep
 
 ### Requirement: 穩定且響應式的參數復原控制
 
@@ -844,309 +648,6 @@ CAD workspace MUST 提供可辨識且可用的 component-level「全部恢復預
 - **AND** 尺寸計算器的暫存輸入 MUST 清空
 - **AND** 相關控制項與相鄰欄位 MUST 不發生額外的水平或垂直位移
 
-### Requirement: OpenGrid stackable-box workspace integration
-
-The CAD workspace MUST bind `/cad/opengrid-stackable-box` exclusively to
-`modelId=opengrid-stackable-box`. The catalog entry MUST expose the existing
-OpenGrid X/Y, height, profile, opening, and full-grid controls plus exactly one
-visible locating-seat radio group with `無角座`, `角座孔`, and `內建角座`. The
-panel MUST keep the existing thin-shell/stackable profile choices, MUST NOT
-expose `basePlateMode` as a selectable profile, and MUST preserve the existing
-latest-wins, preview, commit, STEP, and STL lifecycle. The Worker MUST validate
-the canonical enum parameter and route this model ID to the independent
-stackable-box builder.
-
-#### Scenario: Stackable-box route initializes
-
-- **WHEN** a user opens `/cad/opengrid-stackable-box`
-- **THEN** the workspace MUST initialize with the stable stackable-box model ID
-- **AND** the first valid generation MUST use valid saved parameters or the
-  model defaults, including `cornerSeatMode='hole'` when no seat value exists
-
-#### Scenario: Stackable-box seat controls
-
-- **WHEN** a user views the stackable-box parameter panel
-- **THEN** it MUST show exactly the three mutually exclusive seat labels
-  `無角座`, `角座孔`, and `內建角座`
-- **AND** the selected value MUST be reflected in the typed snapshot
-- **AND** the existing full-bottom-hole grid control MUST remain independent
-
-#### Scenario: Stackable-box route isolation
-
-- **WHEN** a `model.generate` request carries
-  `modelId=opengrid-stackable-box`
-- **THEN** the Worker MUST validate the stackable-box parameter shape
-- **AND** it MUST use the stackable-box builder boundary
-- **AND** mismatched parameters MUST be rejected rather than resolved through
-  another model
-
-#### Scenario: Stackable-box exports retain lifecycle gates
-
-- **WHEN** a seat-mode candidate is valid and committed
-- **THEN** STEP and STL export MUST use the selected seat-mode metadata
-- **AND** exports MUST remain disabled while the current snapshot is invalid,
-  stale, generating, or failed geometry validation
-
-### Requirement: OpenGrid Snap workspace controls
-
-The `/cad/opengrid-snap` workspace MUST expose Full/Lite variant control, one shared `offset` range slider, an X half-cell direction control with `none`／`left`／`right`, and a Y half-cell direction control with `none`／`top`／`bottom`. The offset slider MUST cover `0` through `1 mm` in `0.05 mm` steps, and its label MUST explain that the value is the shared total outer width/depth increment. Each axis direction control MUST allow exactly one value, and the panel MUST NOT expose `allowHalfCell`, a separate half-cell checkbox, or diagonal-only options. The panel MUST display derived outer width, depth, and variant height.
-
-#### Scenario: Configure Full Snap dimensions
-
-- **WHEN** a user selects Full, sets `offset=0.2`, leaves both half-cell directions at `none`, and settles the input
-- **THEN** the pending typed snapshot MUST contain exactly `variant=Full`, `offset=0.2`, `halfCellX=none`, and `halfCellY=none`
-- **AND** the panel MUST display the resulting equal total outer width/depth increments
-- **AND** the panel MUST not display board rows, columns, screws, connectors, or chamfers
-
-#### Scenario: Configure single-axis Snap half-cell
-
-- **WHEN** a user selects Lite, chooses `halfCellX=left`, and leaves `halfCellY=none`
-- **THEN** the pending typed snapshot MUST contain the selected X direction and no Y half-cell
-- **AND** the derived X envelope MUST be shown as a half-cell host dimension
-- **AND** the panel MUST not require an additional half-cell-enabled boolean
-
-#### Scenario: Configure dual-axis Snap half-cell
-
-- **WHEN** a user chooses `halfCellX=right` and `halfCellY=top`
-- **THEN** the pending typed snapshot MUST represent a dual-axis half-cell
-- **AND** the panel MUST derive that state from the two axis controls
-- **AND** it MUST not show a separate right-top or other diagonal Snap option
-
-#### Scenario: Invalid Snap control
-
-- **WHEN** a Snap snapshot contains a non-finite, non-step, or out-of-range offset or an invalid half-cell direction
-- **THEN** the corresponding field MUST show a diagnosable validation error
-- **AND** the workspace MUST send `model.invalidate` rather than `model.generate`
-- **AND** STEP/STL export MUST remain disabled for the invalid or stale generation
-
-### Requirement: OpenGrid half-cell workspace controls
-
-The `/cad/opengrid` workspace MUST expose the existing OpenGrid board controls together with an X half-cell direction control containing `none`／`left`／`right` and a Y half-cell direction control containing `none`／`top`／`bottom`. The grid-count controls MUST be ordered X before Y. With no half-cell on an axis, its slider MUST use whole-cell values; when that axis has a selected half-cell direction, its displayed total count MUST use `0.5` increments (`1.5`, `2.5`, ...), retain at least one complete cell, and extend the maximum by `0.5`. The normalized snapshot MAY continue to store the complete-cell count as an integer plus the typed direction field. The panel MUST display derived width, depth, and thickness using the selected directions. It MUST NOT expose an `allowHalfCell` checkbox, a separate single/dual mode, or independent diagonal controls.
-
-#### Scenario: Select an X half-cell
-
-- **WHEN** a user chooses `halfCellX=right` and leaves `halfCellY=none`
-- **THEN** the pending OpenGrid snapshot MUST include the right X direction
-- **AND** the displayed width MUST increase by exactly 14 mm over the same rows/columns without half-cell
-- **AND** the displayed depth MUST remain unchanged
-
-#### Scenario: Half-cell grid count display
-
-- **WHEN** a user chooses `halfCellX=left` while the normalized OpenGrid snapshot has `columns=2`
-- **THEN** the X grid control MUST appear before the Y grid control
-- **AND** the X control MUST display `2.5` total cells and accept the next `0.5` value
-- **AND** the normalized snapshot MUST retain `columns=2` with `halfCellX=left`
-
-#### Scenario: Half-cell corner screw placement
-
-- **WHEN** a user selects `rows=5`, `columns=3`, `halfCellX=left`, `halfCellY=none`, and `screwMode=corners`
-- **THEN** the generated screw centers MUST include the half-cell/full-cell seam at `x=-35 mm`
-- **AND** the generated screw centers MUST include the far full-cell corner row at `x=21 mm`
-- **AND** the generated screw centers MUST be `[-35,-42]`, `[-35,42]`, `[21,-42]`, and `[21,42]`
-- **AND** the middle full-cell seam at `x=-7 mm` MUST NOT receive screws
-
-#### Scenario: Select a Y half-cell
-
-- **WHEN** a user chooses `halfCellY=top` and leaves `halfCellX=none`
-- **THEN** the pending OpenGrid snapshot MUST include the top Y direction
-- **AND** the displayed depth MUST increase by exactly 14 mm
-- **AND** the displayed width MUST remain unchanged
-
-#### Scenario: Select both axes
-
-- **WHEN** a user chooses one X direction and one Y direction
-- **THEN** the UI MUST describe the pending state as a dual-axis half-cell through the two selected fields
-- **AND** both displayed dimensions MUST include their respective 14 mm extension
-- **AND** left/right and top/bottom choices MUST remain mutually exclusive
-
-#### Scenario: OpenGrid invalid direction
-
-- **WHEN** a programmatic or persisted OpenGrid value contains an invalid direction or `allowHalfCell`
-- **THEN** the panel MUST show a field-specific validation error
-- **AND** it MUST send `model.invalidate` rather than `model.generate`
-- **AND** the previous accepted preview MAY remain visible but MUST be marked stale
-
-### Requirement: OpenGrid Snap workspace lifecycle and preview
-
-The Snap workspace MUST use the existing debounce, latest-wins, candidate commit/discard, stale-preview, Worker recovery, and route-locking behavior. A committed no-half preview MUST display the complete nine-solid assembly and derived dimensions from the committed bounds. A committed half-cell preview MUST display the validated project-owned half-cell assembly and derived dimensions from the committed bounds without requiring nine solids.
-
-#### Scenario: Initial Snap generation
-
-- **WHEN** `/cad/opengrid-snap` receives `engine.ready`
-- **THEN** the main thread MUST send generation 1 with the valid saved Snap snapshot or defaults
-- **AND** the Worker MUST return a candidate for `modelId=opengrid-snap`
-- **AND** the committed viewport MUST display the complete no-half assembly or the validated half-cell assembly selected by the snapshot
-
-#### Scenario: Latest Snap input wins
-
-- **WHEN** a newer valid or invalid Snap snapshot supersedes a running generation
-- **THEN** the older candidate MUST not commit or replace the newer revision
-- **AND** the existing stale/invalid export rules MUST remain in effect
-
-#### Scenario: Snap export uses committed revision
-
-- **WHEN** a Snap model is committed and the user requests STEP or STL
-- **THEN** the export request MUST use the same committed revision shown in the viewport
-- **AND** the downloaded model MUST contain the complete no-half assembly or the validated half-cell assembly rather than only its central body
-
-### Requirement: OpenGrid 分隔器 CAD workspace
-
-The system MUST register `opengrid-divider` as an independent model definition and MUST route `/cad/opengrid-divider` to that definition. The route MUST expose only the divider's `left`, `right`, `up`, `down`, `height`, and `wallThickness` controls without a detailed derived geometry summary. Each directional control MUST accept values from 0 through 10 grids in 0.5-grid steps. The height text input MUST accept 2–500 mm and its slider MUST range from 2–200 mm. It MUST NOT show the repeated technical paragraph describing the official grid, height, slider, or footprint limits. It MUST NOT show the official OpenGrid Full/Lite/Heavy, connector, or screw controls.
-
-#### Scenario: 直接開啟分隔器 route
-
-- **WHEN** a user opens `/cad/opengrid-divider`
-- **THEN** the page MUST resolve the route to `modelId=opengrid-divider`
-- **AND** the first generation MUST use valid saved divider parameters or the divider definition defaults, including `left=1.5`, `right=1.5`, `up=0`, `down=0`, `height=20`, and `wallThickness=2`
-- **AND** the Worker MUST dispatch the request to the divider builder
-
-#### Scenario: 分隔器控制面板
-
-- **WHEN** the divider workspace is rendered
-- **THEN** it MUST display four directional grid-count controls with minimum 0, maximum 10, and step 0.5, a height text input with maximum 500 mm and a height slider with maximum 200 mm, and a wall-thickness control with values from 1 through 5 mm
-- **AND** the thickness control MUST identify 2 mm as the default
-- **AND** it MUST NOT display a separate technical summary for the official 28 mm/14 mm footprint, shape, plane dimensions, chamfer, locating pegs, or total Z bounds
-- **AND** it MUST NOT display the repeated official-grid/height-limit paragraph
-- **AND** it MUST NOT display controls belonging to another model
-
-### Requirement: 分隔器輸入生命週期
-
-The divider workspace MUST use the existing typed generation, debounce, latest-wins, invalidation, candidate, commit, stale-preview, and export gates for its component-specific parameters, including `wallThickness`.
-
-#### Scenario: 合法輸入建模
-
-- **WHEN** a complete divider snapshot passes validation and input debounce settles
-- **THEN** the workspace MUST send a `model.generate` request with `modelId=opengrid-divider`
-- **AND** only the latest valid candidate MUST be eligible for commit
-- **AND** exports MUST become available only after a matching committed revision exists
-
-#### Scenario: 非法輸入失效化
-
-- **WHEN** any directional count, height, or `wallThickness` is empty, fractional where integer input is required, non-finite, negative, or outside its supported range
-- **THEN** the workspace MUST show a field-specific validation error
-- **AND** it MUST send `model.invalidate` instead of `model.generate`
-- **AND** export MUST remain disabled for the invalid or stale generation
-
-### Requirement: OpenGrid pillar workspace integration
-
-The runtime-validated component catalog MUST register `opengrid-pillar` as an independent OpenGrid model definition and MUST route `/cad/opengrid-pillar` to it. The definition MUST expose exactly one required radio group with `standard`, `thin-shell`, and `positioning` choices, defaulting to `standard`, plus numeric X/Y offset controls shared by all three modes. Standard and thin-shell MUST NOT expose a manual length, diameter, flange-height, or chamfer field; positioning MUST expose only its custom total-length field in addition to the X/Y offset controls. The Worker MUST dispatch `modelId=opengrid-pillar` to the pillar builder, and the CAD workspace MUST not fall through to another component or expose another component's parameters.
-
-#### Scenario: Pillar initial generation
-
-- **GIVEN** a user opens `/cad/opengrid-pillar` in a supported browser
-- **WHEN** the Worker emits `engine.ready`
-- **THEN** the main thread MUST send generation 1 using a valid saved pillar snapshot or `{ mode: 'standard', offsetX: 0, offsetY: 0 }`
-- **AND** the Worker MUST route the request to the independent pillar builder
-- **AND** the committed model MUST expose pillar bounds, mesh, and model metadata
-
-#### Scenario: Pillar parameter controls
-
-- **GIVEN** a user views the `/cad/opengrid-pillar` workspace
-- **WHEN** the parameter panel is rendered
-- **THEN** it MUST expose a radio group with clearly labeled `堆疊版`, `薄殼版`, and `物件定位用` choices
-- **AND** the standard choice MUST be selected by default
-- **AND** selecting standard MUST represent a fixed 9 mm model
-- **AND** selecting thin-shell MUST represent a fixed 6 mm model
-- **AND** selecting positioning MUST expose a custom total-length field
-- **AND** every mode MUST expose X and Y offset controls with range -0.5～0.5 mm and step 0.05 mm
-- **AND** standard and thin-shell MUST NOT expose adjustable length, diameter, flange-height, or chamfer fields
-
-#### Scenario: Mode selection updates the existing model
-
-- **GIVEN** a user views the `/cad/opengrid-pillar` workspace
-- **WHEN** the user selects any radio choice or changes a valid XY offset
-- **THEN** the workspace MUST validate and generate the corresponding pillar mode model at the requested XY position
-- **AND** the accepted typed mode, length when applicable, and offsets MUST be persisted under `opengrid-pillar`
-- **AND** switching to positioning MUST retain or initialize its custom length
-- **AND** switching to a fixed mode MUST remove the manual length override from the accepted snapshot
-
-#### Scenario: Pillar route isolation
-
-- **GIVEN** a `model.generate` request carries `modelId=opengrid-pillar`
-- **WHEN** the Worker validates and builds the request
-- **THEN** it MUST accept only the pillar mode parameter shape, with `length` allowed only for positioning and offsets required for every normalized snapshot
-- **AND** it MUST reject mismatched or unknown parameter shapes
-- **AND** it MUST NOT resolve the request through another component's builder or template cache
-
-#### Scenario: Invalid pillar input lifecycle
-
-- **WHEN** a user or external caller supplies a missing, malformed, unsupported pillar mode, invalid positioning length, or invalid XY offset
-- **THEN** the workspace MUST show a diagnosable field error
-- **AND** it MUST send `model.invalidate` rather than `model.generate` for that invalid snapshot
-- **AND** export MUST remain disabled while the input is invalid or stale
-
-### Requirement: OpenGrid locating model descriptions
-
-The system MUST ensure that the OpenGrid stackable-box and stackable-cylinder
-panels and model descriptions describe the three locating-seat choices with the
-exact labels `無角座`,
-`角座孔`, and `內建角座`. The integrated description MUST communicate that the
-selected positions receive a solid Ø5 mm round seat extending 3 mm outward
-from the bottom. Existing model display names and OpenGrid identities MUST
-remain unchanged.
-
-#### Scenario: Integrated seat description is visible
-
-- **WHEN** the user selects `內建角座` in either OpenGrid stackable model
-- **THEN** the panel MUST identify the result as a Ø5 mm, 3 mm-high outward
-  round seat
-- **AND** the panel MUST continue to show the other two mutually exclusive
-  choices
-
-### Requirement: OpenGrid stackable-cylinder workspace integration
-
-The CAD workspace MUST bind `/cad/opengrid-stackable-cylinder` exclusively to
-`modelId=opengrid-stackable-cylinder`. The catalog entry MUST expose the
-existing typed diameter, height, profile, and opening controls plus exactly one
-visible locating-seat radio group with `無角座`, `角座孔`, and `內建角座`.
-The visible panel MUST NOT expose `bottomPlateMode` as a selectable profile,
-and MUST NOT expose individual center or outer-hole toggles. The Worker MUST
-validate the canonical enum and route this model ID to the independent cylinder
-builder without falling through to another model.
-
-#### Scenario: Cylinder route initializes
-
-- **WHEN** a user opens `/cad/opengrid-stackable-cylinder`
-- **THEN** the workspace MUST initialize with
-  `modelId=opengrid-stackable-cylinder`
-- **AND** the first valid generation MUST use valid saved parameters or the
-  defaults, including `bottomSeatMode='hole'` when no seat value exists
-
-#### Scenario: Cylinder seat controls
-
-- **WHEN** a user views the cylinder parameter panel
-- **THEN** it MUST show exactly `無角座`, `角座孔`, and `內建角座` as mutually
-  exclusive radio choices
-- **AND** the existing selected profile descriptions MUST remain unchanged
-- **AND** it MUST not show rectangular X/Y, box full-grid, or individual-hole
-  controls
-
-#### Scenario: Cylinder Worker dispatch is component-specific
-
-- **WHEN** the Worker receives a cylinder generation request with a seat mode
-- **THEN** it MUST validate the cylinder parameter shape and invoke the cylinder
-  builder
-- **AND** a mismatched or unsupported seat value MUST be rejected with a
-  diagnosable validation error
-
-### Requirement: Cylinder workspace lifecycle and export gates
-
-The new cylinder route MUST use the existing debounce, latest-wins, candidate-ready, commit/discard, invalid-input, stale-preview, Worker recovery, preview mesh, STEP export, and STL export lifecycle. A failed or stale cylinder generation MUST NOT replace the latest committed revision or enable export.
-
-#### Scenario: Valid cylinder update commits
-
-- **WHEN** a valid diameter or height update settles after the existing input debounce
-- **THEN** the workspace MUST request a newer cylinder generation
-- **AND** only the latest valid candidate MUST be eligible for commit
-- **AND** the committed bounds MUST match the typed parameters within tolerance
-
-#### Scenario: Invalid or stale cylinder update
-
-- **WHEN** a cylinder input is invalid or its candidate becomes stale because a newer generation exists
-- **THEN** the workspace MUST invalidate or discard that snapshot according to the existing lifecycle
-- **AND** the previous committed preview MAY remain visible as stale
-- **AND** STEP/STL export MUST remain disabled for the invalid or stale snapshot
-
 ### Requirement: Mobile CAD viewport touch interaction
 
 At or below the existing `760px` responsive breakpoint, a CAD viewport with a committed model MUST support continuous touch interaction without requiring the user to lift their finger during a gesture. Touch handling MUST be scoped to the preview surface so normal page scrolling remains available outside the viewport.
@@ -1175,121 +676,34 @@ At or below the existing `760px` responsive breakpoint, a CAD viewport with a co
 - **THEN** the model MUST remain rotatable through the existing desktop interaction
 - **AND** the mobile touch support MUST NOT change model generation, camera framing, dimension annotations, or committed revision behavior
 
-### Requirement: System context controls initial CAD generation
+### Requirement: Component-specific behavior has a single normative owner
 
-The CAD workspace MUST resolve the supported `desk` or `wall` context before its first generation. It MUST initialize from the valid scoped snapshot, system preset, or model definition default according to the persistence precedence, while keeping the existing model id, generation lifecycle, viewport behavior, and export gates unchanged.
+The generic CAD workspace specification MUST own only lifecycle behavior that is
+shared by every runtime-validated catalog component. Route-specific controls,
+component parameter ranges, component builder dispatch, component-specific preview
+invariants, and component-specific export metadata MUST be normatively defined in
+the corresponding component capability specification.
 
-#### Scenario: Context route initializes the matching Snap geometry
+#### Scenario: A component contract changes
 
-- **WHEN** a user opens `/cad/opengrid-snap?system=desk` or `/cad/opengrid-snap?system=wall` without scoped saved values
-- **THEN** generation 1 MUST use the corresponding context preset
-- **AND** the Desk preset MUST use an X/Y increment of `0.25`
-- **AND** the committed model MUST retain `modelId=opengrid-snap`
-- **AND** the model MUST remain previewable and exportable through the existing Worker lifecycle
+- **WHEN** a future change modifies a component route, control, validator, builder,
+  preview, or export rule
+- **THEN** the corresponding component capability spec MUST be updated
+- **AND** `cad-workspace` MUST remain unchanged unless the shared lifecycle changes
 
-### Requirement: System-aware restore defaults
+#### Scenario: Shared lifecycle applies to every component
 
-When a supported system context is active, the CAD workspace's restore-defaults action MUST apply the active system preset and persist the validated result in that system scope. The context-free route MUST continue to restore the model definition defaults.
+- **WHEN** any registered catalog component is initialized, generated, committed,
+  invalidated, previewed, or exported
+- **THEN** the generic lifecycle in `cad-workspace` MUST apply
+- **AND** the component capability spec MUST provide the component-specific inputs
+  and acceptance criteria
 
-#### Scenario: Wall reset restores Wall Snap defaults
+#### Scenario: Existing identities remain compatible
 
-- **WHEN** a user changes Wall Snap parameters and activates `全部恢復預設`
-- **THEN** the controls MUST return to Full/Standard/full/0 with both optional hole flags disabled
-- **AND** the next valid generation MUST use those values
-
-### Requirement: Active system label on the CAD edit page
-
-The CAD edit page MUST show the validated active system name above the model title when a supported OpenGrid system context is present. Desk MUST show `目前系統：Desk System`, and Wall MUST show `目前系統：Wall Related`. A context-free or unsupported route MUST omit the system label.
-
-#### Scenario: Desk edit page identifies the active system
-
-- **WHEN** a user opens `/cad/opengrid-snap?system=desk`
-- **THEN** the page MUST show `目前系統：Desk System` above the model title
-
-#### Scenario: Wall edit page identifies the active system
-
-- **WHEN** a user opens `/cad/opengrid-snap?system=wall`
-- **THEN** the page MUST show `目前系統：Wall Related` above the model title
-
-### Requirement: Open Shelf workspace integration
-
-The CAD workspace MUST register `opengrid-open-shelf` as an independent model definition, expose its existing `x`, `y`, `height`, `cellX`, `cellZ`, and `angle` geometric controls plus a `honeycombMode` toggle labelled `省料模式（六角鏤空）`, route `/cad/opengrid-open-shelf` to that definition, and dispatch Worker generation to the `opengrid-open-shelf` kernel builder. The component MUST use the existing debounce, latest-wins candidate, commit, mesh, STEP, and STL gates.
-
-#### Scenario: Open Shelf route initializes independently
-
-- **WHEN** a user opens `/cad/opengrid-open-shelf` with browser CAD prerequisites
-- **THEN** the workspace MUST initialize `modelId=opengrid-open-shelf`
-- **AND** generation 1 MUST use a valid saved snapshot or the Open Shelf defaults
-- **AND** the Worker MUST not fall through to another model builder
-
-#### Scenario: Open Shelf controls expose its geometric fields and material mode
-
-- **WHEN** the Open Shelf parameter panel is rendered
-- **THEN** it MUST expose outer X/Y grid counts, total height, internal X/Z cell counts, angle controls, and the Hex Mesh toggle
-- **AND** the toggle MUST default to unchecked without changing the six slider controls
-- **AND** it MUST not expose stackable-box modes, ordinary OpenGrid board fields, or another component's controls
-
-#### Scenario: Open Shelf uses the existing export lifecycle
-
-- **WHEN** a valid Open Shelf generation is committed
-- **THEN** the workspace MUST display its mesh and enable the existing STEP/STL export actions
-- **AND** a stale, invalid, or failed generation MUST not replace the last committed revision or enable a new export
-
-### Requirement: Open Shelf raw input validation follows the workspace lifecycle
-
-The workspace MUST parse the six Open Shelf geometric fields and `honeycombMode` into the typed snapshot required by the component contract. Empty, fractional, non-finite, unknown, out-of-range, or invalid boolean raw input MUST produce field-specific validation feedback and `model.invalidate`; valid input MUST use the existing debounce and Worker generation lifecycle.
-
-#### Scenario: Invalid Open Shelf input is invalidated
-
-- **WHEN** a user enters an invalid X/Y/height/cell-count/angle/mode value
-- **THEN** the workspace MUST show a diagnosable field error
-- **AND** it MUST invalidate the pending generation rather than build native geometry
-- **AND** export MUST remain disabled while the input is invalid or stale
-
-#### Scenario: Valid Open Shelf input generates typed parameters
-
-- **WHEN** all fields form a valid snapshot and the debounce settles
-- **THEN** the Worker request MUST contain typed `x`, `y`, `height`, `cellX`, `cellZ`, `angle`, and `honeycombMode`
-- **AND** only the latest valid candidate MUST be eligible for commit
-
-### Requirement: Honeycomb render performance warning
-
-The CAD workspace MUST show a red, user-visible performance warning when
-`省料模式（六角鏤空）` is enabled in each existing OpenGrid stackable-box,
-stackable-cylinder, and Open Shelf parameter panel. The warning MUST use the
-exact text `注意：省料模式會明顯降低模型渲染速度。建議先使用一般模式確認形狀，下載前再啟用省料模式。`
-and MUST be placed below the saving-mode checkbox. The warning MUST be
-informational only: it MUST NOT prevent mode selection, preview generation,
-parameter persistence, or STEP/STL downloads.
-
-#### Scenario: Stackable-box honeycomb warning
-
-- **WHEN** a user enables `省料模式（六角鏤空）` in `/cad/opengrid-stackable-box`
-- **THEN** the parameter panel MUST display the exact red warning text below
-  the saving-mode checkbox
-
-#### Scenario: Stackable-cylinder honeycomb warning
-
-- **WHEN** a user enables `省料模式（六角鏤空）` in `/cad/opengrid-stackable-cylinder`
-- **THEN** the parameter panel MUST display the exact red warning text below
-  the saving-mode checkbox
-
-#### Scenario: Open Shelf honeycomb warning
-
-- **WHEN** a user enables `省料模式（六角鏤空）` in `/cad/opengrid-open-shelf`
-- **THEN** the parameter panel MUST display the exact red warning text below
-  the saving-mode checkbox
-
-#### Scenario: Warning follows the saving-mode checkbox
-
-- **WHEN** a user disables `省料模式（六角鏤空）` in any of the three OpenGrid panels
-- **THEN** the honeycomb performance warning MUST no longer be visible
-
-#### Scenario: Warning does not block existing workflow
-
-- **WHEN** the honeycomb performance warning is visible
-- **THEN** the user MUST still be able to edit parameters, generate the
-  preview, persist the selected profile, and request STEP or STL downloads
+- **WHEN** the ownership refactor is applied
+- **THEN** existing model IDs, OpenGrid build keys, route slugs, persistence keys,
+  and export filename formats MUST remain unchanged
 
 ## 可追溯性
 
