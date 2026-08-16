@@ -11,7 +11,9 @@ export type ModelFamily = 'hsw' | 'opengrid' | 'other'
 
 export type ModelFamilyMetadata = {
   key: ModelFamily
+  /** Stable translation key; never render this value directly. */
   label: string
+  /** Stable translation key; never render this value directly. */
   description: string
 }
 
@@ -28,9 +30,11 @@ export type ModelSelectionSubgroup = {
 
 export type ParameterField = {
   key: ModelParameterKey
+  /** Stable translation key; never render this value directly. */
   label: string
   axis: string
-  unit: 'mm' | '°' | '格' | '支'
+  unit: 'mm' | 'degree' | 'grid' | 'count'
+  labelFormat?: 'axis' | 'label-axis'
   control: 'text' | 'range' | 'range-text'
   defaultValue: number
   min: number
@@ -43,6 +47,7 @@ export type ParameterField = {
 
 export type ModelPreviewImage = {
   src: string
+  /** Stable translation key; never render this value directly. */
   alt: string
   width: number
   height: number
@@ -57,8 +62,10 @@ export type ModelDefinition = {
   id: ModelId
   buildKey: ModelId
   family: ModelFamily
+  /** Stable translation key; never render this value directly. */
   displayName: string
   selectionLabel?: string
+  /** Stable translation key; never render this value directly. */
   selectionDescription: string
   parameterSchema: ReadonlyArray<ParameterField>
   defaultParameters: ModelParameterValues

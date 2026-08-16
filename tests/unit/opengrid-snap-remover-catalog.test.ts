@@ -15,7 +15,7 @@ describe('OpenGrid Snap Remover catalog entry', () => {
       id: 'opengrid-snap-remover',
       buildKey: 'opengrid-snap-remover',
       family: 'opengrid',
-      displayName: 'OpenGrid Snap Remover',
+      displayName: 'models.model.opengrid-snap-remover.name',
       parameterSchema: [],
       defaultParameters: {},
       previewMetadata: {

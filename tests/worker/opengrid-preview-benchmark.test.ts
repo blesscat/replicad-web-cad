@@ -158,7 +158,7 @@ function workerError(
   )
   const failure = new Error(
     event?.kind === 'operation.error'
-      ? `${event.code}:${event.userMessage}`
+      ? `${event.code}:${event.messageId}`
       : `WORKER_EVENT_MISSING:${operationId}`,
   ) as Error & { phase?: string }
   failure.phase = event?.kind === 'operation.error' ? event.stage : 'worker'
@@ -189,7 +189,7 @@ async function createWorkerSession(
   )
   const operationId = `${epoch}-init`
   await runtime.handle({
-    version: 1,
+    version: 2,
     requestId: `${operationId}-request`,
     operationId,
     kind: 'engine.init',
@@ -206,7 +206,7 @@ async function disposeWorkerSession(
 ): Promise<void> {
   if (!session) return
   await session.runtime.handle({
-    version: 1,
+    version: 2,
     requestId: `${session.epoch}-dispose-request`,
     operationId: `${session.epoch}-dispose`,
     kind: 'worker.dispose',
@@ -231,7 +231,7 @@ async function runWorkerPreview(
   const operationId = `${session.epoch}-generation-${generation}`
   const startedAt = performance.now()
   await session.runtime.handle({
-    version: 1,
+    version: 2,
     requestId: `${operationId}-generate-request`,
     operationId,
     kind: 'model.generate',
@@ -250,7 +250,7 @@ async function runWorkerPreview(
 
   const commitStartedAt = performance.now()
   await session.runtime.handle({
-    version: 1,
+    version: 2,
     requestId: `${operationId}-commit-request`,
     operationId,
     kind: 'model.commit',

@@ -1,0 +1,62 @@
+---
+import SiteLayout from '../../../layouts/SiteLayout.astro'
+import {
+  SUPPORTED_LOCALES,
+  isLocale,
+  translate,
+  type Locale,
+} from '../../../i18n'
+import { publicPathFor } from '../../../i18n/routes'
+
+export function getStaticPaths() {
+  return SUPPORTED_LOCALES.map((locale) => ({
+    params: { locale },
+    props: { locale },
+  }))
+}
+
+const locale = Astro.props.locale as Locale
+if (!isLocale(locale)) throw new Error(`UNSUPPORTED_LOCALE:${locale}`)
+const t = (key: string) => translate(locale, key)
+---
+
+<SiteLayout
+  {locale}
+  title={`${t('docs.title')} | Shape Shortcut`}
+  description={t('docs.description')}
+>
+  <article
+    class="rounded-2xl border border-border-card bg-panel p-5 shadow-card"
+  >
+    <p class="mb-4 text-muted">{t('docs.eyebrow')}</p>
+    <h1 class="mb-4 text-4xl font-semibold leading-tight">{t('docs.title')}</h1>
+    <h2 class="mb-3 text-2xl font-semibold leading-tight">
+      {t('docs.modelsHeading')}
+    </h2>
+    <p class="mb-4 leading-normal">{t('docs.body')}</p>
+    <h2 class="mb-3 text-2xl font-semibold leading-tight">
+      {t('docs.parametersHeading')}
+    </h2>
+    <p class="mb-4 leading-normal">{t('docs.parametersBody')}</p>
+    <h2 class="mb-3 text-2xl font-semibold leading-tight">
+      {t('docs.unitsHeading')}
+    </h2>
+    <p class="mb-4 leading-normal">{t('docs.unitsBody')}</p>
+    <h2 class="mb-3 text-2xl font-semibold leading-tight">
+      {t('docs.exportsHeading')}
+    </h2>
+    <p class="mb-4 leading-normal">{t('docs.exportsBody')}</p>
+    <h2 class="mb-3 text-2xl font-semibold leading-tight">
+      {t('docs.browserHeading')}
+    </h2>
+    <p class="mb-4 leading-normal">{t('docs.browserBody')}</p>
+    <p class="mb-4 leading-normal">{t('docs.architecture')}</p>
+    <p class="mb-0">
+      <a
+        class="text-ink underline underline-offset-4"
+        href={publicPathFor(locale, 'models')}
+        >{t('common.backToModelsArrow')}</a
+      >
+    </p>
+  </article>
+</SiteLayout>

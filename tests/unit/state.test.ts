@@ -68,7 +68,7 @@ describe('CAD state machine', () => {
       error: normalizeError(new Error('bad input'), {
         stage: 'validation',
         code: 'INVALID_INPUT',
-        userMessage: '輸入無效',
+        message: { messageId: 'validation.invalid' },
       }),
     })
     expect(state.status).toBe('invalid-input')

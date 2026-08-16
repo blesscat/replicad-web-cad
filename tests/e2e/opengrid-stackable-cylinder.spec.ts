@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { skipHeadlessFirefoxWithoutWebGL, waitForCadReady } from './helpers'
 
 const HONEYCOMB_RENDER_WARNING =
-  '注意：省料模式會明顯降低模型渲染速度。建議先使用一般模式確認形狀，下載前再啟用省料模式。'
+  '省料模式會明顯降低模型渲染速度。建議先使用一般模式確認形狀，下載前再啟用省料模式。'
 
 const sideOpeningGroups = [
   { direction: '-Y', label: '前方' },
@@ -37,7 +37,7 @@ test('Desk System starts the stackable-cylinder with its thin-shell preset', asy
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/opengrid-stackable-cylinder?system=desk')
+  await page.goto('/zh-Hant/cad/opengrid-stackable-cylinder?system=desk')
   await page.evaluate(() => localStorage.clear())
   await page.reload()
   await waitForCadReady(page)
@@ -45,7 +45,7 @@ test('Desk System starts the stackable-cylinder with its thin-shell preset', asy
   await expect(page.getByTestId('cad-system-context')).toHaveText(
     '目前系統：Desk System',
   )
-  await expect(page.getByRole('slider', { name: '外徑（直徑）' })).toHaveValue(
+  await expect(page.getByRole('slider', { name: '外徑（D）' })).toHaveValue(
     '60',
   )
   await expect(page.getByRole('textbox', { name: '高度（Z）' })).toHaveValue(
@@ -59,18 +59,18 @@ test('Desk System starts the stackable-cylinder with its thin-shell preset', asy
 test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
   page,
 }) => {
-  await page.goto('/models')
+  await page.goto('/zh-Hant/models')
   const modelLink = page
     .getByRole('heading', { name: 'Round Box (圓盒)', exact: true })
     .locator('..')
     .getByRole('link', { name: '編輯 Round Box (圓盒)', exact: true })
   await expect(modelLink).toHaveAttribute(
     'href',
-    '/cad/opengrid-stackable-cylinder?system=desk',
+    '/zh-Hant/cad/opengrid-stackable-cylinder?system=desk',
   )
-  await page.goto('/cad/opengrid-stackable-cylinder')
+  await page.goto('/zh-Hant/cad/opengrid-stackable-cylinder')
 
-  await expect(page).toHaveURL('/cad/opengrid-stackable-cylinder')
+  await expect(page).toHaveURL('/zh-Hant/cad/opengrid-stackable-cylinder')
   await expect(
     page.getByRole('heading', { name: '目前編輯：Round Box (圓盒)' }),
   ).toBeVisible()
@@ -97,7 +97,7 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
     modeOptions.locator(
       'xpath=following-sibling::p[@data-testid="opengrid-cylinder-mode-description"]',
     ),
-  ).toHaveText('預設模式：可堆疊滑動，使用9mm定位柱')
+  ).toHaveText('預設模式：可堆疊滑動，使用 9mm 定位柱')
   await expect(
     page.getByText(/高度文字輸入為 10–500 mm、slider 為 10–200 mm/),
   ).toHaveCount(0)
@@ -117,7 +117,7 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
   await expect(openingDisclosure).not.toHaveAttribute('open', '')
   await openCylinderSideOpenings(page)
 
-  const diameter = page.getByRole('slider', { name: '外徑（直徑）' })
+  const diameter = page.getByRole('slider', { name: '外徑（D）' })
   const height = page.getByRole('slider', { name: '高度（Z）' })
   const heightInput = page.getByRole('textbox', { name: '高度（Z）' })
   await expect(diameter).toHaveValue('60')
@@ -202,7 +202,7 @@ test('OpenGrid stackable-cylinder keeps four opening groups independent and rest
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/opengrid-stackable-cylinder')
+  await page.goto('/zh-Hant/cad/opengrid-stackable-cylinder')
   await openCylinderSideOpenings(page)
   await openCylinderSideOpeningGroup(page, '+X')
   await openCylinderSideOpeningGroup(page, '-X')
@@ -217,8 +217,8 @@ test('OpenGrid stackable-cylinder keeps four opening groups independent and rest
   })
   await rightDepth.fill('5')
   await expect(rightDepth).toHaveAttribute('aria-invalid', 'true')
-  await expect(page.locator('#openingPlusXDepth-error')).toContainText(
-    '固定 2.5 mm 圓角',
+  await expect(page.locator('#openingPlusXDepth-error')).toHaveText(
+    '參數 輸入無效，請檢查參數後重試。',
   )
   await rightDepth.fill('8')
   await expect(rightDepth).toHaveAttribute('aria-invalid', 'false')
@@ -252,10 +252,10 @@ test('OpenGrid stackable-cylinder updates and exports deterministic metadata', a
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/opengrid-stackable-cylinder')
+  await page.goto('/zh-Hant/cad/opengrid-stackable-cylinder')
   await waitForCadReady(page)
 
-  await page.getByRole('slider', { name: '外徑（直徑）' }).press('ArrowRight')
+  await page.getByRole('slider', { name: '外徑（D）' }).press('ArrowRight')
   await page.getByRole('textbox', { name: '高度（Z）' }).fill('31')
   await waitForCadReady(page)
 
@@ -272,14 +272,14 @@ test('OpenGrid stackable-cylinder exports the selected thin and no-seat state', 
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/opengrid-stackable-cylinder')
+  await page.goto('/zh-Hant/cad/opengrid-stackable-cylinder')
   await waitForCadReady(page)
 
   await page.getByRole('radio', { name: '薄殼模式' }).check()
   await page.getByRole('radio', { name: '無角座' }).check()
   await expect(
     page.getByTestId('opengrid-cylinder-mode-description'),
-  ).toHaveText('薄殼模式：不可堆疊，使用6mm定位柱')
+  ).toHaveText('薄殼模式：不可堆疊，使用 6mm 定位柱')
   await expect(page.locator('p').filter({ hasText: '底部孔洞：' })).toHaveCount(
     0,
   )
@@ -298,7 +298,7 @@ test('OpenGrid stackable-cylinder exports the integrated seat mode', async ({
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/opengrid-stackable-cylinder')
+  await page.goto('/zh-Hant/cad/opengrid-stackable-cylinder')
   await waitForCadReady(page)
 
   await page.getByRole('radio', { name: '內建角座' }).check()
@@ -317,7 +317,7 @@ test('OpenGrid stackable-cylinder export identity includes enabled opening setti
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/opengrid-stackable-cylinder')
+  await page.goto('/zh-Hant/cad/opengrid-stackable-cylinder')
   await waitForCadReady(page)
   await openCylinderSideOpenings(page)
   await openCylinderSideOpeningGroup(page, '+X')
@@ -341,7 +341,7 @@ test('OpenGrid stackable-cylinder persists the honeycomb saving switch and filen
 }) => {
   test.setTimeout(120_000)
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/opengrid-stackable-cylinder')
+  await page.goto('/zh-Hant/cad/opengrid-stackable-cylinder')
   await waitForCadReady(page)
 
   const honeycomb = page.getByRole('checkbox', {

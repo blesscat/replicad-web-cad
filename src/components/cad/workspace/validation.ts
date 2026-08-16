@@ -1,4 +1,8 @@
 import { normalizeError, type CadError } from '../../../cad-contract/errors'
+import type {
+  DiagnosticDescriptor,
+  DiagnosticParams,
+} from '../../../cad-contract/diagnostics'
 import type { WorkerClientError } from '../../../features/cad/worker-client'
 import {
   HEXAGONAL_COLUMN_CONFIGURATION,
@@ -20,6 +24,7 @@ import {
   type ModelParameterValues,
   type OpenGridSnapParameters,
   type ScalarModelParameterKey,
+  type ValidationIssue,
 } from '../../../cad-contract/units'
 import type { RawParameters } from './types'
 
@@ -177,13 +182,13 @@ function parseBooleanRawParameter(
   field: ModelParameterKey,
 ):
   | { valid: true; value: boolean }
-  | { valid: false; message: string; field: ModelParameterKey } {
+  | { valid: false; messageId: string; field: ModelParameterKey } {
   const value = rawValue ?? 'false'
   if (value === 'true') return { valid: true, value: true }
   if (value === 'false') return { valid: true, value: false }
   return {
     valid: false,
-    message: '必須是 true 或 false。',
+    messageId: 'validation.invalid',
     field,
   }
 }
@@ -193,7 +198,7 @@ function parseSeatModeRawParameter(
   field: ModelParameterKey,
 ):
   | { valid: true; value: (typeof OPENGRID_LOCATING_SEAT_MODES)[number] }
-  | { valid: false; message: string; field: ModelParameterKey } {
+  | { valid: false; messageId: string; field: ModelParameterKey } {
   const value = rawValue ?? 'hole'
   if ((OPENGRID_LOCATING_SEAT_MODES as readonly string[]).includes(value)) {
     return {
@@ -203,21 +208,24 @@ function parseSeatModeRawParameter(
   }
   return {
     valid: false,
-    message: '角座模式必須是 none、hole 或 integrated。',
+    messageId: 'validation.invalid',
     field,
   }
 }
 
-function parsePillarRawParameters(
-  raw: RawParameters,
-):
+function parsePillarRawParameters(raw: RawParameters):
   | { valid: true; value: ModelParameterValues }
-  | { valid: false; message: string; field?: ModelParameterKey } {
+  | {
+      valid: false
+      messageId: string
+      field?: ModelParameterKey
+      params?: DiagnosticParams
+    } {
   const mode = raw.mode
   if (mode !== 'standard' && mode !== 'thin-shell' && mode !== 'positioning') {
     return {
       valid: false,
-      message: '模式必須是 standard、thin-shell 或 positioning。',
+      messageId: 'validation.invalid',
       field: 'mode',
     }
   }
@@ -234,7 +242,7 @@ function parsePillarRawParameters(
   if (offset === null) {
     return {
       valid: false,
-      message: 'offset 必須是有限的小數 mm。',
+      messageId: 'validation.invalid',
       field: 'offset',
     }
   }
@@ -245,7 +253,7 @@ function parsePillarRawParameters(
       const issue = validation.issues[0]
       return {
         valid: false,
-        message: issue?.message ?? '支柱模式輸入無效。',
+        messageId: issue?.messageId ?? 'validation.invalid',
         field: issue?.field === 'parameters' ? undefined : issue?.field,
       }
     }
@@ -258,7 +266,7 @@ function parsePillarRawParameters(
   if (length === null) {
     return {
       valid: false,
-      message: '物件定位用支柱長度必須是有限的整數 mm。',
+      messageId: 'validation.invalid',
       field: 'length',
     }
   }
@@ -272,7 +280,7 @@ function parsePillarRawParameters(
     const issue = validation.issues[0]
     return {
       valid: false,
-      message: issue?.message ?? '物件定位用支柱輸入無效。',
+      messageId: issue?.messageId ?? 'validation.invalid',
       field: issue?.field === 'parameters' ? undefined : issue?.field,
     }
   }
@@ -454,7 +462,12 @@ export function parseRawParameters(
   modelId: ModelId = 'box',
 ):
   | { valid: true; value: ModelParameterValues }
-  | { valid: false; message: string; field?: ModelParameterKey } {
+  | {
+      valid: false
+      messageId: string
+      field?: ModelParameterKey
+      params?: DiagnosticParams
+    } {
   if (modelId === 'opengrid-snap-remover') {
     const validation = validateModelParameters(modelId, {})
     if (validation.valid) {
@@ -462,7 +475,7 @@ export function parseRawParameters(
     }
     return {
       valid: false,
-      message: validation.issues[0]?.message ?? '參數輸入無效。',
+      messageId: validation.issues[0]?.messageId ?? 'validation.invalid',
     }
   }
 
@@ -471,7 +484,7 @@ export function parseRawParameters(
     (key) => !keys.includes(key as ModelParameterKey),
   )
   if (unexpectedKey) {
-    return { valid: false, message: '包含不支援的參數欄位。' }
+    return { valid: false, messageId: 'validation.invalid' }
   }
 
   if (modelId === 'opengrid-pillar') {
@@ -483,7 +496,7 @@ export function parseRawParameters(
     if (variant !== 'Full' && variant !== 'Lite') {
       return {
         valid: false,
-        message: '型號必須是 Full 或 Lite。',
+        messageId: 'validation.invalid',
         field: 'variant',
       }
     }
@@ -492,7 +505,7 @@ export function parseRawParameters(
     if (profile !== 'Standard' && profile !== 'Directional') {
       return {
         valid: false,
-        message: '幾何 profile 必須是 Standard 或 Directional。',
+        messageId: 'validation.invalid',
         field: 'profile',
       }
     }
@@ -501,7 +514,7 @@ export function parseRawParameters(
     if (offset === null) {
       return {
         valid: false,
-        message: '外框總增量必須是有限的小數。',
+        messageId: 'validation.invalid',
         field: 'offset',
       }
     }
@@ -510,7 +523,7 @@ export function parseRawParameters(
     if (!isOpenGridSnapFootprint(footprint)) {
       return {
         valid: false,
-        message: '格型必須是 full、half 或 quarter。',
+        messageId: 'validation.invalid',
         field: 'footprint',
       }
     }
@@ -540,8 +553,9 @@ export function parseRawParameters(
       const field = issue?.field
       return {
         valid: false,
-        message: issue?.message ?? 'OpenGrid Snap 輸入無效。',
+        messageId: issue?.messageId ?? 'validation.invalid',
         field: field === 'parameters' ? undefined : field,
+        ...(issue?.params ? { params: issue.params } : {}),
       }
     }
     return { valid: true, value: validation.value.parameters }
@@ -556,7 +570,7 @@ export function parseRawParameters(
       if (mode !== 'standard' && mode !== 'thin-shell') {
         return {
           valid: false,
-          message: '模式必須是 standard 或 thin-shell。',
+          messageId: 'validation.invalid',
           field: 'mode',
         }
       }
@@ -581,7 +595,7 @@ export function parseRawParameters(
       if (rawValue !== 'true' && rawValue !== 'false') {
         return {
           valid: false,
-          message: '必須是 true 或 false。',
+          messageId: 'validation.invalid',
           field: key,
         }
       }
@@ -609,8 +623,9 @@ export function parseRawParameters(
     const field = issue?.field
     return {
       valid: false,
-      message: issue?.message ?? '尺寸輸入無效。',
+      messageId: issue?.messageId ?? 'validation.invalid',
       field: field === 'parameters' ? undefined : field,
+      ...(issue?.params ? { params: issue.params } : {}),
     }
   }
   return { valid: true, value: validation.value.parameters }
@@ -628,39 +643,56 @@ function parseHalfStepInput(raw: string): number | null {
 }
 
 export function supportsCadBrowser():
-  { supported: true } | { supported: false; message: string } {
+  { supported: true } | { supported: false; diagnostic: DiagnosticDescriptor } {
   if (typeof window === 'undefined') {
-    return { supported: false, message: '需要瀏覽器環境。' }
+    return {
+      supported: false,
+      diagnostic: { messageId: 'diagnostic.browserEnvironmentRequired' },
+    }
   }
   if (typeof WebAssembly === 'undefined') {
-    return { supported: false, message: '此瀏覽器不支援 WebAssembly。' }
+    return {
+      supported: false,
+      diagnostic: { messageId: 'diagnostic.webAssemblyUnsupported' },
+    }
   }
   if (typeof Worker === 'undefined') {
-    return { supported: false, message: '此瀏覽器不支援 Web Worker。' }
+    return {
+      supported: false,
+      diagnostic: { messageId: 'diagnostic.workerUnsupported' },
+    }
   }
   const canvas = document.createElement('canvas')
   const webgl =
     canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
   if (!webgl) {
-    return { supported: false, message: '此瀏覽器不支援 WebGL。' }
+    return {
+      supported: false,
+      diagnostic: { messageId: 'diagnostic.webglUnsupported' },
+    }
   }
   return { supported: true }
 }
 
-export function errorForInput(message: string): CadError {
-  return normalizeError(new Error(message), {
+export function errorForInput(
+  issue: Pick<ValidationIssue, 'messageId' | 'field' | 'params'>,
+): CadError {
+  return normalizeError(undefined, {
     stage: 'validation',
     code: 'INVALID_INPUT',
-    userMessage: message,
+    message: {
+      messageId: issue.messageId,
+      params: { ...issue.params, field: issue.field },
+    },
     recoverable: true,
   })
 }
 
-export function errorForCapability(message: string): CadError {
-  return normalizeError(new Error(message), {
+export function errorForCapability(message: DiagnosticDescriptor): CadError {
+  return normalizeError(undefined, {
     stage: 'worker',
     code: 'BROWSER_UNSUPPORTED',
-    userMessage: message,
+    message,
     recoverable: false,
   })
 }

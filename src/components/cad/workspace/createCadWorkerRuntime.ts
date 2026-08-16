@@ -1,4 +1,5 @@
 import { normalizeError, type CadError } from '../../../cad-contract/errors'
+import { diagnostic } from '../../../cad-contract/diagnostics'
 import {
   PROTOTYPE_CONFIGURATION,
   type ModelId,
@@ -234,7 +235,7 @@ export function createCadWorkerRuntime(
         error: normalizeError(error, {
           stage: 'worker',
           code: 'WORKER_TERMINATED',
-          userMessage: '無法啟動 CAD Worker，請確認瀏覽器能力後重試。',
+          message: diagnostic('diagnostic.workerUnsupported'),
           recoverable: true,
         }),
       })
@@ -265,7 +266,7 @@ export function createCadWorkerRuntime(
           {
             stage: 'initializing',
             code: 'ENGINE_TIMEOUT',
-            userMessage: 'CAD engine 載入超時，請重試。',
+            message: diagnostic('diagnostic.engineTimeout'),
             recoverable: true,
             operationId,
           },
@@ -283,7 +284,7 @@ export function createCadWorkerRuntime(
   if (!support.supported) {
     dispatch({
       type: 'fatal-worker-error',
-      error: errorForCapability(support.message),
+      error: errorForCapability(support.diagnostic),
     })
   } else {
     startWorker(false)
@@ -307,7 +308,7 @@ export function createCadWorkerRuntime(
     if (!retrySupport.supported) {
       dispatch({
         type: 'fatal-worker-error',
-        error: errorForCapability(retrySupport.message),
+        error: errorForCapability(retrySupport.diagnostic),
       })
       return
     }

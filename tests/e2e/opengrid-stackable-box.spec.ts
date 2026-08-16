@@ -2,14 +2,14 @@ import { expect, test } from '@playwright/test'
 import { skipHeadlessFirefoxWithoutWebGL, waitForCadReady } from './helpers'
 
 const HONEYCOMB_RENDER_WARNING =
-  '注意：省料模式會明顯降低模型渲染速度。建議先使用一般模式確認形狀，下載前再啟用省料模式。'
+  '省料模式會明顯降低模型渲染速度。建議先使用一般模式確認形狀，下載前再啟用省料模式。'
 
 test('Desk System starts the stackable-box with its thin-shell preset', async ({
   page,
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/opengrid-stackable-box?system=desk')
+  await page.goto('/zh-Hant/cad/opengrid-stackable-box?system=desk')
   await page.evaluate(() => localStorage.clear())
   await page.reload()
   await waitForCadReady(page)
@@ -30,18 +30,18 @@ test('Desk System starts the stackable-box with its thin-shell preset', async ({
 test('OpenGrid stackable-box is listed and exposes the half-cell controls', async ({
   page,
 }) => {
-  await page.goto('/models')
+  await page.goto('/zh-Hant/models')
   const modelLink = page
     .getByRole('heading', { name: 'Grid Box (方盒)', exact: true })
     .locator('..')
     .getByRole('link', { name: '編輯 Grid Box (方盒)', exact: true })
   await expect(modelLink).toHaveAttribute(
     'href',
-    '/cad/opengrid-stackable-box?system=desk',
+    '/zh-Hant/cad/opengrid-stackable-box?system=desk',
   )
-  await page.goto('/cad/opengrid-stackable-box')
+  await page.goto('/zh-Hant/cad/opengrid-stackable-box')
 
-  await expect(page).toHaveURL('/cad/opengrid-stackable-box')
+  await expect(page).toHaveURL('/zh-Hant/cad/opengrid-stackable-box')
   await expect(
     page.getByRole('heading', { name: '目前編輯：Grid Box (方盒)' }),
   ).toBeVisible()
@@ -92,24 +92,24 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
   await expect(thinShell).toBeVisible()
   await expect(thinShell).not.toBeChecked()
   await expect(
-    page.getByText(/預設模式：可堆疊滑動，使用9mm定位柱/),
+    page.getByText(/預設模式：可堆疊滑動，使用 9mm 定位柱/),
   ).toBeVisible()
   await thinShell.check()
   await expect(thinShell).toBeChecked()
   await expect(defaultMode).not.toBeChecked()
   await expect(
-    page.getByText(/薄殼模式：不可堆疊，使用6mm定位柱/),
+    page.getByText(/薄殼模式：不可堆疊，使用 6mm 定位柱/),
   ).toBeVisible()
   await page.reload()
   await expect(page.getByRole('radio', { name: '薄殼模式' })).toBeChecked()
   await defaultMode.check()
   await expect(defaultMode).toBeChecked()
   await expect(
-    page.getByText(/預設模式：可堆疊滑動，使用9mm定位柱/),
+    page.getByText(/預設模式：可堆疊滑動，使用 9mm 定位柱/),
   ).toBeVisible()
-  await expect(page.getByText(/薄殼模式：不可堆疊，使用6mm定位柱/)).toHaveCount(
-    0,
-  )
+  await expect(
+    page.getByText(/薄殼模式：不可堆疊，使用 6mm 定位柱/),
+  ).toHaveCount(0)
   await seatMode.getByRole('radio', { name: '無角座' }).check()
   await expect(seatMode.getByRole('radio', { name: '無角座' })).toBeChecked()
   await fullGrid.check()
@@ -130,7 +130,7 @@ test('OpenGrid stackable-box expands only opening groups with non-default values
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/opengrid-stackable-box')
+  await page.goto('/zh-Hant/cad/opengrid-stackable-box')
 
   const disclosure = page.getByTestId(
     'opengrid-stackable-box-opening-disclosure',
@@ -164,7 +164,7 @@ test('OpenGrid stackable-box expands only opening groups with non-default values
   await expect(rearDepth).toHaveValue('4')
   await waitForCadReady(page)
 
-  await page.goto('/cad/opengrid-stackable-box')
+  await page.goto('/zh-Hant/cad/opengrid-stackable-box')
   await waitForCadReady(page)
   await expect(disclosure).toHaveAttribute('open', '')
   await expect(frontGroup).toHaveAttribute('open', '')
@@ -192,7 +192,7 @@ test('OpenGrid stackable-box keeps half-cell dimensions in export metadata', asy
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/opengrid-stackable-box')
+  await page.goto('/zh-Hant/cad/opengrid-stackable-box')
   await waitForCadReady(page)
 
   const x = page.getByRole('slider', { name: 'X' })
@@ -225,7 +225,7 @@ test('OpenGrid stackable-box exports the integrated seat mode', async ({
   browserName,
 }) => {
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/opengrid-stackable-box')
+  await page.goto('/zh-Hant/cad/opengrid-stackable-box')
   await waitForCadReady(page)
 
   await page.getByRole('radio', { name: '內建角座' }).check()
@@ -245,7 +245,7 @@ test('OpenGrid stackable-box persists the honeycomb saving switch and filename',
 }) => {
   test.setTimeout(180_000)
   skipHeadlessFirefoxWithoutWebGL(browserName)
-  await page.goto('/cad/opengrid-stackable-box')
+  await page.goto('/zh-Hant/cad/opengrid-stackable-box')
   await waitForCadReady(page)
 
   const honeycomb = page.getByRole('checkbox', {

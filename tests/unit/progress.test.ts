@@ -22,16 +22,16 @@ describe('CAD progress messages', () => {
   })
 
   it.each([
-    ['loading', 1, '載入 CAD engine'],
-    ['building', 2, '建立 B-Rep'],
-    ['meshing', 3, '產生預覽 mesh'],
-    ['exporting', 4, '匯出 STEP'],
-  ] as const)('exposes ordered details for %s', (stage, step, label) => {
+    ['loading', 1, 'cad.progress.stage.loading.label'],
+    ['building', 2, 'cad.progress.stage.building.label'],
+    ['meshing', 3, 'cad.progress.stage.meshing.label'],
+    ['exporting', 4, 'cad.progress.stage.exporting.label'],
+  ] as const)('exposes ordered details for %s', (stage, step, labelKey) => {
     expect(progressDetails(stage)).toMatchObject({
       stage,
       step,
       totalSteps: CAD_PROGRESS_STAGES.length,
-      label,
+      labelKey,
     })
   })
 

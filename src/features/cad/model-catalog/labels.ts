@@ -1,13 +1,21 @@
 import type { ParameterField } from './types'
+import { translate, type Locale } from '../../../i18n'
 
-export function displayParameterLabel(field: ParameterField): string {
-  if (
-    field.label === '行數' ||
-    field.label === '列數' ||
-    field.label.endsWith('格數')
-  ) {
+export function unitLabelFor(
+  locale: Locale,
+  unit: ParameterField['unit'],
+): string {
+  return translate(locale, `unit.${unit}`)
+}
+
+export function displayParameterLabel(
+  field: ParameterField,
+  locale: Locale,
+): string {
+  const label = translate(locale, field.label)
+  if (field.labelFormat === 'axis') {
     return field.axis
   }
 
-  return `${field.label}（${field.axis}）`
+  return `${label}（${field.axis}）`
 }

@@ -13,6 +13,7 @@ import {
   type HswCellParameters,
   type ModularGridBaseParameters,
 } from '../../../cad-contract/units'
+import type { FieldDiagnostic } from '../../../cad-contract/diagnostics'
 
 const COMPARISON_TOLERANCE = 0.000001
 
@@ -23,7 +24,7 @@ export type GridDimensionInput = {
   halfCellY?: HalfCellY
 }
 
-export type GridDimensionErrors = Partial<Record<'x' | 'y', string>>
+export type GridDimensionErrors = Partial<Record<'x' | 'y', FieldDiagnostic>>
 
 export type GridDimensionSuccess = {
   valid: true
@@ -54,7 +55,7 @@ export type OpenGridPrintPlanInput = {
 }
 
 export type OpenGridPrintPlanErrors = Partial<
-  Record<'targetX' | 'targetY' | 'printerX' | 'printerY', string>
+  Record<'targetX' | 'targetY' | 'printerX' | 'printerY', FieldDiagnostic>
 >
 
 export type OpenGridPrintPieceRole = 'primary' | 'edge' | 'corner'
@@ -104,6 +105,14 @@ type ParsedTargets =
   | { valid: true; x: number; y: number }
   | { valid: false; errors: GridDimensionErrors }
 
+function fieldDiagnostic(
+  field: string,
+  messageId: string,
+  params: Record<string, string | number | boolean> = {},
+): FieldDiagnostic {
+  return { field, messageId, params }
+}
+
 type BoundsSize = {
   x: number
   y: number
@@ -119,23 +128,38 @@ function sizeFromBounds(bounds: {
   }
 }
 
-function parseTarget(rawValue: string, label: string): number | string {
+function parseTarget(
+  rawValue: string,
+  field: 'x' | 'y',
+): number | FieldDiagnostic {
   const trimmedValue = rawValue.trim()
-  if (!trimmedValue) return `${label} 尺寸不可空白。`
+  if (!trimmedValue) {
+    return fieldDiagnostic(field, 'validation.requiredDimension', {
+      axis: field.toUpperCase(),
+    })
+  }
 
   const value = Number(trimmedValue)
-  if (!Number.isFinite(value)) return `${label} 尺寸必須是有限數字。`
-  if (value <= 0) return `${label} 尺寸必須大於 0 mm。`
+  if (!Number.isFinite(value)) {
+    return fieldDiagnostic(field, 'validation.invalidNumber', {
+      axis: field.toUpperCase(),
+    })
+  }
+  if (value <= 0) {
+    return fieldDiagnostic(field, 'validation.positiveDimension', {
+      axis: field.toUpperCase(),
+    })
+  }
   return value
 }
 
 function parseTargets(input: GridDimensionInput): ParsedTargets {
-  const x = parseTarget(input.x, 'X')
-  const y = parseTarget(input.y, 'Y')
+  const x = parseTarget(input.x, 'x')
+  const y = parseTarget(input.y, 'y')
   const errors: GridDimensionErrors = {}
 
-  if (typeof x === 'string') errors.x = x
-  if (typeof y === 'string') errors.y = y
+  if (typeof x !== 'number') errors.x = x
+  if (typeof y !== 'number') errors.y = y
   if (typeof x !== 'number' || typeof y !== 'number') {
     return { valid: false, errors }
   }
@@ -163,16 +187,26 @@ type PrintPlanAxis = {
 
 function parsePositivePrintPlanDimension(
   rawValue: string,
-  label: string,
-): number | string {
+  field: 'targetX' | 'targetY' | 'printerX' | 'printerY',
+  axis: 'X' | 'Y',
+): number | FieldDiagnostic {
   const trimmedValue = rawValue.trim()
-  if (!trimmedValue) return `${label} 尺寸不可空白。`
+  if (!trimmedValue) {
+    return fieldDiagnostic(field, 'validation.requiredDimension', { axis })
+  }
 
   const value = Number(trimmedValue)
-  if (!Number.isFinite(value)) return `${label} 尺寸必須是有限數字。`
-  if (value <= 0) return `${label} 尺寸必須大於 0 mm。`
+  if (!Number.isFinite(value)) {
+    return fieldDiagnostic(field, 'validation.invalidNumber', { axis })
+  }
+  if (value <= 0) {
+    return fieldDiagnostic(field, 'validation.positiveDimension', { axis })
+  }
   if (value < OPENGRID_CONFIGURATION.gridPitch) {
-    return `${label} 尺寸至少需要 ${OPENGRID_CONFIGURATION.gridPitch} mm 才能放入 1 格。`
+    return fieldDiagnostic(field, 'validation.minimumGridDimension', {
+      axis,
+      minimum: OPENGRID_CONFIGURATION.gridPitch,
+    })
   }
   return value
 }
@@ -182,17 +216,23 @@ function parsePrintPlanAxis(
   printerValue: string,
   targetKey: 'targetX' | 'targetY',
   printerKey: 'printerX' | 'printerY',
-  targetLabel: string,
-  printerLabel: string,
   errors: OpenGridPrintPlanErrors,
 ): ParsedPrintPlanAxis | null {
-  const target = parsePositivePrintPlanDimension(targetValue, targetLabel)
-  const printer = parsePositivePrintPlanDimension(printerValue, printerLabel)
+  const target = parsePositivePrintPlanDimension(
+    targetValue,
+    targetKey,
+    targetKey === 'targetX' ? 'X' : 'Y',
+  )
+  const printer = parsePositivePrintPlanDimension(
+    printerValue,
+    printerKey,
+    printerKey === 'printerX' ? 'X' : 'Y',
+  )
 
-  if (typeof target === 'string') {
+  if (typeof target !== 'number') {
     errors[targetKey] = target
   }
-  if (typeof printer === 'string') {
+  if (typeof printer !== 'number') {
     errors[printerKey] = printer
   }
   if (typeof target !== 'number' || typeof printer !== 'number') return null
@@ -325,8 +365,6 @@ function printPlanErrorsFor(input: OpenGridPrintPlanInput): {
     input.printerX,
     'targetX',
     'printerX',
-    '目標 X',
-    '列印機 X',
     errors,
   )
   const yAxis = parsePrintPlanAxis(
@@ -334,8 +372,6 @@ function printPlanErrorsFor(input: OpenGridPrintPlanInput): {
     input.printerY,
     'targetY',
     'printerY',
-    '目標 Y',
-    '列印機 Y',
     errors,
   )
   return { errors, xAxis, yAxis }
@@ -359,12 +395,15 @@ function maxCountThatFits(
 function invalidMinimumDimension(
   axis: 'X' | 'Y',
   minimum: number,
-  unitDescription: string,
 ): GridDimensionFailure {
   return {
     valid: false,
     errors: {
-      [axis.toLowerCase()]: `${axis} 目標至少需要 ${minimum} mm 才能放入 ${unitDescription}。`,
+      [axis.toLowerCase()]: fieldDiagnostic(
+        axis.toLowerCase(),
+        'validation.minimumGridDimension',
+        { axis, minimum },
+      ),
     },
   }
 }
@@ -372,12 +411,15 @@ function invalidMinimumDimension(
 function invalidMaximumDimension(
   axis: 'X' | 'Y',
   maximum: number,
-  unitDescription: string,
 ): GridDimensionFailure {
   return {
     valid: false,
     errors: {
-      [axis.toLowerCase()]: `${axis} 目標不可超過 ${maximum} mm 的 ${unitDescription}。`,
+      [axis.toLowerCase()]: fieldDiagnostic(
+        axis.toLowerCase(),
+        'validation.maximumGridDimension',
+        { axis, maximum },
+      ),
     },
   }
 }
@@ -438,10 +480,10 @@ export function calculateModularGridCounts(
   )
 
   if (columns === 0) {
-    return invalidMinimumDimension('X', modularGrid.cellWidth, '1 格')
+    return invalidMinimumDimension('X', modularGrid.cellWidth)
   }
   if (rows === 0) {
-    return invalidMinimumDimension('Y', modularGrid.cellDepth, '1 格')
+    return invalidMinimumDimension('Y', modularGrid.cellDepth)
   }
 
   const parameters: ModularGridBaseParameters = { rows, columns }
@@ -472,10 +514,10 @@ export function calculateOpenGridCounts(
   )
 
   if (columns === 0) {
-    return invalidMinimumDimension('X', minimumX, '1 個 OpenGrid 格與半格')
+    return invalidMinimumDimension('X', minimumX)
   }
   if (rows === 0) {
-    return invalidMinimumDimension('Y', minimumY, '1 個 OpenGrid 格與半格')
+    return invalidMinimumDimension('Y', minimumY)
   }
 
   const parameters =
@@ -513,7 +555,9 @@ export function calculateOpenGridPrintPlan(
     return {
       valid: false,
       errors: {
-        targetX: '無法建立可列印的 OpenGrid 分片方案。',
+        targetX: fieldDiagnostic('targetX', 'validation.noPrintPlan', {
+          axis: 'X',
+        }),
       },
     }
   }
@@ -572,7 +616,7 @@ export function calculateOpenGridStackableBoxCounts(
     configuration.minY,
   ).x
   if (targets.x > maximumWidth + COMPARISON_TOLERANCE) {
-    return invalidMaximumDimension('X', maximumWidth, 'OpenGrid 堆疊盒最大格數')
+    return invalidMaximumDimension('X', maximumWidth)
   }
 
   const columns = minCountThatReachesByStep(
@@ -591,7 +635,7 @@ export function calculateOpenGridStackableBoxCounts(
     configuration.minY,
   ).y
   if (targets.y > maximumDepth + COMPARISON_TOLERANCE) {
-    return invalidMaximumDimension('Y', maximumDepth, 'OpenGrid 堆疊盒最大格數')
+    return invalidMaximumDimension('Y', maximumDepth)
   }
 
   const rows = minCountThatReachesByStep(
@@ -603,11 +647,11 @@ export function calculateOpenGridStackableBoxCounts(
   )
 
   if (columns === 0) {
-    return invalidMinimumDimension('X', minimumWidth, '1 個 OpenGrid 堆疊盒')
+    return invalidMinimumDimension('X', minimumWidth)
   }
 
   if (rows === 0) {
-    return invalidMinimumDimension('Y', minimumDepth, '1 個 OpenGrid 堆疊盒')
+    return invalidMinimumDimension('Y', minimumDepth)
   }
 
   const parameters = { rows, columns }
@@ -632,11 +676,7 @@ export function calculateHswCellCounts(
     (count) => hswBoundsSize(1, count).x,
   )
   if (maxColumnsByWidth === 0) {
-    return invalidMinimumDimension(
-      'X',
-      HSW_CELL_CONFIGURATION.outerWidth,
-      '1 個 HSW 六角單元',
-    )
+    return invalidMinimumDimension('X', HSW_CELL_CONFIGURATION.outerWidth)
   }
 
   let columns = 0
@@ -649,7 +689,7 @@ export function calculateHswCellCounts(
 
   if (columns === 0) {
     const minimumDepth = HSW_CELL_CONFIGURATION.outerDepth
-    return invalidMinimumDimension('Y', minimumDepth, '1 個 HSW 六角單元')
+    return invalidMinimumDimension('Y', minimumDepth)
   }
 
   const rows = maxCountThatFits(
@@ -658,11 +698,7 @@ export function calculateHswCellCounts(
     (count) => hswBoundsSize(count, columns).y,
   )
   if (rows === 0) {
-    return invalidMinimumDimension(
-      'Y',
-      HSW_CELL_CONFIGURATION.outerDepth,
-      '1 個 HSW 六角單元',
-    )
+    return invalidMinimumDimension('Y', HSW_CELL_CONFIGURATION.outerDepth)
   }
 
   const actualDimensions = hswBoundsSize(rows, columns)

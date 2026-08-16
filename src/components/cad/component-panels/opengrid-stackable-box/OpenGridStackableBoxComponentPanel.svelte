@@ -2,6 +2,7 @@
   import {
     displayParameterLabel,
     opengridStackableBoxDefinition,
+    unitLabelFor,
   } from '../../../../features/cad/model-catalog'
   import {
     openGridStackableBoxOpeningBottomLengthMaximumFor,
@@ -19,9 +20,15 @@
   import ParameterField from '../ParameterField.svelte'
   import type { ComponentPanelProps } from '../types'
   import type { ParameterField as ParameterFieldDefinition } from '../../../../features/cad/model-catalog'
+  import { formatValidationIssue } from '../../../../i18n/diagnostics'
+  import { translate } from '../../../../i18n'
 
-  let { rawParameters, fieldErrors, onInputChange }: ComponentPanelProps =
-    $props()
+  let {
+    locale,
+    rawParameters,
+    fieldErrors,
+    onInputChange,
+  }: ComponentPanelProps = $props()
 
   function handleDimensionCalculation(parameters: {
     rows: number
@@ -36,15 +43,23 @@
 
   const seatModeOptions: ReadonlyArray<{
     value: BoxSeatMode
-    label: string
-    description: string
+    labelKey: string
+    descriptionKey: string
   }> = [
-    { value: 'none', label: '無角座', description: '不建立四角定位結構。' },
-    { value: 'hole', label: '角座孔', description: '保留既有 Ø5 mm 角座孔。' },
+    {
+      value: 'none',
+      labelKey: 'panel.seat.none',
+      descriptionKey: 'panel.seat.noneDescription',
+    },
+    {
+      value: 'hole',
+      labelKey: 'panel.seat.hole',
+      descriptionKey: 'panel.seat.holeDescription',
+    },
     {
       value: 'integrated',
-      label: '內建角座',
-      description: '建立向下凸出的 Ø5 × 3 mm 內建角座。',
+      labelKey: 'panel.seat.integrated',
+      descriptionKey: 'panel.seat.integratedDescription',
     },
   ]
 
@@ -77,7 +92,7 @@
   const openingGroups = [
     {
       direction: '-Y',
-      label: '前方',
+      labelKey: 'panel.opening.direction.front',
       keys: [
         'openingMinusYDepth',
         'openingMinusYBottomLength',
@@ -86,7 +101,7 @@
     },
     {
       direction: '+Y',
-      label: '後方',
+      labelKey: 'panel.opening.direction.back',
       keys: [
         'openingPlusYDepth',
         'openingPlusYBottomLength',
@@ -95,7 +110,7 @@
     },
     {
       direction: '-X',
-      label: '左方',
+      labelKey: 'panel.opening.direction.left',
       keys: [
         'openingMinusXDepth',
         'openingMinusXBottomLength',
@@ -104,7 +119,7 @@
     },
     {
       direction: '+X',
-      label: '右方',
+      labelKey: 'panel.opening.direction.right',
       keys: [
         'openingPlusXDepth',
         'openingPlusXBottomLength',
@@ -246,6 +261,7 @@
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
   <GridDimensionCalculator
+    {locale}
     calculate={calculateOpenGridStackableBoxCounts}
     description=""
     onApply={handleDimensionCalculation}
@@ -257,16 +273,16 @@
         ? 'cornerSeatMode-error'
         : undefined}
       aria-invalid={Boolean(fieldErrors.cornerSeatMode)}
-      aria-label="角座模式"
+      aria-label={translate(locale, 'panel.seat.mode')}
       role="radiogroup"
       data-testid="opengrid-stackable-box-seat-mode"
     >
-      <legend class="font-[650]">角座模式</legend>
+      <legend class="font-[650]">{translate(locale, 'panel.seat.mode')}</legend>
       <div class="flex flex-wrap items-start gap-x-4 gap-y-2">
         {#each seatModeOptions as option (option.value)}
           <label class="flex min-w-0 items-start gap-2">
             <input
-              aria-label={option.label}
+              aria-label={translate(locale, option.labelKey)}
               class="mt-1 accent-primary"
               name="opengrid-stackable-box-seat-mode"
               type="radio"
@@ -274,14 +290,21 @@
               checked={seatModeForRawParameters() === option.value}
               onchange={handleSeatModeChange}
             />
-            <span class="font-[650]">{option.label}</span>
+            <span class="font-[650]">{translate(locale, option.labelKey)}</span>
           </label>
         {/each}
       </div>
       <span class="text-sm text-muted">
         {seatModeOptions.find(
           (option) => option.value === seatModeForRawParameters(),
-        )?.description}
+        )?.descriptionKey
+          ? translate(
+              locale,
+              seatModeOptions.find(
+                (option) => option.value === seatModeForRawParameters(),
+              )!.descriptionKey,
+            )
+          : ''}
       </span>
     </fieldset>
     <label class="flex min-w-0 items-start gap-2">
@@ -290,7 +313,7 @@
           ? 'fullBottomHoleGrid-error'
           : undefined}
         aria-invalid={Boolean(fieldErrors.fullBottomHoleGrid)}
-        aria-label="底部全孔模式"
+        aria-label={translate(locale, 'panel.fullBottomHole')}
         class="mt-1 accent-primary"
         type="checkbox"
         checked={rawParameters.fullBottomHoleGrid === 'true'}
@@ -302,13 +325,14 @@
           )
         }}
       />
-      <span class="font-[650]">底部全孔模式</span>
+      <span class="font-[650]">{translate(locale, 'panel.fullBottomHole')}</span
+      >
     </label>
     <label class="flex min-w-0 items-start gap-2">
       <input
         class="mt-1 accent-primary"
         type="checkbox"
-        aria-label="省料模式（六角鏤空）"
+        aria-label={translate(locale, 'panel.honeycomb')}
         data-testid="opengrid-stackable-box-honeycomb-mode"
         checked={rawParameters.honeycombMode === 'true'}
         onchange={(event) => {
@@ -316,10 +340,10 @@
           onInputChange('honeycombMode', String(event.currentTarget.checked))
         }}
       />
-      <span class="font-[650]">省料模式（六角鏤空）</span>
+      <span class="font-[650]">{translate(locale, 'panel.honeycomb')}</span>
     </label>
     {#if rawParameters.honeycombMode === 'true'}
-      <HoneycombRenderWarning />
+      <HoneycombRenderWarning {locale} />
     {/if}
   </div>
   <div
@@ -327,7 +351,7 @@
     aria-invalid={Boolean(
       fieldErrors.basePlateMode || fieldErrors.thinShellMode,
     )}
-    aria-label="盒體模式"
+    aria-label={translate(locale, 'panel.boxMode')}
     class="grid gap-1"
     role="radiogroup"
   >
@@ -335,7 +359,7 @@
       <label class="flex min-w-0 items-start gap-2">
         <input
           aria-describedby={modeErrorDescriptionId()}
-          aria-label="薄殼模式"
+          aria-label={translate(locale, 'panel.thinShell')}
           class="mt-1 accent-primary"
           data-testid="opengrid-stackable-box-thin-shell-mode"
           name="opengrid-stackable-box-mode"
@@ -344,12 +368,12 @@
           checked={rawParameters.thinShellMode === 'true'}
           onchange={handleModeChange}
         />
-        <span class="font-[650]">薄殼模式</span>
+        <span class="font-[650]">{translate(locale, 'panel.thinShell')}</span>
       </label>
       <label class="flex min-w-0 items-start gap-2">
         <input
           aria-describedby={modeErrorDescriptionId()}
-          aria-label="堆疊模式"
+          aria-label={translate(locale, 'panel.stackable')}
           class="mt-1 accent-primary"
           data-testid="opengrid-stackable-box-default-mode"
           name="opengrid-stackable-box-mode"
@@ -359,50 +383,52 @@
             rawParameters.thinShellMode !== 'true'}
           onchange={handleModeChange}
         />
-        <span class="font-[650]">堆疊模式</span>
+        <span class="font-[650]">{translate(locale, 'panel.stackable')}</span>
       </label>
     </div>
     {#if rawParameters.thinShellMode === 'true'}
       <span class="text-sm text-muted">
-        薄殼模式：不可堆疊，使用6mm定位柱
+        {translate(locale, 'panel.thinShellDescription')}
       </span>
     {:else}
       <span class="text-sm text-muted">
-        預設模式：可堆疊滑動，使用9mm定位柱
+        {translate(locale, 'panel.stackableDescription')}
       </span>
     {/if}
   </div>
   {#if fieldErrors.cornerSeatMode}
     <span class="text-sm text-error" id="cornerSeatMode-error" role="alert"
-      >{fieldErrors.cornerSeatMode}</span
+      >{formatValidationIssue(locale, fieldErrors.cornerSeatMode)}</span
     >
   {/if}
   {#if fieldErrors.fullBottomHoleGrid}
     <span class="text-sm text-error" id="fullBottomHoleGrid-error" role="alert"
-      >{fieldErrors.fullBottomHoleGrid}</span
+      >{formatValidationIssue(locale, fieldErrors.fullBottomHoleGrid)}</span
     >
   {/if}
   {#if fieldErrors.basePlateMode}
     <span class="text-sm text-error" id="basePlateMode-error" role="alert"
-      >{fieldErrors.basePlateMode}</span
+      >{formatValidationIssue(locale, fieldErrors.basePlateMode)}</span
     >
   {/if}
   {#if fieldErrors.thinShellMode}
     <span class="text-sm text-error" id="thinShellMode-error" role="alert"
-      >{fieldErrors.thinShellMode}</span
+      >{formatValidationIssue(locale, fieldErrors.thinShellMode)}</span
     >
   {/if}
   {#each opengridStackableBoxDefinition.parameterSchema.slice(0, 3) as field (field.key)}
     {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
     <ParameterField
-      label={displayParameterLabel(field)}
-      unit={field.unit}
+      {locale}
+      label={displayParameterLabel(field, locale)}
+      unit={unitLabelFor(locale, field.unit)}
       changed={value !== String(field.defaultValue)}
       error={fieldErrors[field.key]}
       errorId={`${field.key}-error`}
       onRestore={() => onInputChange(field.key, String(field.defaultValue))}
     >
       <ParameterControl
+        {locale}
         {field}
         {value}
         error={fieldErrors[field.key]}
@@ -415,7 +441,9 @@
     data-testid="opengrid-stackable-box-opening-disclosure"
     bind:open={openingDisclosureOpen}
   >
-    <summary class="cursor-pointer font-[650]">四個方向開口設定</summary>
+    <summary class="cursor-pointer font-[650]">
+      {translate(locale, 'panel.opening.settings')}
+    </summary>
     <div class="grid gap-3 pt-1">
       {#each openingGroups as group (group.direction)}
         <details
@@ -424,14 +452,17 @@
           data-testid={`opengrid-stackable-box-opening-group-${group.direction}`}
           bind:open={openingGroupOpen[group.direction]}
         >
-          <summary class="cursor-pointer font-[650]">{group.label}</summary>
+          <summary class="cursor-pointer font-[650]">
+            {translate(locale, group.labelKey)}
+          </summary>
           <fieldset class="grid gap-3 border-0 p-0 pt-1">
-            {#each fieldsFor(group.keys, group.direction, group.label) as field (field.key)}
+            {#each fieldsFor(group.keys, group.direction, translate(locale, group.labelKey)) as field (field.key)}
               {@const value =
                 rawParameters[field.key] ?? String(field.defaultValue)}
               <ParameterField
-                label={displayParameterLabel(field)}
-                unit={field.unit}
+                {locale}
+                label={displayParameterLabel(field, locale)}
+                unit={unitLabelFor(locale, field.unit)}
                 changed={value !== String(field.defaultValue)}
                 error={fieldErrors[field.key]}
                 errorId={`${field.key}-error`}
@@ -439,6 +470,7 @@
                   onInputChange(field.key, String(field.defaultValue))}
               >
                 <ParameterControl
+                  {locale}
                   {field}
                   {value}
                   error={fieldErrors[field.key]}

@@ -4,15 +4,16 @@
   import {
     parseSystemContext,
     systemContextForModel,
-    systemContextLabel,
     type OpenGridSystemContext,
   } from '../../features/cad/system-entry-context'
+  import { translate, type Locale } from '../../i18n'
 
   type Props = {
     modelId: ModelId
+    locale: Locale
   }
 
-  let { modelId }: Props = $props()
+  let { modelId, locale }: Props = $props()
   let systemContext = $state<OpenGridSystemContext | undefined>(undefined)
 
   onMount(() => {
@@ -28,6 +29,8 @@
     class="m-0 text-sm font-semibold text-muted"
     data-testid="cad-system-context"
   >
-    目前系統：{systemContextLabel(systemContext)}
+    {translate(locale, 'cad.system.current', {
+      name: translate(locale, `models.context.${systemContext}`),
+    })}
   </p>
 {/if}

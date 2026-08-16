@@ -159,6 +159,7 @@ import {
   openGridOpenShelfTopOuterRearZFor,
   validateOpenGridOpenShelfParameters,
 } from './opengrid-open-shelf'
+import type { FieldDiagnostic } from '../diagnostics'
 import type {
   OpenGridOpenShelfCellClearHeights,
   OpenGridOpenShelfCellSpace,
@@ -558,9 +559,8 @@ export type ModelBounds = {
 
 export type BoxBounds = ModelBounds
 
-export type ValidationIssue = {
+export type ValidationIssue = FieldDiagnostic & {
   field: ModelParameterKey | 'parameters'
-  message: string
 }
 
 export type BoxValidation =
@@ -641,6 +641,19 @@ const HEXAGONAL_COLUMN_REQUIRED_PARAMETERS: HexagonalColumnParameterKey[] = [
   'gap',
 ]
 
+function invalidRange(
+  field: ValidationIssue['field'],
+  min: number,
+  max: number,
+  unit: 'mm' | 'count' = 'mm',
+): ValidationIssue {
+  return {
+    field,
+    messageId: 'validation.invalid',
+    params: { min, max, unit },
+  }
+}
+
 function hasExactKeys(
   value: Record<string, unknown>,
   keys: readonly string[],
@@ -670,7 +683,7 @@ export function validateBoxParameters(value: unknown): BoxValidation {
   if (!value || typeof value !== 'object') {
     return {
       valid: false,
-      issues: [{ field: 'parameters', message: '需要提供方塊尺寸。' }],
+      issues: [{ field: 'parameters', messageId: 'validation.invalid' }],
     }
   }
 
@@ -679,27 +692,30 @@ export function validateBoxParameters(value: unknown): BoxValidation {
   const issues: ValidationIssue[] = []
 
   if (!hasExactKeys(candidate, DIMENSIONS)) {
-    issues.push({ field: 'parameters', message: '包含不支援的參數欄位。' })
+    issues.push({ field: 'parameters', messageId: 'validation.invalid' })
   }
 
   for (const field of DIMENSIONS) {
     const dimension = candidate[field]
     if (typeof dimension !== 'number' || !Number.isFinite(dimension)) {
-      issues.push({ field, message: '必須是有限的整數。' })
+      issues.push({ field, messageId: 'validation.invalid' })
       continue
     }
     if (!Number.isInteger(dimension)) {
-      issues.push({ field, message: '只接受整數 mm，不會自動四捨五入。' })
+      issues.push({ field, messageId: 'validation.invalid' })
       continue
     }
     if (
       dimension < PROTOTYPE_CONFIGURATION.minDimension ||
       dimension > PROTOTYPE_CONFIGURATION.maxDimension
     ) {
-      issues.push({
-        field,
-        message: `必須介於 ${PROTOTYPE_CONFIGURATION.minDimension}–${PROTOTYPE_CONFIGURATION.maxDimension} mm。`,
-      })
+      issues.push(
+        invalidRange(
+          field,
+          PROTOTYPE_CONFIGURATION.minDimension,
+          PROTOTYPE_CONFIGURATION.maxDimension,
+        ),
+      )
     }
   }
 
@@ -721,7 +737,7 @@ export function validateModularGridBaseParameters(
   if (!value || typeof value !== 'object') {
     return {
       valid: false,
-      issues: [{ field: 'parameters', message: '需要提供網格列數與行數。' }],
+      issues: [{ field: 'parameters', messageId: 'validation.invalid' }],
     }
   }
 
@@ -731,28 +747,39 @@ export function validateModularGridBaseParameters(
   const grid = PROTOTYPE_CONFIGURATION.modularGridBase
 
   if (!hasExactKeys(candidate, GRID_PARAMETERS)) {
-    issues.push({ field: 'parameters', message: '包含不支援的參數欄位。' })
+    issues.push({ field: 'parameters', messageId: 'validation.invalid' })
   }
 
   for (const field of GRID_PARAMETERS) {
     const count = candidate[field]
     if (typeof count !== 'number' || !Number.isFinite(count)) {
-      issues.push({ field, message: '必須是有限的整數。' })
+      issues.push({ field, messageId: 'validation.invalid' })
       continue
     }
     if (!Number.isInteger(count)) {
-      issues.push({ field, message: '只接受整數格數，不會自動四捨五入。' })
+      issues.push({ field, messageId: 'validation.invalid' })
       continue
     }
     if (count < PROTOTYPE_CONFIGURATION.minDimension) {
-      issues.push({ field, message: '格數必須是正整數。' })
+      issues.push(
+        invalidRange(
+          field,
+          PROTOTYPE_CONFIGURATION.minDimension,
+          grid.maxGridCount,
+          'count',
+        ),
+      )
       continue
     }
     if (count > grid.maxGridCount) {
-      issues.push({
-        field,
-        message: `格數不得超過 ${grid.maxGridCount}。`,
-      })
+      issues.push(
+        invalidRange(
+          field,
+          PROTOTYPE_CONFIGURATION.minDimension,
+          grid.maxGridCount,
+          'count',
+        ),
+      )
     }
   }
 
@@ -766,16 +793,10 @@ export function validateModularGridBaseParameters(
   const depth = parameters.rows * grid.cellDepth
 
   if (width > PROTOTYPE_CONFIGURATION.maxDimension) {
-    issues.push({
-      field: 'columns',
-      message: `寬度不得超過 ${PROTOTYPE_CONFIGURATION.maxDimension} mm。`,
-    })
+    issues.push(invalidRange('columns', 1, grid.maxGridCount, 'count'))
   }
   if (depth > PROTOTYPE_CONFIGURATION.maxDimension) {
-    issues.push({
-      field: 'rows',
-      message: `深度不得超過 ${PROTOTYPE_CONFIGURATION.maxDimension} mm。`,
-    })
+    issues.push(invalidRange('rows', 1, grid.maxGridCount, 'count'))
   }
 
   if (issues.length > 0) return { valid: false, issues }
@@ -786,9 +807,7 @@ export function validateHswCellParameters(value: unknown): HswCellValidation {
   if (!value || typeof value !== 'object') {
     return {
       valid: false,
-      issues: [
-        { field: 'parameters', message: '需要提供 HSW 蜂巢列數與行數。' },
-      ],
+      issues: [{ field: 'parameters', messageId: 'validation.invalid' }],
     }
   }
 
@@ -798,28 +817,25 @@ export function validateHswCellParameters(value: unknown): HswCellValidation {
   const grid = HSW_CELL_CONFIGURATION
 
   if (!hasExactKeys(candidate, GRID_PARAMETERS)) {
-    issues.push({ field: 'parameters', message: '包含不支援的參數欄位。' })
+    issues.push({ field: 'parameters', messageId: 'validation.invalid' })
   }
 
   for (const field of GRID_PARAMETERS) {
     const count = candidate[field]
     if (typeof count !== 'number' || !Number.isFinite(count)) {
-      issues.push({ field, message: '必須是有限的整數。' })
+      issues.push({ field, messageId: 'validation.invalid' })
       continue
     }
     if (!Number.isInteger(count)) {
-      issues.push({ field, message: '只接受整數格數，不會自動四捨五入。' })
+      issues.push({ field, messageId: 'validation.invalid' })
       continue
     }
     if (count < 1) {
-      issues.push({ field, message: '格數必須是正整數。' })
+      issues.push(invalidRange(field, 1, grid.maxGridCount, 'count'))
       continue
     }
     if (count > grid.maxGridCount) {
-      issues.push({
-        field,
-        message: `格數不得超過 ${grid.maxGridCount}。`,
-      })
+      issues.push(invalidRange(field, 1, grid.maxGridCount, 'count'))
     }
   }
 
@@ -834,16 +850,10 @@ export function validateHswCellParameters(value: unknown): HswCellValidation {
   const depth = bounds.max[1] - bounds.min[1]
 
   if (width > PROTOTYPE_CONFIGURATION.maxDimension) {
-    issues.push({
-      field: 'columns',
-      message: `寬度不得超過 ${PROTOTYPE_CONFIGURATION.maxDimension} mm。`,
-    })
+    issues.push(invalidRange('columns', 1, grid.maxGridCount, 'count'))
   }
   if (depth > PROTOTYPE_CONFIGURATION.maxDimension) {
-    issues.push({
-      field: 'rows',
-      message: `深度不得超過 ${PROTOTYPE_CONFIGURATION.maxDimension} mm。`,
-    })
+    issues.push(invalidRange('rows', 1, grid.maxGridCount, 'count'))
   }
 
   if (issues.length > 0) return { valid: false, issues }
@@ -856,7 +866,7 @@ export function validateHexagonalColumnParameters(
   if (!value || typeof value !== 'object') {
     return {
       valid: false,
-      issues: [{ field: 'parameters', message: '需要提供六角柱參數。' }],
+      issues: [{ field: 'parameters', messageId: 'validation.invalid' }],
     }
   }
 
@@ -872,52 +882,62 @@ export function validateHexagonalColumnParameters(
       Object.prototype.hasOwnProperty.call(candidate, key),
     )
   ) {
-    issues.push({ field: 'parameters', message: '包含不支援的參數欄位。' })
+    issues.push({ field: 'parameters', messageId: 'validation.invalid' })
   }
 
   const height = candidate.height
   if (typeof height !== 'number' || !Number.isFinite(height)) {
-    issues.push({ field: 'height', message: '必須是有限的整數。' })
+    issues.push({ field: 'height', messageId: 'validation.invalid' })
   } else if (!Number.isSafeInteger(height)) {
-    issues.push({ field: 'height', message: '只接受安全範圍內的整數 mm。' })
+    issues.push({ field: 'height', messageId: 'validation.invalid' })
   } else if (
     height < HEXAGONAL_COLUMN_CONFIGURATION.minHeight ||
     height > HEXAGONAL_COLUMN_CONFIGURATION.maxHeight
   ) {
-    issues.push({
-      field: 'height',
-      message: `必須介於 ${HEXAGONAL_COLUMN_CONFIGURATION.minHeight}–${HEXAGONAL_COLUMN_CONFIGURATION.maxHeight} mm。`,
-    })
+    issues.push(
+      invalidRange(
+        'height',
+        HEXAGONAL_COLUMN_CONFIGURATION.minHeight,
+        HEXAGONAL_COLUMN_CONFIGURATION.maxHeight,
+      ),
+    )
   }
 
   const count = candidate.count
   if (typeof count !== 'number' || !Number.isFinite(count)) {
-    issues.push({ field: 'count', message: '必須是有限的整數。' })
+    issues.push({ field: 'count', messageId: 'validation.invalid' })
   } else if (!Number.isSafeInteger(count)) {
-    issues.push({ field: 'count', message: '只接受安全範圍內的整數格數。' })
+    issues.push({ field: 'count', messageId: 'validation.invalid' })
   } else if (
     count < HEXAGONAL_COLUMN_CONFIGURATION.minCount ||
     count > HEXAGONAL_COLUMN_CONFIGURATION.maxCount
   ) {
-    issues.push({
-      field: 'count',
-      message: `支數必須介於 ${HEXAGONAL_COLUMN_CONFIGURATION.minCount}–${HEXAGONAL_COLUMN_CONFIGURATION.maxCount}。`,
-    })
+    issues.push(
+      invalidRange(
+        'count',
+        HEXAGONAL_COLUMN_CONFIGURATION.minCount,
+        HEXAGONAL_COLUMN_CONFIGURATION.maxCount,
+        'count',
+      ),
+    )
   }
 
   const gap = candidate.gap
   if (typeof gap !== 'number' || !Number.isFinite(gap)) {
-    issues.push({ field: 'gap', message: '必須是有限的整數 mm。' })
+    issues.push({ field: 'gap', messageId: 'validation.invalid' })
   } else if (!Number.isSafeInteger(gap)) {
-    issues.push({ field: 'gap', message: '只接受安全範圍內的整數 mm。' })
+    issues.push({ field: 'gap', messageId: 'validation.invalid' })
   } else if (
     gap < HEXAGONAL_COLUMN_CONFIGURATION.minGap ||
     gap > HEXAGONAL_COLUMN_CONFIGURATION.maxGap
   ) {
-    issues.push({
-      field: 'gap',
-      message: `間隙必須介於 ${HEXAGONAL_COLUMN_CONFIGURATION.minGap}–${HEXAGONAL_COLUMN_CONFIGURATION.maxGap} mm。`,
-    })
+    issues.push(
+      invalidRange(
+        'gap',
+        HEXAGONAL_COLUMN_CONFIGURATION.minGap,
+        HEXAGONAL_COLUMN_CONFIGURATION.maxGap,
+      ),
+    )
   }
 
   const orientation =
@@ -925,7 +945,7 @@ export function validateHexagonalColumnParameters(
   if (orientation !== 'lying' && orientation !== 'standing') {
     issues.push({
       field: 'orientation',
-      message: '擺放方向必須是 lying 或 standing。',
+      messageId: 'validation.invalid',
     })
   }
 
@@ -951,13 +971,13 @@ export function validateHexagonalColumnParameters(
     if (rowExtent > PROTOTYPE_CONFIGURATION.maxDimension) {
       issues.push({
         field: 'gap',
-        message: `排列寬度不得超過 ${PROTOTYPE_CONFIGURATION.maxDimension} mm。`,
+        messageId: 'validation.invalid',
       })
     }
     if (lengthExtent > HEXAGONAL_COLUMN_CONFIGURATION.maxHeight) {
       issues.push({
         field: 'height',
-        message: `高度不得超過 ${HEXAGONAL_COLUMN_CONFIGURATION.maxHeight} mm。`,
+        messageId: 'validation.invalid',
       })
     }
   }
@@ -984,7 +1004,7 @@ export function validateOpenGridSnapRemoverParameters(
   if (!isPlainEmptyObject(value)) {
     return {
       valid: false,
-      issues: [{ field: 'parameters', message: '此 component 不接受參數。' }],
+      issues: [{ field: 'parameters', messageId: 'validation.invalid' }],
     }
   }
 
@@ -1035,7 +1055,7 @@ export function validateModelParameters(
         valid: false,
         issues: validation.issues.map((issue) => ({
           field: issue.field,
-          message: issue.message,
+          messageId: issue.messageId,
         })),
       }
     }
@@ -1049,7 +1069,7 @@ export function validateModelParameters(
         valid: false,
         issues: validation.issues.map((issue) => ({
           field: issue.field,
-          message: issue.message,
+          messageId: issue.messageId,
         })),
       }
     }
@@ -1063,7 +1083,7 @@ export function validateModelParameters(
         valid: false,
         issues: validation.issues.map((issue) => ({
           field: issue.field as ValidationIssue['field'],
-          message: issue.message,
+          messageId: issue.messageId,
         })),
       }
     }
@@ -1086,7 +1106,7 @@ export function validateModelParameters(
         valid: false,
         issues: validation.issues.map((issue) => ({
           field: issue.field,
-          message: issue.message,
+          messageId: issue.messageId,
         })),
       }
     }
@@ -1100,7 +1120,7 @@ export function validateModelParameters(
         valid: false,
         issues: validation.issues.map((issue) => ({
           field: issue.field,
-          message: issue.message,
+          messageId: issue.messageId,
         })),
       }
     }
@@ -1114,7 +1134,7 @@ export function validateModelParameters(
         valid: false,
         issues: validation.issues.map((issue) => ({
           field: issue.field,
-          message: issue.message,
+          messageId: issue.messageId,
         })),
       }
     }
@@ -1123,7 +1143,7 @@ export function validateModelParameters(
 
   return {
     valid: false,
-    issues: [{ field: 'parameters', message: '找不到指定的 CAD component。' }],
+    issues: [{ field: 'parameters', messageId: 'validation.invalid' }],
   }
 }
 

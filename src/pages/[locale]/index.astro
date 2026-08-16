@@ -1,0 +1,63 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro'
+import { SUPPORTED_LOCALES, isLocale, translate, type Locale } from '../../i18n'
+import { publicPathFor } from '../../i18n/routes'
+
+export function getStaticPaths() {
+  return SUPPORTED_LOCALES.map((locale) => ({
+    params: { locale },
+    props: { locale },
+  }))
+}
+
+const locale = Astro.props.locale as Locale
+if (!isLocale(locale)) throw new Error(`UNSUPPORTED_LOCALE:${locale}`)
+const t = (key: string) => translate(locale, key)
+---
+
+<SiteLayout
+  {locale}
+  title={t('home.title')}
+  description={t('home.description')}
+>
+  <section
+    class="rounded-2xl border border-border-card bg-panel p-5 shadow-card"
+    aria-labelledby="home-title"
+  >
+    <p class="mb-4 text-muted">{t('home.eyebrow')}</p>
+    <h1 class="mb-4 text-4xl font-semibold leading-tight" id="home-title">
+      {t('home.title')}
+    </h1>
+    <p class="mb-4 leading-normal">{t('home.description')}</p>
+    <div class="mt-8 grid gap-4 sm:grid-cols-3" aria-label={t('home.features')}>
+      <article class="rounded-xl border border-border-card bg-page p-4">
+        <h2 class="mb-2 text-xl font-semibold leading-tight">
+          {t('home.feature.browser.title')}
+        </h2>
+        <p class="m-0 text-muted">{t('home.feature.browser.description')}</p>
+      </article>
+      <article class="rounded-xl border border-border-card bg-page p-4">
+        <h2 class="mb-2 text-xl font-semibold leading-tight">
+          {t('home.feature.parameters.title')}
+        </h2>
+        <p class="m-0 text-muted">
+          {t('home.feature.parameters.description')}
+        </p>
+      </article>
+      <article class="rounded-xl border border-border-card bg-page p-4">
+        <h2 class="mb-2 text-xl font-semibold leading-tight">
+          {t('home.feature.export.title')}
+        </h2>
+        <p class="m-0 text-muted">{t('home.feature.export.description')}</p>
+      </article>
+    </div>
+    <p class="mb-0 mt-8">
+      <a
+        class="inline-flex rounded-lg border border-border-card bg-panel px-4 py-3 font-semibold text-ink no-underline shadow-sm hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        href={publicPathFor(locale, 'models')}
+      >
+        {t('home.chooseModel')}
+      </a>
+    </p>
+  </section>
+</SiteLayout>

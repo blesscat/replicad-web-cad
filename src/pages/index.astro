@@ -1,50 +1,21 @@
 ---
-import SiteLayout from '../layouts/SiteLayout.astro'
+const targetPath = '/zh-Hant/'
 ---
 
-<SiteLayout
-  title="Shape Shortcut"
-  description="Browser-based parametric CAD prototype."
->
-  <section
-    class="rounded-2xl border border-border-card bg-panel p-5 shadow-card"
-    aria-labelledby="home-title"
-  >
-    <p class="mb-4 text-muted">Browser-only CAD prototype</p>
-    <h1 class="mb-4 text-4xl font-semibold leading-tight" id="home-title">
-      用瀏覽器建立、調整並匯出 CAD 模型
-    </h1>
-    <p class="mb-4 leading-normal">
-      在瀏覽器中建立參數化 CAD 模型，調整 component 專屬設定、查看即時 3D
-      預覽，並下載由精確 B-Rep 產生的 STEP 或 STL。
-    </p>
-    <div class="mt-8 grid gap-4 sm:grid-cols-3" aria-label="產品特色">
-      <article class="rounded-xl border border-border-card bg-page p-4">
-        <h2 class="mb-2 text-xl font-semibold leading-tight">瀏覽器內建模</h2>
-        <p class="m-0 text-muted">
-          不需安裝桌面 CAD 軟體，就能在瀏覽器調整參數並預覽模型。
-        </p>
-      </article>
-      <article class="rounded-xl border border-border-card bg-page p-4">
-        <h2 class="mb-2 text-xl font-semibold leading-tight">參數化控制</h2>
-        <p class="m-0 text-muted">
-          每個 component 都有獨立參數、即時驗證與可恢復的設定。
-        </p>
-      </article>
-      <article class="rounded-xl border border-border-card bg-page p-4">
-        <h2 class="mb-2 text-xl font-semibold leading-tight">精確匯出</h2>
-        <p class="m-0 text-muted">
-          從精確 B-Rep 產生 STEP 與 STL，方便進一步製作或加工。
-        </p>
-      </article>
-    </div>
-    <p class="mb-0 mt-8">
-      <a
-        class="inline-flex rounded-lg border border-border-card bg-panel px-4 py-3 font-semibold text-ink no-underline shadow-sm hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-        href="/models"
-      >
-        開始選擇模型 →
-      </a>
-    </p>
-  </section>
-</SiteLayout>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex" />
+    <meta http-equiv="refresh" content={`0;url=${targetPath}`} />
+    <link rel="canonical" href={targetPath} />
+    <title>Shape Shortcut</title>
+    <script is:inline>
+      window.location.replace('/zh-Hant/' + window.location.search)
+    </script>
+  </head>
+  <body>
+    <main>
+      <p><a href={targetPath}>Shape Shortcut</a></p>
+    </main>
+  </body>
+</html>

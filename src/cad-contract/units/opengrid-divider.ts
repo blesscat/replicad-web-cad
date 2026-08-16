@@ -43,7 +43,7 @@ export type OpenGridDividerArmEndpoints = {
 
 export type OpenGridDividerValidationIssue = {
   field: OpenGridDividerParameterKey | 'parameters'
-  message: string
+  messageId: string
 }
 
 export type OpenGridDividerValidation =
@@ -242,7 +242,7 @@ export function validateOpenGridDividerParameters(
   if (!isRecord(value)) {
     return {
       valid: false,
-      issues: [{ field: 'parameters', message: '需要提供完整的分隔器參數。' }],
+      issues: [{ field: 'parameters', messageId: 'validation.invalid' }],
     }
   }
 
@@ -250,7 +250,7 @@ export function validateOpenGridDividerParameters(
   if (!hasExactKeys(value, DIVIDER_PARAMETER_KEYS)) {
     issues.push({
       field: 'parameters',
-      message: '包含不支援或缺少的分隔器參數欄位。',
+      messageId: 'validation.invalid',
     })
   }
 
@@ -259,7 +259,7 @@ export function validateOpenGridDividerParameters(
     if (!isSafeCount(count)) {
       issues.push({
         field,
-        message: `格數必須是 0–${OPENGRID_DIVIDER_CONFIGURATION.maxArmCount} 的 ${OPENGRID_DIVIDER_CONFIGURATION.gridStep} 格倍數。`,
+        messageId: 'validation.invalid',
       })
     }
   }
@@ -267,14 +267,14 @@ export function validateOpenGridDividerParameters(
   if (!isSafeHeight(value.height)) {
     issues.push({
       field: 'height',
-      message: `高度必須是 ${OPENGRID_DIVIDER_CONFIGURATION.minHeight}–${OPENGRID_DIVIDER_CONFIGURATION.maxHeight} mm 的安全整數。`,
+      messageId: 'validation.invalid',
     })
   }
 
   if (!isSafeWallThickness(value.wallThickness)) {
     issues.push({
       field: 'wallThickness',
-      message: `牆厚必須是 ${OPENGRID_DIVIDER_CONFIGURATION.minWallThickness}–${OPENGRID_DIVIDER_CONFIGURATION.maxWallThickness} mm 的安全整數。`,
+      messageId: 'validation.invalid',
     })
   }
 
@@ -291,7 +291,7 @@ export function validateOpenGridDividerParameters(
     if (countActiveDirections(candidate) < 1) {
       issues.push({
         field: 'parameters',
-        message: '至少需要一個方向才能建立分隔器。',
+        messageId: 'validation.invalid',
       })
     } else {
       const plan = openGridDividerPlanBoundsFor(candidate)
@@ -301,7 +301,7 @@ export function validateOpenGridDividerParameters(
       ) {
         issues.push({
           field: 'parameters',
-          message: `分隔器平面尺寸不可超過 ${OPENGRID_DIVIDER_CONFIGURATION.maxDimension} mm。`,
+          messageId: 'validation.invalid',
         })
       }
     }

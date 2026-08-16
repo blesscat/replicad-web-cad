@@ -53,7 +53,7 @@ describe('OpenGrid open-shelf workspace integration', () => {
 
     expect(deskDefinition).toBeDefined()
     expect(modelSelectionLabelFor(deskDefinition!)).toBe(
-      'Open Shelf (斜開格櫃)',
+      'models.model.opengrid-open-shelf.selection',
     )
     expect(
       desk?.definitions.filter((entry) => entry.id === 'opengrid-open-shelf'),

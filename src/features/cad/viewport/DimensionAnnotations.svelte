@@ -8,8 +8,10 @@
   } from './dimensions'
   import DimensionAnnotationView from './DimensionAnnotationView.svelte'
   import type { CadViewportTheme } from './theme'
+  import type { Locale } from '../../../i18n'
 
   type Props = {
+    locale: Locale
     mesh: MeshSnapshot
     parameters: ModelParameterValues | null
     theme: CadViewportTheme
@@ -18,13 +20,14 @@
   function getDimensionAnnotations(
     mesh: MeshSnapshot,
     parameters: ModelParameterValues | null,
+    locale: Locale,
   ): DimensionAnnotation[] {
     if (!parameters) return []
-    return createDimensionAnnotations(mesh.bounds, parameters)
+    return createDimensionAnnotations(mesh.bounds, parameters, locale)
   }
 
-  let { mesh, parameters, theme }: Props = $props()
-  let annotations = $derived(getDimensionAnnotations(mesh, parameters))
+  let { locale, mesh, parameters, theme }: Props = $props()
+  let annotations = $derived(getDimensionAnnotations(mesh, parameters, locale))
 </script>
 
 {#if annotations.length > 0}

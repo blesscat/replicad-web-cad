@@ -3,29 +3,41 @@
     type ModelParameterKey,
     type OpenGridSnapParameters,
     type OpenGridSnapFootprint,
+    type ValidationIssue,
   } from '../../../../cad-contract/units'
   import {
     displayParameterLabel,
     opengridSnapDefinition,
+    unitLabelFor,
   } from '../../../../features/cad/model-catalog'
+  import { translate, type Locale } from '../../../../i18n'
+  import { formatValidationIssue } from '../../../../i18n/diagnostics'
   import type { RawParameters } from '../../workspace/types'
   import ParameterField from '../ParameterField.svelte'
   import ParameterControl from '../ParameterControl.svelte'
 
   type Props = {
+    locale: Locale
     parameters: OpenGridSnapParameters
     rawParameters: RawParameters
-    fieldErrors: Partial<Record<ModelParameterKey | 'parameters', string>>
+    fieldErrors: Partial<
+      Record<ModelParameterKey | 'parameters', ValidationIssue>
+    >
     onInputChange: (key: ModelParameterKey, value: string) => void
   }
 
-  let { parameters, rawParameters, fieldErrors, onInputChange }: Props =
+  let { locale, parameters, rawParameters, fieldErrors, onInputChange }: Props =
     $props()
 
   const offsetField = opengridSnapDefinition.parameterSchema[0]!
 
   function fieldError(field: ModelParameterKey | 'parameters') {
     return fieldErrors[field]
+  }
+
+  function fieldErrorMessage(field: ModelParameterKey | 'parameters') {
+    const issue = fieldError(field)
+    return issue ? formatValidationIssue(locale, issue) : ''
   }
 
   let rawOffset = $derived(rawParameters.offset ?? String(parameters.offset))
@@ -71,13 +83,14 @@
 
 <fieldset class="m-0 grid gap-3 border-0 p-0" data-testid="opengrid-snap-panel">
   <ParameterField
-    label="Snap 型號"
+    {locale}
+    label={translate(locale, 'panel.snap.variant')}
     error={fieldError('variant')}
     errorId="opengrid-snap-variant-error"
   >
     <select
       class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-      aria-label="OpenGrid Snap 型號"
+      aria-label={translate(locale, 'panel.snap.variantAria')}
       aria-describedby={fieldError('variant')
         ? 'opengrid-snap-variant-error'
         : undefined}
@@ -89,20 +102,23 @@
         }
       }}
     >
-      <option value="Lite">Lite（3.4 mm）</option>
-      <option value="Full">Full（6.8 mm）</option>
+      <option value="Lite">{translate(locale, 'panel.snap.variantLite')}</option
+      >
+      <option value="Full">{translate(locale, 'panel.snap.variantFull')}</option
+      >
     </select>
   </ParameterField>
 
   <ParameterField
-    label="幾何版本"
+    {locale}
+    label={translate(locale, 'panel.snap.geometry')}
     error={fieldError('profile')}
     errorId="opengrid-snap-profile-error"
     onRestore={() => onInputChange('profile', 'Standard')}
   >
     <select
       class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-      aria-label="OpenGrid Snap 幾何版本"
+      aria-label={translate(locale, 'panel.snap.geometryAria')}
       aria-describedby={fieldError('profile')
         ? 'opengrid-snap-profile-error'
         : undefined}
@@ -114,14 +130,19 @@
         }
       }}
     >
-      <option value="Standard">Standard</option>
-      <option value="Directional">Directional</option>
+      <option value="Standard"
+        >{translate(locale, 'panel.snap.profileStandard')}</option
+      >
+      <option value="Directional"
+        >{translate(locale, 'panel.snap.profileDirectional')}</option
+      >
     </select>
   </ParameterField>
 
   <ParameterField
-    label={displayParameterLabel(offsetField)}
-    unit={offsetField.unit}
+    {locale}
+    label={displayParameterLabel(offsetField, locale)}
+    unit={unitLabelFor(locale, offsetField.unit)}
     changed={offsetIsAdjustable &&
       rawOffset !== String(offsetField.defaultValue)}
     error={fieldError('offset')}
@@ -129,6 +150,7 @@
     onRestore={offsetIsAdjustable ? restoreOffset : undefined}
   >
     <ParameterControl
+      {locale}
       field={offsetField}
       value={displayedOffset}
       error={fieldError('offset')}
@@ -136,19 +158,22 @@
       onChange={(nextValue) => onInputChange('offset', nextValue)}
     />
     {#if !offsetIsAdjustable}
-      <p class="m-0 text-sm text-muted" role="status">增量無效</p>
+      <p class="m-0 text-sm text-muted" role="status">
+        {translate(locale, 'panel.snap.invalidOffset')}
+      </p>
     {/if}
   </ParameterField>
 
   <ParameterField
-    label="格型"
+    {locale}
+    label={translate(locale, 'panel.snap.footprint')}
     error={fieldError('footprint')}
     errorId="opengrid-snap-footprint-error"
     onRestore={() => onInputChange('footprint', 'full')}
   >
     <select
       class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-      aria-label="OpenGrid Snap 格型"
+      aria-label={translate(locale, 'panel.snap.footprintAria')}
       aria-describedby={fieldError('footprint')
         ? 'opengrid-snap-footprint-error'
         : undefined}
@@ -156,13 +181,19 @@
       value={rawFootprint}
       onchange={updateFootprint}
     >
-      <option value="full">Full</option>
-      <option value="half">Half</option>
-      <option value="quarter">Quarter</option>
+      <option value="full"
+        >{translate(locale, 'panel.snap.footprintFull')}</option
+      >
+      <option value="half"
+        >{translate(locale, 'panel.snap.footprintHalf')}</option
+      >
+      <option value="quarter"
+        >{translate(locale, 'panel.snap.footprintQuarter')}</option
+      >
     </select>
     {#if rawFootprint === 'quarter'}
       <p class="m-0 text-sm text-error" role="status">
-        格型測試中 不保證可使用
+        {translate(locale, 'panel.snap.experimental')}
       </p>
     {/if}
   </ParameterField>
@@ -172,7 +203,7 @@
       <label class="flex items-center gap-2 text-sm text-ink">
         <input
           type="checkbox"
-          aria-label="定位孔"
+          aria-label={translate(locale, 'panel.snap.locatingHoles')}
           aria-describedby={fieldError('fourCornerLocatingHoles')
             ? 'opengrid-snap-four-corner-holes-error'
             : undefined}
@@ -182,16 +213,18 @@
           disabled={fixedFootprintFeaturesAreDisabled}
           onchange={(event) => updateBoolean('fourCornerLocatingHoles', event)}
         />
-        定位孔
+        {translate(locale, 'panel.snap.locatingHoles')}
       </label>
       {#if fixedFootprintFeaturesAreDisabled}
-        <p class="m-0 text-sm text-muted" role="status">定位孔無效</p>
+        <p class="m-0 text-sm text-muted" role="status">
+          {translate(locale, 'panel.snap.locatingHolesInvalid')}
+        </p>
       {/if}
       {#if fieldError('fourCornerLocatingHoles')}
         <span
           id="opengrid-snap-four-corner-holes-error"
           class="text-sm text-error"
-          role="alert">{fieldError('fourCornerLocatingHoles')}</span
+          role="alert">{fieldErrorMessage('fourCornerLocatingHoles')}</span
         >
       {/if}
     </div>
@@ -200,7 +233,7 @@
       <label class="flex items-center gap-2 text-sm text-ink">
         <input
           type="checkbox"
-          aria-label="移除孔"
+          aria-label={translate(locale, 'panel.snap.removerHole')}
           aria-describedby={fieldError('centerRemoverHole')
             ? 'opengrid-snap-center-remover-hole-error'
             : undefined}
@@ -210,16 +243,18 @@
           disabled={fixedFootprintFeaturesAreDisabled}
           onchange={(event) => updateBoolean('centerRemoverHole', event)}
         />
-        移除孔
+        {translate(locale, 'panel.snap.removerHole')}
       </label>
       {#if fixedFootprintFeaturesAreDisabled}
-        <p class="m-0 text-sm text-muted" role="status">移除孔無效</p>
+        <p class="m-0 text-sm text-muted" role="status">
+          {translate(locale, 'panel.snap.removerHoleInvalid')}
+        </p>
       {/if}
       {#if fieldError('centerRemoverHole')}
         <span
           id="opengrid-snap-center-remover-hole-error"
           class="text-sm text-error"
-          role="alert">{fieldError('centerRemoverHole')}</span
+          role="alert">{fieldErrorMessage('centerRemoverHole')}</span
         >
       {/if}
     </div>

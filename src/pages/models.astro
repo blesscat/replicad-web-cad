@@ -1,158 +1,23 @@
 ---
-import SiteLayout from '../layouts/SiteLayout.astro'
-import {
-  cadPathForModel,
-  groupModelDefinitions,
-  modelSelectionLabelFor,
-} from '../features/cad/model-catalog'
-import type { ModelDefinition } from '../features/cad/model-catalog'
-
-const modelGroups = groupModelDefinitions()
-
-function previewImageFor(definition: ModelDefinition) {
-  if (!definition.previewImage) {
-    throw new Error(`MODEL_PREVIEW_MISSING:${definition.id}`)
-  }
-  return definition.previewImage
-}
+import { translate } from '../i18n'
+const targetPath = '/zh-Hant/models'
 ---
 
-<SiteLayout
-  fullWidth
-  title="選擇 CAD 模型 | Shape Shortcut"
-  description="選擇要在瀏覽器中調整與匯出的 CAD component。"
->
-  <section
-    class="grid gap-10"
-    aria-labelledby="model-selection-title"
-    data-testid="model-selection"
-  >
-    <header>
-      <h1
-        class="text-4xl font-semibold leading-tight"
-        id="model-selection-title"
-      >
-        選擇 CAD 模型
-      </h1>
-    </header>
-
-    <div class="grid gap-12" aria-label="CAD 模型系列">
-      {
-        modelGroups.map((group) => {
-          const hasSubgroups = Boolean(group.subgroups)
-          const subgroups = group.subgroups ?? [
-            {
-              key: group.key,
-              label: group.label,
-              definitions: group.definitions,
-            },
-          ]
-
-          return (
-            <section
-              class="grid gap-6"
-              aria-labelledby={`model-family-${group.key}`}
-              data-testid={`model-family-${group.key}`}
-            >
-              <div class="border-b border-border-card pb-3">
-                <h2
-                  class="text-3xl font-semibold leading-tight"
-                  id={`model-family-${group.key}`}
-                >
-                  {group.label}
-                </h2>
-              </div>
-              <div
-                class="grid gap-10"
-                data-testid={
-                  hasSubgroups ? `model-subgroups-${group.key}` : undefined
-                }
-              >
-                {subgroups.map((subgroup) => (
-                  <section
-                    class="grid gap-4"
-                    aria-labelledby={
-                      hasSubgroups
-                        ? `model-subgroup-${subgroup.key}-title`
-                        : undefined
-                    }
-                    data-testid={`model-subgroup-${subgroup.key}`}
-                  >
-                    {hasSubgroups ? (
-                      <div class="border-b border-border-card pb-2">
-                        <h3
-                          class="text-xl font-semibold leading-tight"
-                          id={`model-subgroup-${subgroup.key}-title`}
-                        >
-                          {subgroup.label}
-                        </h3>
-                      </div>
-                    ) : null}
-                    <div class="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,18rem),1fr))]">
-                      {subgroup.definitions.map((definition) => {
-                        const preview = previewImageFor(definition)
-                        const selectionLabel =
-                          modelSelectionLabelFor(definition)
-                        return (
-                          <article
-                            class="grid gap-3 rounded-xl border border-border-card bg-panel p-3 shadow-sm transition-shadow hover:shadow-md sm:p-4"
-                            data-model-id={definition.id}
-                            data-entry-key={`${definition.id}-${definition.systemContext ?? 'legacy'}`}
-                            data-system-context={definition.systemContext}
-                          >
-                            <div
-                              class="grid aspect-[16/10] place-items-center overflow-hidden rounded-lg border border-border-card bg-viewport"
-                              data-testid="model-preview"
-                            >
-                              <div
-                                class="p-4 text-center text-sm text-muted"
-                                data-testid="model-preview-fallback"
-                                hidden
-                                role="img"
-                                aria-label={preview.alt}
-                              >
-                                預覽圖片暫時無法載入
-                              </div>
-                              <img
-                                src={preview.src}
-                                alt={preview.alt}
-                                width={preview.width}
-                                height={preview.height}
-                                loading="lazy"
-                                class="h-full w-full object-contain"
-                                onerror="this.hidden = true; this.previousElementSibling.removeAttribute('hidden')"
-                              />
-                            </div>
-                            {hasSubgroups ? (
-                              <h4 class="text-2xl font-semibold leading-tight">
-                                {selectionLabel}
-                              </h4>
-                            ) : (
-                              <h3 class="text-2xl font-semibold leading-tight">
-                                {selectionLabel}
-                              </h3>
-                            )}
-                            <a
-                              class="inline-flex items-center justify-self-start rounded-lg border border-border-card bg-page px-3 py-2 font-semibold text-ink no-underline shadow-sm hover:bg-viewport focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                              href={cadPathForModel(
-                                definition.id,
-                                definition.systemContext,
-                              )}
-                              aria-label={`編輯 ${selectionLabel}`}
-                            >
-                              編輯 →
-                            </a>
-                          </article>
-                        )
-                      })}
-                    </div>
-                  </section>
-                ))}
-              </div>
-            </section>
-          )
-        })
-      }
-    </div>
-  </section>
-</SiteLayout>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex" />
+    <meta http-equiv="refresh" content={`0;url=${targetPath}`} />
+    <link rel="canonical" href={targetPath} />
+    <title>{translate('zh-Hant', 'models.title')} | Shape Shortcut</title>
+    <script is:inline>
+      window.location.replace('/zh-Hant/models' + window.location.search)
+    </script>
+  </head>
+  <body>
+    <main>
+      <h1>{translate('zh-Hant', 'models.title')}</h1>
+      <a href={targetPath}>{translate('zh-Hant', 'common.backToModels')}</a>
+    </main>
+  </body>
+</html>

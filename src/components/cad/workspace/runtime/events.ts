@@ -1,4 +1,5 @@
 import { normalizeError } from '../../../../cad-contract/errors'
+import { diagnostic } from '../../../../cad-contract/diagnostics'
 import {
   isWorkerEvent,
   type ProgressEvent,
@@ -23,7 +24,7 @@ type WorkerEventContext = RuntimeContext & {
 
 type InitialParameterParseResult =
   | { valid: true; value: ModelParameterValues }
-  | { valid: false; message: string; field?: ModelParameterKey }
+  | { valid: false; messageId: string; field?: ModelParameterKey }
 
 function parseInitialModelParameters(
   context: RuntimeContext,
@@ -40,7 +41,7 @@ function parseInitialModelParameters(
   if (!validation.valid) {
     return {
       valid: false,
-      message: validation.issues[0]?.message ?? 'OpenGrid 參數無效。',
+      messageId: validation.issues[0]?.messageId ?? 'validation.invalid',
     }
   }
   return { valid: true, value: validation.value.parameters }
@@ -123,7 +124,12 @@ export function createWorkerEventHandler(
           )
         } else {
           if (parsed.field) {
-            context.setFieldErrors({ [parsed.field]: parsed.message })
+            context.setFieldErrors({
+              [parsed.field]: {
+                field: parsed.field,
+                messageId: parsed.messageId,
+              },
+            })
           } else {
             context.setFieldErrors({})
           }
@@ -132,7 +138,10 @@ export function createWorkerEventHandler(
             modelId,
             input: context.refs.state.current.input,
             generation: initialGeneration,
-            error: errorForInput(parsed.message),
+            error: errorForInput({
+              field: parsed.field ?? 'parameters',
+              messageId: parsed.messageId,
+            }),
           })
           context.generation.sendInvalidate(initialGeneration, 'invalid-input')
         }
@@ -194,10 +203,10 @@ export function createWorkerEventHandler(
           PROTOTYPE_CONFIGURATION.operationTimeoutMs,
           () => {
             context.recoverWorker(
-              normalizeError(new Error('候選模型回應超時。'), {
+              normalizeError(undefined, {
                 stage: 'worker',
                 code: 'WORKER_TIMEOUT',
-                userMessage: '候選模型處理超時，請重試。',
+                message: diagnostic('diagnostic.workerTimeout'),
                 recoverable: true,
                 generation: event.generation,
                 operationId: event.operationId,
@@ -213,7 +222,7 @@ export function createWorkerEventHandler(
             error: normalizeError(new Error('mesh validation failed'), {
               stage: 'meshing',
               code: 'MESH_INVALID',
-              userMessage: '預覽 mesh 無效，請重試。',
+              message: diagnostic('diagnostic.meshInvalid'),
               recoverable: true,
               generation: event.generation,
               operationId: event.operationId,
@@ -242,7 +251,7 @@ export function createWorkerEventHandler(
             normalizeError(new Error('model.ready mesh validation failed'), {
               stage: 'meshing',
               code: 'MESH_INVALID',
-              userMessage: '模型 mesh 無效，Worker 將重新啟動。',
+              message: diagnostic('diagnostic.meshInvalid'),
               recoverable: true,
               generation: event.generation,
               operationId: event.operationId,
@@ -288,7 +297,7 @@ export function createWorkerEventHandler(
             error: normalizeError(new Error(event.reason), {
               stage: 'worker',
               code: 'STALE_GENERATION',
-              userMessage: '這次建模已被較新的輸入取代。',
+              message: diagnostic('diagnostic.staleGeneration'),
               recoverable: true,
               generation: event.generation,
               operationId: event.operationId,
@@ -334,10 +343,13 @@ export function createWorkerEventHandler(
           context.refs.exportRequest.current = null
           context.dispatch({ type: 'export-end' })
         }
-        const error = normalizeError(new Error(event.userMessage), {
+        const error = normalizeError(undefined, {
           stage: event.stage,
           code: event.code,
-          userMessage: event.userMessage,
+          message: {
+            messageId: event.messageId,
+            params: event.messageParams,
+          },
           recoverable: event.recoverable,
           generation: event.generation,
           modelRevision: event.modelRevision,

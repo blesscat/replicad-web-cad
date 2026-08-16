@@ -1,21 +1,33 @@
 <script lang="ts">
   import {
     displayParameterLabel,
+    unitLabelFor,
     type ParameterField,
   } from '../../../features/cad/model-catalog'
+  import type { Locale } from '../../../i18n'
+  import type { ValidationIssue } from '../../../cad-contract/units'
   import Slider from './Slider.svelte'
 
   type Props = {
+    locale: Locale
     field: ParameterField
     value: string
-    error?: string
+    error?: ValidationIssue
     disabled?: boolean
     onChange: (value: string) => void
   }
 
-  let { field, value, error, disabled = false, onChange }: Props = $props()
+  let {
+    locale,
+    field,
+    value,
+    error,
+    disabled = false,
+    onChange,
+  }: Props = $props()
 
-  let controlLabel = $derived(displayParameterLabel(field))
+  let controlLabel = $derived(displayParameterLabel(field, locale))
+  let unitLabel = $derived(unitLabelFor(locale, field.unit))
 
   let commonProps = $derived({
     'aria-invalid': Boolean(error),
@@ -50,7 +62,7 @@
       {#if field.control === 'range'}
         <span aria-live="polite" class="text-right text-sm text-muted">
           {value}
-          {field.unit}
+          {unitLabel}
         </span>
       {:else}
         <div class="min-w-0 flex items-center gap-2">
@@ -63,7 +75,7 @@
             {value}
             oninput={handleInput}
           />
-          <span class="shrink-0 text-sm text-muted">{field.unit}</span>
+          <span class="shrink-0 text-sm text-muted">{unitLabel}</span>
         </div>
       {/if}
     </div>

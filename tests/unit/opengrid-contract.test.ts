@@ -201,8 +201,7 @@ describe('OpenGrid contract', () => {
     }
     expect(invalid.issues).toContainEqual({
       field: 'screwKind',
-      message:
-        'official-default 必須使用官方 SCAD 的螺絲尺寸；其他尺寸請選 custom。',
+      messageId: 'validation.invalid',
     })
     expect(
       validateOpenGridParameters({
@@ -363,7 +362,7 @@ describe('OpenGrid contract', () => {
       issues: [
         {
           field: 'screwCenter',
-          message: '正中心螺絲孔需要 X、Y 格數都至少為 2。',
+          messageId: 'validation.invalid',
         },
       ],
     })

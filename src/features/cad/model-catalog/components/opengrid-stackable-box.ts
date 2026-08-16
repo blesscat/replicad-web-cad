@@ -14,9 +14,10 @@ import type { ModelDefinition, ParameterField } from '../types'
 const BASE_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
   {
     key: 'x',
-    label: 'X 格數',
+    label: 'parameter.xGridCount',
     axis: 'X',
-    unit: '格',
+    unit: 'grid',
+    labelFormat: 'axis',
     control: 'range',
     defaultValue: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultX,
     min: OPENGRID_STACKABLE_BOX_CONFIGURATION.minX,
@@ -25,9 +26,10 @@ const BASE_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
   },
   {
     key: 'y',
-    label: 'Y 格數',
+    label: 'parameter.yGridCount',
     axis: 'Y',
-    unit: '格',
+    unit: 'grid',
+    labelFormat: 'axis',
     control: 'range',
     defaultValue: OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultY,
     min: OPENGRID_STACKABLE_BOX_CONFIGURATION.minY,
@@ -36,7 +38,7 @@ const BASE_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
   },
   {
     key: 'height',
-    label: '盒內淨高',
+    label: 'parameter.innerHeight',
     axis: 'Z',
     unit: 'mm',
     control: 'range-text',
@@ -59,7 +61,7 @@ function openingFieldsFor(
   return [
     {
       key: depthKey,
-      label: '下切深度',
+      label: 'parameter.openingDepth',
       axis: direction,
       unit: 'mm',
       control: 'range-text',
@@ -72,7 +74,7 @@ function openingFieldsFor(
     },
     {
       key: bottomLengthKey,
-      label: '切口底部長度',
+      label: 'parameter.openingBottomLength',
       axis: direction,
       unit: 'mm',
       control: 'range-text',
@@ -85,9 +87,9 @@ function openingFieldsFor(
     },
     {
       key: angleKey,
-      label: '側壁角度',
+      label: 'parameter.sideWallAngle',
       axis: direction,
-      unit: '°',
+      unit: 'degree',
       control: 'range-text',
       defaultValue: configuration.defaultOpeningAngle,
       min: configuration.openingAngleMin,
@@ -165,10 +167,9 @@ export const opengridStackableBoxDefinition: ModelDefinition = {
   id: 'opengrid-stackable-box',
   buildKey: 'opengrid-stackable-box',
   family: 'opengrid',
-  displayName: 'Grid Box (方盒)',
-  selectionLabel: 'Grid Box (方盒)',
-  selectionDescription:
-    'Grid Box (方盒)；角座可選無角座、角座孔或向下凸出的 Ø5 × 3 mm 內建角座。',
+  displayName: 'models.model.opengrid-stackable-box.name',
+  selectionLabel: 'models.model.opengrid-stackable-box.selection',
+  selectionDescription: 'models.model.opengrid-stackable-box.description',
   parameterSchema: OPENGRID_STACKABLE_BOX_PARAMETER_SCHEMA,
   defaultParameters: {
     ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
@@ -176,7 +177,7 @@ export const opengridStackableBoxDefinition: ModelDefinition = {
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {
     src: '/model-previews/opengrid-stackable-box.png',
-    alt: 'Grid Box (方盒) 預覽',
+    alt: 'models.model.opengrid-stackable-box.alt',
     width: 640,
     height: 400,
   },

@@ -28,6 +28,7 @@
   }
 
   let {
+    locale,
     modelId,
     parameters,
     systemContext,
@@ -40,25 +41,38 @@
 </script>
 
 {#if modelId === 'box'}
-  <BoxComponentPanel {rawParameters} {fieldErrors} {onInputChange} />
+  <BoxComponentPanel {locale} {rawParameters} {fieldErrors} {onInputChange} />
 {:else if modelId === 'modular-grid-base'}
   <ModularGridBaseComponentPanel
+    {locale}
     {rawParameters}
     {fieldErrors}
     {onInputChange}
   />
 {:else if modelId === 'hsw-cell'}
-  <HswCellComponentPanel {rawParameters} {fieldErrors} {onInputChange} />
+  <HswCellComponentPanel
+    {locale}
+    {rawParameters}
+    {fieldErrors}
+    {onInputChange}
+  />
 {:else if modelId === 'hexagonal-column'}
   <HexagonalColumnComponentPanel
+    {locale}
     {rawParameters}
     {fieldErrors}
     {onInputChange}
   />
 {:else if modelId === 'opengrid-pillar'}
-  <OpenGridPillarComponentPanel {rawParameters} {fieldErrors} {onInputChange} />
+  <OpenGridPillarComponentPanel
+    {locale}
+    {rawParameters}
+    {fieldErrors}
+    {onInputChange}
+  />
 {:else if modelId === 'opengrid'}
   <OpenGridComponentPanel
+    {locale}
     parameters={parameters as OpenGridParameters}
     {systemContext}
     {fieldErrors}
@@ -67,24 +81,28 @@
   />
 {:else if modelId === 'opengrid-divider'}
   <OpenGridDividerComponentPanel
+    {locale}
     {rawParameters}
     {fieldErrors}
     {onInputChange}
   />
 {:else if modelId === 'opengrid-stackable-box'}
   <OpenGridStackableBoxComponentPanel
+    {locale}
     {rawParameters}
     {fieldErrors}
     {onInputChange}
   />
 {:else if modelId === 'opengrid-stackable-cylinder'}
   <OpenGridStackableCylinderComponentPanel
+    {locale}
     {rawParameters}
     {fieldErrors}
     {onInputChange}
   />
 {:else if modelId === 'opengrid-snap'}
   <OpenGridSnapComponentPanel
+    {locale}
     parameters={parameters as OpenGridSnapParameters}
     {rawParameters}
     {fieldErrors}
@@ -92,6 +110,7 @@
   />
 {:else if modelId === 'opengrid-open-shelf'}
   <OpenGridOpenShelfComponentPanel
+    {locale}
     {rawParameters}
     {fieldErrors}
     {onInputChange}

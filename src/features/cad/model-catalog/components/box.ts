@@ -12,7 +12,7 @@ import type { ModelDefinition, ParameterField } from '../types'
 const BOX_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
   {
     key: 'width',
-    label: '寬度',
+    label: 'parameter.width',
     axis: 'X',
     unit: 'mm',
     control: 'text',
@@ -23,7 +23,7 @@ const BOX_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
   },
   {
     key: 'depth',
-    label: '深度',
+    label: 'parameter.depth',
     axis: 'Y',
     unit: 'mm',
     control: 'text',
@@ -34,7 +34,7 @@ const BOX_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
   },
   {
     key: 'height',
-    label: '高度',
+    label: 'parameter.height',
     axis: 'Z',
     unit: 'mm',
     control: 'text',
@@ -72,8 +72,8 @@ export const boxDefinition: ModelDefinition = {
   id: 'box',
   buildKey: 'box',
   family: 'other',
-  displayName: '方塊',
-  selectionDescription: '以寬度、深度與高度定義基本方塊。',
+  displayName: 'models.model.box.name',
+  selectionDescription: 'models.model.box.description',
   parameterSchema: BOX_PARAMETER_SCHEMA,
   defaultParameters: { ...PROTOTYPE_CONFIGURATION.defaultDimensions },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },

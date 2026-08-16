@@ -5,6 +5,7 @@
     ModelParameterKey,
     ModelParameterValues,
     OpenGridParameters,
+    ValidationIssue,
   } from '../../cad-contract/units'
   import type { ExportFormat } from '../../features/cad/download'
   import type { OpenGridSystemContext } from '../../features/cad/system-entry-context'
@@ -12,17 +13,21 @@
   import type { RawParameters } from './workspace/types'
   import ComponentParameterPanel from './component-panels/index.svelte'
   import RestoreDefaultsButton from './component-panels/RestoreDefaultsButton.svelte'
+  import { translate, type Locale } from '../../i18n'
 
   const ACTION_BUTTON_CLASS =
     'cursor-pointer rounded-lg border-0 bg-primary px-[0.8rem] py-[0.6rem] text-base text-white disabled:cursor-not-allowed disabled:bg-disabled'
 
   type Props = {
+    locale: Locale
     state: CadState
     modelId: ModelId
     systemContext?: OpenGridSystemContext
     parameters: ModelParameterValues
     rawParameters: RawParameters
-    fieldErrors: Partial<Record<ModelParameterKey | 'parameters', string>>
+    fieldErrors: Partial<
+      Record<ModelParameterKey | 'parameters', ValidationIssue>
+    >
     canExport: boolean
     onInputChange: (key: ModelParameterKey, value: string) => void
     onOpenGridParametersChange: (parameters: OpenGridParameters) => void
@@ -34,6 +39,7 @@
   }
 
   let {
+    locale,
     state,
     modelId,
     systemContext,
@@ -50,6 +56,9 @@
     onRestoreDefaults,
   }: Props = $props()
 
+  const t = (key: string, values?: Record<string, string | number | boolean>) =>
+    translate(locale, key, values)
+
   function hasParameterControlsFor(modelId: ModelId): boolean {
     if (modelId === 'opengrid' || modelId === 'opengrid-pillar') return true
     return (getModelDefinition(modelId)?.parameterSchema.length ?? 0) > 0
@@ -61,9 +70,10 @@
   data-testid="cad-workspace-panel"
 >
   {#if hasParameterControlsFor(modelId)}
-    <RestoreDefaultsButton onRestore={onRestoreDefaults} />
+    <RestoreDefaultsButton {locale} onRestore={onRestoreDefaults} />
     {#key resetVersion}
       <ComponentParameterPanel
+        {locale}
         {modelId}
         {systemContext}
         {parameters}
@@ -82,7 +92,7 @@
       disabled={!canExport}
       onclick={() => onExport('step')}
     >
-      下載 STEP
+      {t('cad.action.step')}
     </button>
     <button
       class={ACTION_BUTTON_CLASS}
@@ -90,11 +100,11 @@
       disabled={!canExport}
       onclick={() => onExport('stl')}
     >
-      下載 STL
+      {t('cad.action.stl')}
     </button>
     {#if state.status === 'recoverable-error' || state.status === 'fatal-worker-error'}
       <button class={ACTION_BUTTON_CLASS} type="button" onclick={onRetry}>
-        重試
+        {t('cad.action.retry')}
       </button>
     {/if}
   </div>

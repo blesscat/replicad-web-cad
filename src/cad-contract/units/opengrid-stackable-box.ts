@@ -112,7 +112,7 @@ export type OpenGridStackableBoxDerivedGeometry = {
 
 export type OpenGridStackableBoxValidationIssue = {
   field: OpenGridStackableBoxParameterKey | 'parameters'
-  message: string
+  messageId: string
 }
 
 export type OpenGridStackableBoxValidation =
@@ -393,12 +393,12 @@ function validateGridAxis(
   issues: OpenGridStackableBoxValidationIssue[],
 ): void {
   if (!isHalfStep(value)) {
-    issues.push({ field, message: '格數必須是 0.5 的倍數。' })
+    issues.push({ field, messageId: 'validation.invalid' })
     return
   }
 
   if (value < min || value > max) {
-    issues.push({ field, message: `格數必須介於 ${min}–${max}。` })
+    issues.push({ field, messageId: 'validation.invalid' })
   }
 }
 
@@ -407,11 +407,11 @@ function validateHeight(
   issues: OpenGridStackableBoxValidationIssue[],
 ): void {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
-    issues.push({ field: 'height', message: '高度必須是有限的整數 mm。' })
+    issues.push({ field: 'height', messageId: 'validation.invalid' })
     return
   }
   if (!Number.isSafeInteger(value)) {
-    issues.push({ field: 'height', message: '高度必須是安全範圍內的整數 mm。' })
+    issues.push({ field: 'height', messageId: 'validation.invalid' })
     return
   }
   if (
@@ -420,7 +420,7 @@ function validateHeight(
   ) {
     issues.push({
       field: 'height',
-      message: `高度必須介於 ${OPENGRID_STACKABLE_BOX_CONFIGURATION.minHeight}–${OPENGRID_STACKABLE_BOX_CONFIGURATION.maxHeight} mm。`,
+      messageId: 'validation.invalid',
     })
   }
 }
@@ -432,7 +432,7 @@ function validateCornerSeatMode(
   if (!isOpenGridLocatingSeatMode(value)) {
     issues.push({
       field: 'cornerSeatMode',
-      message: '角座模式必須是 none、hole 或 integrated。',
+      messageId: 'validation.invalid',
     })
   }
 }
@@ -444,7 +444,7 @@ function validateFullBottomHoleGrid(
   if (typeof value !== 'boolean') {
     issues.push({
       field: 'fullBottomHoleGrid',
-      message: '底部全孔模式必須是布林值。',
+      messageId: 'validation.invalid',
     })
   }
 }
@@ -456,7 +456,7 @@ function validateBasePlateMode(
   if (typeof value !== 'boolean') {
     issues.push({
       field: 'basePlateMode',
-      message: '底版模式必須是布林值。',
+      messageId: 'validation.invalid',
     })
   }
 }
@@ -468,7 +468,7 @@ function validateThinShellMode(
   if (typeof value !== 'boolean') {
     issues.push({
       field: 'thinShellMode',
-      message: '薄殼模式必須是布林值。',
+      messageId: 'validation.invalid',
     })
   }
 }
@@ -480,7 +480,7 @@ function validateHoneycombMode(
   if (typeof value !== 'boolean') {
     issues.push({
       field: 'honeycombMode',
-      message: '省料模式必須是布林值。',
+      messageId: 'validation.invalid',
     })
   }
 }
@@ -694,17 +694,17 @@ function validateOpeningIntegerField(
 ): void {
   const unitSuffix = unit === '°' ? ' °' : ' mm'
   if (typeof value !== 'number' || !Number.isFinite(value)) {
-    issues.push({ field, message: `必須是有限的整數${unitSuffix}。` })
+    issues.push({ field, messageId: 'validation.invalid' })
     return
   }
   if (!Number.isSafeInteger(value)) {
-    issues.push({ field, message: `只接受安全範圍內的整數${unitSuffix}。` })
+    issues.push({ field, messageId: 'validation.invalid' })
     return
   }
   if (value < min || value > max) {
     issues.push({
       field,
-      message: `必須介於 ${min}–${max}${unitSuffix}。`,
+      messageId: 'validation.invalid',
     })
   }
 }
@@ -753,17 +753,17 @@ function openingValidationIssuesFor(
     if (opening.bottomLength < configuration.openingBottomLengthMin) {
       issues.push({
         field: keys.bottomLength,
-        message: '啟用開口時，平底長度至少需要 1 mm。',
+        messageId: 'validation.invalid',
       })
     }
     if (opening.verticalSideHeight <= 1e-9) {
       issues.push({
         field: keys.depth,
-        message: `固定 ${configuration.openingCornerRadius} mm 圓角之間需要保留直壁，目前下切深度不足。`,
+        messageId: 'validation.invalid',
       })
     }
     if (opening.bottomZ < derived.activeFloorTopZ - 0.0001) {
-      issues.push({ field: keys.depth, message: '開口底部不可切入目前底板。' })
+      issues.push({ field: keys.depth, messageId: 'validation.invalid' })
     }
     const maximum = openGridStackableBoxOpeningBottomLengthMaximumFor(
       parameters,
@@ -772,13 +772,13 @@ function openingValidationIssuesFor(
     if (opening.bottomLength > maximum) {
       issues.push({
         field: keys.bottomLength,
-        message: '開口寬度超過盒體直線側壁可用範圍。',
+        messageId: 'validation.invalid',
       })
     }
     if (opening.straightRun <= 2 * opening.bridgeWidth) {
       issues.push({
         field: keys.bottomLength,
-        message: '盒體側壁沒有足夠的直線段保留開口結構。',
+        messageId: 'validation.invalid',
       })
     }
   }
@@ -795,7 +795,7 @@ export function validateOpenGridStackableBoxParameters(
       issues: [
         {
           field: 'parameters',
-          message: '需要提供 OpenGrid 堆疊盒參數。',
+          messageId: 'validation.invalid',
         },
       ],
     }
@@ -813,7 +813,7 @@ export function validateOpenGridStackableBoxParameters(
       hasOwn(value, key),
     )
   if (!hasLegacyShape && !hasCurrentShape) {
-    issues.push({ field: 'parameters', message: '包含不支援的參數欄位。' })
+    issues.push({ field: 'parameters', messageId: 'validation.invalid' })
   }
 
   validateGridAxis(
@@ -839,7 +839,7 @@ export function validateOpenGridStackableBoxParameters(
   ) {
     issues.push({
       field: 'cornerSeatMode',
-      message: '舊版底部四角孔必須是布林值。',
+      messageId: 'validation.invalid',
     })
   }
   validateFullBottomHoleGrid(value.fullBottomHoleGrid, issues)
@@ -854,7 +854,7 @@ export function validateOpenGridStackableBoxParameters(
   if (value.basePlateMode === true && value.thinShellMode === true) {
     issues.push({
       field: 'thinShellMode',
-      message: '薄殼模式與底版模式不可同時開啟。',
+      messageId: 'validation.invalid',
     })
   }
 
@@ -899,13 +899,13 @@ export function validateOpenGridStackableBoxParameters(
   if (width > OPENGRID_STACKABLE_BOX_CONFIGURATION.workspaceMaxDimension) {
     issues.push({
       field: 'x',
-      message: `X 方向寬度不得超過 ${OPENGRID_STACKABLE_BOX_CONFIGURATION.workspaceMaxDimension} mm。`,
+      messageId: 'validation.invalid',
     })
   }
   if (depth > OPENGRID_STACKABLE_BOX_CONFIGURATION.workspaceMaxDimension) {
     issues.push({
       field: 'y',
-      message: `Y 方向深度不得超過 ${OPENGRID_STACKABLE_BOX_CONFIGURATION.workspaceMaxDimension} mm。`,
+      messageId: 'validation.invalid',
     })
   }
 

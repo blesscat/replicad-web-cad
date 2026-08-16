@@ -34,7 +34,7 @@ describe('CAD workspace validation helpers', () => {
       parseRawParameters({ width: '20.5', depth: '30', height: '40' }),
     ).toEqual({
       valid: false,
-      message: '必須是有限的整數。',
+      messageId: 'validation.invalid',
       field: 'width',
     })
   })
@@ -54,14 +54,15 @@ describe('CAD workspace validation helpers', () => {
       parseRawParameters({ rows: '0', columns: '21' }, 'hsw-cell'),
     ).toEqual({
       valid: false,
-      message: '格數必須是正整數。',
+      messageId: 'validation.invalid',
       field: 'rows',
+      params: { min: 1, max: 20, unit: 'count' },
     })
     expect(
       parseRawParameters({ rows: '2.5', columns: '3' }, 'hsw-cell'),
     ).toEqual({
       valid: false,
-      message: '必須是有限的整數。',
+      messageId: 'validation.invalid',
       field: 'rows',
     })
     expect(
@@ -71,7 +72,7 @@ describe('CAD workspace validation helpers', () => {
       ),
     ).toEqual({
       valid: false,
-      message: '包含不支援的參數欄位。',
+      messageId: 'validation.invalid',
     })
   })
 
@@ -110,7 +111,7 @@ describe('CAD workspace validation helpers', () => {
       ),
     ).toEqual({
       valid: false,
-      message: '必須是有限的整數。',
+      messageId: 'validation.invalid',
       field: 'height',
     })
   })
@@ -149,20 +150,20 @@ describe('CAD workspace validation helpers', () => {
       ),
     ).toEqual({
       valid: false,
-      message: '包含不支援的參數欄位。',
+      messageId: 'validation.invalid',
     })
     expect(
       parseRawParameters({ variant: 'Lite', offset: '' }, 'opengrid-snap'),
     ).toEqual({
       valid: false,
-      message: '外框總增量必須是有限的小數。',
+      messageId: 'validation.invalid',
       field: 'offset',
     })
     expect(
       parseRawParameters({ variant: 'Lite', offset: '0.03' }, 'opengrid-snap'),
     ).toEqual({
       valid: false,
-      message: '外框增量必須以 0.05 mm 為步進。',
+      messageId: 'validation.invalid',
       field: 'offset',
     })
     expect(
@@ -189,7 +190,7 @@ describe('CAD workspace validation helpers', () => {
       ),
     ).toEqual({
       valid: false,
-      message: '幾何 profile 必須是 Standard 或 Directional。',
+      messageId: 'validation.invalid',
       field: 'profile',
     })
     expect(
@@ -203,7 +204,7 @@ describe('CAD workspace validation helpers', () => {
       ),
     ).toEqual({
       valid: false,
-      message: '必須是 true 或 false。',
+      messageId: 'validation.invalid',
       field: 'fourCornerLocatingHoles',
     })
   })
@@ -276,7 +277,7 @@ describe('CAD workspace validation helpers', () => {
       ),
     ).toEqual({
       valid: false,
-      message: '格數必須是 0.5 的倍數。',
+      messageId: 'validation.invalid',
       field: 'x',
     })
   })
@@ -327,7 +328,7 @@ describe('CAD workspace validation helpers', () => {
       ),
     ).toEqual({
       valid: false,
-      message: '薄殼模式與底版模式不可同時開啟。',
+      messageId: 'validation.invalid',
       field: 'thinShellMode',
     })
   })
@@ -392,7 +393,7 @@ describe('CAD workspace validation helpers', () => {
       ),
     ).toEqual({
       valid: false,
-      message: `格數必須是 0–${OPENGRID_DIVIDER_CONFIGURATION.maxArmCount} 的 ${OPENGRID_DIVIDER_CONFIGURATION.gridStep} 格倍數。`,
+      messageId: 'validation.invalid',
       field: 'left',
     })
   })
@@ -414,12 +415,12 @@ describe('CAD workspace validation helpers', () => {
     })
     expect(parseRawParameters({ mode: 'legacy' }, 'opengrid-pillar')).toEqual({
       valid: false,
-      message: '模式必須是 standard、thin-shell 或 positioning。',
+      messageId: 'validation.invalid',
       field: 'mode',
     })
     expect(parseRawParameters({}, 'opengrid-pillar')).toEqual({
       valid: false,
-      message: '模式必須是 standard、thin-shell 或 positioning。',
+      messageId: 'validation.invalid',
       field: 'mode',
     })
   })
@@ -451,7 +452,7 @@ describe('CAD workspace validation helpers', () => {
       ),
     ).toEqual({
       valid: false,
-      message: 'offset 必須以 0.05 mm 為步進。',
+      messageId: 'validation.invalid',
       field: 'offset',
     })
     expect(
@@ -461,7 +462,7 @@ describe('CAD workspace validation helpers', () => {
       ),
     ).toEqual({
       valid: false,
-      message: 'offset 必須介於 -0.5–0.5 mm。',
+      messageId: 'validation.invalid',
       field: 'offset',
     })
   })
@@ -516,7 +517,7 @@ describe('CAD workspace validation helpers', () => {
       ),
     ).toEqual({
       valid: false,
-      message: '必須是有限的整數。',
+      messageId: 'validation.invalid',
       field: 'diameter',
     })
   })

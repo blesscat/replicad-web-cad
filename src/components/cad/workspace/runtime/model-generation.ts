@@ -1,4 +1,5 @@
 import { normalizeError } from '../../../../cad-contract/errors'
+import { diagnostic } from '../../../../cad-contract/diagnostics'
 import {
   OPENGRID_PREVIEW_CONFIGURATION,
   PROTOTYPE_CONFIGURATION,
@@ -55,7 +56,11 @@ export function createModelGenerationHandlers(
       const support = validateOpenGridGenerationSupport(parameters)
       if (!support.valid) {
         context.clearProgress()
-        context.setFieldErrors({ parameters: support.issues[0]?.message })
+        const issue = support.issues[0] ?? {
+          field: 'parameters' as const,
+          messageId: 'validation.invalid',
+        }
+        context.setFieldErrors({ parameters: issue })
         context.dispatch({
           type: 'input-invalid',
           modelId,
@@ -66,8 +71,7 @@ export function createModelGenerationHandlers(
             {
               stage: 'validation',
               code: 'OPENGRID_UNSUPPORTED_CONFIGURATION',
-              userMessage:
-                support.issues[0]?.message ?? 'OpenGrid 組合目前不支援。',
+              message: diagnostic('diagnostic.opengridUnsupported'),
               recoverable: true,
               generation,
               operationId,
@@ -99,10 +103,10 @@ export function createModelGenerationHandlers(
       PROTOTYPE_CONFIGURATION.operationTimeoutMs,
       () => {
         context.recoverWorker(
-          normalizeError(new Error('建模超時。'), {
+          normalizeError(undefined, {
             stage: 'worker',
             code: 'WORKER_TIMEOUT',
-            userMessage: '模型建立超時，請重試。',
+            message: diagnostic('diagnostic.modelBuildFailed'),
             recoverable: true,
             generation,
             operationId,
@@ -137,13 +141,17 @@ export function createModelGenerationHandlers(
     const parsed = parseRawParameters(next, modelId)
     if (!parsed.valid) {
       context.clearProgress()
-      context.setFieldErrors({ [parsed.field ?? key]: parsed.message })
+      const issue = {
+        field: parsed.field ?? key,
+        messageId: parsed.messageId,
+      }
+      context.setFieldErrors({ [issue.field]: issue })
       context.dispatch({
         type: 'input-invalid',
         modelId,
         input: context.refs.state.current.input,
         generation,
-        error: errorForInput(parsed.message),
+        error: errorForInput(issue),
       })
       sendInvalidate(generation, 'invalid-input')
       if (context.refs.debounce.current)
@@ -174,15 +182,22 @@ export function createModelGenerationHandlers(
       context.clearProgress()
       const firstIssue = validation.issues[0]
       context.setFieldErrors({
-        [firstIssue?.field ?? 'parameters']:
-          firstIssue?.message ?? 'OpenGrid 參數無效。',
+        [firstIssue?.field ?? 'parameters']: firstIssue ?? {
+          field: 'parameters',
+          messageId: 'validation.invalid',
+        },
       })
       context.dispatch({
         type: 'input-invalid',
         modelId,
         input: parameters,
         generation,
-        error: errorForInput(firstIssue?.message ?? 'OpenGrid 參數無效。'),
+        error: errorForInput(
+          firstIssue ?? {
+            field: 'parameters',
+            messageId: 'validation.invalid',
+          },
+        ),
       })
       sendInvalidate(generation, 'invalid-input')
       if (context.refs.debounce.current) {
@@ -195,8 +210,11 @@ export function createModelGenerationHandlers(
     const support = validateOpenGridGenerationSupport(validation.value)
     if (!support.valid) {
       context.clearProgress()
-      const message = support.issues[0]?.message ?? 'OpenGrid 組合目前不支援。'
-      context.setFieldErrors({ parameters: message })
+      const issue = support.issues[0] ?? {
+        field: 'parameters' as const,
+        messageId: 'validation.invalid',
+      }
+      context.setFieldErrors({ parameters: issue })
       context.dispatch({
         type: 'input-invalid',
         modelId,
@@ -205,7 +223,7 @@ export function createModelGenerationHandlers(
         error: normalizeError(new Error('OPENGRID_UNSUPPORTED_CONFIGURATION'), {
           stage: 'validation',
           code: 'OPENGRID_UNSUPPORTED_CONFIGURATION',
-          userMessage: message,
+          message: diagnostic('diagnostic.opengridUnsupported'),
           recoverable: true,
           generation,
         }),
@@ -243,7 +261,10 @@ export function createModelGenerationHandlers(
       modelId: 'opengrid',
       input: context.refs.state.current.input,
       generation,
-      error: errorForInput('OpenGrid 尺寸計算輸入無效。'),
+      error: errorForInput({
+        field: 'parameters',
+        messageId: 'validation.invalid',
+      }),
     })
     sendInvalidate(generation, 'invalid-input')
   }

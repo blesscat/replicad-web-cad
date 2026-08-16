@@ -19,8 +19,10 @@
   import type { CadViewportTheme } from './theme'
   import type { CadViewportPresentation } from './presentation'
   import type { ViewportGeometryTiming } from './geometry-timing'
+  import type { Locale } from '../../../i18n'
 
   type Props = {
+    locale: Locale
     mesh: MeshSnapshot
     modelRevision: string
     parameters: ModelParameterValues | null
@@ -40,6 +42,7 @@
   }
 
   let {
+    locale,
     mesh,
     modelRevision,
     parameters,
@@ -111,7 +114,7 @@
   <Bounds margin={boundsMarginFor(presentation)} animate={false}>
     <ModelMesh {mesh} {theme} {onPreparationTiming} />
     {#if presentation === 'workspace'}
-      <DimensionAnnotations {mesh} {parameters} {theme} />
+      <DimensionAnnotations {locale} {mesh} {parameters} {theme} />
     {/if}
   </Bounds>
 {/key}

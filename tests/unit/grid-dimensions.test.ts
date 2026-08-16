@@ -64,7 +64,12 @@ describe('modular grid dimension calculation', () => {
 
     expect(result).toMatchObject({
       valid: false,
-      errors: { x: expect.stringContaining('20 mm') },
+      errors: {
+        x: expect.objectContaining({
+          field: 'x',
+          messageId: 'validation.minimumGridDimension',
+        }),
+      },
     })
   })
 })
@@ -128,7 +133,12 @@ describe('HSW dimension calculation', () => {
     expect(malformed).toMatchObject({ valid: false })
     expect(tooSmall).toMatchObject({
       valid: false,
-      errors: { x: expect.stringContaining('HSW') },
+      errors: {
+        x: expect.objectContaining({
+          field: 'x',
+          messageId: 'validation.minimumGridDimension',
+        }),
+      },
     })
   })
 })
@@ -174,7 +184,12 @@ describe('OpenGrid dimension calculation', () => {
 
     expect(result).toMatchObject({
       valid: false,
-      errors: { x: expect.stringContaining('28 mm') },
+      errors: {
+        x: expect.objectContaining({
+          field: 'x',
+          messageId: 'validation.minimumGridDimension',
+        }),
+      },
     })
   })
 
@@ -224,7 +239,12 @@ describe('OpenGrid dimension calculation', () => {
 
     expect(result).toEqual({
       valid: false,
-      errors: { x: expect.stringContaining('42 mm') },
+      errors: {
+        x: expect.objectContaining({
+          field: 'x',
+          messageId: 'validation.minimumGridDimension',
+        }),
+      },
     })
   })
 })
@@ -390,7 +410,12 @@ describe('OpenGrid print-plan calculation', () => {
 
       expect(result).toMatchObject({
         valid: false,
-        errors: { [field]: expect.any(String) },
+        errors: {
+          [field]: expect.objectContaining({
+            field,
+            messageId: expect.any(String),
+          }),
+        },
       })
     }
   })
@@ -512,7 +537,12 @@ describe('OpenGrid stackable-box dimension calculation', () => {
 
     expect(result).toMatchObject({
       valid: false,
-      errors: { x: expect.stringContaining('最大格數') },
+      errors: {
+        x: expect.objectContaining({
+          field: 'x',
+          messageId: 'validation.maximumGridDimension',
+        }),
+      },
     })
   })
 })

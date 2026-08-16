@@ -35,7 +35,7 @@ export type OpenGridOpenShelfCellSpace = {
 
 export type OpenGridOpenShelfValidationIssue = {
   field: OpenGridOpenShelfParameterKey | 'parameters'
-  message: string
+  messageId: string
 }
 
 export type OpenGridOpenShelfValidation =
@@ -323,11 +323,11 @@ function validateGridAxis(
   issues: OpenGridOpenShelfValidationIssue[],
 ): void {
   if (!isHalfStep(value)) {
-    issues.push({ field, message: '格數必須是 0.5 的倍數。' })
+    issues.push({ field, messageId: 'validation.invalid' })
     return
   }
   if (value < minimum || value > maximum) {
-    issues.push({ field, message: `格數必須介於 ${minimum}–${maximum}。` })
+    issues.push({ field, messageId: 'validation.invalid' })
   }
 }
 
@@ -340,13 +340,13 @@ function validateIntegerField(
   issues: OpenGridOpenShelfValidationIssue[],
 ): void {
   if (!Number.isFinite(value) || !Number.isSafeInteger(value)) {
-    issues.push({ field, message: `${field} 必須是安全範圍內的整數${unit}。` })
+    issues.push({ field, messageId: 'validation.invalid' })
     return
   }
   if ((value as number) < minimum || (value as number) > maximum) {
     issues.push({
       field,
-      message: `${field} 必須介於 ${minimum}–${maximum}${unit}。`,
+      messageId: 'validation.invalid',
     })
   }
 }
@@ -357,9 +357,7 @@ export function validateOpenGridOpenShelfParameters(
   if (!isRecord(value)) {
     return {
       valid: false,
-      issues: [
-        { field: 'parameters', message: '需要提供 OpenGrid 斜開格櫃參數。' },
-      ],
+      issues: [{ field: 'parameters', messageId: 'validation.invalid' }],
     }
   }
 
@@ -375,7 +373,7 @@ export function validateOpenGridOpenShelfParameters(
   if (!hasCurrentParameters && !hasLegacyParameters) {
     issues.push({
       field: 'parameters',
-      message: '包含不支援或缺少的參數欄位。',
+      messageId: 'validation.invalid',
     })
   }
 
@@ -393,7 +391,7 @@ export function validateOpenGridOpenShelfParameters(
   if (hasCurrentParameters && typeof value.honeycombMode !== 'boolean') {
     issues.push({
       field: 'honeycombMode',
-      message: '省料模式必須是布林值。',
+      messageId: 'validation.invalid',
     })
   }
   validateIntegerField(
@@ -438,13 +436,13 @@ export function validateOpenGridOpenShelfParameters(
   if (width > configuration.workspaceMaxDimension) {
     issues.push({
       field: 'x',
-      message: `X 方向寬度不得超過 ${configuration.workspaceMaxDimension} mm。`,
+      messageId: 'validation.invalid',
     })
   }
   if (depth > configuration.workspaceMaxDimension) {
     issues.push({
       field: 'y',
-      message: `Y 方向深度不得超過 ${configuration.workspaceMaxDimension} mm。`,
+      messageId: 'validation.invalid',
     })
   }
 
@@ -460,7 +458,7 @@ export function validateOpenGridOpenShelfParameters(
   ) {
     issues.push({
       field: 'angle',
-      message: '目前總高、仰角與格數會讓後方格高不足，請降低仰角或提高總高。',
+      messageId: 'validation.invalid',
     })
   }
 

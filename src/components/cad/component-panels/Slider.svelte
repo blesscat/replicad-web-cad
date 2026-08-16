@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { ValidationIssue } from '../../../cad-contract/units'
+
   type Props = {
     value: string | number
     label: string
@@ -6,7 +8,7 @@
     max: string | number
     step: string | number
     direction?: 'ltr' | 'rtl'
-    error?: string
+    error?: ValidationIssue
     describedBy?: string
     disabled?: boolean
     onChange: (value: string) => void

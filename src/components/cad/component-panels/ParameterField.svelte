@@ -1,12 +1,16 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import RestoreButton from './RestoreButton.svelte'
+  import { formatValidationIssue } from '../../../i18n/diagnostics'
+  import type { Locale } from '../../../i18n'
+  import type { ValidationIssue } from '../../../cad-contract/units'
 
   type Props = {
+    locale: Locale
     label: string
     unit?: string
     changed?: boolean
-    error?: string
+    error?: ValidationIssue
     errorId?: string
     unitAriaLive?: boolean
     restoreLabel?: string
@@ -15,6 +19,7 @@
   }
 
   let {
+    locale,
     label,
     unit = '',
     changed = false,
@@ -35,13 +40,20 @@
       aria-live={unitAriaLive ? 'polite' : undefined}>{unit}</span
     >
     {#if onRestore}
-      <RestoreButton label={restoreLabel} visible={changed} {onRestore} />
+      <RestoreButton
+        {locale}
+        label={restoreLabel}
+        visible={changed}
+        {onRestore}
+      />
     {/if}
   </div>
 
   {@render children()}
 
   {#if error}
-    <span id={errorId} class="text-sm text-error" role="alert">{error}</span>
+    <span id={errorId} class="text-sm text-error" role="alert"
+      >{formatValidationIssue(locale, error)}</span
+    >
   {/if}
 </div>

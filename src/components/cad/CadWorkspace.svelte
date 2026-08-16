@@ -30,12 +30,14 @@
     type CadWorkspaceControllerSnapshot,
   } from './workspace/createCadWorkspaceController'
   import { errorToastKey, toastErrorForState } from './workspace/error-toast'
+  import type { Locale } from '../../i18n'
 
   type Props = {
     modelId: ModelId
+    locale: Locale
   }
 
-  let { modelId }: Props = $props()
+  let { modelId, locale }: Props = $props()
   let snapshot = $state<CadWorkspaceControllerSnapshot | null>(null)
   let dismissedErrorToastKey = $state<string | null>(null)
   let toastError = $state<CadError | null>(null)
@@ -118,6 +120,7 @@
     data-testid="cad-workspace"
   >
     <CadWorkspacePanel
+      {locale}
       state={snapshot.state}
       modelId={snapshot.modelId}
       {systemContext}
@@ -134,6 +137,7 @@
       onRestoreDefaults={handleRestoreDefaults}
     />
     <CadViewport
+      {locale}
       mesh={snapshot.state.committed?.mesh ?? null}
       modelRevision={snapshot.state.committed?.revision ?? null}
       parameters={snapshot.state.committed?.parameters ?? null}
@@ -141,10 +145,14 @@
       {presentation}
     />
     {#if snapshot.progress}
-      <CadProgressIndicator progress={snapshot.progress} />
+      <CadProgressIndicator progress={snapshot.progress} {locale} />
     {/if}
     {#if toastError}
-      <CadErrorToast error={toastError} onDismiss={dismissErrorToast} />
+      <CadErrorToast
+        error={toastError}
+        onDismiss={dismissErrorToast}
+        {locale}
+      />
     {/if}
   </div>
 {/if}

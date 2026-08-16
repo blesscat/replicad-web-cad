@@ -5,6 +5,7 @@
     GridDimensionResult,
   } from '../../../features/cad/grid-dimensions'
   import ParameterField from './ParameterField.svelte'
+  import { translate, type Locale } from '../../../i18n'
 
   type GridParameters = {
     rows: number
@@ -17,18 +18,14 @@
   }
 
   type Props = {
+    locale: Locale
     calculate: (input: GridDimensionInput) => GridDimensionResult
     onApply: (parameters: GridParameters) => void
     description?: string
     onInvalid?: () => void
   }
 
-  let {
-    calculate,
-    onApply,
-    description = '輸入 X/Y 尺寸，計算不超過目標的最大格數。',
-    onInvalid,
-  }: Props = $props()
+  let { locale, calculate, onApply, description, onInvalid }: Props = $props()
 
   let targetX = $state('')
   let targetY = $state('')
@@ -74,9 +71,15 @@
   data-testid="grid-dimension-calculator"
 >
   <div>
-    <h3 class="m-0 text-base font-semibold">用尺寸計算格數</h3>
+    <h3 class="m-0 text-base font-semibold">
+      {translate(locale, 'panel.gridDimension.title')}
+    </h3>
     {#if description}
       <p class="mt-1 mb-0 text-sm text-muted">{description}</p>
+    {:else}
+      <p class="mt-1 mb-0 text-sm text-muted">
+        {translate(locale, 'panel.gridDimension.description')}
+      </p>
     {/if}
   </div>
 
@@ -84,6 +87,7 @@
     class="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-start gap-2"
   >
     <ParameterField
+      {locale}
       label="X"
       unit="mm"
       error={errors.x}
@@ -92,7 +96,7 @@
       <input
         aria-describedby={errors.x ? 'grid-dimension-x-error' : undefined}
         aria-invalid={Boolean(errors.x)}
-        aria-label="X（mm）"
+        aria-label={`X（${translate(locale, 'unit.mm')}）`}
         class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
         inputmode="decimal"
         type="text"
@@ -102,6 +106,7 @@
     </ParameterField>
 
     <ParameterField
+      {locale}
       label="Y"
       unit="mm"
       error={errors.y}
@@ -110,7 +115,7 @@
       <input
         aria-describedby={errors.y ? 'grid-dimension-y-error' : undefined}
         aria-invalid={Boolean(errors.y)}
-        aria-label="Y（mm）"
+        aria-label={`Y（${translate(locale, 'unit.mm')}）`}
         class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink aria-[invalid=true]:border-error-border"
         inputmode="decimal"
         type="text"
@@ -124,7 +129,7 @@
         type="button"
         onclick={handleCalculate}
       >
-        計算格數
+        {translate(locale, 'common.calculate')}
       </button>
     </div>
   </div>
@@ -135,8 +140,10 @@
       data-testid="grid-dimension-result"
       aria-live="polite"
     >
-      計算結果：X {formatDimension(actualDimensions.x)} mm、Y
-      {formatDimension(actualDimensions.y)} mm。
+      {translate(locale, 'common.calculationResult', {
+        x: formatDimension(actualDimensions.x),
+        y: formatDimension(actualDimensions.y),
+      })}
     </p>
   {/if}
 </div>

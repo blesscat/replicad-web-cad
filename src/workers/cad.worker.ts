@@ -48,6 +48,10 @@ import type {
   CadErrorStage,
 } from '../cad-contract/errors'
 import {
+  diagnostic,
+  type DiagnosticDescriptor,
+} from '../cad-contract/diagnostics'
+import {
   modelFileName,
   modelStlFileName,
   boundsForOpenGridSnap,
@@ -103,36 +107,10 @@ function id(): string {
 function makeError(
   stage: CadErrorStage,
   code: CadErrorCode,
-  userMessage: string,
+  message: DiagnosticDescriptor,
   recoverable = true,
 ): CadError {
-  return { stage, code, userMessage, recoverable }
-}
-
-function cylinderQualityContext(command: WorkerCommand): string {
-  if (
-    command.kind !== 'model.generate' ||
-    command.modelId !== 'opengrid-stackable-cylinder'
-  ) {
-    return ''
-  }
-
-  let profile = '預設'
-  if (command.parameters.bottomPlateMode === true) {
-    profile = '底板'
-  } else if (command.parameters.thinBottomMode === true) {
-    profile = '薄底'
-  }
-  const seatState = cylinderSeatModeLabelFor(command.parameters.bottomSeatMode)
-  return `（${profile}模式、${seatState}）`
-}
-
-function cylinderSeatModeLabelFor(
-  mode: 'none' | 'hole' | 'integrated',
-): string {
-  if (mode === 'none') return '無角座'
-  if (mode === 'integrated') return '內建角座'
-  return '角座孔'
+  return { stage, code, message, recoverable }
 }
 
 function yieldToWorkerEventLoop(): Promise<void> {
@@ -203,7 +181,7 @@ export class CadWorkerRuntime {
         terminalForRequestId: 'protocol',
         stage: 'protocol',
         code: 'PROTOCOL_INVALID',
-        userMessage: 'Worker 收到無法辨識的訊息。',
+        messageId: 'diagnostic.protocolInvalid',
         recoverable: false,
       })
       return
@@ -216,7 +194,7 @@ export class CadWorkerRuntime {
           makeError(
             'worker',
             'WORKER_TERMINATED',
-            'CAD Worker 已釋放，請重試。',
+            diagnostic('diagnostic.workerTerminated'),
             false,
           ),
         ),
@@ -1144,17 +1122,17 @@ export class CadWorkerRuntime {
     const code: CadErrorCode = cadErrorCodeFor(message, command.kind)
     const stage: CadErrorStage = cadErrorStageFor(command.kind, message)
     if (command.kind === 'export.stl') {
-      const userMessage =
+      const messageId =
         code === 'STL_METADATA_INVALID'
-          ? 'STL 匯出資料不正確，請重試。'
-          : 'STL 匯出失敗，請重試。'
-      return makeError(stage, code, userMessage, true)
+          ? 'diagnostic.stlMetadataInvalid'
+          : 'diagnostic.stlExportFailed'
+      return makeError(stage, code, diagnostic(messageId), true)
     }
     if (code === 'OPENGRID_UNSUPPORTED_CONFIGURATION') {
       return makeError(
         'validation',
         code,
-        'OpenGrid 參數與官方 SCAD 規格不相容，請檢查板型、格數、螺絲孔與接頭孔設定。',
+        diagnostic('diagnostic.opengridUnsupported'),
         true,
       )
     }
@@ -1165,7 +1143,7 @@ export class CadWorkerRuntime {
       return makeError(
         'validation',
         code,
-        'OpenGrid 可堆疊圓柱參數無效，外徑與高度必須是範圍內的 1 mm 整數。',
+        diagnostic('diagnostic.cylinderParametersInvalid'),
         true,
       )
     }
@@ -1173,7 +1151,7 @@ export class CadWorkerRuntime {
       return makeError(
         'meshing',
         code,
-        'OpenGrid 幾何未通過品質檢查，請調整參數後重試。',
+        diagnostic('diagnostic.opengridQualityInvalid'),
         true,
       )
     }
@@ -1181,7 +1159,7 @@ export class CadWorkerRuntime {
       return makeError(
         'meshing',
         code,
-        `OpenGrid 可堆疊圓柱${cylinderQualityContext(command)}的底部輪廓、階梯孔或堆疊介面未通過品質檢查，請調整參數後重試。`,
+        diagnostic('diagnostic.cylinderQualityInvalid'),
         true,
       )
     }
@@ -1189,7 +1167,7 @@ export class CadWorkerRuntime {
       return makeError(
         'meshing',
         code,
-        'OpenGrid Snap 幾何未通過品質檢查，請調整外框增量後重試。',
+        diagnostic('diagnostic.snapQualityInvalid'),
         true,
       )
     }
@@ -1198,11 +1176,16 @@ export class CadWorkerRuntime {
       return makeError(
         'meshing',
         code,
-        '官方 28 mm 整格／14 mm 半格 OpenGrid 分隔器幾何未通過品質檢查，請調整參數後重試。',
+        diagnostic('diagnostic.dividerQualityInvalid'),
         true,
       )
     }
-    return makeError(stage, code, `CAD 操作失敗：${message}`, true)
+    return makeError(
+      stage,
+      code,
+      diagnostic('diagnostic.modelBuildFailed'),
+      true,
+    )
   }
 }
 

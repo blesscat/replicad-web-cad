@@ -35,7 +35,7 @@ vi.mock('../../src/cad-kernel/export', () => ({
 import { CadWorkerRuntime } from '../../src/workers/cad.worker'
 
 const base = {
-  version: 1 as const,
+  version: 2 as const,
   requestId: 'request-base',
   operationId: 'operation-base',
 }
