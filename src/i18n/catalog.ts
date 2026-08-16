@@ -161,7 +161,9 @@ export const zhHantMessages = {
   'docs.title': 'Prototype 文件',
   'docs.description':
     'Shape Shortcut Desk System 的快速入門，以及 CAD 模型、參數範圍、單位、STEP/STL 匯出與瀏覽器需求文件。',
-  'docs.modelsHeading': '模型與用途（參考）',
+  'docs.referenceHeading': '進階參考',
+  'docs.referenceBody':
+    '其他模型的用途與可調參數，請前往模型選擇頁查看 HSW、OpenGrid 與其他模型分類；本頁以下整理共通的參數、單位、匯出格式與瀏覽器需求。',
   'docs.parametersHeading': '參數與限制',
   'docs.parametersBody':
     '每個模型都有獨立的參數 schema；模型選擇頁會列出可調欄位、有效範圍與單位，互動工作區則會即時驗證輸入。',
@@ -173,9 +175,7 @@ export const zhHantMessages = {
     '互動模型可從瀏覽器下載 STEP 與 STL；固定預覽模型則提供其對應的 STEP 檔案。',
   'docs.browserHeading': '瀏覽器需求',
   'docs.browserBody':
-    '互動 CAD 預覽需要 JavaScript、WebAssembly、Web Worker 與 WebGL；沒有 JavaScript 時仍可讀取本頁的模型摘要。',
-  'docs.body':
-    '上方 Quick Start 先介紹 Desk System 的實際組裝；本節補充其他 OpenGrid、HSW 與獨立模型的用途。這個 Prototype 目前提供方塊、模組化網格底板、獨立的 HSW 六角蜂巢，以及可調 height、count 與預設 1 mm gap 的六角柱；六角柱截面採尖對尖方向，預設躺下且長軸沿 X，也可切換為站立沿 Z。六角柱 height 支援 1–200 mm slider／1–500 mm 輸入，gap 支援 1–10 mm slider／1–99 mm 輸入；OpenGrid 系列提供 Full、Lite、Heavy、Hybrid 四種 28 mm 網格板型，其中 Hybrid 為外圍 Heavy、內部 Full。模型選擇頁依 HSW 系列、OpenGrid 系列與其他模型分類。所有模型支援 component-specific 參數、瀏覽器端 3D 預覽，以及 STEP/STL 下載；參數會依 component 分別保存到 localStorage。OpenGrid 堆疊方盒與圓盒提供「無角座」、「角座孔」與「內建角座」三種定位座模式；內建角座為 Ø5 × 3 mm 的向下實體圓座。',
+    '互動 CAD 預覽需要 JavaScript、WebAssembly、Web Worker 與 WebGL；沒有 JavaScript 時仍可讀取本頁的靜態說明與參考文字。',
   'docs.architecture':
     '完整架構與驗收規則請參考專案根目錄的 README 及 OpenSpec change 文件。',
   'common.backToModels': '返回模型選擇',
@@ -644,7 +644,9 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'docs.title': 'Prototype documentation',
   'docs.description':
     'Shape Shortcut Desk System quick start, plus documentation for CAD models, parameter ranges, units, STEP/STL exports, and browser requirements.',
-  'docs.modelsHeading': 'Models and purpose (reference)',
+  'docs.referenceHeading': 'Advanced reference',
+  'docs.referenceBody':
+    'For other model purposes and adjustable parameters, use the model chooser to browse the HSW, OpenGrid, and other model families. The sections below summarize shared parameter, unit, export, and browser requirements.',
   'docs.parametersHeading': 'Parameters and constraints',
   'docs.parametersBody':
     'Each model has its own parameter schema. The model chooser lists adjustable fields, valid ranges, and units, while the interactive workspace validates inputs live.',
@@ -656,9 +658,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'Interactive models can download STEP and STL files in the browser. Fixed preview models provide their corresponding STEP file.',
   'docs.browserHeading': 'Browser requirements',
   'docs.browserBody':
-    'The interactive CAD preview requires JavaScript, WebAssembly, Web Worker, and WebGL. Without JavaScript, this page still exposes the model summaries.',
-  'docs.body':
-    'The Quick Start above introduces the physical Desk System assembly. This section covers the remaining OpenGrid, HSW, and independent model purposes. This prototype provides a box, a modular grid base, an independent HSW hexagonal honeycomb, and adjustable hexagonal columns with height, count, and a default 1 mm gap. Hexagonal columns use a point-to-point profile, lie along X by default, and can stand along Z. OpenGrid provides Full, Lite, Heavy, and Hybrid 28 mm grid board variants. The model chooser groups models by HSW, OpenGrid, and other families. Every model supports component-specific parameters, browser-based 3D preview, and STEP/STL downloads; parameters are saved separately per component in localStorage. OpenGrid stackable boxes provide none, hole, and integrated locating-seat modes.',
+    'The interactive CAD preview requires JavaScript, WebAssembly, Web Worker, and WebGL. Without JavaScript, this page still exposes its static instructions and reference text.',
   'docs.architecture':
     'See the repository README and OpenSpec change documents for the complete architecture and acceptance rules.',
   'common.backToModels': 'Back to model selection',

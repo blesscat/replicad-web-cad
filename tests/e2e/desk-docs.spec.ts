@@ -8,6 +8,7 @@ const locales = [
     snap: 'Snap (咔咔)',
     gridBox: 'Grid Box (方盒)',
     roundBox: 'Round Box (圓盒)',
+    reference: '進階參考',
   },
   {
     code: 'en',
@@ -16,6 +17,7 @@ const locales = [
     snap: 'Snap',
     gridBox: 'Grid Box',
     roundBox: 'Round Box',
+    reference: 'Advanced reference',
   },
 ] as const
 
@@ -29,6 +31,9 @@ for (const locale of locales) {
       page.getByRole('heading', { name: locale.quickStart, exact: true }),
     ).toBeVisible()
     await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
+    await expect(page.getByTestId('docs-advanced-reference')).toContainText(
+      locale.reference,
+    )
 
     const steps = page
       .getByTestId('desk-quick-start')
