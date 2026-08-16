@@ -1,6 +1,6 @@
 ---
 name: openspec-to-main-pr
-description: Continue a completed OpenSpec exploration through proposal generation, implementation, independent compliance review, main-spec synchronization, change archiving, commit, push, and a pull request targeting main. Use when the user says an openspec-explore discussion is complete and wants the full propose → apply-review → sync/archive → create-pr workflow run in one pass.
+description: Continue a completed OpenSpec exploration through proposal generation, implementation, independent compliance review, main-spec synchronization, change archiving, commit, push, and a pull request targeting main, using a GitHub connector fallback when gh is unavailable. Use when the user says an openspec-explore discussion is complete and wants the full propose → apply-review → sync/archive → create-pr workflow run in one pass.
 ---
 
 # OpenSpec to Main PR
@@ -27,7 +27,9 @@ does not merge the pull request or push directly to `main`.
 - Preserve unrelated user changes. Never use `git add -A` when the worktree contains
   changes whose ownership or scope is unclear.
 - Stop and report the blocker when a required artifact, implementation task, review,
-  test, GitHub authentication, remote, or branch scope cannot be safely resolved.
+  test, remote, or branch scope cannot be safely resolved, or when neither an
+  authenticated `gh` session nor a write-capable GitHub connector is available for
+  publishing.
 - Archive the OpenSpec change as part of this workflow. When the archive skill finds
   delta requirements or scenarios missing from the main spec, choose sync and verify
   the main spec before moving the change into the archive.
@@ -132,9 +134,15 @@ cannot verify the result, stop before publishing and report the exact blocker.
 Only enter this phase after apply is complete, review has no blocking findings,
 validation has passed, and main-spec synchronization plus archiving are complete.
 
-Use the GitHub publish workflow from `$yeet` when available for branch, commit, push,
-and PR safety rules. The PR target is always `main`, even when the repository's default
-branch differs.
+Use the GitHub publish workflow from `$yeet` when `gh` is installed and authenticated.
+If `gh` is unavailable or unauthenticated but the GitHub connector can write to the
+repository, use the connector publish path below instead; missing `gh` alone is not a
+blocker. The PR target is always `main`, even when the repository's default branch
+differs.
+
+### Local CLI publish path
+
+Use this path when both `gh --version` and `gh auth status` succeed:
 
 1. Recheck `git status -sb`, `git diff --stat`, and the intended changed-file list,
    including the synchronized main spec and archived change files.
@@ -155,12 +163,31 @@ branch differs.
    - body: what changed, why, user/developer impact, OpenSpec change name, review
      verdict, and validation results.
 
-If a dedicated `create-pr` action is not available, use the GitHub connector's
-`github_create_pull_request` with the same repository, `head`, `base: "main"`, title,
-body, and draft setting. If the connector cannot resolve the repository or branch,
-fall back to `gh pr create` after confirming `gh auth status`. Follow the existing
-publish policy and create a draft PR unless the user explicitly asks for a ready-for-
-review PR.
+### GitHub connector publish path
+
+Use this path when `gh` is unavailable or unauthenticated and the connector has write
+access to the repository. It performs the equivalent remote Git operations without
+requiring a local GitHub CLI:
+
+1. Recheck `git status -sb`, `git diff --stat`, and the explicit changed-file list.
+2. Resolve the repository, default branch SHA, and base tree SHA from the connector.
+3. Choose a focused source branch such as `agent/<description>` and create it from
+   the current `main` commit with `github_create_branch`.
+4. Create blobs for each changed text file with `github_create_blob`, create a tree
+   from the base tree with `github_create_tree`, create a commit with
+   `github_create_commit`, and move the source branch to that commit with
+   `github_update_ref`. Do not overwrite `main`.
+5. Verify the remote commit and compare it against `main` using the connector before
+   opening the PR. The connector commit is the remote equivalent of the local commit
+   and push in the CLI path.
+6. Create a draft PR with `github_create_pull_request` using the same repository,
+   `head`, `base: "main"`, title, body, and validation details.
+
+If the connector cannot resolve the repository, create/update the source branch, or
+write the commit, use the local CLI path only when `gh auth status` succeeds;
+otherwise stop and report the exact missing capability. Follow the existing publish
+policy and create a draft PR unless the user explicitly asks for a ready-for-review
+PR.
 
 Never claim success until the PR creation response includes a URL or an equivalent
 stable PR identifier. Do not merge it, resolve reviews, or modify `main` directly.
@@ -178,3 +205,4 @@ Report the full outcome in one concise handoff:
 
 If the workflow stops, report the last completed phase, exact blocker, and the smallest
 next action needed to resume. Do not present a partial run as a completed PR workflow.
+
