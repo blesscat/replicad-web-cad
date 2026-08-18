@@ -102,10 +102,68 @@ export const zhHantMessages = {
     '前方開口、整體向前上仰的 OpenGrid 格櫃。',
   'models.model.opengrid-open-shelf.alt': 'OpenGrid Open Shelf 預覽',
   'docs.eyebrow': 'Documentation',
+  'docs.deskQuickStart.title': 'Desk System 快速入門',
+  'docs.deskQuickStart.intro':
+    '這是目前主打的 Desk System 使用流程：先放好 Board，再在每個盒位準備 Snap，接著選擇一種定位方式，最後放入 Grid Box 或 Round Box。',
+  'docs.deskQuickStart.workflowHeading': '組裝流程',
+  'docs.deskQuickStart.step.board.title': '1. 列印並放置 Board',
+  'docs.deskQuickStart.step.board.body':
+    'Board 可以直接放在桌面上，不需要先鎖螺絲。若需要更穩固，也可以使用板上的螺絲孔固定；這是非必要選項。',
+  'docs.deskQuickStart.step.board.note': '直接放置即可；螺絲孔固定為非必要。',
+  'docs.deskQuickStart.step.snap.title': '2. 在盒位準備 Snap',
+  'docs.deskQuickStart.step.snap.body':
+    '每一個要放盒子的格位，都要先準備對應的 Snap，讓容器可以和 Board 的位置連接。',
+  'docs.deskQuickStart.step.locating.title': '3. 選擇一種定位方式',
+  'docs.deskQuickStart.step.locating.body':
+    '每個盒位只需要一種定位方式：使用獨立 Locating Post，或選擇盒子內建的「內建角座」。',
+  'docs.deskQuickStart.step.container.title': '4. 放入容器',
+  'docs.deskQuickStart.step.container.body':
+    '先以 Grid Box 作為第一個範例；Round Box 也使用同一套 Board、Snap 與定位流程。',
+  'docs.deskQuickStart.locatingHeading': '定位方式二選一',
+  'docs.deskQuickStart.locating.separate.title': '獨立 Locating Post',
+  'docs.deskQuickStart.locating.separate.body':
+    '盒子使用一般角座孔，另外列印並安裝 Locating Post。',
+  'docs.deskQuickStart.locating.builtin.title': '盒子內建角座',
+  'docs.deskQuickStart.locating.builtin.body':
+    '在盒子設定中選擇「內建角座」，定位座會成為盒子本體的一部分。',
+  'docs.deskQuickStart.locating.builtin.noPost':
+    '選擇內建角座後，不需要另加 Locating Post。',
+  'docs.deskQuickStart.checklistHeading': '最小列印清單',
+  'docs.deskQuickStart.checklistIntro':
+    '先準備下列項目；定位方式請在獨立 Locating Post 與內建角座之間擇一，容器也請在 Grid Box 與 Round Box 之間擇一。',
+  'docs.deskQuickStart.checklist.board': 'Board：Desk System 的基礎底板。',
+  'docs.deskQuickStart.checklist.snap': 'Snap：每個要放盒子的格位各需要一個。',
+  'docs.deskQuickStart.checklist.locating':
+    '定位方式：獨立 Locating Post 或盒子內建角座，二選一。',
+  'docs.deskQuickStart.checklist.gridBox':
+    'Grid Box：第一個建議使用的容器範例。',
+  'docs.deskQuickStart.checklist.roundBox':
+    'Round Box：使用相同組裝流程的圓盒選項。',
+  'docs.deskQuickStart.exampleHeading': '第一個範例：Grid Box',
+  'docs.deskQuickStart.exampleGridBox':
+    'Grid Box 是第一個範例：先放入已準備好 Snap 與定位方式的格位；盒子的定位座選項會決定是否需要額外的 Locating Post。',
+  'docs.deskQuickStart.exampleRoundBox':
+    'Round Box 是第二個容器選項，使用相同的 Board → Snap → 定位方式流程。',
+  'docs.deskQuickStart.visual.flow.caption':
+    'Desk System 四步驟組裝流程示意圖。',
+  'docs.deskQuickStart.visual.flow.alt':
+    '流程圖：Board、Snap、選一種定位方式，最後放入 Grid Box 或 Round Box。',
+  'docs.deskQuickStart.visual.placement.caption':
+    'Board 與 Snap 的位置關係示意圖。',
+  'docs.deskQuickStart.visual.placement.alt':
+    '俯視示意圖：Board 網格上的每個盒位先放置對應的 Snap。',
+  'docs.deskQuickStart.visual.locating.caption':
+    '獨立 Locating Post 與盒子內建角座的比較。',
+  'docs.deskQuickStart.visual.locating.alt':
+    '比較圖：獨立 Locating Post 需要額外定位柱；內建角座不需要額外 Locating Post。',
+  'docs.deskQuickStart.scopeNote':
+    '這一版先說明系統組裝與元件關係；切片器與詳細列印設定會放在後續參考文件。',
   'docs.title': 'Prototype 文件',
   'docs.description':
-    'Shape Shortcut 的 CAD 模型、參數範圍、單位、STEP/STL 匯出與瀏覽器需求文件。',
-  'docs.modelsHeading': '模型與用途',
+    'Shape Shortcut Desk System 的快速入門，以及 CAD 模型、參數範圍、單位、STEP/STL 匯出與瀏覽器需求文件。',
+  'docs.referenceHeading': '進階參考',
+  'docs.referenceBody':
+    '其他模型的用途與可調參數，請前往模型選擇頁查看 HSW、OpenGrid 與其他模型分類；本頁以下整理共通的參數、單位、匯出格式與瀏覽器需求。',
   'docs.parametersHeading': '參數與限制',
   'docs.parametersBody':
     '每個模型都有獨立的參數 schema；模型選擇頁會列出可調欄位、有效範圍與單位，互動工作區則會即時驗證輸入。',
@@ -117,9 +175,7 @@ export const zhHantMessages = {
     '互動模型可從瀏覽器下載 STEP 與 STL；固定預覽模型則提供其對應的 STEP 檔案。',
   'docs.browserHeading': '瀏覽器需求',
   'docs.browserBody':
-    '互動 CAD 預覽需要 JavaScript、WebAssembly、Web Worker 與 WebGL；沒有 JavaScript 時仍可讀取本頁的模型摘要。',
-  'docs.body':
-    '這個 Prototype 目前提供方塊、模組化網格底板、獨立的 HSW 六角蜂巢，以及可調 height、count 與預設 1 mm gap 的六角柱；六角柱截面採尖對尖方向，預設躺下且長軸沿 X，也可切換為站立沿 Z。六角柱 height 支援 1–200 mm slider／1–500 mm 輸入，gap 支援 1–10 mm slider／1–99 mm 輸入；OpenGrid 系列提供 Full、Lite、Heavy、Hybrid 四種 28 mm 網格板型，其中 Hybrid 為外圍 Heavy、內部 Full。模型選擇頁依 HSW 系列、OpenGrid 系列與其他模型分類。所有模型支援 component-specific 參數、瀏覽器端 3D 預覽，以及 STEP/STL 下載；參數會依 component 分別保存到 localStorage。OpenGrid 堆疊方盒與圓盒提供「無角座」、「角座孔」與「內建角座」三種定位座模式；內建角座為 Ø5 × 3 mm 的向下實體圓座。',
+    '互動 CAD 預覽需要 JavaScript、WebAssembly、Web Worker 與 WebGL；沒有 JavaScript 時仍可讀取本頁的靜態說明與參考文字。',
   'docs.architecture':
     '完整架構與驗收規則請參考專案根目錄的 README 及 OpenSpec change 文件。',
   'common.backToModels': '返回模型選擇',
@@ -526,10 +582,71 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'An OpenGrid shelf with a forward opening and adjustable angled elevation.',
   'models.model.opengrid-open-shelf.alt': 'OpenGrid Open Shelf preview',
   'docs.eyebrow': 'Documentation',
+  'docs.deskQuickStart.title': 'Desk System Quick Start',
+  'docs.deskQuickStart.intro':
+    'This is the primary Desk System workflow: place the Board, prepare a Snap at each box position, choose one locating method, and then add a Grid Box or Round Box.',
+  'docs.deskQuickStart.workflowHeading': 'Assembly workflow',
+  'docs.deskQuickStart.step.board.title': '1. Print and place the Board',
+  'docs.deskQuickStart.step.board.body':
+    'The Board can simply rest on the desk; screw-hole fastening is optional rather than a prerequisite.',
+  'docs.deskQuickStart.step.board.note':
+    'Simple placement is enough; screw-hole fastening is optional.',
+  'docs.deskQuickStart.step.snap.title':
+    '2. Prepare a Snap at each box position',
+  'docs.deskQuickStart.step.snap.body':
+    'Every grid position that will hold a box needs its matching Snap before the container is installed.',
+  'docs.deskQuickStart.step.locating.title': '3. Choose one locating method',
+  'docs.deskQuickStart.step.locating.body':
+    'Each box position uses one locating method: a separate Locating Post or the box’s built-in `內建角座` option.',
+  'docs.deskQuickStart.step.container.title': '4. Add the container',
+  'docs.deskQuickStart.step.container.body':
+    'Start with Grid Box as the first example; Round Box follows the same Board, Snap, and locating workflow.',
+  'docs.deskQuickStart.locatingHeading': 'Choose one locating method',
+  'docs.deskQuickStart.locating.separate.title': 'Locating Post (separate)',
+  'docs.deskQuickStart.locating.separate.body':
+    'Use a regular seat hole in the box, then print and install a separate Locating Post.',
+  'docs.deskQuickStart.locating.builtin.title': 'Built-in seat (`內建角座`)',
+  'docs.deskQuickStart.locating.builtin.body':
+    'Choose the `內建角座` option so the locating seat is part of the box itself.',
+  'docs.deskQuickStart.locating.builtin.noPost':
+    'With the built-in seat selected, do not add a separate Locating Post.',
+  'docs.deskQuickStart.checklistHeading': 'Minimum print checklist',
+  'docs.deskQuickStart.checklistIntro':
+    'Prepare the items below; choose either a separate Locating Post or the built-in seat, and choose one container: Grid Box or Round Box.',
+  'docs.deskQuickStart.checklist.board': 'Board: the Desk System base board.',
+  'docs.deskQuickStart.checklist.snap':
+    'Snap: one for each box position you plan to use.',
+  'docs.deskQuickStart.checklist.locating':
+    'Locating method: separate Locating Post or built-in seat, choose one.',
+  'docs.deskQuickStart.checklist.gridBox':
+    'Grid Box: the recommended first container example.',
+  'docs.deskQuickStart.checklist.roundBox':
+    'Round Box: a secondary container using the same workflow.',
+  'docs.deskQuickStart.exampleHeading': 'First example: Grid Box',
+  'docs.deskQuickStart.exampleGridBox':
+    'Grid Box is the first example: place it in a position with its Snap and one locating method prepared. The box seat choice determines whether an extra Locating Post is needed.',
+  'docs.deskQuickStart.exampleRoundBox':
+    'Round Box is a secondary container option that uses the same Board → Snap → locating method workflow.',
+  'docs.deskQuickStart.visual.flow.caption':
+    'Desk System four-step assembly flow.',
+  'docs.deskQuickStart.visual.flow.alt':
+    'Flow diagram: Board, Snap, choose one locating method, then Grid Box or Round Box.',
+  'docs.deskQuickStart.visual.placement.caption':
+    'Board and Snap placement relationship.',
+  'docs.deskQuickStart.visual.placement.alt':
+    'Top view showing a matching Snap placed at each box position on the Board grid.',
+  'docs.deskQuickStart.visual.locating.caption':
+    'Separate Locating Post versus the box built-in seat.',
+  'docs.deskQuickStart.visual.locating.alt':
+    'Comparison: a separate Locating Post is an additional part; the built-in seat needs no extra Locating Post.',
+  'docs.deskQuickStart.scopeNote':
+    'Version 1 explains system assembly and component relationships; slicer and detailed print settings belong in a later reference.',
   'docs.title': 'Prototype documentation',
   'docs.description':
-    'Shape Shortcut documentation for CAD models, parameter ranges, units, STEP/STL exports, and browser requirements.',
-  'docs.modelsHeading': 'Models and purpose',
+    'Shape Shortcut Desk System quick start, plus documentation for CAD models, parameter ranges, units, STEP/STL exports, and browser requirements.',
+  'docs.referenceHeading': 'Advanced reference',
+  'docs.referenceBody':
+    'For other model purposes and adjustable parameters, use the model chooser to browse the HSW, OpenGrid, and other model families. The sections below summarize shared parameter, unit, export, and browser requirements.',
   'docs.parametersHeading': 'Parameters and constraints',
   'docs.parametersBody':
     'Each model has its own parameter schema. The model chooser lists adjustable fields, valid ranges, and units, while the interactive workspace validates inputs live.',
@@ -541,9 +658,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'Interactive models can download STEP and STL files in the browser. Fixed preview models provide their corresponding STEP file.',
   'docs.browserHeading': 'Browser requirements',
   'docs.browserBody':
-    'The interactive CAD preview requires JavaScript, WebAssembly, Web Worker, and WebGL. Without JavaScript, this page still exposes the model summaries.',
-  'docs.body':
-    'This prototype provides a box, a modular grid base, an independent HSW hexagonal honeycomb, and adjustable hexagonal columns with height, count, and a default 1 mm gap. Hexagonal columns use a point-to-point profile, lie along X by default, and can stand along Z. OpenGrid provides Full, Lite, Heavy, and Hybrid 28 mm grid board variants. The model chooser groups models by HSW, OpenGrid, and other families. Every model supports component-specific parameters, browser-based 3D preview, and STEP/STL downloads; parameters are saved separately per component in localStorage. OpenGrid stackable boxes provide none, hole, and integrated locating-seat modes.',
+    'The interactive CAD preview requires JavaScript, WebAssembly, Web Worker, and WebGL. Without JavaScript, this page still exposes its static instructions and reference text.',
   'docs.architecture':
     'See the repository README and OpenSpec change documents for the complete architecture and acceptance rules.',
   'common.backToModels': 'Back to model selection',

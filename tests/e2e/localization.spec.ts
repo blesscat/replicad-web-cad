@@ -67,6 +67,9 @@ test('localized public pages and CAD controls expose both locales', async ({
   await expect(
     page.getByRole('heading', { name: 'Parameters and constraints' }),
   ).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'Advanced reference' }),
+  ).toBeVisible()
 
   await page.goto('/en/cad/box?system=desk&view=search')
   await expect(
