@@ -402,7 +402,9 @@ describe('OpenGrid stackable-cylinder contract', () => {
       valid: true,
       value,
     })
-    expect(boundsForOpenGridStackableCylinder(value).min[2]).toBe(-3)
+    expect(boundsForOpenGridStackableCylinder(value).min[2]).toBe(
+      OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.centerHookMinZ,
+    )
     expect(openGridStackableCylinderOuterHoleIndexFor(value)).toBe(0)
     expect(openGridStackableCylinderHoleCentersFor(value)).toEqual([])
     expect(openGridStackableCylinderFileName(value)).toContain(

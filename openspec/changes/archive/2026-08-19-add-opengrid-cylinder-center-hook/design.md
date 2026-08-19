@@ -45,7 +45,7 @@ value from reaching the Box builder.
 The default remains `hole`; existing legacy `bottomHolesEnabled` migration is
 unchanged. The new value is canonical and is stored as `bottomSeatMode`.
 
-### 2. Use a fixed nominal 8 × 4 quarter-turn hook
+### 2. Use a fixed nominal 8 × 4 head with a short rotation stem
 
 The Snap profile registry is the source of truth for the mating opening:
 
@@ -57,13 +57,16 @@ Snap top
 Snap bottom
 ```
 
-The cylinder hook is built in the insertion orientation with a rectangular
-plan of 3.6 × 7.6 mm. This is the nominal 8 × 4 hook reduced by 0.2 mm on every
-side of the 4 × 8 passage. Its long axis is along Y while inserting. After a
-90-degree rotation around Z the 7.6 mm axis is along X, so it cannot return
-through the 4 mm-wide upper passage and is retained by the step. The hook spans
-Z=-3 mm through Z=0, which exceeds the Full narrow-band depth of 2 mm and the
-Lite depth of 1.5 mm.
+The cylinder hook is built in the insertion orientation from a rectangular
+3.6 × 7.6 mm head and a centered round Ø3.6 mm stem. The head is the nominal
+8 × 4 hook reduced by 0.2 mm on every side of the 4 × 8 passage; its long axis
+is along Y while inserting. The head is 0.8 mm high from Z=-2.9 to Z=-2.1,
+while the stem runs from Z=-2.1 to Z=0 and extends 0.1 mm beyond the Full
+narrow-band depth of 2 mm. The round stem supplies continuous rotation
+clearance in the 4 mm-wide passage. After a 90-degree rotation around Z the
+head's 7.6 mm axis is along X, so it cannot return through the 4 mm-wide upper
+passage and is retained by the step. The total hook span is therefore 2.9 mm,
+just enough to clear the Full Snap passage rather than using a long shaft.
 
 The clearance is a fixed product contract, not a new user parameter. The
 geometry should remain simple and printable; no chamfer or fillet is required
@@ -74,10 +77,11 @@ that one is necessary.
 
 The existing cylinder pipeline creates the revolved shell first and then adds
 bottom locating geometry before side openings and honeycomb cuts. The hook will
-follow that same pipeline: create one `makeBox`-equivalent rectangular solid,
-fuse it to the cylinder's Z=0 bottom face, and release intermediate shapes on
-boolean replacement. `center-hook` will skip stepped-hole cutters and round
-integrated seats, and it will not emit the 14 mm outer cardinal group.
+follow that same pipeline: create one rectangular head and one round stem,
+fuse the two parts into one hook, fuse it to the cylinder's Z=0 bottom face,
+and release intermediate shapes on boolean replacement. `center-hook` will
+skip stepped-hole cutters and round integrated seats, and it will not emit the
+14 mm outer cardinal group.
 
 The shell's normal central bottom face provides the fusion interface in all
 three floor profiles. The hook is inside the existing cylinder XY envelope,
@@ -91,13 +95,14 @@ Cylinder quality will distinguish four cases:
 - `hole`: current stepped-hole records and fixture checks;
 - `integrated`: current round-seat records and footprint checks;
 - `none`: no special bottom records;
-- `center-hook`: one centered rectangular solid, positive printable clearance,
-  correct Z span, fusion into the cylinder, and no outer locating group.
+- `center-hook`: one centered two-stage solid with a rectangular head and round
+  rotation stem, positive printable and rotation clearance, correct short Z
+  span, fusion into the cylinder, and no outer locating group.
 
-The contract bounds use min Z=-3 only for `integrated` and `center-hook`. The
-quality gate must continue to reject invalid candidates before committing a
-preview or enabling STEP/STL export. Existing committed revisions remain the
-fallback after a failed hook generation.
+The contract bounds use min Z=-3 for `integrated` and min Z=-2.9 for
+`center-hook`. The quality gate must continue to reject invalid candidates
+before committing a preview or enabling STEP/STL export. Existing committed
+revisions remain the fallback after a failed hook generation.
 
 ### 5. Extend UI, persistence, and export metadata without changing identity
 

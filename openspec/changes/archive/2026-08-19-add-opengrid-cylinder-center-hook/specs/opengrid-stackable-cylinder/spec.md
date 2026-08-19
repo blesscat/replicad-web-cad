@@ -64,7 +64,7 @@ remain solid. When `bottomSeatMode='integrated'`, the center MUST instead carry
 one fused solid Ø5 mm cylinder exactly 3 mm high from Z=-3 mm through Z=0;
 there MUST be no stepped center hole at that position. When
 `bottomSeatMode='center-hook'`, the center MUST instead carry the centered
-rectangular quarter-turn hook defined by the center-hook compatibility
+two-stage quarter-turn hook defined by the center-hook compatibility
 requirement, and MUST NOT contain a stepped hole or round integrated seat.
 
 #### Scenario: Cylinder hole mode preserves the center socket
@@ -92,8 +92,9 @@ requirement, and MUST NOT contain a stepped hole or round integrated seat.
 #### Scenario: Cylinder center hook replaces the center seat
 
 - **WHEN** a valid cylinder uses `bottomSeatMode='center-hook'`
-- **THEN** the center MUST contain exactly one rectangular hook extending from
-  Z=-3 mm through Z=0
+- **THEN** the center MUST contain exactly one fused two-stage hook with a
+  3.6 × 7.6 mm rectangular head from Z=-2.9 mm through Z=-2.1 mm and a
+  centered Ø3.6 mm round rotation stem from Z=-2.1 mm through Z=0
 - **AND** the center MUST not contain a stepped hole or a round seat
 - **AND** the result MUST remain one valid solid
 
@@ -175,9 +176,11 @@ MUST require zero bottom-hole records and zero integrated-seat records. In
 `integrated` mode it MUST require the expected center-plus-safe-cardinal seat
 records, validate their Ø5 mm diameter and 3 mm Z span from -3 to 0, and retain
 the existing shell/opening/stacking checks. In `center-hook` mode it MUST
-validate one centered rectangular hook, its dimensions, engagement envelope,
-and fusion into the cylinder. The contract bounds MUST use min Z=-3 mm in
-`integrated` and `center-hook` modes; max Z and XY bounds MUST remain unchanged.
+validate one centered two-stage hook, the 3.6 × 7.6 mm head, the Ø3.6 mm
+round rotation stem, the short engagement envelope, positive rotation
+clearance, and fusion into the cylinder. The contract bounds MUST use
+min Z=-3 mm in `integrated` mode and min Z=-2.9 mm in `center-hook` mode;
+max Z and XY bounds MUST remain unchanged.
 Valid results MUST remain eligible for preview, STEP export, and binary STL
 export.
 
@@ -240,7 +243,7 @@ distinguish all four bottom geometries and all opening settings.
 
 - **WHEN** a center-hook cylinder is exported
 - **THEN** both filenames MUST contain `-seats-center-hook`
-- **AND** the exported geometry MUST include the centered rectangular hook
+- **AND** the exported geometry MUST include the centered two-stage hook
 
 ### Requirement: OpenGrid stackable-cylinder workspace integration
 
@@ -284,35 +287,43 @@ The `center-hook` cylinder mode MUST use the existing OpenGrid Snap
 center-remover profile as its mating interface. The Snap lower passage is a
 nominal 8 × 8 mm square and its upper passage is nominally 4 × 8 mm, with the
 profile-specific step at Z=4.8 mm for Full and Z=1.9 mm for Lite. The cylinder
-MUST generate one centered male hook with a nominal 8 × 4 mm plan, a 0.2 mm
-per-side print clearance relative to the mating passages, and a 3 mm downward
-span from the cylinder bottom. The hook MUST enter the narrow passage in its
-insertion orientation, reach the lower square chamber for both Snap variants,
-and remain captured when rotated 90 degrees around Z until returned to its
-insertion orientation.
+MUST generate one centered male hook with a nominal 8 × 4 mm rectangular head,
+reduced to 3.6 × 7.6 mm by the fixed 0.2 mm per-side print clearance. The head
+MUST be 0.8 mm high, from Z=-2.9 mm through Z=-2.1 mm, and MUST be joined to a
+centered round Ø3.6 mm rotation stem from Z=-2.1 mm through Z=0. The stem
+MUST extend 0.1 mm beyond the Full 2 mm narrow passage depth, making the total
+downward span 2.9 mm rather than a long remover-style shaft. The hook MUST
+enter the narrow passage in its insertion orientation, allow continuous
+rotation through the passage via the round stem, place the head in the lower
+square chamber for both Snap variants before rotation, and remain captured
+when rotated 90 degrees around Z until returned to its insertion orientation.
 
 #### Scenario: Center hook fits the Full Snap profile
 
 - **WHEN** a center-hook cylinder is inserted into a Full Snap center-remover
   opening in the insertion orientation
-- **THEN** the hook MUST pass through the 4 × 8 mm upper passage with the
-  specified print clearance
-- **AND** after a 90-degree Z rotation its long side MUST be retained by the
-  upper passage shoulder
+- **THEN** the Ø3.6 mm rotation stem MUST pass through the 4 × 8 mm upper
+  passage with 0.2 mm radial clearance on the narrow axis
+- **AND** the rectangular head MUST clear the 2 mm narrow passage and enter
+  the 8 × 8 mm lower chamber before rotation
+- **AND** after a 90-degree Z rotation its 7.6 mm long side MUST be retained
+  by the upper passage shoulder
 
 #### Scenario: Center hook fits the Lite Snap profile
 
 - **WHEN** a center-hook cylinder is inserted into a Lite Snap center-remover
   opening in the insertion orientation
-- **THEN** the hook MUST pass through the 4 × 8 mm upper passage and reach the
-  8 × 8 mm lower square chamber
-- **AND** after a 90-degree Z rotation it MUST remain captured by the same
-  quarter-turn principle
+- **THEN** the Ø3.6 mm rotation stem MUST pass through the 4 × 8 mm upper
+  passage and the rectangular head MUST reach the 8 × 8 mm lower square
+  chamber
+- **AND** after a 90-degree Z rotation the head MUST remain captured by the
+  same quarter-turn principle
 
 #### Scenario: Center hook is printable and fused
 
 - **WHEN** a valid cylinder uses `bottomSeatMode='center-hook'`
 - **THEN** the hook MUST be fused to the cylinder at the Z=0 bottom face
-- **AND** its 0.2 mm per-side clearance MUST leave a positive printable gap
-  against the mating passage
+- **AND** its 0.2 mm per-side head clearance and Ø3.6 mm stem MUST leave a
+  positive printable gap against the mating passage
+- **AND** the total hook span MUST remain the configured short 2.9 mm
 - **AND** the complete result MUST remain one valid solid

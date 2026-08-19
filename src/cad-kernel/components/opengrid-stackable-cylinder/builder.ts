@@ -61,11 +61,22 @@ export type OpenGridStackableCylinderIntegratedSeatRecord = {
 
 export type OpenGridStackableCylinderCenterHookQuality = {
   bounds: ModelBounds
+  headBounds: ModelBounds
+  stemBounds: ModelBounds
   planWidth: number
   planDepth: number
+  headPlanWidth: number
+  headPlanDepth: number
+  stemPlanWidth: number
+  stemPlanDepth: number
   minZ: number
+  headHeight: number
+  stemHeight: number
   footprintVolume: number
+  headVolume: number
+  stemVolume: number
   insertionClearancePerSide: number
+  rotationClearance: number
   quarterTurnCaptureOverhang: number
 }
 
@@ -431,27 +442,50 @@ function addCenterHook(
   context: OpenGridStackableCylinderBuildContext,
 ): Shape3D {
   const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
-  const hook = makeBox(
+  const head = makeBox(
     [
       -configuration.centerHookWidth / 2,
       -configuration.centerHookDepth / 2,
-      configuration.centerHookMinZ,
+      configuration.centerHookHeadMinZ,
     ],
     [
       configuration.centerHookWidth / 2,
       configuration.centerHookDepth / 2,
-      configuration.centerHookMaxZ,
+      configuration.centerHookHeadMaxZ,
     ],
   )
-  const fuseScope = context.booleanOperations?.createScope(1)
+  const stem = makeCylinder(
+    configuration.centerHookStemDiameter / 2,
+    configuration.centerHookStemHeight,
+    [0, 0, configuration.centerHookStemMinZ],
+  )
+  let hook: Shape3D | null = null
+  let headReleased = false
+  let stemReleased = false
+  const fuseScope = context.booleanOperations?.createScope(2)
   try {
     assertGenerationCurrent(context)
+    hook = measureBooleanInScope(fuseScope, 'fuse', () =>
+      head.fuse(stem, { optimisation: 'commonFace' }),
+    )
+    if (hook !== head) {
+      deleteShape(head)
+      headReleased = true
+    }
+    if (hook !== stem) {
+      deleteShape(stem)
+      stemReleased = true
+    }
+    if (!hook) throw new Error('OPENGRID_CENTER_HOOK_EMPTY')
+    const activeHook = hook
     const fused = measureBooleanInScope(fuseScope, 'fuse', () =>
-      shape.fuse(hook, { optimisation: 'commonFace' }),
+      shape.fuse(activeHook, { optimisation: 'commonFace' }),
     )
     deleteShape(shape)
     return fused
   } finally {
+    if (!headReleased && hook !== head) deleteShape(head)
+    if (!stemReleased && hook !== stem) deleteShape(stem)
     deleteShape(hook)
   }
 }
@@ -1010,41 +1044,77 @@ function readCenterHookQuality(
 ): OpenGridStackableCylinderCenterHookQuality {
   const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
   const margin = CENTER_HOOK_QUALITY_PROBE_MARGIN
-  const probe = makeBox(
-    [
-      -configuration.centerHookWidth / 2 - margin,
-      -configuration.centerHookDepth / 2 - margin,
-      configuration.centerHookMinZ - margin,
-    ],
-    [
-      configuration.centerHookWidth / 2 + margin,
-      configuration.centerHookDepth / 2 + margin,
-      configuration.centerHookMaxZ - margin,
-    ],
-  )
-  let intersection: Shape3D | null = null
-  try {
-    intersection = shape.intersect(probe)
-    const bounds = readBounds(intersection)
-    const planWidth = bounds[1][0] - bounds[0][0]
-    const planDepth = bounds[1][1] - bounds[0][1]
-    const insertionClearancePerSide = Math.min(
-      (configuration.centerHookNominalShortSide - planWidth) / 2,
-      (configuration.centerHookNominalLongSide - planDepth) / 2,
+  const partQuality = (
+    width: number,
+    depth: number,
+    minZ: number,
+    maxZ: number,
+    probeMinimumZ = minZ - margin,
+    probeMaximumZ = maxZ - margin,
+  ) => {
+    const probe = makeBox(
+      [-width / 2 - margin, -depth / 2 - margin, probeMinimumZ],
+      [width / 2 + margin, depth / 2 + margin, probeMaximumZ],
     )
-    return {
-      bounds: { min: bounds[0], max: bounds[1] },
-      planWidth,
-      planDepth,
-      minZ: bounds[0][2],
-      footprintVolume: measureVolume(intersection),
-      insertionClearancePerSide,
-      quarterTurnCaptureOverhang:
-        planDepth - configuration.centerHookNominalShortSide,
+    let intersection: Shape3D | null = null
+    try {
+      intersection = shape.intersect(probe)
+      const bounds = readBounds(intersection)
+      return {
+        bounds: { min: bounds[0], max: bounds[1] },
+        planWidth: bounds[1][0] - bounds[0][0],
+        planDepth: bounds[1][1] - bounds[0][1],
+        volume: measureVolume(intersection),
+      }
+    } finally {
+      deleteShape(intersection)
+      deleteShape(probe)
     }
-  } finally {
-    deleteShape(intersection)
-    deleteShape(probe)
+  }
+
+  const head = partQuality(
+    configuration.centerHookWidth,
+    configuration.centerHookDepth,
+    configuration.centerHookHeadMinZ,
+    configuration.centerHookHeadMaxZ,
+  )
+  const stem = partQuality(
+    configuration.centerHookStemDiameter,
+    configuration.centerHookStemDiameter,
+    configuration.centerHookStemMinZ,
+    configuration.centerHookStemMaxZ,
+    configuration.centerHookStemMinZ + margin,
+    configuration.centerHookStemMaxZ - margin,
+  )
+  const bounds: ModelBounds = {
+    min: [head.bounds.min[0], head.bounds.min[1], head.bounds.min[2]],
+    max: [head.bounds.max[0], head.bounds.max[1], stem.bounds.max[2]],
+  }
+  return {
+    bounds,
+    headBounds: head.bounds,
+    stemBounds: stem.bounds,
+    planWidth: head.planWidth,
+    planDepth: head.planDepth,
+    headPlanWidth: head.planWidth,
+    headPlanDepth: head.planDepth,
+    stemPlanWidth: stem.planWidth,
+    stemPlanDepth: stem.planDepth,
+    minZ: head.bounds.min[2],
+    headHeight: configuration.centerHookHeadHeight,
+    stemHeight: configuration.centerHookStemHeight,
+    footprintVolume: head.volume + stem.volume,
+    headVolume: head.volume,
+    stemVolume: stem.volume,
+    insertionClearancePerSide: Math.min(
+      (configuration.centerHookNominalShortSide - head.planWidth) / 2,
+      (configuration.centerHookNominalLongSide - head.planDepth) / 2,
+    ),
+    rotationClearance:
+      configuration.centerHookStemHeight -
+      configuration.centerHookFullPassageDepth,
+    quarterTurnCaptureOverhang:
+      head.planDepth - configuration.centerHookNominalShortSide,
   }
 }
 
@@ -1869,25 +1939,46 @@ function assertQuality(
   }
   if (parameters.bottomSeatMode === 'center-hook') {
     const centerHook = report.centerHook
-    const expectedFootprintVolume =
+    const expectedHeadVolume =
       configuration.centerHookWidth *
       configuration.centerHookDepth *
-      (configuration.centerHookHeight - 2 * CENTER_HOOK_QUALITY_PROBE_MARGIN)
+      (configuration.centerHookHeadHeight - CENTER_HOOK_QUALITY_PROBE_MARGIN)
+    const expectedStemVolume =
+      Math.PI *
+      (configuration.centerHookStemDiameter / 2) ** 2 *
+      (configuration.centerHookStemHeight -
+        2 * CENTER_HOOK_QUALITY_PROBE_MARGIN)
     if (!centerHook) {
       failures.push('center-hook-missing')
     } else {
       if (
-        !closeEnough(centerHook.planWidth, configuration.centerHookWidth) ||
-        !closeEnough(centerHook.planDepth, configuration.centerHookDepth) ||
+        !closeEnough(centerHook.headPlanWidth, configuration.centerHookWidth) ||
+        !closeEnough(centerHook.headPlanDepth, configuration.centerHookDepth) ||
         !closeEnough(centerHook.minZ, configuration.centerHookMinZ) ||
-        centerHook.footprintVolume < expectedFootprintVolume * 0.95
+        centerHook.headVolume < expectedHeadVolume * 0.95
       ) {
         failures.push('center-hook-envelope')
+      }
+      if (
+        !closeEnough(
+          centerHook.stemPlanWidth,
+          configuration.centerHookStemDiameter,
+        ) ||
+        !closeEnough(
+          centerHook.stemPlanDepth,
+          configuration.centerHookStemDiameter,
+        ) ||
+        centerHook.stemVolume < expectedStemVolume * 0.95
+      ) {
+        failures.push('center-hook-rotation-neck')
       }
       if (centerHook.insertionClearancePerSide <= 0) {
         failures.push('center-hook-clearance')
       }
-      if (centerHook.quarterTurnCaptureOverhang <= 0) {
+      if (
+        centerHook.rotationClearance <= 0 ||
+        centerHook.quarterTurnCaptureOverhang <= 0
+      ) {
         failures.push('center-hook-quarter-turn')
       }
     }
