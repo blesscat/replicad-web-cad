@@ -9,17 +9,25 @@ test('OpenGrid organizer-box is listed and exposes the cavity controls', async (
   await page.goto('/zh-Hant/models')
 
   const card = page
-    .getByRole('heading', { name: '收納方盒', exact: true })
+    .getByRole('heading', {
+      name: 'Organizer Box (收納方盒)',
+      exact: true,
+    })
     .locator('..')
   await expect(
-    card.getByRole('link', { name: '編輯 收納方盒', exact: true }),
+    card.getByRole('link', {
+      name: '編輯 Organizer Box (收納方盒)',
+      exact: true,
+    }),
   ).toHaveAttribute('href', '/zh-Hant/cad/opengrid-organizer-box?system=desk')
 
   await page.goto('/zh-Hant/cad/opengrid-organizer-box')
   await waitForCadReady(page)
 
   await expect(
-    page.getByRole('heading', { name: '目前編輯：OpenGrid 收納方盒' }),
+    page.getByRole('heading', {
+      name: '目前編輯：OpenGrid Organizer Box (收納方盒)',
+    }),
   ).toBeVisible()
   await expect(
     page

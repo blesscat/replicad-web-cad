@@ -79,11 +79,13 @@ export const zhHantMessages = {
   'models.model.opengrid-divider.description':
     '可調整方向臂、牆高與牆厚的 OpenGrid 分隔牆。',
   'models.model.opengrid-divider.alt': 'OpenGrid divider 預覽',
-  'models.model.opengrid-organizer-box.name': 'OpenGrid 收納方盒',
-  'models.model.opengrid-organizer-box.selection': '收納方盒',
+  'models.model.opengrid-organizer-box.name':
+    'OpenGrid Organizer Box (收納方盒)',
+  'models.model.opengrid-organizer-box.selection': 'Organizer Box (收納方盒)',
   'models.model.opengrid-organizer-box.description':
-    '外觀類似方盒、頂部可挖圓形或規則多邊形盲孔的 OpenGrid 收納盒；可放電池與工具頭。',
-  'models.model.opengrid-organizer-box.alt': 'OpenGrid 收納方盒預覽',
+    '外觀類似方盒、頂部可挖圓形或規則多邊形盲孔的 OpenGrid Organizer Box (收納方盒)；可放電池與工具頭。',
+  'models.model.opengrid-organizer-box.alt':
+    'OpenGrid Organizer Box (收納方盒) 預覽',
   'models.model.opengrid-stackable-box.name': 'Grid Box (方盒)',
   'models.model.opengrid-stackable-box.selection': 'Grid Box (方盒)',
   'models.model.opengrid-stackable-box.description':
@@ -135,7 +137,7 @@ export const zhHantMessages = {
     '選擇內建角座後，不需要另加 Locating Post。',
   'docs.deskQuickStart.checklistHeading': '最小列印清單',
   'docs.deskQuickStart.checklistIntro':
-    '先準備下列項目；定位方式請在獨立 Locating Post 與內建角座之間擇一，容器可選 Grid Box、收納方盒或 Round Box。',
+    '先準備下列項目；定位方式請在獨立 Locating Post 與內建角座之間擇一，容器可選 Grid Box、Organizer Box (收納方盒) 或 Round Box。',
   'docs.deskQuickStart.checklist.board': 'Board：Desk System 的基礎底板。',
   'docs.deskQuickStart.checklist.snap': 'Snap：每個要放盒子的格位各需要一個。',
   'docs.deskQuickStart.checklist.locating':
@@ -143,7 +145,7 @@ export const zhHantMessages = {
   'docs.deskQuickStart.checklist.gridBox':
     'Grid Box：第一個建議使用的容器範例。',
   'docs.deskQuickStart.checklist.organizerBox':
-    '收納方盒：用可調整的盲孔收納電池、工具頭等物件。',
+    'Organizer Box (收納方盒)：用可調整的盲孔收納電池、工具頭等物件。',
   'docs.deskQuickStart.checklist.roundBox':
     'Round Box：使用相同組裝流程的圓盒選項。',
   'docs.deskQuickStart.exampleHeading': '第一個範例：Grid Box',
