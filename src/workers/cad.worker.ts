@@ -26,6 +26,7 @@ import { assertOpenGridSnapShapeQuality } from '../cad-kernel/components/opengri
 import { assertOpenGridDividerShapeQuality } from '../cad-kernel/components/opengrid-divider/quality'
 import { assertPillarShapeQuality } from '../cad-kernel/components/opengrid-pillar/quality'
 import { assertOpenGridOpenShelfShapeQuality } from '../cad-kernel/components/opengrid-open-shelf/quality'
+import { assertOpenGridOrganizerBoxGeometry } from '../cad-kernel/components/opengrid-organizer-box/quality'
 import { meshBRep, serializeMesh, type MeshData } from '../cad-kernel/mesh'
 import {
   createBooleanOperationReporter,
@@ -58,6 +59,7 @@ import {
   isHswCellParameters,
   isOpenGridDividerModelParameters,
   isOpenGridOpenShelfParameters,
+  isOpenGridOrganizerBoxParameters,
   isOpenGridParameters,
   normalizeOpenGridDividerParameters,
   normalizeOpenGridParameters,
@@ -479,6 +481,14 @@ export class CadWorkerRuntime {
             generationParameters,
             mesh,
           ),
+        )
+      }
+      if (command.modelId === 'opengrid-organizer-box') {
+        if (!isOpenGridOrganizerBoxParameters(generationParameters)) {
+          throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-organizer-box')
+        }
+        timing.measureSync('quality', () =>
+          assertOpenGridOrganizerBoxGeometry(shape, generationParameters),
         )
       }
     } catch (error) {

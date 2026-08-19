@@ -25,6 +25,10 @@ const mocks = vi.hoisted(() => ({
     model: 'opengrid-stackable-box',
     delete: vi.fn(),
   })),
+  buildOpenGridOrganizerBox: vi.fn(() => ({
+    model: 'opengrid-organizer-box',
+    delete: vi.fn(),
+  })),
   buildOpenGridDivider: vi.fn(async () => ({
     model: 'opengrid-divider',
     delete: vi.fn(),
@@ -71,6 +75,12 @@ vi.mock(
     buildOpenGridStackableCylinder: mocks.buildOpenGridStackableCylinder,
   }),
 )
+vi.mock(
+  '../../src/cad-kernel/components/opengrid-organizer-box/builder',
+  () => ({
+    buildOpenGridOrganizerBox: mocks.buildOpenGridOrganizerBox,
+  }),
+)
 
 vi.mock('../../src/cad-kernel/components/opengrid-divider/builder', () => ({
   buildOpenGridDivider: mocks.buildOpenGridDivider,
@@ -102,6 +112,7 @@ describe('HSW kernel model registration', () => {
       'opengrid-pillar',
       'opengrid',
       'opengrid-stackable-box',
+      'opengrid-organizer-box',
       'opengrid-stackable-cylinder',
       'opengrid-open-shelf',
       'opengrid-snap',

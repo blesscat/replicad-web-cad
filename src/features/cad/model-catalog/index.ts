@@ -10,6 +10,7 @@ import { hswCellDefinition } from './components/hsw-cell'
 import { modularGridBaseDefinition } from './components/modular-grid-base'
 import { opengridDefinition } from './components/opengrid'
 import { opengridDividerDefinition } from './components/opengrid-divider'
+import { opengridOrganizerBoxDefinition } from './components/opengrid-organizer-box'
 import { opengridStackableBoxDefinition } from './components/opengrid-stackable-box'
 import { opengridStackableCylinderDefinition } from './components/opengrid-stackable-cylinder'
 import { opengridSnapDefinition } from './components/opengrid-snap'
@@ -43,6 +44,7 @@ export { hswCellDefinition } from './components/hsw-cell'
 export { modularGridBaseDefinition } from './components/modular-grid-base'
 export { opengridDefinition } from './components/opengrid'
 export { opengridDividerDefinition } from './components/opengrid-divider'
+export { opengridOrganizerBoxDefinition } from './components/opengrid-organizer-box'
 export { opengridStackableBoxDefinition } from './components/opengrid-stackable-box'
 export { opengridStackableCylinderDefinition } from './components/opengrid-stackable-cylinder'
 export { opengridSnapDefinition } from './components/opengrid-snap'
@@ -59,6 +61,7 @@ export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   opengridSnapDefinition,
   opengridPillarDefinition,
   opengridDividerDefinition,
+  opengridOrganizerBoxDefinition,
   opengridStackableBoxDefinition,
   opengridStackableCylinderDefinition,
   openGridSnapRemoverDefinition,

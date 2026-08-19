@@ -42,6 +42,19 @@ import type {
   OpenGridStackableBoxValidationIssue,
 } from './opengrid-stackable-box'
 import {
+  boundsForOpenGridOrganizerBox,
+  isOpenGridOrganizerBoxParameters,
+  openGridOrganizerBoxFileName,
+  openGridOrganizerBoxStlFileName,
+  OPENGRID_ORGANIZER_BOX_CONFIGURATION,
+  OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+  validateOpenGridOrganizerBoxParameters,
+} from './opengrid-organizer-box'
+import type {
+  OpenGridOrganizerBoxParameterKey,
+  OpenGridOrganizerBoxParameters,
+} from './opengrid-organizer-box'
+import {
   boundsForOpenGridStackableCylinder,
   isOpenGridStackableCylinderParameters,
   openGridStackableCylinderDerivedGeometryFor,
@@ -255,6 +268,18 @@ export {
   validateOpenGridStackableBoxParameters,
 } from './opengrid-stackable-box'
 export {
+  boundsForOpenGridOrganizerBox,
+  isOpenGridOrganizerBoxParameters,
+  openGridOrganizerBoxCavityEnvelopeFor,
+  openGridOrganizerBoxFileName,
+  openGridOrganizerBoxLayoutFor,
+  openGridOrganizerBoxPolygonPointsFor,
+  openGridOrganizerBoxStlFileName,
+  OPENGRID_ORGANIZER_BOX_CONFIGURATION,
+  OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+  validateOpenGridOrganizerBoxParameters,
+} from './opengrid-organizer-box'
+export {
   boundsForOpenGridStackableCylinder,
   isOpenGridStackableCylinderParameters,
   openGridStackableCylinderDerivedGeometryFor,
@@ -326,6 +351,19 @@ export type {
   OpenGridStackableBoxValidation,
   OpenGridStackableBoxValidationIssue,
 } from './opengrid-stackable-box'
+export type {
+  OpenGridOrganizerBoxBottomInterfaceMode,
+  OpenGridOrganizerBoxCavityEnvelope,
+  OpenGridOrganizerBoxCavityEnvelopeInput,
+  OpenGridOrganizerBoxLayout,
+  OpenGridOrganizerBoxParameterKey,
+  OpenGridOrganizerBoxParameters,
+  OpenGridOrganizerBoxPoint2D,
+  OpenGridOrganizerBoxShape,
+  OpenGridOrganizerBoxSpacingMode,
+  OpenGridOrganizerBoxValidation,
+  OpenGridOrganizerBoxValidationIssue,
+} from './opengrid-organizer-box'
 export type {
   OpenGridStackableCylinderDerivedOpening,
   OpenGridStackableCylinderDerivedGeometry,
@@ -463,6 +501,7 @@ export const PROTOTYPE_CONFIGURATION = {
   hswCell: HSW_CELL_CONFIGURATION,
   opengrid: OPENGRID_CONFIGURATION,
   opengridStackableBox: OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  opengridOrganizerBox: OPENGRID_ORGANIZER_BOX_CONFIGURATION,
   opengridStackableCylinder: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
   opengridDivider: OPENGRID_DIVIDER_CONFIGURATION,
   opengridOpenShelf: OPENGRID_OPEN_SHELF_CONFIGURATION,
@@ -478,6 +517,7 @@ export type ModelParameterKey =
   | HexagonalColumnParameterKey
   | OpenGridParameterKey
   | OpenGridStackableBoxParameterKey
+  | OpenGridOrganizerBoxParameterKey
   | OpenGridStackableCylinderParameterKey
   | OpenGridSnapParameterKey
   | OpenGridDividerParameterKey
@@ -497,6 +537,7 @@ export type ModelId =
   | 'hexagonal-column'
   | 'opengrid'
   | 'opengrid-stackable-box'
+  | 'opengrid-organizer-box'
   | 'opengrid-stackable-cylinder'
   | 'opengrid-snap'
   | 'opengrid-snap-remover'
@@ -530,6 +571,10 @@ export type ModelParameters =
   | {
       modelId: 'opengrid-stackable-box'
       parameters: OpenGridStackableBoxParameters
+    }
+  | {
+      modelId: 'opengrid-organizer-box'
+      parameters: OpenGridOrganizerBoxParameters
     }
   | {
       modelId: 'opengrid-stackable-cylinder'
@@ -581,6 +626,16 @@ export type OpenGridStackableBoxModelValidation =
       value: {
         modelId: 'opengrid-stackable-box'
         parameters: OpenGridStackableBoxParameters
+      }
+    }
+  | { valid: false; issues: ValidationIssue[] }
+
+export type OpenGridOrganizerBoxModelValidation =
+  | {
+      valid: true
+      value: {
+        modelId: 'opengrid-organizer-box'
+        parameters: OpenGridOrganizerBoxParameters
       }
     }
   | { valid: false; issues: ValidationIssue[] }
@@ -1062,6 +1117,20 @@ export function validateModelParameters(
     return { valid: true, value: { modelId, parameters: validation.value } }
   }
 
+  if (modelId === 'opengrid-organizer-box') {
+    const validation = validateOpenGridOrganizerBoxParameters(value)
+    if (!validation.valid) {
+      return {
+        valid: false,
+        issues: validation.issues.map((issue) => ({
+          field: issue.field,
+          messageId: issue.messageId,
+        })),
+      }
+    }
+    return { valid: true, value: { modelId, parameters: validation.value } }
+  }
+
   if (modelId === 'opengrid-stackable-cylinder') {
     const validation = validateOpenGridStackableCylinderParameters(value)
     if (!validation.valid) {
@@ -1341,6 +1410,12 @@ export function isOpenGridStackableBoxModelParameters(
   return isOpenGridStackableBoxParameters(value)
 }
 
+export function isOpenGridOrganizerBoxModelParameters(
+  value: unknown,
+): value is OpenGridOrganizerBoxParameters {
+  return isOpenGridOrganizerBoxParameters(value)
+}
+
 export function isOpenGridStackableCylinderModelParameters(
   value: unknown,
 ): value is OpenGridStackableCylinderParameters {
@@ -1397,6 +1472,8 @@ export function boundsForModel(model: ModelParameters): ModelBounds {
       return boundsForOpenGrid(model.parameters)
     case 'opengrid-stackable-box':
       return boundsForOpenGridStackableBox(model.parameters)
+    case 'opengrid-organizer-box':
+      return boundsForOpenGridOrganizerBox(model.parameters)
     case 'opengrid-stackable-cylinder':
       return boundsForOpenGridStackableCylinder(model.parameters)
     case 'opengrid-snap':
@@ -1426,6 +1503,8 @@ export function modelFileName(model: ModelParameters): string {
       return openGridFileName(model.parameters)
     case 'opengrid-stackable-box':
       return openGridStackableBoxFileName(model.parameters)
+    case 'opengrid-organizer-box':
+      return openGridOrganizerBoxFileName(model.parameters)
     case 'opengrid-stackable-cylinder':
       return openGridStackableCylinderFileName(model.parameters)
     case 'opengrid-snap':
@@ -1455,6 +1534,8 @@ export function modelStlFileName(model: ModelParameters): string {
       return openGridStlFileName(model.parameters)
     case 'opengrid-stackable-box':
       return openGridStackableBoxStlFileName(model.parameters)
+    case 'opengrid-organizer-box':
+      return openGridOrganizerBoxStlFileName(model.parameters)
     case 'opengrid-stackable-cylinder':
       return openGridStackableCylinderStlFileName(model.parameters)
     case 'opengrid-snap':

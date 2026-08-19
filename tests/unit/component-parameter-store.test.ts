@@ -5,6 +5,7 @@ import {
 } from '../../src/features/cad/parameters'
 import {
   OPENGRID_CONFIGURATION,
+  OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   OPENGRID_SNAP_CONFIGURATION,
@@ -68,6 +69,46 @@ function opengridParameters(
 }
 
 describe('component parameter store', () => {
+  it('persists organizer-box snapshots independently and rejects malformed entries', () => {
+    const storage = createMemoryStorage()
+    const parameters = {
+      ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+      holeSpacingMode: 'independent' as const,
+      holeSpacingX: 3,
+      holeSpacingY: 4,
+      holeShape: 'hexagon' as const,
+      bottomInterfaceMode: 'stackable' as const,
+    }
+    const store = createComponentParameterStore({ storage })
+
+    expect(store.set('opengrid-organizer-box', parameters)).toBe(true)
+    expect(store.get('opengrid-organizer-box')).toEqual(parameters)
+
+    const persisted = JSON.parse(
+      storage.data.get(COMPONENT_PARAMETER_STORAGE_KEY) ?? '{}',
+    ) as { values?: Record<string, Record<string, unknown>> }
+    expect(persisted.values?.legacy?.['opengrid-organizer-box']).toEqual(
+      parameters,
+    )
+    expect(persisted.values?.legacy).not.toHaveProperty(
+      'opengrid-stackable-box',
+    )
+    store.dispose()
+
+    const malformedStorage = createMemoryStorage(
+      createPayload({
+        'opengrid-organizer-box': { ...parameters, holeDepth: 0 },
+      }),
+    )
+    const malformedStore = createComponentParameterStore({
+      storage: malformedStorage,
+    })
+    expect(malformedStore.get('opengrid-organizer-box')).toEqual(
+      OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+    )
+    malformedStore.dispose()
+  })
+
   it('keeps Desk and Wall parameter snapshots in separate scopes', () => {
     const storage = createMemoryStorage()
     const deskStore = createComponentParameterStore({

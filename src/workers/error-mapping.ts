@@ -26,7 +26,9 @@ export function cadErrorCodeFor(
     message.includes('OPENGRID_SNAP_PARAMETERS_INVALID') ||
     message.includes('MODEL_PARAMETERS_MISMATCH:opengrid-snap') ||
     message.includes('OPENGRID_STACKABLE_CYLINDER_PARAMETERS_INVALID') ||
-    message.includes('MODEL_PARAMETERS_MISMATCH:opengrid-stackable-cylinder')
+    message.includes('MODEL_PARAMETERS_MISMATCH:opengrid-stackable-cylinder') ||
+    message.includes('OPENGRID_ORGANIZER_BOX_PARAMETERS_INVALID') ||
+    message.includes('MODEL_PARAMETERS_MISMATCH:opengrid-organizer-box')
   ) {
     return 'INVALID_INPUT'
   }
@@ -52,7 +54,8 @@ export function cadErrorCodeFor(
   if (
     message.includes('OPENGRID_QUALITY_INVALID') ||
     message.includes('OPENGRID_BREP_INVALID') ||
-    message.includes('OPENGRID_STACKABLE_BOX_')
+    message.includes('OPENGRID_STACKABLE_BOX_') ||
+    message.includes('OPENGRID_ORGANIZER_BOX_')
   ) {
     return 'OPENGRID_QUALITY_INVALID'
   }
@@ -99,7 +102,8 @@ export function cadErrorStageFor(
   if (message.includes('OPENGRID_SNAP_HOLD_')) return 'meshing'
   if (
     message.includes('OPENGRID_QUALITY_INVALID') ||
-    message.includes('OPENGRID_STACKABLE_BOX_')
+    message.includes('OPENGRID_STACKABLE_BOX_') ||
+    message.includes('OPENGRID_ORGANIZER_BOX_')
   ) {
     return 'meshing'
   }

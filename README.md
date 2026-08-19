@@ -28,7 +28,7 @@ Astro site shell（layouts/ + pages/）
          ├─ modular-grid-base builder + STEP template
          ├─ hsw-cell builder + STEP template
          ├─ hexagonal-column builder + STEP template
-         ├─ OpenGrid stackable-box / stackable-cylinder builders
+         ├─ OpenGrid stackable-box / stackable-cylinder / organizer-box builders
          ├─ preview mesh generation
          └─ STEP / binary STL export
 ```
@@ -92,12 +92,13 @@ pages/
 
 ## Prototype 範圍
 
-- 內建 component：X/Y 置中於世界原點、底面位於 Z=0 的 `box`、`modular-grid-base`、`hsw-cell`、`hexagonal-column` 與 OpenGrid stackable models。
+- 內建 component：X/Y 置中於世界原點、底面位於 Z=0 的 `box`、`modular-grid-base`、`hsw-cell`、`hexagonal-column`、OpenGrid stackable models 與 `opengrid-organizer-box`。
 - `box` 參數：`width`、`depth`、`height`，單位為 mm。
 - `modular-grid-base` 參數：`rows`、`columns` 格數 slider，範圍為 1–20 格；每格為 20 × 20 mm，高度固定 5 mm，最大寬/深為 400 mm。預切除 `cell-template.step` 會複製、平移、融合後，只對整體外側四角套用 R2.5 mm 圓角。
 - `hsw-cell` 參數：`rows`、`columns` 格數 slider，範圍為 1–20 格；使用固定約 27.25 × 23.60 × 8 mm 的平頂六角 canonical `hsw-cell.step`，columns 沿 X 方向交錯排列成蜂巢，整體不套用額外圓角。路由為 `/cad/hsw-cell`，輸出檔名為 `hsw-cell-{columns}x{rows}.step` 與 `hsw-cell-{columns}x{rows}.stl`。
 - `hexagonal-column` 參數：`height` 文字輸入=1–500 mm、slider=1–200 mm、`count`、`gap` 與 `orientation`，路由為 `/cad/hexagonal-column`；它保持獨立 component contract，列平面 footprint 安全上限維持 500 mm。
 - OpenGrid stackable-box 與 stackable-cylinder 都以 `hole`（`角座孔`）為預設，並提供 `none`（`無角座`）、`hole`、`integrated`（`內建角座`）三種互斥座模式。`integrated` 會在既有定位位置融合 Ø5 mm × 3 mm、由 Z=-3 mm 延伸至 Z=0 的實體圓座；兩者的 STEP/STL 檔名都包含唯一的 `-seats-none`、`-seats-hole` 或 `-seats-integrated` 後綴。
+- `opengrid-organizer-box` 沿用 OpenGrid 方盒外觀，頂部為實體盲孔，可選圓形或固定方向的 3–6 邊正多邊形；多邊形直徑定義為內切圓直徑。X/Y 孔數、孔外圍對外圍間距、孔深與底部加厚（預設 2 mm）會共同決定盒體尺寸；孔距可連動或分開設定。底部介面以 radio 二選一：`四角固定座` 或 `堆疊結構`，兩者不會同時建立。
 - 預覽：由 Worker 產生的 B-Rep mesh。
 - 匯出：由 Worker 目前 committed B-Rep 產生 STEP 或 binary STL。
 - 不包含模型匯入、3MF/G-code、儲存、帳號、後端、多人協作或自動啟動 Bambu Studio。
@@ -127,6 +128,7 @@ hsw-cell-{columns}x{rows}.step
 hexagonal-column-{height}x{count}-g{gap}-{standing|lying}.step
 opengrid-stackable-box-{x}x{y}-h{height}-seats-{none|hole|integrated}.step
 opengrid-stackable-cylinder-d{diameter}-h{height}-seats-{none|hole|integrated}.step
+opengrid-organizer-box-{countX}x{countY}-{shape}-sm-{linked|independent}-d{diameter}-sx{spacingX}-sy{spacingY}-h{depth}-b{bottomThickness}-i{corner-seat|stackable}.step
 ```
 
 這個 Prototype 不提供任意 STEP 的產品匯入或 round-trip parser；目前的 `board-cell-template.step` 是 repository 內受控的 canonical asset，並由 CAD kernel integration tests 驗證其 single-solid、尺寸與幾何條件。
@@ -144,6 +146,7 @@ hsw-cell-{columns}x{rows}.stl
 hexagonal-column-{height}x{count}-g{gap}-{standing|lying}.stl
 opengrid-stackable-box-{x}x{y}-h{height}-seats-{none|hole|integrated}.stl
 opengrid-stackable-cylinder-d{diameter}-h{height}-seats-{none|hole|integrated}.stl
+opengrid-organizer-box-{countX}x{countY}-{shape}-sm-{linked|independent}-d{diameter}-sx{spacingX}-sy{spacingY}-h{depth}-b{bottomThickness}-i{corner-seat|stackable}.stl
 ```
 
 下載完成後，使用者可在 Bambu Studio 透過一般的本機檔案開啟/匯入流程載入 STL。瀏覽器不會直接啟動或控制 Bambu Studio，也不會產生 3MF、G-code 或印表機設定檔。初始 STL tessellation 設定為 `tolerance = 0.001 mm`、`angularTolerance = 0.1`；這些設定與 viewport preview mesh 分開管理。
@@ -198,7 +201,7 @@ Prototype 驗收使用的自動化瀏覽器 binary 為 Chromium `151.0.7922.34` 
 
 ## 未來模型 catalog 的擴充
 
-目前 catalog 有 `box`、`modular-grid-base`、`hsw-cell`、`hexagonal-column`、`opengrid` 與 OpenGrid stackable models。新增 component 時，在 `features/cad/model-catalog/components/` 建立獨立 `ModelDefinition`，在 `components/cad/component-panels/<component>/` 建立專屬調整頁面，再在 Worker-only 的 `cad-kernel/components/<component>/` 放 builder 與資產，最後由 catalog/kernel registry 掛入。UI 只消費 schema，不應把 B-Rep 邏輯放進 `CadWorkspace`。新模型必須另開 OpenSpec change，明確驗收參數單位、bounds、mesh、revision lifetime、STEP/STL filename 與錯誤流程，並維持既有 versioned Worker contract 與主執行緒/CAD Worker 邊界。
+目前 catalog 有 `box`、`modular-grid-base`、`hsw-cell`、`hexagonal-column`、`opengrid`、OpenGrid stackable models 與 `opengrid-organizer-box`。新增 component 時，在 `features/cad/model-catalog/components/` 建立獨立 `ModelDefinition`，在 `components/cad/component-panels/<component>/` 建立專屬調整頁面，再在 Worker-only 的 `cad-kernel/components/<component>/` 放 builder 與資產，最後由 catalog/kernel registry 掛入。UI 只消費 schema，不應把 B-Rep 邏輯放進 `CadWorkspace`。新模型必須另開 OpenSpec change，明確驗收參數單位、bounds、mesh、revision lifetime、STEP/STL filename 與錯誤流程，並維持既有 versioned Worker contract 與主執行緒/CAD Worker 邊界。
 
 ## OpenSpec 文件
 

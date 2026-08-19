@@ -4,6 +4,7 @@ import type {
   HexagonalColumnParameters,
   HswCellParameters,
   OpenGridDividerParameters,
+  OpenGridOrganizerBoxParameters,
   OpenGridStackableBoxParameters,
   OpenGridStackableCylinderParameters,
   OpenGridSnapParameters,
@@ -11,6 +12,7 @@ import type {
 } from '../../src/cad-contract/units'
 import {
   OPENGRID_DIVIDER_CONFIGURATION,
+  OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
 } from '../../src/cad-contract/units'
@@ -27,6 +29,49 @@ describe('CAD workspace validation helpers', () => {
 
     expect(raw).toEqual({ width: '20', depth: '30', height: '40' })
     expect(parseRawParameters(raw)).toEqual({ valid: true, value: parameters })
+  })
+
+  it('round-trips organizer-box shape, spacing, and bottom-interface inputs', () => {
+    const parameters: OpenGridOrganizerBoxParameters = {
+      ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+      holeCountX: 3,
+      holeCountY: 2,
+      holeSpacingMode: 'independent',
+      holeSpacingX: 2.5,
+      holeSpacingY: 4,
+      holeShape: 'hexagon',
+      holeDiameter: 12.5,
+      holeDepth: 18,
+      bottomThickness: 3.5,
+      bottomInterfaceMode: 'stackable',
+    }
+    const raw = rawFromParameters(parameters)
+
+    expect(parseRawParameters(raw, 'opengrid-organizer-box')).toEqual({
+      valid: true,
+      value: parameters,
+    })
+    expect(
+      parseRawParameters(
+        { ...raw, holeSpacingMode: 'linked', holeSpacingY: '4' },
+        'opengrid-organizer-box',
+      ),
+    ).toEqual({
+      valid: false,
+      messageId: 'validation.invalid',
+      field: 'holeSpacingY',
+    })
+  })
+
+  it('rejects incomplete organizer-box raw input instead of defaulting fields', () => {
+    const raw = rawFromParameters(OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS)
+    delete raw.holeDepth
+
+    expect(parseRawParameters(raw, 'opengrid-organizer-box')).toEqual({
+      valid: false,
+      messageId: 'validation.invalid',
+      field: 'holeDepth',
+    })
   })
 
   it('returns the first invalid dimension field and its user-facing message', () => {

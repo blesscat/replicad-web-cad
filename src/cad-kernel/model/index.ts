@@ -9,6 +9,7 @@ import {
   isOpenGridDividerModelParameters,
   isOpenGridParameters,
   isOpenGridOpenShelfParameters,
+  isOpenGridOrganizerBoxParameters,
   isOpenGridStackableBoxParameters,
   isOpenGridStackableCylinderParameters,
   isOpenGridSnapParameters,
@@ -37,6 +38,7 @@ import {
 import { buildOpenGridSnapRemover } from '../components/opengrid-snap-remover/builder'
 import { buildPillar } from '../components/opengrid-pillar/builder'
 import { buildOpenGridOpenShelf } from '../components/opengrid-open-shelf/builder'
+import { buildOpenGridOrganizerBox } from '../components/opengrid-organizer-box/builder'
 
 export type KernelBuildContext = {
   getModularGridBaseTemplate: () => Promise<Shape3D>
@@ -242,6 +244,19 @@ async function buildOpenGridStackableBoxModel(
   })
 }
 
+function buildOpenGridOrganizerBoxModel(
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Shape3D {
+  if (!isOpenGridOrganizerBoxParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-organizer-box')
+  }
+  return buildOpenGridOrganizerBox(parameters, {
+    isGenerationCurrent: context.isGenerationCurrent,
+    booleanOperations: context.booleanOperations,
+  })
+}
+
 async function buildOpenGridOpenShelfModel(
   parameters: ModelParameterValues,
   context: KernelBuildContext,
@@ -328,6 +343,11 @@ export const opengridStackableBoxKernelDefinition: KernelModelDefinition = {
   build: buildOpenGridStackableBoxModel,
 }
 
+export const opengridOrganizerBoxKernelDefinition: KernelModelDefinition = {
+  id: 'opengrid-organizer-box',
+  build: buildOpenGridOrganizerBoxModel,
+}
+
 export const opengridStackableCylinderKernelDefinition: KernelModelDefinition =
   {
     id: 'opengrid-stackable-cylinder',
@@ -357,6 +377,7 @@ export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   pillarKernelDefinition,
   opengridKernelDefinition,
   opengridStackableBoxKernelDefinition,
+  opengridOrganizerBoxKernelDefinition,
   opengridStackableCylinderKernelDefinition,
   opengridOpenShelfKernelDefinition,
   opengridSnapKernelDefinition,
