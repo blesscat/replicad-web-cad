@@ -18,11 +18,11 @@ import {
   OPENGRID_STACKABLE_CYLINDER_OPENING_DIRECTIONS,
   validateOpenGridStackableCylinderParameters,
   type ModelBounds,
-  type OpenGridLocatingSeatMode,
   type OpenGridStackableCylinderOpeningDirection,
   type OpenGridStackableCylinderParameters,
   type OpenGridStackableCylinderPoint2D,
   type OpenGridStackableCylinderProfile,
+  type OpenGridStackableCylinderSeatMode,
 } from '../../../cad-contract/units'
 import {
   measureBoolean,
@@ -37,6 +37,7 @@ import {
 } from '../../lattice/opengrid-honeycomb'
 
 const HONEYCOMB_CUT_BATCH_SIZE = 128
+const CENTER_HOOK_QUALITY_PROBE_MARGIN = 0.1
 
 export type OpenGridStackableCylinderBuildContext = {
   isGenerationCurrent?: () => boolean
@@ -56,6 +57,16 @@ export type OpenGridStackableCylinderIntegratedSeatRecord = {
   diameter: number
   minZ: number
   maxZ: number
+}
+
+export type OpenGridStackableCylinderCenterHookQuality = {
+  bounds: ModelBounds
+  planWidth: number
+  planDepth: number
+  minZ: number
+  footprintVolume: number
+  insertionClearancePerSide: number
+  quarterTurnCaptureOverhang: number
 }
 
 export type OpenGridStackableCylinderHoleQuality = {
@@ -80,7 +91,7 @@ export type OpenGridStackableCylinderInterfaceQualityReport = {
   profile: OpenGridStackableCylinderProfile
   thinBottomMode: boolean
   bottomPlateMode: boolean
-  bottomSeatMode: OpenGridLocatingSeatMode
+  bottomSeatMode: OpenGridStackableCylinderSeatMode
   floorThickness: number
   bottomHoleSectionDepth: number
   bounds: ModelBounds
@@ -91,6 +102,7 @@ export type OpenGridStackableCylinderInterfaceQualityReport = {
   holes: OpenGridStackableCylinderHoleQuality[]
   integratedSeatRecordCount: number
   integratedSeats: OpenGridStackableCylinderIntegratedSeatRecord[]
+  centerHook: OpenGridStackableCylinderCenterHookQuality | null
   openings: OpenGridStackableCylinderOpeningQuality[]
   neighboringOpeningProbeCount: number
   neighboringOpeningExpectedProbeCount: number
@@ -414,6 +426,36 @@ function addIntegratedSeats(
   return current
 }
 
+function addCenterHook(
+  shape: Shape3D,
+  context: OpenGridStackableCylinderBuildContext,
+): Shape3D {
+  const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
+  const hook = makeBox(
+    [
+      -configuration.centerHookWidth / 2,
+      -configuration.centerHookDepth / 2,
+      configuration.centerHookMinZ,
+    ],
+    [
+      configuration.centerHookWidth / 2,
+      configuration.centerHookDepth / 2,
+      configuration.centerHookMaxZ,
+    ],
+  )
+  const fuseScope = context.booleanOperations?.createScope(1)
+  try {
+    assertGenerationCurrent(context)
+    const fused = measureBooleanInScope(fuseScope, 'fuse', () =>
+      shape.fuse(hook, { optimisation: 'commonFace' }),
+    )
+    deleteShape(shape)
+    return fused
+  } finally {
+    deleteShape(hook)
+  }
+}
+
 function addBottomLocatingFeatures(
   shape: Shape3D,
   parameters: OpenGridStackableCylinderParameters,
@@ -422,6 +464,9 @@ function addBottomLocatingFeatures(
   if (parameters.bottomSeatMode === 'none') return shape
   if (parameters.bottomSeatMode === 'integrated') {
     return addIntegratedSeats(shape, parameters, context)
+  }
+  if (parameters.bottomSeatMode === 'center-hook') {
+    return addCenterHook(shape, context)
   }
   return addBottomHoles(shape, parameters, context)
 }
@@ -960,6 +1005,49 @@ function readIntegratedSeatRecords(
   )
 }
 
+function readCenterHookQuality(
+  shape: Shape3D,
+): OpenGridStackableCylinderCenterHookQuality {
+  const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
+  const margin = CENTER_HOOK_QUALITY_PROBE_MARGIN
+  const probe = makeBox(
+    [
+      -configuration.centerHookWidth / 2 - margin,
+      -configuration.centerHookDepth / 2 - margin,
+      configuration.centerHookMinZ - margin,
+    ],
+    [
+      configuration.centerHookWidth / 2 + margin,
+      configuration.centerHookDepth / 2 + margin,
+      configuration.centerHookMaxZ - margin,
+    ],
+  )
+  let intersection: Shape3D | null = null
+  try {
+    intersection = shape.intersect(probe)
+    const bounds = readBounds(intersection)
+    const planWidth = bounds[1][0] - bounds[0][0]
+    const planDepth = bounds[1][1] - bounds[0][1]
+    const insertionClearancePerSide = Math.min(
+      (configuration.centerHookNominalShortSide - planWidth) / 2,
+      (configuration.centerHookNominalLongSide - planDepth) / 2,
+    )
+    return {
+      bounds: { min: bounds[0], max: bounds[1] },
+      planWidth,
+      planDepth,
+      minZ: bounds[0][2],
+      footprintVolume: measureVolume(intersection),
+      insertionClearancePerSide,
+      quarterTurnCaptureOverhang:
+        planDepth - configuration.centerHookNominalShortSide,
+    }
+  } finally {
+    deleteShape(intersection)
+    deleteShape(probe)
+  }
+}
+
 function countConicalFacesInRadialBand(
   shape: Shape3D,
   minZ: number,
@@ -1189,6 +1277,10 @@ export function inspectOpenGridStackableCylinderInterface(
     parameters.bottomSeatMode === 'integrated'
       ? readIntegratedSeatRecords(shape, parameters)
       : []
+  const centerHook =
+    parameters.bottomSeatMode === 'center-hook'
+      ? readCenterHookQuality(shape)
+      : null
   const openingQuality = OPENGRID_STACKABLE_CYLINDER_OPENING_DIRECTIONS.map(
     (direction): OpenGridStackableCylinderOpeningQuality => {
       const opening = derived.openings[direction]
@@ -1604,9 +1696,7 @@ export function inspectOpenGridStackableCylinderInterface(
           min: [
             -derived.radius,
             -derived.radius,
-            parameters.bottomSeatMode === 'integrated'
-              ? OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ
-              : 0,
+            boundsForOpenGridStackableCylinder(parameters).min[2],
           ] as [number, number, number],
           max: [derived.radius, derived.radius, parameters.height] as [
             number,
@@ -1633,6 +1723,7 @@ export function inspectOpenGridStackableCylinderInterface(
     holes: readHoleQuality(parameters, floorHoleRecords),
     integratedSeatRecordCount: integratedSeatRecords.length,
     integratedSeats: integratedSeatRecords,
+    centerHook,
     openings: openingQuality,
     neighboringOpeningProbeCount,
     neighboringOpeningExpectedProbeCount,
@@ -1775,6 +1866,33 @@ function assertQuality(
     ) {
       failures.push('integrated-seat-profile')
     }
+  }
+  if (parameters.bottomSeatMode === 'center-hook') {
+    const centerHook = report.centerHook
+    const expectedFootprintVolume =
+      configuration.centerHookWidth *
+      configuration.centerHookDepth *
+      (configuration.centerHookHeight - 2 * CENTER_HOOK_QUALITY_PROBE_MARGIN)
+    if (!centerHook) {
+      failures.push('center-hook-missing')
+    } else {
+      if (
+        !closeEnough(centerHook.planWidth, configuration.centerHookWidth) ||
+        !closeEnough(centerHook.planDepth, configuration.centerHookDepth) ||
+        !closeEnough(centerHook.minZ, configuration.centerHookMinZ) ||
+        centerHook.footprintVolume < expectedFootprintVolume * 0.95
+      ) {
+        failures.push('center-hook-envelope')
+      }
+      if (centerHook.insertionClearancePerSide <= 0) {
+        failures.push('center-hook-clearance')
+      }
+      if (centerHook.quarterTurnCaptureOverhang <= 0) {
+        failures.push('center-hook-quarter-turn')
+      }
+    }
+  } else if (report.centerHook !== null) {
+    failures.push('center-hook-unexpected')
   }
   const largestHoleRadius =
     Math.max(

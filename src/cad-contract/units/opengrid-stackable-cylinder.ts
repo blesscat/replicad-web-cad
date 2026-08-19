@@ -2,7 +2,6 @@ import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
 import {
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_LOCATING_SEAT_MODES,
-  type OpenGridLocatingSeatMode,
 } from './opengrid-locating-assembly'
 
 export type OpenGridStackableCylinderParameterKey =
@@ -31,12 +30,20 @@ export type OpenGridStackableCylinderOpeningDirection =
 export type OpenGridStackableCylinderProfile =
   'default' | 'thin' | 'bottom-plate'
 
+export const OPENGRID_STACKABLE_CYLINDER_SEAT_MODES = [
+  ...OPENGRID_LOCATING_SEAT_MODES,
+  'center-hook',
+] as const
+
+export type OpenGridStackableCylinderSeatMode =
+  (typeof OPENGRID_STACKABLE_CYLINDER_SEAT_MODES)[number]
+
 export type OpenGridStackableCylinderParameters = {
   diameter: number
   height: number
   thinBottomMode: boolean
   bottomPlateMode: boolean
-  bottomSeatMode: OpenGridLocatingSeatMode
+  bottomSeatMode: OpenGridStackableCylinderSeatMode
   honeycombMode: boolean
 } & Record<OpenGridStackableCylinderOpeningParameterKey, number>
 
@@ -97,6 +104,15 @@ export type OpenGridStackableCylinderValidation =
   | { valid: true; value: OpenGridStackableCylinderParameters }
   | { valid: false; issues: OpenGridStackableCylinderValidationIssue[] }
 
+const CENTER_HOOK_NOMINAL_SHORT_SIDE = 4
+const CENTER_HOOK_NOMINAL_LONG_SIDE = 8
+const CENTER_HOOK_CLEARANCE_PER_SIDE = 0.2
+const CENTER_HOOK_WIDTH =
+  CENTER_HOOK_NOMINAL_SHORT_SIDE - CENTER_HOOK_CLEARANCE_PER_SIDE * 2
+const CENTER_HOOK_DEPTH =
+  CENTER_HOOK_NOMINAL_LONG_SIDE - CENTER_HOOK_CLEARANCE_PER_SIDE * 2
+const CENTER_HOOK_HEIGHT = 3
+
 export const OPENGRID_STACKABLE_CYLINDER_CONFIGURATION = {
   defaultDiameter: 60,
   minDiameter: 20,
@@ -132,7 +148,16 @@ export const OPENGRID_STACKABLE_CYLINDER_CONFIGURATION = {
   thinTopInnerChamfer: 1.6,
   topInnerChamferLand: 0,
   bottomOuterChamfer: 2,
-  defaultBottomSeatMode: 'hole' as OpenGridLocatingSeatMode,
+  defaultBottomSeatMode: 'hole' as OpenGridStackableCylinderSeatMode,
+  centerHookNominalShortSide: CENTER_HOOK_NOMINAL_SHORT_SIDE,
+  centerHookNominalLongSide: CENTER_HOOK_NOMINAL_LONG_SIDE,
+  centerHookClearancePerSide: CENTER_HOOK_CLEARANCE_PER_SIDE,
+  centerHookWidth: CENTER_HOOK_WIDTH,
+  centerHookDepth: CENTER_HOOK_DEPTH,
+  centerHookHeight: CENTER_HOOK_HEIGHT,
+  centerHookMinZ: -CENTER_HOOK_HEIGHT,
+  centerHookMaxZ: 0,
+  centerHookQuarterTurnDegrees: 90,
   openingDepthMin: 0,
   openingDepthMax: 500,
   openingBottomLengthMin: 1,
@@ -258,12 +283,14 @@ function hasExactKeys(
   )
 }
 
-function isOpenGridLocatingSeatMode(
+export function isOpenGridStackableCylinderSeatMode(
   value: unknown,
-): value is OpenGridLocatingSeatMode {
+): value is OpenGridStackableCylinderSeatMode {
   return (
     typeof value === 'string' &&
-    (OPENGRID_LOCATING_SEAT_MODES as readonly string[]).includes(value)
+    (OPENGRID_STACKABLE_CYLINDER_SEAT_MODES as readonly string[]).includes(
+      value,
+    )
   )
 }
 
@@ -303,7 +330,7 @@ function validateBottomSeatMode(
   value: unknown,
   issues: OpenGridStackableCylinderValidationIssue[],
 ): void {
-  if (!isOpenGridLocatingSeatMode(value)) {
+  if (!isOpenGridStackableCylinderSeatMode(value)) {
     issues.push({
       field: 'bottomSeatMode',
       messageId: 'validation.invalid',
@@ -336,7 +363,7 @@ function hasOnlySupportedParameterKeys(
 
 function legacyBottomSeatModeFor(
   value: Record<string, unknown>,
-): OpenGridLocatingSeatMode {
+): OpenGridStackableCylinderSeatMode {
   if (value.bottomHolesEnabled === false) return 'none'
   return 'hole'
 }
@@ -516,7 +543,7 @@ export function validateOpenGridStackableCylinderParameters(
         ? (value.bottomPlateMode as boolean)
         : false,
     bottomSeatMode: hasCurrentSeatMode
-      ? (value.bottomSeatMode as OpenGridLocatingSeatMode)
+      ? (value.bottomSeatMode as OpenGridStackableCylinderSeatMode)
       : legacyBottomSeatModeFor(value),
     honeycombMode:
       typeof value.honeycombMode === 'boolean'
@@ -548,10 +575,12 @@ export function boundsForOpenGridStackableCylinder(
   parameters: OpenGridStackableCylinderParameters,
 ) {
   const radius = parameters.diameter / 2
-  const minimumZ =
-    parameters.bottomSeatMode === 'integrated'
-      ? OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ
-      : 0
+  let minimumZ = 0
+  if (parameters.bottomSeatMode === 'integrated') {
+    minimumZ = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ
+  } else if (parameters.bottomSeatMode === 'center-hook') {
+    minimumZ = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.centerHookMinZ
+  }
   return {
     min: [-radius, -radius, minimumZ] as [number, number, number],
     max: [radius, radius, parameters.height] as [number, number, number],
@@ -888,7 +917,12 @@ export function openGridStackableCylinderOpeningBottomLengthMaximumFor(
 export function openGridStackableCylinderOuterHoleIndexFor(
   parameters: OpenGridStackableCylinderParameters,
 ): number {
-  if (parameters.bottomSeatMode === 'none') return 0
+  if (
+    parameters.bottomSeatMode === 'none' ||
+    parameters.bottomSeatMode === 'center-hook'
+  ) {
+    return 0
+  }
   const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
   const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
   const largestHoleRadius =
@@ -912,7 +946,12 @@ export function openGridStackableCylinderOuterHoleIndexFor(
 export function openGridStackableCylinderHoleCentersFor(
   parameters: OpenGridStackableCylinderParameters,
 ): OpenGridStackableCylinderPoint2D[] {
-  if (parameters.bottomSeatMode === 'none') return []
+  if (
+    parameters.bottomSeatMode === 'none' ||
+    parameters.bottomSeatMode === 'center-hook'
+  ) {
+    return []
+  }
   const centers: OpenGridStackableCylinderPoint2D[] = [[0, 0]]
   const index = openGridStackableCylinderOuterHoleIndexFor(parameters)
   if (index < 1) return centers
