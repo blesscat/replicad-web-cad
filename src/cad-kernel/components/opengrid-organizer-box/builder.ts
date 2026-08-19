@@ -174,7 +174,7 @@ function stackableAdapterFor(
         OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight,
     ),
     cornerSeatMode:
-      parameters.bottomInterfaceMode === 'corner-seat' ? 'hole' : 'none',
+      parameters.bottomInterfaceMode === 'corner-seat' ? 'integrated' : 'none',
     fullBottomHoleGrid: false,
     basePlateMode: false,
     thinShellMode: false,

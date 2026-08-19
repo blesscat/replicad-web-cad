@@ -1,4 +1,5 @@
 import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
+import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from './opengrid-locating-assembly'
 import {
   openGridStackableBoxSocketCentersFor,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
@@ -261,7 +262,7 @@ function interfaceBoundaryClearanceFor(
   const configuration = OPENGRID_ORGANIZER_BOX_CONFIGURATION
   const interfaceClearance =
     mode === 'corner-seat'
-      ? OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleTopOpeningDiameter / 2
+      ? OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatDiameter / 2
       : OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomGridSeamBedOpeningWidth / 2
   return Math.max(
     configuration.boundaryClearance,
@@ -300,7 +301,7 @@ function stackableInterfaceParametersFor(
     ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
     x: gridCountX,
     y: gridCountY,
-    cornerSeatMode: 'hole',
+    cornerSeatMode: 'integrated',
     fullBottomHoleGrid: false,
     basePlateMode: false,
     thinShellMode: false,
@@ -334,17 +335,17 @@ function interfaceFeatureBoundsFor(
       gridCountY,
     )
     const radius =
-      stackableConfiguration.baseHoleTopOpeningDiameter / 2 +
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatDiameter / 2 +
       organizerConfiguration.clearanceTotal
     return openGridStackableBoxSocketCentersFor(interfaceParameters).map(
       ([x, y]) => ({
-        min: [x - radius, y - radius, -INTERFACE_COLLISION_TOLERANCE],
-        max: [
-          x + radius,
-          y + radius,
-          stackableConfiguration.bottomAssemblyHeight +
+        min: [
+          x - radius,
+          y - radius,
+          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ -
             INTERFACE_COLLISION_TOLERANCE,
         ],
+        max: [x + radius, y + radius, INTERFACE_COLLISION_TOLERANCE],
       }),
     )
   }
@@ -680,8 +681,12 @@ export function boundsForOpenGridOrganizerBox(
   }
   const layout = openGridOrganizerBoxLayoutForUnchecked(parameters)
   const [width, depth] = layout.footprint
+  const minimumZ =
+    parameters.bottomInterfaceMode === 'corner-seat'
+      ? OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ
+      : 0
   return {
-    min: [-width / 2, -depth / 2, 0],
+    min: [-width / 2, -depth / 2, minimumZ],
     max: [width / 2, depth / 2, layout.bodyHeight],
   }
 }

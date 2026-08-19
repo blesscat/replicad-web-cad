@@ -394,10 +394,10 @@ export const zhHantMessages = {
   'panel.organizerBox.interfaceMode': '底部介面（二選一）',
   'panel.organizerBox.interface.cornerSeat': '四角固定座',
   'panel.organizerBox.interface.cornerSeatDescription':
-    '使用四角固定座孔，不建立完整堆疊結構。',
+    '直接融合方盒內建的四角實體腳座，不需要從底部插入腳座。',
   'panel.organizerBox.interface.stackable': '堆疊結構',
   'panel.organizerBox.interface.stackableDescription':
-    '使用 OpenGrid 方盒的堆疊底部結構，不建立四角固定座孔。',
+    '使用 OpenGrid 方盒的堆疊底部結構，不建立四角內建實體腳座。',
   'panel.pillar.version': '支柱版本',
   'panel.pillar.stacking': '堆疊版',
   'panel.pillar.thinShell': '薄殼版',
@@ -930,12 +930,12 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'panel.organizerBox.shape.pentagon': 'Pentagon',
   'panel.organizerBox.shape.hexagon': 'Hexagon',
   'panel.organizerBox.interfaceMode': 'Bottom interface (choose one)',
-  'panel.organizerBox.interface.cornerSeat': 'Four-corner locating seats',
+  'panel.organizerBox.interface.cornerSeat': 'Four-corner built-in feet',
   'panel.organizerBox.interface.cornerSeatDescription':
-    'Use the four-corner locating-seat holes without a full stacking profile.',
+    'Use the Grid Box-style four-corner built-in feet without a full stacking profile.',
   'panel.organizerBox.interface.stackable': 'Stacking structure',
   'panel.organizerBox.interface.stackableDescription':
-    'Use the OpenGrid box stacking bottom structure without four-corner seat holes.',
+    'Use the OpenGrid box stacking bottom structure without four-corner built-in feet.',
   'panel.pillar.version': 'Post version',
   'panel.pillar.stacking': 'Stacking',
   'panel.pillar.thinShell': 'Thin shell',

@@ -2,6 +2,7 @@ import {
   boundsForOpenGridOrganizerBox,
   openGridOrganizerBoxLayoutFor,
   openGridStackableBoxSocketCentersFor,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   type ModelBounds,
   type OpenGridOrganizerBoxParameters,
@@ -269,7 +270,7 @@ function assertInterfaceExclusivity(
     ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
     x: layout.gridCountX,
     y: layout.gridCountY,
-    cornerSeatMode: 'hole' as const,
+    cornerSeatMode: 'integrated' as const,
     fullBottomHoleGrid: false,
     basePlateMode: false,
     thinShellMode: false,
@@ -281,22 +282,25 @@ function assertInterfaceExclusivity(
     throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:seat-count')
   }
 
-  const probeZMin = layout.interfaceFloorDatum / 2 - 0.05
-  const probeZMax = layout.interfaceFloorDatum / 2 + 0.05
-  const socketVolumes = socketCenters.map(([x, y]) =>
+  const footProbeCenterZ =
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ +
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatHeight / 2
+  const footProbeZMin = footProbeCenterZ - 0.05
+  const footProbeZMax = footProbeCenterZ + 0.05
+  const footVolumes = socketCenters.map(([x, y]) =>
     volumeInBox(
       shape,
-      [x - 0.2, y - 0.2, probeZMin],
-      [x + 0.2, y + 0.2, probeZMax],
+      [x - 0.2, y - 0.2, footProbeZMin],
+      [x + 0.2, y + 0.2, footProbeZMax],
     ),
   )
-  const hasAllCornerSeats = socketVolumes.every((volume) => volume <= 0.001)
-  if (parameters.bottomInterfaceMode === 'corner-seat' && !hasAllCornerSeats) {
-    throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:corner-seat')
+  const hasAllBuiltInFeet = footVolumes.every((volume) => volume > 0.001)
+  if (parameters.bottomInterfaceMode === 'corner-seat' && !hasAllBuiltInFeet) {
+    throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:built-in-feet')
   }
   if (
     parameters.bottomInterfaceMode === 'stackable' &&
-    socketVolumes.some((volume) => volume <= 0.001)
+    footVolumes.some((volume) => volume > 0.001)
   ) {
     throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:combined-interface')
   }

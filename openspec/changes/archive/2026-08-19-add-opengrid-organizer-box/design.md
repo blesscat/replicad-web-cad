@@ -129,8 +129,10 @@ enum. Shared geometry helpers will be extracted or wrapped so that existing
 Grid Box generation continues to use its current parameter contract and tests.
 
 - `corner-seat` uses the existing four-corner socket-center calculation and
-  standard fixed socket profile, including small-footprint de-duplication. It
-  does not apply the normal box-to-box stacking guide.
+  the Grid Box's `integrated` built-in-foot profile, including small-footprint
+  de-duplication. It fuses four downward Ø5 mm × 3 mm solid feet from Z=-3 mm
+  to Z=0 mm; it does not create insertable socket holes and does not apply the
+  normal box-to-box stacking guide.
 - `stackable` applies the existing normal bottom guide/seam profile and its
   fixed 0.25 mm stacking clearance. It does not add the four corner sockets.
 

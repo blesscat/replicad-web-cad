@@ -5,7 +5,10 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { makeBox, measureVolume, setOC, type Shape3D } from 'replicad'
 import {
   boundsForOpenGridOrganizerBox,
+  openGridStackableBoxSocketCentersFor,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   openGridOrganizerBoxLayoutFor,
   type OpenGridOrganizerBoxParameters,
 } from '../../src/cad-contract/units'
@@ -134,6 +137,31 @@ describe('OpenGrid organizer-box B-Rep', () => {
           [halfWidth + 0.1, 0.2, layout.bodyHeight / 2 + 0.1],
         ]),
       ).toBeGreaterThan(0)
+
+      const interfaceParameters = {
+        ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+        x: layout.gridCountX,
+        y: layout.gridCountY,
+        cornerSeatMode: 'integrated' as const,
+        fullBottomHoleGrid: false,
+        basePlateMode: false,
+        thinShellMode: false,
+        honeycombMode: false,
+      }
+      const footZ =
+        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ +
+        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatHeight / 2
+      const footCenters =
+        openGridStackableBoxSocketCentersFor(interfaceParameters)
+      expect(footCenters).toHaveLength(4)
+      for (const [x, y] of footCenters) {
+        expect(
+          probeVolume(shape, [
+            [x - 0.2, y - 0.2, footZ - 0.05],
+            [x + 0.2, y + 0.2, footZ + 0.05],
+          ]),
+        ).toBeGreaterThan(0)
+      }
     } finally {
       deleteShape(shape)
     }

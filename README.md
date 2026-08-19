@@ -98,7 +98,7 @@ pages/
 - `hsw-cell` 參數：`rows`、`columns` 格數 slider，範圍為 1–20 格；使用固定約 27.25 × 23.60 × 8 mm 的平頂六角 canonical `hsw-cell.step`，columns 沿 X 方向交錯排列成蜂巢，整體不套用額外圓角。路由為 `/cad/hsw-cell`，輸出檔名為 `hsw-cell-{columns}x{rows}.step` 與 `hsw-cell-{columns}x{rows}.stl`。
 - `hexagonal-column` 參數：`height` 文字輸入=1–500 mm、slider=1–200 mm、`count`、`gap` 與 `orientation`，路由為 `/cad/hexagonal-column`；它保持獨立 component contract，列平面 footprint 安全上限維持 500 mm。
 - OpenGrid stackable-box 與 stackable-cylinder 都以 `hole`（`角座孔`）為預設，並提供 `none`（`無角座`）、`hole`、`integrated`（`內建角座`）三種互斥座模式。`integrated` 會在既有定位位置融合 Ø5 mm × 3 mm、由 Z=-3 mm 延伸至 Z=0 的實體圓座；兩者的 STEP/STL 檔名都包含唯一的 `-seats-none`、`-seats-hole` 或 `-seats-integrated` 後綴。
-- `opengrid-organizer-box` 沿用 OpenGrid 方盒外觀，頂部為實體盲孔，可選圓形或固定方向的 3–6 邊正多邊形；多邊形直徑定義為內切圓直徑。X/Y 孔數、孔外圍對外圍間距、孔深與底部加厚（預設 2 mm）會共同決定盒體尺寸；孔距可連動或分開設定。底部介面以 radio 二選一：`四角固定座` 或 `堆疊結構`，兩者不會同時建立。
+- `opengrid-organizer-box` 沿用 OpenGrid 方盒外觀，頂部為實體盲孔，可選圓形或固定方向的 3–6 邊正多邊形；多邊形直徑定義為內切圓直徑。X/Y 孔數、孔外圍對外圍間距、孔深與底部加厚（預設 2 mm）會共同決定盒體尺寸；孔距可連動或分開設定。底部介面以 radio 二選一：`四角固定座` 或 `堆疊結構`，兩者不會同時建立。`四角固定座` 會直接融合方盒內建的四個 Ø5 mm × 3 mm 實體腳座（Z=-3 mm 至 Z=0 mm），不需要從底部另行塞入腳座。
 - 預覽：由 Worker 產生的 B-Rep mesh。
 - 匯出：由 Worker 目前 committed B-Rep 產生 STEP 或 binary STL。
 - 不包含模型匯入、3MF/G-code、儲存、帳號、後端、多人協作或自動啟動 Bambu Studio。

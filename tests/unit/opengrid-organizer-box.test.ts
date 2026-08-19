@@ -5,6 +5,7 @@ import {
   openGridOrganizerBoxLayoutFor,
   openGridOrganizerBoxFileName,
   openGridOrganizerBoxStlFileName,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
   validateOpenGridOrganizerBoxParameters,
@@ -132,6 +133,12 @@ describe('OpenGrid organizer-box contract', () => {
     expect(step.endsWith('.step')).toBe(true)
     expect(stl.endsWith('.stl')).toBe(true)
     expect(
+      boundsForOpenGridOrganizerBox({
+        ...value,
+        bottomInterfaceMode: 'corner-seat',
+      }).min[2],
+    ).toBe(OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ)
+    expect(
       openGridOrganizerBoxFileName({
         ...value,
         holeSpacingMode: 'independent',
@@ -154,7 +161,7 @@ describe('OpenGrid organizer-box contract', () => {
       const cavityFloor = layout.bodyHeight - value.holeDepth
       const interfaceTop =
         bottomInterfaceMode === 'corner-seat'
-          ? OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight + 0.02
+          ? OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ
           : OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomFootChamferHeight +
             OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomSupportBandHeight +
             OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomStackingLeadIn +

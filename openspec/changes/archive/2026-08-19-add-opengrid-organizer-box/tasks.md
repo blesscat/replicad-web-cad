@@ -9,7 +9,7 @@
 
 - [x] 2.1 Create the `src/cad-kernel/components/opengrid-organizer-box/` builder and geometry modules for a solid rounded envelope with a flat top and no side openings.
 - [x] 2.2 Build circle and regular 3-, 4-, 5-, and 6-sided blind cavity cutters at the derived centers, preserve the requested bottom thickness, and cut them in bounded boolean batches with generation checks.
-- [x] 2.3 Extract or wrap the existing OpenGrid bottom-interface primitives so `corner-seat` uses the fixed four-corner socket layout and `stackable` uses the normal bottom guide, while neither mode generates the other interface.
+- [x] 2.3 Extract or wrap the existing OpenGrid bottom-interface primitives so `corner-seat` uses the fixed four-corner locating layout and `stackable` uses the normal bottom guide, while neither mode generates the other interface.
 - [x] 2.4 Add organizer geometry quality checks for single-solid/watertight output, cavity count and spacing, finite bounds, bottom thickness, interface exclusivity, and absence of side openings.
 - [x] 2.5 Add kernel model registration and Worker dispatch for `opengrid-organizer-box`, including progress/error mapping and revision/export lifecycle compatibility.
 
@@ -32,3 +32,7 @@
 - [x] 5.2 Add focused UI/e2e coverage for route discovery, radio exclusivity, spacing mode switching, calculated grid occupancy, preview updates, and export availability.
 - [x] 5.3 Update README and relevant OpenGrid documentation with organizer-box parameters, units, interface modes, cavity-diameter semantics, spacing semantics, and export filename examples.
 - [x] 5.4 Run formatting, type checking, targeted unit/worker/e2e tests, full validation, and the project build; record exact results and mark all completed tasks.
+
+## 6. Corner-seat correction
+
+- [x] 6.1 Change organizer-box `corner-seat` from insertable socket holes to the existing Grid Box `integrated` four-foot profile, update bounds/quality checks/docs, and add regression coverage for the downward built-in feet.

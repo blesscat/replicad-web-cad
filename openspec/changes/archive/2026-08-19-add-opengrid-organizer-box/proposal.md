@@ -17,7 +17,7 @@ interfaces.
 - Provide linked or independent X/Y spacing controls and derive the OpenGrid
   footprint/grid counts from the cavity layout and fixed boundary clearances.
 - Provide a mutually exclusive bottom-interface radio choice between the
-  existing four-corner locating-seat geometry and the existing box-to-box
+  existing four-corner built-in-foot geometry and the existing box-to-box
   stacking geometry.
 - Keep the organizer body solid between cavities and omit side openings.
 - Preserve existing component IDs and behavior; no existing component is

@@ -163,17 +163,20 @@ options: `四角固定座` and `堆疊結構`. The normalized
 `bottomInterfaceMode` MUST contain exactly one corresponding value.
 
 In `corner-seat` mode, the result MUST preserve the existing Grid Box fixed
-four-corner locating-seat positions and geometry, including the existing
-de-duplication behavior for small footprints, and MUST NOT generate the full
-box-to-box stacking guide. In `stackable` mode, the result MUST preserve the
-existing normal box-to-box bottom stacking geometry and MUST NOT generate the
-four-corner locating seats. The two interface modes MUST NOT be combined.
+four-corner locating-seat positions and use the existing `integrated` built-in
+foot geometry, including the existing de-duplication behavior for small
+footprints. It MUST fuse four downward solid feet from Z=-3 mm to Z=0 mm, MUST
+NOT generate insertable socket holes, and MUST NOT generate the full box-to-box
+stacking guide. In `stackable` mode, the result MUST preserve the existing
+normal box-to-box bottom stacking geometry and MUST NOT generate the four
+integrated feet. The two interface modes MUST NOT be combined.
 
 #### Scenario: Four-corner interface selection
 
 - **WHEN** the user selects `四角固定座`
 - **THEN** exactly that radio option MUST be selected
-- **AND** the generated result MUST contain the four-corner locating interface
+- **AND** the generated result MUST contain four downward built-in locating feet
+- **AND** the generated result MUST NOT require a separate foot inserted from below
 - **AND** the full stacking guide MUST be absent
 
 #### Scenario: Stacking interface selection
@@ -182,7 +185,7 @@ four-corner locating seats. The two interface modes MUST NOT be combined.
 - **THEN** exactly that radio option MUST be selected
 - **AND** the generated result MUST contain the normal box-to-box stacking
   interface
-- **AND** the four-corner locating interface MUST be absent
+- **AND** the four-corner built-in feet MUST be absent
 
 #### Scenario: Interface modes remain exclusive
 
