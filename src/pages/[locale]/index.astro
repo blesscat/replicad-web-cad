@@ -1,7 +1,7 @@
 ---
 import SiteLayout from '../../layouts/SiteLayout.astro'
 import { SUPPORTED_LOCALES, isLocale, translate, type Locale } from '../../i18n'
-import { publicPathFor } from '../../i18n/routes'
+import { localizedCadPathFor, publicPathFor } from '../../i18n/routes'
 
 export function getStaticPaths() {
   return SUPPORTED_LOCALES.map((locale) => ({
@@ -13,51 +13,355 @@ export function getStaticPaths() {
 const locale = Astro.props.locale as Locale
 if (!isLocale(locale)) throw new Error(`UNSUPPORTED_LOCALE:${locale}`)
 const t = (key: string) => translate(locale, key)
+const deskBoardPath = localizedCadPathFor(locale, 'opengrid', 'desk')
+const wallBoardPath = localizedCadPathFor(locale, 'opengrid', 'wall')
+const hswCellPath = localizedCadPathFor(locale, 'hsw-cell')
+const modelsPath = publicPathFor(locale, 'models')
+const docsPath = publicPathFor(locale, 'docs')
+const deskFlowPath = `/docs/desk-system/desk-system-flow.${locale}.svg`
+
+const primaryCtaClass =
+  'inline-flex items-center justify-center rounded-lg bg-primary px-4 py-3 font-semibold text-white no-underline shadow-sm transition-colors hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus'
+const secondaryCtaClass =
+  'inline-flex items-center justify-center rounded-lg border border-border-card bg-panel px-4 py-3 font-semibold text-ink no-underline shadow-sm transition-colors hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus'
+const inlineLinkClass =
+  'font-semibold text-ink underline decoration-border-card underline-offset-4 hover:decoration-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus'
 ---
 
 <SiteLayout
   {locale}
-  title={t('home.title')}
+  title={t('home.metaTitle')}
   description={t('home.description')}
 >
-  <section
-    class="rounded-2xl border border-border-card bg-panel p-5 shadow-card"
-    aria-labelledby="home-title"
-  >
-    <p class="mb-4 text-muted">{t('home.eyebrow')}</p>
-    <h1 class="mb-4 text-4xl font-semibold leading-tight" id="home-title">
-      {t('home.title')}
-    </h1>
-    <p class="mb-4 leading-normal">{t('home.description')}</p>
-    <div class="mt-8 grid gap-4 sm:grid-cols-3" aria-label={t('home.features')}>
-      <article class="rounded-xl border border-border-card bg-page p-4">
-        <h2 class="mb-2 text-xl font-semibold leading-tight">
-          {t('home.feature.browser.title')}
-        </h2>
-        <p class="m-0 text-muted">{t('home.feature.browser.description')}</p>
-      </article>
-      <article class="rounded-xl border border-border-card bg-page p-4">
-        <h2 class="mb-2 text-xl font-semibold leading-tight">
-          {t('home.feature.parameters.title')}
-        </h2>
-        <p class="m-0 text-muted">
-          {t('home.feature.parameters.description')}
+  <div class="grid gap-16">
+    <section
+      class="grid items-center gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-12"
+      aria-labelledby="home-title"
+      data-testid="home-hero"
+    >
+      <div class="grid gap-5">
+        <p class="m-0 font-semibold uppercase tracking-[0.12em] text-primary">
+          {t('home.eyebrow')}
         </p>
-      </article>
-      <article class="rounded-xl border border-border-card bg-page p-4">
-        <h2 class="mb-2 text-xl font-semibold leading-tight">
-          {t('home.feature.export.title')}
+        <h1
+          class="m-0 max-w-2xl text-4xl font-semibold leading-tight sm:text-5xl"
+          id="home-title"
+        >
+          {t('home.title')}
+        </h1>
+        <p class="m-0 max-w-2xl text-lg leading-relaxed text-muted">
+          {t('home.description')}
+        </p>
+        <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <a class={primaryCtaClass} href={deskBoardPath}>
+            {t('home.primaryCta')}
+          </a>
+          <a class={secondaryCtaClass} href={modelsPath}>
+            {t('home.secondaryCta')}
+          </a>
+        </div>
+        <p class="m-0 text-sm leading-normal text-muted">
+          <a class={inlineLinkClass} href={docsPath}>{t('home.docsCta')}</a>
+          <span aria-hidden="true"> · </span>{t('home.heroNote')}
+        </p>
+      </div>
+
+      <figure class="m-0 grid gap-3" data-testid="home-hero-visual">
+        <div
+          class="grid gap-3 sm:grid-cols-[minmax(0,1.35fr)_minmax(8rem,0.65fr)]"
+        >
+          <img
+            class="aspect-[16/10] h-full w-full rounded-2xl border border-border-card bg-viewport object-cover shadow-card"
+            src="/model-previews/opengrid-desk.png"
+            width="640"
+            height="400"
+            loading="eager"
+            alt={t('home.heroVisual.boardAlt')}
+          />
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-1">
+            <img
+              class="aspect-[16/10] w-full rounded-xl border border-border-card bg-viewport object-cover"
+              src="/model-previews/opengrid-stackable-box-desk.png"
+              width="640"
+              height="400"
+              loading="lazy"
+              alt={t('home.heroVisual.boxAlt')}
+            />
+            <img
+              class="aspect-[16/10] w-full rounded-xl border border-border-card bg-viewport object-cover"
+              src="/model-previews/opengrid-stackable-cylinder-desk.png"
+              width="640"
+              height="400"
+              loading="lazy"
+              alt={t('home.heroVisual.roundBoxAlt')}
+            />
+          </div>
+        </div>
+        <figcaption class="text-sm leading-normal text-muted">
+          {t('home.heroVisual.caption')}
+        </figcaption>
+      </figure>
+    </section>
+
+    <section
+      class="grid gap-6 border-y border-border-card py-8"
+      aria-labelledby="home-capabilities-title"
+      data-testid="home-capabilities"
+    >
+      <header class="grid gap-2">
+        <p
+          class="m-0 text-sm font-semibold uppercase tracking-[0.12em] text-muted"
+        >
+          {t('home.features')}
+        </p>
+        <h2
+          class="m-0 text-3xl font-semibold leading-tight"
+          id="home-capabilities-title"
+        >
+          {t('home.capabilities.title')}
         </h2>
-        <p class="m-0 text-muted">{t('home.feature.export.description')}</p>
-      </article>
-    </div>
-    <p class="mb-0 mt-8">
-      <a
-        class="inline-flex rounded-lg border border-border-card bg-panel px-4 py-3 font-semibold text-ink no-underline shadow-sm hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-        href={publicPathFor(locale, 'models')}
+      </header>
+      <div
+        class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        aria-label={t('home.features')}
       >
-        {t('home.chooseModel')}
-      </a>
-    </p>
-  </section>
+        <article
+          class="grid gap-2 rounded-xl border border-border-card bg-panel p-4 shadow-sm"
+        >
+          <h3 class="m-0 text-lg font-semibold leading-tight">
+            {t('home.feature.browser.title')}
+          </h3>
+          <p class="m-0 text-sm leading-normal text-muted">
+            {t('home.feature.browser.description')}
+          </p>
+        </article>
+        <article
+          class="grid gap-2 rounded-xl border border-border-card bg-panel p-4 shadow-sm"
+        >
+          <h3 class="m-0 text-lg font-semibold leading-tight">
+            {t('home.feature.parameters.title')}
+          </h3>
+          <p class="m-0 text-sm leading-normal text-muted">
+            {t('home.feature.parameters.description')}
+          </p>
+        </article>
+        <article
+          class="grid gap-2 rounded-xl border border-border-card bg-panel p-4 shadow-sm"
+        >
+          <h3 class="m-0 text-lg font-semibold leading-tight">
+            {t('home.feature.preview.title')}
+          </h3>
+          <p class="m-0 text-sm leading-normal text-muted">
+            {t('home.feature.preview.description')}
+          </p>
+        </article>
+        <article
+          class="grid gap-2 rounded-xl border border-border-card bg-panel p-4 shadow-sm"
+        >
+          <h3 class="m-0 text-lg font-semibold leading-tight">
+            {t('home.feature.export.title')}
+          </h3>
+          <p class="m-0 text-sm leading-normal text-muted">
+            {t('home.feature.export.description')}
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section
+      class="grid gap-8 rounded-2xl border border-border-card bg-panel p-5 shadow-card sm:p-8"
+      aria-labelledby="home-desk-title"
+      data-testid="home-desk-system"
+    >
+      <header class="grid gap-3">
+        <p
+          class="m-0 text-sm font-semibold uppercase tracking-[0.12em] text-primary"
+        >
+          {t('home.desk.eyebrow')}
+        </p>
+        <h2
+          class="m-0 text-3xl font-semibold leading-tight"
+          id="home-desk-title"
+        >
+          {t('home.desk.title')}
+        </h2>
+        <p class="m-0 max-w-3xl leading-relaxed text-muted">
+          {t('home.desk.description')}
+        </p>
+      </header>
+
+      <div
+        class="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)] lg:items-start"
+      >
+        <figure class="m-0 grid gap-3">
+          <img
+            class="w-full rounded-xl border border-border-card bg-viewport"
+            src={deskFlowPath}
+            width="1400"
+            height="820"
+            loading="lazy"
+            alt={t('home.desk.flowAlt')}
+          />
+          <figcaption class="text-sm leading-normal text-muted">
+            {t('home.desk.flowCaption')}
+          </figcaption>
+        </figure>
+
+        <div class="grid gap-5">
+          <ol class="m-0 grid gap-4 p-0">
+            <li class="flex gap-3">
+              <span
+                class="grid size-8 shrink-0 place-items-center rounded-full bg-primary font-semibold text-white"
+                >1</span
+              >
+              <div class="grid gap-1">
+                <h3 class="m-0 font-semibold">
+                  {t('home.desk.step.board.title')}
+                </h3>
+                <p class="m-0 text-sm leading-normal text-muted">
+                  {t('home.desk.step.board.description')}
+                </p>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span
+                class="grid size-8 shrink-0 place-items-center rounded-full bg-[#0d9488] font-semibold text-white"
+                >2</span
+              >
+              <div class="grid gap-1">
+                <h3 class="m-0 font-semibold">
+                  {t('home.desk.step.snap.title')}
+                </h3>
+                <p class="m-0 text-sm leading-normal text-muted">
+                  {t('home.desk.step.snap.description')}
+                </p>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span
+                class="grid size-8 shrink-0 place-items-center rounded-full bg-[#f59e0b] font-semibold text-white"
+                >3</span
+              >
+              <div class="grid gap-1">
+                <h3 class="m-0 font-semibold">
+                  {t('home.desk.step.locating.title')}
+                </h3>
+                <p class="m-0 text-sm leading-normal text-muted">
+                  {t('home.desk.step.locating.description')}
+                </p>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span
+                class="grid size-8 shrink-0 place-items-center rounded-full bg-[#7c3aed] font-semibold text-white"
+                >4</span
+              >
+              <div class="grid gap-1">
+                <h3 class="m-0 font-semibold">
+                  {t('home.desk.step.container.title')}
+                </h3>
+                <p class="m-0 text-sm leading-normal text-muted">
+                  {t('home.desk.step.container.description')}
+                </p>
+              </div>
+            </li>
+          </ol>
+          <a class={secondaryCtaClass} href={docsPath}
+            >{t('home.desk.docsCta')}</a
+          >
+        </div>
+      </div>
+    </section>
+
+    <section
+      class="grid gap-6"
+      aria-labelledby="home-explore-title"
+      data-testid="home-explore"
+    >
+      <header class="grid gap-2">
+        <p
+          class="m-0 text-sm font-semibold uppercase tracking-[0.12em] text-muted"
+        >
+          {t('home.explore.eyebrow')}
+        </p>
+        <h2
+          class="m-0 text-3xl font-semibold leading-tight"
+          id="home-explore-title"
+        >
+          {t('home.explore.title')}
+        </h2>
+      </header>
+      <div class="grid gap-6 md:grid-cols-2">
+        <article
+          class="grid gap-4 rounded-2xl border border-border-card bg-panel p-4 shadow-sm sm:grid-cols-[minmax(9rem,0.85fr)_minmax(0,1.15fr)] sm:items-center"
+        >
+          <img
+            class="aspect-[16/10] w-full rounded-xl border border-border-card bg-viewport object-cover"
+            src="/model-previews/opengrid-wall.png"
+            width="640"
+            height="400"
+            loading="lazy"
+            alt={t('home.explore.wall.alt')}
+          />
+          <div class="grid gap-2">
+            <h3 class="m-0 text-xl font-semibold leading-tight">
+              {t('home.explore.wall.title')}
+            </h3>
+            <p class="m-0 text-sm leading-normal text-muted">
+              {t('home.explore.wall.description')}
+            </p>
+            <a class={inlineLinkClass} href={wallBoardPath}
+              >{t('home.explore.wall.cta')}</a
+            >
+          </div>
+        </article>
+        <article
+          class="grid gap-4 rounded-2xl border border-border-card bg-panel p-4 shadow-sm sm:grid-cols-[minmax(9rem,0.85fr)_minmax(0,1.15fr)] sm:items-center"
+        >
+          <img
+            class="aspect-[16/10] w-full rounded-xl border border-border-card bg-viewport object-cover"
+            src="/model-previews/hsw-cell.png"
+            width="640"
+            height="400"
+            loading="lazy"
+            alt={t('home.explore.hsw.alt')}
+          />
+          <div class="grid gap-2">
+            <h3 class="m-0 text-xl font-semibold leading-tight">
+              {t('home.explore.hsw.title')}
+            </h3>
+            <p class="m-0 text-sm leading-normal text-muted">
+              {t('home.explore.hsw.description')}
+            </p>
+            <a class={inlineLinkClass} href={hswCellPath}
+              >{t('home.explore.hsw.cta')}</a
+            >
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section
+      class="grid gap-4 rounded-2xl bg-nav p-6 text-nav-foreground shadow-card sm:p-8"
+      aria-labelledby="home-final-title"
+    >
+      <h2
+        class="m-0 text-3xl font-semibold leading-tight"
+        id="home-final-title"
+      >
+        {t('home.final.title')}
+      </h2>
+      <p class="m-0 max-w-2xl leading-relaxed text-white/75">
+        {t('home.final.description')}
+      </p>
+      <p class="m-0">
+        <a
+          class="inline-flex items-center justify-center rounded-lg bg-white px-4 py-3 font-semibold text-ink no-underline shadow-sm transition-colors hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          href={modelsPath}
+        >
+          {t('home.final.cta')}
+        </a>
+      </p>
+    </section>
+  </div>
 </SiteLayout>

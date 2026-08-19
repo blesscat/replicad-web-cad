@@ -7,21 +7,69 @@ export const zhHantMessages = {
   'navigation.language': '語言',
   'navigation.switchToEnglish': 'English',
   'navigation.switchToZhHant': '繁體中文',
-  'home.eyebrow': 'Browser-only CAD prototype',
-  'home.title': '用瀏覽器建立、調整並匯出 CAD 模型',
+  'home.eyebrow': 'OpenGrid Desk System · 瀏覽器 CAD Prototype',
+  'home.metaTitle': '在瀏覽器裡打造 OpenGrid Desk System | Shape Shortcut',
+  'home.title': '在瀏覽器裡，做出剛好適合你的桌面收納',
   'home.description':
-    '在瀏覽器中建立參數化 CAD 模型，調整 component 專屬設定、查看即時 3D 預覽，並下載由精確 B-Rep 產生的 STEP 或 STL。',
+    '調整 OpenGrid Board、Snap、Grid Box 與 Round Box，查看即時 3D 預覽，再下載可列印或繼續編輯的 STEP／STL 檔案。',
+  'home.primaryCta': '從 Desk System 開始',
+  'home.secondaryCta': '瀏覽所有模型',
+  'home.docsCta': '先看 Desk System 快速入門 →',
+  'home.heroNote': '建模與匯出在瀏覽器完成，不需要安裝桌面 CAD。',
+  'home.heroVisual.boardAlt': 'OpenGrid Desk System Board 底板預覽',
+  'home.heroVisual.boxAlt': 'OpenGrid Desk System Grid Box 方盒預覽',
+  'home.heroVisual.roundBoxAlt': 'OpenGrid Desk System Round Box 圓盒預覽',
+  'home.heroVisual.caption':
+    '用 Board、Snap 與可調整的收納元件，組出自己的 Desk System。',
   'home.features': '產品特色',
+  'home.capabilities.title': '從想法到檔案，流程都在瀏覽器完成',
   'home.feature.browser.title': '瀏覽器內建模',
   'home.feature.browser.description':
-    '不需安裝桌面 CAD 軟體，就能在瀏覽器調整參數並預覽模型。',
-  'home.feature.parameters.title': '參數化控制',
+    '不需安裝桌面 CAD 軟體，就能開始調整與預覽。',
+  'home.feature.parameters.title': '元件專屬參數',
   'home.feature.parameters.description':
-    '每個 component 都有獨立參數、即時驗證與可恢復的設定。',
-  'home.feature.export.title': '精確匯出',
+    '每個元件都有自己的尺寸、模式與即時驗證。',
+  'home.feature.preview.title': '即時 3D 預覽',
+  'home.feature.preview.description':
+    '調整設定後直接檢查形狀，再決定是否下載。',
+  'home.feature.export.title': 'STEP／STL 匯出',
   'home.feature.export.description':
-    '從精確 B-Rep 產生 STEP 與 STL，方便進一步製作或加工。',
-  'home.chooseModel': '開始選擇模型 →',
+    '從精確 B-Rep 產生可供後續製作或加工的檔案。',
+  'home.desk.eyebrow': '主要使用情境',
+  'home.desk.title': '從一塊 Board 開始，組出自己的 Desk System',
+  'home.desk.description':
+    '先準備 Board 與每個盒位的 Snap，再選擇一種定位方式，最後放入 Grid Box 或 Round Box。',
+  'home.desk.flowAlt':
+    'Desk System 流程：Board、Snap、選擇一種定位方式，最後放入 Grid Box 或 Round Box。',
+  'home.desk.flowCaption':
+    'Board → Snap → 選擇一種定位方式 → Grid Box／Round Box。',
+  'home.desk.step.board.title': 'Board',
+  'home.desk.step.board.description':
+    '列印並放在桌面上，螺絲固定不是必要條件。',
+  'home.desk.step.snap.title': 'Snap',
+  'home.desk.step.snap.description':
+    '每個要放盒子的格位，都先準備一個對應的 Snap。',
+  'home.desk.step.locating.title': '選擇一種定位方式',
+  'home.desk.step.locating.description':
+    '使用獨立 Locating Post，或選擇盒子的內建角座，二選一。',
+  'home.desk.step.container.title': 'Grid Box／Round Box',
+  'home.desk.step.container.description': '把完成的容器放入已準備好的格位。',
+  'home.desk.docsCta': '閱讀完整快速入門 →',
+  'home.explore.eyebrow': '繼續探索',
+  'home.explore.title': '同一套瀏覽器 CAD，也能做更多',
+  'home.explore.wall.title': 'OpenGrid Wall',
+  'home.explore.wall.description':
+    '從 Board 與 Snap 開始，設計牆面相關的 OpenGrid 配置。',
+  'home.explore.wall.cta': '探索 Wall Related →',
+  'home.explore.wall.alt': 'OpenGrid Wall Board 底板預覽',
+  'home.explore.hsw.title': 'HSW 六角蜂巢',
+  'home.explore.hsw.description':
+    '調整 rows 與 columns，快速產生適合 HSW 系統的六角蜂巢。',
+  'home.explore.hsw.cta': '建立六角蜂巢 →',
+  'home.explore.hsw.alt': 'HSW 六角蜂巢預覽',
+  'home.final.title': '準備好建立第一個模型了嗎？',
+  'home.final.description': '從 Desk System 開始，或瀏覽目前可用的模型系列。',
+  'home.final.cta': '開始選擇模型 →',
   'models.title': '選擇 CAD 模型',
   'models.description': '選擇要在瀏覽器中調整與匯出的 CAD component。',
   'models.series': 'CAD 模型系列',
@@ -485,21 +533,73 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'navigation.language': 'Language',
   'navigation.switchToEnglish': 'English',
   'navigation.switchToZhHant': '繁體中文',
-  'home.eyebrow': 'Browser-only CAD prototype',
-  'home.title': 'Create, adjust, and export CAD models in your browser',
+  'home.eyebrow': 'OpenGrid Desk System · Browser CAD prototype',
+  'home.metaTitle':
+    'Build an OpenGrid Desk System in your browser | Shape Shortcut',
+  'home.title': 'Build the desk setup that fits you—in your browser',
   'home.description':
-    'Create parametric CAD models in the browser, adjust component-specific settings, inspect a live 3D preview, and download precise B-Rep generated STEP or STL files.',
-  'home.features': 'Product features',
+    'Adjust OpenGrid Boards, Snaps, Grid Boxes, and Round Boxes, inspect a live 3D preview, then download printable or editable STEP/STL files.',
+  'home.primaryCta': 'Start with Desk System',
+  'home.secondaryCta': 'Browse all models',
+  'home.docsCta': 'Read the Desk System quick start →',
+  'home.heroNote':
+    'Modeling and export run in the browser—no desktop CAD install required.',
+  'home.heroVisual.boardAlt': 'OpenGrid Desk System Board preview',
+  'home.heroVisual.boxAlt': 'OpenGrid Desk System Grid Box preview',
+  'home.heroVisual.roundBoxAlt': 'OpenGrid Desk System Round Box preview',
+  'home.heroVisual.caption':
+    'Combine a Board, Snaps, and adjustable containers to build your Desk System.',
+  'home.features': 'Product capabilities',
+  'home.capabilities.title': 'Go from idea to file in the browser',
   'home.feature.browser.title': 'Browser-based modeling',
   'home.feature.browser.description':
-    'Adjust parameters and preview models in the browser without installing desktop CAD software.',
-  'home.feature.parameters.title': 'Parametric controls',
+    'Start adjusting and previewing without installing desktop CAD software.',
+  'home.feature.parameters.title': 'Component-specific parameters',
   'home.feature.parameters.description':
-    'Every component has independent parameters, live validation, and restorable settings.',
-  'home.feature.export.title': 'Precise exports',
+    'Each component has its own dimensions, modes, and live validation.',
+  'home.feature.preview.title': 'Live 3D preview',
+  'home.feature.preview.description':
+    'Inspect the shape as you adjust it before deciding to download.',
+  'home.feature.export.title': 'STEP/STL export',
   'home.feature.export.description':
-    'Generate STEP and STL files from precise B-Rep geometry for further fabrication or processing.',
-  'home.chooseModel': 'Start choosing a model →',
+    'Generate files from precise B-Rep geometry for fabrication or further editing.',
+  'home.desk.eyebrow': 'Featured workflow',
+  'home.desk.title': 'Start with a Board and build your Desk System',
+  'home.desk.description':
+    'Prepare a Board and a Snap for each box position, choose one locating method, then add a Grid Box or Round Box.',
+  'home.desk.flowAlt':
+    'Desk System flow: Board, Snap, choose one locating method, then add a Grid Box or Round Box.',
+  'home.desk.flowCaption':
+    'Board → Snap → choose one locating method → Grid Box/Round Box.',
+  'home.desk.step.board.title': 'Board',
+  'home.desk.step.board.description':
+    'Print and place it on the desk; screw fastening is optional.',
+  'home.desk.step.snap.title': 'Snap',
+  'home.desk.step.snap.description':
+    'Prepare one matching Snap for every box position.',
+  'home.desk.step.locating.title': 'Choose one locating method',
+  'home.desk.step.locating.description':
+    'Use a separate Locating Post or choose the box built-in seat—pick one.',
+  'home.desk.step.container.title': 'Grid Box/Round Box',
+  'home.desk.step.container.description':
+    'Place the finished container into the prepared position.',
+  'home.desk.docsCta': 'Read the full quick start →',
+  'home.explore.eyebrow': 'Explore further',
+  'home.explore.title': 'The same browser CAD supports more workflows',
+  'home.explore.wall.title': 'OpenGrid Wall',
+  'home.explore.wall.description':
+    'Start with a Board and Snap to design a wall-related OpenGrid layout.',
+  'home.explore.wall.cta': 'Explore Wall Related →',
+  'home.explore.wall.alt': 'OpenGrid Wall Board preview',
+  'home.explore.hsw.title': 'HSW Hexagonal Honeycomb',
+  'home.explore.hsw.description':
+    'Adjust rows and columns to generate a honeycomb component for HSW systems.',
+  'home.explore.hsw.cta': 'Build a honeycomb →',
+  'home.explore.hsw.alt': 'HSW hexagonal honeycomb preview',
+  'home.final.title': 'Ready to create your first model?',
+  'home.final.description':
+    'Start with Desk System, or browse the currently available model series.',
+  'home.final.cta': 'Start choosing a model →',
   'models.title': 'Choose a CAD model',
   'models.description':
     'Choose a CAD component to adjust and export in the browser.',
