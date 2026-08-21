@@ -7,7 +7,7 @@ const SOURCE_REVISION = '61231295ea08c302eff32051769113c48cbda255'
 const OPENGRID_SOURCE_URL = `https://github.com/AndyLevesque/QuackWorks/blob/${SOURCE_REVISION}/openGrid/openGrid.scad`
 const SNAP_SOURCE_URL = `https://github.com/AndyLevesque/QuackWorks/blob/${SOURCE_REVISION}/openGrid/opengrid-snap.scad`
 const DAVID_D_PROFILE_URL = 'https://www.printables.com/@DavidD'
-const BLACKJACK_DUCK_PROFILE_URL = 'https://makerworld.com/en/@BlackjackDuck'
+const BLACKJACK_DUCK_SOURCE_URL = 'https://github.com/AndyLevesque/QuackWorks'
 
 const attributionCases = [
   {
@@ -18,7 +18,7 @@ const attributionCases = [
     creditsText: '上游作者：',
     authors: [
       { name: 'David D', url: DAVID_D_PROFILE_URL },
-      { name: 'BlackjackDuck (Andy)', url: BLACKJACK_DUCK_PROFILE_URL },
+      { name: 'BlackjackDuck (Andy)', url: BLACKJACK_DUCK_SOURCE_URL },
     ],
     sourceLinkText: '查看固定版本的上游來源',
     sourceCodeLicenseText: '上游程式碼：CC BY-NC-SA 4.0',
@@ -33,7 +33,7 @@ const attributionCases = [
     creditsText: 'Upstream authors:',
     authors: [
       { name: 'David D', url: DAVID_D_PROFILE_URL },
-      { name: 'BlackjackDuck (Andy)', url: BLACKJACK_DUCK_PROFILE_URL },
+      { name: 'BlackjackDuck (Andy)', url: BLACKJACK_DUCK_SOURCE_URL },
     ],
     sourceLinkText: 'View the pinned upstream source',
     sourceCodeLicenseText: 'Upstream source code: CC BY-NC-SA 4.0',
