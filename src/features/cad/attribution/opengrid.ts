@@ -7,7 +7,7 @@ export const OPENGRID_DERIVED_PARTS_LICENSE_URL =
 export const OPENGRID_DESIGNER_PROFILE_URL =
   'https://www.printables.com/@DavidD'
 export const OPENGRID_OPENSCAD_AUTHOR_PROFILE_URL =
-  'https://github.com/AndyLevesque'
+  'https://makerworld.com/en/@BlackjackDuck'
 export const OPENGRID_SNAP_OPENSCAD_AUTHOR_PROFILE_URL =
   'https://www.printables.com/@metasyntactic'
 
