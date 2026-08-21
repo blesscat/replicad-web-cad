@@ -5,7 +5,7 @@ const SOURCE_CODE_LICENSE_URL =
 const DERIVED_PARTS_LICENSE_URL = 'https://creativecommons.org/licenses/by/4.0/'
 const DAVID_D_PROFILE_URL = 'https://www.printables.com/@DavidD'
 const ANDY_PROFILE_URL = 'https://github.com/AndyLevesque'
-const METASYNTACTIC_PROFILE_URL = 'https://github.com/metasyntactic'
+const METASYNTACTIC_PROFILE_URL = 'https://www.printables.com/@metasyntactic'
 
 const attributionCases = [
   {

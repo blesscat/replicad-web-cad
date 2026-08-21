@@ -9,7 +9,7 @@ export const OPENGRID_DESIGNER_PROFILE_URL =
 export const OPENGRID_OPENSCAD_AUTHOR_PROFILE_URL =
   'https://github.com/AndyLevesque'
 export const OPENGRID_SNAP_OPENSCAD_AUTHOR_PROFILE_URL =
-  'https://github.com/metasyntactic'
+  'https://www.printables.com/@metasyntactic'
 
 export type OpenGridAttributionAuthor = {
   label: string
