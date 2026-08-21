@@ -189,12 +189,12 @@ export const zhHantMessages = {
   'cad.attribution.heading': '來源與授權',
   'cad.attribution.opengrid.summary':
     '這個 OpenGrid Board 使用下列固定版本的上游來源與授權資訊。',
-  'cad.attribution.opengrid.credits':
-    '上游歸屬：設計 David D；OpenSCAD BlackjackDuck（Andy）。',
+  'cad.attribution.opengrid.credits': '上游作者：',
   'cad.attribution.snap.summary':
     '這個 OpenGrid Snap generator 使用下列固定版本的上游來源與授權資訊。',
-  'cad.attribution.snap.credits':
-    '上游歸屬：設計 David D；OpenSCAD metasyntactic。',
+  'cad.attribution.snap.credits': '上游作者：',
+  'cad.attribution.author.designRole': '設計',
+  'cad.attribution.author.openScadRole': 'OpenSCAD',
   'cad.attribution.snap.modified':
     '`snap-half` 與 `snap-quarter` 是根據原始 Snap 修改的衍生版本，固定下載檔名為 `Half.step` 與 `Quarter.step`。',
   'cad.attribution.sourceLabel': '上游來源',
@@ -692,12 +692,12 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'cad.attribution.heading': 'Source and licensing',
   'cad.attribution.opengrid.summary':
     'This OpenGrid Board uses the pinned upstream source and licensing information below.',
-  'cad.attribution.opengrid.credits':
-    'Upstream attribution: design by David D; OpenSCAD by BlackjackDuck (Andy).',
+  'cad.attribution.opengrid.credits': 'Upstream authors:',
   'cad.attribution.snap.summary':
     'This OpenGrid Snap generator uses the pinned upstream source and licensing information below.',
-  'cad.attribution.snap.credits':
-    'Upstream attribution: design by David D; OpenSCAD by metasyntactic.',
+  'cad.attribution.snap.credits': 'Upstream authors:',
+  'cad.attribution.author.designRole': 'design',
+  'cad.attribution.author.openScadRole': 'OpenSCAD',
   'cad.attribution.snap.modified':
     '`snap-half` and `snap-quarter` are modified derivatives of the original Snap design; the fixed download filenames are `Half.step` and `Quarter.step`.',
   'cad.attribution.sourceLabel': 'Upstream source',

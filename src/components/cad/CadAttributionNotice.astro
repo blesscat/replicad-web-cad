@@ -4,6 +4,7 @@ import {
   OPENGRID_SOURCE_CODE_LICENSE_URL,
   type OpenGridAttribution,
 } from '../../features/cad/attribution/opengrid'
+import CadAttributionAuthor from './CadAttributionAuthor.astro'
 import { translate, type Locale } from '../../i18n'
 
 interface Props {
@@ -29,6 +30,19 @@ const t = (key: string, values?: Record<string, string | number | boolean>) =>
   </h2>
   <p class="m-0 leading-normal">{t(attribution.summaryKey)}</p>
   <p class="m-0 leading-normal">{t(attribution.creditsKey)}</p>
+  <ul class="m-0 flex list-none flex-wrap gap-x-3 gap-y-1 p-0 leading-normal">
+    {
+      attribution.authors.map((author) => (
+        <li>
+          <CadAttributionAuthor
+            label={author.label}
+            role={t(author.roleKey)}
+            url={author.url}
+          />
+        </li>
+      ))
+    }
+  </ul>
   {
     attribution.modificationKey && (
       <p class="m-0 leading-normal">{t(attribution.modificationKey)}</p>

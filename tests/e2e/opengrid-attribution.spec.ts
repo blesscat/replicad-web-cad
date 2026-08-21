@@ -6,6 +6,8 @@ const DERIVED_PARTS_LICENSE_URL = 'https://creativecommons.org/licenses/by/4.0/'
 const SOURCE_REVISION = '61231295ea08c302eff32051769113c48cbda255'
 const OPENGRID_SOURCE_URL = `https://github.com/AndyLevesque/QuackWorks/blob/${SOURCE_REVISION}/openGrid/openGrid.scad`
 const SNAP_SOURCE_URL = `https://github.com/AndyLevesque/QuackWorks/blob/${SOURCE_REVISION}/openGrid/opengrid-snap.scad`
+const DAVID_D_PROFILE_URL = 'https://www.printables.com/@DavidD'
+const BLACKJACK_DUCK_PROFILE_URL = 'https://makerworld.com/en/@BlackjackDuck'
 
 const attributionCases = [
   {
@@ -13,7 +15,11 @@ const attributionCases = [
     heading: '來源與授權',
     revision: `版本 commit ${SOURCE_REVISION}`,
     sourceUrl: OPENGRID_SOURCE_URL,
-    creditsText: '上游歸屬：設計 David D；OpenSCAD BlackjackDuck（Andy）。',
+    creditsText: '上游作者：',
+    authors: [
+      { name: 'David D', url: DAVID_D_PROFILE_URL },
+      { name: 'BlackjackDuck (Andy)', url: BLACKJACK_DUCK_PROFILE_URL },
+    ],
     sourceLinkText: '查看固定版本的上游來源',
     sourceCodeLicenseText: '上游程式碼：CC BY-NC-SA 4.0',
     derivedPartsLicenseText: '衍生／產生零件：CC BY 4.0',
@@ -24,8 +30,11 @@ const attributionCases = [
     heading: 'Source and licensing',
     revision: `(commit ${SOURCE_REVISION})`,
     sourceUrl: OPENGRID_SOURCE_URL,
-    creditsText:
-      'Upstream attribution: design by David D; OpenSCAD by BlackjackDuck (Andy).',
+    creditsText: 'Upstream authors:',
+    authors: [
+      { name: 'David D', url: DAVID_D_PROFILE_URL },
+      { name: 'BlackjackDuck (Andy)', url: BLACKJACK_DUCK_PROFILE_URL },
+    ],
     sourceLinkText: 'View the pinned upstream source',
     sourceCodeLicenseText: 'Upstream source code: CC BY-NC-SA 4.0',
     derivedPartsLicenseText: 'Derived/generated parts: CC BY 4.0',
@@ -36,7 +45,9 @@ const attributionCases = [
     heading: '來源與授權',
     revision: `版本 commit ${SOURCE_REVISION}`,
     sourceUrl: SNAP_SOURCE_URL,
-    creditsText: '上游歸屬：設計 David D；OpenSCAD metasyntactic。',
+    creditsText: '上游作者：',
+    authors: [{ name: 'David D', url: DAVID_D_PROFILE_URL }],
+    unlinkedAuthorText: 'metasyntactic',
     sourceLinkText: '查看固定版本的上游來源',
     sourceCodeLicenseText: '上游程式碼：CC BY-NC-SA 4.0',
     derivedPartsLicenseText: '衍生／產生零件：CC BY 4.0',
@@ -47,8 +58,9 @@ const attributionCases = [
     heading: 'Source and licensing',
     revision: `(commit ${SOURCE_REVISION})`,
     sourceUrl: SNAP_SOURCE_URL,
-    creditsText:
-      'Upstream attribution: design by David D; OpenSCAD by metasyntactic.',
+    creditsText: 'Upstream authors:',
+    authors: [{ name: 'David D', url: DAVID_D_PROFILE_URL }],
+    unlinkedAuthorText: 'metasyntactic',
     sourceLinkText: 'View the pinned upstream source',
     sourceCodeLicenseText: 'Upstream source code: CC BY-NC-SA 4.0',
     derivedPartsLicenseText: 'Derived/generated parts: CC BY 4.0',
@@ -69,6 +81,14 @@ for (const attributionCase of attributionCases) {
     )
     await expect(notice).toContainText(attributionCase.revision)
     await expect(notice).toContainText(attributionCase.creditsText)
+    for (const author of attributionCase.authors) {
+      await expect(
+        notice.getByRole('link', { name: author.name }),
+      ).toHaveAttribute('href', author.url)
+    }
+    if ('unlinkedAuthorText' in attributionCase) {
+      await expect(notice).toContainText(attributionCase.unlinkedAuthorText)
+    }
     await expect(
       notice.getByRole('link', { name: attributionCase.sourceLinkText }),
     ).toHaveAttribute('href', attributionCase.sourceUrl)
