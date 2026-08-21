@@ -5,7 +5,6 @@ const SOURCE_CODE_LICENSE_URL =
 const DERIVED_PARTS_LICENSE_URL = 'https://creativecommons.org/licenses/by/4.0/'
 const DAVID_D_PROFILE_URL = 'https://www.printables.com/@DavidD'
 const ANDY_PROFILE_URL = 'https://makerworld.com/en/@BlackjackDuck'
-const METASYNTACTIC_PROFILE_URL = 'https://www.printables.com/@metasyntactic'
 
 const attributionCases = [
   {
@@ -38,10 +37,8 @@ const attributionCases = [
     path: '/zh-Hant/cad/opengrid-snap',
     heading: '來源與授權',
     creditsText: '上游作者：',
-    authors: [
-      { name: 'David D', url: DAVID_D_PROFILE_URL },
-      { name: 'metasyntactic', url: METASYNTACTIC_PROFILE_URL },
-    ],
+    authors: [{ name: 'David D', url: DAVID_D_PROFILE_URL }],
+    unlinkedAuthorText: 'metasyntactic',
     removedSourceLinkText: '查看固定版本的上游來源',
     sourceCodeLicenseText: '上游程式碼：CC BY-NC-SA 4.0',
     derivedPartsLicenseText: '衍生／產生零件：CC BY 4.0',
@@ -51,10 +48,8 @@ const attributionCases = [
     path: '/en/cad/opengrid-snap',
     heading: 'Source and licensing',
     creditsText: 'Upstream authors:',
-    authors: [
-      { name: 'David D', url: DAVID_D_PROFILE_URL },
-      { name: 'metasyntactic', url: METASYNTACTIC_PROFILE_URL },
-    ],
+    authors: [{ name: 'David D', url: DAVID_D_PROFILE_URL }],
+    unlinkedAuthorText: 'metasyntactic',
     removedSourceLinkText: 'View the pinned upstream source',
     sourceCodeLicenseText: 'Upstream source code: CC BY-NC-SA 4.0',
     derivedPartsLicenseText: 'Derived/generated parts: CC BY 4.0',
@@ -94,6 +89,12 @@ for (const attributionCase of attributionCases) {
       await expect(
         notice.getByRole('link', { name: author.name }),
       ).toHaveAttribute('href', author.url)
+    }
+    if ('unlinkedAuthorText' in attributionCase) {
+      await expect(notice).toContainText(attributionCase.unlinkedAuthorText)
+      await expect(
+        notice.getByRole('link', { name: attributionCase.unlinkedAuthorText }),
+      ).toHaveCount(0)
     }
     await expect(
       notice.getByRole('link', {

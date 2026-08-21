@@ -8,8 +8,6 @@ export const OPENGRID_DESIGNER_PROFILE_URL =
   'https://www.printables.com/@DavidD'
 export const OPENGRID_OPENSCAD_AUTHOR_PROFILE_URL =
   'https://makerworld.com/en/@BlackjackDuck'
-export const OPENGRID_SNAP_OPENSCAD_AUTHOR_PROFILE_URL =
-  'https://www.printables.com/@metasyntactic'
 
 export type OpenGridAttributionAuthor = {
   label: string
@@ -51,7 +49,6 @@ const OPENGRID_ATTRIBUTION_BY_MODEL_ID = {
       {
         label: 'metasyntactic',
         roleKey: 'cad.attribution.author.openScadRole',
-        url: OPENGRID_SNAP_OPENSCAD_AUTHOR_PROFILE_URL,
       },
     ],
     modificationKey: 'cad.attribution.snap.modified',
