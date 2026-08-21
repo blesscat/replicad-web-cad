@@ -7,7 +7,6 @@ const SOURCE_REVISION = '61231295ea08c302eff32051769113c48cbda255'
 const OPENGRID_SOURCE_URL = `https://github.com/AndyLevesque/QuackWorks/blob/${SOURCE_REVISION}/openGrid/openGrid.scad`
 const SNAP_SOURCE_URL = `https://github.com/AndyLevesque/QuackWorks/blob/${SOURCE_REVISION}/openGrid/opengrid-snap.scad`
 const DAVID_D_PROFILE_URL = 'https://www.printables.com/@DavidD'
-const BLACKJACK_DUCK_SOURCE_URL = 'https://github.com/AndyLevesque/QuackWorks'
 
 const attributionCases = [
   {
@@ -16,10 +15,8 @@ const attributionCases = [
     revision: `版本 commit ${SOURCE_REVISION}`,
     sourceUrl: OPENGRID_SOURCE_URL,
     creditsText: '上游作者：',
-    authors: [
-      { name: 'David D', url: DAVID_D_PROFILE_URL },
-      { name: 'BlackjackDuck (Andy)', url: BLACKJACK_DUCK_SOURCE_URL },
-    ],
+    authors: [{ name: 'David D', url: DAVID_D_PROFILE_URL }],
+    unlinkedAuthorText: 'BlackjackDuck (Andy)',
     sourceLinkText: '查看固定版本的上游來源',
     sourceCodeLicenseText: '上游程式碼：CC BY-NC-SA 4.0',
     derivedPartsLicenseText: '衍生／產生零件：CC BY 4.0',
@@ -31,10 +28,8 @@ const attributionCases = [
     revision: `(commit ${SOURCE_REVISION})`,
     sourceUrl: OPENGRID_SOURCE_URL,
     creditsText: 'Upstream authors:',
-    authors: [
-      { name: 'David D', url: DAVID_D_PROFILE_URL },
-      { name: 'BlackjackDuck (Andy)', url: BLACKJACK_DUCK_SOURCE_URL },
-    ],
+    authors: [{ name: 'David D', url: DAVID_D_PROFILE_URL }],
+    unlinkedAuthorText: 'BlackjackDuck (Andy)',
     sourceLinkText: 'View the pinned upstream source',
     sourceCodeLicenseText: 'Upstream source code: CC BY-NC-SA 4.0',
     derivedPartsLicenseText: 'Derived/generated parts: CC BY 4.0',
@@ -88,6 +83,9 @@ for (const attributionCase of attributionCases) {
     }
     if ('unlinkedAuthorText' in attributionCase) {
       await expect(notice).toContainText(attributionCase.unlinkedAuthorText)
+      await expect(
+        notice.getByRole('link', { name: attributionCase.unlinkedAuthorText }),
+      ).toHaveCount(0)
     }
     await expect(
       notice.getByRole('link', { name: attributionCase.sourceLinkText }),

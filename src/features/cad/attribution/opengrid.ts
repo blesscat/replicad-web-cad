@@ -8,8 +8,6 @@ export const OPENGRID_DERIVED_PARTS_LICENSE_URL =
   'https://creativecommons.org/licenses/by/4.0/'
 export const OPENGRID_DESIGNER_PROFILE_URL =
   'https://www.printables.com/@DavidD'
-export const OPENGRID_OPENSCAD_AUTHOR_SOURCE_URL =
-  'https://github.com/AndyLevesque/QuackWorks'
 
 export type OpenGridAttributionAuthor = {
   label: string
@@ -43,7 +41,6 @@ const OPENGRID_ATTRIBUTION_BY_MODEL_ID = {
       {
         label: 'BlackjackDuck (Andy)',
         roleKey: 'cad.attribution.author.openScadRole',
-        url: OPENGRID_OPENSCAD_AUTHOR_SOURCE_URL,
       },
     ],
   },
