@@ -186,6 +186,25 @@ export const zhHantMessages = {
   'cad.parametersHeading': '可調參數與限制',
   'cad.fixedParameters': '這個模型使用固定幾何，沒有可調參數。',
   'cad.exportFormats': '可用匯出格式：STEP 與 STL。',
+  'cad.attribution.heading': '來源與授權',
+  'cad.attribution.opengrid.summary':
+    '這個 OpenGrid Board 使用下列固定版本的上游來源與授權資訊。',
+  'cad.attribution.opengrid.credits':
+    '上游歸屬：設計 David D；OpenSCAD BlackjackDuck（Andy）。',
+  'cad.attribution.snap.summary':
+    '這個 OpenGrid Snap generator 使用下列固定版本的上游來源與授權資訊。',
+  'cad.attribution.snap.credits':
+    '上游歸屬：設計 David D；OpenSCAD metasyntactic。',
+  'cad.attribution.snap.modified':
+    '`snap-half` 與 `snap-quarter` 是根據原始 Snap 修改的衍生版本，固定下載檔名為 `Half.step` 與 `Quarter.step`。',
+  'cad.attribution.sourceLabel': '上游來源',
+  'cad.attribution.sourceLink': '查看固定版本的上游來源',
+  'cad.attribution.revision': '版本 commit {revision}',
+  'cad.attribution.licenseLabel': '授權',
+  'cad.attribution.sourceCodeLicense': '上游程式碼：CC BY-NC-SA 4.0',
+  'cad.attribution.derivedPartsLicense': '衍生／產生零件：CC BY 4.0',
+  'cad.attribution.note':
+    '以上資訊說明上游來源與衍生零件的授權，不代表 Shape Shortcut 對上游程式碼或其他模型取得額外權利。',
   'cad.loading': '正在載入 {name} CAD workspace',
   'cad.requirements':
     '需要 JavaScript、WebAssembly、Web Worker 與 WebGL 才能顯示互動式預覽。',
@@ -670,6 +689,25 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'cad.fixedParameters':
     'This model uses fixed geometry and has no adjustable parameters.',
   'cad.exportFormats': 'Available export formats: STEP and STL.',
+  'cad.attribution.heading': 'Source and licensing',
+  'cad.attribution.opengrid.summary':
+    'This OpenGrid Board uses the pinned upstream source and licensing information below.',
+  'cad.attribution.opengrid.credits':
+    'Upstream attribution: design by David D; OpenSCAD by BlackjackDuck (Andy).',
+  'cad.attribution.snap.summary':
+    'This OpenGrid Snap generator uses the pinned upstream source and licensing information below.',
+  'cad.attribution.snap.credits':
+    'Upstream attribution: design by David D; OpenSCAD by metasyntactic.',
+  'cad.attribution.snap.modified':
+    '`snap-half` and `snap-quarter` are modified derivatives of the original Snap design; the fixed download filenames are `Half.step` and `Quarter.step`.',
+  'cad.attribution.sourceLabel': 'Upstream source',
+  'cad.attribution.sourceLink': 'View the pinned upstream source',
+  'cad.attribution.revision': '(commit {revision})',
+  'cad.attribution.licenseLabel': 'Licenses',
+  'cad.attribution.sourceCodeLicense': 'Upstream source code: CC BY-NC-SA 4.0',
+  'cad.attribution.derivedPartsLicense': 'Derived/generated parts: CC BY 4.0',
+  'cad.attribution.note':
+    'This information documents the upstream source and derived-part licenses; it does not grant Shape Shortcut additional rights to the upstream code or other models.',
   'cad.loading': 'Loading {name} CAD workspace',
   'cad.requirements':
     'JavaScript, WebAssembly, Web Worker, and WebGL are required for the interactive preview.',

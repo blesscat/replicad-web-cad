@@ -1,7 +1,9 @@
 ---
 import SiteLayout from '../../../layouts/SiteLayout.astro'
+import CadAttributionNotice from '../../../components/cad/CadAttributionNotice.astro'
 import CadSystemContextLabel from '../../../components/cad/CadSystemContextLabel.svelte'
 import CadWorkspace from '../../../components/cad/CadWorkspace.svelte'
+import { getOpenGridAttribution } from '../../../features/cad/attribution/opengrid'
 import {
   displayParameterLabel,
   getModelDefinition,
@@ -37,6 +39,7 @@ const t = (key: string, values?: Record<string, string | number | boolean>) =>
   translate(locale, key, values)
 const modelName = t(`models.model.${definition.id}.name`)
 const modelDescription = t(`models.model.${definition.id}.description`)
+const attribution = getOpenGridAttribution(modelId)
 
 function parameterSummary() {
   if (definition.parameterSchema.length === 0) {
@@ -113,6 +116,7 @@ function parameterSummary() {
         >
       </p>
     </div>
+    {attribution && <CadAttributionNotice {locale} {attribution} />}
     <CadWorkspace client:only="svelte" modelId={modelId} locale={locale} />
   </section>
 </SiteLayout>
