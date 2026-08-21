@@ -12,7 +12,6 @@ const attributionCases = [
   {
     path: '/zh-Hant/cad/opengrid',
     heading: '來源與授權',
-    revision: `版本 commit ${SOURCE_REVISION}`,
     sourceUrl: OPENGRID_SOURCE_URL,
     creditsText: '上游作者：',
     authors: [{ name: 'David D', url: DAVID_D_PROFILE_URL }],
@@ -25,7 +24,6 @@ const attributionCases = [
   {
     path: '/en/cad/opengrid',
     heading: 'Source and licensing',
-    revision: `(commit ${SOURCE_REVISION})`,
     sourceUrl: OPENGRID_SOURCE_URL,
     creditsText: 'Upstream authors:',
     authors: [{ name: 'David D', url: DAVID_D_PROFILE_URL }],
@@ -38,7 +36,6 @@ const attributionCases = [
   {
     path: '/zh-Hant/cad/opengrid-snap',
     heading: '來源與授權',
-    revision: `版本 commit ${SOURCE_REVISION}`,
     sourceUrl: SNAP_SOURCE_URL,
     creditsText: '上游作者：',
     authors: [{ name: 'David D', url: DAVID_D_PROFILE_URL }],
@@ -51,7 +48,6 @@ const attributionCases = [
   {
     path: '/en/cad/opengrid-snap',
     heading: 'Source and licensing',
-    revision: `(commit ${SOURCE_REVISION})`,
     sourceUrl: SNAP_SOURCE_URL,
     creditsText: 'Upstream authors:',
     authors: [{ name: 'David D', url: DAVID_D_PROFILE_URL }],
@@ -90,7 +86,6 @@ for (const attributionCase of attributionCases) {
     await expect(notice.getByRole('heading')).toHaveText(
       attributionCase.heading,
     )
-    await expect(notice).toContainText(attributionCase.revision)
     await expect(notice).toContainText(attributionCase.creditsText)
     for (const author of attributionCase.authors) {
       await expect(

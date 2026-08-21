@@ -17,7 +17,6 @@ export type OpenGridAttributionAuthor = {
 
 export type OpenGridAttribution = {
   sourceUrl: string
-  sourceRevision: string
   summaryKey: string
   creditsKey: string
   authors: readonly OpenGridAttributionAuthor[]
@@ -33,7 +32,6 @@ const DAVID_D_AUTHOR = {
 const OPENGRID_ATTRIBUTION_BY_MODEL_ID = {
   opengrid: {
     sourceUrl: `https://github.com/AndyLevesque/QuackWorks/blob/${OPENGRID_SOURCE_REVISION}/openGrid/openGrid.scad`,
-    sourceRevision: OPENGRID_SOURCE_REVISION,
     summaryKey: 'cad.attribution.opengrid.summary',
     creditsKey: 'cad.attribution.opengrid.credits',
     authors: [
@@ -46,7 +44,6 @@ const OPENGRID_ATTRIBUTION_BY_MODEL_ID = {
   },
   'opengrid-snap': {
     sourceUrl: `https://github.com/AndyLevesque/QuackWorks/blob/${OPENGRID_SOURCE_REVISION}/openGrid/opengrid-snap.scad`,
-    sourceRevision: OPENGRID_SOURCE_REVISION,
     summaryKey: 'cad.attribution.snap.summary',
     creditsKey: 'cad.attribution.snap.credits',
     authors: [
