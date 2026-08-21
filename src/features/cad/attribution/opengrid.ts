@@ -1,7 +1,5 @@
 import type { ModelId } from '../../../cad-contract/units'
 
-export const OPENGRID_SOURCE_REVISION =
-  '61231295ea08c302eff32051769113c48cbda255'
 export const OPENGRID_SOURCE_CODE_LICENSE_URL =
   'https://creativecommons.org/licenses/by-nc-sa/4.0/'
 export const OPENGRID_DERIVED_PARTS_LICENSE_URL =
@@ -16,7 +14,6 @@ export type OpenGridAttributionAuthor = {
 }
 
 export type OpenGridAttribution = {
-  sourceUrl: string
   summaryKey: string
   creditsKey: string
   authors: readonly OpenGridAttributionAuthor[]
@@ -31,7 +28,6 @@ const DAVID_D_AUTHOR = {
 
 const OPENGRID_ATTRIBUTION_BY_MODEL_ID = {
   opengrid: {
-    sourceUrl: `https://github.com/AndyLevesque/QuackWorks/blob/${OPENGRID_SOURCE_REVISION}/openGrid/openGrid.scad`,
     summaryKey: 'cad.attribution.opengrid.summary',
     creditsKey: 'cad.attribution.opengrid.credits',
     authors: [
@@ -43,7 +39,6 @@ const OPENGRID_ATTRIBUTION_BY_MODEL_ID = {
     ],
   },
   'opengrid-snap': {
-    sourceUrl: `https://github.com/AndyLevesque/QuackWorks/blob/${OPENGRID_SOURCE_REVISION}/openGrid/opengrid-snap.scad`,
     summaryKey: 'cad.attribution.snap.summary',
     creditsKey: 'cad.attribution.snap.credits',
     authors: [

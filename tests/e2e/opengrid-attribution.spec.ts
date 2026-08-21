@@ -3,20 +3,16 @@ import { expect, test } from '@playwright/test'
 const SOURCE_CODE_LICENSE_URL =
   'https://creativecommons.org/licenses/by-nc-sa/4.0/'
 const DERIVED_PARTS_LICENSE_URL = 'https://creativecommons.org/licenses/by/4.0/'
-const SOURCE_REVISION = '61231295ea08c302eff32051769113c48cbda255'
-const OPENGRID_SOURCE_URL = `https://github.com/AndyLevesque/QuackWorks/blob/${SOURCE_REVISION}/openGrid/openGrid.scad`
-const SNAP_SOURCE_URL = `https://github.com/AndyLevesque/QuackWorks/blob/${SOURCE_REVISION}/openGrid/opengrid-snap.scad`
 const DAVID_D_PROFILE_URL = 'https://www.printables.com/@DavidD'
 
 const attributionCases = [
   {
     path: '/zh-Hant/cad/opengrid',
     heading: '來源與授權',
-    sourceUrl: OPENGRID_SOURCE_URL,
     creditsText: '上游作者：',
     authors: [{ name: 'David D', url: DAVID_D_PROFILE_URL }],
     unlinkedAuthorText: 'BlackjackDuck (Andy)',
-    sourceLinkText: '查看固定版本的上游來源',
+    removedSourceLinkText: '查看固定版本的上游來源',
     sourceCodeLicenseText: '上游程式碼：CC BY-NC-SA 4.0',
     derivedPartsLicenseText: '衍生／產生零件：CC BY 4.0',
     modifiedText: null,
@@ -24,11 +20,10 @@ const attributionCases = [
   {
     path: '/en/cad/opengrid',
     heading: 'Source and licensing',
-    sourceUrl: OPENGRID_SOURCE_URL,
     creditsText: 'Upstream authors:',
     authors: [{ name: 'David D', url: DAVID_D_PROFILE_URL }],
     unlinkedAuthorText: 'BlackjackDuck (Andy)',
-    sourceLinkText: 'View the pinned upstream source',
+    removedSourceLinkText: 'View the pinned upstream source',
     sourceCodeLicenseText: 'Upstream source code: CC BY-NC-SA 4.0',
     derivedPartsLicenseText: 'Derived/generated parts: CC BY 4.0',
     modifiedText: null,
@@ -36,11 +31,10 @@ const attributionCases = [
   {
     path: '/zh-Hant/cad/opengrid-snap',
     heading: '來源與授權',
-    sourceUrl: SNAP_SOURCE_URL,
     creditsText: '上游作者：',
     authors: [{ name: 'David D', url: DAVID_D_PROFILE_URL }],
     unlinkedAuthorText: 'metasyntactic',
-    sourceLinkText: '查看固定版本的上游來源',
+    removedSourceLinkText: '查看固定版本的上游來源',
     sourceCodeLicenseText: '上游程式碼：CC BY-NC-SA 4.0',
     derivedPartsLicenseText: '衍生／產生零件：CC BY 4.0',
     modifiedText: '修改的衍生版本',
@@ -48,11 +42,10 @@ const attributionCases = [
   {
     path: '/en/cad/opengrid-snap',
     heading: 'Source and licensing',
-    sourceUrl: SNAP_SOURCE_URL,
     creditsText: 'Upstream authors:',
     authors: [{ name: 'David D', url: DAVID_D_PROFILE_URL }],
     unlinkedAuthorText: 'metasyntactic',
-    sourceLinkText: 'View the pinned upstream source',
+    removedSourceLinkText: 'View the pinned upstream source',
     sourceCodeLicenseText: 'Upstream source code: CC BY-NC-SA 4.0',
     derivedPartsLicenseText: 'Derived/generated parts: CC BY 4.0',
     modifiedText: 'modified derivatives',
@@ -99,8 +92,10 @@ for (const attributionCase of attributionCases) {
       ).toHaveCount(0)
     }
     await expect(
-      notice.getByRole('link', { name: attributionCase.sourceLinkText }),
-    ).toHaveAttribute('href', attributionCase.sourceUrl)
+      notice.getByRole('link', {
+        name: attributionCase.removedSourceLinkText,
+      }),
+    ).toHaveCount(0)
     await expect(
       notice.getByRole('link', {
         name: attributionCase.sourceCodeLicenseText,
