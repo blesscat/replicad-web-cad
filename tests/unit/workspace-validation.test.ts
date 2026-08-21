@@ -124,6 +124,11 @@ describe('CAD workspace validation helpers', () => {
       footprint: 'half',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      magnetHoleShape: 'none',
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 0,
     }
     const raw = rawFromParameters(parameters)
 
@@ -134,6 +139,11 @@ describe('CAD workspace validation helpers', () => {
       footprint: 'half',
       fourCornerLocatingHoles: 'false',
       centerRemoverHole: 'false',
+      magnetHoleShape: 'none',
+      magnetHoleLength: '0',
+      magnetHoleWidth: '0',
+      magnetHoleDiameter: '0',
+      magnetHoleThickness: '0',
     })
     expect(parseRawParameters(raw, 'opengrid-snap')).toEqual({
       valid: true,
@@ -177,6 +187,11 @@ describe('CAD workspace validation helpers', () => {
         footprint: 'full',
         fourCornerLocatingHoles: false,
         centerRemoverHole: false,
+        magnetHoleShape: 'none',
+        magnetHoleLength: 0,
+        magnetHoleWidth: 0,
+        magnetHoleDiameter: 0,
+        magnetHoleThickness: 0,
       },
     })
     expect(

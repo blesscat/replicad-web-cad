@@ -17,6 +17,11 @@ describe('OpenGrid Snap contract', () => {
       footprint: 'full' | 'half' | 'quarter'
       fourCornerLocatingHoles: boolean
       centerRemoverHole: boolean
+      magnetHoleShape: 'none' | 'square' | 'round'
+      magnetHoleLength: number
+      magnetHoleWidth: number
+      magnetHoleDiameter: number
+      magnetHoleThickness: number
     }> = {},
   ) {
     return {
@@ -26,6 +31,11 @@ describe('OpenGrid Snap contract', () => {
       footprint: 'full' as const,
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      magnetHoleShape: 'none' as const,
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 0,
       ...overrides,
     }
   }
@@ -150,6 +160,25 @@ describe('OpenGrid Snap contract', () => {
     )
   })
 
+  it('distinguishes enabled magnet dimensions in Full export filenames', () => {
+    const square = parameters({
+      magnetHoleShape: 'square',
+      magnetHoleLength: 6,
+      magnetHoleWidth: 4,
+      magnetHoleThickness: 2,
+    })
+    const round = parameters({
+      magnetHoleShape: 'round',
+      magnetHoleDiameter: 8,
+      magnetHoleThickness: 2,
+    })
+
+    expect(openGridSnapFileName(square)).toContain(
+      '-magnet-square-l6-w4-t2.step',
+    )
+    expect(openGridSnapStlFileName(round)).toContain('-magnet-round-d8-t2.stl')
+  })
+
   it('uses fixed STEP filenames for half and quarter downloads', () => {
     expect(
       openGridSnapFileName(
@@ -200,5 +229,84 @@ describe('OpenGrid Snap contract', () => {
     expect(
       validateOpenGridSnapParameters({ ...defaults, allowHalfCell: true }),
     ).toMatchObject({ valid: false })
+  })
+
+  it('accepts square and round magnet contracts only with shape-specific fields', () => {
+    const square = parameters({
+      magnetHoleShape: 'square',
+      magnetHoleLength: 6,
+      magnetHoleWidth: 4,
+      magnetHoleThickness: 2,
+    })
+    const round = parameters({
+      magnetHoleShape: 'round',
+      magnetHoleDiameter: 8,
+      magnetHoleThickness: 2.5,
+    })
+
+    expect(validateOpenGridSnapParameters(square)).toEqual({
+      valid: true,
+      value: square,
+    })
+    expect(validateOpenGridSnapParameters(round)).toEqual({
+      valid: true,
+      value: round,
+    })
+  })
+
+  it('rejects conflicting holes and non-zero inactive magnet dimensions', () => {
+    const defaults = parameters()
+
+    expect(
+      validateOpenGridSnapParameters({
+        ...defaults,
+        magnetHoleShape: 'square',
+        magnetHoleLength: 6,
+        magnetHoleWidth: 4,
+        magnetHoleThickness: 2,
+        fourCornerLocatingHoles: true,
+      }),
+    ).toMatchObject({ valid: false })
+    expect(
+      validateOpenGridSnapParameters({
+        ...defaults,
+        magnetHoleDiameter: 8,
+      }),
+    ).toMatchObject({ valid: false })
+    expect(
+      validateOpenGridSnapParameters({
+        ...defaults,
+        footprint: 'half',
+        magnetHoleShape: 'round',
+        magnetHoleDiameter: 8,
+        magnetHoleThickness: 2,
+      }),
+    ).toMatchObject({ valid: false })
+  })
+
+  it('normalizes legacy Snap snapshots to an inactive magnet', async () => {
+    const { normalizeOpenGridSnapParameters } =
+      await import('../../src/cad-contract/units')
+
+    expect(
+      normalizeOpenGridSnapParameters({
+        variant: 'Lite',
+        offset: 0.2,
+        halfCellX: 'none',
+        halfCellY: 'none',
+      }),
+    ).toEqual({
+      variant: 'Lite',
+      offset: 0.2,
+      profile: 'Standard',
+      fourCornerLocatingHoles: false,
+      centerRemoverHole: false,
+      magnetHoleShape: 'none',
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 0,
+      footprint: 'full',
+    })
   })
 })

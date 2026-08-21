@@ -57,7 +57,14 @@ function snapParameters(
   overrides: Partial<
     Pick<
       OpenGridSnapParameters,
-      'profile' | 'fourCornerLocatingHoles' | 'centerRemoverHole'
+      | 'profile'
+      | 'fourCornerLocatingHoles'
+      | 'centerRemoverHole'
+      | 'magnetHoleShape'
+      | 'magnetHoleLength'
+      | 'magnetHoleWidth'
+      | 'magnetHoleDiameter'
+      | 'magnetHoleThickness'
     >
   > = {},
 ): OpenGridSnapParameters {
@@ -68,6 +75,11 @@ function snapParameters(
     footprint,
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
+    magnetHoleShape: 'none',
+    magnetHoleLength: 0,
+    magnetHoleWidth: 0,
+    magnetHoleDiameter: 0,
+    magnetHoleThickness: 0,
     ...overrides,
   }
 }
@@ -293,7 +305,17 @@ describe('OpenGrid Snap Worker runtime', () => {
       events.push(event),
     )
     await runtime.handle(initCommand())
-    await runtime.handle(generateCommand(snapParameters('Full', 0), 1))
+    await runtime.handle(
+      generateCommand(
+        snapParameters('Full', 0, 'full', {
+          magnetHoleShape: 'square',
+          magnetHoleLength: 6,
+          magnetHoleWidth: 4,
+          magnetHoleThickness: 2,
+        }),
+        1,
+      ),
+    )
     await runtime.handle(generateCommand(snapParameters('Full', 0.05), 2))
 
     expect(

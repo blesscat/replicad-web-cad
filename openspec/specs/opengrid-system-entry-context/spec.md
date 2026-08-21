@@ -6,18 +6,46 @@ This capability gives OpenGrid model entries a stable Desk or Wall context so th
 
 ### Requirement: Stable OpenGrid system contexts and effective presets
 
-The system MUST recognize exactly two OpenGrid system contexts, `desk` and `wall`, from the model-entry link query. The context MUST NOT change the existing model id, build key, route slug, Worker request model id, or export contract. For `opengrid`, the Wall preset MUST be a validated clone of the model definition defaults and the Desk preset MUST override `rows=4`, `columns=4`, `chamfers=none`, and `screwMode=none` on that clone. The Desk preset MUST retain the model definition defaults for all other OpenGrid parameters, including connector controls, screw dimensions, modifiers, and an empty custom position list. For `opengrid-snap`, the Desk preset MUST be `variant=Lite`, `profile=Standard`, `footprint=full`, `offset=0.25` for the X/Y increment, `fourCornerLocatingHoles=true`, and `centerRemoverHole=true`; the Wall preset MUST be `variant=Full`, `profile=Standard`, `footprint=full`, `offset=0`, `fourCornerLocatingHoles=false`, and `centerRemoverHole=false`. For `opengrid-pillar`, the Desk preset MUST be `{ mode: 'thin-shell' }`. For `opengrid-stackable-box`, the Desk preset MUST be `x=4`, `y=2`, `height=30`, `thinShellMode=true`, and `basePlateMode=false`. For `opengrid-stackable-cylinder`, the Desk preset MUST be `diameter=60`, `height=30`, `thinBottomMode=true`, and `bottomPlateMode=false`. Any other visible OpenGrid entry MUST use its validated model definition defaults in the Desk context and MUST NOT appear in the Wall context.
+The system MUST recognize exactly two OpenGrid system contexts, `desk` and
+`wall`, from the model-entry link query. The context MUST NOT change the
+existing model id, build key, route slug, Worker request model id, or export
+contract. For `opengrid`, the Wall preset MUST be a validated clone of the
+model definition defaults and the Desk preset MUST override `rows=4`,
+`columns=4`, `chamfers=none`, and `screwMode=none` on that clone. The Desk
+preset MUST retain the model definition defaults for all other OpenGrid
+parameters, including connector controls, screw dimensions, modifiers, and an
+empty custom position list. For `opengrid-snap`, the Desk preset MUST be
+`variant=Lite`, `profile=Standard`, `footprint=full`, `offset=0.25` for the X/Y
+increment, `fourCornerLocatingHoles=true`, and `centerRemoverHole=true`; the
+Wall preset MUST be `variant=Full`, `profile=Standard`, `footprint=full`,
+`offset=0`, `fourCornerLocatingHoles=false`, and
+`centerRemoverHole=false`. Both Snap presets MUST also contain
+`magnetHoleShape=none` and zero values for `magnetHoleLength`,
+`magnetHoleWidth`, `magnetHoleDiameter`, and `magnetHoleThickness`. The
+magnet controls MUST remain available in both contexts; context selection MUST
+NOT hide or enable them independently. For `opengrid-pillar`, the Desk preset
+MUST be `{ mode: 'thin-shell' }`. For `opengrid-stackable-box`, the Desk
+preset MUST be `x=4`, `y=2`, `height=30`, `thinShellMode=true`, and
+`basePlateMode=false`. For `opengrid-stackable-cylinder`, the Desk preset MUST
+be `diameter=60`, `height=30`, `thinBottomMode=true`, and
+`bottomPlateMode=false`. Any other visible OpenGrid entry MUST use its
+validated model definition defaults in the Desk context and MUST NOT appear in
+the Wall context.
 
 #### Scenario: Desk Snap entry resolves its preset
 
-- **WHEN** a user opens `/cad/opengrid-snap?system=desk` without a valid Desk/Snap saved snapshot
+- **WHEN** a user opens `/cad/opengrid-snap?system=desk` without a valid
+  Desk/Snap saved snapshot
 - **THEN** the workspace MUST initialize `opengrid-snap` with the Desk preset
+- **AND** the preset MUST have the disabled magnet values
 - **AND** the Worker request MUST continue to use `modelId=opengrid-snap`
 
 #### Scenario: Wall Snap entry resolves its preset
 
-- **WHEN** a user opens `/cad/opengrid-snap?system=wall` without a valid Wall/Snap saved snapshot
+- **WHEN** a user opens `/cad/opengrid-snap?system=wall` without a valid
+  Wall/Snap saved snapshot
 - **THEN** the workspace MUST initialize `opengrid-snap` with the Wall preset
+- **AND** the preset MUST have the disabled magnet values
 - **AND** the Worker request MUST continue to use `modelId=opengrid-snap`
 
 #### Scenario: Desk pillar entry resolves the thin-shell preset

@@ -3,6 +3,7 @@ import type {
   OpenGridSnapProfile,
   OpenGridSnapVariant,
 } from '../../../cad-contract/units'
+import { OPENGRID_SNAP_CONFIGURATION } from '../../../cad-contract/units'
 import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from '../../../cad-contract/units/opengrid-locating-assembly'
 
 export type OpenGridSnapProfileDefinition = {
@@ -26,6 +27,8 @@ export type OpenGridSnapProfileDefinition = {
   centerRemoverUpperHalfWidth: number
   centerRemoverHalfDepth: number
   centerRemoverStepZ: number
+  magnetHoleOpeningWidth: number
+  magnetHoleConnectorReach: number
 }
 
 const standardAssetUrls = {
@@ -128,6 +131,8 @@ function makeDefinition(
     centerRemoverUpperHalfWidth: 2,
     centerRemoverHalfDepth: 4,
     centerRemoverStepZ,
+    magnetHoleOpeningWidth: OPENGRID_SNAP_CONFIGURATION.magnetHole.openingWidth,
+    magnetHoleConnectorReach: 10.5,
   }
 }
 

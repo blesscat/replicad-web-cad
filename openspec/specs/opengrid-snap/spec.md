@@ -6,34 +6,209 @@
 
 ### Requirement: OpenGrid Snap model contract
 
-The system MUST register the independent `opengrid-snap` model with `Full` and `Lite` variants and `Standard` and `Directional` profiles. Its normalized parameter snapshot MUST contain exactly `variant`, `profile`, `offset`, `footprint`, `fourCornerLocatingHoles`, and `centerRemoverHole`. `variant` MUST be `Full` or `Lite`; `profile` MUST be `Standard` or `Directional`; and `footprint` MUST be `full`, `half`, or `quarter`. The two boolean feature fields MUST be independent. A Snap snapshot MUST NOT contain board rows, columns, Heavy, screws, connectors, chamfers, `halfCellX`, `halfCellY`, `allowHalfCell`, or direction-specific/diagonal fields. The OpenGrid board MAY continue to use its own `halfCellX` and `halfCellY` contract. The existing `opengrid-snap` modelId, buildKey, and route MUST remain unchanged. A zero-offset, full-footprint Standard snapshot MUST use the repository-owned Bare Standard reference or its equivalent programmatic baseline, with optional holes disabled unless explicitly selected.
+The system MUST register the independent `opengrid-snap` model with `Full` and
+`Lite` variants and `Standard` and `Directional` profiles. Its normalized
+parameter snapshot MUST contain exactly `variant`, `profile`, `offset`,
+`footprint`, `fourCornerLocatingHoles`, `centerRemoverHole`,
+`magnetHoleShape`, `magnetHoleLength`, `magnetHoleWidth`,
+`magnetHoleDiameter`, and `magnetHoleThickness`. `variant` MUST be `Full` or
+`Lite`; `profile` MUST be `Standard` or `Directional`; and `footprint` MUST be
+`full`, `half`, or `quarter`. `magnetHoleShape` MUST be `none`, `square`, or
+`round`. When the shape is `none`, all four magnet dimensions MUST be zero and
+the magnet feature MUST have no geometric effect. When the shape is `square`,
+`magnetHoleLength`, `magnetHoleWidth`, and `magnetHoleThickness` MUST be
+finite positive values and `magnetHoleDiameter` MUST be zero. When the shape
+is `round`, `magnetHoleDiameter` and `magnetHoleThickness` MUST be finite
+positive values and `magnetHoleLength` and `magnetHoleWidth` MUST be zero.
+The magnet feature MUST be mutually exclusive with
+`fourCornerLocatingHoles` and `centerRemoverHole`; invalid combinations MUST
+be rejected. For `footprint=half` or `footprint=quarter`, the magnet shape
+MUST be `none` and all magnet dimensions MUST be zero. A Snap snapshot MUST
+NOT contain board rows, columns, Heavy, screws, connectors, chamfers,
+`halfCellX`, `halfCellY`, `allowHalfCell`, or direction-specific/diagonal
+fields. The OpenGrid board MAY continue to use its own `halfCellX` and
+`halfCellY` contract. The existing `opengrid-snap` modelId, buildKey, and route
+MUST remain unchanged. A zero-offset, full-footprint Standard snapshot with
+all features disabled MUST use the repository-owned Bare Standard reference
+or its equivalent programmatic baseline.
 
 #### Scenario: Valid full-footprint Standard snapshot
 
-- **WHEN** a complete `opengrid-snap` snapshot has `variant=Full`, `profile=Standard`, `offset=0`, `footprint=full`, `fourCornerLocatingHoles=false`, and `centerRemoverHole=false`
+- **WHEN** a complete `opengrid-snap` snapshot has `variant=Full`,
+  `profile=Standard`, `offset=0`, `footprint=full`, both existing hole flags
+  `false`, `magnetHoleShape=none`, and all magnet dimensions `0`
 - **THEN** validation MUST accept it as a typed Snap snapshot
 - **AND** generation MUST select the Full Bare Standard baseline
-- **AND** the body MUST remain solid except for fixed geometry already present in the source profile
+- **AND** the body MUST remain solid except for fixed geometry already present
+  in the source profile
+
+#### Scenario: Valid square magnet snapshot
+
+- **WHEN** a full-footprint snapshot selects `magnetHoleShape=square` with
+  positive length, width, and thickness, zero diameter, and both existing hole
+  flags `false`
+- **THEN** validation MUST accept it when the dimensions fit the selected
+  profile's printable body and retaining structure
+- **AND** generation MUST apply one centered square magnet feature
+
+#### Scenario: Valid round magnet snapshot
+
+- **WHEN** a full-footprint snapshot selects `magnetHoleShape=round` with
+  positive diameter and thickness, zero length and width, and both existing
+  hole flags `false`
+- **THEN** validation MUST accept it when the dimensions fit the selected
+  profile's printable body and retaining structure
+- **AND** generation MUST apply one centered round magnet feature
 
 #### Scenario: Valid canonical half-footprint snapshot
 
-- **WHEN** a complete Snap snapshot has `variant=Lite`, `profile=Standard`, `offset=0`, `footprint=half`, `fourCornerLocatingHoles=false`, and `centerRemoverHole=false`
+- **WHEN** a complete Snap snapshot has `variant=Lite`, `profile=Standard`,
+  `offset=0`, `footprint=half`, both existing hole flags `false`,
+  `magnetHoleShape=none`, and all magnet dimensions `0`
 - **THEN** validation MUST accept it
-- **AND** production preview generation MUST use the repository-owned fixed `snap-half.step` asset
+- **AND** production preview generation MUST use the repository-owned fixed
+  `snap-half.step` asset
 - **AND** the fixed result MUST fit one 14 mm axis host and one 28 mm host axis
 
 #### Scenario: Valid canonical quarter-footprint snapshot
 
-- **WHEN** a complete Snap snapshot has `variant=Lite`, `profile=Directional`, `offset=0`, `footprint=quarter`, `fourCornerLocatingHoles=false`, and `centerRemoverHole=false`
+- **WHEN** a complete Snap snapshot has `variant=Lite`,
+  `profile=Directional`, `offset=0`, `footprint=quarter`, both existing hole
+  flags `false`, `magnetHoleShape=none`, and all magnet dimensions `0`
 - **THEN** validation MUST accept it
-- **AND** production preview generation MUST use the repository-owned fixed `snap-quarter.step` asset
+- **AND** production preview generation MUST use the repository-owned fixed
+  `snap-quarter.step` asset
 - **AND** the fixed result MUST fit both 14 mm host axes
 
 #### Scenario: Board or direction fields are rejected by the normalized Snap validator
 
-- **WHEN** a normalized Snap snapshot contains rows, columns, Heavy, screw, connector, chamfer, `halfCellX`, `halfCellY`, `allowHalfCell`, or a direction-specific/diagonal field
+- **WHEN** a normalized Snap snapshot contains forbidden board/direction fields,
+  an unknown magnet shape, non-zero inactive magnet dimensions, non-positive or
+  non-finite active dimensions, or a magnet conflict with an existing hole flag
 - **THEN** validation MUST reject the snapshot as a model-parameter mismatch
-- **AND** the Worker MUST NOT route it through the existing OpenGrid board builder
+- **AND** the Worker MUST NOT generate or export that snapshot
+
+### Requirement: Central magnet pocket geometry
+
+For a valid `footprint=full` snapshot with `magnetHoleShape=square` or
+`magnetHoleShape=round`, the generated Snap MUST contain exactly one centered
+magnet cavity. The cavity MUST begin at the underside of the selected Snap and
+extend upward along Z by the requested `magnetHoleThickness`; the thickness
+field MUST use the same meaning for square and round shapes. The square cavity
+MUST use the requested length and width in the XY plane. The round cavity MUST
+use the requested diameter in the XY plane. The cavity MUST remain centered at
+the Snap origin and its requested dimensions MUST remain fixed when a valid
+non-zero outer offset scales the non-hole assembly.
+
+#### Scenario: Square cavity uses the requested dimensions
+
+- **WHEN** a valid square magnet snapshot is generated
+- **THEN** the underside cavity MUST measure the requested length and width
+  within the documented CAD tolerance
+- **AND** its Z extent MUST equal the requested thickness within tolerance
+- **AND** no second magnet cavity MAY be present
+
+#### Scenario: Round cavity uses the requested dimensions
+
+- **WHEN** a valid round magnet snapshot is generated
+- **THEN** the underside cavity MUST measure the requested diameter within the
+  documented CAD tolerance
+- **AND** its Z extent MUST equal the requested thickness within tolerance
+- **AND** no second magnet cavity MAY be present
+
+#### Scenario: Four retaining openings connect the cavity
+
+- **WHEN** either magnet shape is generated
+- **THEN** four symmetric openings at the annotated top, bottom, left, and right
+  red-frame positions MUST connect to the central cavity
+- **AND** each opening MUST be 2 mm wide in the XY plane within tolerance
+- **AND** the openings MUST retain the surrounding material needed to clamp a
+  press-fit magnet rather than removing the entire outer support
+
+#### Scenario: Magnet geometry is applied after non-hole scaling
+
+- **WHEN** a valid magnet snapshot uses a positive outer offset
+- **THEN** the selected profile and non-hole assembly MUST receive their normal
+  XY transform first
+- **AND** the central cavity dimensions, center, Z thickness, and 2 mm opening
+  width MUST remain unchanged
+
+### Requirement: Magnet feature conflicts and footprint controls
+
+The Snap panel MUST expose the magnet shape and its shape-specific dimensions
+next to the existing locating-hole and remover-hole controls on every supported
+Snap route. The controls MUST NOT be hidden or enabled only by `system=wall`.
+Selecting a square or round magnet mode MUST clear or disable both existing
+hole controls, and selecting either existing hole feature MUST return the
+magnet mode to `none`; the resulting normalized snapshot MUST never contain a
+conflicting combination. Selecting `Half` or `Quarter` MUST reset the magnet
+mode and dimensions to their inactive values and disable all magnet controls.
+
+#### Scenario: Magnet controls appear with existing hole controls
+
+- **WHEN** a user opens any supported `/cad/opengrid-snap` route
+- **THEN** the panel MUST show the magnet mode alongside locating-hole and
+  remover-hole controls
+- **AND** no route context condition MAY be required to display the controls
+
+#### Scenario: Magnet selection disables conflicting features
+
+- **WHEN** a user selects square or round magnet mode
+- **THEN** the locating-hole and remover-hole controls MUST become inactive or
+  unchecked
+- **AND** the next valid generation MUST contain only the magnet feature among
+  these mutually exclusive features
+
+#### Scenario: Existing hole selection disables the magnet
+
+- **WHEN** a user enables locating holes or the remover hole while magnet mode
+  is active
+- **THEN** magnet mode MUST return to `none` and its dimensions MUST become
+  inactive
+- **AND** the next valid generation MUST contain the selected existing feature
+  without a magnet cavity
+
+#### Scenario: Half and quarter reject magnet customization
+
+- **WHEN** a user selects `Half` or `Quarter`
+- **THEN** the magnet mode and all magnet dimensions MUST reset to inactive
+  values
+- **AND** the controls MUST be disabled with an explanation that fixed
+  footprints do not accept holes
+- **AND** the fixed repository-owned STEP asset MUST remain unchanged
+
+### Requirement: Magnet quality and committed export metadata
+
+Before committing a magnet-enabled candidate, the Worker MUST verify the
+centered cavity shape, requested XY dimensions, requested underside Z
+thickness, four 2 mm connecting openings, preserved retaining material, valid
+B-Rep, finite non-empty mesh, and complete selected Snap assembly. A failed
+magnet quality check MUST discard the candidate and keep STEP/STL export
+disabled for that generation. Full-footprint magnet-enabled STEP and STL
+filenames MUST identify the magnet shape and all active dimensions so that two
+different magnet configurations cannot overwrite each other's exports. A
+magnet-disabled Full filename MUST retain the existing filename format, and
+Half/Quarter filenames MUST remain `Half.step` and `Quarter.step`.
+
+#### Scenario: Valid magnet candidate becomes exportable
+
+- **WHEN** a magnet-enabled Full candidate passes all cavity, opening,
+  retention, assembly, B-Rep, mesh, and generation checks
+- **THEN** it MAY be committed
+- **AND** the viewport, STEP export, and STL export MUST refer to that same
+  committed revision
+- **AND** the generated filenames MUST distinguish its magnet shape and active
+  dimensions
+
+#### Scenario: Invalid magnet candidate remains stale
+
+- **WHEN** a magnet candidate loses the requested cavity, has an incorrect
+  opening width, removes required retaining material, exceeds the selected
+  profile's safe geometry, or fails B-Rep/mesh validation
+- **THEN** the candidate MUST be discarded
+- **AND** the previous committed preview MAY remain visible but MUST be marked
+  stale
+- **AND** STEP/STL export MUST remain disabled for the failed generation
 
 ### Requirement: Complete reference assembly preservation
 

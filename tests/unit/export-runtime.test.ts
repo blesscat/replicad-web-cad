@@ -40,6 +40,11 @@ function createContext(
       footprint: snapFootprint,
       fourCornerLocatingHoles: true,
       centerRemoverHole: true,
+      magnetHoleShape: 'none',
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 0,
     }
     parameters = snapParameters
     rawParameters = {
@@ -49,6 +54,11 @@ function createContext(
       footprint: snapFootprint,
       fourCornerLocatingHoles: 'true',
       centerRemoverHole: 'true',
+      magnetHoleShape: 'none',
+      magnetHoleLength: '0',
+      magnetHoleWidth: '0',
+      magnetHoleDiameter: '0',
+      magnetHoleThickness: '0',
     }
     bounds = boundsForOpenGridSnap(snapParameters)
   } else if (modelId === 'opengrid-pillar') {

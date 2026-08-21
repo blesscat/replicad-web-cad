@@ -19,11 +19,15 @@ test('Desk and Wall Snap entries use isolated presets and context resets', async
   const variant = page.getByRole('combobox', { name: 'OpenGrid Snap 型號' })
   const cornerHoles = page.getByRole('checkbox', { name: '定位孔' })
   const centerRemover = page.getByRole('checkbox', { name: '移除孔' })
+  const deskMagnetShape = page.getByRole('combobox', {
+    name: 'Snap 磁鐵孔形狀',
+  })
   const offset = page.getByRole('slider', { name: '外框總增量（X/Y）' })
 
   await expect(variant).toHaveValue('Lite')
   await expect(cornerHoles).toBeChecked()
   await expect(centerRemover).toBeChecked()
+  await expect(deskMagnetShape).toBeVisible()
   await expect(offset).toHaveValue('0.25')
   await expect(
     page.getByText('目前系統：Desk System', { exact: true }),
@@ -40,12 +44,16 @@ test('Desk and Wall Snap entries use isolated presets and context resets', async
   })
   const wallCornerHoles = page.getByRole('checkbox', { name: '定位孔' })
   const wallCenterRemover = page.getByRole('checkbox', { name: '移除孔' })
+  const wallMagnetShape = page.getByRole('combobox', {
+    name: 'Snap 磁鐵孔形狀',
+  })
   const wallOffset = page.getByRole('slider', {
     name: '外框總增量（X/Y）',
   })
   await expect(wallVariant).toHaveValue('Full')
   await expect(wallCornerHoles).not.toBeChecked()
   await expect(wallCenterRemover).not.toBeChecked()
+  await expect(wallMagnetShape).toBeVisible()
   await expect(wallOffset).toHaveValue('0')
   await expect(
     page.getByText('目前系統：Wall Related', { exact: true }),
@@ -108,11 +116,56 @@ test('OpenGrid Snap route exposes profiles, features, and one shared outer offse
   const centerRemover = page.getByRole('checkbox', {
     name: '移除孔',
   })
+  const magnetShape = page.getByRole('combobox', {
+    name: 'Snap 磁鐵孔形狀',
+  })
   await expect(cornerHoles).not.toBeChecked()
   await expect(centerRemover).not.toBeChecked()
+  await expect(magnetShape).toHaveValue('none')
+  await expect(magnetShape.locator('option')).toHaveCount(3)
+  await magnetShape.selectOption('square')
+  await expect(cornerHoles).not.toBeChecked()
+  await expect(centerRemover).not.toBeChecked()
+  await expect(
+    page.getByRole('textbox', { name: '磁鐵孔長度（X）' }),
+  ).toBeVisible()
+  await page.getByRole('textbox', { name: '磁鐵孔長度（X）' }).fill('6')
+  await page.getByRole('textbox', { name: '磁鐵孔寬度（Y）' }).fill('4')
+  await page.getByRole('textbox', { name: '磁鐵孔厚度（Z）' }).fill('2')
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const captures = (
+          window as Window & { __cadModelGenerateCaptures?: unknown[] }
+        ).__cadModelGenerateCaptures
+        return captures?.at(-1) ?? null
+      }),
+    )
+    .toMatchObject({
+      modelId: 'opengrid-snap',
+      parameters: {
+        magnetHoleShape: 'square',
+        magnetHoleLength: 6,
+        magnetHoleWidth: 4,
+        magnetHoleDiameter: 0,
+        magnetHoleThickness: 2,
+        fourCornerLocatingHoles: false,
+        centerRemoverHole: false,
+      },
+    })
+  await cornerHoles.check()
+  await expect(magnetShape).toHaveValue('none')
+  await expect(
+    page.getByRole('textbox', { name: '磁鐵孔長度（X）' }),
+  ).toHaveCount(0)
+  await cornerHoles.uncheck()
+  await magnetShape.selectOption('round')
+  await page.getByRole('textbox', { name: '磁鐵孔直徑（XY）' }).fill('8')
+  await page.getByRole('textbox', { name: '磁鐵孔厚度（Z）' }).fill('2')
   await profile.selectOption('Directional')
   await cornerHoles.check()
   await centerRemover.check()
+  await expect(magnetShape).toHaveValue('none')
   await page.reload()
   await expect(profile).toHaveValue('Directional')
   await expect(cornerHoles).toBeChecked()

@@ -379,7 +379,13 @@ describe('CAD component catalog', () => {
     expect(snap?.selectionDescription).toBe(
       'models.model.opengrid-snap.description',
     )
-    expect(snap?.parameterSchema.map((field) => field.key)).toEqual(['offset'])
+    expect(snap?.parameterSchema.map((field) => field.key)).toEqual([
+      'offset',
+      'magnetHoleLength',
+      'magnetHoleWidth',
+      'magnetHoleDiameter',
+      'magnetHoleThickness',
+    ])
     expect(snap?.parameterSchema[0]).toMatchObject({
       control: 'range',
       min: 0,
@@ -393,6 +399,11 @@ describe('CAD component catalog', () => {
       footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      magnetHoleShape: 'none',
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 0,
     })
     expect(
       snap?.boundsForParameters({
@@ -402,6 +413,11 @@ describe('CAD component catalog', () => {
         footprint: 'full',
         fourCornerLocatingHoles: false,
         centerRemoverHole: false,
+        magnetHoleShape: 'none',
+        magnetHoleLength: 0,
+        magnetHoleWidth: 0,
+        magnetHoleDiameter: 0,
+        magnetHoleThickness: 0,
       }),
     ).toEqual({
       min: [-12.9, -12.9, 0],
@@ -415,6 +431,11 @@ describe('CAD component catalog', () => {
         footprint: 'full',
         fourCornerLocatingHoles: false,
         centerRemoverHole: false,
+        magnetHoleShape: 'none',
+        magnetHoleLength: 0,
+        magnetHoleWidth: 0,
+        magnetHoleDiameter: 0,
+        magnetHoleThickness: 0,
       }),
     ).toBe('opengrid-snap-standard-full-offset0.2-full-corners0-center0.step')
     expect(
@@ -425,6 +446,11 @@ describe('CAD component catalog', () => {
         footprint: 'full',
         fourCornerLocatingHoles: false,
         centerRemoverHole: false,
+        magnetHoleShape: 'none',
+        magnetHoleLength: 0,
+        magnetHoleWidth: 0,
+        magnetHoleDiameter: 0,
+        magnetHoleThickness: 0,
       }),
     ).toBe('opengrid-snap-standard-lite-offset0.15-full-corners0-center0.stl')
     expect(
@@ -435,6 +461,11 @@ describe('CAD component catalog', () => {
         footprint: 'half',
         fourCornerLocatingHoles: true,
         centerRemoverHole: true,
+        magnetHoleShape: 'none',
+        magnetHoleLength: 0,
+        magnetHoleWidth: 0,
+        magnetHoleDiameter: 0,
+        magnetHoleThickness: 0,
       }),
     ).toEqual({
       url: '/downloads/snap-half.step',
@@ -448,6 +479,11 @@ describe('CAD component catalog', () => {
         footprint: 'quarter',
         fourCornerLocatingHoles: true,
         centerRemoverHole: true,
+        magnetHoleShape: 'none',
+        magnetHoleLength: 0,
+        magnetHoleWidth: 0,
+        magnetHoleDiameter: 0,
+        magnetHoleThickness: 0,
       }),
     ).toEqual({
       url: '/downloads/snap-quarter.step',
@@ -461,6 +497,11 @@ describe('CAD component catalog', () => {
         footprint: 'full',
         fourCornerLocatingHoles: true,
         centerRemoverHole: true,
+        magnetHoleShape: 'none',
+        magnetHoleLength: 0,
+        magnetHoleWidth: 0,
+        magnetHoleDiameter: 0,
+        magnetHoleThickness: 0,
       }),
     ).toBeNull()
     expect(
@@ -471,6 +512,11 @@ describe('CAD component catalog', () => {
         footprint: 'full',
         fourCornerLocatingHoles: true,
         centerRemoverHole: true,
+        magnetHoleShape: 'none',
+        magnetHoleLength: 0,
+        magnetHoleWidth: 0,
+        magnetHoleDiameter: 0,
+        magnetHoleThickness: 0,
       }),
     ).toEqual({
       valid: true,
@@ -483,6 +529,11 @@ describe('CAD component catalog', () => {
           footprint: 'full',
           fourCornerLocatingHoles: true,
           centerRemoverHole: true,
+          magnetHoleShape: 'none',
+          magnetHoleLength: 0,
+          magnetHoleWidth: 0,
+          magnetHoleDiameter: 0,
+          magnetHoleThickness: 0,
         },
       },
     })

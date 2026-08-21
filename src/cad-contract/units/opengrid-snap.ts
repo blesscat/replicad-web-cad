@@ -12,6 +12,7 @@ import {
 export type OpenGridSnapVariant = 'Full' | 'Lite'
 export type OpenGridSnapProfile = 'Standard' | 'Directional'
 export type OpenGridSnapFootprint = 'full' | 'half' | 'quarter'
+export type OpenGridSnapMagnetHoleShape = 'none' | 'square' | 'round'
 
 export type OpenGridSnapParameterKey =
   | 'variant'
@@ -20,6 +21,11 @@ export type OpenGridSnapParameterKey =
   | 'footprint'
   | 'fourCornerLocatingHoles'
   | 'centerRemoverHole'
+  | 'magnetHoleShape'
+  | 'magnetHoleLength'
+  | 'magnetHoleWidth'
+  | 'magnetHoleDiameter'
+  | 'magnetHoleThickness'
 
 export type OpenGridSnapParameters = {
   variant: OpenGridSnapVariant
@@ -29,6 +35,11 @@ export type OpenGridSnapParameters = {
   footprint: OpenGridSnapFootprint
   fourCornerLocatingHoles: boolean
   centerRemoverHole: boolean
+  magnetHoleShape: OpenGridSnapMagnetHoleShape
+  magnetHoleLength: number
+  magnetHoleWidth: number
+  magnetHoleDiameter: number
+  magnetHoleThickness: number
 }
 
 export type OpenGridSnapCanonicalAxes = {
@@ -62,6 +73,16 @@ export const OPENGRID_SNAP_CONFIGURATION = {
   minOffset: 0,
   maxOffset: 1,
   offsetStep: 0.05,
+  magnetHole: {
+    minPlanDimension: 2,
+    minThickness: 0.1,
+    maxPlanDimension: 12,
+    openingWidth: 2,
+    maxThickness: {
+      Full: 6.6,
+      Lite: 3.2,
+    } satisfies Record<OpenGridSnapVariant, number>,
+  },
   boundsTolerance: 0.05,
   officialHost: {
     boardWidth: 70,
@@ -93,6 +114,11 @@ export const OPENGRID_SNAP_CONFIGURATION = {
     footprint: 'full' as OpenGridSnapFootprint,
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
+    magnetHoleShape: 'none' as OpenGridSnapMagnetHoleShape,
+    magnetHoleLength: 0,
+    magnetHoleWidth: 0,
+    magnetHoleDiameter: 0,
+    magnetHoleThickness: 0,
   } satisfies OpenGridSnapParameters,
 } as const
 
@@ -103,6 +129,11 @@ const PARAMETER_KEYS: readonly OpenGridSnapParameterKey[] = [
   'footprint',
   'fourCornerLocatingHoles',
   'centerRemoverHole',
+  'magnetHoleShape',
+  'magnetHoleLength',
+  'magnetHoleWidth',
+  'magnetHoleDiameter',
+  'magnetHoleThickness',
 ]
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -131,6 +162,12 @@ export function isOpenGridSnapFootprint(
   value: unknown,
 ): value is OpenGridSnapFootprint {
   return value === 'full' || value === 'half' || value === 'quarter'
+}
+
+export function isOpenGridSnapMagnetHoleShape(
+  value: unknown,
+): value is OpenGridSnapMagnetHoleShape {
+  return value === 'none' || value === 'square' || value === 'round'
 }
 
 function formatNumber(value: number): string {
@@ -228,6 +265,33 @@ export function validateOpenGridSnapParameters(
     })
   }
 
+  if (!isOpenGridSnapMagnetHoleShape(value.magnetHoleShape)) {
+    issues.push({
+      field: 'magnetHoleShape',
+      messageId: 'validation.invalid',
+    })
+  }
+
+  const magnetDimensionKeys = [
+    'magnetHoleLength',
+    'magnetHoleWidth',
+    'magnetHoleDiameter',
+    'magnetHoleThickness',
+  ] as const
+  const magnetDimensions = magnetDimensionKeys.map((key) => ({
+    key,
+    value: value[key],
+  }))
+  const magnetDimensionsAreNumbers = magnetDimensions.every(
+    ({ key, value: dimension }) => {
+      if (typeof dimension === 'number' && Number.isFinite(dimension)) {
+        return true
+      }
+      issues.push({ field: key, messageId: 'validation.invalid' })
+      return false
+    },
+  )
+
   const offset = value.offset
   if (typeof offset !== 'number' || !Number.isFinite(offset)) {
     issues.push({ field: 'offset', messageId: 'validation.invalid' })
@@ -297,6 +361,95 @@ export function validateOpenGridSnapParameters(
     }
   }
 
+  if (
+    isOpenGridSnapMagnetHoleShape(value.magnetHoleShape) &&
+    magnetDimensionsAreNumbers
+  ) {
+    const length = value.magnetHoleLength as number
+    const width = value.magnetHoleWidth as number
+    const diameter = value.magnetHoleDiameter as number
+    const thickness = value.magnetHoleThickness as number
+    const addDimensionIssue = (
+      key: (typeof magnetDimensionKeys)[number],
+    ): void => {
+      issues.push({ field: key, messageId: 'validation.invalid' })
+    }
+
+    if (value.magnetHoleShape === 'none') {
+      for (const { key, value: dimension } of magnetDimensions) {
+        if (dimension !== 0) addDimensionIssue(key)
+      }
+    } else {
+      if (value.footprint !== 'full') {
+        issues.push({
+          field: 'magnetHoleShape',
+          messageId: 'validation.invalid',
+        })
+      }
+      if (value.fourCornerLocatingHoles === true) {
+        issues.push({
+          field: 'fourCornerLocatingHoles',
+          messageId: 'validation.invalid',
+        })
+      }
+      if (value.centerRemoverHole === true) {
+        issues.push({
+          field: 'centerRemoverHole',
+          messageId: 'validation.invalid',
+        })
+      }
+
+      const minPlanDimension =
+        OPENGRID_SNAP_CONFIGURATION.magnetHole.minPlanDimension
+      const minThickness = OPENGRID_SNAP_CONFIGURATION.magnetHole.minThickness
+      const maxPlanDimension =
+        OPENGRID_SNAP_CONFIGURATION.magnetHole.maxPlanDimension
+      const maxThickness = isOpenGridSnapVariant(value.variant)
+        ? OPENGRID_SNAP_CONFIGURATION.magnetHole.maxThickness[value.variant]
+        : Number.POSITIVE_INFINITY
+      const validatePositiveDimension = (
+        key: (typeof magnetDimensionKeys)[number],
+        dimension: number,
+        maximum: number,
+        minimum: number = minPlanDimension,
+      ): void => {
+        if (
+          !Number.isFinite(dimension) ||
+          dimension < minimum ||
+          dimension > maximum
+        ) {
+          addDimensionIssue(key)
+        }
+      }
+
+      if (value.magnetHoleShape === 'square') {
+        validatePositiveDimension('magnetHoleLength', length, maxPlanDimension)
+        validatePositiveDimension('magnetHoleWidth', width, maxPlanDimension)
+        validatePositiveDimension(
+          'magnetHoleThickness',
+          thickness,
+          maxThickness,
+          minThickness,
+        )
+        if (diameter !== 0) addDimensionIssue('magnetHoleDiameter')
+      } else {
+        validatePositiveDimension(
+          'magnetHoleDiameter',
+          diameter,
+          maxPlanDimension,
+        )
+        validatePositiveDimension(
+          'magnetHoleThickness',
+          thickness,
+          maxThickness,
+          minThickness,
+        )
+        if (length !== 0) addDimensionIssue('magnetHoleLength')
+        if (width !== 0) addDimensionIssue('magnetHoleWidth')
+      }
+    }
+  }
+
   if (issues.length > 0) return { valid: false, issues }
 
   return {
@@ -308,6 +461,11 @@ export function validateOpenGridSnapParameters(
       footprint: value.footprint as OpenGridSnapFootprint,
       fourCornerLocatingHoles: value.fourCornerLocatingHoles as boolean,
       centerRemoverHole: value.centerRemoverHole as boolean,
+      magnetHoleShape: value.magnetHoleShape as OpenGridSnapMagnetHoleShape,
+      magnetHoleLength: value.magnetHoleLength as number,
+      magnetHoleWidth: value.magnetHoleWidth as number,
+      magnetHoleDiameter: value.magnetHoleDiameter as number,
+      magnetHoleThickness: value.magnetHoleThickness as number,
     },
   }
 }
@@ -326,6 +484,23 @@ export function normalizeOpenGridSnapParameters(value: unknown): unknown {
   }
   if (!Object.prototype.hasOwnProperty.call(normalized, 'centerRemoverHole')) {
     normalized.centerRemoverHole = false
+  }
+  if (!Object.prototype.hasOwnProperty.call(normalized, 'magnetHoleShape')) {
+    normalized.magnetHoleShape = 'none'
+  }
+  if (!Object.prototype.hasOwnProperty.call(normalized, 'magnetHoleLength')) {
+    normalized.magnetHoleLength = 0
+  }
+  if (!Object.prototype.hasOwnProperty.call(normalized, 'magnetHoleWidth')) {
+    normalized.magnetHoleWidth = 0
+  }
+  if (!Object.prototype.hasOwnProperty.call(normalized, 'magnetHoleDiameter')) {
+    normalized.magnetHoleDiameter = 0
+  }
+  if (
+    !Object.prototype.hasOwnProperty.call(normalized, 'magnetHoleThickness')
+  ) {
+    normalized.magnetHoleThickness = 0
   }
   if (Object.prototype.hasOwnProperty.call(normalized, 'footprint')) {
     return normalized
@@ -435,13 +610,23 @@ export function openGridSnapFileName(
 ): string {
   if (parameters.footprint === 'half') return 'Half.step'
   if (parameters.footprint === 'quarter') return 'Quarter.step'
-  return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-${parameters.footprint}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}.step`
+  return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-${parameters.footprint}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}${openGridSnapMagnetFileNameSuffix(parameters)}.step`
 }
 
 export function openGridSnapStlFileName(
   parameters: OpenGridSnapParameters,
 ): string {
-  return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-${parameters.footprint}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}.stl`
+  return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-${parameters.footprint}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}${openGridSnapMagnetFileNameSuffix(parameters)}.stl`
+}
+
+function openGridSnapMagnetFileNameSuffix(
+  parameters: OpenGridSnapParameters,
+): string {
+  if (parameters.magnetHoleShape === 'none') return ''
+  if (parameters.magnetHoleShape === 'square') {
+    return `-magnet-square-l${formatNumber(parameters.magnetHoleLength)}-w${formatNumber(parameters.magnetHoleWidth)}-t${formatNumber(parameters.magnetHoleThickness)}`
+  }
+  return `-magnet-round-d${formatNumber(parameters.magnetHoleDiameter)}-t${formatNumber(parameters.magnetHoleThickness)}`
 }
 
 export function openGridSnapHeightFor(variant: OpenGridSnapVariant): number {

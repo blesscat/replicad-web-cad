@@ -124,6 +124,11 @@ describe('Worker contract runtime validation', () => {
         footprint: 'full' as const,
         fourCornerLocatingHoles: false,
         centerRemoverHole: false,
+        magnetHoleShape: 'none' as const,
+        magnetHoleLength: 0,
+        magnetHoleWidth: 0,
+        magnetHoleDiameter: 0,
+        magnetHoleThickness: 0,
       },
       previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
     }
@@ -149,6 +154,11 @@ describe('Worker contract runtime validation', () => {
           footprint: 'diagonal',
           fourCornerLocatingHoles: false,
           centerRemoverHole: false,
+          magnetHoleShape: 'none',
+          magnetHoleLength: 0,
+          magnetHoleWidth: 0,
+          magnetHoleDiameter: 0,
+          magnetHoleThickness: 0,
         },
       }),
     ).toBe(false)
