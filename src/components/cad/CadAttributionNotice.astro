@@ -1,0 +1,75 @@
+---
+import {
+  OPENGRID_DERIVED_PARTS_LICENSE_URL,
+  OPENGRID_SOURCE_CODE_LICENSE_URL,
+  type OpenGridAttribution,
+} from '../../features/cad/attribution/opengrid'
+import CadAttributionAuthor from './CadAttributionAuthor.astro'
+import { translate, type Locale } from '../../i18n'
+
+interface Props {
+  locale: Locale
+  attribution: OpenGridAttribution
+}
+
+const { locale, attribution } = Astro.props
+const t = (key: string, values?: Record<string, string | number | boolean>) =>
+  translate(locale, key, values)
+---
+
+<section
+  aria-labelledby="cad-attribution-title"
+  class="mt-6 mb-4 grid gap-3 rounded-xl border border-border-card bg-page p-4"
+  data-testid="cad-attribution"
+>
+  <h2
+    class="m-0 text-xl font-semibold leading-tight"
+    id="cad-attribution-title"
+  >
+    {t('cad.attribution.heading')}
+  </h2>
+  <p class="m-0 leading-normal">{t(attribution.summaryKey)}</p>
+  <p class="m-0 leading-normal">{t(attribution.creditsKey)}</p>
+  <ul class="m-0 flex list-none flex-wrap gap-x-3 gap-y-1 p-0 leading-normal">
+    {
+      attribution.authors.map((author) => (
+        <li>
+          <CadAttributionAuthor
+            label={author.label}
+            role={t(author.roleKey)}
+            url={author.url}
+          />
+        </li>
+      ))
+    }
+  </ul>
+  {
+    attribution.modificationKey && (
+      <p class="m-0 leading-normal">{t(attribution.modificationKey)}</p>
+    )
+  }
+  <dl class="m-0 grid gap-2 leading-normal">
+    <div>
+      <dt class="font-semibold">{t('cad.attribution.licenseLabel')}</dt>
+      <dd class="m-0 grid gap-1">
+        <a
+          href={OPENGRID_SOURCE_CODE_LICENSE_URL}
+          target="_blank"
+          rel="license noopener noreferrer"
+        >
+          {t('cad.attribution.sourceCodeLicense')}
+        </a>
+        <a
+          href={OPENGRID_DERIVED_PARTS_LICENSE_URL}
+          target="_blank"
+          rel="license noopener noreferrer"
+        >
+          {t('cad.attribution.derivedPartsLicense')}
+        </a>
+      </dd>
+    </div>
+  </dl>
+  <p class="m-0 text-sm leading-normal text-muted">
+    {t('cad.attribution.note')}
+  </p>
+</section>

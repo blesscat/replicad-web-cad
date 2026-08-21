@@ -46,6 +46,15 @@ translation.
 - **THEN** the check SHALL fail and identify the missing locale and key before the
   build is considered valid
 
+#### Scenario: Attribution notice uses the selected locale
+
+- **WHEN** a user opens the OpenGrid board or Snap generator page under either
+  supported locale
+- **THEN** the attribution heading, credit text, license labels, modification
+  statement, and accessible names SHALL use that page's locale
+- **AND** the source revision, license URLs, model IDs, and download filenames
+  SHALL remain unchanged between locales
+
 ### Requirement: Locale switching preserves CAD context
 
 The language switch SHALL navigate to the equivalent page in the selected locale,
