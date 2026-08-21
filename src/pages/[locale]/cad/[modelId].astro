@@ -116,7 +116,7 @@ function parameterSummary() {
         >
       </p>
     </div>
-    {attribution && <CadAttributionNotice {locale} {attribution} />}
     <CadWorkspace client:only="svelte" modelId={modelId} locale={locale} />
+    {attribution && <CadAttributionNotice {locale} {attribution} />}
   </section>
 </SiteLayout>

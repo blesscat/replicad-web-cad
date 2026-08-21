@@ -70,7 +70,23 @@ for (const attributionCase of attributionCases) {
     const notice = page.getByTestId('cad-attribution')
     await expect(notice).toBeVisible()
     await expect(page.locator('#cad-fallback')).toBeHidden()
-    await expect(notice).toBeVisible()
+    await expect(page.getByTestId('cad-workspace')).toBeVisible()
+    const attributionFollowsWorkspace = await page
+      .locator('section[aria-labelledby="cad-title"]')
+      .evaluate((section) => {
+        const workspace = section.querySelector('[data-testid="cad-workspace"]')
+        const attribution = section.querySelector(
+          '[data-testid="cad-attribution"]',
+        )
+
+        return Boolean(
+          workspace &&
+          attribution &&
+          workspace.compareDocumentPosition(attribution) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+        )
+      })
+    expect(attributionFollowsWorkspace).toBe(true)
     await expect(notice.getByRole('heading')).toHaveText(
       attributionCase.heading,
     )

@@ -18,8 +18,9 @@ corresponding Creative Commons license page.
 #### Scenario: OpenGrid board attribution is visible in both locales
 
 - **WHEN** a user opens `/zh-Hant/cad/opengrid` or `/en/cad/opengrid`
-- **THEN** the page MUST show the attribution notice before or alongside the
-  interactive CAD workspace
+- **THEN** the page MUST show the attribution notice at the end of the
+  generator/download context, after the interactive CAD workspace when it is
+  rendered
 - **AND** the notice MUST link to the pinned OpenGrid source revision
 - **AND** the notice MUST identify the upstream source-code license as
   CC BY-NC-SA 4.0 and the derived/generated-parts license as CC BY 4.0
