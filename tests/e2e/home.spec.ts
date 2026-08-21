@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { configuredPortalySupportUrl, supportLink } from './helpers'
 
 type HomepageRuntimeObservation = {
@@ -21,6 +21,45 @@ function observeHomepageRuntime(page: Page): HomepageRuntimeObservation {
   })
 
   return observation
+}
+
+function parseRgb(value: string): [number, number, number] {
+  const components = value.match(/\d+(?:\.\d+)?/g)?.map(Number) ?? []
+  if (components.length < 3) throw new Error(`Unsupported color: ${value}`)
+  return [components[0] ?? 0, components[1] ?? 0, components[2] ?? 0]
+}
+
+function relativeLuminance(value: string): number {
+  const channels = parseRgb(value).map((channel) => channel / 255)
+  const linearChannels = channels.map((channel) =>
+    channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+  )
+  return (
+    0.2126 * (linearChannels[0] ?? 0) +
+    0.7152 * (linearChannels[1] ?? 0) +
+    0.0722 * (linearChannels[2] ?? 0)
+  )
+}
+
+function contrastRatio(first: string, second: string): number {
+  const firstLuminance = relativeLuminance(first)
+  const secondLuminance = relativeLuminance(second)
+  const lighter = Math.max(firstLuminance, secondLuminance)
+  const darker = Math.min(firstLuminance, secondLuminance)
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
+async function readCtaColors(locator: Locator): Promise<{
+  color: string
+  backgroundColor: string
+}> {
+  return locator.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return {
+      color: style.color,
+      backgroundColor: style.backgroundColor,
+    }
+  })
 }
 
 async function expectStaticHomepage(
@@ -336,6 +375,50 @@ test('English homepage uses localized promotional content and routes', async ({
     page.getByAltText('OpenGrid Desk System Board preview'),
   ).toBeVisible()
   await expectStaticHomepage(page, runtimeObservation)
+})
+
+test('localized homepage final CTA remains readable in both color schemes', async ({
+  page,
+}) => {
+  const homepageCtaCases = [
+    {
+      path: '/zh-Hant/',
+      name: '開始選擇模型 →',
+      href: '/zh-Hant/models',
+    },
+    {
+      path: '/en/',
+      name: 'Start choosing a model →',
+      href: '/en/models',
+    },
+  ] as const
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme })
+
+    for (const homepage of homepageCtaCases) {
+      await page.goto(homepage.path)
+      const cta = page.getByRole('link', { name: homepage.name, exact: true })
+
+      await expect(cta).toBeVisible()
+      await expect(cta).toHaveAttribute('href', homepage.href)
+      await cta.focus()
+      await expect(cta).toBeFocused()
+
+      const normalColors = await readCtaColors(cta)
+      expect(
+        contrastRatio(normalColors.color, normalColors.backgroundColor),
+      ).toBeGreaterThanOrEqual(4.5)
+
+      await cta.hover()
+      const hoverColors = await readCtaColors(cta)
+      expect(
+        contrastRatio(hoverColors.color, hoverColors.backgroundColor),
+      ).toBeGreaterThanOrEqual(4.5)
+    }
+  }
 })
 
 test('model selection stacks all cards on narrow screens', async ({ page }) => {
