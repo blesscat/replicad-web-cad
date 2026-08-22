@@ -86,6 +86,94 @@ describe('OpenGrid contract', () => {
     })
   })
 
+  it('fills a target envelope with a centered remainder without changing the grid host', () => {
+    const fitted = parameters({
+      columns: 3,
+      rows: 2,
+      halfCellX: 'right',
+      targetWidth: 100,
+      targetDepth: 58,
+      fitToTarget: true,
+    })
+
+    expect(boundsForOpenGrid(fitted)).toEqual({
+      min: [-50, -29, 0],
+      max: [50, 29, 4],
+    })
+    const nominal = parameters({
+      columns: 3,
+      rows: 2,
+      halfCellX: 'right',
+      targetWidth: 100,
+      targetDepth: 58,
+      fitToTarget: false,
+    })
+    expect(openGridConnectorLocationsFor(fitted)).toEqual(
+      openGridConnectorLocationsFor(nominal),
+    )
+    expect(openGridScrewCentersFor(fitted)).toEqual(
+      openGridScrewCentersFor(nominal),
+    )
+    expect(validateOpenGridParameters(fitted)).toMatchObject({
+      valid: true,
+      value: fitted,
+    })
+  })
+
+  it('keeps the nominal envelope when target fitting is disabled', () => {
+    const notFitted = parameters({
+      columns: 3,
+      rows: 2,
+      halfCellX: 'right',
+      targetWidth: 100,
+      targetDepth: 58,
+      fitToTarget: false,
+    })
+
+    expect(boundsForOpenGrid(notFitted)).toEqual({
+      min: [-49, -28, 0],
+      max: [49, 28, 4],
+    })
+  })
+
+  it('rejects a fitted target below nominal size or beyond one half-cell remainder', () => {
+    const defaults = parameters({
+      columns: 3,
+      rows: 2,
+      halfCellX: 'right',
+    })
+
+    expect(
+      validateOpenGridParameters({
+        ...defaults,
+        targetWidth: 97.99,
+        targetDepth: 56,
+        fitToTarget: true,
+      }),
+    ).toMatchObject({ valid: false })
+    expect(
+      validateOpenGridParameters({
+        ...defaults,
+        targetWidth: 112.01,
+        targetDepth: 56,
+        fitToTarget: true,
+      }),
+    ).toMatchObject({ valid: false })
+  })
+
+  it('separates fitted and nominal export identities', () => {
+    const defaults = parameters()
+    const fitted = parameters({
+      targetWidth: 60,
+      targetDepth: 60,
+      fitToTarget: true,
+    })
+
+    expect(openGridFileName(fitted)).not.toBe(openGridFileName(defaults))
+    expect(openGridStlFileName(fitted)).not.toBe(openGridStlFileName(defaults))
+    expect(openGridFileName(fitted)).toContain('fit-60x60')
+  })
+
   it('maps all side directions to centered full-grid offsets and host pitches', () => {
     expect(openGridAxisSize(2, 'none')).toBe(56)
     expect(openGridAxisSize(2, 'left')).toBe(70)

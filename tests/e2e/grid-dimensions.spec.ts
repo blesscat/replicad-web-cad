@@ -182,6 +182,43 @@ test('OpenGrid print planner applies the practical primary piece and preserves h
   await expect(page.getByText('已選 1 孔')).toBeVisible()
 })
 
+test('OpenGrid fills a calculated remainder with a persisted centered frame', async ({
+  page,
+}) => {
+  await page.goto('/cad/opengrid')
+  await page
+    .getByRole('combobox', { name: 'OpenGrid X 半格方向' })
+    .selectOption('right')
+  await page.getByRole('slider', { name: 'X' }).press('ArrowRight')
+
+  const calculator = page.getByTestId('opengrid-target-dimension-calculator')
+  await calculator.getByRole('textbox', { name: 'X（mm）' }).fill('100')
+  await calculator.getByRole('textbox', { name: 'Y（mm）' }).fill('58')
+  await calculator.getByRole('button', { name: '計算格數' }).click()
+
+  const fitToTarget = page.getByRole('checkbox', {
+    name: '用實體邊框補足目標尺寸',
+  })
+  await expect(fitToTarget).toBeEnabled()
+  await fitToTarget.check()
+  await expect(page.getByText('尺寸：100 × 58 × 4 mm')).toBeVisible()
+
+  await page.reload()
+  await expect(page.getByTestId('opengrid-panel')).toBeVisible()
+  const restoredCalculator = page.getByTestId(
+    'opengrid-target-dimension-calculator',
+  )
+  await expect(
+    restoredCalculator.getByRole('textbox', { name: 'X（mm）' }),
+  ).toHaveValue('100')
+  await expect(
+    restoredCalculator.getByRole('textbox', { name: 'Y（mm）' }),
+  ).toHaveValue('58')
+  await expect(
+    page.getByRole('checkbox', { name: '用實體邊框補足目標尺寸' }),
+  ).toBeChecked()
+})
+
 test('grid dimension calculators remain usable on narrow viewports', async ({
   page,
 }) => {
