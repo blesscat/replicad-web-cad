@@ -26,6 +26,11 @@ function parameters(
     footprint: 'full' as const,
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
+    magnetHoleShape: 'none' as const,
+    magnetHoleLength: 0,
+    magnetHoleWidth: 0,
+    magnetHoleDiameter: 0,
+    magnetHoleThickness: 0,
     ...overrides,
   }
 }
@@ -100,6 +105,11 @@ describe('OpenGrid Snap footprint contract', () => {
       footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      magnetHoleShape: 'none',
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 0,
     })
     expect(
       normalizeOpenGridSnapParameters({

@@ -7,6 +7,7 @@ import type { WorkerClientError } from '../../../features/cad/worker-client'
 import {
   HEXAGONAL_COLUMN_CONFIGURATION,
   isOpenGridSnapFootprint,
+  isOpenGridSnapMagnetHoleShape,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_OPENING_PARAMETER_KEYS,
   OPENGRID_LOCATING_SEAT_MODES,
@@ -105,6 +106,11 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
       'footprint',
       'fourCornerLocatingHoles',
       'centerRemoverHole',
+      'magnetHoleShape',
+      'magnetHoleLength',
+      'magnetHoleWidth',
+      'magnetHoleDiameter',
+      'magnetHoleThickness',
     ]
   }
   if (modelId === 'opengrid-snap-remover') return []
@@ -191,6 +197,24 @@ function parseBooleanRawParameter(
     messageId: 'validation.invalid',
     field,
   }
+}
+
+function parseOpenGridSnapDimension(
+  rawValue: string | undefined,
+  field: ModelParameterKey,
+):
+  | { valid: true; value: number }
+  | { valid: false; messageId: string; field: ModelParameterKey } {
+  const value = rawValue === undefined ? '0' : rawValue
+  const parsed = parseOpenGridSnapDecimalInput(value)
+  if (parsed === null) {
+    return {
+      valid: false,
+      messageId: 'validation.invalid',
+      field,
+    }
+  }
+  return { valid: true, value: parsed }
 }
 
 function parseSeatModeRawParameter(
@@ -424,6 +448,11 @@ export function rawFromParameters(
       footprint: snapParameters.footprint,
       fourCornerLocatingHoles: String(snapParameters.fourCornerLocatingHoles),
       centerRemoverHole: String(snapParameters.centerRemoverHole),
+      magnetHoleShape: snapParameters.magnetHoleShape ?? 'none',
+      magnetHoleLength: String(snapParameters.magnetHoleLength ?? 0),
+      magnetHoleWidth: String(snapParameters.magnetHoleWidth ?? 0),
+      magnetHoleDiameter: String(snapParameters.magnetHoleDiameter ?? 0),
+      magnetHoleThickness: String(snapParameters.magnetHoleThickness ?? 0),
     }
   }
 
@@ -540,6 +569,36 @@ export function parseRawParameters(
     )
     if (!centerRemoverHole.valid) return centerRemoverHole
 
+    const magnetHoleShape = raw.magnetHoleShape ?? 'none'
+    if (!isOpenGridSnapMagnetHoleShape(magnetHoleShape)) {
+      return {
+        valid: false,
+        messageId: 'validation.invalid',
+        field: 'magnetHoleShape',
+      }
+    }
+
+    const magnetHoleLength = parseOpenGridSnapDimension(
+      raw.magnetHoleLength,
+      'magnetHoleLength',
+    )
+    if (!magnetHoleLength.valid) return magnetHoleLength
+    const magnetHoleWidth = parseOpenGridSnapDimension(
+      raw.magnetHoleWidth,
+      'magnetHoleWidth',
+    )
+    if (!magnetHoleWidth.valid) return magnetHoleWidth
+    const magnetHoleDiameter = parseOpenGridSnapDimension(
+      raw.magnetHoleDiameter,
+      'magnetHoleDiameter',
+    )
+    if (!magnetHoleDiameter.valid) return magnetHoleDiameter
+    const magnetHoleThickness = parseOpenGridSnapDimension(
+      raw.magnetHoleThickness,
+      'magnetHoleThickness',
+    )
+    if (!magnetHoleThickness.valid) return magnetHoleThickness
+
     const validation = validateModelParameters(modelId, {
       variant,
       profile,
@@ -547,6 +606,11 @@ export function parseRawParameters(
       footprint,
       fourCornerLocatingHoles: fourCornerLocatingHoles.value,
       centerRemoverHole: centerRemoverHole.value,
+      magnetHoleShape,
+      magnetHoleLength: magnetHoleLength.value,
+      magnetHoleWidth: magnetHoleWidth.value,
+      magnetHoleDiameter: magnetHoleDiameter.value,
+      magnetHoleThickness: magnetHoleThickness.value,
     } satisfies OpenGridSnapParameters)
     if (!validation.valid) {
       const issue = validation.issues[0]

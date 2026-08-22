@@ -53,6 +53,11 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
       footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      magnetHoleShape: 'none',
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 0,
     }
   }
   if (modelId === 'opengrid-divider') {
@@ -803,6 +808,11 @@ describe('CAD model generation debounce', () => {
           footprint: 'full',
           fourCornerLocatingHoles: false,
           centerRemoverHole: false,
+          magnetHoleShape: 'none',
+          magnetHoleLength: 0,
+          magnetHoleWidth: 0,
+          magnetHoleDiameter: 0,
+          magnetHoleThickness: 0,
         },
       }),
     )

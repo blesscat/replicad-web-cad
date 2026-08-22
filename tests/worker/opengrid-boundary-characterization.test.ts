@@ -300,6 +300,11 @@ describe('official OpenGrid edge fixture', () => {
           footprint,
           fourCornerLocatingHoles: false,
           centerRemoverHole: false,
+          magnetHoleShape: 'none',
+          magnetHoleLength: 0,
+          magnetHoleWidth: 0,
+          magnetHoleDiameter: 0,
+          magnetHoleThickness: 0,
         },
         { getOpenGridSnapReference: async () => reference },
       )

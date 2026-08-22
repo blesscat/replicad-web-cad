@@ -34,6 +34,11 @@ describe('OpenGrid system entry context', () => {
       footprint: 'full',
       fourCornerLocatingHoles: true,
       centerRemoverHole: true,
+      magnetHoleShape: 'none',
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 0,
     })
     expect(getSystemPreset('opengrid-snap', 'wall')).toEqual({
       variant: 'Full',
@@ -42,6 +47,11 @@ describe('OpenGrid system entry context', () => {
       footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      magnetHoleShape: 'none',
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 0,
     })
     expect(getSystemPreset('opengrid-pillar', 'desk')).toEqual({
       mode: 'thin-shell',
