@@ -307,9 +307,10 @@ pose, the indicator center MUST remain on the deterministic locked centerline
 outside the socket envelope. The upper-left and lower-right canonical
 indicators MUST be moved to the opposite side of their sockets, as shown by the
 reference arrows, while retaining the same 0.15 mm boundary clearance. The
-upper-right and lower-left indicators MUST remain on their existing sides. With
-the shared triangle's local apex pointing along +X, these directions MUST
-remain deterministic in the same corner order.
+upper-right and lower-left indicators MUST remain on their existing sides. All
+four female triangle apexes MUST point toward their socket openings. With the
+shared triangle's local apex pointing along +X, these directions MUST remain
+deterministic in the same corner order.
 
 #### Scenario: Locking corner-seat mode shows four indicators
 
@@ -325,10 +326,11 @@ remain deterministic in the same corner order.
 #### Scenario: Corner indicators follow deterministic locked directions
 
 - **WHEN** the detachable socket layout is inspected from the box bottom
-- **THEN** the indicator rotations MUST be 270°, 0°, 90°, and 180° in
+- **THEN** the indicator rotations MUST be 90°, 0°, 270°, and 180° in
   upper-left, upper-right, lower-right, and lower-left order
-- **AND** each indicator center MUST lie on the corresponding locked male
-  triangle's apex direction, outside the socket envelope
+- **AND** each indicator center MUST lie on the corresponding locked centerline
+  outside the socket envelope, with the upper-left and lower-right centers on
+  the opposite side specified by the reference arrows
 - **AND** each socket MUST accept the same unmirrored male seat in its existing
   insertion orientation
 - **AND** turning that male clockwise 90° MUST make the two visible triangles

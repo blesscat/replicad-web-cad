@@ -246,11 +246,11 @@ applied. Both mating indicators MUST use this same local profile datum.
 Viewed from the box underside, the indicator orientation MUST communicate the
 clockwise 90-degree locking motion: after the male seat has been turned
 clockwise 90 degrees from its insertion orientation, the male triangle's apex
-MUST point along the corresponding female indicator centerline. The female
-indicator MUST follow the canonical corner direction: the upper-left and
-lower-right indicators point away from their sockets, while the upper-right and
-lower-left indicators point back toward their sockets. These reference-aligned
-directions MUST represent the locked state.
+MUST point along the corresponding female indicator centerline. Every female
+indicator's apex MUST point toward its socket opening; the upper-left and
+lower-right indicators are moved to the opposite side of their sockets while
+retaining that inward-pointing direction. These reference-aligned directions
+MUST represent the locked state.
 
 #### Scenario: Shared indicator dimensions are published once
 
@@ -268,8 +268,8 @@ directions MUST represent the locked state.
   Z axis as viewed from below
 - **THEN** the male triangle MUST point along the corresponding female
   indicator centerline
-- **AND** the female triangle MUST use its canonical corner direction, with
-  the upper-left and lower-right markers reversed from the other two corners
+- **AND** every female triangle MUST point toward its socket opening, including
+  the upper-left and lower-right markers after they move to the opposite side
 - **AND** the reference-aligned triangles MUST identify the locked state
 - **AND** the insertion orientation MUST remain distinguishable from the locked
   orientation

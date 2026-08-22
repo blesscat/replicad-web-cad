@@ -215,7 +215,7 @@ describe('OpenGrid organizer-box contract', () => {
       configuration.indicator.radialLength / 2
 
     expect(placements.map(({ rotationDegrees }) => rotationDegrees)).toEqual([
-      270, 0, 90, 180,
+      90, 0, 270, 180,
     ])
     expect(placements[0]?.center[0]).toBe(poses[0]?.center[0])
     expect(placements[0]?.center[1]).toBeCloseTo(
