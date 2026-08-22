@@ -10,6 +10,7 @@ import {
 } from '../../src/features/cad/system-entry-context'
 import {
   OPENGRID_CONFIGURATION,
+  OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
 } from '../../src/cad-contract/units'
@@ -34,6 +35,11 @@ describe('OpenGrid system entry context', () => {
       footprint: 'full',
       fourCornerLocatingHoles: true,
       centerRemoverHole: true,
+      magnetHoleShape: 'none',
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 0,
     })
     expect(getSystemPreset('opengrid-snap', 'wall')).toEqual({
       variant: 'Full',
@@ -42,6 +48,11 @@ describe('OpenGrid system entry context', () => {
       footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      magnetHoleShape: 'none',
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 0,
     })
     expect(getSystemPreset('opengrid-pillar', 'desk')).toEqual({
       mode: 'thin-shell',
@@ -67,6 +78,7 @@ describe('OpenGrid system entry context', () => {
   it('resolves isolated Desk container presets without changing model defaults', () => {
     const deskBox = getSystemPreset('opengrid-stackable-box', 'desk')
     const deskCylinder = getSystemPreset('opengrid-stackable-cylinder', 'desk')
+    const deskOrganizer = getSystemPreset('opengrid-organizer-box', 'desk')
 
     expect(deskBox).toEqual({
       ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
@@ -83,11 +95,18 @@ describe('OpenGrid system entry context', () => {
       thinBottomMode: true,
       bottomPlateMode: false,
     })
+    expect(deskOrganizer).toEqual({
+      ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+      holeCountX: 2,
+      holeCountY: 2,
+      holeDepth: 30,
+    })
 
     expect(getSystemPreset('opengrid-stackable-box', 'wall')).toBeUndefined()
     expect(
       getSystemPreset('opengrid-stackable-cylinder', 'wall'),
     ).toBeUndefined()
+    expect(getSystemPreset('opengrid-organizer-box', 'wall')).toBeUndefined()
 
     expect(getSystemPreset('opengrid-stackable-box', 'desk')).not.toBe(
       getSystemPreset('opengrid-stackable-box', 'desk'),
@@ -127,6 +146,7 @@ describe('OpenGrid system entry context', () => {
       'opengrid-snap',
       'opengrid-pillar',
       'opengrid-divider',
+      'opengrid-organizer-box',
       'opengrid-stackable-box',
       'opengrid-stackable-cylinder',
       'opengrid-snap-remover',

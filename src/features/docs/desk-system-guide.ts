@@ -4,7 +4,12 @@ import { localizedCadPathFor } from '../../i18n/routes'
 import type { Locale } from '../../i18n'
 
 export type DeskQuickStartRole =
-  'board' | 'snap' | 'locating-post' | 'grid-box' | 'round-box'
+  | 'board'
+  | 'snap'
+  | 'locating-post'
+  | 'grid-box'
+  | 'organizer-box'
+  | 'round-box'
 
 export type DeskQuickStartComponent = {
   readonly role: DeskQuickStartRole
@@ -21,6 +26,7 @@ export const deskQuickStartComponents = [
   { role: 'snap', modelId: 'opengrid-snap' },
   { role: 'locating-post', modelId: 'opengrid-pillar' },
   { role: 'grid-box', modelId: 'opengrid-stackable-box' },
+  { role: 'organizer-box', modelId: 'opengrid-organizer-box' },
   { role: 'round-box', modelId: 'opengrid-stackable-cylinder' },
 ] as const satisfies ReadonlyArray<DeskQuickStartComponent>
 

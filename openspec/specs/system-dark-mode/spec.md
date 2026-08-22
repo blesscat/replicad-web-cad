@@ -44,6 +44,13 @@ The site MUST expose sufficient visual contrast for body text, muted text, borde
 - **THEN** the state MUST remain visually distinguishable from the surrounding dark surface
 - **AND** its text or indicator MUST remain readable without relying on color alone for the associated message
 
+#### Scenario: Static homepage CTA remains readable in dark appearance
+
+- **WHEN** a user views a localized homepage while the browser reports a dark color scheme
+- **THEN** the final call-to-action label MUST have at least 4.5:1 contrast against its surface
+- **AND** the CTA's hover state MUST preserve at least 4.5:1 contrast between its label and surface
+- **AND** the CTA MUST remain visible, keyboard-focusable, and linked to the localized model-selection page
+
 ### Requirement: CAD viewport follows the selected appearance
 
 The CAD viewport MUST adapt its rendered background, grid, orientation gizmo, model edge overlay, dimension annotations, and lighting to the selected color scheme. Theme adaptation MUST NOT change the committed model geometry, dimension values, camera framing, orbit controls, model revision, stale state, or export behavior.

@@ -9,6 +9,7 @@ import {
   isOpenGridDividerModelParameters,
   isOpenGridParameters,
   isOpenGridOpenShelfParameters,
+  isOpenGridOrganizerBoxParameters,
   isOpenGridStackableBoxParameters,
   isOpenGridStackableCylinderParameters,
   isOpenGridSnapParameters,
@@ -37,6 +38,7 @@ import {
 import { buildOpenGridSnapRemover } from '../components/opengrid-snap-remover/builder'
 import { buildPillar } from '../components/opengrid-pillar/builder'
 import { buildOpenGridOpenShelf } from '../components/opengrid-open-shelf/builder'
+import { buildOpenGridOrganizerBox } from '../components/opengrid-organizer-box/builder'
 
 export type KernelBuildContext = {
   getModularGridBaseTemplate: () => Promise<Shape3D>
@@ -64,6 +66,8 @@ export type KernelBuildContext = {
     footprint: OpenGridSnapFixedFootprint,
   ) => Promise<Shape3D>
   getOpenGridSnapRemoverAsset?: () => Promise<Shape3D>
+  getOpenGridDetachableCornerSeatReference?: () => Promise<Shape3D>
+  getOpenGridDetachableCornerSeatHolderReference?: () => Promise<Shape3D>
   yieldToEventLoop?: () => Promise<void>
   isGenerationCurrent?: () => boolean
   reportProgress?: (progress: {
@@ -159,7 +163,19 @@ async function buildPillarModel(
   if (!isPillarParameters(parameters)) {
     throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-pillar')
   }
+  let detachableCornerSeatReference: Shape3D | undefined
+  if (parameters.mode === 'detachable-corner-seat') {
+    if (!context.getOpenGridDetachableCornerSeatReference) {
+      throw new Error('MODEL_ASSET_CONTEXT_MISSING:detachable-corner-seat')
+    }
+    detachableCornerSeatReference =
+      await context.getOpenGridDetachableCornerSeatReference()
+    if (context.isGenerationCurrent && !context.isGenerationCurrent()) {
+      throw new Error('STALE_GENERATION')
+    }
+  }
   return buildPillar(parameters, {
+    detachableCornerSeatReference,
     yieldToEventLoop: context.yieldToEventLoop,
     isGenerationCurrent: context.isGenerationCurrent,
     booleanOperations: context.booleanOperations,
@@ -237,6 +253,41 @@ async function buildOpenGridStackableBoxModel(
     throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-stackable-box')
   }
   return buildOpenGridStackableBox(parameters, {
+    isGenerationCurrent: context.isGenerationCurrent,
+    booleanOperations: context.booleanOperations,
+  })
+}
+
+async function buildOpenGridOrganizerBoxModel(
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Promise<Shape3D> {
+  if (!isOpenGridOrganizerBoxParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-organizer-box')
+  }
+  let detachableCornerSeatReference: Shape3D | undefined
+  let detachableCornerSeatHolderReference: Shape3D | undefined
+  if (parameters.bottomInterfaceMode === 'detachable-corner-seat') {
+    if (!context.getOpenGridDetachableCornerSeatReference) {
+      throw new Error('MODEL_ASSET_CONTEXT_MISSING:detachable-corner-seat')
+    }
+    if (!context.getOpenGridDetachableCornerSeatHolderReference) {
+      throw new Error(
+        'MODEL_ASSET_CONTEXT_MISSING:detachable-corner-seat-holder',
+      )
+    }
+    ;[detachableCornerSeatReference, detachableCornerSeatHolderReference] =
+      await Promise.all([
+        context.getOpenGridDetachableCornerSeatReference(),
+        context.getOpenGridDetachableCornerSeatHolderReference(),
+      ])
+    if (context.isGenerationCurrent && !context.isGenerationCurrent()) {
+      throw new Error('STALE_GENERATION')
+    }
+  }
+  return buildOpenGridOrganizerBox(parameters, {
+    detachableCornerSeatReference,
+    detachableCornerSeatHolderReference,
     isGenerationCurrent: context.isGenerationCurrent,
     booleanOperations: context.booleanOperations,
   })
@@ -328,6 +379,11 @@ export const opengridStackableBoxKernelDefinition: KernelModelDefinition = {
   build: buildOpenGridStackableBoxModel,
 }
 
+export const opengridOrganizerBoxKernelDefinition: KernelModelDefinition = {
+  id: 'opengrid-organizer-box',
+  build: buildOpenGridOrganizerBoxModel,
+}
+
 export const opengridStackableCylinderKernelDefinition: KernelModelDefinition =
   {
     id: 'opengrid-stackable-cylinder',
@@ -357,6 +413,7 @@ export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   pillarKernelDefinition,
   opengridKernelDefinition,
   opengridStackableBoxKernelDefinition,
+  opengridOrganizerBoxKernelDefinition,
   opengridStackableCylinderKernelDefinition,
   opengridOpenShelfKernelDefinition,
   opengridSnapKernelDefinition,

@@ -78,6 +78,11 @@ describe('OpenGrid Snap footprint generation matrix', () => {
                   offset,
                   footprint,
                   ...features,
+                  magnetHoleShape: 'none',
+                  magnetHoleLength: 0,
+                  magnetHoleWidth: 0,
+                  magnetHoleDiameter: 0,
+                  magnetHoleThickness: 0,
                 } as const
                 let generated: Awaited<ReturnType<typeof buildOpenGridSnap>>
                 try {

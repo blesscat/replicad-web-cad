@@ -28,9 +28,11 @@ test('OpenGrid pillar is listed in its family and exposes fixed and positioning 
   const standard = page.getByRole('radio', { name: '堆疊版' })
   const thinShell = page.getByRole('radio', { name: '薄殼版' })
   const positioning = page.getByRole('radio', { name: '物件定位用' })
+  const detachable = page.getByRole('radio', { name: '可拆式角座' })
   await expect(standard).toBeVisible()
   await expect(thinShell).toBeVisible()
   await expect(positioning).toBeVisible()
+  await expect(detachable).toBeVisible()
   await expect(standard).not.toBeChecked()
   await expect(thinShell).toBeChecked()
   await expect(positioning).not.toBeChecked()
@@ -58,6 +60,14 @@ test('OpenGrid pillar is listed in its family and exposes fixed and positioning 
   await expect(positioning).toBeChecked()
   await expect(page.getByRole('textbox', { name: /總長度/ })).toBeVisible()
   await expect(page.getByRole('slider', { name: /總長度/ })).toBeVisible()
+  await detachable.check()
+  await expect(detachable).toBeChecked()
+  await expect(page.getByRole('textbox', { name: /總長度/ })).toHaveCount(0)
+  await expect(page.getByRole('slider', { name: /總長度/ })).toHaveCount(0)
+  await expect(page.getByRole('textbox', { name: /XY 直徑增量/ })).toHaveCount(
+    0,
+  )
+  await expect(page.getByRole('slider', { name: /XY 直徑增量/ })).toHaveCount(0)
   await standard.check()
   await expect(page.getByRole('textbox', { name: /總長度/ })).toHaveCount(0)
 })
@@ -113,5 +123,14 @@ test('OpenGrid pillar exports deterministic files for all pillar modes', async (
   await expect(page.getByRole('textbox', { name: /總長度/ })).toHaveValue('25')
   await expect(page.getByRole('textbox', { name: /XY 直徑增量/ })).toHaveValue(
     '0.25',
+  )
+
+  await page.getByRole('radio', { name: '可拆式角座' }).check()
+  await waitForCadReady(page)
+  const detachableStepPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '下載 STEP' }).click()
+  const detachableStep = await detachableStepPromise
+  expect(detachableStep.suggestedFilename()).toBe(
+    'pillar-5.3-detachable-corner-seat.step',
   )
 })

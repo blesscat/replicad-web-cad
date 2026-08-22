@@ -8,6 +8,7 @@ import type {
 } from '../../src/cad-contract/units'
 import {
   OPENGRID_CONFIGURATION,
+  OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_PREVIEW_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
@@ -53,6 +54,11 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
       footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      magnetHoleShape: 'none',
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 0,
     }
   }
   if (modelId === 'opengrid-divider') {
@@ -528,6 +534,31 @@ describe('CAD model generation debounce', () => {
     )
   })
 
+  it('debounces organizer-box input with its independent typed snapshot', () => {
+    const { send, context } = createRuntimeContext('opengrid-organizer-box', {
+      ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+    })
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('holeShape', 'hexagon')
+    handlers.handleInputChange('holeSpacingMode', 'independent')
+    handlers.handleInputChange('holeSpacingY', '4')
+    vi.advanceTimersByTime(500)
+
+    expect(send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.generate',
+        modelId: 'opengrid-organizer-box',
+        parameters: {
+          ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+          holeShape: 'hexagon',
+          holeSpacingMode: 'independent',
+          holeSpacingY: 4,
+        },
+      }),
+    )
+  })
+
   it('debounces divider arm counts with 0.5-grid input support', () => {
     const { client, send, context } = createRuntimeContext('opengrid-divider', {
       left: 1,
@@ -803,6 +834,11 @@ describe('CAD model generation debounce', () => {
           footprint: 'full',
           fourCornerLocatingHoles: false,
           centerRemoverHole: false,
+          magnetHoleShape: 'none',
+          magnetHoleLength: 0,
+          magnetHoleWidth: 0,
+          magnetHoleDiameter: 0,
+          magnetHoleThickness: 0,
         },
       }),
     )

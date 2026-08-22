@@ -5,6 +5,7 @@ import {
 } from '../../src/features/cad/parameters'
 import {
   OPENGRID_CONFIGURATION,
+  OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   OPENGRID_SNAP_CONFIGURATION,
@@ -68,6 +69,46 @@ function opengridParameters(
 }
 
 describe('component parameter store', () => {
+  it('persists organizer-box snapshots independently and rejects malformed entries', () => {
+    const storage = createMemoryStorage()
+    const parameters = {
+      ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+      holeSpacingMode: 'independent' as const,
+      holeSpacingX: 3,
+      holeSpacingY: 4,
+      holeShape: 'hexagon' as const,
+      bottomInterfaceMode: 'detachable-corner-seat' as const,
+    }
+    const store = createComponentParameterStore({ storage })
+
+    expect(store.set('opengrid-organizer-box', parameters)).toBe(true)
+    expect(store.get('opengrid-organizer-box')).toEqual(parameters)
+
+    const persisted = JSON.parse(
+      storage.data.get(COMPONENT_PARAMETER_STORAGE_KEY) ?? '{}',
+    ) as { values?: Record<string, Record<string, unknown>> }
+    expect(persisted.values?.legacy?.['opengrid-organizer-box']).toEqual(
+      parameters,
+    )
+    expect(persisted.values?.legacy).not.toHaveProperty(
+      'opengrid-stackable-box',
+    )
+    store.dispose()
+
+    const malformedStorage = createMemoryStorage(
+      createPayload({
+        'opengrid-organizer-box': { ...parameters, holeDepth: 0 },
+      }),
+    )
+    const malformedStore = createComponentParameterStore({
+      storage: malformedStorage,
+    })
+    expect(malformedStore.get('opengrid-organizer-box')).toEqual(
+      OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+    )
+    malformedStore.dispose()
+  })
+
   it('keeps Desk and Wall parameter snapshots in separate scopes', () => {
     const storage = createMemoryStorage()
     const deskStore = createComponentParameterStore({
@@ -87,6 +128,11 @@ describe('component parameter store', () => {
         footprint: 'full',
         fourCornerLocatingHoles: true,
         centerRemoverHole: true,
+        magnetHoleShape: 'none',
+        magnetHoleLength: 0,
+        magnetHoleWidth: 0,
+        magnetHoleDiameter: 0,
+        magnetHoleThickness: 0,
       }),
     ).toBe(true)
     expect(
@@ -97,6 +143,11 @@ describe('component parameter store', () => {
         footprint: 'full',
         fourCornerLocatingHoles: false,
         centerRemoverHole: false,
+        magnetHoleShape: 'none',
+        magnetHoleLength: 0,
+        magnetHoleWidth: 0,
+        magnetHoleDiameter: 0,
+        magnetHoleThickness: 0,
       }),
     ).toBe(true)
 
@@ -151,7 +202,56 @@ describe('component parameter store', () => {
       footprint: 'full',
       fourCornerLocatingHoles: true,
       centerRemoverHole: true,
+      magnetHoleShape: 'none',
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 0,
     })
+    store.dispose()
+  })
+
+  it('persists active Snap magnet dimensions as typed values and rejects conflicts', () => {
+    const storage = createMemoryStorage()
+    const store = createComponentParameterStore({ storage })
+    const squareMagnet = {
+      ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
+      variant: 'Full' as const,
+      magnetHoleShape: 'square' as const,
+      magnetHoleLength: 6,
+      magnetHoleWidth: 4,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 2,
+    }
+
+    expect(store.set('opengrid-snap', squareMagnet)).toBe(true)
+    expect(store.get('opengrid-snap')).toEqual(squareMagnet)
+
+    const persisted = JSON.parse(
+      storage.data.get(COMPONENT_PARAMETER_STORAGE_KEY) ?? '{}',
+    ) as { values?: { legacy?: Record<string, unknown> } }
+    expect(persisted.values?.legacy?.['opengrid-snap']).toEqual(squareMagnet)
+    expect(persisted.values?.legacy?.['opengrid-snap']).not.toHaveProperty(
+      'halfCellX',
+    )
+
+    expect(
+      store.set('opengrid-snap', {
+        ...squareMagnet,
+        centerRemoverHole: true,
+      }),
+    ).toBe(false)
+    expect(store.get('opengrid-snap')).toEqual(squareMagnet)
+
+    const roundMagnet = {
+      ...squareMagnet,
+      magnetHoleShape: 'round' as const,
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 8,
+    }
+    expect(store.set('opengrid-snap', roundMagnet)).toBe(true)
+    expect(store.get('opengrid-snap')).toEqual(roundMagnet)
     store.dispose()
   })
 
@@ -333,6 +433,11 @@ describe('component parameter store', () => {
       footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      magnetHoleShape: 'none',
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 0,
     })
 
     expect(store.get('opengrid-stackable-cylinder')).toEqual({
@@ -617,6 +722,11 @@ describe('component parameter store', () => {
         footprint: 'half',
         fourCornerLocatingHoles: true,
         centerRemoverHole: false,
+        magnetHoleShape: 'none',
+        magnetHoleLength: 0,
+        magnetHoleWidth: 0,
+        magnetHoleDiameter: 0,
+        magnetHoleThickness: 0,
       }),
     ).toBe(true)
     expect(store.get('opengrid')).toEqual(board)
@@ -627,6 +737,11 @@ describe('component parameter store', () => {
       footprint: 'half',
       fourCornerLocatingHoles: true,
       centerRemoverHole: false,
+      magnetHoleShape: 'none',
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 0,
     })
     store.dispose()
   })
@@ -713,6 +828,11 @@ describe('component parameter store', () => {
       footprint: 'half',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      magnetHoleShape: 'none',
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 0,
     })
 
     expect(store.set('opengrid-snap', store.get('opengrid-snap'))).toBe(true)
@@ -727,6 +847,11 @@ describe('component parameter store', () => {
       footprint: 'half',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      magnetHoleShape: 'none',
+      magnetHoleLength: 0,
+      magnetHoleWidth: 0,
+      magnetHoleDiameter: 0,
+      magnetHoleThickness: 0,
     })
     expect(persisted.values?.legacy?.['opengrid-snap']).not.toHaveProperty(
       'halfCellX',
@@ -788,6 +913,25 @@ describe('component parameter store', () => {
       offset: 0,
     })
 
+    store.dispose()
+  })
+
+  it('persists the exact detachable corner-seat mode without numeric fields', () => {
+    const storage = createMemoryStorage()
+    const store = createComponentParameterStore({ storage })
+
+    expect(
+      store.set('opengrid-pillar', { mode: 'detachable-corner-seat' }),
+    ).toBe(true)
+    expect(store.get('opengrid-pillar')).toEqual({
+      mode: 'detachable-corner-seat',
+    })
+
+    const restored = createComponentParameterStore({ storage })
+    expect(restored.get('opengrid-pillar')).toEqual({
+      mode: 'detachable-corner-seat',
+    })
+    restored.dispose()
     store.dispose()
   })
 

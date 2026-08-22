@@ -94,6 +94,15 @@ function deleteShape(shape: { delete?: () => void } | null | undefined): void {
   }
 }
 
+function deleteDistinctShapes(shapes: Array<Shape3D | null | undefined>): void {
+  const deleted = new Set<Shape3D>()
+  for (const shape of shapes) {
+    if (!shape || deleted.has(shape)) continue
+    deleted.add(shape)
+    deleteShape(shape)
+  }
+}
+
 function assertGenerationCurrent(context: OpenGridSnapBuildContext): void {
   if (context.isGenerationCurrent && !context.isGenerationCurrent()) {
     throw new Error('STALE_GENERATION')
@@ -295,10 +304,15 @@ function cutShape(
   cutter: Shape3D,
   scope: BooleanOperationScope | undefined,
 ): Shape3D {
-  const result = measureBooleanInScope(scope, 'cut', () => source.cut(cutter))
-  if (result !== source) deleteShape(source)
-  deleteShape(cutter)
-  return result
+  try {
+    const result = measureBooleanInScope(scope, 'cut', () => source.cut(cutter))
+    if (result !== source) deleteShape(source)
+    deleteShape(cutter)
+    return result
+  } catch (error) {
+    deleteShape(cutter)
+    throw error
+  }
 }
 
 function fuseCutter(
@@ -408,6 +422,76 @@ function makeLocatingHolesCutter(
   return cutter
 }
 
+function magnetHolePlanHalfExtents(
+  parameters: OpenGridSnapParameters,
+): [number, number] {
+  if (parameters.magnetHoleShape === 'square') {
+    return [parameters.magnetHoleLength / 2, parameters.magnetHoleWidth / 2]
+  }
+  const radius = parameters.magnetHoleDiameter / 2
+  return [radius, radius]
+}
+
+function makeMagnetHoleCutter(
+  parameters: OpenGridSnapParameters,
+  definition: OpenGridSnapProfileDefinition,
+  reporter: BooleanOperationReporter | undefined,
+): Shape3D {
+  if (parameters.magnetHoleShape === 'none') {
+    throw new Error('OPENGRID_SNAP_MAGNET_HOLE_DISABLED')
+  }
+
+  const baseZ = definition.expectedBounds.min[2] - 1
+  const topZ = definition.expectedBounds.min[2] + parameters.magnetHoleThickness
+  const [halfX, halfY] = magnetHolePlanHalfExtents(parameters)
+  let cutter: Shape3D
+  if (parameters.magnetHoleShape === 'square') {
+    cutter = makeBox([-halfX, -halfY, baseZ], [halfX, halfY, topZ])
+  } else {
+    cutter = makeCylinder(parameters.magnetHoleDiameter / 2, topZ - baseZ, [
+      0,
+      0,
+      baseZ,
+    ])
+  }
+
+  const halfOpeningWidth = definition.magnetHoleOpeningWidth / 2
+  const reach = definition.magnetHoleConnectorReachByDirection
+  // Overlap the pocket slightly so round pockets are connected by an area,
+  // not only tangent at a single point on the circle.
+  const connectorOverlap = Math.min(0.5, halfOpeningWidth)
+  const slotStartX = halfX - connectorOverlap
+  const slotStartY = halfY - connectorOverlap
+  const fuseScope = reporter?.createScope(4)
+  const slots = [
+    makeBox(
+      [slotStartX, -halfOpeningWidth, baseZ],
+      [reach.positiveX, halfOpeningWidth, topZ],
+    ),
+    makeBox(
+      [-reach.negativeX, -halfOpeningWidth, baseZ],
+      [-slotStartX, halfOpeningWidth, topZ],
+    ),
+    makeBox(
+      [-halfOpeningWidth, slotStartY, baseZ],
+      [halfOpeningWidth, reach.positiveY, topZ],
+    ),
+    makeBox(
+      [-halfOpeningWidth, -reach.negativeY, baseZ],
+      [halfOpeningWidth, -slotStartY, topZ],
+    ),
+  ]
+
+  try {
+    for (const slot of slots) cutter = fuseCutter(cutter, slot, fuseScope)
+    return cutter
+  } catch (error) {
+    deleteShape(cutter)
+    for (const slot of slots) deleteShape(slot)
+    throw error
+  }
+}
+
 function applyBodyFeatures(
   body: Shape3D,
   parameters: OpenGridSnapParameters,
@@ -465,9 +549,9 @@ function applyBodyFeatures(
 }
 
 type StandardAssemblyParts = {
-  body: Solid
-  sideHolders: Solid[]
-  snaps: Solid[]
+  body: Shape3D
+  sideHolders: Shape3D[]
+  snaps: Shape3D[]
 }
 
 function buildStandardAssemblyParts(
@@ -548,11 +632,52 @@ function composeStandardAssembly(
   if (applyOptionalFeatures) {
     body = applyBodyFeatures(parts.body, parameters, definition, {}, reporter)
   }
-  const output: Shape3D[] = [body, ...parts.sideHolders, ...parts.snaps]
+  const assemblyParts: StandardAssemblyParts = {
+    body,
+    sideHolders: parts.sideHolders,
+    snaps: parts.snaps,
+  }
+  if (applyOptionalFeatures && parameters.magnetHoleShape !== 'none') {
+    const members = [
+      assemblyParts.body,
+      ...assemblyParts.sideHolders,
+      ...assemblyParts.snaps,
+    ]
+    const cutScope = reporter?.createScope(members.length)
+    let magnetCutter: Shape3D | null = null
+    try {
+      magnetCutter = makeMagnetHoleCutter(parameters, definition, reporter)
+      for (let index = 0; index < members.length; index += 1) {
+        const member = members[index]
+        if (!member) continue
+        const cutMember = cutShape(
+          member,
+          cloneImportedAssembly(magnetCutter),
+          cutScope,
+        )
+        members[index] = cutMember
+      }
+      const cutBody = members[0]
+      if (!cutBody) throw new Error('OPENGRID_SNAP_MAGNET_BODY_MISSING')
+      assemblyParts.body = cutBody
+      assemblyParts.sideHolders = members.slice(1, 5)
+      assemblyParts.snaps = members.slice(5)
+    } catch (error) {
+      deleteDistinctShapes(members)
+      throw error
+    } finally {
+      deleteShape(magnetCutter)
+    }
+  }
+  const finalOutput: Shape3D[] = [
+    assemblyParts.body,
+    ...assemblyParts.sideHolders,
+    ...assemblyParts.snaps,
+  ]
   try {
-    return makeCompound(output).asShape3D()
+    return makeCompound(finalOutput).asShape3D()
   } catch (error) {
-    for (const shape of output) deleteShape(shape)
+    for (const shape of finalOutput) deleteShape(shape)
     throw error
   }
 }
@@ -577,6 +702,13 @@ function applyDirectionalFeatures(
   definition: OpenGridSnapProfileDefinition,
   reporter: BooleanOperationReporter | undefined,
 ): Shape3D {
+  if (parameters.magnetHoleShape !== 'none') {
+    return cutShape(
+      assembly,
+      makeMagnetHoleCutter(parameters, definition, reporter),
+      reporter?.createScope(1),
+    )
+  }
   if (!parameters.fourCornerLocatingHoles && !parameters.centerRemoverHole) {
     return assembly
   }

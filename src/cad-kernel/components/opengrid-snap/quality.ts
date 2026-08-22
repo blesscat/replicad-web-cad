@@ -46,6 +46,7 @@ export type OpenGridSnapQualityReport = {
   centralVolume: number | null
   internalProbeVolumes: number[]
   optionalFeatureProbeVolumes: number[]
+  magnetHoleProbeVolumes: number[]
   meshTriangleCount: number
 }
 
@@ -275,6 +276,30 @@ function volumeInCylinder(
   }
 }
 
+function volumeInCylinderAtZ(
+  shape: Shape3D,
+  center: [number, number],
+  radius: number,
+  zMin: number,
+  zMax: number,
+): number {
+  const cylinder = makeCylinder(radius, zMax - zMin, [
+    center[0],
+    center[1],
+    zMin,
+  ])
+  let intersection: Shape3D | null = null
+  try {
+    intersection = shape.intersect(cylinder)
+    return measureVolume(intersection)
+  } finally {
+    deleteDistinctShapes([
+      intersection !== shape ? intersection : null,
+      cylinder,
+    ])
+  }
+}
+
 function volumeInCylindricalAnnulus(
   shape: Shape3D,
   center: [number, number],
@@ -420,6 +445,247 @@ function centerRemoverLedgeProbe(
   }
 }
 
+function magnetHolePlanHalfExtents(
+  parameters: OpenGridSnapParameters,
+): [number, number] {
+  if (parameters.magnetHoleShape === 'square') {
+    return [parameters.magnetHoleLength / 2, parameters.magnetHoleWidth / 2]
+  }
+  const radius = parameters.magnetHoleDiameter / 2
+  return [radius, radius]
+}
+
+function magnetHoleProbeZBounds(
+  parameters: OpenGridSnapParameters,
+  bounds: ModelBounds,
+): [number, number] | null {
+  const minZ = Math.max(bounds.min[2] + 0.05, bounds.min[2])
+  const maxZ = Math.min(
+    bounds.max[2] - 0.05,
+    bounds.min[2] + parameters.magnetHoleThickness - 0.05,
+  )
+  if (maxZ <= minZ) return null
+  return [minZ, maxZ]
+}
+
+function magnetConnectorProbes(
+  parameters: OpenGridSnapParameters,
+  definition: ReturnType<typeof openGridSnapProfileFor>,
+  zMin: number,
+  zMax: number,
+): Array<{ opening: Probe; tangent: Probe; retention: Probe }> {
+  const [halfX, halfY] = magnetHolePlanHalfExtents(parameters)
+  const halfOpeningWidth = definition.magnetHoleOpeningWidth / 2
+  const reach = definition.magnetHoleConnectorReachByDirection
+  const bounds = boundsForOpenGridSnap(parameters)
+  const innerMargin = 0.2
+  const tangentMin = halfOpeningWidth + 0.15
+  const tangentMax = halfOpeningWidth + 0.55
+  const probes: Array<{ opening: Probe; tangent: Probe; retention: Probe }> = []
+
+  const retentionEndFor = (
+    axis: 0 | 1,
+    sign: -1 | 1,
+    connectorReach: number,
+  ): number => {
+    const positiveOuter = bounds.max[axis]
+    const negativeOuter = Math.abs(bounds.min[axis])
+    const outerBoundary = sign > 0 ? positiveOuter : negativeOuter
+    return Math.min(connectorReach + 0.9, outerBoundary - 0.2)
+  }
+
+  const addVertical = (sign: -1 | 1, connectorReach: number): void => {
+    const start = sign > 0 ? halfY + innerMargin : -connectorReach + innerMargin
+    const end = sign > 0 ? connectorReach - innerMargin : -halfY - innerMargin
+    if (end <= start) return
+    const retentionStart = connectorReach + 0.2
+    const retentionEnd = retentionEndFor(1, sign, connectorReach)
+    const retentionMin = sign > 0 ? retentionStart : -retentionEnd
+    const retentionMax = sign > 0 ? retentionEnd : -retentionStart
+    probes.push({
+      opening: {
+        min: [-halfOpeningWidth + innerMargin, start, zMin],
+        max: [halfOpeningWidth - innerMargin, end, zMax],
+      },
+      tangent: {
+        min: [tangentMin, (start + end) / 2 - 0.25, zMin],
+        max: [tangentMax, (start + end) / 2 + 0.25, zMax],
+      },
+      retention: {
+        min: [-0.4, retentionMin, zMin],
+        max: [0.4, retentionMax, zMax],
+      },
+    })
+  }
+
+  const addHorizontal = (sign: -1 | 1, connectorReach: number): void => {
+    const start = sign > 0 ? halfX + innerMargin : -connectorReach + innerMargin
+    const end = sign > 0 ? connectorReach - innerMargin : -halfX - innerMargin
+    if (end <= start) return
+    const retentionStart = connectorReach + 0.2
+    const retentionEnd = retentionEndFor(0, sign, connectorReach)
+    const retentionMin = sign > 0 ? retentionStart : -retentionEnd
+    const retentionMax = sign > 0 ? retentionEnd : -retentionStart
+    probes.push({
+      opening: {
+        min: [start, -halfOpeningWidth + innerMargin, zMin],
+        max: [end, halfOpeningWidth - innerMargin, zMax],
+      },
+      tangent: {
+        min: [(start + end) / 2 - 0.25, tangentMin, zMin],
+        max: [(start + end) / 2 + 0.25, tangentMax, zMax],
+      },
+      retention: {
+        min: [retentionMin, -0.4, zMin],
+        max: [retentionMax, 0.4, zMax],
+      },
+    })
+  }
+
+  addVertical(-1, reach.negativeY)
+  addVertical(1, reach.positiveY)
+  addHorizontal(-1, reach.negativeX)
+  addHorizontal(1, reach.positiveX)
+  return probes
+}
+
+function inspectMagnetHoleProbes(
+  shape: Shape3D,
+  parameters: OpenGridSnapParameters,
+  bounds: ModelBounds | null,
+  failures: string[],
+): number[] {
+  if (!bounds || parameters.magnetHoleShape === 'none') return []
+
+  const definition = openGridSnapProfileFor(
+    parameters.profile,
+    parameters.variant,
+  )
+  const zBounds = magnetHoleProbeZBounds(parameters, bounds)
+  if (!zBounds) {
+    failures.push('magnet:thickness-probe-empty')
+    return []
+  }
+  const [zMin, zMax] = zBounds
+  const topProbeMin = bounds.min[2] + parameters.magnetHoleThickness + 0.05
+  const topProbeMax = Math.min(bounds.max[2] - 0.05, topProbeMin + 0.2)
+  if (topProbeMax <= topProbeMin) {
+    failures.push('magnet:thickness-support-probe-empty')
+  }
+  const central = largestSolid(shape)
+  const probeVolumes: number[] = []
+  try {
+    const [halfX, halfY] = magnetHolePlanHalfExtents(parameters)
+    if (parameters.magnetHoleShape === 'square') {
+      const cavity = volumeInBoxProbe(central, {
+        min: [-halfX + 0.2, -halfY + 0.2, zMin],
+        max: [halfX - 0.2, halfY - 0.2, zMax],
+      })
+      const retainingCorner = volumeInBoxProbe(central, {
+        min: [halfX + 0.2, halfY + 0.2, zMin],
+        max: [halfX + 0.8, halfY + 0.8, zMax],
+      })
+      const topSupport =
+        topProbeMax > topProbeMin
+          ? volumeInBoxProbe(central, {
+              min: [-halfX + 0.2, -halfY + 0.2, topProbeMin],
+              max: [halfX - 0.2, halfY - 0.2, topProbeMax],
+            })
+          : 0
+      probeVolumes.push(cavity, retainingCorner, topSupport)
+      if (cavity > QUALITY_TOLERANCE) {
+        failures.push('magnet:square-cavity-missing')
+      }
+      if (retainingCorner <= QUALITY_TOLERANCE) {
+        failures.push('magnet:retention-material-missing')
+      }
+      if (topSupport <= QUALITY_TOLERANCE) {
+        failures.push('magnet:thickness-exceeds-requested-depth')
+      }
+    } else {
+      const radius = parameters.magnetHoleDiameter / 2
+      const cavity = volumeInCylinderAtZ(
+        central,
+        [0, 0],
+        Math.max(0.1, radius - 0.2),
+        zMin,
+        zMax,
+      )
+      const retainingOuter = makeCylinder(radius + 0.55, zMax - zMin, [
+        0,
+        0,
+        zMin,
+      ])
+      const retainingInner = makeCylinder(radius + 0.15, zMax - zMin, [
+        0,
+        0,
+        zMin,
+      ])
+      let retainingAnnulusShape: Shape3D | null = null
+      let retainingIntersection: Shape3D | null = null
+      let retainingAnnulus = 0
+      try {
+        retainingAnnulusShape = retainingOuter.cut(retainingInner)
+        retainingIntersection = central.intersect(retainingAnnulusShape)
+        retainingAnnulus = measureVolume(retainingIntersection)
+      } finally {
+        deleteDistinctShapes([
+          retainingIntersection !== central ? retainingIntersection : null,
+          retainingAnnulusShape,
+          retainingOuter,
+          retainingInner,
+        ])
+      }
+      probeVolumes.push(cavity, retainingAnnulus)
+      if (cavity > QUALITY_TOLERANCE) {
+        failures.push('magnet:round-cavity-missing')
+      }
+      if (retainingAnnulus <= QUALITY_TOLERANCE) {
+        failures.push('magnet:retention-material-missing')
+      }
+      const topSupport =
+        topProbeMax > topProbeMin
+          ? volumeInCylinderAtZ(
+              central,
+              [0, 0],
+              Math.max(0.1, radius - 0.2),
+              topProbeMin,
+              topProbeMax,
+            )
+          : 0
+      probeVolumes.push(topSupport)
+      if (topSupport <= QUALITY_TOLERANCE) {
+        failures.push('magnet:thickness-exceeds-requested-depth')
+      }
+    }
+
+    const connectorProbes = magnetConnectorProbes(
+      parameters,
+      definition,
+      zMin,
+      zMax,
+    )
+    for (const { opening, tangent, retention } of connectorProbes) {
+      const openingVolume = volumeInBoxProbe(shape, opening)
+      const tangentVolume = volumeInBoxProbe(shape, tangent)
+      const retentionVolume = volumeInBoxProbe(shape, retention)
+      probeVolumes.push(openingVolume, tangentVolume, retentionVolume)
+      if (openingVolume > QUALITY_TOLERANCE) {
+        failures.push('magnet:connector-opening-missing')
+      }
+      if (tangentVolume <= QUALITY_TOLERANCE) {
+        failures.push('magnet:connector-width-invalid')
+      }
+      if (retentionVolume <= QUALITY_TOLERANCE) {
+        failures.push('magnet:connector-retention-missing')
+      }
+    }
+  } finally {
+    deleteShape(central)
+  }
+  return probeVolumes
+}
+
 function inspectOptionalFeatureProbes(
   shape: Shape3D,
   parameters: OpenGridSnapParameters,
@@ -428,6 +694,10 @@ function inspectOptionalFeatureProbes(
   reference: Shape3D,
 ): number[] {
   if (!bounds) return []
+
+  if (parameters.magnetHoleShape !== 'none') {
+    return inspectMagnetHoleProbes(shape, parameters, bounds, failures)
+  }
 
   const definition = openGridSnapProfileFor(
     parameters.profile,
@@ -945,7 +1215,9 @@ function compareTransformedStandardAssembly(
     }
     if (
       index > 0 ||
-      (!parameters.fourCornerLocatingHoles && !parameters.centerRemoverHole)
+      (!parameters.fourCornerLocatingHoles &&
+        !parameters.centerRemoverHole &&
+        parameters.magnetHoleShape === 'none')
     ) {
       const expectedVolume =
         referenceMember.volume * transform.scaleX * transform.scaleY
@@ -1312,6 +1584,7 @@ function inspectProfileQuality(
       if (
         !parameters.fourCornerLocatingHoles &&
         !parameters.centerRemoverHole &&
+        parameters.magnetHoleShape === 'none' &&
         parameters.offset === 0 &&
         Math.abs(measureVolume(shape) - measureVolume(reference)) >
           QUALITY_TOLERANCE
@@ -1455,6 +1728,7 @@ export function inspectOpenGridSnapShapeQuality(
   let centralVolume: number | null = null
   let internalProbeVolumes: number[] = []
   let optionalFeatureProbeVolumes: number[] = []
+  let magnetHoleProbeVolumes: number[] = []
 
   try {
     let envelopeTolerance = OPENGRID_SNAP_GENERATED_ENVELOPE_TOLERANCE
@@ -1546,7 +1820,8 @@ export function inspectOpenGridSnapShapeQuality(
   } else if (
     parameters.profile === 'Standard' &&
     !parameters.fourCornerLocatingHoles &&
-    !parameters.centerRemoverHole
+    !parameters.centerRemoverHole &&
+    parameters.magnetHoleShape === 'none'
   ) {
     const transformedCore = compareTransformedCore(
       shape,
@@ -1579,6 +1854,9 @@ export function inspectOpenGridSnapShapeQuality(
       failures,
       reference,
     )
+    if (parameters.magnetHoleShape !== 'none') {
+      magnetHoleProbeVolumes = optionalFeatureProbeVolumes
+    }
   } catch (error) {
     failures.push(
       `features:${error instanceof Error ? error.message : String(error)}`,
@@ -1607,6 +1885,7 @@ export function inspectOpenGridSnapShapeQuality(
     centralVolume,
     internalProbeVolumes,
     optionalFeatureProbeVolumes,
+    magnetHoleProbeVolumes,
     meshTriangleCount: mesh.triangleCount,
   }
 }

@@ -1,5 +1,6 @@
 import {
   OPENGRID_CONFIGURATION,
+  OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   type ModelId,
@@ -42,6 +43,7 @@ export function systemContextForModel(
     modelId === 'opengrid-snap' ||
     modelId === 'opengrid-pillar' ||
     modelId === 'opengrid-divider' ||
+    modelId === 'opengrid-organizer-box' ||
     modelId === 'opengrid-stackable-box' ||
     modelId === 'opengrid-stackable-cylinder' ||
     modelId === 'opengrid-snap-remover' ||
@@ -81,6 +83,11 @@ function snapPresetFor(context: OpenGridSystemContext): OpenGridSnapParameters {
     footprint: 'full',
     fourCornerLocatingHoles: context === 'desk',
     centerRemoverHole: context === 'desk',
+    magnetHoleShape: 'none',
+    magnetHoleLength: 0,
+    magnetHoleWidth: 0,
+    magnetHoleDiameter: 0,
+    magnetHoleThickness: 0,
   }
 }
 
@@ -113,6 +120,14 @@ export function getSystemPreset(
       height: 30,
       basePlateMode: false,
       thinShellMode: true,
+    })
+  }
+  if (context === 'desk' && modelId === 'opengrid-organizer-box') {
+    return cloneModelParameters({
+      ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+      holeCountX: 2,
+      holeCountY: 2,
+      holeDepth: 30,
     })
   }
   if (context === 'desk' && modelId === 'opengrid-stackable-cylinder') {

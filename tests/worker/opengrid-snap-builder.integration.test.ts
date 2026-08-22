@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
   getOC,
   makeBox,
+  makeCylinder,
   measureVolume,
   setOC,
   Solid,
@@ -311,6 +312,23 @@ function volumeInBox(
   }
 }
 
+function volumeInCylinder(
+  shape: Shape3D,
+  radius: number,
+  minZ: number,
+  maxZ: number,
+): number {
+  const probe = makeCylinder(radius, maxZ - minZ, [0, 0, minZ])
+  let intersection: Shape3D | null = null
+  try {
+    intersection = shape.intersect(probe)
+    return measureVolume(intersection)
+  } finally {
+    if (intersection && intersection !== shape) intersection.delete()
+    probe.delete()
+  }
+}
+
 function assetBlob(
   variant: 'Full' | 'Lite',
   profile: 'Standard' | 'Directional' = 'Standard',
@@ -341,6 +359,11 @@ function snapParameters(
     profile: 'Standard' | 'Directional'
     fourCornerLocatingHoles: boolean
     centerRemoverHole: boolean
+    magnetHoleShape: 'none' | 'square' | 'round'
+    magnetHoleLength: number
+    magnetHoleWidth: number
+    magnetHoleDiameter: number
+    magnetHoleThickness: number
   }> = {},
 ) {
   return {
@@ -350,6 +373,11 @@ function snapParameters(
     footprint,
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
+    magnetHoleShape: 'none' as const,
+    magnetHoleLength: 0,
+    magnetHoleWidth: 0,
+    magnetHoleDiameter: 0,
+    magnetHoleThickness: 0,
     ...overrides,
   }
 }
@@ -521,6 +549,130 @@ describe('OpenGrid Snap reference builder', () => {
         reference.delete()
       }
     },
+  )
+
+  it('cuts one centered square or round magnet pocket with four 2 mm openings', async () => {
+    const reference = await importOpenGridSnapReference(
+      assetBlob('Full'),
+      'Full',
+    )
+    const cases = [
+      {
+        magnetHoleShape: 'square' as const,
+        magnetHoleLength: 6,
+        magnetHoleWidth: 4,
+        magnetHoleDiameter: 0,
+        magnetHoleThickness: 2,
+      },
+      {
+        magnetHoleShape: 'round' as const,
+        magnetHoleLength: 0,
+        magnetHoleWidth: 0,
+        magnetHoleDiameter: 8,
+        magnetHoleThickness: 2,
+      },
+    ]
+
+    try {
+      for (const magnet of cases) {
+        const parameters = snapParameters('Full', 0.2, 'full', magnet)
+        const generated = await buildOpenGridSnap(parameters, {
+          getOpenGridSnapReference: async () => reference,
+        })
+        const body = centralSolid(generated)
+        try {
+          expect(countSolids(generated)).toBe(9)
+          expect(
+            magnet.magnetHoleShape === 'square'
+              ? volumeInBox(body, [-2.9, -1.9, 0.1], [2.9, 1.9, 1.9])
+              : volumeInCylinder(body, 3.9, 0.1, 1.9),
+          ).toBeLessThan(0.05)
+          expect(
+            volumeInBox(body, [2.5, -0.8, 0.1], [3.1, 0.8, 1.9]),
+          ).toBeLessThan(0.1)
+          expect(
+            volumeInBox(body, [-0.8, 2.8, 0.1], [0.8, 9.5, 1.9]),
+          ).toBeLessThan(0.1)
+          expect(
+            volumeInBox(body, [-0.8, -9.5, 0.1], [0.8, -2.8, 1.9]),
+          ).toBeLessThan(0.1)
+          expect(
+            volumeInBox(body, [2.8, -0.8, 0.1], [9.5, 0.8, 1.9]),
+          ).toBeLessThan(0.1)
+          expect(
+            volumeInBox(body, [-9.5, -0.8, 0.1], [-2.8, 0.8, 1.9]),
+          ).toBeLessThan(0.1)
+          expect(
+            volumeInBox(body, [11, -0.8, 0.1], [12, 0.8, 1.9]),
+          ).toBeGreaterThan(0.05)
+          expect(
+            volumeInBox(body, [-0.8, 11, 0.1], [0.8, 12, 1.9]),
+          ).toBeGreaterThan(0.05)
+          expect(
+            volumeInBox(body, [10.9, -0.8, 0.1], [11.3, 0.8, 1.9]),
+          ).toBeLessThan(0.1)
+          expect(
+            volumeInBox(body, [-11.3, -0.8, 0.1], [-10.9, 0.8, 1.9]),
+          ).toBeLessThan(0.1)
+          expect(
+            volumeInBox(body, [-0.8, 10.9, 0.1], [0.8, 11.3, 1.9]),
+          ).toBeLessThan(0.1)
+          expect(
+            volumeInBox(body, [-0.8, -11.3, 0.1], [0.8, -10.9, 1.9]),
+          ).toBeLessThan(0.1)
+          const quality = inspectOpenGridSnapShapeQuality(
+            generated,
+            parameters,
+            meshBRep(generated, { tolerance: 0.05, angularTolerance: 0.1 }),
+            reference,
+          )
+          expect(quality.passed, quality.failures.join(';')).toBe(true)
+        } finally {
+          body.delete()
+          generated.delete()
+        }
+      }
+    } finally {
+      reference.delete()
+    }
+  }, 60_000)
+
+  it.each([
+    ['Full', 'Directional'],
+    ['Lite', 'Standard'],
+    ['Lite', 'Directional'],
+  ] as const)(
+    'quality-gates %s %s magnet assemblies',
+    async (variant, profile) => {
+      const reference = await importOpenGridSnapReference(
+        assetBlob(variant, profile),
+        variant,
+        profile,
+      )
+      const parameters = snapParameters(variant, 0, 'full', {
+        profile,
+        magnetHoleShape: 'round',
+        magnetHoleDiameter: 8,
+        magnetHoleThickness: 2,
+      })
+      const generated = await buildOpenGridSnap(parameters, {
+        getOpenGridSnapReference: async () => reference,
+      })
+      try {
+        const quality = inspectOpenGridSnapShapeQuality(
+          generated,
+          parameters,
+          meshBRep(generated, { tolerance: 0.05, angularTolerance: 0.1 }),
+          reference,
+        )
+        expect(quality.passed, quality.failures.join(';')).toBe(true)
+        expect(countSolids(generated)).toBe(profile === 'Standard' ? 9 : 1)
+      } finally {
+        generated.delete()
+        reference.delete()
+      }
+    },
+    60_000,
   )
 
   it.each(['Full', 'Lite'] as const)(

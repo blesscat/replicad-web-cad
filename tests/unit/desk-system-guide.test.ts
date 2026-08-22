@@ -12,6 +12,7 @@ describe('Desk System documentation guide', () => {
       { role: 'snap', modelId: 'opengrid-snap' },
       { role: 'locating-post', modelId: 'opengrid-pillar' },
       { role: 'grid-box', modelId: 'opengrid-stackable-box' },
+      { role: 'organizer-box', modelId: 'opengrid-organizer-box' },
       { role: 'round-box', modelId: 'opengrid-stackable-cylinder' },
     ])
   })
@@ -22,6 +23,7 @@ describe('Desk System documentation guide', () => {
       '/en/cad/opengrid-snap?system=desk',
       '/en/cad/opengrid-pillar?system=desk',
       '/en/cad/opengrid-stackable-box?system=desk',
+      '/en/cad/opengrid-organizer-box?system=desk',
       '/en/cad/opengrid-stackable-cylinder?system=desk',
     ])
     expect(deskQuickStartEntries('zh-Hant').map((entry) => entry.href)).toEqual(
@@ -30,6 +32,7 @@ describe('Desk System documentation guide', () => {
         '/zh-Hant/cad/opengrid-snap?system=desk',
         '/zh-Hant/cad/opengrid-pillar?system=desk',
         '/zh-Hant/cad/opengrid-stackable-box?system=desk',
+        '/zh-Hant/cad/opengrid-organizer-box?system=desk',
         '/zh-Hant/cad/opengrid-stackable-cylinder?system=desk',
       ],
     )
