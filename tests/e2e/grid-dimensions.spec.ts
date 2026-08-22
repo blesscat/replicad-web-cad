@@ -219,6 +219,43 @@ test('OpenGrid fills a calculated remainder with a persisted centered frame', as
   ).toBeChecked()
 })
 
+test('OpenGrid print planning clears single-board target fitting', async ({
+  page,
+}) => {
+  await page.goto('/cad/opengrid')
+  await page
+    .getByRole('combobox', { name: 'OpenGrid X 半格方向' })
+    .selectOption('right')
+
+  const targetCalculator = page.getByTestId(
+    'opengrid-target-dimension-calculator',
+  )
+  await targetCalculator.getByRole('textbox', { name: 'X（mm）' }).fill('100')
+  await targetCalculator.getByRole('textbox', { name: 'Y（mm）' }).fill('58')
+  await targetCalculator.getByRole('button', { name: '計算格數' }).click()
+
+  const fitToTarget = page.getByRole('checkbox', {
+    name: '用實體邊框補足目標尺寸',
+  })
+  await fitToTarget.check()
+
+  const printPlanner = page.getByTestId('grid-dimension-calculator')
+  await printPlanner.getByRole('textbox', { name: '目標 X（mm）' }).fill('1000')
+  await printPlanner.getByRole('textbox', { name: '目標 Y（mm）' }).fill('1000')
+  await printPlanner
+    .getByRole('textbox', { name: '列印機 X（mm）' })
+    .fill('256')
+  await printPlanner
+    .getByRole('textbox', { name: '列印機 Y（mm）' })
+    .fill('256')
+  await printPlanner.getByRole('button', { name: '計算列印分片' }).click()
+
+  await expect(
+    printPlanner.getByTestId('grid-print-plan-result'),
+  ).toContainText('共 25 片')
+  await expect(fitToTarget).not.toBeChecked()
+})
+
 test('grid dimension calculators remain usable on narrow viewports', async ({
   page,
 }) => {

@@ -375,10 +375,10 @@
     rows: number
     columns: number
   }): void {
-    // Planning changes only the primary piece dimensions. Keep screw settings
-    // and custom positions intact; manual slider edits retain their existing
-    // position-cleanup behavior through updateGridCounts.
-    updateParameters(changes)
+    // The plan's primary piece dimensions replace the single-board target.
+    // Disable target fitting so the saved target does not invalidate or
+    // prevent generation of the selected primary piece.
+    updateParameters({ ...changes, fitToTarget: false })
   }
 
   function calculateGridDimensions(input: GridDimensionInput) {
