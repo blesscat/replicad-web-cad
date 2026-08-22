@@ -13,6 +13,25 @@ sync, and archive are complete.
 The final operation creates a pull request from the working branch into `main`.
 Never merge the pull request or push directly to `main`.
 
+## Codex Worktree and Environment (must happen first)
+
+When this skill is started in the Codex desktop app, use this setup before any
+OpenSpec or repository workflow work:
+
+Use Codex's built-in Worktree to create an isolated work environment for this
+task from `main`.
+
+After creating it, confirm the following before continuing:
+
+1. The current working directory is the new worktree.
+2. The environment and terminal are attached to this worktree.
+3. Do not run `git worktree add` only from the original `main` checkout.
+
+Report the following results before starting work:
+pwd
+git status --short --branch
+git worktree list --porcelain
+
 ## Worktree isolation (must happen first)
 
 Before doing any other workflow work—including reading or writing OpenSpec
