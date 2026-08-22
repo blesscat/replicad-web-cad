@@ -164,4 +164,26 @@ describe('OpenGrid target frame builder', () => {
       shape.delete()
     }
   }, 60_000)
+
+  it('keeps the default OpenGrid details valid with a target frame', async () => {
+    const input = parameters({
+      rows: 2,
+      columns: 3,
+      halfCellX: 'right',
+      targetWidth: 100,
+      targetDepth: 58,
+      fitToTarget: true,
+    })
+    const shape = await buildOpenGridBRep(input)
+    try {
+      const quality = inspectOpenGridShapeQuality(
+        shape,
+        input,
+        meshBRep(shape, OPENGRID_PREVIEW_CONFIGURATION),
+      )
+      expect(quality.passed, quality.failures.join('; ')).toBe(true)
+    } finally {
+      shape.delete()
+    }
+  }, 60_000)
 })

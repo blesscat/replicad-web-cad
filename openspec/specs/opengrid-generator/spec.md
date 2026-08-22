@@ -319,7 +319,7 @@ boundary host on each selected half-cell axis. left/right MUST map to the
 negative/positive X outer side, and top/bottom MUST map to the
 positive/negative Y outer side. Feature coordinates, connector placement, screw placement, centering, and variant thickness MUST use the final nominal grid envelope.
 
-When `fitToTarget=true`, the generator MUST add a centered physical outer frame around the nominal grid envelope. The frame MUST use the selected variant's board height, MUST fill only the requested remainder on each axis, MUST be fused before board feature cutters run, and MUST NOT create a new grid host, connector seam, screw center, or Snap interface. The final physical bounds MUST equal the requested target dimensions on enabled axes.
+When `fitToTarget=true`, the generator MUST add a centered physical outer frame around the nominal grid envelope. The frame MUST use the selected variant's board height, MUST fill only the requested remainder on each axis, and MUST be fused to the completed nominal grid geometry after board feature cutters run on that nominal geometry. The frame MUST NOT receive or create a new grid host, connector seam, screw center, or Snap interface. The final physical bounds MUST equal the requested target dimensions on enabled axes.
 
 The detailed shared half-cell direction, interface, and persistence contract
 is defined by the opengrid-half-cell capability.

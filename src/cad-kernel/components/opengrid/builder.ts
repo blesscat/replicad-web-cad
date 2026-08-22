@@ -3251,7 +3251,6 @@ export async function buildOpenGridBRepWithStrategy(
   try {
     assertGenerationCurrent(context)
     base = await buildProductBase(parameters, strategy, context)
-    base = await addTargetFrame(base, parameters, context)
     if (strategy === 'prototype-template') {
       base = await applyBoardFeatures(base, parameters, context)
     } else {
@@ -3262,6 +3261,9 @@ export async function buildOpenGridBRepWithStrategy(
         !isOpenGridLayeredVariant(parameters.variant),
       )
     }
+    // Keep cutters on the nominal grid geometry. A narrow target-frame overlap
+    // can otherwise be severed by edge features and fail the single-solid gate.
+    base = await addTargetFrame(base, parameters, context)
     assertGenerationCurrent(context)
     return base
   } catch (error) {
