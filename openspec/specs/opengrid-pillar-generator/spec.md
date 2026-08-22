@@ -101,12 +101,12 @@ flange is Ø7 mm; the `positioning` mode MUST have X/Y envelope extents of
 `detachable-corner-seat` mode MUST have X/Y envelope extents of ±2.5 mm. The
 standard mode MUST have Z bounds `[0, 9]`, the thin-shell mode MUST have Z
 bounds `[0, 6]`, positioning mode MUST have Z bounds `[0, length]`, and the
-detachable-corner-seat mode MUST have Z bounds `[0, 4.5]`.
+detachable-corner-seat mode MUST have Z bounds `[0, 5.3]`.
 
 The deterministic zero-offset export stems MUST be `pillar-9-standard`,
 `pillar-6-thin-shell`, and `pillar-{length}-positioning`; a non-zero shared
 offset export MUST append a deterministic `-xy{offset}` value. The fixed
-detachable mode export stem MUST be `pillar-4.5-detachable-corner-seat`.
+detachable mode export stem MUST be `pillar-5.3-detachable-corner-seat`.
 Distinct typed geometry MUST NOT share export metadata. `.step` and `.stl`
 extensions MUST remain supplied by the existing export contracts.
 
@@ -143,7 +143,7 @@ extensions MUST remain supplied by the existing export contracts.
 - **WHEN** a valid detachable-corner-seat candidate is prepared for commit
 - **THEN** it MUST contain exactly one valid connected solid
 - **AND** its mesh MUST be finite and non-empty
-- **AND** its bounds MUST be `[-2.5, -2.5, 0]` through `[2.5, 2.5, 4.5]`
+- **AND** its bounds MUST be `[-2.5, -2.5, 0]` through `[2.5, 2.5, 5.3]`
   within the workspace tolerance
 - **AND** its volume MUST match the shared male reference volume within the
   configured B-Rep quality tolerance
@@ -157,7 +157,7 @@ extensions MUST remain supplied by the existing export contracts.
 - **WHEN** a committed positioning pillar with `length=25` and `offset=0.25` is exported
 - **THEN** its export stem MUST identify the shared XY diameter increment as `pillar-25-positioning-xy0.25`
 - **WHEN** a committed detachable corner seat is exported
-- **THEN** its export stem MUST be `pillar-4.5-detachable-corner-seat`
+- **THEN** its export stem MUST be `pillar-5.3-detachable-corner-seat`
 - **AND** every export MUST use the committed pillar B-Rep rather than a
   viewport mesh reconstruction
 
@@ -166,11 +166,11 @@ extensions MUST remain supplied by the existing export contracts.
 For the `standard` and `thin-shell` modes, the generator MUST create one centered cylindrical body with nominal Ø5 mm, a flat sharp-edged lower flange with nominal Ø7 mm and axial height 0.8 mm, and a sharp 90-degree shoulder between the flange and body. The upper end MUST retain the existing 0.5 mm, 45-degree equal-distance chamfer. The flange and upper chamfer MUST be included within the fixed total length: 9 mm for `standard` and 6 mm for `thin-shell`. The effective body and flange diameters MUST each equal their nominal diameter plus `offset`; the same additive offset MUST be applied to both diameters. The complete solid MUST remain centered on the local/world XY origin, and all axial heights, chamfer distances, and Z stations MUST remain unchanged.
 
 The `detachable-corner-seat` mode MUST use the shared fixed male geometry. Its
-locating section MUST span Z=0 through Z=3 with maximum Ø5 mm, beginning with a
+locating section MUST span Z=0 through Z=3.8 with maximum Ø5 mm, beginning with a
 0.2 mm-high lead-in chamfer from Ø4.6 mm at Z=0 to Ø5 mm at Z=0.2. Its keyed
-45-degree retaining head MUST begin at Z=3 and retain the shared 1.8 mm key
-width. The head taper MUST end at Z=4.35, followed by a 0.15 mm-high flat wear
-surface ending at Z=4.5. No detachable-seat dimension MUST be user adjustable.
+45-degree retaining head MUST begin at Z=3.8 and retain the shared 1.8 mm key
+width. The head taper MUST end at Z=5.15, followed by a 0.15 mm-high flat wear
+surface ending at Z=5.3. No detachable-seat dimension MUST be user adjustable.
 
 #### Scenario: Standard pillar geometry
 
@@ -207,7 +207,7 @@ surface ending at Z=4.5. No detachable-seat dimension MUST be user adjustable.
 #### Scenario: Detachable corner-seat geometry
 
 - **WHEN** the generator builds `{ mode: 'detachable-corner-seat' }`
-- **THEN** the model MUST span `Z=0` through `Z=4.5`
+- **THEN** the model MUST span `Z=0` through `Z=5.3`
 - **AND** the bottom lead-in, Ø5 locating section, keyed retaining head, and
   0.15 mm wear surface MUST match the shared reference geometry
 

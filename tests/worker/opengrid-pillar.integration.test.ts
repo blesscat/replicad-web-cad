@@ -27,7 +27,7 @@ const initialiseOpenCascade = require('replicad-opencascadejs')
 const WASM_PATH =
   require.resolve('replicad-opencascadejs/src/replicad_single.wasm')
 const DETACHABLE_CORNER_SEAT_ASSET_URL = new URL(
-  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat.step',
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-3.8.step',
   import.meta.url,
 )
 
@@ -74,7 +74,7 @@ function probeVolumeAt(
 }
 
 describe('OpenGrid pillar CAD kernel integration', () => {
-  it('builds the fixed detachable corner seat from a cloned shared reference', async () => {
+  it('builds the detachable corner seat with a 3.8 mm locating body', async () => {
     const reference = await importOpenGridDetachableCornerSeatReference(
       new Blob([await readFile(DETACHABLE_CORNER_SEAT_ASSET_URL)], {
         type: 'model/step',
@@ -96,6 +96,9 @@ describe('OpenGrid pillar CAD kernel integration', () => {
       expect(actual[1]?.[0]).toBeCloseTo(configuration.male.bounds.max[0], 5)
       expect(actual[1]?.[1]).toBeCloseTo(configuration.male.bounds.max[1], 5)
       expect(actual[1]?.[2]).toBeCloseTo(configuration.male.bounds.max[2], 5)
+      expect(actual[1]?.[2]).toBeCloseTo(5.3, 5)
+      expect(probeVolumeAt(shape, 2.4, 3.75)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, 2.6, 3.75)).toBeLessThan(1e-8)
       expect(measureVolume(shape)).toBeCloseTo(
         configuration.male.nominalVolume,
         5,

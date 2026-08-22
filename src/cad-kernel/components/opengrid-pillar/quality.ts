@@ -281,6 +281,22 @@ function inspectDetachableCornerSeatProfiles(
     configuration.leadInHeight + 0.05,
     true,
   )
+  expectMaterial(
+    shape,
+    failures,
+    'body-upper-inside',
+    2.4,
+    configuration.bodyHeight - 0.05,
+    true,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'body-upper-outside',
+    2.6,
+    configuration.bodyHeight - 0.05,
+    false,
+  )
   if (
     !hasFaceSpanningZ(shape, configuration.taperTopZ, configuration.totalHeight)
   ) {

@@ -81,32 +81,42 @@ describe('OpenGrid locating and assembly interface contract', () => {
 
     expect(configuration.male).toMatchObject({
       bodyDiameter: 5,
-      bodyHeight: 3,
+      bodyHeight: 3.8,
       leadInHeight: 0.2,
       leadInTipDiameter: 4.6,
       keyWidth: 1.8,
-      taperTopZ: 4.35,
+      taperTopZ: 5.15,
       wearHeight: 0.15,
-      totalHeight: 4.5,
-      nominalVolume: 66.7032674,
+      totalHeight: 5.3,
       bounds: {
         min: [-2.5, -2.5, 0],
-        max: [2.5, 2.5, 4.5],
+        max: [2.5, 2.5, 5.3],
       },
     })
+    expect(configuration.male.totalHeight).toBeCloseTo(
+      configuration.male.bodyHeight + configuration.femaleReference.depth,
+      8,
+    )
+    expect(configuration.male.taperTopZ).toBeCloseTo(
+      configuration.male.totalHeight - configuration.male.wearHeight,
+      8,
+    )
     expect(configuration.female).toMatchObject({
       outerDiameter: 7,
-      depth: 1.5,
+      depth: 1.75,
       passageWidth: 2,
       keySideClearance: 0.1,
       sourceMinZ: 3,
-      sourceMaxZ: 4.5,
-      nominalVolume: 38.4253392,
+      sourceMaxZ: 4.75,
       bounds: {
         min: [-3.5, -3.5, 3],
-        max: [3.5, 3.5, 4.5],
+        max: [3.5, 3.5, 4.75],
       },
     })
+    expect(configuration.female.depth).toBeCloseTo(
+      configuration.femaleReference.depth + 0.25,
+      8,
+    )
     expect(configuration.minimumSocketRoof).toBe(0.5)
     expect(
       configuration.female.passageWidth - configuration.male.keyWidth,

@@ -16,7 +16,9 @@ import {
 } from '../opengrid-stackable-box/quality-metrics'
 import { bottomGridSeamsFor } from '../opengrid-stackable-box/geometry'
 import {
+  buildOpenGridDetachableCornerSeatHolderFromReference,
   buildOpenGridDetachableCornerSeatSocketVoid,
+  placeOpenGridDetachableCornerSeatMaleShape,
   placeOpenGridDetachableCornerSeatSocketShape,
 } from '../opengrid-locating-assembly/reference'
 
@@ -372,9 +374,12 @@ function assertDetachableSocketGeometry(
   }
 
   const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
-  const sourceVoid =
-    buildOpenGridDetachableCornerSeatSocketVoid(holderReference)
+  let sourceVoid: Shape3D | null = null
+  let sourceHolder: Shape3D | null = null
   try {
+    sourceVoid = buildOpenGridDetachableCornerSeatSocketVoid(holderReference)
+    sourceHolder =
+      buildOpenGridDetachableCornerSeatHolderFromReference(holderReference)
     for (const pose of openGridOrganizerBoxDetachableSocketPosesFor(
       parameters,
     )) {
@@ -387,10 +392,10 @@ function assertDetachableSocketGeometry(
           pose,
         )
         placedHolder = placeOpenGridDetachableCornerSeatSocketShape(
-          holderReference,
+          sourceHolder,
           pose,
         )
-        placedMale = placeOpenGridDetachableCornerSeatSocketShape(
+        placedMale = placeOpenGridDetachableCornerSeatMaleShape(
           maleReference,
           pose,
         )
@@ -443,6 +448,7 @@ function assertDetachableSocketGeometry(
     }
   } finally {
     deleteShape(sourceVoid)
+    deleteShape(sourceHolder)
   }
 }
 

@@ -22,9 +22,11 @@ import {
 import { buildOpenGridOrganizerBox } from '../../src/cad-kernel/components/opengrid-organizer-box/builder'
 import { assertOpenGridOrganizerBoxGeometry } from '../../src/cad-kernel/components/opengrid-organizer-box/quality'
 import {
+  buildOpenGridDetachableCornerSeatHolderFromReference,
   buildOpenGridDetachableCornerSeatSocketVoid,
   importOpenGridDetachableCornerSeatHolderReference,
   importOpenGridDetachableCornerSeatReference,
+  placeOpenGridDetachableCornerSeatMaleShape,
   placeOpenGridDetachableCornerSeatSocketShape,
 } from '../../src/cad-kernel/components/opengrid-locating-assembly/reference'
 
@@ -39,7 +41,7 @@ const initialiseOpenCascade = require('replicad-opencascadejs')
 const WASM_PATH =
   require.resolve('replicad-opencascadejs/src/replicad_single.wasm')
 const DETACHABLE_CORNER_SEAT_ASSET_URL = new URL(
-  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat.step',
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-3.8.step',
   import.meta.url,
 )
 const DETACHABLE_CORNER_SEAT_HOLDER_ASSET_URL = new URL(
@@ -108,6 +110,8 @@ describe('OpenGrid organizer-box B-Rep', () => {
     })
     const socketVoid =
       buildOpenGridDetachableCornerSeatSocketVoid(holderReference)
+    const targetHolder =
+      buildOpenGridDetachableCornerSeatHolderFromReference(holderReference)
     try {
       const expected = boundsForOpenGridOrganizerBox(input)
       const actual = shape.boundingBox
@@ -128,10 +132,10 @@ describe('OpenGrid organizer-box B-Rep', () => {
           pose,
         )
         const placedHolder = placeOpenGridDetachableCornerSeatSocketShape(
-          holderReference,
+          targetHolder,
           pose,
         )
-        const placedMale = placeOpenGridDetachableCornerSeatSocketShape(
+        const placedMale = placeOpenGridDetachableCornerSeatMaleShape(
           maleReference,
           pose,
         )
@@ -207,6 +211,7 @@ describe('OpenGrid organizer-box B-Rep', () => {
       ).toBe(0)
     } finally {
       deleteShape(socketVoid)
+      deleteShape(targetHolder)
       deleteShape(shape)
       deleteShape(maleReference)
       deleteShape(holderReference)

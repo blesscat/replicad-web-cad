@@ -131,6 +131,6 @@ test('OpenGrid pillar exports deterministic files for all pillar modes', async (
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const detachableStep = await detachableStepPromise
   expect(detachableStep.suggestedFilename()).toBe(
-    'pillar-4.5-detachable-corner-seat.step',
+    'pillar-5.3-detachable-corner-seat.step',
   )
 })

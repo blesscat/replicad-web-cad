@@ -21,7 +21,7 @@ import {
   type BooleanOperationScope,
   type BooleanOperationReporter,
 } from '../../boolean-progress'
-import { assertOpenGridDetachableCornerSeatReference } from '../opengrid-locating-assembly/reference'
+import { buildOpenGridDetachableCornerSeatFromReference } from '../opengrid-locating-assembly/reference'
 
 const GEOMETRY_TOLERANCE = 0.02
 
@@ -266,10 +266,9 @@ export async function buildPillar(
       if (!context.detachableCornerSeatReference) {
         throw new Error('PILLAR_DETACHABLE_CORNER_SEAT_REFERENCE_MISSING')
       }
-      assertOpenGridDetachableCornerSeatReference(
+      shape = buildOpenGridDetachableCornerSeatFromReference(
         context.detachableCornerSeatReference,
       )
-      shape = context.detachableCornerSeatReference.clone()
     } else if (parameters.mode === 'positioning') {
       shape = buildPositioningPillar(parameters)
     } else {

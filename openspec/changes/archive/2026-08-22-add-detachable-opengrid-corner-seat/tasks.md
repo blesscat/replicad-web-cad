@@ -5,6 +5,7 @@
 - [x] 1.3 Implement shared STEP import, B-Rep validity/bounds/volume inspection, seated zero-intersection inspection, and female socket-void derivation.
 - [x] 1.4 Add cached Worker/context getters with retry-safe loading, clone ownership, stale-generation handling, and disposal for both references.
 - [x] 1.5 Add focused shared-contract and Worker integration tests for asset validity, 0.2 mm lead-in, 0.15 mm wear cap, fixed key clearance, and canonical male/female compatibility.
+- [x] 1.6 Derive and validate the 3.8 mm male locating body, 5.3 mm total height, and 1.75 mm effective holder depth while preserving the supplied bottom geometry.
 
 ## 2. Detachable corner-seat Pillar mode
 
@@ -42,3 +43,16 @@
 - `openspec validate --specs --strict --json`: 38 main specs passed with zero failures.
 - `git diff --check`: passed.
 - Independent read-only compliance review: all findings remediated; final re-review reported no findings.
+
+## Follow-up validation — 2026-08-22
+
+- Increased the detachable male locating body to 3.8 mm and total height to 5.3 mm while preserving the 0.2 mm insertion chamfer and 0.15 mm wear cap.
+- Increased the Organizer Box holder/socket effective depth by 0.25 mm to 1.75 mm while preserving the supplied bottom entrance.
+- `pnpm format:check`: passed.
+- `pnpm check`: passed.
+- Focused contract/catalog unit suite: 3 files, 30 tests passed.
+- Detachable-seat, Pillar, Organizer Box, and Worker lifecycle integration suite: 4 files, 33 tests passed.
+- Chromium target e2e: 3 tests passed.
+- Headful Firefox target e2e: both CAD tests passed; the control-only test also passed on its isolated single-worker rerun after a parallel resource-contention timeout.
+- `pnpm build`: passed; 49 static pages built.
+- `openspec validate --specs --strict --json`: 38 main specs passed with zero failures.

@@ -214,13 +214,13 @@ seat. The three interface modes MUST NOT be combined.
 When `bottomInterfaceMode=detachable-corner-seat`, the Organizer Box MUST form
 four keyed female corner-seat sockets directly in the box body at the existing
 four-corner locating positions. Each socket MUST use the shared detachable-seat
-female geometry with a nominal Ø7 mm by 1.5 mm material envelope and its two
+female geometry with a nominal Ø7 mm by 1.75 mm material envelope and its two
 retaining tabs. The socket holder MUST remain part of the one exported box
 solid and MUST NOT be emitted as a separate printable part.
 
 Viewed from the box bottom, the sockets MUST use the deterministic corner
 rotations upper-left 0°, upper-right 90°, lower-right 180°, and lower-left 270°.
-The mode MUST preserve at least 0.5 mm of solid roof between each 1.5 mm-deep
+The mode MUST preserve at least 0.5 mm of solid roof between each 1.75 mm-deep
 socket and the nearest storage cavity, MUST NOT generate built-in downward
 feet, and MUST NOT generate the box-to-box stacking guide.
 
@@ -244,7 +244,7 @@ feet, and MUST NOT generate the box-to-box stacking guide.
 #### Scenario: Detachable socket roof is too thin
 
 - **WHEN** the requested bottom thickness would leave less than 0.5 mm of
-  material above a 1.5 mm-deep detachable socket
+  material above a 1.75 mm-deep detachable socket
 - **THEN** Organizer Box validation MUST return a diagnosable bottom-interface
   or bottom-thickness error
 - **AND** the invalid snapshot MUST NOT replace the last valid revision or

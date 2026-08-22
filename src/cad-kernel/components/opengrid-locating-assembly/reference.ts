@@ -1,4 +1,14 @@
-import { importSTEP, makeCylinder, measureVolume, type Shape3D } from 'replicad'
+import {
+  basicFaceExtrusion,
+  deserializeShape,
+  importSTEP,
+  makeCompound,
+  makeCylinder,
+  measureVolume,
+  Vector,
+  type Face,
+  type Shape3D,
+} from 'replicad'
 import { OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION } from '../../../cad-contract/units'
 import {
   countSolids,
@@ -6,7 +16,7 @@ import {
 } from '../opengrid-stackable-box/quality-metrics'
 
 export const OPEN_GRID_DETACHABLE_CORNER_SEAT_REFERENCE_URL = new URL(
-  './assets/detachable-corner-seat.step',
+  './assets/detachable-corner-seat-3.8.step',
   import.meta.url,
 )
 
@@ -35,11 +45,19 @@ export type OpenGridDetachableCornerSeatSocketPlacement = {
   rotationDegrees: 0 | 90 | 180 | 270
 }
 
-function deleteShape(shape: Shape3D | null | undefined): void {
+function deleteShape(shape: { delete(): void } | null | undefined): void {
   try {
     shape?.delete()
   } catch {
     // Cleanup must not replace the primary geometry diagnostic.
+  }
+}
+
+function runGeometryStage<T>(code: string, operation: () => T): T {
+  try {
+    return operation()
+  } catch (cause) {
+    throw new Error(code, { cause })
   }
 }
 
@@ -63,7 +81,8 @@ function inspectReference(shape: Shape3D): ReferenceInspection {
 
 function expectedReference(kind: ReferenceKind) {
   const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
-  return kind === 'male' ? configuration.male : configuration.female
+  if (kind === 'male') return configuration.maleReference
+  return configuration.femaleReference
 }
 
 function boundsMatch(
@@ -112,6 +131,121 @@ export function assertOpenGridDetachableCornerSeatHolderReference(
   shape: Shape3D,
 ): void {
   assertReference(shape, 'female')
+}
+
+function assertGeneratedMale(shape: Shape3D): void {
+  const inspection = inspectReference(shape)
+  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+  const expected = configuration.male
+  const volumeMatches =
+    Math.abs(inspection.volume - expected.nominalVolume) <=
+    configuration.volumeTolerance
+  if (
+    inspection.solidCount !== 1 ||
+    !inspection.valid ||
+    !boundsMatch(inspection.bounds, expected.bounds) ||
+    !volumeMatches
+  ) {
+    throw new Error(
+      `OPENGRID_DETACHABLE_CORNER_SEAT_GENERATED_MALE_INVALID:${JSON.stringify({ inspection, expected })}`,
+    )
+  }
+}
+
+function assertGeneratedFemale(shape: Shape3D): void {
+  const inspection = inspectReference(shape)
+  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+  const expected = configuration.female
+  const volumeMatches =
+    Math.abs(inspection.volume - expected.nominalVolume) <=
+    configuration.volumeTolerance
+  if (
+    inspection.solidCount < 1 ||
+    !inspection.valid ||
+    !boundsMatch(inspection.bounds, expected.bounds) ||
+    !volumeMatches
+  ) {
+    throw new Error(
+      `OPENGRID_DETACHABLE_CORNER_SEAT_GENERATED_FEMALE_INVALID:${JSON.stringify({ inspection, expected })}`,
+    )
+  }
+}
+
+export function buildOpenGridDetachableCornerSeatFromReference(
+  reference: Shape3D,
+): Shape3D {
+  assertReference(reference, 'male')
+  let result: Shape3D | null = reference.clone()
+  try {
+    assertGeneratedMale(result)
+    const generated = result
+    result = null
+    return generated
+  } finally {
+    deleteShape(result)
+  }
+}
+
+export function buildOpenGridDetachableCornerSeatHolderFromReference(
+  reference: Shape3D,
+): Shape3D {
+  assertReference(reference, 'female')
+  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+  const extensionHeight =
+    configuration.female.depth - configuration.femaleReference.depth
+  const topFaces: Face[] = []
+  for (const face of reference.faces) {
+    const boundingBox = face.boundingBox
+    try {
+      const [minimum, maximum] = boundingBox.bounds as [
+        [number, number, number],
+        [number, number, number],
+      ]
+      const isTopFace =
+        face.surface.surfaceType === 'PLANE' &&
+        Math.abs(minimum[2] - configuration.femaleReference.sourceMaxZ) <=
+          configuration.geometryTolerance &&
+        Math.abs(maximum[2] - configuration.femaleReference.sourceMaxZ) <=
+          configuration.geometryTolerance
+      if (isTopFace) {
+        topFaces.push(face)
+      } else {
+        deleteShape(face)
+      }
+    } finally {
+      boundingBox.delete()
+    }
+  }
+  if (topFaces.length === 0) {
+    throw new Error('OPENGRID_DETACHABLE_CORNER_SEAT_HOLDER_TOP_FACE_MISSING')
+  }
+
+  const extrusionVector = new Vector([0, 0, extensionHeight])
+  const parts: Shape3D[] = [deserializeShape(reference.serialize()).asShape3D()]
+  let holder: Shape3D | null = null
+  try {
+    for (const face of topFaces) {
+      parts.push(
+        runGeometryStage(
+          'OPENGRID_DETACHABLE_CORNER_SEAT_HOLDER_EXTRUSION_FAILED',
+          () => basicFaceExtrusion(face, extrusionVector),
+        ),
+      )
+    }
+    holder = makeCompound(parts).asShape3D()
+    if (!holder) {
+      throw new Error('OPENGRID_DETACHABLE_CORNER_SEAT_HOLDER_COMPOUND_EMPTY')
+    }
+    assertGeneratedFemale(holder)
+    const generated = holder
+    holder = null
+    return generated
+  } finally {
+    deleteShape(holder)
+    parts.forEach(deleteShape)
+    topFaces.forEach(deleteShape)
+    extrusionVector.delete()
+  }
 }
 
 async function importReference(
@@ -180,8 +314,18 @@ export function inspectOpenGridDetachableCornerSeatCompatibility(
   male: Shape3D,
   female: Shape3D,
 ): OpenGridDetachableCornerSeatCompatibilityReport {
-  const intersection = male.intersect(female)
+  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+  let alignedHolder: Shape3D | null =
+    buildOpenGridDetachableCornerSeatHolderFromReference(female)
+  let intersection: Shape3D | null = null
   try {
+    const alignmentZ =
+      configuration.male.bodyHeight - configuration.female.sourceMinZ
+    alignedHolder = replaceOwnedShape(
+      alignedHolder,
+      alignedHolder.translateZ(alignmentZ),
+    )
+    intersection = male.intersect(alignedHolder)
     return {
       male: inspectReference(male),
       female: inspectReference(female),
@@ -189,6 +333,7 @@ export function inspectOpenGridDetachableCornerSeatCompatibility(
     }
   } finally {
     deleteShape(intersection)
+    deleteShape(alignedHolder)
   }
 }
 
@@ -218,7 +363,8 @@ export function buildOpenGridDetachableCornerSeatSocketVoid(
     configuration.depth,
     [0, 0, configuration.sourceMinZ],
   )
-  const holder = holderReference.clone()
+  const holder =
+    buildOpenGridDetachableCornerSeatHolderFromReference(holderReference)
   try {
     const socketVoid = envelope.cut(holder)
     const volume = measureVolume(socketVoid)
@@ -238,12 +384,11 @@ function replaceOwnedShape(current: Shape3D, next: Shape3D): Shape3D {
   return next
 }
 
-export function placeOpenGridDetachableCornerSeatSocketShape(
+function placeOpenGridDetachableCornerSeatShapeAtDatum(
   source: Shape3D,
   placement: OpenGridDetachableCornerSeatSocketPlacement,
+  sourceMinZ: number,
 ): Shape3D {
-  const sourceMinZ =
-    OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.sourceMinZ
   let placed: Shape3D | null = null
   try {
     placed = source.clone()
@@ -265,4 +410,26 @@ export function placeOpenGridDetachableCornerSeatSocketShape(
     deleteShape(placed)
     throw error
   }
+}
+
+export function placeOpenGridDetachableCornerSeatSocketShape(
+  source: Shape3D,
+  placement: OpenGridDetachableCornerSeatSocketPlacement,
+): Shape3D {
+  return placeOpenGridDetachableCornerSeatShapeAtDatum(
+    source,
+    placement,
+    OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.sourceMinZ,
+  )
+}
+
+export function placeOpenGridDetachableCornerSeatMaleShape(
+  source: Shape3D,
+  placement: OpenGridDetachableCornerSeatSocketPlacement,
+): Shape3D {
+  return placeOpenGridDetachableCornerSeatShapeAtDatum(
+    source,
+    placement,
+    OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male.bodyHeight,
+  )
 }

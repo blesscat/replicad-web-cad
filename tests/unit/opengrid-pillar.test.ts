@@ -164,7 +164,7 @@ describe('pillar contract', () => {
     })
     expect(boundsForPillar({ mode: 'detachable-corner-seat' })).toEqual({
       min: [-2.5, -2.5, 0],
-      max: [2.5, 2.5, 4.5],
+      max: [2.5, 2.5, 5.3],
     })
   })
 
@@ -226,10 +226,10 @@ describe('pillar contract', () => {
       pillarStlFileName({ mode: 'positioning', length: 25, offset: 0 }),
     ).toBe('pillar-25-positioning.stl')
     expect(pillarFileName({ mode: 'detachable-corner-seat' })).toBe(
-      'pillar-4.5-detachable-corner-seat.step',
+      'pillar-5.3-detachable-corner-seat.step',
     )
     expect(pillarStlFileName({ mode: 'detachable-corner-seat' })).toBe(
-      'pillar-4.5-detachable-corner-seat.stl',
+      'pillar-5.3-detachable-corner-seat.stl',
     )
 
     for (const parameters of [

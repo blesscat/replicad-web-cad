@@ -18,11 +18,13 @@ models.
   and 270° around the footprint) so their internal tab orientation follows the
   box perimeter consistently.
 - Add a fixed detachable-corner-seat mode to the existing OpenGrid Pillar
-  generator. The male seat preserves the reference STEP geometry, including
-  the 3 mm locating section, 0.2 mm-high Ø4.6-to-Ø5 insertion chamfer, keyed
-  retaining head, and 0.15 mm raised wear surface for a total 4.5 mm height.
-- Keep the supplied male and female STEP geometry as the initial fixed fit
-  contract without a user-facing clearance adjustment. Require a hand
+  generator. The male seat preserves the keyed reference profile, including
+  the 3.8 mm locating section, 0.2 mm-high Ø4.6-to-Ø5 insertion chamfer, keyed
+  retaining head, and 0.15 mm raised wear surface for a total 5.3 mm height.
+- Extend the female holder inward by 0.25 mm for a 1.75 mm effective socket
+  depth while keeping its supplied bottom entrance geometry unchanged.
+- Keep the supplied STEP geometry and validated target derivations as the fixed
+  fit contract without a user-facing clearance adjustment. Require a hand
   press-fit that stays attached when the box is lifted and remains removable
   by hand.
 - Scope initial model integration to `opengrid-organizer-box`; rollout to other

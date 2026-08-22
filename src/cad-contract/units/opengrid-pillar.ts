@@ -347,7 +347,9 @@ function formatPillarOffset(value: number): string {
 
 function pillarExportStem(parameters: PillarParameters): string {
   if (parameters.mode === 'detachable-corner-seat') {
-    return 'pillar-4.5-detachable-corner-seat'
+    const height =
+      OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male.totalHeight
+    return `pillar-${height}-detachable-corner-seat`
   }
   const length = pillarLengthForParameters(parameters)
   const mode =

@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { measureVolume, setOC, type Shape3D } from 'replicad'
 import { OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION } from '../../src/cad-contract/units'
 import {
+  buildOpenGridDetachableCornerSeatHolderFromReference,
   buildOpenGridDetachableCornerSeatSocketVoid,
   importOpenGridDetachableCornerSeatHolderReference,
   importOpenGridDetachableCornerSeatReference,
@@ -25,7 +26,7 @@ const WASM_PATH =
   require.resolve('replicad-opencascadejs/src/replicad_single.wasm')
 
 const MALE_ASSET_URL = new URL(
-  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat.step',
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-3.8.step',
   import.meta.url,
 )
 const HOLDER_ASSET_URL = new URL(
@@ -127,23 +128,44 @@ describe('OpenGrid detachable corner-seat canonical references', () => {
     expect(report.male.solidCount).toBe(1)
     expect(report.male.valid).toBe(true)
     expectBoundsClose(report.male.bounds, [
-      [...configuration.male.bounds.min],
-      [...configuration.male.bounds.max],
+      [...configuration.maleReference.bounds.min],
+      [...configuration.maleReference.bounds.max],
     ])
-    expect(report.male.volume).toBeCloseTo(configuration.male.nominalVolume, 5)
+    expect(report.male.volume).toBeCloseTo(
+      configuration.maleReference.nominalVolume,
+      5,
+    )
     expect(report.female.solidCount).toBe(1)
     expect(report.female.valid).toBe(true)
     expectBoundsClose(report.female.bounds, [
-      [...configuration.female.bounds.min],
-      [...configuration.female.bounds.max],
+      [...configuration.femaleReference.bounds.min],
+      [...configuration.femaleReference.bounds.max],
     ])
     expect(report.female.volume).toBeCloseTo(
-      configuration.female.nominalVolume,
+      configuration.femaleReference.nominalVolume,
       5,
     )
     expect(report.intersectionVolume).toBeLessThanOrEqual(
       configuration.intersectionVolumeTolerance,
     )
+  })
+
+  it('extends the retaining-tab holder 0.25 mm inward from the fixed entrance datum', () => {
+    const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+    const extended =
+      buildOpenGridDetachableCornerSeatHolderFromReference(holderReference)
+    try {
+      const bounds = shapeBounds(extended)
+      expect(bounds[0]?.[2]).toBeCloseTo(3, 5)
+      expect(bounds[1]?.[2]).toBeCloseTo(4.75, 5)
+      expect((bounds[1]?.[2] ?? 0) - (bounds[0]?.[2] ?? 0)).toBeCloseTo(1.75, 5)
+      expect(measureVolume(extended)).toBeCloseTo(
+        configuration.female.nominalVolume,
+        5,
+      )
+    } finally {
+      deleteShape(extended)
+    }
   })
 
   it('measures the exact 0.1 mm key clearance on each side from the STEP solids', () => {
@@ -179,6 +201,7 @@ describe('OpenGrid detachable corner-seat canonical references', () => {
       const placedBounds = shapeBounds(placed)
       expect(placedBounds[0]?.[2]).toBeCloseTo(0, 5)
       expect(placedBounds[1]?.[2]).toBeCloseTo(configuration.female.depth, 5)
+      expect(placedBounds[1]?.[2]).toBeCloseTo(1.75, 5)
       expect(
         (placedBounds[0]?.[0] ?? 0) + (placedBounds[1]?.[0] ?? 0),
       ).toBeCloseTo(24, 5)

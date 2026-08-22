@@ -17,8 +17,9 @@ surfaces on the main thread.
 
 **Goals:**
 
-- Preserve the two supplied STEP solids as the canonical prototype fit instead
-  of approximating their keyed taper and retaining tabs.
+- Preserve the two supplied STEP solids as prototype sources, and derive the
+  fixed 3.8 mm male target and 1.75 mm holder depth without approximating their
+  keyed taper or retaining tabs.
 - Share one validated geometry contract between the Organizer Box female socket
   and Pillar male-seat mode.
 - Leave existing Organizer Box and Pillar modes byte-for-byte compatible at the
@@ -40,14 +41,17 @@ surfaces on the main thread.
 
 ### 1. Store and validate canonical STEP references in a shared Worker module
 
-Add the supplied files under
+Add the supplied files and validated male target under
 `src/cad-kernel/components/opengrid-locating-assembly/assets/` with stable ASCII
 filenames for the male seat and female socket material. A sibling shared module
 will expose their URLs, import functions, bounds/volume inspection, seated-pose
 compatibility inspection, and fixed local transforms. Numeric dimensions live
-in `OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION`; the binary references remain the
-source of truth for the trimmed taper and retaining-tab boundaries that cannot
-be represented by the simple scalar contract alone.
+in `OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION`; the supplied binary references
+remain the source of truth for the trimmed taper and retaining-tab boundaries
+that cannot be represented by the simple scalar contract alone. The checked-in
+male target translates only the stations above the 0.2 mm lead-in by 0.8 mm,
+preserving that chamfer and the exact upper profile while increasing the body to
+3.8 mm and total height to 5.3 mm.
 
 `KernelBuildContext` and the CAD Worker gain two cached reference getters. The
 Worker owns and disposes the cached originals; each builder clones a reference
@@ -66,11 +70,13 @@ Alternatives considered:
 ### 2. Form the female socket by cutting the reference complement
 
 The female STEP describes material, but the Organizer Box body already contains
-that material. Normalize the reference from source Z=3..4.5 to box-local
-Z=0..1.5, subtract it from a coincident Ø7 × 1.5 mm envelope to obtain the
-socket-void template, then cut translated/rotated clones of that void from the
-existing Organizer Box solid. This leaves the ring and retaining tabs as native
-box material, so there is no second solid and no fragile holder-to-body fuse.
+that material. Preserve its source Z=3..4.5 bottom entrance and extend its top
+planar faces by 0.25 mm to Z=4.75. Normalize that effective geometry to
+box-local Z=0..1.75, then subtract it from a coincident Ø7 × 1.75 mm envelope to
+obtain the socket-void template. Cut translated/rotated clones of that void from
+the existing Organizer Box solid. This leaves the ring and retaining tabs as
+native box material, so there is no second solid and no fragile holder-to-body
+fuse.
 
 Derive four placements from the existing corner-center calculator, but assign
 rotation by quadrant rather than relying on array order: upper-left 0°,
@@ -81,7 +87,7 @@ remain unchanged; the new branch bypasses both.
 
 The Organizer Box contract treats the detachable socket as a Ø7 interface
 feature for footprint collision calculations. Its expected lower bound is Z=0,
-and its 1.5 mm depth stays well below the current cavity floor because that
+and its 1.75 mm depth stays well below the current cavity floor because that
 floor includes the fixed 5 mm interface datum.
 
 Alternatives considered:
@@ -104,8 +110,8 @@ legacy normalization, and export stems.
 For the new mode, `buildPillar` clones the cached male reference, verifies the
 generation is still current, and runs the normal single-solid, finite-bounds,
 mesh, volume, and export lifecycle. It does not run the existing flange fuse or
-end-chamfer routines. The fixed bounds are ±2.5 mm in X/Y and 0..4.5 mm in Z;
-the export stem is `pillar-4.5-detachable-corner-seat`.
+end-chamfer routines. The fixed bounds are ±2.5 mm in X/Y and 0..5.3 mm in Z;
+the export stem is `pillar-5.3-detachable-corner-seat`.
 
 The Pillar panel adds a fourth `可拆式角座` / `Detachable corner seat` radio
 choice. It hides both numeric controls for this mode, while standard,
@@ -114,7 +120,7 @@ alone retains length.
 
 Alternatives considered:
 
-- Reuse `positioning` with `length=4.5`: rejected because positioning requires
+- Reuse `positioning` with `length=5.3`: rejected because positioning requires
   an integer length and its round chamfered profile cannot express the keyed
   retaining head.
 - Allow the shared Pillar offset to tune fit: rejected until the fixed reference
