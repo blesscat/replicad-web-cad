@@ -10,6 +10,7 @@ import {
   normalizeOpenGridParameters,
   OPENGRID_CONFIGURATION,
   OPENGRID_PREVIEW_CONFIGURATION,
+  openGridConnectorLocationsFor,
   type OpenGridParameters,
 } from '../../src/cad-contract/units'
 
@@ -41,6 +42,9 @@ function parameters(
     },
     connectorSides: {
       ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
+    },
+    targetFrameSides: {
+      ...OPENGRID_CONFIGURATION.defaultParameters.targetFrameSides,
     },
     customScrewPositions: [],
     ...overrides,
@@ -212,4 +216,115 @@ describe('OpenGrid target frame builder', () => {
       shape.delete()
     }
   }, 60_000)
+
+  it('extends only the selected frame side and leaves the other axis nominal', async () => {
+    const input = parameters({
+      variant: 'Lite',
+      rows: 3,
+      columns: 3,
+      targetWidth: 100,
+      targetDepth: 100,
+      fitToTarget: true,
+      targetFrameSides: {
+        top: true,
+        right: false,
+        bottom: false,
+        left: false,
+      },
+      chamfers: 'none',
+      connectorHoles: 'none',
+      screwMode: 'none',
+    })
+    const shape = await buildOpenGridBRep(input)
+    try {
+      const bounds = readShapeBounds(shape)
+      expect(bounds.min[0]).toBeCloseTo(-42, 5)
+      expect(bounds.max[0]).toBeCloseTo(42, 5)
+      expect(bounds.min[1]).toBeCloseTo(-42, 5)
+      expect(bounds.max[1]).toBeCloseTo(58, 5)
+      const quality = inspectOpenGridShapeQuality(
+        shape,
+        input,
+        meshBRep(shape, OPENGRID_PREVIEW_CONFIGURATION),
+      )
+      expect(quality.passed, quality.failures.join('; ')).toBe(true)
+    } finally {
+      shape.delete()
+    }
+  }, 60_000)
+
+  it('keeps connector holes on an unframed nominal side', async () => {
+    const input = parameters({
+      variant: 'Full',
+      rows: 3,
+      columns: 3,
+      targetWidth: 100,
+      targetDepth: 100,
+      fitToTarget: true,
+      targetFrameSides: {
+        top: true,
+        right: false,
+        bottom: false,
+        left: false,
+      },
+      chamfers: 'none',
+      connectorHoles: 'enabled',
+      screwMode: 'none',
+    })
+    const leftConnector = openGridConnectorLocationsFor(input).find(
+      (location) => location.side === 'left',
+    )
+    expect(leftConnector).toBeDefined()
+    const shape = await buildOpenGridBRep(input)
+    try {
+      const connector = leftConnector!
+      expect(
+        measureIntersectionVolume(
+          shape,
+          [connector.center[0] - 0.1, connector.center[1] - 1, 2.5],
+          [connector.center[0] + 1, connector.center[1] + 1, 4.3],
+        ),
+      ).toBeLessThan(0.01)
+      expect(
+        measureIntersectionVolume(shape, [-0.5, 57, 2.5], [0.5, 58.1, 4.3]),
+      ).toBeGreaterThan(0.01)
+    } finally {
+      shape.delete()
+    }
+  }, 60_000)
+
+  it.each(['chamfer', 'fillet'] as const)(
+    'builds a valid %s target-frame corner shape',
+    async (targetFrameShape) => {
+      const input = parameters({
+        variant: 'Lite',
+        rows: 3,
+        columns: 3,
+        targetWidth: 100,
+        targetDepth: 100,
+        fitToTarget: true,
+        targetFrameShape,
+        chamfers: 'none',
+        connectorHoles: 'none',
+        screwMode: 'none',
+      })
+      const shape = await buildOpenGridBRep(input)
+      try {
+        const bounds = readShapeBounds(shape)
+        expect(bounds.min[0]).toBeCloseTo(-50, 5)
+        expect(bounds.max[0]).toBeCloseTo(50, 5)
+        expect(bounds.min[1]).toBeCloseTo(-50, 5)
+        expect(bounds.max[1]).toBeCloseTo(50, 5)
+        const quality = inspectOpenGridShapeQuality(
+          shape,
+          input,
+          meshBRep(shape, OPENGRID_PREVIEW_CONFIGURATION),
+        )
+        expect(quality.passed, quality.failures.join('; ')).toBe(true)
+      } finally {
+        shape.delete()
+      }
+    },
+    60_000,
+  )
 })

@@ -62,6 +62,9 @@ function opengridParameters(
     connectorSides: {
       ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
     },
+    targetFrameSides: {
+      ...OPENGRID_CONFIGURATION.defaultParameters.targetFrameSides,
+    },
     customScrewPositions: [],
     ...overrides,
   }
@@ -260,6 +263,8 @@ describe('component parameter store', () => {
     delete legacy.targetWidth
     delete legacy.targetDepth
     delete legacy.fitToTarget
+    delete legacy.targetFrameShape
+    delete legacy.targetFrameSides
 
     const storage = createMemoryStorage(createPayload({ opengrid: legacy }))
     const store = createComponentParameterStore({ storage })
@@ -270,6 +275,13 @@ describe('component parameter store', () => {
       targetWidth: 0,
       targetDepth: 0,
       fitToTarget: false,
+      targetFrameShape: 'none',
+      targetFrameSides: {
+        top: true,
+        right: true,
+        bottom: true,
+        left: true,
+      },
     })
     store.dispose()
   })

@@ -13,6 +13,7 @@ import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
 
 export type OpenGridVariant = 'Full' | 'Lite' | 'Heavy' | 'Hybrid'
 export type OpenGridChamferMode = 'none' | 'corners' | 'everywhere'
+export type OpenGridTargetFrameShape = 'none' | 'chamfer' | 'fillet'
 export type OpenGridScrewKind = 'official-default' | 'custom'
 export type OpenGridScrewPreset = 'm3' | 'm4' | 'm5' | 'm6' | 'm7'
 export type OpenGridScrewMode =
@@ -29,6 +30,8 @@ export type OpenGridParameterKey =
   | 'targetWidth'
   | 'targetDepth'
   | 'fitToTarget'
+  | 'targetFrameShape'
+  | 'targetFrameSides'
   | 'chamfers'
   | 'chamferCorners'
   | 'connectorHoles'
@@ -67,6 +70,13 @@ export type OpenGridSideFlags = {
   left: boolean
 }
 
+export type OpenGridFrameSideFlags = {
+  top: boolean
+  right: boolean
+  bottom: boolean
+  left: boolean
+}
+
 export type OpenGridParameters = {
   variant: OpenGridVariant
   rows: number
@@ -76,6 +86,8 @@ export type OpenGridParameters = {
   targetWidth: number
   targetDepth: number
   fitToTarget: boolean
+  targetFrameShape: OpenGridTargetFrameShape
+  targetFrameSides: OpenGridFrameSideFlags
   chamfers: OpenGridChamferMode
   chamferCorners: OpenGridCornerFlags
   connectorHoles: OpenGridConnectorHoles
@@ -186,9 +198,16 @@ const DEFAULT_CONNECTOR_SIDES: OpenGridSideFlags = {
   left: true,
 }
 
+const DEFAULT_TARGET_FRAME_SIDES: OpenGridFrameSideFlags = {
+  top: true,
+  right: true,
+  bottom: true,
+  left: true,
+}
+
 const OPENGRID_WORKSPACE_MAX_DIMENSION = 500
 const OPENGRID_BOARD_MAX_GRID_COUNT = 10
-const TARGET_FRAME_MAX_SIDE_REMAINDER = HALF_CELL_CONFIGURATION.halfPitch
+const TARGET_FRAME_MAX_TOTAL_REMAINDER = HALF_CELL_CONFIGURATION.halfPitch * 2
 
 export const OPENGRID_CONFIGURATION = {
   gridPitch: OPENGRID_GRID_CONFIGURATION.fullPitch,
@@ -228,6 +247,8 @@ export const OPENGRID_CONFIGURATION = {
     targetWidth: 0,
     targetDepth: 0,
     fitToTarget: false,
+    targetFrameShape: 'none' as OpenGridTargetFrameShape,
+    targetFrameSides: DEFAULT_TARGET_FRAME_SIDES,
     chamfers: 'corners' as OpenGridChamferMode,
     chamferCorners: DEFAULT_CHAMFER_CORNERS,
     connectorHoles: 'enabled' as OpenGridConnectorHoles,
@@ -269,6 +290,8 @@ const OPEN_GRID_PARAMETER_KEYS: readonly OpenGridParameterKey[] = [
   'targetWidth',
   'targetDepth',
   'fitToTarget',
+  'targetFrameShape',
+  'targetFrameSides',
   'chamfers',
   'chamferCorners',
   'connectorHoles',
@@ -327,6 +350,12 @@ export function isOpenGridLayeredVariant(variant: OpenGridVariant): boolean {
 
 function isOpenGridChamferMode(value: unknown): value is OpenGridChamferMode {
   return value === 'none' || value === 'corners' || value === 'everywhere'
+}
+
+function isOpenGridTargetFrameShape(
+  value: unknown,
+): value is OpenGridTargetFrameShape {
+  return value === 'none' || value === 'chamfer' || value === 'fillet'
 }
 
 function isOpenGridScrewKind(value: unknown): value is OpenGridScrewKind {
@@ -453,6 +482,20 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
   if (typeof value.fitToTarget !== 'boolean') {
     issues.push({ field: 'fitToTarget', messageId: 'validation.invalid' })
   }
+  if (!isOpenGridTargetFrameShape(value.targetFrameShape)) {
+    issues.push({
+      field: 'targetFrameShape',
+      messageId: 'validation.invalid',
+    })
+  }
+  if (
+    !isBooleanRecord(value.targetFrameSides, ['top', 'right', 'bottom', 'left'])
+  ) {
+    issues.push({
+      field: 'targetFrameSides',
+      messageId: 'validation.invalid',
+    })
+  }
 
   for (const field of ['rows', 'columns'] as const) {
     const count = value[field]
@@ -576,6 +619,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     value.fitToTarget === true &&
     nominalWidth !== null &&
     isFiniteNumber(value.targetWidth) &&
+    (value.targetWidth as number) > 0 &&
     (value.targetWidth as number) < nominalWidth
   ) {
     issues.push({ field: 'targetWidth', messageId: 'validation.invalid' })
@@ -585,7 +629,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     nominalWidth !== null &&
     isFiniteNumber(value.targetWidth) &&
     (value.targetWidth as number) >
-      nominalWidth + TARGET_FRAME_MAX_SIDE_REMAINDER * 2
+      nominalWidth + TARGET_FRAME_MAX_TOTAL_REMAINDER
   ) {
     issues.push({ field: 'targetWidth', messageId: 'validation.invalid' })
   }
@@ -593,6 +637,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     value.fitToTarget === true &&
     nominalDepth !== null &&
     isFiniteNumber(value.targetDepth) &&
+    (value.targetDepth as number) > 0 &&
     (value.targetDepth as number) < nominalDepth
   ) {
     issues.push({ field: 'targetDepth', messageId: 'validation.invalid' })
@@ -602,7 +647,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     nominalDepth !== null &&
     isFiniteNumber(value.targetDepth) &&
     (value.targetDepth as number) >
-      nominalDepth + TARGET_FRAME_MAX_SIDE_REMAINDER * 2
+      nominalDepth + TARGET_FRAME_MAX_TOTAL_REMAINDER
   ) {
     issues.push({ field: 'targetDepth', messageId: 'validation.invalid' })
   }
@@ -753,6 +798,10 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
       targetWidth: value.targetWidth as number,
       targetDepth: value.targetDepth as number,
       fitToTarget: value.fitToTarget as boolean,
+      targetFrameShape: value.targetFrameShape as OpenGridTargetFrameShape,
+      targetFrameSides: {
+        ...(value.targetFrameSides as OpenGridFrameSideFlags),
+      },
       chamfers: value.chamfers as OpenGridChamferMode,
       chamferCorners: { ...(value.chamferCorners as OpenGridCornerFlags) },
       connectorHoles: value.connectorHoles as OpenGridConnectorHoles,
@@ -776,9 +825,32 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
 export function normalizeOpenGridParameters(
   value: unknown,
 ): OpenGridParameters {
-  const validation = validateOpenGridParameters(value)
+  const validation = validateOpenGridParameters(
+    normalizeLegacyOpenGridParameters(value),
+  )
   if (!validation.valid) throw new Error('OPENGRID_PARAMETERS_INVALID')
   return validation.value
+}
+
+function normalizeLegacyOpenGridParameters(value: unknown): unknown {
+  if (!isRecord(value)) return value
+  const normalized = { ...value }
+  if (!Object.prototype.hasOwnProperty.call(normalized, 'targetWidth')) {
+    normalized.targetWidth = 0
+  }
+  if (!Object.prototype.hasOwnProperty.call(normalized, 'targetDepth')) {
+    normalized.targetDepth = 0
+  }
+  if (!Object.prototype.hasOwnProperty.call(normalized, 'fitToTarget')) {
+    normalized.fitToTarget = false
+  }
+  if (!Object.prototype.hasOwnProperty.call(normalized, 'targetFrameShape')) {
+    normalized.targetFrameShape = 'none'
+  }
+  if (!Object.prototype.hasOwnProperty.call(normalized, 'targetFrameSides')) {
+    normalized.targetFrameSides = { ...DEFAULT_TARGET_FRAME_SIDES }
+  }
+  return normalized
 }
 
 export function isOpenGridParameters(
@@ -800,29 +872,91 @@ export function isOpenGridGenerationSupported(
 }
 
 export function openGridBoardConfiguration(
-  parameters: Pick<OpenGridParameters, 'variant' | 'rows' | 'columns'> &
-    Partial<
-      Pick<
-        OpenGridParameters,
-        | 'halfCellX'
-        | 'halfCellY'
-        | 'targetWidth'
-        | 'targetDepth'
-        | 'fitToTarget'
-      >
-    >,
+  parameters: OpenGridBoardParameters,
 ): OpenGridBoardConfiguration {
+  const bounds = openGridPhysicalBoundsFor(parameters)
+  return {
+    width: bounds.max[0] - bounds.min[0],
+    depth: bounds.max[1] - bounds.min[1],
+    height: bounds.max[2],
+  }
+}
+
+type OpenGridBoardParameters = Pick<
+  OpenGridParameters,
+  'variant' | 'rows' | 'columns'
+> &
+  Partial<
+    Pick<
+      OpenGridParameters,
+      | 'halfCellX'
+      | 'halfCellY'
+      | 'targetWidth'
+      | 'targetDepth'
+      | 'fitToTarget'
+      | 'targetFrameSides'
+    >
+  >
+
+type OpenGridAxisBounds = { min: number; max: number }
+
+function axisBoundsForTarget(
+  nominalSize: number,
+  targetSize: number | undefined,
+  fitToTarget: boolean,
+  negativeSide: boolean,
+  positiveSide: boolean,
+): OpenGridAxisBounds {
+  if (
+    !fitToTarget ||
+    !isFiniteNumber(targetSize) ||
+    targetSize <= nominalSize ||
+    (!negativeSide && !positiveSide)
+  ) {
+    return { min: -nominalSize / 2, max: nominalSize / 2 }
+  }
+
+  if (negativeSide && positiveSide) {
+    return { min: -targetSize / 2, max: targetSize / 2 }
+  }
+
+  const remainder = targetSize - nominalSize
+  if (negativeSide) {
+    return {
+      min: -nominalSize / 2 - remainder,
+      max: nominalSize / 2,
+    }
+  }
+
+  return {
+    min: -nominalSize / 2,
+    max: nominalSize / 2 + remainder,
+  }
+}
+
+export function openGridPhysicalBoundsFor(parameters: OpenGridBoardParameters) {
   const nominal = openGridNominalBoardConfiguration(parameters)
-  const useTarget = parameters.fitToTarget === true
-  let width = nominal.width
-  let depth = nominal.depth
-  if (useTarget && isFiniteNumber(parameters.targetWidth)) {
-    if (parameters.targetWidth > 0) width = parameters.targetWidth
+  const sides = parameters.targetFrameSides ?? DEFAULT_TARGET_FRAME_SIDES
+  const fitToTarget = parameters.fitToTarget === true
+  const xBounds = axisBoundsForTarget(
+    nominal.width,
+    parameters.targetWidth,
+    fitToTarget,
+    sides.left,
+    sides.right,
+  )
+  const yBounds = axisBoundsForTarget(
+    nominal.depth,
+    parameters.targetDepth,
+    fitToTarget,
+    sides.bottom,
+    sides.top,
+  )
+
+  return {
+    min: [xBounds.min, yBounds.min, 0] as [number, number, number],
+    max: [xBounds.max, yBounds.max, nominal.height] as [number, number, number],
   }
-  if (useTarget && isFiniteNumber(parameters.targetDepth)) {
-    if (parameters.targetDepth > 0) depth = parameters.targetDepth
-  }
-  return { width, depth, height: nominal.height }
 }
 
 export function openGridNominalBoardConfiguration(
@@ -838,19 +972,8 @@ export function openGridNominalBoardConfiguration(
   }
 }
 
-export function boundsForOpenGrid(
-  parameters: Pick<OpenGridParameters, 'variant' | 'rows' | 'columns'> &
-    Partial<Pick<OpenGridParameters, 'halfCellX' | 'halfCellY'>>,
-) {
-  const board = openGridBoardConfiguration(parameters)
-  return {
-    min: [-board.width / 2, -board.depth / 2, 0] as [number, number, number],
-    max: [board.width / 2, board.depth / 2, board.height] as [
-      number,
-      number,
-      number,
-    ],
-  }
+export function boundsForOpenGrid(parameters: OpenGridBoardParameters) {
+  return openGridPhysicalBoundsFor(parameters)
 }
 
 export function cellCenterForOpenGrid(
@@ -1339,6 +1462,16 @@ function openGridScrewPatternFingerprint(
   )
 }
 
+function openGridTargetFrameFingerprint(
+  parameters: OpenGridParameters,
+): string {
+  const sides = parameters.targetFrameSides
+  const sideFingerprint = [sides.top, sides.right, sides.bottom, sides.left]
+    .map((enabled) => (enabled ? '1' : '0'))
+    .join('')
+  return `${parameters.targetFrameShape}-${sideFingerprint}`
+}
+
 function buildOpenGridFileName(
   parameters: OpenGridParameters,
   extension: '.step' | '.stl',
@@ -1351,7 +1484,7 @@ function buildOpenGridFileName(
     ? `-${openGridScrewPatternFingerprint(parameters)}`
     : ''
   const targetSuffix = parameters.fitToTarget
-    ? `-fit-${Number(parameters.targetWidth.toFixed(2))}x${Number(parameters.targetDepth.toFixed(2))}`
+    ? `-fit-${Number(parameters.targetWidth.toFixed(2))}x${Number(parameters.targetDepth.toFixed(2))}-${openGridTargetFrameFingerprint(parameters)}`
     : ''
   return `opengrid-${parameters.variant.toLowerCase()}-${parameters.columns}x${parameters.rows}-x${parameters.halfCellX}-y${parameters.halfCellY}-${parameters.screwKind}-${parameters.screwMode}-${parameters.chamfers}-${parameters.connectorHoles}${targetSuffix}${fingerprint}${extension}`
 }

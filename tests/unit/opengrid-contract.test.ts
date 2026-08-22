@@ -14,6 +14,7 @@ import {
   halfCellHostPitch,
   openGridAxisSize,
   OPENGRID_CONFIGURATION,
+  normalizeOpenGridParameters,
   validateOpenGridGenerationSupport,
   validateOpenGridParameters,
   type OpenGridParameters,
@@ -33,6 +34,9 @@ function parameters(
     },
     connectorSides: {
       ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
+    },
+    targetFrameSides: {
+      ...OPENGRID_CONFIGURATION.defaultParameters.targetFrameSides,
     },
     customScrewPositions: [],
     ...overrides,
@@ -61,6 +65,17 @@ describe('OpenGrid contract', () => {
     expect(validateOpenGridParameters({ ...defaults, columns: 11 }).valid).toBe(
       false,
     )
+  })
+
+  it('normalizes legacy target-frame snapshots with nominal defaults', () => {
+    const legacy = { ...parameters() } as Record<string, unknown>
+    delete legacy.targetWidth
+    delete legacy.targetDepth
+    delete legacy.fitToTarget
+    delete legacy.targetFrameShape
+    delete legacy.targetFrameSides
+
+    expect(normalizeOpenGridParameters(legacy)).toEqual(parameters())
   })
 
   it('adds a 14 mm extension for each selected half-cell axis', () => {
@@ -139,6 +154,68 @@ describe('OpenGrid contract', () => {
     })
   })
 
+  it('allocates a target remainder according to the selected frame sides', () => {
+    const oneSided = parameters({
+      columns: 3,
+      rows: 3,
+      targetWidth: 100,
+      targetDepth: 100,
+      fitToTarget: true,
+      targetFrameSides: {
+        top: true,
+        right: false,
+        bottom: false,
+        left: false,
+      },
+    })
+    const unextended = parameters({
+      ...oneSided,
+      targetFrameSides: {
+        top: false,
+        right: false,
+        bottom: false,
+        left: false,
+      },
+    })
+
+    expect(boundsForOpenGrid(oneSided)).toEqual({
+      min: [-42, -42, 0],
+      max: [42, 58, 4],
+    })
+    expect(boundsForOpenGrid(unextended)).toEqual({
+      min: [-42, -42, 0],
+      max: [42, 42, 4],
+    })
+    expect(openGridConnectorLocationsFor(oneSided)).toEqual(
+      openGridConnectorLocationsFor(parameters({ rows: 3, columns: 3 })),
+    )
+  })
+
+  it('accepts a pending target-frame mode before dimensions are calculated', () => {
+    const pending = parameters({ fitToTarget: true })
+
+    expect(validateOpenGridParameters(pending)).toMatchObject({
+      valid: true,
+      value: pending,
+    })
+    expect(boundsForOpenGrid(pending)).toEqual({
+      min: [-28, -28, 0],
+      max: [28, 28, 4],
+    })
+  })
+
+  it('validates the independent target-frame corner shape', () => {
+    expect(
+      validateOpenGridParameters(parameters({ targetFrameShape: 'fillet' }))
+        .valid,
+    ).toBe(true)
+    expect(
+      validateOpenGridParameters(
+        parameters({ targetFrameShape: 'rounded' as never }),
+      ).valid,
+    ).toBe(false)
+  })
+
   it('keeps the nominal envelope when target fitting is disabled', () => {
     const notFitted = parameters({
       columns: 3,
@@ -199,6 +276,21 @@ describe('OpenGrid contract', () => {
     expect(openGridFileName(fitted)).not.toBe(openGridFileName(defaults))
     expect(openGridStlFileName(fitted)).not.toBe(openGridStlFileName(defaults))
     expect(openGridFileName(fitted)).toContain('fit-60x60')
+
+    const oneSidedFillet = parameters({
+      targetWidth: 60,
+      targetDepth: 60,
+      fitToTarget: true,
+      targetFrameShape: 'fillet',
+      targetFrameSides: {
+        top: true,
+        right: false,
+        bottom: false,
+        left: false,
+      },
+    })
+    expect(openGridFileName(oneSidedFillet)).not.toBe(openGridFileName(fitted))
+    expect(openGridFileName(oneSidedFillet)).toContain('fillet-1000')
   })
 
   it('maps all side directions to centered full-grid offsets and host pitches', () => {

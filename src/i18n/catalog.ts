@@ -441,10 +441,16 @@ export const zhHantMessages = {
   'panel.opengrid.halfYRestore': 'OpenGrid Y 半格方向',
   'panel.opengrid.targetDimensionDescription':
     '輸入單一底板目標長寬；會依目前半格設定取不超過目標的最大格數。',
-  'panel.opengrid.fitToTarget': '用實體邊框補足目標尺寸',
+  'panel.opengrid.fitToTarget': '用實體邊框補足目標尺寸 Beta',
   'panel.opengrid.fitToTargetRestore': 'OpenGrid 實體邊框補足目標尺寸',
   'panel.opengrid.fitToTargetDescription':
-    '啟用後以置中的實體周邊帶填滿剩餘距離，不新增格點或介面。',
+    '啟用後以實體外框填滿剩餘距離；可選擇外框角型與四個延伸方向，不新增格點或介面。',
+  'panel.opengrid.targetFrameShape': '外框角型',
+  'panel.opengrid.targetFrameShapeRestore': 'OpenGrid 外框角型',
+  'panel.opengrid.targetFrameShapeChamfer': '倒角',
+  'panel.opengrid.targetFrameShapeFillet': '圓角',
+  'panel.opengrid.targetFrameSides': '外框延伸方向',
+  'panel.opengrid.targetFrameSidesRestore': 'OpenGrid 外框延伸方向',
   'panel.opengrid.none': '無',
   'panel.opengrid.left': '左',
   'panel.opengrid.right': '右',
@@ -998,10 +1004,17 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'panel.opengrid.halfYRestore': 'OpenGrid Y half-cell direction',
   'panel.opengrid.targetDimensionDescription':
     'Enter the target size for one board; the largest grid that fits the current half-cell settings will be selected.',
-  'panel.opengrid.fitToTarget': 'Fill target size with physical frame',
+  'panel.opengrid.fitToTarget': 'Fill target size with physical frame (Beta)',
   'panel.opengrid.fitToTargetRestore': 'OpenGrid physical target-frame fitting',
   'panel.opengrid.fitToTargetDescription':
-    'Adds a centered solid perimeter frame for the remainder without adding grid hosts or interfaces.',
+    'Fills the remainder with a solid frame; choose its corner shape and four independent extension sides without adding grid hosts or interfaces.',
+  'panel.opengrid.targetFrameShape': 'Outer frame corner shape',
+  'panel.opengrid.targetFrameShapeRestore': 'OpenGrid outer frame corner shape',
+  'panel.opengrid.targetFrameShapeChamfer': 'Chamfer',
+  'panel.opengrid.targetFrameShapeFillet': 'Fillet',
+  'panel.opengrid.targetFrameSides': 'Outer frame extension sides',
+  'panel.opengrid.targetFrameSidesRestore':
+    'OpenGrid outer frame extension sides',
   'panel.opengrid.none': 'None',
   'panel.opengrid.left': 'Left',
   'panel.opengrid.right': 'Right',

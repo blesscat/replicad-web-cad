@@ -36,7 +36,7 @@ OpenGrid board normalized snapshots MUST continue to use typed axis fields: `hal
 
 The OpenGrid board MUST retain a 28 mm full-cell pitch and add exactly 14 mm on each axis whose half-cell field is not `none`. Its nominal grid dimensions MUST be `columns × 28 + 14` for a selected X half-cell and `rows × 28 + 14` for a selected Y half-cell. The nominal grid MUST remain centered on X/Y with minimum Z=0. `left` MUST occupy the negative-X outer side, `right` the positive-X outer side, `top` the positive-Y outer side, and `bottom` the negative-Y outer side.
 
-When `fitToTarget=true`, `targetWidth` and `targetDepth` MUST define the physical outer envelope in millimetres. Each target axis MUST be at least its nominal grid dimension. Because the remainder is centered, the added distance on each of the two opposite sides MUST be no more than one 14 mm half-cell; equivalently, each target axis MUST be no more than 28 mm beyond its nominal dimension. Any remainder between the nominal grid and the target envelope MUST be divided equally between the two opposite sides of that axis. The target envelope MUST remain centered on X/Y and MUST keep minimum Z=0. The target frame MUST NOT change the 28 mm pitch, half-cell direction, or nominal grid-host centers.
+When `fitToTarget=true`, `targetWidth` and `targetDepth` MUST define the requested physical outer envelope in millimetres. Each positive target axis MUST be at least its nominal grid dimension, and its remainder MUST be no more than 28 mm. When both opposite `targetFrameSides` are enabled, the remainder MUST be divided equally between those sides; when only one is enabled, that side MUST receive the full remainder; when neither is enabled, that axis MUST remain at its nominal dimension even if a larger target was entered. The resulting envelope MUST remain centered on the nominal grid where both sides are enabled and MUST keep minimum Z=0. The target frame MUST NOT change the 28 mm pitch, half-cell direction, or nominal grid-host centers.
 
 #### Scenario: X-axis half-cell size
 
@@ -137,7 +137,28 @@ The shared half-cell geometry contract MUST define the Snap host pitch as 28 mm 
 
 ### Requirement: OpenGrid half-cell workspace controls
 
-The `/cad/opengrid` workspace MUST expose the existing OpenGrid board controls together with an X half-cell direction control containing `none`／`left`／`right` and a Y half-cell direction control containing `none`／`top`／`bottom`. The grid-count controls MUST be ordered X before Y. With no half-cell on an axis, its slider MUST use whole-cell values; when that axis has a selected half-cell direction, its displayed total count MUST use `0.5` increments (`1.5`, `2.5`, ...), retain at least one complete cell, and extend the maximum by `0.5`. The normalized snapshot MAY continue to store the complete-cell count as an integer plus the typed direction field. The panel MUST display nominal derived width, depth, and thickness using the selected directions. It MUST expose persisted target X/Y dimensions and a `fitToTarget` checkbox. When the checkbox is enabled, the panel MUST indicate that the physical outer frame fills the remaining target distance symmetrically; when disabled, the target values MUST NOT change the generated envelope. It MUST NOT expose an `allowHalfCell` checkbox, a separate single/dual mode, or independent diagonal controls.
+The `/cad/opengrid` workspace MUST expose the existing OpenGrid board controls together with an X half-cell direction control containing `none`／`left`／`right` and a Y half-cell direction control containing `none`／`top`／`bottom`. The grid-count controls MUST be ordered X before Y. With no half-cell on an axis, its slider MUST use whole-cell values; when that axis has a selected half-cell direction, its displayed total count MUST use `0.5` increments (`1.5`, `2.5`, ...), retain at least one complete cell, and extend the maximum by `0.5`. The normalized snapshot MAY continue to store the complete-cell count as an integer plus the typed direction field. The panel MUST display nominal derived width, depth, and thickness using the selected directions.
+
+The persisted OpenGrid snapshot MUST include `targetFrameShape` with values
+`none`, `chamfer`, or `fillet`, and `targetFrameSides` with independent boolean
+`top`, `right`, `bottom`, and `left` fields. Existing snapshots missing these
+fields MUST receive the square-frame default and all four enabled directions.
+The checkbox controlling `fitToTarget` MUST be the first control in the
+OpenGrid panel and MUST include a visible Beta label. When the checkbox is
+disabled, the target-frame calculator and target-frame-only controls MUST be
+hidden, while print planning and nominal board chamfer controls remain
+available. When the checkbox is enabled, the target-size grid calculator,
+`targetFrameShape` control labelled `外框角型`, and four independent frame-side
+controls MUST be visible; print planning and nominal board chamfer controls MUST
+be hidden, while connector and screw controls MUST remain available. The
+target-frame calculator MUST retain target X/Y dimensions and the panel MUST
+display the actual physical envelope: target dimensions on axes with a
+selected frame side and nominal dimensions on axes with no selected frame side.
+If the checkbox is enabled before a positive target is calculated, the panel
+MUST allow the pending mode to remain at nominal dimensions until the
+calculator is applied. When the checkbox is disabled, target values MUST NOT
+change the generated envelope. The panel MUST NOT expose an `allowHalfCell`
+checkbox, a separate single/dual mode, or independent diagonal controls.
 
 #### Scenario: Select an X half-cell
 
@@ -163,10 +184,51 @@ The `/cad/opengrid` workspace MUST expose the existing OpenGrid board controls t
 
 #### Scenario: Target frame checkbox
 
-- **WHEN** a user has calculated target dimensions and enables `fitToTarget`
-- **THEN** the pending snapshot MUST retain the target width and depth
-- **AND** the panel MUST show the target envelope as the derived physical width and depth
-- **AND** the generated board MUST use a centered physical frame for the remaining distance
+- **WHEN** a user views the `/cad/opengrid` parameter panel
+- **THEN** the physical target-frame checkbox MUST be the first OpenGrid
+  control and MUST include the Beta label
+- **AND** the target-size calculator, outer-frame corner shape, and frame-side
+  controls MUST be hidden until the checkbox is enabled
+- **AND** print planning and nominal board chamfer controls MUST be visible
+  only while the checkbox is disabled
+
+#### Scenario: Enable target frame controls
+
+- **WHEN** a user enables `fitToTarget`
+- **THEN** the panel MUST show the target-size grid calculator
+- **AND** the panel MUST show `外框角型` with `無`, `倒角`, and `圓角`
+- **AND** the panel MUST show independent top, right, bottom, and left frame
+  direction controls
+- **AND** the panel MUST hide print planning and nominal board chamfer
+  controls
+- **AND** connector and screw controls MUST remain available
+
+#### Scenario: Target frame checkbox with no calculated target
+
+- **WHEN** a user enables `fitToTarget` before a positive target dimension has
+  been calculated
+- **THEN** the target calculator MUST be shown without blocking the checkbox
+- **AND** the generated envelope MUST remain nominal until target dimensions
+  are applied
+- **AND** applying valid target dimensions MUST persist them with
+  `fitToTarget=true`
+
+#### Scenario: Directional target-frame remainder
+
+- **WHEN** a target-fitted board has a target larger than nominal on an axis
+- **THEN** selecting both opposite frame directions MUST split the remainder
+  equally
+- **AND** selecting only one direction MUST place the full remainder on that
+  side
+- **AND** selecting neither direction MUST leave that axis at its nominal
+  dimension
+
+#### Scenario: Connector remains on a side without a frame
+
+- **WHEN** connector holes are enabled and a connector side is selected while
+  its corresponding target-frame direction is disabled
+- **THEN** the connector holes MUST remain visible on that nominal board side
+- **AND** no connector holes MUST be added to the physical frame
 
 #### Scenario: Select a Y half-cell
 

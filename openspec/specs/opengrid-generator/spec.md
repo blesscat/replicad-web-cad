@@ -67,6 +67,8 @@ parameters MUST include:
 - halfCellX none, left, or right, and halfCellY none, top, or bottom;
 - targetWidth and targetDepth as finite millimetre dimensions, where zero means no saved target;
 - fitToTarget as a boolean;
+- targetFrameShape none, chamfer, or fillet;
+- targetFrameSides as independent boolean top, right, bottom, and left flags;
 - chamfers none, corners, or everywhere plus four outer-corner flags;
 - connectorHoles none or enabled plus independent top, right, bottom, and left
   side flags;
@@ -78,11 +80,13 @@ parameters MUST include:
 - sorted custom positions on the internal rows-minus-one by
   columns-minus-one intersection lattice.
 
-The standard pitch MUST be 28 mm. Without half-cell directions, the nominal board width and depth MUST be columns times 28 mm and rows times 28 mm. Each selected half-cell direction MUST add exactly 14 mm on its nominal axis while keeping the board centered and within the 500 mm workspace limit. When `fitToTarget=false`, the target dimensions MUST NOT affect the generated board envelope. When `fitToTarget=true`, each positive target dimension MUST be at least its corresponding nominal dimension. Because the target remainder is centered, each side MUST receive no more than one 14 mm half-cell; equivalently, each target dimension MUST be no more than 28 mm beyond its corresponding nominal dimension. The physical target envelope MUST remain within the 500 mm workspace limit. Hybrid MUST use the same normalized field shape as the other OpenGrid variants and MUST NOT add a variant-specific persistence or Worker field.
+The standard pitch MUST be 28 mm. Without half-cell directions, the nominal board width and depth MUST be columns times 28 mm and rows times 28 mm. Each selected half-cell direction MUST add exactly 14 mm on its nominal axis while keeping the board centered and within the 500 mm workspace limit. When `fitToTarget=false`, the target dimensions MUST NOT affect the generated board envelope. When `fitToTarget=true`, each positive target dimension MUST be at least its corresponding nominal dimension. The target remainder MUST be no more than 28 mm per axis. When both opposite `targetFrameSides` are enabled, the remainder MUST be split equally; when only one is enabled, that side MUST receive the full remainder; when neither is enabled, the physical envelope MUST remain nominal on that axis. The physical target envelope MUST remain within the 500 mm workspace limit. Hybrid MUST use the same normalized field shape as the other OpenGrid variants and MUST NOT add a variant-specific persistence or Worker field.
 
 The official default MUST be Lite 2 by 2 with corner chamfers, all connector
 sides enabled, corner screws, and screw dimensions 4.1 mm, 7.2 mm, 1 mm,
-countersunk enabled, and 90 degrees. Its targetWidth and targetDepth MUST be zero and fitToTarget MUST be false.
+countersunk enabled, and 90 degrees. Its targetWidth and targetDepth MUST be
+zero, fitToTarget MUST be false, targetFrameShape MUST be none, and all four
+targetFrameSides MUST be enabled.
 
 The normalized snapshot MUST use generic dimensions and MUST NOT retain the
 former 16 mm opening, four-slot, small/large connector, or M3/M4/M5-only
@@ -112,8 +116,10 @@ the generic dimensions.
 - **THEN** validation MUST reject it before native work
 - **AND** the previous accepted preview MUST remain stale
 - **AND** incompatible persisted data MUST fall back to the component default
-- **WHEN** a legacy snapshot is missing targetWidth, targetDepth, or fitToTarget
-- **THEN** persistence hydration MUST add zero, zero, and false respectively before validation
+- **WHEN** a legacy snapshot is missing targetWidth, targetDepth, fitToTarget,
+  targetFrameShape, or targetFrameSides
+- **THEN** persistence hydration MUST add zero, zero, false, none, and all four
+  enabled directions respectively before validation
 
 ### Requirement: Official tile profile and variants
 
@@ -319,7 +325,22 @@ boundary host on each selected half-cell axis. left/right MUST map to the
 negative/positive X outer side, and top/bottom MUST map to the
 positive/negative Y outer side. Feature coordinates, connector placement, screw placement, centering, and variant thickness MUST use the final nominal grid envelope.
 
-When `fitToTarget=true`, the generator MUST add a centered physical outer frame around the nominal grid envelope. The frame MUST use the selected variant's board height, MUST fill only the requested remainder on each axis, and MUST be fused to the completed nominal grid geometry after board feature cutters run on that nominal geometry. The frame MUST NOT receive or create a new grid host, connector seam, screw center, or Snap interface. The final physical bounds MUST equal the requested target dimensions on enabled axes.
+When `fitToTarget=true`, the generator MUST add a physical outer frame only on
+the selected `targetFrameSides` around the nominal grid envelope. The frame
+MUST use the selected variant's board height, MUST fill only the requested
+remainder on each enabled axis, and MUST be fused to the completed nominal grid
+geometry after board feature cutters run on that nominal geometry. When both
+opposite frame sides on an axis are selected, the remainder MUST be split
+equally; when only one side is selected, that side MUST receive the complete
+remainder; when neither side is selected, that axis MUST remain nominal even if
+its target dimension is larger. A target remainder MUST NOT exceed 28 mm on an
+axis. The frame MUST NOT receive or create a new grid host, connector seam,
+screw center, or Snap interface. `targetFrameShape=none` MUST leave the frame
+corners square, `chamfer` MUST apply the selected outer-frame chamfer shape,
+and `fillet` MUST apply the selected outer-frame rounded shape. The final
+physical bounds MUST equal the requested target dimensions on axes with at
+least one selected frame side and MUST remain nominal on axes with no selected
+frame side.
 
 The detailed shared half-cell direction, interface, and persistence contract
 is defined by the opengrid-half-cell capability.
@@ -330,6 +351,36 @@ is defined by the opengrid-half-cell capability.
 - **THEN** the derived board envelope MUST add 14 mm on each selected axis
 - **AND** the board MUST remain centered with feature and connector placement
   on the final envelope
+
+#### Scenario: Extend one physical frame side
+
+- **WHEN** a valid 3 by 3 board has a 100 mm target on an axis whose nominal
+  size is 84 mm and only the positive side is selected in `targetFrameSides`
+- **THEN** the final envelope MUST extend 16 mm on that positive side
+- **AND** the opposite side MUST remain at the nominal grid boundary
+- **AND** the nominal grid hosts MUST remain in their existing coordinates
+
+#### Scenario: Split an extension across two opposite sides
+
+- **WHEN** a valid 3 by 3 board has a 100 mm target on an axis whose nominal
+  size is 84 mm and both opposite sides are selected in `targetFrameSides`
+- **THEN** the final envelope MUST add 8 mm on each selected side
+- **AND** the nominal grid hosts MUST remain in their existing coordinates
+
+#### Scenario: Leave an axis without a physical frame
+
+- **WHEN** a valid target-fitted board has a target larger than nominal on an
+  axis and neither opposite side is selected in `targetFrameSides`
+- **THEN** the final envelope on that axis MUST remain nominal
+- **AND** no physical frame material MUST be added on that axis
+
+#### Scenario: Keep connectors on an exposed nominal side
+
+- **WHEN** connector holes are enabled, a connector side is selected, and the
+  corresponding physical frame side is not selected
+- **THEN** the connector holes MUST remain on the nominal grid boundary
+- **AND** the connector holes MUST remain present on that exposed side
+- **AND** the physical frame MUST NOT add connector holes at a new outer edge
 
 ### Requirement: OpenGrid quality gate
 
@@ -360,20 +411,37 @@ produced from the quality-gated committed B-Rep revision.
 
 ### Requirement: Target frame quality evidence
 
-The OpenGrid quality gate MUST verify target-frame geometry when `fitToTarget=true`. It MUST verify the final centered bounds, positive frame material on every enabled remainder axis, preservation of all nominal cell openings, and the absence of a second grid-host seam or feature location in the frame. A disabled target frame MUST use the existing nominal quality evidence.
+The OpenGrid quality gate MUST verify target-frame geometry when
+`fitToTarget=true`. It MUST verify the final directional bounds, positive frame
+material on every selected remainder side, preservation of all nominal
+cell-openings, the selected outer-frame corner shape, and the absence of a
+second grid-host seam or feature location in the frame. A disabled target frame
+or an axis with no selected frame side MUST use the existing nominal quality
+evidence.
 
 #### Scenario: Target frame reaches the requested space
 
-- **WHEN** a target-fitted board is quality-checked
-- **THEN** its X/Y bounds MUST match the requested target dimensions within the existing bounds tolerance
-- **AND** probes in each requested outer frame strip MUST intersect positive material
+- **WHEN** a target-fitted board is quality-checked with at least one selected
+  frame side on an axis
+- **THEN** its bounds on that axis MUST match the requested target dimension
+  within the existing bounds tolerance
+- **AND** probes in each selected outer frame strip MUST intersect positive
+  material
 - **AND** all nominal cell openings MUST remain through-open
+
+#### Scenario: Target frame keeps an unextended axis nominal
+
+- **WHEN** a target-fitted board has a larger target dimension but neither
+  opposite frame side is selected on that axis
+- **THEN** its bounds on that axis MUST match the nominal grid dimension
+- **AND** no missing-frame failure MUST be reported for that axis
 
 #### Scenario: Target frame keeps the OpenGrid interface stable
 
 - **WHEN** a target-fitted board has connector holes or generated screws
 - **THEN** those feature centers MUST equal the corresponding non-fitted nominal board centers
-- **AND** probes in the added frame MUST NOT be reported as additional OpenGrid hosts
+- **AND** probes in every added frame side MUST NOT be reported as additional
+  OpenGrid hosts
 
 ### Requirement: Optional official reference comparison
 

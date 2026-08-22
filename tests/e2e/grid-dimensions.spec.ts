@@ -101,17 +101,21 @@ test('OpenGrid print planner applies the practical primary piece and preserves h
   page,
 }) => {
   await page.goto('/cad/opengrid')
+  const fitToTarget = page.getByRole('checkbox', {
+    name: /用實體邊框補足目標尺寸/,
+  })
+  if (await fitToTarget.isChecked()) await fitToTarget.uncheck()
   await page
     .getByRole('combobox', { name: 'OpenGrid X 半格方向' })
     .selectOption('right')
   await page
     .getByRole('combobox', { name: 'OpenGrid Y 半格方向' })
     .selectOption('top')
-  await page.getByRole('checkbox', { name: 'OpenGrid 正中心螺絲孔' }).check()
+  await page.getByRole('checkbox', { name: '正中心螺絲孔' }).check()
   await page
     .getByRole('combobox', { name: 'OpenGrid 螺絲孔模式' })
     .selectOption('custom')
-  await page.getByRole('button', { name: '內部交界第 1 行第 1 列' }).click()
+  await page.getByRole('button', { name: '交界 1 × 1' }).click()
   await expect(page.getByText('已選 1 孔')).toBeVisible()
 
   const calculator = page.getByTestId('grid-dimension-calculator')
@@ -131,7 +135,7 @@ test('OpenGrid print planner applies the practical primary piece and preserves h
     page.getByRole('combobox', { name: 'OpenGrid Y 半格方向' }),
   ).toHaveValue('top')
   await expect(
-    page.getByRole('checkbox', { name: 'OpenGrid 正中心螺絲孔' }),
+    page.getByRole('checkbox', { name: '正中心螺絲孔' }),
   ).toBeChecked()
   await expect(
     page.getByRole('combobox', { name: 'OpenGrid 螺絲孔模式' }),
@@ -177,7 +181,7 @@ test('OpenGrid print planner applies the practical primary piece and preserves h
   await expect(calculator.getByRole('alert')).toContainText('28 mm')
   await expect(xSlider).toHaveValue('8.5')
   await expect(
-    page.getByRole('checkbox', { name: 'OpenGrid 正中心螺絲孔' }),
+    page.getByRole('checkbox', { name: '正中心螺絲孔' }),
   ).toBeChecked()
   await expect(page.getByText('已選 1 孔')).toBeVisible()
 })
@@ -191,17 +195,24 @@ test('OpenGrid fills a calculated remainder with a persisted centered frame', as
     .selectOption('right')
   await page.getByRole('slider', { name: 'X' }).press('ArrowRight')
 
+  const fitToTarget = page.getByRole('checkbox', {
+    name: /用實體邊框補足目標尺寸/,
+  })
+  await fitToTarget.check()
   const calculator = page.getByTestId('opengrid-target-dimension-calculator')
   await calculator.getByRole('textbox', { name: 'X（mm）' }).fill('100')
   await calculator.getByRole('textbox', { name: 'Y（mm）' }).fill('58')
   await calculator.getByRole('button', { name: '計算格數' }).click()
 
-  const fitToTarget = page.getByRole('checkbox', {
-    name: '用實體邊框補足目標尺寸',
-  })
-  await expect(fitToTarget).toBeEnabled()
-  await fitToTarget.check()
   await expect(page.getByText('尺寸：100 × 58 × 4 mm')).toBeVisible()
+  await expect(page.getByTestId('opengrid-target-frame-sides')).toBeVisible()
+  await expect(
+    page.getByRole('combobox', { name: 'OpenGrid 外框角型' }),
+  ).toBeVisible()
+  await expect(page.getByTestId('grid-dimension-calculator')).toHaveCount(0)
+  await expect(
+    page.getByRole('combobox', { name: 'OpenGrid 倒角模式' }),
+  ).toHaveCount(0)
 
   await page.reload()
   await expect(page.getByTestId('opengrid-panel')).toBeVisible()
@@ -215,8 +226,62 @@ test('OpenGrid fills a calculated remainder with a persisted centered frame', as
     restoredCalculator.getByRole('textbox', { name: 'Y（mm）' }),
   ).toHaveValue('58')
   await expect(
-    page.getByRole('checkbox', { name: '用實體邊框補足目標尺寸' }),
+    page.getByRole('checkbox', { name: /用實體邊框補足目標尺寸/ }),
   ).toBeChecked()
+})
+
+test('OpenGrid beta target-frame controls are ordered and independently configurable', async ({
+  page,
+}) => {
+  await page.goto('/cad/opengrid')
+  const panel = page.getByTestId('opengrid-panel')
+  const fitToTarget = page.getByRole('checkbox', {
+    name: /用實體邊框補足目標尺寸/,
+  })
+
+  await expect(panel.locator('input, select').first()).toHaveAttribute(
+    'aria-label',
+    /用實體邊框補足目標尺寸/,
+  )
+  await expect(panel.getByText(/用實體邊框補足目標尺寸 Beta/)).toBeVisible()
+  await expect(page.getByTestId('grid-dimension-calculator')).toBeVisible()
+  await expect(
+    page.getByRole('combobox', { name: 'OpenGrid 倒角模式' }),
+  ).toBeVisible()
+
+  await fitToTarget.check()
+  const targetFrameShape = page.getByRole('combobox', {
+    name: 'OpenGrid 外框角型',
+  })
+  await targetFrameShape.selectOption('fillet')
+  await expect(targetFrameShape).toHaveValue('fillet')
+
+  const frameSides = page.getByTestId('opengrid-target-frame-sides')
+  const rightSide = frameSides.getByRole('checkbox', {
+    name: '外框延伸方向 右',
+  })
+  await rightSide.uncheck()
+  await expect(rightSide).not.toBeChecked()
+  await expect(
+    frameSides.getByRole('checkbox', { name: '外框延伸方向 上' }),
+  ).toBeChecked()
+  await expect(
+    page.getByRole('combobox', { name: 'OpenGrid 連接孔' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('combobox', { name: 'OpenGrid 螺絲孔模式' }),
+  ).toBeVisible()
+  await expect(page.getByTestId('grid-dimension-calculator')).toHaveCount(0)
+  await expect(
+    page.getByRole('combobox', { name: 'OpenGrid 倒角模式' }),
+  ).toHaveCount(0)
+
+  await fitToTarget.uncheck()
+  await expect(page.getByTestId('grid-dimension-calculator')).toBeVisible()
+  await expect(targetFrameShape).toHaveCount(0)
+  await expect(
+    page.getByRole('combobox', { name: 'OpenGrid 倒角模式' }),
+  ).toBeVisible()
 })
 
 test('OpenGrid generates a centered frame for a 100 mm target from a 3 by 3 grid', async ({
@@ -226,15 +291,15 @@ test('OpenGrid generates a centered frame for a 100 mm target from a 3 by 3 grid
   await page.getByRole('slider', { name: 'X' }).fill('3')
   await page.getByRole('slider', { name: 'Y' }).fill('3')
 
+  const fitToTarget = page.getByRole('checkbox', {
+    name: /用實體邊框補足目標尺寸/,
+  })
+  await fitToTarget.check()
   const calculator = page.getByTestId('opengrid-target-dimension-calculator')
   await calculator.getByRole('textbox', { name: 'X（mm）' }).fill('100')
   await calculator.getByRole('textbox', { name: 'Y（mm）' }).fill('100')
   await calculator.getByRole('button', { name: '計算格數' }).click()
 
-  const fitToTarget = page.getByRole('checkbox', {
-    name: '用實體邊框補足目標尺寸',
-  })
-  await fitToTarget.check()
   await expect(page.getByText('尺寸：100 × 100 × 4 mm')).toBeVisible()
   await expect(page.getByTestId('cad-error-toast')).toHaveCount(0)
   await expect(page.getByTestId('cad-viewport').locator('canvas')).toBeVisible({
@@ -250,6 +315,10 @@ test('OpenGrid print planning clears single-board target fitting', async ({
     .getByRole('combobox', { name: 'OpenGrid X 半格方向' })
     .selectOption('right')
 
+  const fitToTarget = page.getByRole('checkbox', {
+    name: /用實體邊框補足目標尺寸/,
+  })
+  await fitToTarget.check()
   const targetCalculator = page.getByTestId(
     'opengrid-target-dimension-calculator',
   )
@@ -257,11 +326,8 @@ test('OpenGrid print planning clears single-board target fitting', async ({
   await targetCalculator.getByRole('textbox', { name: 'Y（mm）' }).fill('58')
   await targetCalculator.getByRole('button', { name: '計算格數' }).click()
 
-  const fitToTarget = page.getByRole('checkbox', {
-    name: '用實體邊框補足目標尺寸',
-  })
-  await fitToTarget.check()
-
+  await expect(page.getByTestId('grid-dimension-calculator')).toHaveCount(0)
+  await fitToTarget.uncheck()
   const printPlanner = page.getByTestId('grid-dimension-calculator')
   await printPlanner.getByRole('textbox', { name: '目標 X（mm）' }).fill('1000')
   await printPlanner.getByRole('textbox', { name: '目標 Y（mm）' }).fill('1000')

@@ -32,6 +32,9 @@ function benchmarkParameters(
     connectorSides: {
       ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
     },
+    targetFrameSides: {
+      ...OPENGRID_CONFIGURATION.defaultParameters.targetFrameSides,
+    },
     customScrewPositions: [],
     ...overrides,
   })

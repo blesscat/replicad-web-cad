@@ -188,6 +188,17 @@ function normalizeLegacyHalfCellParameters(
   if (!Object.prototype.hasOwnProperty.call(normalized, 'fitToTarget')) {
     normalized.fitToTarget = false
   }
+  if (!Object.prototype.hasOwnProperty.call(normalized, 'targetFrameShape')) {
+    normalized.targetFrameShape = 'none'
+  }
+  if (!Object.prototype.hasOwnProperty.call(normalized, 'targetFrameSides')) {
+    normalized.targetFrameSides = {
+      top: true,
+      right: true,
+      bottom: true,
+      left: true,
+    }
+  }
   return normalized
 }
 
