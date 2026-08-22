@@ -1,12 +1,15 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import type { Shape3D } from 'replicad'
 import {
   OPENGRID_DIVIDER_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
   PILLAR_CONFIGURATION,
+  OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
 } from '../../src/cad-contract/units'
 import { openGridSnapProfileFor } from '../../src/cad-kernel/components/opengrid-snap/profile'
+import { placeOpenGridDetachableCornerSeatSocketShape } from '../../src/cad-kernel/components/opengrid-locating-assembly/reference'
 
 describe('OpenGrid locating and assembly interface contract', () => {
   it('publishes the confirmed dimensions and derived openings', () => {
@@ -71,5 +74,101 @@ describe('OpenGrid locating and assembly interface contract', () => {
     expect(configuration.testShaftExposure).toBe(1)
     expect(configuration.testShaftLengthForFloor(3)).toBe(4)
     expect(configuration.testShaftLengthForFloor(5)).toBe(6)
+  })
+
+  it('publishes the fixed detachable corner-seat fit once', () => {
+    const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+
+    expect(configuration.male).toMatchObject({
+      bodyDiameter: 5,
+      bodyHeight: 3,
+      leadInHeight: 0.2,
+      leadInTipDiameter: 4.6,
+      keyWidth: 1.8,
+      taperTopZ: 4.35,
+      wearHeight: 0.15,
+      totalHeight: 4.5,
+      nominalVolume: 66.7032674,
+      bounds: {
+        min: [-2.5, -2.5, 0],
+        max: [2.5, 2.5, 4.5],
+      },
+    })
+    expect(configuration.female).toMatchObject({
+      outerDiameter: 7,
+      depth: 1.5,
+      passageWidth: 2,
+      keySideClearance: 0.1,
+      sourceMinZ: 3,
+      sourceMaxZ: 4.5,
+      nominalVolume: 38.4253392,
+      bounds: {
+        min: [-3.5, -3.5, 3],
+        max: [3.5, 3.5, 4.5],
+      },
+    })
+    expect(configuration.minimumSocketRoof).toBe(0.5)
+    expect(
+      configuration.female.passageWidth - configuration.male.keyWidth,
+    ).toBeCloseTo(configuration.female.keySideClearance * 2, 8)
+  })
+
+  it.each(['translateZ', 'rotate', 'translate'] as const)(
+    'deletes the owned clone when %s placement fails',
+    (failedTransform) => {
+      const ownedClone = {
+        delete: vi.fn(),
+        translateZ: vi.fn(() => {
+          if (failedTransform === 'translateZ')
+            throw new Error('TRANSFORM_FAILED')
+          return ownedClone
+        }),
+        rotate: vi.fn(() => {
+          if (failedTransform === 'rotate') throw new Error('TRANSFORM_FAILED')
+          return ownedClone
+        }),
+        translate: vi.fn(() => {
+          if (failedTransform === 'translate')
+            throw new Error('TRANSFORM_FAILED')
+          return ownedClone
+        }),
+      }
+      const source = {
+        clone: vi.fn(() => ownedClone),
+      } as unknown as Shape3D
+
+      expect(() =>
+        placeOpenGridDetachableCornerSeatSocketShape(source, {
+          center: [10, 20],
+          rotationDegrees: 90,
+        }),
+      ).toThrow('TRANSFORM_FAILED')
+      expect(ownedClone.delete).toHaveBeenCalledOnce()
+    },
+  )
+
+  it('deletes both the replaced clone and current transform on a later failure', () => {
+    const translatedClone = {
+      delete: vi.fn(),
+      rotate: vi.fn(() => {
+        throw new Error('ROTATE_FAILED')
+      }),
+    }
+    const initialClone = {
+      delete: vi.fn(),
+      translateZ: vi.fn(() => translatedClone),
+    }
+    const source = {
+      clone: vi.fn(() => initialClone),
+    } as unknown as Shape3D
+
+    expect(() =>
+      placeOpenGridDetachableCornerSeatSocketShape(source, {
+        center: [0, 0],
+        rotationDegrees: 90,
+      }),
+    ).toThrow('ROTATE_FAILED')
+    expect(initialClone.delete).toHaveBeenCalledOnce()
+    expect(translatedClone.delete).toHaveBeenCalledOnce()
   })
 })

@@ -1,5 +1,8 @@
 import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
-import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from './opengrid-locating-assembly'
+import {
+  OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
+} from './opengrid-locating-assembly'
 import {
   openGridStackableBoxSocketCentersFor,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
@@ -12,7 +15,16 @@ export type OpenGridOrganizerBoxShape =
 
 export type OpenGridOrganizerBoxSpacingMode = 'linked' | 'independent'
 export type OpenGridOrganizerBoxBottomInterfaceMode =
-  'corner-seat' | 'stackable'
+  'corner-seat' | 'detachable-corner-seat' | 'stackable'
+
+export type OpenGridOrganizerBoxDetachableSocketCorner =
+  'upper-left' | 'upper-right' | 'lower-right' | 'lower-left'
+
+export type OpenGridOrganizerBoxDetachableSocketPose = {
+  corner: OpenGridOrganizerBoxDetachableSocketCorner
+  center: OpenGridOrganizerBoxPoint2D
+  rotationDegrees: 0 | 90 | 180 | 270
+}
 
 export type OpenGridOrganizerBoxParameterKey =
   | 'holeCountX'
@@ -88,6 +100,7 @@ export const OPENGRID_ORGANIZER_BOX_SPACING_MODES = [
 
 export const OPENGRID_ORGANIZER_BOX_BOTTOM_INTERFACE_MODES = [
   'corner-seat',
+  'detachable-corner-seat',
   'stackable',
 ] as const satisfies readonly OpenGridOrganizerBoxBottomInterfaceMode[]
 
@@ -260,10 +273,16 @@ function interfaceBoundaryClearanceFor(
   mode: OpenGridOrganizerBoxBottomInterfaceMode,
 ): number {
   const configuration = OPENGRID_ORGANIZER_BOX_CONFIGURATION
-  const interfaceClearance =
-    mode === 'corner-seat'
-      ? OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatDiameter / 2
-      : OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomGridSeamBedOpeningWidth / 2
+  let interfaceClearance =
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomGridSeamBedOpeningWidth / 2
+  if (mode === 'corner-seat') {
+    interfaceClearance =
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatDiameter / 2
+  }
+  if (mode === 'detachable-corner-seat') {
+    interfaceClearance =
+      OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.outerDiameter / 2
+  }
   return Math.max(
     configuration.boundaryClearance,
     interfaceClearance + configuration.clearanceTotal,
@@ -346,6 +365,27 @@ function interfaceFeatureBoundsFor(
             INTERFACE_COLLISION_TOLERANCE,
         ],
         max: [x + radius, y + radius, INTERFACE_COLLISION_TOLERANCE],
+      }),
+    )
+  }
+
+  if (mode === 'detachable-corner-seat') {
+    const interfaceParameters = stackableInterfaceParametersFor(
+      gridCountX,
+      gridCountY,
+    )
+    const radius =
+      OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.outerDiameter / 2 +
+      organizerConfiguration.clearanceTotal
+    return openGridStackableBoxSocketCentersFor(interfaceParameters).map(
+      ([x, y]) => ({
+        min: [x - radius, y - radius, -INTERFACE_COLLISION_TOLERANCE],
+        max: [
+          x + radius,
+          y + radius,
+          OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.depth +
+            INTERFACE_COLLISION_TOLERANCE,
+        ],
       }),
     )
   }
@@ -555,6 +595,52 @@ function openGridOrganizerBoxLayoutForUnchecked(
   }
 }
 
+function detachableSocketCenterFor(
+  centers: readonly OpenGridOrganizerBoxPoint2D[],
+  xSign: -1 | 1,
+  ySign: -1 | 1,
+): OpenGridOrganizerBoxPoint2D {
+  const center = centers.find(
+    ([x, y]) => Math.sign(x) === xSign && Math.sign(y) === ySign,
+  )
+  if (!center) throw new Error('OPENGRID_ORGANIZER_BOX_SOCKET_LAYOUT_INVALID')
+  return center
+}
+
+export function openGridOrganizerBoxDetachableSocketPosesFor(
+  parameters: OpenGridOrganizerBoxParameters,
+): OpenGridOrganizerBoxDetachableSocketPose[] {
+  if (parameters.bottomInterfaceMode !== 'detachable-corner-seat') return []
+  const layout = openGridOrganizerBoxLayoutFor(parameters)
+  const interfaceParameters = stackableInterfaceParametersFor(
+    layout.gridCountX,
+    layout.gridCountY,
+  )
+  const centers = openGridStackableBoxSocketCentersFor(interfaceParameters)
+  return [
+    {
+      corner: 'upper-left',
+      center: detachableSocketCenterFor(centers, -1, 1),
+      rotationDegrees: 0,
+    },
+    {
+      corner: 'upper-right',
+      center: detachableSocketCenterFor(centers, 1, 1),
+      rotationDegrees: 90,
+    },
+    {
+      corner: 'lower-right',
+      center: detachableSocketCenterFor(centers, 1, -1),
+      rotationDegrees: 180,
+    },
+    {
+      corner: 'lower-left',
+      center: detachableSocketCenterFor(centers, -1, -1),
+      rotationDegrees: 270,
+    },
+  ]
+}
+
 export function validateOpenGridOrganizerBoxParameters(
   value: unknown,
 ): OpenGridOrganizerBoxValidation {
@@ -646,6 +732,17 @@ export function validateOpenGridOrganizerBoxParameters(
 
   const parameters = value as unknown as OpenGridOrganizerBoxParameters
   const layout = openGridOrganizerBoxLayoutForUnchecked(parameters)
+  if (parameters.bottomInterfaceMode === 'detachable-corner-seat') {
+    const cavityFloor = layout.bodyHeight - parameters.holeDepth
+    const socketTop = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.depth
+    const socketRoof = cavityFloor - socketTop
+    if (
+      socketRoof <
+      OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.minimumSocketRoof
+    ) {
+      issues.push(issue('bottomThickness'))
+    }
+  }
   const interfaceCollision = layoutIntersectsBottomInterfaceFor(
     parameters,
     layout.gridCountX,

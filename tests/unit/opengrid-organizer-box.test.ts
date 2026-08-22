@@ -3,11 +3,14 @@ import {
   boundsForOpenGridOrganizerBox,
   openGridOrganizerBoxCavityEnvelopeFor,
   openGridOrganizerBoxLayoutFor,
+  openGridOrganizerBoxDetachableSocketPosesFor,
   openGridOrganizerBoxFileName,
   openGridOrganizerBoxStlFileName,
+  OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+  type OpenGridOrganizerBoxParameters,
   validateOpenGridOrganizerBoxParameters,
 } from '../../src/cad-contract/units'
 
@@ -18,6 +21,23 @@ function parameters(
     ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
     ...overrides,
   }
+}
+
+function interfaceTopFor(
+  mode: OpenGridOrganizerBoxParameters['bottomInterfaceMode'],
+): number {
+  if (mode === 'corner-seat') {
+    return OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ
+  }
+  if (mode === 'detachable-corner-seat') {
+    return OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.depth
+  }
+  return (
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomFootChamferHeight +
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomSupportBandHeight +
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomStackingLeadIn +
+    OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomGridSeamOpeningWidth / 2
+  )
 }
 
 describe('OpenGrid organizer-box contract', () => {
@@ -146,7 +166,37 @@ describe('OpenGrid organizer-box contract', () => {
     ).not.toBe(step)
   })
 
-  it.each(['corner-seat', 'stackable'] as const)(
+  it('accepts the detachable interface with B-oriented four-corner sockets', () => {
+    const value = parameters({
+      holeCountX: 1,
+      holeCountY: 1,
+      bottomInterfaceMode: 'detachable-corner-seat',
+    })
+
+    expect(validateOpenGridOrganizerBoxParameters(value)).toEqual({
+      valid: true,
+      value,
+    })
+    const poses = openGridOrganizerBoxDetachableSocketPosesFor(value)
+    expect(poses).toHaveLength(4)
+    expect(
+      poses.map(({ corner, rotationDegrees }) => ({
+        corner,
+        rotationDegrees,
+      })),
+    ).toEqual([
+      { corner: 'upper-left', rotationDegrees: 0 },
+      { corner: 'upper-right', rotationDegrees: 90 },
+      { corner: 'lower-right', rotationDegrees: 180 },
+      { corner: 'lower-left', rotationDegrees: 270 },
+    ])
+    expect(boundsForOpenGridOrganizerBox(value).min[2]).toBe(0)
+    expect(openGridOrganizerBoxFileName(value)).toContain(
+      'idetachable-corner-seat',
+    )
+  })
+
+  it.each(['corner-seat', 'detachable-corner-seat', 'stackable'] as const)(
     'keeps the %s bottom interface below the cavity floor',
     (bottomInterfaceMode) => {
       const value = parameters({
@@ -159,13 +209,7 @@ describe('OpenGrid organizer-box contract', () => {
       })
       const layout = openGridOrganizerBoxLayoutFor(value)
       const cavityFloor = layout.bodyHeight - value.holeDepth
-      const interfaceTop =
-        bottomInterfaceMode === 'corner-seat'
-          ? OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ
-          : OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomFootChamferHeight +
-            OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomSupportBandHeight +
-            OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomStackingLeadIn +
-            OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomGridSeamOpeningWidth / 2
+      const interfaceTop = interfaceTopFor(bottomInterfaceMode)
 
       expect(cavityFloor).toBeGreaterThan(interfaceTop)
       expect(layout.minimumFootprintSpan.x).toBeGreaterThan(

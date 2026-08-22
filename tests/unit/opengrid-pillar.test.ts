@@ -62,6 +62,36 @@ describe('pillar contract', () => {
     })
   })
 
+  it('accepts only the fixed shared detachable corner-seat snapshot', () => {
+    const parameters = { mode: 'detachable-corner-seat' } as const
+
+    expect(validatePillarParameters(parameters)).toEqual({
+      valid: true,
+      value: parameters,
+    })
+    expect(
+      validatePillarParameters({
+        mode: 'detachable-corner-seat',
+        offset: 0,
+      }),
+    ).toMatchObject({ valid: false })
+    expect(
+      validatePillarParameters({
+        mode: 'detachable-corner-seat',
+        length: 4.5,
+      }),
+    ).toMatchObject({ valid: false })
+    expect(
+      validatePillarParameters({
+        mode: 'detachable-corner-seat',
+        clearance: 0.1,
+      }),
+    ).toEqual({
+      valid: false,
+      issues: [{ field: 'clearance', messageId: 'validation.invalid' }],
+    })
+  })
+
   it('keeps fixed modes free of a manual length parameter', () => {
     expect(
       validatePillarParameters({
@@ -132,6 +162,10 @@ describe('pillar contract', () => {
       min: [-3.75, -3.75, 0],
       max: [3.75, 3.75, 9],
     })
+    expect(boundsForPillar({ mode: 'detachable-corner-seat' })).toEqual({
+      min: [-2.5, -2.5, 0],
+      max: [2.5, 2.5, 4.5],
+    })
   })
 
   it('migrates legacy snapshots to the shared offset contract', () => {
@@ -164,6 +198,9 @@ describe('pillar contract', () => {
       mode: 'standard',
       offset: 0,
     })
+    expect(
+      normalizePillarParameters({ mode: 'detachable-corner-seat' }),
+    ).toEqual({ mode: 'detachable-corner-seat' })
   })
 
   it('uses deterministic mode-specific export filenames', () => {
@@ -188,6 +225,12 @@ describe('pillar contract', () => {
     expect(
       pillarStlFileName({ mode: 'positioning', length: 25, offset: 0 }),
     ).toBe('pillar-25-positioning.stl')
+    expect(pillarFileName({ mode: 'detachable-corner-seat' })).toBe(
+      'pillar-4.5-detachable-corner-seat.step',
+    )
+    expect(pillarStlFileName({ mode: 'detachable-corner-seat' })).toBe(
+      'pillar-4.5-detachable-corner-seat.stl',
+    )
 
     for (const parameters of [
       { mode: 'standard', offset: 0.25 },

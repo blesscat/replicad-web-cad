@@ -5,6 +5,7 @@ test('OpenGrid organizer-box is listed and exposes the cavity controls', async (
   page,
   browserName,
 }) => {
+  test.setTimeout(180_000)
   skipHeadlessFirefoxWithoutWebGL(browserName)
   await page.goto('/zh-Hant/models')
 
@@ -33,7 +34,7 @@ test('OpenGrid organizer-box is listed and exposes the cavity controls', async (
     page
       .getByTestId('opengrid-organizer-box-interface-mode')
       .getByRole('radio'),
-  ).toHaveCount(2)
+  ).toHaveCount(3)
   await expect(
     page.getByTestId('opengrid-organizer-box-spacing-mode').getByRole('radio'),
   ).toHaveCount(2)
@@ -60,9 +61,33 @@ test('OpenGrid organizer-box is listed and exposes the cavity controls', async (
   await expect(shapes).toHaveValue('circle')
   await shapes.selectOption('hexagon')
   await expect(shapes).toHaveValue('hexagon')
+  await waitForCadReady(page, 90_000)
 
   const interfaceMode = page.getByTestId(
     'opengrid-organizer-box-interface-mode',
+  )
+  const revisionBeforeDetachable = await viewport.getAttribute(
+    'data-model-revision',
+  )
+  await interfaceMode.getByRole('radio', { name: '可拆式角座' }).check()
+  await expect(
+    interfaceMode.getByRole('radio', { name: '可拆式角座' }),
+  ).toBeChecked()
+  await expect(
+    interfaceMode.getByRole('radio', { name: '四角固定座' }),
+  ).not.toBeChecked()
+  await expect(
+    interfaceMode.getByRole('radio', { name: '堆疊結構' }),
+  ).not.toBeChecked()
+  await expect(viewport).not.toHaveAttribute(
+    'data-model-revision',
+    revisionBeforeDetachable ?? '',
+    { timeout: 90_000 },
+  )
+  await waitForCadReady(page, 90_000)
+
+  const revisionBeforeStackable = await viewport.getAttribute(
+    'data-model-revision',
   )
   await interfaceMode.getByRole('radio', { name: '堆疊結構' }).check()
   await expect(
@@ -72,7 +97,12 @@ test('OpenGrid organizer-box is listed and exposes the cavity controls', async (
     interfaceMode.getByRole('radio', { name: '四角固定座' }),
   ).not.toBeChecked()
 
-  await waitForCadReady(page)
+  await expect(viewport).not.toHaveAttribute(
+    'data-model-revision',
+    revisionBeforeStackable ?? '',
+    { timeout: 90_000 },
+  )
+  await waitForCadReady(page, 90_000)
   await expect(viewport).not.toHaveAttribute(
     'data-model-revision',
     initialRevision ?? '',

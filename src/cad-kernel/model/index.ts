@@ -66,6 +66,8 @@ export type KernelBuildContext = {
     footprint: OpenGridSnapFixedFootprint,
   ) => Promise<Shape3D>
   getOpenGridSnapRemoverAsset?: () => Promise<Shape3D>
+  getOpenGridDetachableCornerSeatReference?: () => Promise<Shape3D>
+  getOpenGridDetachableCornerSeatHolderReference?: () => Promise<Shape3D>
   yieldToEventLoop?: () => Promise<void>
   isGenerationCurrent?: () => boolean
   reportProgress?: (progress: {
@@ -161,7 +163,19 @@ async function buildPillarModel(
   if (!isPillarParameters(parameters)) {
     throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-pillar')
   }
+  let detachableCornerSeatReference: Shape3D | undefined
+  if (parameters.mode === 'detachable-corner-seat') {
+    if (!context.getOpenGridDetachableCornerSeatReference) {
+      throw new Error('MODEL_ASSET_CONTEXT_MISSING:detachable-corner-seat')
+    }
+    detachableCornerSeatReference =
+      await context.getOpenGridDetachableCornerSeatReference()
+    if (context.isGenerationCurrent && !context.isGenerationCurrent()) {
+      throw new Error('STALE_GENERATION')
+    }
+  }
   return buildPillar(parameters, {
+    detachableCornerSeatReference,
     yieldToEventLoop: context.yieldToEventLoop,
     isGenerationCurrent: context.isGenerationCurrent,
     booleanOperations: context.booleanOperations,
@@ -244,14 +258,36 @@ async function buildOpenGridStackableBoxModel(
   })
 }
 
-function buildOpenGridOrganizerBoxModel(
+async function buildOpenGridOrganizerBoxModel(
   parameters: ModelParameterValues,
   context: KernelBuildContext,
-): Shape3D {
+): Promise<Shape3D> {
   if (!isOpenGridOrganizerBoxParameters(parameters)) {
     throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-organizer-box')
   }
+  let detachableCornerSeatReference: Shape3D | undefined
+  let detachableCornerSeatHolderReference: Shape3D | undefined
+  if (parameters.bottomInterfaceMode === 'detachable-corner-seat') {
+    if (!context.getOpenGridDetachableCornerSeatReference) {
+      throw new Error('MODEL_ASSET_CONTEXT_MISSING:detachable-corner-seat')
+    }
+    if (!context.getOpenGridDetachableCornerSeatHolderReference) {
+      throw new Error(
+        'MODEL_ASSET_CONTEXT_MISSING:detachable-corner-seat-holder',
+      )
+    }
+    ;[detachableCornerSeatReference, detachableCornerSeatHolderReference] =
+      await Promise.all([
+        context.getOpenGridDetachableCornerSeatReference(),
+        context.getOpenGridDetachableCornerSeatHolderReference(),
+      ])
+    if (context.isGenerationCurrent && !context.isGenerationCurrent()) {
+      throw new Error('STALE_GENERATION')
+    }
+  }
   return buildOpenGridOrganizerBox(parameters, {
+    detachableCornerSeatReference,
+    detachableCornerSeatHolderReference,
     isGenerationCurrent: context.isGenerationCurrent,
     booleanOperations: context.booleanOperations,
   })

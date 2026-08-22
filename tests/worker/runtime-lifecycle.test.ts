@@ -33,8 +33,21 @@ vi.mock('../../src/cad-kernel/components/opengrid-pillar/quality', () => ({
   assertPillarShapeQuality: vi.fn(),
 }))
 
+vi.mock(
+  '../../src/cad-kernel/components/opengrid-locating-assembly/reference',
+  () => ({
+    loadOpenGridDetachableCornerSeatReference: vi.fn(),
+    loadOpenGridDetachableCornerSeatHolderReference: vi.fn(),
+  }),
+)
+
 import { CadWorkerRuntime } from '../../src/workers/cad.worker'
+import { buildModelBRep } from '../../src/cad-kernel/model'
 import { assertPillarShapeQuality } from '../../src/cad-kernel/components/opengrid-pillar/quality'
+import {
+  loadOpenGridDetachableCornerSeatHolderReference,
+  loadOpenGridDetachableCornerSeatReference,
+} from '../../src/cad-kernel/components/opengrid-locating-assembly/reference'
 import { meshBRep, serializeMesh } from '../../src/cad-kernel/mesh'
 
 const base = {
@@ -74,6 +87,13 @@ function pillarGenerateCommand(generation = 1) {
     modelId: 'opengrid-pillar' as const,
     parameters: { mode: 'standard', offset: 0 },
     previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
+  }
+}
+
+function detachablePillarGenerateCommand(generation = 1) {
+  return {
+    ...pillarGenerateCommand(generation),
+    parameters: { mode: 'detachable-corner-seat' as const },
   }
 }
 
@@ -254,6 +274,192 @@ describe('CAD Worker candidate terminal lifecycle', () => {
       kind: 'operation.error',
       code: 'WORKER_TERMINATED',
     })
+  })
+
+  it('caches and disposes both detachable corner-seat references', async () => {
+    const maleReference = { delete: vi.fn() }
+    const holderReference = { delete: vi.fn() }
+    vi.mocked(loadOpenGridDetachableCornerSeatReference).mockResolvedValue(
+      maleReference as never,
+    )
+    vi.mocked(
+      loadOpenGridDetachableCornerSeatHolderReference,
+    ).mockResolvedValue(holderReference as never)
+    vi.mocked(buildModelBRep).mockImplementationOnce(
+      async (_modelId, _parameters, context) => {
+        const firstMale =
+          await context.getOpenGridDetachableCornerSeatReference?.()
+        const secondMale =
+          await context.getOpenGridDetachableCornerSeatReference?.()
+        const firstHolder =
+          await context.getOpenGridDetachableCornerSeatHolderReference?.()
+        const secondHolder =
+          await context.getOpenGridDetachableCornerSeatHolderReference?.()
+        expect(secondMale).toBe(firstMale)
+        expect(secondHolder).toBe(firstHolder)
+        return { delete: vi.fn() } as never
+      },
+    )
+
+    const runtime = new CadWorkerRuntime('epoch-detachable-cache', () => {})
+    await runtime.handle(initCommand())
+    await runtime.handle(detachablePillarGenerateCommand())
+
+    expect(loadOpenGridDetachableCornerSeatReference).toHaveBeenCalledOnce()
+    expect(
+      loadOpenGridDetachableCornerSeatHolderReference,
+    ).toHaveBeenCalledOnce()
+
+    await runtime.handle({ ...base, kind: 'worker.dispose' as const })
+    await Promise.resolve()
+    expect(maleReference.delete).toHaveBeenCalledOnce()
+    expect(holderReference.delete).toHaveBeenCalledOnce()
+  })
+
+  it.each(['male', 'holder'] as const)(
+    'retries the %s detachable reference after a failed load',
+    async (failedReference) => {
+      const maleReference = { delete: vi.fn() }
+      const holderReference = { delete: vi.fn() }
+      const maleLoader = vi.mocked(loadOpenGridDetachableCornerSeatReference)
+      const holderLoader = vi.mocked(
+        loadOpenGridDetachableCornerSeatHolderReference,
+      )
+      if (failedReference === 'male') {
+        maleLoader
+          .mockRejectedValueOnce(
+            new Error('OPENGRID_DETACHABLE_CORNER_SEAT_REFERENCE_LOAD_FAILED'),
+          )
+          .mockResolvedValue(maleReference as never)
+        holderLoader.mockResolvedValue(holderReference as never)
+      } else {
+        maleLoader.mockResolvedValue(maleReference as never)
+        holderLoader
+          .mockRejectedValueOnce(
+            new Error(
+              'OPENGRID_DETACHABLE_CORNER_SEAT_HOLDER_REFERENCE_LOAD_FAILED',
+            ),
+          )
+          .mockResolvedValue(holderReference as never)
+      }
+
+      const buildWithReferences = async (
+        _modelId: unknown,
+        _parameters: unknown,
+        context: Parameters<NonNullable<typeof buildModelBRep>>[2],
+      ) => {
+        await Promise.all([
+          context.getOpenGridDetachableCornerSeatReference?.(),
+          context.getOpenGridDetachableCornerSeatHolderReference?.(),
+        ])
+        return { delete: vi.fn() } as never
+      }
+      vi.mocked(buildModelBRep)
+        .mockImplementationOnce(buildWithReferences)
+        .mockImplementationOnce(buildWithReferences)
+
+      const events: any[] = []
+      const runtime = new CadWorkerRuntime(
+        `epoch-detachable-retry-${failedReference}`,
+        (event) => events.push(event),
+      )
+      await runtime.handle(initCommand())
+      await runtime.handle(detachablePillarGenerateCommand(1))
+      await runtime.handle(detachablePillarGenerateCommand(2))
+
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          kind: 'operation.error',
+          generation: 1,
+          code: 'MODEL_ASSET_INVALID',
+        }),
+      )
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          kind: 'model.candidate-ready',
+          generation: 2,
+        }),
+      )
+      expect(maleLoader).toHaveBeenCalledTimes(
+        failedReference === 'male' ? 2 : 1,
+      )
+      expect(holderLoader).toHaveBeenCalledTimes(
+        failedReference === 'holder' ? 2 : 1,
+      )
+
+      await runtime.handle({ ...base, kind: 'worker.dispose' as const })
+      expect(maleReference.delete).toHaveBeenCalledOnce()
+      expect(holderReference.delete).toHaveBeenCalledOnce()
+    },
+  )
+
+  it('supersedes a generation while a detachable reference load is pending', async () => {
+    let resolveMale: (value: unknown) => void = () => undefined
+    const maleReference = { delete: vi.fn() }
+    const holderReference = { delete: vi.fn() }
+    const pendingMale = new Promise((resolve) => {
+      resolveMale = resolve
+    })
+    vi.mocked(loadOpenGridDetachableCornerSeatReference).mockReturnValue(
+      pendingMale as never,
+    )
+    vi.mocked(
+      loadOpenGridDetachableCornerSeatHolderReference,
+    ).mockResolvedValue(holderReference as never)
+
+    const generatedShape = { delete: vi.fn() }
+    const buildWithPendingReference = async (
+      _modelId: unknown,
+      _parameters: unknown,
+      context: Parameters<NonNullable<typeof buildModelBRep>>[2],
+    ) => {
+      await Promise.all([
+        context.getOpenGridDetachableCornerSeatReference?.(),
+        context.getOpenGridDetachableCornerSeatHolderReference?.(),
+      ])
+      if (!context.isGenerationCurrent?.()) throw new Error('STALE_GENERATION')
+      return generatedShape as never
+    }
+    vi.mocked(buildModelBRep)
+      .mockImplementationOnce(buildWithPendingReference)
+      .mockImplementationOnce(buildWithPendingReference)
+
+    const events: any[] = []
+    const runtime = new CadWorkerRuntime('epoch-detachable-stale', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+
+    const first = runtime.handle(detachablePillarGenerateCommand(1))
+    await vi.waitFor(() =>
+      expect(loadOpenGridDetachableCornerSeatReference).toHaveBeenCalledOnce(),
+    )
+    const second = runtime.handle(detachablePillarGenerateCommand(2))
+    await vi.waitFor(() => expect(buildModelBRep).toHaveBeenCalledTimes(2))
+    resolveMale(maleReference)
+    await Promise.all([first, second])
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'operation.superseded',
+        generation: 1,
+        reason: 'STALE_GENERATION',
+      }),
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'model.candidate-ready',
+        generation: 2,
+      }),
+    )
+    expect(loadOpenGridDetachableCornerSeatReference).toHaveBeenCalledOnce()
+    expect(
+      loadOpenGridDetachableCornerSeatHolderReference,
+    ).toHaveBeenCalledOnce()
+
+    await runtime.handle({ ...base, kind: 'worker.dispose' as const })
+    expect(maleReference.delete).toHaveBeenCalledOnce()
+    expect(holderReference.delete).toHaveBeenCalledOnce()
   })
 
   it('generates and commits pillar metadata through the shared lifecycle', async () => {

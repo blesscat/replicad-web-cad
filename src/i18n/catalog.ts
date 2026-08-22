@@ -393,10 +393,13 @@ export const zhHantMessages = {
   'panel.organizerBox.shape.square': '四角形',
   'panel.organizerBox.shape.pentagon': '五角形',
   'panel.organizerBox.shape.hexagon': '六角形',
-  'panel.organizerBox.interfaceMode': '底部介面（二選一）',
+  'panel.organizerBox.interfaceMode': '底部介面（三選一）',
   'panel.organizerBox.interface.cornerSeat': '四角固定座',
   'panel.organizerBox.interface.cornerSeatDescription':
     '直接融合方盒內建的四角實體腳座，不需要從底部插入腳座。',
+  'panel.organizerBox.interface.detachableCornerSeat': '可拆式角座',
+  'panel.organizerBox.interface.detachableCornerSeatDescription':
+    '在盒底直接形成四個有擋片的插槽；另列印可拆角座並由底部壓入。',
   'panel.organizerBox.interface.stackable': '堆疊結構',
   'panel.organizerBox.interface.stackableDescription':
     '使用 OpenGrid 方盒的堆疊底部結構，不建立四角內建實體腳座。',
@@ -404,6 +407,9 @@ export const zhHantMessages = {
   'panel.pillar.stacking': '堆疊版',
   'panel.pillar.thinShell': '薄殼版',
   'panel.pillar.positioning': '物件定位用',
+  'panel.pillar.detachableCornerSeat': '可拆式角座',
+  'panel.pillar.detachableCornerSeatDescription':
+    '固定 4.5 mm 角座：保留 0.2 mm 導入倒角與 0.15 mm 耐磨頂面。',
   'panel.pillar.fixedLength': '固定總長 {length} mm',
   'panel.snap.variant': 'Snap 型號',
   'panel.snap.variantAria': 'OpenGrid Snap 型號',
@@ -931,10 +937,14 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'panel.organizerBox.shape.square': 'Square',
   'panel.organizerBox.shape.pentagon': 'Pentagon',
   'panel.organizerBox.shape.hexagon': 'Hexagon',
-  'panel.organizerBox.interfaceMode': 'Bottom interface (choose one)',
+  'panel.organizerBox.interfaceMode': 'Bottom interface (choose one of three)',
   'panel.organizerBox.interface.cornerSeat': 'Four-corner built-in feet',
   'panel.organizerBox.interface.cornerSeatDescription':
     'Use the Grid Box-style four-corner built-in feet without a full stacking profile.',
+  'panel.organizerBox.interface.detachableCornerSeat':
+    'Detachable corner seats',
+  'panel.organizerBox.interface.detachableCornerSeatDescription':
+    'Form four retaining-tab sockets directly in the box bottom, then press separately printed seats in from below.',
   'panel.organizerBox.interface.stackable': 'Stacking structure',
   'panel.organizerBox.interface.stackableDescription':
     'Use the OpenGrid box stacking bottom structure without four-corner built-in feet.',
@@ -942,6 +952,9 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'panel.pillar.stacking': 'Stacking',
   'panel.pillar.thinShell': 'Thin shell',
   'panel.pillar.positioning': 'Object positioning',
+  'panel.pillar.detachableCornerSeat': 'Detachable corner seat',
+  'panel.pillar.detachableCornerSeatDescription':
+    'Fixed 4.5 mm seat with a 0.2 mm insertion lead-in and 0.15 mm wear surface.',
   'panel.pillar.fixedLength': 'Fixed total length {length} mm',
   'panel.snap.variant': 'Snap variant',
   'panel.snap.variantAria': 'OpenGrid Snap variant',

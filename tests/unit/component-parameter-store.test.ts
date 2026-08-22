@@ -77,7 +77,7 @@ describe('component parameter store', () => {
       holeSpacingX: 3,
       holeSpacingY: 4,
       holeShape: 'hexagon' as const,
-      bottomInterfaceMode: 'stackable' as const,
+      bottomInterfaceMode: 'detachable-corner-seat' as const,
     }
     const store = createComponentParameterStore({ storage })
 
@@ -829,6 +829,25 @@ describe('component parameter store', () => {
       offset: 0,
     })
 
+    store.dispose()
+  })
+
+  it('persists the exact detachable corner-seat mode without numeric fields', () => {
+    const storage = createMemoryStorage()
+    const store = createComponentParameterStore({ storage })
+
+    expect(
+      store.set('opengrid-pillar', { mode: 'detachable-corner-seat' }),
+    ).toBe(true)
+    expect(store.get('opengrid-pillar')).toEqual({
+      mode: 'detachable-corner-seat',
+    })
+
+    const restored = createComponentParameterStore({ storage })
+    expect(restored.get('opengrid-pillar')).toEqual({
+      mode: 'detachable-corner-seat',
+    })
+    restored.dispose()
     store.dispose()
   })
 

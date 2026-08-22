@@ -1,15 +1,18 @@
 import { createRequire } from 'node:module'
+import { readFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { makeCylinder, measureVolume, setOC, type Shape3D } from 'replicad'
 import {
   boundsForPillar,
+  OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   PILLAR_CONFIGURATION,
   type PillarParameters,
 } from '../../src/cad-contract/units'
 import { buildPillar } from '../../src/cad-kernel/components/opengrid-pillar/builder'
 import { assertPillarShapeQuality } from '../../src/cad-kernel/components/opengrid-pillar/quality'
+import { importOpenGridDetachableCornerSeatReference } from '../../src/cad-kernel/components/opengrid-locating-assembly/reference'
 import { exportStlBytes, exportStepBytes } from '../../src/cad-kernel/export'
 import { meshBRep } from '../../src/cad-kernel/mesh'
 
@@ -23,6 +26,10 @@ const initialiseOpenCascade = require('replicad-opencascadejs')
   .default as (options: { locateFile: () => string }) => Promise<unknown>
 const WASM_PATH =
   require.resolve('replicad-opencascadejs/src/replicad_single.wasm')
+const DETACHABLE_CORNER_SEAT_ASSET_URL = new URL(
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat.step',
+  import.meta.url,
+)
 
 beforeAll(async () => {
   const openCascade = await initialiseOpenCascade({
@@ -67,6 +74,46 @@ function probeVolumeAt(
 }
 
 describe('OpenGrid pillar CAD kernel integration', () => {
+  it('builds the fixed detachable corner seat from a cloned shared reference', async () => {
+    const reference = await importOpenGridDetachableCornerSeatReference(
+      new Blob([await readFile(DETACHABLE_CORNER_SEAT_ASSET_URL)], {
+        type: 'model/step',
+      }),
+    )
+    const referenceVolume = measureVolume(reference)
+    const parameters: PillarParameters = {
+      mode: 'detachable-corner-seat',
+    }
+    const shape = await buildPillar(parameters, {
+      detachableCornerSeatReference: reference,
+    })
+    try {
+      const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+      const actual = shapeBounds(shape)
+      expect(actual[0]?.[0]).toBeCloseTo(configuration.male.bounds.min[0], 5)
+      expect(actual[0]?.[1]).toBeCloseTo(configuration.male.bounds.min[1], 5)
+      expect(actual[0]?.[2]).toBeCloseTo(configuration.male.bounds.min[2], 5)
+      expect(actual[1]?.[0]).toBeCloseTo(configuration.male.bounds.max[0], 5)
+      expect(actual[1]?.[1]).toBeCloseTo(configuration.male.bounds.max[1], 5)
+      expect(actual[1]?.[2]).toBeCloseTo(configuration.male.bounds.max[2], 5)
+      expect(measureVolume(shape)).toBeCloseTo(
+        configuration.male.nominalVolume,
+        5,
+      )
+      const mesh = meshBRep(shape, {
+        tolerance: 0.05,
+        angularTolerance: 0.1,
+      })
+      expect(assertPillarShapeQuality(shape, parameters, mesh).passed).toBe(
+        true,
+      )
+    } finally {
+      deleteShape(shape)
+      expect(measureVolume(reference)).toBeCloseTo(referenceVolume, 8)
+      deleteShape(reference)
+    }
+  }, 180_000)
+
   it.each([
     { mode: 'standard', offset: 0 },
     { mode: 'thin-shell', offset: 0 },

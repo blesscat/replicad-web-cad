@@ -1,8 +1,10 @@
 import {
   boundsForOpenGridOrganizerBox,
+  openGridOrganizerBoxDetachableSocketPosesFor,
   openGridOrganizerBoxLayoutFor,
   openGridStackableBoxSocketCentersFor,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
+  OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   type ModelBounds,
   type OpenGridOrganizerBoxParameters,
@@ -13,6 +15,10 @@ import {
   isBRepValid,
 } from '../opengrid-stackable-box/quality-metrics'
 import { bottomGridSeamsFor } from '../opengrid-stackable-box/geometry'
+import {
+  buildOpenGridDetachableCornerSeatSocketVoid,
+  placeOpenGridDetachableCornerSeatSocketShape,
+} from '../opengrid-locating-assembly/reference'
 
 type FaceRecord = {
   surfaceType: string
@@ -60,6 +66,16 @@ function volumeInBox(
   } finally {
     deleteShape(intersection)
     deleteShape(probe)
+  }
+}
+
+function intersectionVolume(first: Shape3D, second: Shape3D): number {
+  let intersection: Shape3D | null = null
+  try {
+    intersection = first.intersect(second)
+    return measureVolume(intersection)
+  } finally {
+    deleteShape(intersection)
   }
 }
 
@@ -299,7 +315,7 @@ function assertInterfaceExclusivity(
     throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:built-in-feet')
   }
   if (
-    parameters.bottomInterfaceMode === 'stackable' &&
+    parameters.bottomInterfaceMode !== 'corner-seat' &&
     footVolumes.some((volume) => volume > 0.001)
   ) {
     throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:combined-interface')
@@ -330,16 +346,111 @@ function assertInterfaceExclusivity(
     throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:stacking-guide')
   }
   if (
-    parameters.bottomInterfaceMode === 'corner-seat' &&
+    parameters.bottomInterfaceMode !== 'stackable' &&
     seamVolumes.some((volume) => volume <= 0.001)
   ) {
     throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:combined-interface')
   }
 }
 
+function assertDetachableSocketGeometry(
+  shape: Shape3D,
+  parameters: OpenGridOrganizerBoxParameters,
+  holderReference: Shape3D | undefined,
+  maleReference: Shape3D | undefined,
+): void {
+  if (parameters.bottomInterfaceMode !== 'detachable-corner-seat') return
+  if (!holderReference) {
+    throw new Error(
+      'OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:holder-reference-missing',
+    )
+  }
+  if (!maleReference) {
+    throw new Error(
+      'OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:male-reference-missing',
+    )
+  }
+
+  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+  const sourceVoid =
+    buildOpenGridDetachableCornerSeatSocketVoid(holderReference)
+  try {
+    for (const pose of openGridOrganizerBoxDetachableSocketPosesFor(
+      parameters,
+    )) {
+      let placedVoid: Shape3D | null = null
+      let placedHolder: Shape3D | null = null
+      let placedMale: Shape3D | null = null
+      try {
+        placedVoid = placeOpenGridDetachableCornerSeatSocketShape(
+          sourceVoid,
+          pose,
+        )
+        placedHolder = placeOpenGridDetachableCornerSeatSocketShape(
+          holderReference,
+          pose,
+        )
+        placedMale = placeOpenGridDetachableCornerSeatSocketShape(
+          maleReference,
+          pose,
+        )
+        if (
+          intersectionVolume(shape, placedVoid) >
+          configuration.intersectionVolumeTolerance
+        ) {
+          throw new Error(
+            `OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:socket-void-${pose.corner}`,
+          )
+        }
+        const retainedVolume = intersectionVolume(shape, placedHolder)
+        if (
+          Math.abs(retainedVolume - configuration.female.nominalVolume) >
+          configuration.volumeTolerance
+        ) {
+          throw new Error(
+            `OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:socket-retainer-${pose.corner}`,
+          )
+        }
+        if (
+          intersectionVolume(shape, placedMale) >
+          configuration.intersectionVolumeTolerance
+        ) {
+          throw new Error(
+            `OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:socket-male-collision-${pose.corner}`,
+          )
+        }
+
+        const [x, y] = pose.center
+        const roofVolume = volumeInBox(
+          shape,
+          [x - 0.1, y - 0.1, configuration.female.depth + 0.05],
+          [
+            x + 0.1,
+            y + 0.1,
+            configuration.female.depth + configuration.minimumSocketRoof - 0.05,
+          ],
+        )
+        if (roofVolume <= 0.001) {
+          throw new Error(
+            `OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:socket-roof-${pose.corner}`,
+          )
+        }
+      } finally {
+        deleteShape(placedVoid)
+        deleteShape(placedHolder)
+        deleteShape(placedMale)
+      }
+    }
+  } finally {
+    deleteShape(sourceVoid)
+  }
+}
+
 export function assertOpenGridOrganizerBoxGeometry(
   shape: Shape3D,
   parameters: OpenGridOrganizerBoxParameters,
+  detachableCornerSeatHolderReference?: Shape3D,
+  detachableCornerSeatReference?: Shape3D,
 ): void {
   const actualBounds = boundsOf(shape)
   const expectedBounds = boundsForOpenGridOrganizerBox(parameters)
@@ -360,4 +471,10 @@ export function assertOpenGridOrganizerBoxGeometry(
   assertCavityAndWallGeometry(shape, parameters)
   assertCavityFaceGeometry(shape, parameters)
   assertInterfaceExclusivity(shape, parameters)
+  assertDetachableSocketGeometry(
+    shape,
+    parameters,
+    detachableCornerSeatHolderReference,
+    detachableCornerSeatReference,
+  )
 }

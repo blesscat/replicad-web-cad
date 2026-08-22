@@ -1,12 +1,15 @@
 import { createRequire } from 'node:module'
+import { readFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { makeBox, measureVolume, setOC, type Shape3D } from 'replicad'
 import {
   boundsForOpenGridOrganizerBox,
+  openGridOrganizerBoxDetachableSocketPosesFor,
   openGridStackableBoxSocketCentersFor,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
+  OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   openGridOrganizerBoxLayoutFor,
@@ -17,6 +20,13 @@ import {
   type KernelBuildContext,
 } from '../../src/cad-kernel/model'
 import { buildOpenGridOrganizerBox } from '../../src/cad-kernel/components/opengrid-organizer-box/builder'
+import { assertOpenGridOrganizerBoxGeometry } from '../../src/cad-kernel/components/opengrid-organizer-box/quality'
+import {
+  buildOpenGridDetachableCornerSeatSocketVoid,
+  importOpenGridDetachableCornerSeatHolderReference,
+  importOpenGridDetachableCornerSeatReference,
+  placeOpenGridDetachableCornerSeatSocketShape,
+} from '../../src/cad-kernel/components/opengrid-locating-assembly/reference'
 
 ;(globalThis as typeof globalThis & { __dirname?: string }).__dirname = dirname(
   fileURLToPath(import.meta.url),
@@ -28,6 +38,14 @@ const initialiseOpenCascade = require('replicad-opencascadejs')
   .default as (options: { locateFile: () => string }) => Promise<unknown>
 const WASM_PATH =
   require.resolve('replicad-opencascadejs/src/replicad_single.wasm')
+const DETACHABLE_CORNER_SEAT_ASSET_URL = new URL(
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat.step',
+  import.meta.url,
+)
+const DETACHABLE_CORNER_SEAT_HOLDER_ASSET_URL = new URL(
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-holder.step',
+  import.meta.url,
+)
 
 beforeAll(async () => {
   const openCascade = await initialiseOpenCascade({
@@ -66,6 +84,135 @@ function probeVolume(
 }
 
 describe('OpenGrid organizer-box B-Rep', () => {
+  it('cuts four B-oriented retaining sockets directly into one box solid', async () => {
+    const [maleReference, holderReference] = await Promise.all([
+      importOpenGridDetachableCornerSeatReference(
+        new Blob([await readFile(DETACHABLE_CORNER_SEAT_ASSET_URL)], {
+          type: 'model/step',
+        }),
+      ),
+      importOpenGridDetachableCornerSeatHolderReference(
+        new Blob([await readFile(DETACHABLE_CORNER_SEAT_HOLDER_ASSET_URL)], {
+          type: 'model/step',
+        }),
+      ),
+    ])
+    const input = parameters({
+      holeCountX: 1,
+      holeCountY: 1,
+      bottomInterfaceMode: 'detachable-corner-seat',
+    })
+    const shape = buildOpenGridOrganizerBox(input, {
+      detachableCornerSeatReference: maleReference,
+      detachableCornerSeatHolderReference: holderReference,
+    })
+    const socketVoid =
+      buildOpenGridDetachableCornerSeatSocketVoid(holderReference)
+    try {
+      const expected = boundsForOpenGridOrganizerBox(input)
+      const actual = shape.boundingBox
+      try {
+        expect(actual.bounds[0][2]).toBeCloseTo(expected.min[2], 5)
+        expect(actual.bounds[1][2]).toBeCloseTo(expected.max[2], 5)
+      } finally {
+        actual.delete()
+      }
+
+      const poses = openGridOrganizerBoxDetachableSocketPosesFor(input)
+      expect(poses.map((pose) => pose.rotationDegrees)).toEqual([
+        0, 90, 180, 270,
+      ])
+      for (const pose of poses) {
+        const placedVoid = placeOpenGridDetachableCornerSeatSocketShape(
+          socketVoid,
+          pose,
+        )
+        const placedHolder = placeOpenGridDetachableCornerSeatSocketShape(
+          holderReference,
+          pose,
+        )
+        const placedMale = placeOpenGridDetachableCornerSeatSocketShape(
+          maleReference,
+          pose,
+        )
+        let voidIntersection: Shape3D | null = null
+        let holderIntersection: Shape3D | null = null
+        let maleIntersection: Shape3D | null = null
+        try {
+          voidIntersection = shape.intersect(placedVoid)
+          holderIntersection = shape.intersect(placedHolder)
+          maleIntersection = shape.intersect(placedMale)
+          expect(measureVolume(voidIntersection)).toBeLessThanOrEqual(
+            OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.intersectionVolumeTolerance,
+          )
+          expect(measureVolume(holderIntersection)).toBeCloseTo(
+            OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.nominalVolume,
+            4,
+          )
+          expect(measureVolume(maleIntersection)).toBeLessThanOrEqual(
+            OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.intersectionVolumeTolerance,
+          )
+        } finally {
+          deleteShape(voidIntersection)
+          deleteShape(holderIntersection)
+          deleteShape(maleIntersection)
+          deleteShape(placedVoid)
+          deleteShape(placedHolder)
+          deleteShape(placedMale)
+        }
+      }
+
+      const fixedWorldSpaceTabProbes = [
+        { corner: 'upper-left', material: [-15, 15], void: [-13, 15] },
+        { corner: 'upper-right', material: [13, 13], void: [13, 15] },
+        { corner: 'lower-right', material: [15, -15], void: [13, -15] },
+        { corner: 'lower-left', material: [-13, -13], void: [-13, -15] },
+      ] as const
+      for (const probe of fixedWorldSpaceTabProbes) {
+        const materialVolume = probeVolume(shape, [
+          [probe.material[0] - 0.08, probe.material[1] - 0.08, 0.71],
+          [probe.material[0] + 0.08, probe.material[1] + 0.08, 0.79],
+        ])
+        const voidVolume = probeVolume(shape, [
+          [probe.void[0] - 0.08, probe.void[1] - 0.08, 0.71],
+          [probe.void[0] + 0.08, probe.void[1] + 0.08, 0.79],
+        ])
+        expect(materialVolume, probe.corner).toBeGreaterThan(0.0001)
+        expect(voidVolume, probe.corner).toBeLessThanOrEqual(
+          OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.intersectionVolumeTolerance,
+        )
+      }
+
+      const shiftedMale = maleReference.translate(0, 0.5, 0)
+      try {
+        expect(() =>
+          assertOpenGridOrganizerBoxGeometry(
+            shape,
+            input,
+            holderReference,
+            shiftedMale,
+          ),
+        ).toThrow(
+          'OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:socket-male-collision',
+        )
+      } finally {
+        deleteShape(shiftedMale)
+      }
+
+      expect(
+        probeVolume(shape, [
+          [-0.2, -0.2, -1],
+          [0.2, 0.2, -0.5],
+        ]),
+      ).toBe(0)
+    } finally {
+      deleteShape(socketVoid)
+      deleteShape(shape)
+      deleteShape(maleReference)
+      deleteShape(holderReference)
+    }
+  }, 180_000)
+
   it('builds blind circular cavities with a solid top and four-corner mode', () => {
     const input = parameters({
       holeCountX: 2,

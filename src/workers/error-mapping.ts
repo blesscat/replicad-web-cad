@@ -51,6 +51,9 @@ export function cadErrorCodeFor(
   if (message.includes('OPENGRID_SNAP_HOLD_')) {
     return 'OPENGRID_QUALITY_INVALID'
   }
+  if (message.includes('OPENGRID_DETACHABLE_CORNER_SEAT_')) {
+    return 'MODEL_ASSET_INVALID'
+  }
   if (
     message.includes('OPENGRID_QUALITY_INVALID') ||
     message.includes('OPENGRID_BREP_INVALID') ||
@@ -97,6 +100,9 @@ export function cadErrorStageFor(
     return 'meshing'
   }
   if (message.includes('OPENGRID_SNAP_HOLD_REFERENCE_')) {
+    return 'initializing'
+  }
+  if (message.includes('OPENGRID_DETACHABLE_CORNER_SEAT_')) {
     return 'initializing'
   }
   if (message.includes('OPENGRID_SNAP_HOLD_')) return 'meshing'

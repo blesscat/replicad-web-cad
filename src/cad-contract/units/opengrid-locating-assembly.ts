@@ -33,3 +33,38 @@ export const OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION = {
   testShaftLengthForFloor: (floorThickness: number): number =>
     floorThickness + TEST_SHAFT_EXTERIOR_ALLOWANCE,
 } as const
+
+export const OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION = {
+  geometryTolerance: 0.02,
+  volumeTolerance: 0.02,
+  intersectionVolumeTolerance: 1e-6,
+  minimumSocketRoof: 0.5,
+  male: {
+    bodyDiameter: 5,
+    bodyHeight: 3,
+    leadInHeight: 0.2,
+    leadInTipDiameter: 4.6,
+    keyWidth: 1.8,
+    taperTopZ: 4.35,
+    wearHeight: 0.15,
+    totalHeight: 4.5,
+    nominalVolume: 66.7032674,
+    bounds: {
+      min: [-2.5, -2.5, 0],
+      max: [2.5, 2.5, 4.5],
+    },
+  },
+  female: {
+    outerDiameter: 7,
+    depth: 1.5,
+    passageWidth: 2,
+    keySideClearance: 0.1,
+    sourceMinZ: 3,
+    sourceMaxZ: 4.5,
+    nominalVolume: 38.4253392,
+    bounds: {
+      min: [-3.5, -3.5, 3],
+      max: [3.5, 3.5, 4.5],
+    },
+  },
+} as const

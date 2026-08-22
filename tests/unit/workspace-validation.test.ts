@@ -74,6 +74,20 @@ describe('CAD workspace validation helpers', () => {
     })
   })
 
+  it('round-trips the organizer-box detachable interface mode', () => {
+    const parameters: OpenGridOrganizerBoxParameters = {
+      ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+      bottomInterfaceMode: 'detachable-corner-seat',
+    }
+
+    expect(
+      parseRawParameters(
+        rawFromParameters(parameters),
+        'opengrid-organizer-box',
+      ),
+    ).toEqual({ valid: true, value: parameters })
+  })
+
   it('returns the first invalid dimension field and its user-facing message', () => {
     expect(
       parseRawParameters({ width: '20.5', depth: '30', height: '40' }),
@@ -487,6 +501,22 @@ describe('CAD workspace validation helpers', () => {
       valid: true,
       value: parameters,
     })
+  })
+
+  it('round-trips the fixed detachable corner-seat without numeric fields', () => {
+    const parameters: PillarParameters = {
+      mode: 'detachable-corner-seat',
+    }
+
+    expect(rawFromParameters(parameters)).toEqual({
+      mode: 'detachable-corner-seat',
+    })
+    expect(
+      parseRawParameters(
+        { mode: 'detachable-corner-seat', offset: '0.5' },
+        'opengrid-pillar',
+      ),
+    ).toEqual({ valid: true, value: parameters })
   })
 
   it('rejects pillar offsets that are outside the range or step', () => {

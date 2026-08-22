@@ -9,6 +9,7 @@ import {
 } from 'replicad'
 import {
   openGridOrganizerBoxLayoutFor,
+  openGridOrganizerBoxDetachableSocketPosesFor,
   openGridOrganizerBoxPolygonPointsFor,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
@@ -29,6 +30,10 @@ import {
   type OpenGridStackableBoxBuildContext,
 } from '../opengrid-stackable-box/shared'
 import { assertOpenGridOrganizerBoxGeometry } from './quality'
+import {
+  buildOpenGridDetachableCornerSeatSocketVoid,
+  placeOpenGridDetachableCornerSeatSocketShape,
+} from '../opengrid-locating-assembly/reference'
 
 type RoundedRectangleSection = {
   width: number
@@ -39,7 +44,11 @@ type RoundedRectangleSection = {
 
 const CAVITY_BOOLEAN_BATCH_SIZE = 16
 
-export type OpenGridOrganizerBoxBuildContext = OpenGridStackableBoxBuildContext
+export type OpenGridOrganizerBoxBuildContext =
+  OpenGridStackableBoxBuildContext & {
+    detachableCornerSeatReference?: Shape3D
+    detachableCornerSeatHolderReference?: Shape3D
+  }
 
 function roundedSectionWire(section: RoundedRectangleSection): Wire {
   const sketch = sketchRoundedRectangle(
@@ -280,6 +289,47 @@ function cutCavities(
   }
 }
 
+function cutDetachableCornerSeatSockets(
+  shape: Shape3D,
+  parameters: OpenGridOrganizerBoxParameters,
+  context: OpenGridOrganizerBoxBuildContext,
+): Shape3D {
+  const holderReference = context.detachableCornerSeatHolderReference
+  if (!holderReference) {
+    throw new Error('OPENGRID_ORGANIZER_BOX_DETACHABLE_HOLDER_MISSING')
+  }
+
+  const sourceVoid =
+    buildOpenGridDetachableCornerSeatSocketVoid(holderReference)
+  const cutters: Shape3D[] = []
+  let compound: Shape3D | null = null
+  try {
+    for (const pose of openGridOrganizerBoxDetachableSocketPosesFor(
+      parameters,
+    )) {
+      cutters.push(
+        placeOpenGridDetachableCornerSeatSocketShape(sourceVoid, pose),
+      )
+    }
+    compound = makeCompound(cutters).asShape3D()
+    if (!compound) {
+      throw new Error('OPENGRID_ORGANIZER_BOX_SOCKET_CUTTER_EMPTY')
+    }
+    const compoundCutter = compound
+    const cut = measureBooleanInScope(
+      context.booleanOperations?.createScope(1),
+      'cut',
+      () => shape.cut(compoundCutter),
+    )
+    deleteShape(shape)
+    return cut
+  } finally {
+    deleteShape(compound)
+    cutters.forEach(deleteShape)
+    deleteShape(sourceVoid)
+  }
+}
+
 export function buildOpenGridOrganizerBox(
   parameters: OpenGridOrganizerBoxParameters,
   context: OpenGridOrganizerBoxBuildContext = {},
@@ -292,13 +342,20 @@ export function buildOpenGridOrganizerBox(
     const adapter = stackableAdapterFor(parameters)
     if (parameters.bottomInterfaceMode === 'stackable') {
       shape = applyStackingProfile(shape, adapter, context)
-    } else {
+    } else if (parameters.bottomInterfaceMode === 'corner-seat') {
       shape = addMountingSockets(shape, adapter, context)
+    } else {
+      shape = cutDetachableCornerSeatSockets(shape, parameters, context)
     }
     assertGenerationCurrent(context)
     shape = cutCavities(shape, parameters, context, context.booleanOperations)
     assertGenerationCurrent(context)
-    assertOpenGridOrganizerBoxGeometry(shape, parameters)
+    assertOpenGridOrganizerBoxGeometry(
+      shape,
+      parameters,
+      context.detachableCornerSeatHolderReference,
+      context.detachableCornerSeatReference,
+    )
     return shape
   } catch (error) {
     deleteShape(shape)

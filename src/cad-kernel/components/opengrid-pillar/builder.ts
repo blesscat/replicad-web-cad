@@ -21,10 +21,12 @@ import {
   type BooleanOperationScope,
   type BooleanOperationReporter,
 } from '../../boolean-progress'
+import { assertOpenGridDetachableCornerSeatReference } from '../opengrid-locating-assembly/reference'
 
 const GEOMETRY_TOLERANCE = 0.02
 
 export type PillarBuildContext = {
+  detachableCornerSeatReference?: Shape3D
   yieldToEventLoop?: () => Promise<void>
   isGenerationCurrent?: () => boolean
   booleanOperations?: BooleanOperationReporter
@@ -256,19 +258,28 @@ export async function buildPillar(
   let shape: Shape3D | null = null
   let finalSolid: Solid | null = null
   const fuseScope =
-    parameters.mode === 'positioning'
-      ? undefined
-      : context.booleanOperations?.createScope(1)
+    parameters.mode === 'standard' || parameters.mode === 'thin-shell'
+      ? context.booleanOperations?.createScope(1)
+      : undefined
   try {
-    shape =
-      parameters.mode === 'positioning'
-        ? buildPositioningPillar(parameters)
-        : buildFixedPillar(parameters, fuseScope)
+    if (parameters.mode === 'detachable-corner-seat') {
+      if (!context.detachableCornerSeatReference) {
+        throw new Error('PILLAR_DETACHABLE_CORNER_SEAT_REFERENCE_MISSING')
+      }
+      assertOpenGridDetachableCornerSeatReference(
+        context.detachableCornerSeatReference,
+      )
+      shape = context.detachableCornerSeatReference.clone()
+    } else if (parameters.mode === 'positioning') {
+      shape = buildPositioningPillar(parameters)
+    } else {
+      shape = buildFixedPillar(parameters, fuseScope)
+    }
 
     assertGenerationCurrent(context)
     await yieldAtSafeBoundary(context)
 
-    if (parameters.mode !== 'positioning') {
+    if (parameters.mode === 'standard' || parameters.mode === 'thin-shell') {
       shape = chamferAtStations(
         shape,
         [pillarLengthForParameters(parameters)],

@@ -230,6 +230,20 @@ function parseSeatModeRawParameter(
   }
 }
 
+function pillarModelParameterField(
+  field: string | undefined,
+): ModelParameterKey | undefined {
+  if (field === 'mode' || field === 'length' || field === 'offset') return field
+  return undefined
+}
+
+function modelParameterFieldFromDiagnostic(
+  field: string | undefined,
+): ModelParameterKey | undefined {
+  if (!field || field === 'parameters') return undefined
+  return field as ModelParameterKey
+}
+
 function parsePillarRawParameters(raw: RawParameters):
   | { valid: true; value: ModelParameterValues }
   | {
@@ -239,12 +253,29 @@ function parsePillarRawParameters(raw: RawParameters):
       params?: DiagnosticParams
     } {
   const mode = raw.mode
-  if (mode !== 'standard' && mode !== 'thin-shell' && mode !== 'positioning') {
+  if (
+    mode !== 'standard' &&
+    mode !== 'thin-shell' &&
+    mode !== 'positioning' &&
+    mode !== 'detachable-corner-seat'
+  ) {
     return {
       valid: false,
       messageId: 'validation.invalid',
       field: 'mode',
     }
+  }
+
+  if (mode === 'detachable-corner-seat') {
+    const validation = validatePillarParameters({ mode })
+    if (!validation.valid) {
+      return {
+        valid: false,
+        messageId: validation.issues[0]?.messageId ?? 'validation.invalid',
+        field: 'mode',
+      }
+    }
+    return { valid: true, value: validation.value }
   }
 
   const rawOffset = (field: 'offset'): number | null => {
@@ -271,7 +302,7 @@ function parsePillarRawParameters(raw: RawParameters):
       return {
         valid: false,
         messageId: issue?.messageId ?? 'validation.invalid',
-        field: issue?.field === 'parameters' ? undefined : issue?.field,
+        field: pillarModelParameterField(issue?.field),
       }
     }
     return { valid: true, value: validation.value }
@@ -298,7 +329,7 @@ function parsePillarRawParameters(raw: RawParameters):
     return {
       valid: false,
       messageId: issue?.messageId ?? 'validation.invalid',
-      field: issue?.field === 'parameters' ? undefined : issue?.field,
+      field: pillarModelParameterField(issue?.field),
     }
   }
   return { valid: true, value: validation.value }
@@ -387,6 +418,7 @@ function parseOpenGridOrganizerBoxRawParameters(raw: RawParameters):
     raw.bottomInterfaceMode ?? defaults.bottomInterfaceMode
   if (
     bottomInterfaceMode !== 'corner-seat' &&
+    bottomInterfaceMode !== 'detachable-corner-seat' &&
     bottomInterfaceMode !== 'stackable'
   ) {
     return invalid('bottomInterfaceMode')
@@ -409,7 +441,7 @@ function parseOpenGridOrganizerBoxRawParameters(raw: RawParameters):
     return {
       valid: false,
       messageId: issue?.messageId ?? 'validation.invalid',
-      field: issue?.field === 'parameters' ? undefined : issue?.field,
+      field: modelParameterFieldFromDiagnostic(issue?.field),
       ...(issue?.params ? { params: issue.params } : {}),
     }
   }
@@ -473,6 +505,9 @@ export function rawFromParameters(
   }
 
   if ('mode' in parameters) {
+    if (parameters.mode === 'detachable-corner-seat') {
+      return { mode: parameters.mode }
+    }
     if (parameters.mode === 'positioning' && 'length' in parameters) {
       return {
         mode: parameters.mode,
@@ -699,7 +734,7 @@ export function parseRawParameters(
       return {
         valid: false,
         messageId: issue?.messageId ?? 'validation.invalid',
-        field: field === 'parameters' ? undefined : field,
+        field: modelParameterFieldFromDiagnostic(field),
         ...(issue?.params ? { params: issue.params } : {}),
       }
     }
@@ -773,7 +808,7 @@ export function parseRawParameters(
     return {
       valid: false,
       messageId: issue?.messageId ?? 'validation.invalid',
-      field: field === 'parameters' ? undefined : field,
+      field: modelParameterFieldFromDiagnostic(field),
       ...(issue?.params ? { params: issue.params } : {}),
     }
   }

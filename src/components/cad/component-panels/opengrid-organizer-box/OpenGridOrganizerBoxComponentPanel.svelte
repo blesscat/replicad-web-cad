@@ -76,6 +76,12 @@
       descriptionKey: 'panel.organizerBox.interface.cornerSeatDescription',
     },
     {
+      value: 'detachable-corner-seat',
+      labelKey: 'panel.organizerBox.interface.detachableCornerSeat',
+      descriptionKey:
+        'panel.organizerBox.interface.detachableCornerSeatDescription',
+    },
+    {
       value: 'stackable',
       labelKey: 'panel.organizerBox.interface.stackable',
       descriptionKey: 'panel.organizerBox.interface.stackableDescription',
@@ -110,9 +116,10 @@
   }
 
   function interfaceForRawParameters(): OpenGridOrganizerBoxBottomInterfaceMode {
-    return rawParameters.bottomInterfaceMode === 'stackable'
-      ? 'stackable'
-      : 'corner-seat'
+    const value = rawParameters.bottomInterfaceMode
+    const supported = interfaceOptions.some((option) => option.value === value)
+    if (supported) return value as OpenGridOrganizerBoxBottomInterfaceMode
+    return OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS.bottomInterfaceMode
   }
 
   function spacingKeysForRawParameters(): ReadonlyArray<

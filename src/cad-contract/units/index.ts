@@ -271,6 +271,7 @@ export {
   boundsForOpenGridOrganizerBox,
   isOpenGridOrganizerBoxParameters,
   openGridOrganizerBoxCavityEnvelopeFor,
+  openGridOrganizerBoxDetachableSocketPosesFor,
   openGridOrganizerBoxFileName,
   openGridOrganizerBoxLayoutFor,
   openGridOrganizerBoxPolygonPointsFor,
@@ -325,6 +326,7 @@ export {
 export { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
 export { OPENGRID_HONEYCOMB_CONFIGURATION } from './opengrid-honeycomb'
 export {
+  OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_LOCATING_SEAT_MODES,
 } from './opengrid-locating-assembly'
@@ -355,6 +357,8 @@ export type {
   OpenGridOrganizerBoxBottomInterfaceMode,
   OpenGridOrganizerBoxCavityEnvelope,
   OpenGridOrganizerBoxCavityEnvelopeInput,
+  OpenGridOrganizerBoxDetachableSocketCorner,
+  OpenGridOrganizerBoxDetachableSocketPose,
   OpenGridOrganizerBoxLayout,
   OpenGridOrganizerBoxParameterKey,
   OpenGridOrganizerBoxParameters,
@@ -604,9 +608,7 @@ export type ModelBounds = {
 
 export type BoxBounds = ModelBounds
 
-export type ValidationIssue = FieldDiagnostic & {
-  field: ModelParameterKey | 'parameters'
-}
+export type ValidationIssue = FieldDiagnostic
 
 export type BoxValidation =
   | { valid: true; value: BoxParameters }

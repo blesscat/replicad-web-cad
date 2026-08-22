@@ -1,34 +1,54 @@
-## Purpose
+## ADDED Requirements
 
-Provide an OpenGrid-compatible solid organizer box for storing batteries, tool
-bits, and similar items in a configurable matrix of shaped, blind top cavities.
+### Requirement: Integrated detachable corner-seat sockets
 
-## Requirements
+When `bottomInterfaceMode=detachable-corner-seat`, the Organizer Box MUST form
+four keyed female corner-seat sockets directly in the box body at the existing
+four-corner locating positions. Each socket MUST use the shared detachable-seat
+female geometry with a nominal Ø7 mm by 1.5 mm material envelope and its two
+retaining tabs. The socket holder MUST remain part of the one exported box
+solid and MUST NOT be emitted as a separate printable part.
 
-### Requirement: Stable organizer-box component contract
+Viewed from the box bottom, the sockets MUST use the deterministic corner
+rotations upper-left 0°, upper-right 90°, lower-right 180°, and lower-left 270°.
+The mode MUST preserve at least 0.5 mm of solid roof between each 1.5 mm-deep
+socket and the nearest storage cavity, MUST NOT generate built-in downward
+feet, and MUST NOT generate the box-to-box stacking guide.
 
-The system MUST expose a new OpenGrid component with stable
-`modelId=opengrid-organizer-box`, build key `opengrid-organizer-box`, and route
-slug `opengrid-organizer-box`. Its user-facing display name MUST begin with
-`OpenGrid `, and its parameter state, preview, generation, and export identity
-MUST remain independent from existing OpenGrid component IDs. Existing model
-IDs and their behavior MUST remain unchanged.
+#### Scenario: Detachable sockets are part of the box
 
-#### Scenario: Organizer box is discoverable
+- **WHEN** a valid Organizer Box snapshot selects `detachable-corner-seat`
+- **THEN** the generated result MUST remain one connected watertight solid
+- **AND** it MUST contain the four shared female socket profiles at the fixed
+  corner positions
+- **AND** no socket holder or male seat MUST be fused below the box or emitted
+  as another solid
 
-- **WHEN** the model chooser or OpenGrid catalog is rendered
-- **THEN** it MUST list the organizer box under the OpenGrid family
-- **AND** its selection entry MUST navigate to the
-  `/cad/opengrid-organizer-box` route
-- **AND** the route MUST show only organizer-box controls
+#### Scenario: Socket rotations follow the four corners
 
-#### Scenario: Organizer box initializes independently
+- **WHEN** the detachable socket layout is inspected from the box bottom
+- **THEN** the upper-left, upper-right, lower-right, and lower-left socket
+  profiles MUST use rotations 0°, 90°, 180°, and 270° respectively
+- **AND** all four sockets MUST accept the same unmirrored male corner-seat
+  geometry after the male part is rotated to the corresponding orientation
 
-- **WHEN** the organizer-box route starts without a valid saved snapshot
-- **THEN** it MUST use the organizer-box defaults
-- **AND** the first Worker generation MUST use
-  `modelId=opengrid-organizer-box`
-- **AND** no existing component's parameters MUST be copied into the snapshot
+#### Scenario: Detachable socket roof is too thin
+
+- **WHEN** the requested bottom thickness would leave less than 0.5 mm of
+  material above a 1.5 mm-deep detachable socket
+- **THEN** Organizer Box validation MUST return a diagnosable bottom-interface
+  or bottom-thickness error
+- **AND** the invalid snapshot MUST NOT replace the last valid revision or
+  enable export
+
+#### Scenario: Detachable mode excludes existing interfaces
+
+- **WHEN** the user selects `detachable-corner-seat`
+- **THEN** the generated underside MUST contain neither the four existing
+  downward built-in feet nor the box-to-box stacking guide
+- **AND** the box lower Z bound MUST remain at its body bottom datum
+
+## MODIFIED Requirements
 
 ### Requirement: Organizer-box parameters and linked spacing
 
@@ -132,35 +152,6 @@ NOT expose side-opening controls or generate side openings.
   thickness, and selected fixed bottom interface rather than an unrelated
   manually entered height
 
-### Requirement: Derived OpenGrid footprint and fixed cavity orientation
-
-The organizer-box X/Y footprint MUST be derived from the cavity count, selected
-shape envelope, and edge-to-edge spacing. The derivation MUST choose the
-smallest legal OpenGrid footprint that contains the centered cavity matrix while
-preserving the fixed boundary clearance required by the selected bottom
-interface. The resulting footprint MUST use the existing 28 mm OpenGrid pitch
-and existing per-axis exterior clearance, and the derived grid counts MUST be
-available to the UI as read-only calculated values.
-
-All cavities MUST share one deterministic orientation relative to the world X/Y
-axes. Orientation MUST NOT be independently configurable per cavity or per axis.
-
-#### Scenario: Cavity layout determines grid occupancy
-
-- **WHEN** the user changes either cavity count, cavity diameter, or linked/
-  independent spacing
-- **THEN** the derived X/Y grid occupancy and outer footprint MUST recalculate
-- **AND** the cavity matrix MUST remain centered
-- **AND** the selected bottom interface positions MUST remain on the derived
-  footprint's fixed OpenGrid locations
-
-#### Scenario: Layout does not fit
-
-- **WHEN** the requested cavity matrix cannot fit inside the largest safe
-  OpenGrid footprint or would collide with a fixed interface boundary
-- **THEN** validation MUST reject the snapshot with a layout error
-- **AND** no new Worker generation or export request MUST be sent
-
 ### Requirement: Mutually exclusive bottom interfaces
 
 The organizer-box panel MUST expose exactly one radio group with exactly three
@@ -208,79 +199,3 @@ seat. The three interface modes MUST NOT be combined.
 - **THEN** the canonical snapshot MUST contain only the newly selected mode
 - **AND** the preview bounds and generated underside MUST update to that mode
 - **AND** no combined mode or legacy boolean MUST be emitted
-
-### Requirement: Integrated detachable corner-seat sockets
-
-When `bottomInterfaceMode=detachable-corner-seat`, the Organizer Box MUST form
-four keyed female corner-seat sockets directly in the box body at the existing
-four-corner locating positions. Each socket MUST use the shared detachable-seat
-female geometry with a nominal Ø7 mm by 1.5 mm material envelope and its two
-retaining tabs. The socket holder MUST remain part of the one exported box
-solid and MUST NOT be emitted as a separate printable part.
-
-Viewed from the box bottom, the sockets MUST use the deterministic corner
-rotations upper-left 0°, upper-right 90°, lower-right 180°, and lower-left 270°.
-The mode MUST preserve at least 0.5 mm of solid roof between each 1.5 mm-deep
-socket and the nearest storage cavity, MUST NOT generate built-in downward
-feet, and MUST NOT generate the box-to-box stacking guide.
-
-#### Scenario: Detachable sockets are part of the box
-
-- **WHEN** a valid Organizer Box snapshot selects `detachable-corner-seat`
-- **THEN** the generated result MUST remain one connected watertight solid
-- **AND** it MUST contain the four shared female socket profiles at the fixed
-  corner positions
-- **AND** no socket holder or male seat MUST be fused below the box or emitted
-  as another solid
-
-#### Scenario: Socket rotations follow the four corners
-
-- **WHEN** the detachable socket layout is inspected from the box bottom
-- **THEN** the upper-left, upper-right, lower-right, and lower-left socket
-  profiles MUST use rotations 0°, 90°, 180°, and 270° respectively
-- **AND** all four sockets MUST accept the same unmirrored male corner-seat
-  geometry after the male part is rotated to the corresponding orientation
-
-#### Scenario: Detachable socket roof is too thin
-
-- **WHEN** the requested bottom thickness would leave less than 0.5 mm of
-  material above a 1.5 mm-deep detachable socket
-- **THEN** Organizer Box validation MUST return a diagnosable bottom-interface
-  or bottom-thickness error
-- **AND** the invalid snapshot MUST NOT replace the last valid revision or
-  enable export
-
-#### Scenario: Detachable mode excludes existing interfaces
-
-- **WHEN** the user selects `detachable-corner-seat`
-- **THEN** the generated underside MUST contain neither the four existing
-  downward built-in feet nor the box-to-box stacking guide
-- **AND** the box lower Z bound MUST remain at its body bottom datum
-
-### Requirement: Preview, persistence, and exports
-
-Every valid organizer-box snapshot MUST generate a non-empty watertight single
-solid centered on X/Y with a valid bottom reference, remain previewable through
-the existing Worker revision lifecycle, and support STEP and binary STL export.
-The export filenames MUST identify the organizer-box model and include every
-parameter that changes cavity geometry or bottom-interface geometry, including
-shape, diameter, counts, spacing, depth, bottom thickness, and interface mode.
-
-Valid organizer-box parameters MUST persist under the independent
-`opengrid-organizer-box` model ID. Invalid or incomplete raw input MUST NOT
-overwrite the last accepted persisted snapshot, and a malformed persisted entry
-MUST fall back to organizer-box defaults without affecting other components.
-
-#### Scenario: Valid result is previewable and exportable
-
-- **WHEN** a valid organizer-box snapshot completes generation
-- **THEN** the Worker MUST commit a non-empty single solid revision
-- **AND** the viewport MUST display the selected cavity matrix and underside
-  interface
-- **AND** STEP and STL export MUST be enabled for that revision
-
-#### Scenario: Parameter persistence is isolated
-
-- **WHEN** a valid organizer-box parameter update is accepted
-- **THEN** only the `opengrid-organizer-box` persistence entry MUST change
-- **AND** navigating to another model MUST NOT inherit organizer-box values

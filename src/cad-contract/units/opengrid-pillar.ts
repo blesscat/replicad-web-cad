@@ -1,6 +1,10 @@
-import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from './opengrid-locating-assembly'
+import {
+  OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
+} from './opengrid-locating-assembly'
 
-export type PillarMode = 'standard' | 'thin-shell' | 'positioning'
+export type PillarMode =
+  'standard' | 'thin-shell' | 'positioning' | 'detachable-corner-seat'
 export type PillarParameterKey = 'mode' | 'length' | 'offset'
 
 export type PillarParameters =
@@ -13,6 +17,9 @@ export type PillarParameters =
       length: number
       offset: number
     }
+  | {
+      mode: 'detachable-corner-seat'
+    }
 
 export type PillarBounds = {
   min: [number, number, number]
@@ -20,7 +27,7 @@ export type PillarBounds = {
 }
 
 export type PillarValidationIssue = {
-  field: PillarParameterKey | 'parameters'
+  field: string
   messageId: string
 }
 
@@ -61,6 +68,7 @@ const POSITIONING_PILLAR_PARAMETER_KEYS: readonly PillarParameterKey[] = [
   'length',
   'offset',
 ]
+const DETACHABLE_PILLAR_PARAMETER_KEYS: readonly PillarParameterKey[] = ['mode']
 
 const OFFSET_STEP_TOLERANCE = 1e-9
 
@@ -76,6 +84,20 @@ function hasExactKeys(
     Object.keys(value).length === keys.length &&
     keys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
   )
+}
+
+function mismatchedParameterField(
+  value: Record<string, unknown>,
+  expectedKeys: readonly string[],
+): string {
+  const unexpectedField = Object.keys(value).find(
+    (field) => !expectedKeys.includes(field),
+  )
+  if (unexpectedField) return unexpectedField
+  const missingField = expectedKeys.find(
+    (field) => !Object.prototype.hasOwnProperty.call(value, field),
+  )
+  return missingField ?? 'parameters'
 }
 
 function isValidOffset(value: unknown): value is number {
@@ -104,21 +126,32 @@ export function validatePillarParameters(value: unknown): PillarValidation {
   const issues: PillarValidationIssue[] = []
   const mode = value.mode
   const isPositioningMode = mode === 'positioning'
-  const expectedKeys = isPositioningMode
-    ? POSITIONING_PILLAR_PARAMETER_KEYS
-    : FIXED_PILLAR_PARAMETER_KEYS
+  const isDetachableMode = mode === 'detachable-corner-seat'
+  let expectedKeys = FIXED_PILLAR_PARAMETER_KEYS
+  if (isPositioningMode) expectedKeys = POSITIONING_PILLAR_PARAMETER_KEYS
+  if (isDetachableMode) expectedKeys = DETACHABLE_PILLAR_PARAMETER_KEYS
   if (!hasExactKeys(value, expectedKeys)) {
     issues.push({
-      field: 'parameters',
+      field: mismatchedParameterField(value, expectedKeys),
       messageId: 'validation.invalid',
     })
   }
 
-  if (mode !== 'standard' && mode !== 'thin-shell' && !isPositioningMode) {
+  if (
+    mode !== 'standard' &&
+    mode !== 'thin-shell' &&
+    !isPositioningMode &&
+    !isDetachableMode
+  ) {
     issues.push({
       field: 'mode',
       messageId: 'validation.invalid',
     })
+  }
+
+  if (isDetachableMode) {
+    if (issues.length > 0) return { valid: false, issues }
+    return { valid: true, value: { mode: 'detachable-corner-seat' } }
   }
 
   const length = value.length
@@ -254,6 +287,9 @@ export function normalizePillarParameters(value: unknown): PillarParameters {
 export function pillarLengthForMode(mode: PillarMode): number {
   if (mode === 'thin-shell') return PILLAR_CONFIGURATION.thinShellLength
   if (mode === 'standard') return PILLAR_CONFIGURATION.standardLength
+  if (mode === 'detachable-corner-seat') {
+    return OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male.totalHeight
+  }
   throw new Error('PILLAR_POSITIONING_LENGTH_REQUIRES_PARAMETERS')
 }
 
@@ -267,6 +303,9 @@ export function pillarLengthForParameters(
 export function pillarBodyDiameterForParameters(
   parameters: PillarParameters,
 ): number {
+  if (parameters.mode === 'detachable-corner-seat') {
+    return OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male.bodyDiameter
+  }
   const nominalDiameter =
     parameters.mode === 'positioning'
       ? PILLAR_CONFIGURATION.positioningBodyDiameter
@@ -277,10 +316,20 @@ export function pillarBodyDiameterForParameters(
 export function pillarFlangeDiameterForParameters(
   parameters: PillarParameters,
 ): number {
+  if (parameters.mode === 'detachable-corner-seat') {
+    throw new Error('PILLAR_DETACHABLE_CORNER_SEAT_HAS_NO_FLANGE')
+  }
   return PILLAR_CONFIGURATION.baseDiameter + parameters.offset
 }
 
 export function boundsForPillar(parameters: PillarParameters): PillarBounds {
+  if (parameters.mode === 'detachable-corner-seat') {
+    const bounds = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male.bounds
+    return {
+      min: [...bounds.min],
+      max: [...bounds.max],
+    }
+  }
   const diameter =
     parameters.mode === 'positioning'
       ? pillarBodyDiameterForParameters(parameters)
@@ -297,6 +346,9 @@ function formatPillarOffset(value: number): string {
 }
 
 function pillarExportStem(parameters: PillarParameters): string {
+  if (parameters.mode === 'detachable-corner-seat') {
+    return 'pillar-4.5-detachable-corner-seat'
+  }
   const length = pillarLengthForParameters(parameters)
   const mode =
     parameters.mode === 'positioning' ? 'positioning' : parameters.mode
