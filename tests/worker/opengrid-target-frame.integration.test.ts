@@ -186,4 +186,30 @@ describe('OpenGrid target frame builder', () => {
       shape.delete()
     }
   }, 60_000)
+
+  it('generates a centered frame when each side remainder is below a half-cell', async () => {
+    const input = parameters({
+      rows: 3,
+      columns: 3,
+      targetWidth: 100,
+      targetDepth: 100,
+      fitToTarget: true,
+    })
+    const shape = await buildOpenGridBRep(input)
+    try {
+      const bounds = readShapeBounds(shape)
+      expect(bounds.min[0]).toBeCloseTo(-50, 5)
+      expect(bounds.max[0]).toBeCloseTo(50, 5)
+      expect(bounds.min[1]).toBeCloseTo(-50, 5)
+      expect(bounds.max[1]).toBeCloseTo(50, 5)
+      const quality = inspectOpenGridShapeQuality(
+        shape,
+        input,
+        meshBRep(shape, OPENGRID_PREVIEW_CONFIGURATION),
+      )
+      expect(quality.passed, quality.failures.join('; ')).toBe(true)
+    } finally {
+      shape.delete()
+    }
+  }, 60_000)
 })

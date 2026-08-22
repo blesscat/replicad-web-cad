@@ -219,6 +219,29 @@ test('OpenGrid fills a calculated remainder with a persisted centered frame', as
   ).toBeChecked()
 })
 
+test('OpenGrid generates a centered frame for a 100 mm target from a 3 by 3 grid', async ({
+  page,
+}) => {
+  await page.goto('/cad/opengrid')
+  await page.getByRole('slider', { name: 'X' }).fill('3')
+  await page.getByRole('slider', { name: 'Y' }).fill('3')
+
+  const calculator = page.getByTestId('opengrid-target-dimension-calculator')
+  await calculator.getByRole('textbox', { name: 'X（mm）' }).fill('100')
+  await calculator.getByRole('textbox', { name: 'Y（mm）' }).fill('100')
+  await calculator.getByRole('button', { name: '計算格數' }).click()
+
+  const fitToTarget = page.getByRole('checkbox', {
+    name: '用實體邊框補足目標尺寸',
+  })
+  await fitToTarget.check()
+  await expect(page.getByText('尺寸：100 × 100 × 4 mm')).toBeVisible()
+  await expect(page.getByTestId('cad-error-toast')).toHaveCount(0)
+  await expect(page.getByTestId('cad-viewport').locator('canvas')).toBeVisible({
+    timeout: 60_000,
+  })
+})
+
 test('OpenGrid print planning clears single-board target fitting', async ({
   page,
 }) => {

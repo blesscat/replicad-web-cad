@@ -188,6 +188,7 @@ const DEFAULT_CONNECTOR_SIDES: OpenGridSideFlags = {
 
 const OPENGRID_WORKSPACE_MAX_DIMENSION = 500
 const OPENGRID_BOARD_MAX_GRID_COUNT = 10
+const TARGET_FRAME_MAX_SIDE_REMAINDER = HALF_CELL_CONFIGURATION.halfPitch
 
 export const OPENGRID_CONFIGURATION = {
   gridPitch: OPENGRID_GRID_CONFIGURATION.fullPitch,
@@ -584,7 +585,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     nominalWidth !== null &&
     isFiniteNumber(value.targetWidth) &&
     (value.targetWidth as number) >
-      nominalWidth + HALF_CELL_CONFIGURATION.halfPitch
+      nominalWidth + TARGET_FRAME_MAX_SIDE_REMAINDER * 2
   ) {
     issues.push({ field: 'targetWidth', messageId: 'validation.invalid' })
   }
@@ -601,7 +602,7 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     nominalDepth !== null &&
     isFiniteNumber(value.targetDepth) &&
     (value.targetDepth as number) >
-      nominalDepth + HALF_CELL_CONFIGURATION.halfPitch
+      nominalDepth + TARGET_FRAME_MAX_SIDE_REMAINDER * 2
   ) {
     issues.push({ field: 'targetDepth', messageId: 'validation.invalid' })
   }
