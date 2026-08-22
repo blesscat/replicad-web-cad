@@ -6,6 +6,9 @@ import type {
 import { OPENGRID_SNAP_CONFIGURATION } from '../../../cad-contract/units'
 import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from '../../../cad-contract/units/opengrid-locating-assembly'
 
+export type OpenGridSnapMagnetConnectorDirection =
+  'positiveX' | 'negativeX' | 'positiveY' | 'negativeY'
+
 export type OpenGridSnapProfileDefinition = {
   profile: OpenGridSnapProfile
   variant: OpenGridSnapVariant
@@ -28,7 +31,9 @@ export type OpenGridSnapProfileDefinition = {
   centerRemoverHalfDepth: number
   centerRemoverStepZ: number
   magnetHoleOpeningWidth: number
-  magnetHoleConnectorReach: number
+  magnetHoleConnectorReachByDirection: Readonly<
+    Record<OpenGridSnapMagnetConnectorDirection, number>
+  >
 }
 
 const standardAssetUrls = {
@@ -72,6 +77,8 @@ function makeDefinition(
   variant: OpenGridSnapVariant,
 ): OpenGridSnapProfileDefinition {
   const isStandard = profile === 'Standard'
+  const standardConnectorReach = 11.7
+  const negativeYConnectorReach = isStandard ? standardConnectorReach : 10.9
   const centerRemoverStepZ = variant === 'Full' ? 4.8 : 1.9
   let assetUrl: URL
   let expectedBounds: ModelBounds
@@ -132,7 +139,16 @@ function makeDefinition(
     centerRemoverHalfDepth: 4,
     centerRemoverStepZ,
     magnetHoleOpeningWidth: OPENGRID_SNAP_CONFIGURATION.magnetHole.openingWidth,
-    magnetHoleConnectorReach: 10.5,
+    // The Standard side gaps run from approximately 11.1 mm to 11.7 mm.
+    // Directional's negative-Y side has its corresponding gap at 10.8–10.9
+    // mm, so each radial opening stops at its own gap's outer edge instead of
+    // cutting through the surrounding outer frame.
+    magnetHoleConnectorReachByDirection: {
+      positiveX: standardConnectorReach,
+      negativeX: standardConnectorReach,
+      positiveY: standardConnectorReach,
+      negativeY: negativeYConnectorReach,
+    },
   }
 }
 

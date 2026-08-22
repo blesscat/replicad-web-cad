@@ -456,7 +456,7 @@ function makeMagnetHoleCutter(
   }
 
   const halfOpeningWidth = definition.magnetHoleOpeningWidth / 2
-  const reach = definition.magnetHoleConnectorReach
+  const reach = definition.magnetHoleConnectorReachByDirection
   // Overlap the pocket slightly so round pockets are connected by an area,
   // not only tangent at a single point on the circle.
   const connectorOverlap = Math.min(0.5, halfOpeningWidth)
@@ -466,18 +466,18 @@ function makeMagnetHoleCutter(
   const slots = [
     makeBox(
       [slotStartX, -halfOpeningWidth, baseZ],
-      [reach, halfOpeningWidth, topZ],
+      [reach.positiveX, halfOpeningWidth, topZ],
     ),
     makeBox(
-      [-reach, -halfOpeningWidth, baseZ],
+      [-reach.negativeX, -halfOpeningWidth, baseZ],
       [-slotStartX, halfOpeningWidth, topZ],
     ),
     makeBox(
       [-halfOpeningWidth, slotStartY, baseZ],
-      [halfOpeningWidth, reach, topZ],
+      [halfOpeningWidth, reach.positiveY, topZ],
     ),
     makeBox(
-      [-halfOpeningWidth, -reach, baseZ],
+      [-halfOpeningWidth, -reach.negativeY, baseZ],
       [halfOpeningWidth, -slotStartY, topZ],
     ),
   ]

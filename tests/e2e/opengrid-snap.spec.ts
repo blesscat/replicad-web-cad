@@ -122,16 +122,30 @@ test('OpenGrid Snap route exposes profiles, features, and one shared outer offse
   await expect(cornerHoles).not.toBeChecked()
   await expect(centerRemover).not.toBeChecked()
   await expect(magnetShape).toHaveValue('none')
+  await expect(magnetShape.locator('option[value="none"]')).toHaveText('無')
   await expect(magnetShape.locator('option')).toHaveCount(3)
   await magnetShape.selectOption('square')
   await expect(cornerHoles).not.toBeChecked()
   await expect(centerRemover).not.toBeChecked()
-  await expect(
-    page.getByRole('textbox', { name: '磁鐵孔長度（X）' }),
-  ).toBeVisible()
-  await page.getByRole('textbox', { name: '磁鐵孔長度（X）' }).fill('6')
-  await page.getByRole('textbox', { name: '磁鐵孔寬度（Y）' }).fill('4')
-  await page.getByRole('textbox', { name: '磁鐵孔厚度（Z）' }).fill('2')
+  const squareLength = page.getByRole('slider', { name: '長度（X）' })
+  const squareWidth = page.getByRole('slider', { name: '寬度（Y）' })
+  const squareThickness = page.getByRole('slider', { name: '厚度（Z）' })
+  await expect(squareLength).toBeVisible()
+  await expect(squareWidth).toBeVisible()
+  await expect(squareThickness).toBeVisible()
+  await expect(squareLength).toHaveAttribute('type', 'range')
+  await squareLength.press('Home')
+  for (let index = 0; index < 40; index += 1) {
+    await squareLength.press('ArrowRight')
+  }
+  await squareWidth.press('Home')
+  for (let index = 0; index < 20; index += 1) {
+    await squareWidth.press('ArrowRight')
+  }
+  await squareThickness.press('Home')
+  for (let index = 0; index < 19; index += 1) {
+    await squareThickness.press('ArrowRight')
+  }
   await expect
     .poll(async () =>
       page.evaluate(() => {
@@ -155,13 +169,19 @@ test('OpenGrid Snap route exposes profiles, features, and one shared outer offse
     })
   await cornerHoles.check()
   await expect(magnetShape).toHaveValue('none')
-  await expect(
-    page.getByRole('textbox', { name: '磁鐵孔長度（X）' }),
-  ).toHaveCount(0)
+  await expect(page.getByRole('slider', { name: '長度（X）' })).toHaveCount(0)
   await cornerHoles.uncheck()
   await magnetShape.selectOption('round')
-  await page.getByRole('textbox', { name: '磁鐵孔直徑（XY）' }).fill('8')
-  await page.getByRole('textbox', { name: '磁鐵孔厚度（Z）' }).fill('2')
+  const roundDiameter = page.getByRole('slider', { name: '直徑（XY）' })
+  const roundThickness = page.getByRole('slider', { name: '厚度（Z）' })
+  await roundDiameter.press('Home')
+  for (let index = 0; index < 60; index += 1) {
+    await roundDiameter.press('ArrowRight')
+  }
+  await roundThickness.press('Home')
+  for (let index = 0; index < 19; index += 1) {
+    await roundThickness.press('ArrowRight')
+  }
   await profile.selectOption('Directional')
   await cornerHoles.check()
   await centerRemover.check()

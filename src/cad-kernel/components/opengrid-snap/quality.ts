@@ -476,21 +476,30 @@ function magnetConnectorProbes(
 ): Array<{ opening: Probe; tangent: Probe; retention: Probe }> {
   const [halfX, halfY] = magnetHolePlanHalfExtents(parameters)
   const halfOpeningWidth = definition.magnetHoleOpeningWidth / 2
-  const reach = definition.magnetHoleConnectorReach
+  const reach = definition.magnetHoleConnectorReachByDirection
+  const bounds = boundsForOpenGridSnap(parameters)
   const innerMargin = 0.2
   const tangentMin = halfOpeningWidth + 0.15
   const tangentMax = halfOpeningWidth + 0.55
-  const retentionStart = reach + 0.2
-  const retentionEnd = Math.min(
-    reach + 0.9,
-    boundsForOpenGridSnap(parameters).max[0] - 0.2,
-  )
   const probes: Array<{ opening: Probe; tangent: Probe; retention: Probe }> = []
 
-  const addVertical = (sign: -1 | 1): void => {
-    const start = sign > 0 ? halfY + innerMargin : -reach + innerMargin
-    const end = sign > 0 ? reach - innerMargin : -halfY - innerMargin
+  const retentionEndFor = (
+    axis: 0 | 1,
+    sign: -1 | 1,
+    connectorReach: number,
+  ): number => {
+    const positiveOuter = bounds.max[axis]
+    const negativeOuter = Math.abs(bounds.min[axis])
+    const outerBoundary = sign > 0 ? positiveOuter : negativeOuter
+    return Math.min(connectorReach + 0.9, outerBoundary - 0.2)
+  }
+
+  const addVertical = (sign: -1 | 1, connectorReach: number): void => {
+    const start = sign > 0 ? halfY + innerMargin : -connectorReach + innerMargin
+    const end = sign > 0 ? connectorReach - innerMargin : -halfY - innerMargin
     if (end <= start) return
+    const retentionStart = connectorReach + 0.2
+    const retentionEnd = retentionEndFor(1, sign, connectorReach)
     const retentionMin = sign > 0 ? retentionStart : -retentionEnd
     const retentionMax = sign > 0 ? retentionEnd : -retentionStart
     probes.push({
@@ -509,10 +518,12 @@ function magnetConnectorProbes(
     })
   }
 
-  const addHorizontal = (sign: -1 | 1): void => {
-    const start = sign > 0 ? halfX + innerMargin : -reach + innerMargin
-    const end = sign > 0 ? reach - innerMargin : -halfX - innerMargin
+  const addHorizontal = (sign: -1 | 1, connectorReach: number): void => {
+    const start = sign > 0 ? halfX + innerMargin : -connectorReach + innerMargin
+    const end = sign > 0 ? connectorReach - innerMargin : -halfX - innerMargin
     if (end <= start) return
+    const retentionStart = connectorReach + 0.2
+    const retentionEnd = retentionEndFor(0, sign, connectorReach)
     const retentionMin = sign > 0 ? retentionStart : -retentionEnd
     const retentionMax = sign > 0 ? retentionEnd : -retentionStart
     probes.push({
@@ -531,10 +542,10 @@ function magnetConnectorProbes(
     })
   }
 
-  addVertical(-1)
-  addVertical(1)
-  addHorizontal(-1)
-  addHorizontal(1)
+  addVertical(-1, reach.negativeY)
+  addVertical(1, reach.positiveY)
+  addHorizontal(-1, reach.negativeX)
+  addHorizontal(1, reach.positiveX)
   return probes
 }
 

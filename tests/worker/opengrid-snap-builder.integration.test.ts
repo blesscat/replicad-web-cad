@@ -608,6 +608,18 @@ describe('OpenGrid Snap reference builder', () => {
           expect(
             volumeInBox(body, [-0.8, 11, 0.1], [0.8, 12, 1.9]),
           ).toBeGreaterThan(0.05)
+          expect(
+            volumeInBox(body, [10.9, -0.8, 0.1], [11.3, 0.8, 1.9]),
+          ).toBeLessThan(0.1)
+          expect(
+            volumeInBox(body, [-11.3, -0.8, 0.1], [-10.9, 0.8, 1.9]),
+          ).toBeLessThan(0.1)
+          expect(
+            volumeInBox(body, [-0.8, 10.9, 0.1], [0.8, 11.3, 1.9]),
+          ).toBeLessThan(0.1)
+          expect(
+            volumeInBox(body, [-0.8, -11.3, 0.1], [0.8, -10.9, 1.9]),
+          ).toBeLessThan(0.1)
           const quality = inspectOpenGridSnapShapeQuality(
             generated,
             parameters,

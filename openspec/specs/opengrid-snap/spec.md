@@ -119,11 +119,13 @@ non-zero outer offset scales the non-hole assembly.
 #### Scenario: Four retaining openings connect the cavity
 
 - **WHEN** either magnet shape is generated
-- **THEN** four symmetric openings at the annotated top, bottom, left, and right
-  red-frame positions MUST connect to the central cavity
+- **THEN** four cardinal openings at the annotated top, bottom, left, and right
+  red-frame positions MUST run directly from the central cavity to each
+  profile's corresponding existing side gap
 - **AND** each opening MUST be 2 mm wide in the XY plane within tolerance
-- **AND** the openings MUST retain the surrounding material needed to clamp a
-  press-fit magnet rather than removing the entire outer support
+- **AND** the opening endpoint MUST stop at the outer edge of that gap while
+  retaining the surrounding material needed to clamp a press-fit magnet rather
+  than removing the entire outer support
 
 #### Scenario: Magnet geometry is applied after non-hole scaling
 
@@ -137,7 +139,10 @@ non-zero outer offset scales the non-hole assembly.
 
 The Snap panel MUST expose the magnet shape and its shape-specific dimensions
 next to the existing locating-hole and remover-hole controls on every supported
-Snap route. The controls MUST NOT be hidden or enabled only by `system=wall`.
+Snap route. The shape-specific numeric dimensions MUST use slider controls, and
+their displayed labels MUST omit the `magnet-hole` prefix. The inactive shape
+option MUST be labelled `無` in the Traditional Chinese locale and `None` in
+English. The controls MUST NOT be hidden or enabled only by `system=wall`.
 Selecting a square or round magnet mode MUST clear or disable both existing
 hole controls, and selecting either existing hole feature MUST return the
 magnet mode to `none`; the resulting normalized snapshot MUST never contain a

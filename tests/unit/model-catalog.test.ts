@@ -392,6 +392,9 @@ describe('CAD component catalog', () => {
       max: OPENGRID_SNAP_CONFIGURATION.maxOffset,
       step: 0.05,
     })
+    expect(
+      snap?.parameterSchema.slice(1).map((field) => field.control),
+    ).toEqual(['range', 'range', 'range', 'range'])
     expect(snap?.defaultParameters).toEqual({
       variant: 'Full',
       profile: 'Standard',
