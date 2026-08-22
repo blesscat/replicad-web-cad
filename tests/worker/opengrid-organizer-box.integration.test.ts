@@ -224,7 +224,7 @@ function markerVerticesRelativeTo(
 }
 
 describe('OpenGrid organizer-box B-Rep', () => {
-  it('aligns each female marker with the marked male after a clockwise quarter-turn', async () => {
+  it('places each female marker on its locked reference-arrow side', async () => {
     const input = parameters({
       holeCountX: 1,
       holeCountY: 1,

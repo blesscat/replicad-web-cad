@@ -246,9 +246,11 @@ applied. Both mating indicators MUST use this same local profile datum.
 Viewed from the box underside, the indicator orientation MUST communicate the
 clockwise 90-degree locking motion: after the male seat has been turned
 clockwise 90 degrees from its insertion orientation, the male triangle's apex
-MUST point toward the corresponding female indicator and the female triangle's
-apex MUST point back toward the male indicator. This point-to-point alignment
-MUST represent the locked state.
+MUST point along the corresponding female indicator centerline. The female
+indicator MUST follow the canonical corner direction: the upper-left and
+lower-right indicators point away from their sockets, while the upper-right and
+lower-left indicators point back toward their sockets. These reference-aligned
+directions MUST represent the locked state.
 
 #### Scenario: Shared indicator dimensions are published once
 
@@ -259,16 +261,16 @@ MUST represent the locked state.
 - **AND** neither consumer MUST define a conflicting local indicator depth or
   profile
 
-#### Scenario: Clockwise locked pose makes the indicators point to one another
+#### Scenario: Clockwise locked pose follows the reference directions
 
 - **WHEN** a compatible male seat is placed in the canonical female socket
   insertion orientation and then turned clockwise 90 degrees around the shared
   Z axis as viewed from below
-- **THEN** the male triangle MUST point toward the female triangle along their
-  shared centerline
-- **AND** the female triangle MUST point back toward the male triangle, with
-  opposite apex directions
-- **AND** the point-to-point triangles MUST identify the locked state
+- **THEN** the male triangle MUST point along the corresponding female
+  indicator centerline
+- **AND** the female triangle MUST use its canonical corner direction, with
+  the upper-left and lower-right markers reversed from the other two corners
+- **AND** the reference-aligned triangles MUST identify the locked state
 - **AND** the insertion orientation MUST remain distinguishable from the locked
   orientation
 

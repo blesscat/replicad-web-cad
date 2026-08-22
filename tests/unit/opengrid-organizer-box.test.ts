@@ -198,7 +198,7 @@ describe('OpenGrid organizer-box contract', () => {
     )
   })
 
-  it('places lock indicators tip-to-tip with the locked male pose', () => {
+  it('places lock indicators on the reference-arrow sides', () => {
     const value = parameters({
       holeCountX: 1,
       holeCountY: 1,
@@ -219,7 +219,7 @@ describe('OpenGrid organizer-box contract', () => {
     ])
     expect(placements[0]?.center[0]).toBe(poses[0]?.center[0])
     expect(placements[0]?.center[1]).toBeCloseTo(
-      (poses[0]?.center[1] ?? 0) + offset,
+      (poses[0]?.center[1] ?? 0) - offset,
       8,
     )
     expect(placements[1]?.center[0]).toBeCloseTo(
@@ -229,7 +229,7 @@ describe('OpenGrid organizer-box contract', () => {
     expect(placements[1]?.center[1]).toBe(poses[1]?.center[1])
     expect(placements[2]?.center[0]).toBe(poses[2]?.center[0])
     expect(placements[2]?.center[1]).toBeCloseTo(
-      (poses[2]?.center[1] ?? 0) - offset,
+      (poses[2]?.center[1] ?? 0) + offset,
       8,
     )
     expect(placements[3]?.center[0]).toBeCloseTo(

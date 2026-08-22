@@ -690,10 +690,12 @@ export function openGridOrganizerBoxDetachableIndicatorPlacementFor(
     configuration.indicator.lockRotationDegrees) %
     360) as OpenGridOrganizerBoxDetachableSocketPose['rotationDegrees']
   const apexDirection = detachableIndicatorApexDirectionFor(lockRotation)
+  const referenceArrowSign =
+    pose.corner === 'upper-left' || pose.corner === 'lower-right' ? -1 : 1
   return {
     center: [
-      pose.center[0] + apexDirection[0] * offsetFromSocket,
-      pose.center[1] + apexDirection[1] * offsetFromSocket,
+      pose.center[0] + referenceArrowSign * apexDirection[0] * offsetFromSocket,
+      pose.center[1] + referenceArrowSign * apexDirection[1] * offsetFromSocket,
     ],
     rotationDegrees: detachableIndicatorRotationFor(pose.rotationDegrees),
   }
