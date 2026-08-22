@@ -252,6 +252,19 @@ describe('OpenGrid organizer-box B-Rep', () => {
       const maleVertices = markerTriangleVerticesAt(markedMale, [0, 0])
       expect(maleVertices).not.toBeNull()
       if (!maleVertices) return
+      const maleRelativeVertices = markerVerticesRelativeTo(
+        maleVertices,
+        [0, 0],
+      )
+      const maleApex = [...maleRelativeVertices].sort(
+        ([firstX], [secondX]) => secondX - firstX,
+      )[0]
+      expect(maleApex?.[0]).toBeCloseTo(
+        OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.radialLength /
+          2,
+        3,
+      )
+      expect(maleApex?.[1]).toBeCloseTo(0, 3)
 
       for (const pose of openGridOrganizerBoxDetachableSocketPosesFor(input)) {
         const placement =

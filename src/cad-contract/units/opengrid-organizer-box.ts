@@ -672,10 +672,10 @@ function detachableIndicatorRotationFor(
 function detachableIndicatorApexDirectionFor(
   rotationDegrees: OpenGridOrganizerBoxDetachableSocketPose['rotationDegrees'],
 ): OpenGridOrganizerBoxPoint2D {
-  if (rotationDegrees === 0) return [0, 1]
-  if (rotationDegrees === 90) return [-1, 0]
-  if (rotationDegrees === 180) return [0, -1]
-  return [1, 0]
+  if (rotationDegrees === 0) return [1, 0]
+  if (rotationDegrees === 90) return [0, 1]
+  if (rotationDegrees === 180) return [-1, 0]
+  return [0, -1]
 }
 
 export function openGridOrganizerBoxDetachableIndicatorPlacementFor(

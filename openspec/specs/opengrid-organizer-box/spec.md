@@ -307,7 +307,7 @@ pose, the indicator center MUST be offset from the socket center in the
 direction of the matching male triangle's apex after a clockwise 90° lock turn,
 while remaining outside the socket envelope. The female triangle MUST point
 back toward the socket so that the two triangles are point-to-point only in the
-locked pose. With the shared triangle's local apex pointing along +Y, the
+locked pose. With the shared triangle's local apex pointing along +X, the
 resulting female indicator rotations MUST be 270°, 0°, 90°, and 180° in the
 same corner order.
 

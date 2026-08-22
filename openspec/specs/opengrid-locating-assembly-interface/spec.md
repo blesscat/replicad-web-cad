@@ -239,6 +239,10 @@ MUST be an exposed-bottom, shallow recessed isosceles triangle with a nominal
 indicator depth MUST be shared by both mating parts and MUST remain within the
 requested 0.1–0.2 mm printable range.
 
+The shared triangle's local radial direction MUST run from its flat edge toward
+its apex along the local positive X axis before any socket-pose transform is
+applied. Both mating indicators MUST use this same local profile datum.
+
 Viewed from the box underside, the indicator orientation MUST communicate the
 clockwise 90-degree locking motion: after the male seat has been turned
 clockwise 90 degrees from its insertion orientation, the male triangle's apex
