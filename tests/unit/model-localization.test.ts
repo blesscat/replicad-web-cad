@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  adjustableParameterLabelsFor,
   displayParameterLabel,
+  getModelDefinition,
+  joinParameterLabels,
   modelDefinitions,
+  parameterPresentationFor,
   unitLabelFor,
 } from '../../src/features/cad/model-catalog'
 import { translate } from '../../src/i18n'
@@ -56,6 +60,51 @@ describe('localized model catalog copy', () => {
     expect(unitLabelFor('en', count.unit)).toBe('columns')
     expect(definition.id).toBe('hexagonal-column')
     expect(definition.buildKey).toBe('hexagonal-column')
+  })
+
+  it('uses explicit presentation metadata for custom controls and schema defaults', () => {
+    const board = getModelDefinition('opengrid')!
+    const box = getModelDefinition('box')!
+    const snapRemover = getModelDefinition('opengrid-snap-remover')!
+
+    expect(parameterPresentationFor(board)).toEqual({
+      kind: 'adjustable',
+      summaryKey: 'models.model.opengrid.staticParameters',
+      detailsKey: 'models.model.opengrid.parameterDetails',
+    })
+    expect(parameterPresentationFor(box)).toEqual({ kind: 'adjustable' })
+    expect(parameterPresentationFor(snapRemover)).toEqual({ kind: 'fixed' })
+  })
+
+  it('creates localized concise labels without duplicating conditional fields', () => {
+    const cylinder = getModelDefinition('opengrid-stackable-cylinder')!
+    const englishLabels = adjustableParameterLabelsFor(cylinder, 'en')
+    const traditionalChineseLabels = adjustableParameterLabelsFor(
+      cylinder,
+      'zh-Hant',
+    )
+
+    expect(englishLabels.length).toBeLessThanOrEqual(
+      cylinder.parameterSchema.length,
+    )
+    expect(new Set(englishLabels).size).toBe(englishLabels.length)
+    expect(traditionalChineseLabels).toHaveLength(englishLabels.length)
+    expect(joinParameterLabels(['Width', 'Height'], 'en')).toBe(
+      'Width and Height',
+    )
+    expect(joinParameterLabels(['寬度', '高度'], 'zh-Hant')).toContain('寬度')
+    expect(joinParameterLabels(['寬度', '高度'], 'zh-Hant')).toContain('高度')
+  })
+
+  it('provides localized capability and dialog actions', () => {
+    expect(
+      translate('zh-Hant', 'models.adjustableSettings', { value: '板型' }),
+    ).toBe('可調整設定：板型')
+    expect(
+      translate('en', 'models.adjustableSettings', { value: 'board profile' }),
+    ).toBe('Adjustable settings: board profile')
+    expect(translate('zh-Hant', 'models.details')).toBe('查看完整資訊')
+    expect(translate('en', 'models.close')).toBe('Close')
   })
 
   it('labels the organizer-box retaining interface as locking corner seats', () => {

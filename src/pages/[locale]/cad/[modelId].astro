@@ -8,6 +8,7 @@ import {
   displayParameterLabel,
   getModelDefinition,
   modelDefinitions,
+  parameterStaticSummaryKeysFor,
   unitLabelFor,
 } from '../../../features/cad/model-catalog'
 import {
@@ -43,8 +44,10 @@ const attribution = getOpenGridAttribution(modelId)
 
 function parameterSummary() {
   if (definition.parameterSchema.length === 0) {
-    const staticSummary = t(`models.model.${definition.id}.staticParameters`)
-    if (!staticSummary.startsWith('⟦')) return [staticSummary]
+    const staticSummaries = parameterStaticSummaryKeysFor(definition)
+      .map((key) => t(key))
+      .filter((summary) => !summary.startsWith('⟦'))
+    if (staticSummaries.length > 0) return staticSummaries
     return [t('cad.fixedParameters')]
   }
 

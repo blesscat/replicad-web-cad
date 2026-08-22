@@ -50,6 +50,11 @@ export const opengridDefinition: ModelDefinition = {
   selectionLabel: 'models.model.opengrid.selection',
   selectionDescription: 'models.model.opengrid.description',
   parameterSchema: [],
+  parameterPresentation: {
+    kind: 'adjustable',
+    summaryKey: 'models.model.opengrid.staticParameters',
+    detailsKey: 'models.model.opengrid.parameterDetails',
+  },
   defaultParameters: {
     ...OPENGRID_CONFIGURATION.defaultParameters,
     customScrewPositions: [],

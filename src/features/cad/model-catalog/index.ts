@@ -27,11 +27,18 @@ import type {
 
 export { displayParameterLabel } from './labels'
 export { unitLabelFor } from './labels'
+export {
+  adjustableParameterLabelsFor,
+  joinParameterLabels,
+  parameterPresentationFor,
+  parameterStaticSummaryKeysFor,
+} from './presentation'
 export type {
   ModelDefinition,
   ModelFamily,
   ModelFamilyGroup,
   ModelFamilyMetadata,
+  ModelParameterPresentation,
   ModelPreviewImage,
   ModelSelectionSubgroup,
   ParameterField,

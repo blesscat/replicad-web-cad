@@ -73,8 +73,10 @@ export const zhHantMessages = {
   'models.title': '選擇 CAD 模型',
   'models.description': '選擇要在瀏覽器中調整與匯出的 CAD component。',
   'models.series': 'CAD 模型系列',
-  'models.parametersSummary': '可調整參數（{count} 項）',
-  'models.parametersDetails': '查看完整參數',
+  'models.adjustableSettings': '可調整設定：{value}',
+  'models.adjustableSettingsMultiple': '可調整設定（多項）',
+  'models.details': '查看完整資訊',
+  'models.close': '關閉',
   'models.parameters': '可調參數與範圍',
   'models.parameterRange': '{label}：{min}–{max} {unit}',
   'models.fixedParameters': '固定幾何，沒有可調參數。',
@@ -111,6 +113,8 @@ export const zhHantMessages = {
     '提供 Full、Lite、Heavy、Hybrid 四種 OpenGrid 網格底板。',
   'models.model.opengrid.staticParameters':
     '板型（Full／Lite／Heavy／Hybrid）、X/Y 格數、半格方向、倒角、連接孔、螺絲孔模式與螺絲尺寸。',
+  'models.model.opengrid.parameterDetails':
+    '板型：Lite 4 mm、Full 6.8 mm、Heavy 13.8 mm（雙面）、Hybrid 13.8 mm（外圍 Heavy／內部 Full）；X/Y 格數各為 1–10 格，選擇半格方向時顯示數量最多 10.5 格（網格間距 28 mm）；倒角可選無、四角或全部；連接孔可開關並選擇側邊；螺絲孔可選無、四角、全部、依行列或自訂，行列間隔為 1–10，另有每隔 0–10 格的選項與中心孔選項（中心孔需要至少 2×2 格）；自訂螺絲尺寸必須符合通孔直徑 > 0、頭部直徑不超過 28 mm 且不小於通孔、內縮 ≥ 0 且不超過板厚、沉頭角度介於 0° 與 180° 之間。',
   'models.model.opengrid.alt': 'OpenGrid Board 底板預覽',
   'models.model.opengrid-snap.name': 'Snap (咔咔)',
   'models.model.opengrid-snap.selection': 'Snap (咔咔)',
@@ -674,8 +678,10 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'models.description':
     'Choose a CAD component to adjust and export in the browser.',
   'models.series': 'CAD model series',
-  'models.parametersSummary': 'Adjustable parameters ({count})',
-  'models.parametersDetails': 'View full parameters',
+  'models.adjustableSettings': 'Adjustable settings: {value}',
+  'models.adjustableSettingsMultiple': 'Adjustable settings (multiple)',
+  'models.details': 'View full details',
+  'models.close': 'Close',
   'models.parameters': 'Adjustable parameters and ranges',
   'models.parameterRange': '{label}: {min}–{max} {unit}',
   'models.fixedParameters': 'Fixed geometry with no adjustable parameters.',
@@ -713,6 +719,8 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'OpenGrid board variants in Full, Lite, Heavy, and Hybrid profiles.',
   'models.model.opengrid.staticParameters':
     'Board profile (Full/Lite/Heavy/Hybrid), X/Y cell counts, half-cell directions, chamfers, connector holes, screw-hole mode, and screw dimensions.',
+  'models.model.opengrid.parameterDetails':
+    'Profile: Lite 4 mm, Full 6.8 mm, Heavy 13.8 mm (double-sided), Hybrid 13.8 mm (Heavy perimeter / Full inside); X/Y counts are each 1–10 cells, with up to 10.5 displayed cells when a half-cell direction is selected (28 mm grid pitch); chamfers can be none, corners, or everywhere; connector holes can be enabled or disabled with side selection; screw-hole modes are none, corners, everywhere, by row and column, or custom, with row/column intervals of 1–10 plus an every-N-cell setting from 0–10 and a center-hole option (the center hole requires at least a 2×2 grid); custom screw dimensions require a through-hole diameter > 0, a head diameter no larger than 28 mm and no smaller than the through-hole, an inset from 0 up to the board thickness, and a countersink angle strictly between 0° and 180°.',
   'models.model.opengrid.alt': 'OpenGrid board preview',
   'models.model.opengrid-snap.name': 'OpenGrid Snap',
   'models.model.opengrid-snap.selection': 'Snap',

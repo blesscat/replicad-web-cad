@@ -1,9 +1,13 @@
 ---
 import SiteLayout from '../../layouts/SiteLayout.astro'
 import {
+  adjustableParameterLabelsFor,
   displayParameterLabel,
   groupModelDefinitions,
+  joinParameterLabels,
   modelSelectionLabelFor,
+  parameterPresentationFor,
+  parameterStaticSummaryKeysFor,
   unitLabelFor,
   type ModelDefinition,
 } from '../../features/cad/model-catalog'
@@ -50,11 +54,30 @@ function subgroupText(
   return groupText(groupKey)
 }
 
-function parameterSummary(definition: ModelDefinition) {
-  if (definition.parameterSchema.length === 0) {
-    const staticSummary = t(`models.model.${definition.id}.staticParameters`)
-    if (!staticSummary.startsWith('⟦')) return [staticSummary]
+function translatedSummaryFor(key: string | undefined): string | undefined {
+  if (!key) return undefined
+  const summary = t(key)
+  if (summary.startsWith('⟦')) return undefined
+  return summary
+}
+
+function translatedStaticSummariesFor(definition: ModelDefinition): string[] {
+  return parameterStaticSummaryKeysFor(definition)
+    .map((key) => translatedSummaryFor(key))
+    .filter((summary): summary is string => summary !== undefined)
+}
+
+function parameterSummary(definition: ModelDefinition): string[] {
+  const presentation = parameterPresentationFor(definition)
+  const staticSummaries = translatedStaticSummariesFor(definition)
+  if (staticSummaries.length > 0) return staticSummaries
+
+  if (presentation.kind === 'fixed') {
     return [t('models.fixedParameters')]
+  }
+
+  if (definition.parameterSchema.length === 0) {
+    return [t('models.adjustableSettingsMultiple')]
   }
 
   return definition.parameterSchema.map((field) =>
@@ -67,13 +90,27 @@ function parameterSummary(definition: ModelDefinition) {
   )
 }
 
-function parameterSummaryLabel(definition: ModelDefinition): string {
-  if (definition.parameterSchema.length === 0) {
+function parameterCapabilitySummaryFor(definition: ModelDefinition): string {
+  const presentation = parameterPresentationFor(definition)
+  if (presentation.kind === 'fixed') {
     return t('models.fixedParameters')
   }
-  return t('models.parametersSummary', {
-    count: definition.parameterSchema.length,
+
+  const staticSummary = translatedStaticSummariesFor(definition)[0]
+  if (staticSummary) {
+    return t('models.adjustableSettings', { value: staticSummary })
+  }
+
+  const labels = adjustableParameterLabelsFor(definition, locale)
+  if (labels.length === 0) return t('models.adjustableSettingsMultiple')
+
+  return t('models.adjustableSettings', {
+    value: joinParameterLabels(labels, locale),
   })
+}
+
+function detailsDialogIdFor(definition: ModelDefinition): string {
+  return `model-details-${definition.id}-${definition.systemContext ?? 'legacy'}`
 }
 ---
 
@@ -157,6 +194,17 @@ function parameterSummaryLabel(definition: ModelDefinition): string {
                         )
                         const description = modelText(definition, 'description')
                         const previewAlt = modelText(definition, 'alt')
+                        const capabilitySummary =
+                          parameterCapabilitySummaryFor(definition)
+                        const parameterDetails = parameterSummary(definition)
+                        const dialogId = detailsDialogIdFor(definition)
+                        const presentation =
+                          parameterPresentationFor(definition)
+                        const cadPath = localizedCadPathFor(
+                          locale,
+                          definition.id,
+                          definition.systemContext,
+                        )
                         return (
                           <article
                             class="grid gap-3 rounded-xl border border-border-card bg-panel p-3 shadow-sm transition-shadow hover:shadow-md sm:p-4"
@@ -199,39 +247,86 @@ function parameterSummaryLabel(definition: ModelDefinition): string {
                             <p class="m-0 text-sm leading-normal text-muted">
                               {description}
                             </p>
-                            <details class="grid gap-2 text-sm leading-normal">
-                              <summary class="cursor-pointer font-semibold">
-                                {parameterSummaryLabel(definition)}
-                                <span class="font-normal text-muted">
-                                  · {t('models.parametersDetails')}
-                                </span>
-                              </summary>
-                              <div class="grid gap-2 pt-2">
-                                <h5 class="m-0 font-semibold">
-                                  {t('models.parameters')}
-                                </h5>
-                                <ul class="m-0 grid gap-1 pl-5">
-                                  {parameterSummary(definition).map(
-                                    (summary) => (
+                            <div class="grid gap-2 text-sm leading-normal">
+                              <p
+                                class="m-0 break-words"
+                                data-testid="model-capability-summary"
+                                data-parameter-presentation={presentation.kind}
+                              >
+                                {capabilitySummary}
+                              </p>
+                              <button
+                                type="button"
+                                class="inline-flex w-fit items-center rounded-lg border border-border-card bg-page px-3 py-2 font-semibold text-ink shadow-sm hover:bg-viewport focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                                data-model-details-open={dialogId}
+                                aria-controls={dialogId}
+                                aria-haspopup="dialog"
+                                hidden
+                              >
+                                {t('models.details')}
+                              </button>
+                              <a
+                                class="inline-flex w-fit items-center rounded-lg border border-border-card bg-page px-3 py-2 font-semibold text-ink no-underline shadow-sm hover:bg-viewport focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                                data-model-details-fallback
+                                href={cadPath}
+                              >
+                                {t('models.details')}
+                              </a>
+                            </div>
+                            <dialog
+                              id={dialogId}
+                              class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-2xl overflow-hidden rounded-2xl border border-border-card bg-panel p-0 text-ink shadow-card backdrop:bg-black/60"
+                              aria-labelledby={`${dialogId}-title`}
+                              data-testid="model-details-dialog"
+                            >
+                              <div
+                                class="grid max-h-[calc(100dvh-2rem)] min-w-0 gap-5 overflow-y-auto p-5 sm:p-6"
+                                data-testid="model-details-scroll"
+                              >
+                                <header class="flex min-w-0 items-start justify-between gap-4">
+                                  <div class="min-w-0">
+                                    <p class="m-0 text-sm leading-normal text-muted">
+                                      {capabilitySummary}
+                                    </p>
+                                    <h2
+                                      class="m-0 break-words text-2xl font-semibold leading-tight"
+                                      id={`${dialogId}-title`}
+                                    >
+                                      {selectionLabel}
+                                    </h2>
+                                  </div>
+                                  <form method="dialog" class="shrink-0">
+                                    <button
+                                      type="submit"
+                                      class="rounded-lg border border-border-card bg-page px-3 py-2 font-semibold text-ink shadow-sm hover:bg-viewport focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                                      data-model-details-close
+                                      aria-label={t('models.close')}
+                                    >
+                                      {t('models.close')}
+                                    </button>
+                                  </form>
+                                </header>
+                                <section class="grid min-w-0 gap-2 text-sm leading-normal">
+                                  <h3 class="m-0 text-lg font-semibold leading-tight">
+                                    {t('models.parameters')}
+                                  </h3>
+                                  <ul class="m-0 grid gap-1 break-words pl-5">
+                                    {parameterDetails.map((summary) => (
                                       <li>{summary}</li>
-                                    ),
-                                  )}
-                                </ul>
-                                <p class="m-0 text-muted">
-                                  {t('models.exportFormatsLine', {
-                                    label: t('models.exportFormats'),
-                                    value: t('models.exportFormatsValue'),
-                                  })}
-                                </p>
+                                    ))}
+                                  </ul>
+                                  <p class="m-0 break-words text-muted">
+                                    {t('models.exportFormatsLine', {
+                                      label: t('models.exportFormats'),
+                                      value: t('models.exportFormatsValue'),
+                                    })}
+                                  </p>
+                                </section>
                               </div>
-                            </details>
+                            </dialog>
                             <a
                               class="inline-flex items-center justify-self-start rounded-lg border border-border-card bg-page px-3 py-2 font-semibold text-ink no-underline shadow-sm hover:bg-viewport focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                              href={localizedCadPathFor(
-                                locale,
-                                definition.id,
-                                definition.systemContext,
-                              )}
+                              href={cadPath}
                               aria-label={t('models.editAria', {
                                 name: selectionLabel,
                               })}
@@ -251,4 +346,34 @@ function parameterSummaryLabel(definition: ModelDefinition): string {
       }
     </div>
   </section>
+  <script is:inline>
+    const canUseModal =
+      typeof HTMLDialogElement !== 'undefined' &&
+      typeof HTMLDialogElement.prototype.showModal === 'function'
+    for (const opener of document.querySelectorAll(
+      '[data-model-details-open]',
+    )) {
+      const dialogId = opener.getAttribute('data-model-details-open')
+      const dialog = dialogId ? document.getElementById(dialogId) : null
+      if (!canUseModal || !(dialog instanceof HTMLDialogElement)) continue
+
+      opener.removeAttribute('hidden')
+      const fallback = opener.parentElement?.querySelector(
+        '[data-model-details-fallback]',
+      )
+      fallback?.setAttribute('hidden', '')
+      let lastOpener = null
+      opener.addEventListener('click', () => {
+        lastOpener = opener
+        if (!dialog.open) dialog.showModal()
+      })
+      dialog.addEventListener('close', () => {
+        if (lastOpener instanceof HTMLElement) lastOpener.focus()
+        lastOpener = null
+      })
+      dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) dialog.close()
+      })
+    }
+  </script>
 </SiteLayout>
