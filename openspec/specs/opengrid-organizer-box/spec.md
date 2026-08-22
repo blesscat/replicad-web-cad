@@ -99,6 +99,11 @@ selected fixed bottom interface MAY shape the underside within its specified
 interface envelope, but it MUST NOT reach a storage cavity; the component MUST
 NOT expose side-opening controls or generate side openings.
 
+When `bottomInterfaceMode` is `detachable-corner-seat`, `bottomThickness` MUST
+be the vertical distance from the integrated corner-seat holder top to the
+storage-cavity floor. The holder depth below that datum MUST NOT be added to the
+requested thickness.
+
 #### Scenario: Circular cavity matrix
 
 - **WHEN** a valid snapshot selects `circle` with X/Y counts, diameter, depth,
@@ -128,6 +133,8 @@ NOT expose side-opening controls or generate side openings.
   remain at least the requested thickness
 - **AND** a detachable socket MUST retain at least 0.5 mm of solid roof before
   the cavity floor
+- **AND** in detachable-corner-seat mode the socket roof thickness MUST equal
+  the requested `bottomThickness` within geometry tolerance
 - **AND** the overall Z extent MUST be derived from the cavity depth, bottom
   thickness, and selected fixed bottom interface rather than an unrelated
   manually entered height

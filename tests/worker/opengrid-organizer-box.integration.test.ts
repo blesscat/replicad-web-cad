@@ -84,6 +84,33 @@ function probeVolume(
   }
 }
 
+function horizontalFaceZValuesAt(
+  shape: Shape3D,
+  point: [number, number],
+): number[] {
+  const values: number[] = []
+  for (const face of shape.faces) {
+    const boundingBox = face.boundingBox
+    try {
+      const [minimum, maximum] = boundingBox.bounds
+      const isHorizontalPlane =
+        face.surface.surfaceType === 'PLANE' && maximum[2] - minimum[2] < 1e-5
+      const containsPoint =
+        minimum[0] <= point[0] &&
+        maximum[0] >= point[0] &&
+        minimum[1] <= point[1] &&
+        maximum[1] >= point[1]
+      if (isHorizontalPlane && containsPoint) {
+        values.push((minimum[2] + maximum[2]) / 2)
+      }
+    } finally {
+      boundingBox.delete()
+      face.delete()
+    }
+  }
+  return values
+}
+
 describe('OpenGrid organizer-box B-Rep', () => {
   it('cuts four B-oriented retaining sockets directly into one box solid', async () => {
     const [maleReference, holderReference] = await Promise.all([
@@ -123,6 +150,22 @@ describe('OpenGrid organizer-box B-Rep', () => {
       expect(poses.map((pose) => pose.rotationDegrees)).toEqual([
         0, 90, 180, 270,
       ])
+
+      const layout = openGridOrganizerBoxLayoutFor(input)
+      const cavityCenter = layout.cavityCenters[0]
+      if (!cavityCenter) {
+        throw new Error('EXPECTED_ORGANIZER_BOX_CAVITY')
+      }
+      const horizontalFaceZValues = horizontalFaceZValuesAt(shape, cavityCenter)
+      const cavityFloor = Math.max(
+        ...horizontalFaceZValues.filter(
+          (value) => value < layout.bodyHeight - 1e-5,
+        ),
+      )
+      const holderTop =
+        OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.depth
+      expect(cavityFloor - holderTop).toBeCloseTo(input.bottomThickness, 5)
+
       for (const pose of poses) {
         const placedVoid = placeOpenGridDetachableCornerSeatSocketShape(
           socketVoid,

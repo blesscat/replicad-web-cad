@@ -196,6 +196,20 @@ describe('OpenGrid organizer-box contract', () => {
     )
   })
 
+  it('measures detachable bottom thickness above the holder top', () => {
+    const value = parameters({
+      holeDepth: 30,
+      bottomThickness: 2,
+      bottomInterfaceMode: 'detachable-corner-seat',
+    })
+
+    const layout = openGridOrganizerBoxLayoutFor(value)
+    const cavityFloor = layout.bodyHeight - value.holeDepth
+    const holderTop = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.depth
+
+    expect(cavityFloor - holderTop).toBeCloseTo(value.bottomThickness, 8)
+  })
+
   it.each(['corner-seat', 'detachable-corner-seat', 'stackable'] as const)(
     'keeps the %s bottom interface below the cavity floor',
     (bottomInterfaceMode) => {

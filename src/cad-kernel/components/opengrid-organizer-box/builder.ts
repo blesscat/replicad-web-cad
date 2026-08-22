@@ -43,6 +43,7 @@ type RoundedRectangleSection = {
 }
 
 const CAVITY_BOOLEAN_BATCH_SIZE = 16
+const CAVITY_CUTTER_TOP_OVERLAP = 0.02
 
 export type OpenGridOrganizerBoxBuildContext =
   OpenGridStackableBoxBuildContext & {
@@ -226,8 +227,8 @@ function cavityCutterFor(
   center: [number, number],
   layout: ReturnType<typeof openGridOrganizerBoxLayoutFor>,
 ): Shape3D {
-  const bottomZ = layout.bodyHeight - parameters.holeDepth - 0.02
-  const height = parameters.holeDepth + 0.04
+  const bottomZ = layout.bodyHeight - parameters.holeDepth
+  const height = parameters.holeDepth + CAVITY_CUTTER_TOP_OVERLAP
   if (parameters.holeShape === 'circle') {
     return makeCylinder(parameters.holeDiameter / 2, height, [
       center[0],

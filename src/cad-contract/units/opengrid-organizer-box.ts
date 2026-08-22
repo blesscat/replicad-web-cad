@@ -134,6 +134,15 @@ export const OPENGRID_ORGANIZER_BOX_CONFIGURATION = {
   maxBottomThickness: 100,
 } as const
 
+function interfaceFloorDatumFor(
+  mode: OpenGridOrganizerBoxBottomInterfaceMode,
+): number {
+  if (mode === 'detachable-corner-seat') {
+    return OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.depth
+  }
+  return OPENGRID_ORGANIZER_BOX_CONFIGURATION.interfaceFloorDatum
+}
+
 export const OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS: OpenGridOrganizerBoxParameters =
   {
     holeCountX: OPENGRID_ORGANIZER_BOX_CONFIGURATION.defaultHoleCountX,
@@ -463,7 +472,7 @@ function layoutIntersectsBottomInterfaceFor(
     gridCountY,
   )
   const cavityMinZ =
-    OPENGRID_ORGANIZER_BOX_CONFIGURATION.interfaceFloorDatum +
+    interfaceFloorDatumFor(parameters.bottomInterfaceMode) +
     parameters.bottomThickness -
     INTERFACE_COLLISION_TOLERANCE
   const cavityMaxZ =
@@ -568,8 +577,9 @@ function openGridOrganizerBoxLayoutForUnchecked(
   )
   const gridCountX = gridCounts.x
   const gridCountY = gridCounts.y
-  const interfaceFloorDatum =
-    OPENGRID_ORGANIZER_BOX_CONFIGURATION.interfaceFloorDatum
+  const interfaceFloorDatum = interfaceFloorDatumFor(
+    parameters.bottomInterfaceMode,
+  )
   return {
     cavityEnvelope: envelope,
     cavityPitch: [pitchX, pitchY],
