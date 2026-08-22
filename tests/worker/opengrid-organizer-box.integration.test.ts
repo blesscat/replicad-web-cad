@@ -266,7 +266,8 @@ describe('OpenGrid organizer-box B-Rep', () => {
               vertex,
               pose.rotationDegrees +
                 OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator
-                  .lockRotationDegrees,
+                  .lockRotationDegrees +
+                180,
             ),
           ),
           [0, 0],

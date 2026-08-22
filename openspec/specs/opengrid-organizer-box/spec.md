@@ -301,11 +301,15 @@ openings. Each recess MUST be 0.15 mm deep, remain on the exposed box-bottom
 surface outside the nominal Ø7 mm socket envelope, and remain clear of the
 keyed passage, retaining tabs, storage cavities, and outer boundary.
 
-The four indicators MUST follow the existing bottom-view socket orientations:
-upper-left 0°, upper-right 90°, lower-right 180°, and lower-left 270°. Their
-orientation MUST be selected so that the matching male indicator aligns with
-the corresponding socket indicator after the male is turned clockwise 90° from
-insertion.
+The four socket poses MUST retain the existing bottom-view orientations:
+upper-left 0°, upper-right 90°, lower-right 180°, and lower-left 270°. For each
+pose, the indicator center MUST be offset from the socket center in the
+direction of the matching male triangle's apex after a clockwise 90° lock turn,
+while remaining outside the socket envelope. The female triangle MUST point
+back toward the socket so that the two triangles are point-to-point only in the
+locked pose. With the shared triangle's local apex pointing along +Y, the
+resulting female indicator rotations MUST be 270°, 0°, 90°, and 180° in the
+same corner order.
 
 #### Scenario: Locking corner-seat mode shows four indicators
 
@@ -318,15 +322,17 @@ insertion.
 - **AND** all four recesses MUST remain outside their socket openings and
   preserve the existing socket passage and retaining tabs
 
-#### Scenario: Corner indicators follow deterministic socket rotations
+#### Scenario: Corner indicators follow deterministic locked directions
 
 - **WHEN** the detachable socket layout is inspected from the box bottom
-- **THEN** the indicator orientations MUST correspond to socket rotations
-  0°, 90°, 180°, and 270° in upper-left, upper-right, lower-right, and
-  lower-left order
+- **THEN** the indicator rotations MUST be 270°, 0°, 90°, and 180° in
+  upper-left, upper-right, lower-right, and lower-left order
+- **AND** each indicator center MUST lie on the corresponding locked male
+  triangle's apex direction, outside the socket envelope
 - **AND** each socket MUST accept the same unmirrored male seat in its existing
   insertion orientation
-- **AND** turning that male clockwise 90° MUST align the two visible triangles
+- **AND** turning that male clockwise 90° MUST make the two visible triangles
+  point to one another
 
 #### Scenario: Indicators do not change Organizer Box interfaces
 

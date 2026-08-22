@@ -240,9 +240,11 @@ indicator depth MUST be shared by both mating parts and MUST remain within the
 requested 0.1–0.2 mm printable range.
 
 Viewed from the box underside, the indicator orientation MUST communicate the
-clockwise 90-degree locking motion: the two triangles MUST be aligned when the
-male seat has been turned clockwise 90 degrees from its insertion orientation,
-and that alignment MUST represent the locked state.
+clockwise 90-degree locking motion: after the male seat has been turned
+clockwise 90 degrees from its insertion orientation, the male triangle's apex
+MUST point toward the corresponding female indicator and the female triangle's
+apex MUST point back toward the male indicator. This point-to-point alignment
+MUST represent the locked state.
 
 #### Scenario: Shared indicator dimensions are published once
 
@@ -253,13 +255,16 @@ and that alignment MUST represent the locked state.
 - **AND** neither consumer MUST define a conflicting local indicator depth or
   profile
 
-#### Scenario: Clockwise locked pose aligns the indicators
+#### Scenario: Clockwise locked pose makes the indicators point to one another
 
 - **WHEN** a compatible male seat is placed in the canonical female socket
   insertion orientation and then turned clockwise 90 degrees around the shared
   Z axis as viewed from below
-- **THEN** the male and female triangles MUST have the same angular orientation
-- **AND** the aligned triangles MUST identify the locked state
+- **THEN** the male triangle MUST point toward the female triangle along their
+  shared centerline
+- **AND** the female triangle MUST point back toward the male triangle, with
+  opposite apex directions
+- **AND** the point-to-point triangles MUST identify the locked state
 - **AND** the insertion orientation MUST remain distinguishable from the locked
   orientation
 

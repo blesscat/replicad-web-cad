@@ -198,7 +198,7 @@ describe('OpenGrid organizer-box contract', () => {
     )
   })
 
-  it('places lock indicators one quarter-turn past each insertion pose', () => {
+  it('places lock indicators tip-to-tip with the locked male pose', () => {
     const value = parameters({
       holeCountX: 1,
       holeCountY: 1,
@@ -215,14 +215,26 @@ describe('OpenGrid organizer-box contract', () => {
       configuration.indicator.radialLength / 2
 
     expect(placements.map(({ rotationDegrees }) => rotationDegrees)).toEqual([
-      90, 180, 270, 0,
+      270, 0, 90, 180,
     ])
     expect(placements[0]?.center[0]).toBeCloseTo(
       (poses[0]?.center[0] ?? 0) - offset,
       8,
     )
-    expect(placements[1]?.center[0]).toBeCloseTo(
-      (poses[1]?.center[0] ?? 0) + offset,
+    expect(placements[0]?.center[1]).toBe(poses[0]?.center[1])
+    expect(placements[1]?.center[0]).toBe(poses[1]?.center[0])
+    expect(placements[1]?.center[1]).toBeCloseTo(
+      (poses[1]?.center[1] ?? 0) - offset,
+      8,
+    )
+    expect(placements[2]?.center[0]).toBeCloseTo(
+      (poses[2]?.center[0] ?? 0) + offset,
+      8,
+    )
+    expect(placements[2]?.center[1]).toBe(poses[2]?.center[1])
+    expect(placements[3]?.center[0]).toBe(poses[3]?.center[0])
+    expect(placements[3]?.center[1]).toBeCloseTo(
+      (poses[3]?.center[1] ?? 0) + offset,
       8,
     )
     expect(
@@ -233,8 +245,6 @@ describe('OpenGrid organizer-box contract', () => {
         configuration.indicator.socketBoundaryClearance,
       8,
     )
-    expect(placements[0]?.center[1]).toBe(poses[0]?.center[1])
-    expect(placements[1]?.center[1]).toBe(poses[1]?.center[1])
   })
 
   it('measures detachable bottom thickness above the holder top', () => {
