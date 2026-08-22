@@ -28,6 +28,16 @@ describe('CAD Worker error mapping', () => {
       'MODEL_ASSET_INVALID',
     ],
     [
+      'OPENGRID_DETACHABLE_CORNER_SEAT_REFERENCE_LOAD_FAILED',
+      'model.generate',
+      'MODEL_ASSET_INVALID',
+    ],
+    [
+      'OPENGRID_DETACHABLE_CORNER_SEAT_HOLDER_REFERENCE_INVALID',
+      'model.generate',
+      'MODEL_ASSET_INVALID',
+    ],
+    [
       'OPENGRID_DIVIDER_QUALITY_INVALID:fillet:top-edge-rounding-missing',
       'model.generate',
       'OPENGRID_DIVIDER_QUALITY_INVALID',
@@ -68,6 +78,12 @@ describe('CAD Worker error mapping', () => {
     expect(cadErrorStageFor('export.step')).toBe('exporting')
     expect(cadErrorStageFor('model.generate')).toBe('building')
     expect(cadErrorStageFor('model.generate', 'MESH_INVALID')).toBe('meshing')
+    expect(
+      cadErrorStageFor(
+        'model.generate',
+        'OPENGRID_DETACHABLE_CORNER_SEAT_REFERENCE_LOAD_FAILED',
+      ),
+    ).toBe('initializing')
     expect(
       cadErrorStageFor(
         'model.generate',

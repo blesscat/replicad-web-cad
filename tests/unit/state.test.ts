@@ -3,6 +3,7 @@ import { normalizeError } from '../../src/cad-contract/errors'
 import {
   OPENGRID_CONFIGURATION,
   OPENGRID_DIVIDER_CONFIGURATION,
+  OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   type OpenGridParameters,
@@ -128,6 +129,13 @@ describe('CAD state machine', () => {
 
     expect(state.modelId).toBe('opengrid-stackable-box')
     expect(state.input).toEqual(OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS)
+  })
+
+  it('initializes the independent OpenGrid organizer-box defaults', () => {
+    const state = initialCadState('opengrid-organizer-box')
+
+    expect(state.modelId).toBe('opengrid-organizer-box')
+    expect(state.input).toEqual(OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS)
   })
 
   it('initializes the independent OpenGrid divider defaults', () => {

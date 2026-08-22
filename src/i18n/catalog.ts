@@ -127,6 +127,13 @@ export const zhHantMessages = {
   'models.model.opengrid-divider.description':
     '可調整方向臂、牆高與牆厚的 OpenGrid 分隔牆。',
   'models.model.opengrid-divider.alt': 'OpenGrid divider 預覽',
+  'models.model.opengrid-organizer-box.name':
+    'OpenGrid Organizer Box (收納方盒)',
+  'models.model.opengrid-organizer-box.selection': 'Organizer Box (收納方盒)',
+  'models.model.opengrid-organizer-box.description':
+    '外觀類似方盒、頂部可挖圓形或規則多邊形盲孔的 OpenGrid Organizer Box (收納方盒)；可放電池與工具頭。',
+  'models.model.opengrid-organizer-box.alt':
+    'OpenGrid Organizer Box (收納方盒) 預覽',
   'models.model.opengrid-stackable-box.name': 'Grid Box (方盒)',
   'models.model.opengrid-stackable-box.selection': 'Grid Box (方盒)',
   'models.model.opengrid-stackable-box.description':
@@ -178,13 +185,15 @@ export const zhHantMessages = {
     '選擇內建角座後，不需要另加 Locating Post。',
   'docs.deskQuickStart.checklistHeading': '最小列印清單',
   'docs.deskQuickStart.checklistIntro':
-    '先準備下列項目；定位方式請在獨立 Locating Post 與內建角座之間擇一，容器也請在 Grid Box 與 Round Box 之間擇一。',
+    '先準備下列項目；定位方式請在獨立 Locating Post 與內建角座之間擇一，容器可選 Grid Box、Organizer Box (收納方盒) 或 Round Box。',
   'docs.deskQuickStart.checklist.board': 'Board：Desk System 的基礎底板。',
   'docs.deskQuickStart.checklist.snap': 'Snap：每個要放盒子的格位各需要一個。',
   'docs.deskQuickStart.checklist.locating':
     '定位方式：獨立 Locating Post 或盒子內建角座，二選一。',
   'docs.deskQuickStart.checklist.gridBox':
     'Grid Box：第一個建議使用的容器範例。',
+  'docs.deskQuickStart.checklist.organizerBox':
+    'Organizer Box (收納方盒)：用可調整的盲孔收納電池、工具頭等物件。',
   'docs.deskQuickStart.checklist.roundBox':
     'Round Box：使用相同組裝流程的圓盒選項。',
   'docs.deskQuickStart.exampleHeading': '第一個範例：Grid Box',
@@ -298,6 +307,12 @@ export const zhHantMessages = {
   'parameter.openingDepth': '下切深度',
   'parameter.openingBottomLength': '切口底部長度',
   'parameter.sideWallAngle': '側壁角度',
+  'parameter.organizerHoleCount': '孔數',
+  'parameter.organizerHoleSpacing': '孔外圍間距',
+  'parameter.organizerHoleDiameter': '孔直徑（多邊形為內切圓直徑）',
+  'parameter.organizerHoleDepth': '孔深度',
+  'parameter.organizerBottomThickness': '底部加厚',
+  'parameter.organizerHoleShape': '孔形狀',
   'cad.action.step': '下載 STEP',
   'cad.action.stl': '下載 STL',
   'cad.action.retry': '重試',
@@ -430,10 +445,39 @@ export const zhHantMessages = {
   'panel.honeycomb': '省料模式（六角鏤空）',
   'panel.honeycombWarning':
     '省料模式會明顯降低模型渲染速度。建議先使用一般模式確認形狀，下載前再啟用省料模式。',
+  'panel.organizerBox.description':
+    '頂部為實體盲孔；孔距以孔的外圍到外圍計算，所有孔固定同一方向。',
+  'panel.organizerBox.spacingMode': 'X/Y 孔距設定',
+  'panel.organizerBox.spacingLinked': '連動',
+  'panel.organizerBox.spacingLinkedDescription': 'X 與 Y 使用相同孔距。',
+  'panel.organizerBox.spacingIndependent': '分開',
+  'panel.organizerBox.spacingIndependentDescription': 'X 與 Y 可使用不同孔距。',
+  'panel.organizerBox.layoutSummary': '計算格數與外框',
+  'panel.organizerBox.layoutValue':
+    'X {x} 格 × Y {y} 格；外框 {width} × {depth} mm',
+  'panel.organizerBox.layoutInvalid': '目前輸入尚無法計算',
+  'panel.organizerBox.shape.circle': '圓形',
+  'panel.organizerBox.shape.triangle': '三角形',
+  'panel.organizerBox.shape.square': '四角形',
+  'panel.organizerBox.shape.pentagon': '五角形',
+  'panel.organizerBox.shape.hexagon': '六角形',
+  'panel.organizerBox.interfaceMode': '底部介面（三選一）',
+  'panel.organizerBox.interface.cornerSeat': '四角固定座',
+  'panel.organizerBox.interface.cornerSeatDescription':
+    '直接融合方盒內建的四角實體腳座，不需要從底部插入腳座。',
+  'panel.organizerBox.interface.detachableCornerSeat': '鎖定角座',
+  'panel.organizerBox.interface.detachableCornerSeatDescription':
+    '在盒底直接形成四個有擋片的插槽；另列印鎖定角座並由底部壓入。',
+  'panel.organizerBox.interface.stackable': '堆疊結構',
+  'panel.organizerBox.interface.stackableDescription':
+    '使用 OpenGrid 方盒的堆疊底部結構，不建立四角內建實體腳座。',
   'panel.pillar.version': '支柱版本',
   'panel.pillar.stacking': '堆疊版',
   'panel.pillar.thinShell': '薄殼版',
   'panel.pillar.positioning': '物件定位用',
+  'panel.pillar.detachableCornerSeat': '可拆式角座',
+  'panel.pillar.detachableCornerSeatDescription':
+    '固定 4.5 mm 角座：保留 0.2 mm 導入倒角與 0.15 mm 耐磨頂面。',
   'panel.pillar.fixedLength': '固定總長 {length} mm',
   'panel.snap.variant': 'Snap 型號',
   'panel.snap.variantAria': 'OpenGrid Snap 型號',
@@ -685,6 +729,11 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'models.model.opengrid-divider.description':
     'An OpenGrid divider with adjustable arms, wall height, and wall thickness.',
   'models.model.opengrid-divider.alt': 'OpenGrid divider preview',
+  'models.model.opengrid-organizer-box.name': 'OpenGrid Organizer Box',
+  'models.model.opengrid-organizer-box.selection': 'Organizer Box',
+  'models.model.opengrid-organizer-box.description':
+    'A solid-top OpenGrid organizer box with blind circular or regular polygon cavities for batteries and tool bits.',
+  'models.model.opengrid-organizer-box.alt': 'OpenGrid organizer box preview',
   'models.model.opengrid-stackable-box.name': 'OpenGrid Grid Box',
   'models.model.opengrid-stackable-box.selection': 'Grid Box',
   'models.model.opengrid-stackable-box.description':
@@ -710,7 +759,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'docs.eyebrow': 'Documentation',
   'docs.deskQuickStart.title': 'Desk System Quick Start',
   'docs.deskQuickStart.intro':
-    'This is the primary Desk System workflow: place the Board, prepare a Snap at each box position, choose one locating method, and then add a Grid Box or Round Box.',
+    'This is the primary Desk System workflow: place the Board, prepare a Snap at each box position, choose one locating method, and then add a Grid Box, Organizer Box, or Round Box.',
   'docs.deskQuickStart.workflowHeading': 'Assembly workflow',
   'docs.deskQuickStart.step.board.title': '1. Print and place the Board',
   'docs.deskQuickStart.step.board.body':
@@ -726,7 +775,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'Each box position uses one locating method: a separate Locating Post or the box’s built-in `內建角座` option.',
   'docs.deskQuickStart.step.container.title': '4. Add the container',
   'docs.deskQuickStart.step.container.body':
-    'Start with Grid Box as the first example; Round Box follows the same Board, Snap, and locating workflow.',
+    'Start with Grid Box as the first example; Organizer Box and Round Box follow the same Board, Snap, and locating workflow.',
   'docs.deskQuickStart.locatingHeading': 'Choose one locating method',
   'docs.deskQuickStart.locating.separate.title': 'Locating Post (separate)',
   'docs.deskQuickStart.locating.separate.body':
@@ -738,7 +787,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'With the built-in seat selected, do not add a separate Locating Post.',
   'docs.deskQuickStart.checklistHeading': 'Minimum print checklist',
   'docs.deskQuickStart.checklistIntro':
-    'Prepare the items below; choose either a separate Locating Post or the built-in seat, and choose one container: Grid Box or Round Box.',
+    'Prepare the items below; choose either a separate Locating Post or the built-in seat, then choose a container: Grid Box, Organizer Box, or Round Box.',
   'docs.deskQuickStart.checklist.board': 'Board: the Desk System base board.',
   'docs.deskQuickStart.checklist.snap':
     'Snap: one for each box position you plan to use.',
@@ -746,6 +795,8 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'Locating method: separate Locating Post or built-in seat, choose one.',
   'docs.deskQuickStart.checklist.gridBox':
     'Grid Box: the recommended first container example.',
+  'docs.deskQuickStart.checklist.organizerBox':
+    'Organizer Box: store batteries or tool bits in configurable blind cavities.',
   'docs.deskQuickStart.checklist.roundBox':
     'Round Box: a secondary container using the same workflow.',
   'docs.deskQuickStart.exampleHeading': 'First example: Grid Box',
@@ -756,7 +807,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'docs.deskQuickStart.visual.flow.caption':
     'Desk System four-step assembly flow.',
   'docs.deskQuickStart.visual.flow.alt':
-    'Flow diagram: Board, Snap, choose one locating method, then Grid Box or Round Box.',
+    'Flow diagram: Board, Snap, choose one locating method, then Grid Box, Organizer Box, or Round Box.',
   'docs.deskQuickStart.visual.placement.caption':
     'Board and Snap placement relationship.',
   'docs.deskQuickStart.visual.placement.alt':
@@ -862,6 +913,12 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'parameter.openingDepth': 'Cut depth',
   'parameter.openingBottomLength': 'Opening bottom length',
   'parameter.sideWallAngle': 'Side-wall angle',
+  'parameter.organizerHoleCount': 'Hole count',
+  'parameter.organizerHoleSpacing': 'Outer-to-outer hole gap',
+  'parameter.organizerHoleDiameter': 'Hole diameter (inscribed for polygons)',
+  'parameter.organizerHoleDepth': 'Hole depth',
+  'parameter.organizerBottomThickness': 'Bottom thickness',
+  'parameter.organizerHoleShape': 'Hole shape',
   'cad.action.step': 'Download STEP',
   'cad.action.stl': 'Download STL',
   'cad.action.retry': 'Retry',
@@ -1007,10 +1064,42 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'panel.honeycomb': 'Material-saving mode (hexagonal voids)',
   'panel.honeycombWarning':
     'Material-saving mode can significantly slow model rendering. Check the shape in normal mode first, then enable material-saving mode before downloading.',
+  'panel.organizerBox.description':
+    'The top is a solid plate with blind cavities. Spacing is measured outer-envelope to outer-envelope, with one fixed orientation for every cavity.',
+  'panel.organizerBox.spacingMode': 'X/Y hole spacing',
+  'panel.organizerBox.spacingLinked': 'Linked',
+  'panel.organizerBox.spacingLinkedDescription':
+    'Use the same spacing for X and Y.',
+  'panel.organizerBox.spacingIndependent': 'Independent',
+  'panel.organizerBox.spacingIndependentDescription':
+    'Set X and Y spacing separately.',
+  'panel.organizerBox.layoutSummary': 'Calculated grid occupancy and footprint',
+  'panel.organizerBox.layoutValue':
+    'X {x} cells × Y {y} cells; footprint {width} × {depth} mm',
+  'panel.organizerBox.layoutInvalid':
+    'The current input cannot be calculated yet',
+  'panel.organizerBox.shape.circle': 'Circle',
+  'panel.organizerBox.shape.triangle': 'Triangle',
+  'panel.organizerBox.shape.square': 'Square',
+  'panel.organizerBox.shape.pentagon': 'Pentagon',
+  'panel.organizerBox.shape.hexagon': 'Hexagon',
+  'panel.organizerBox.interfaceMode': 'Bottom interface (choose one of three)',
+  'panel.organizerBox.interface.cornerSeat': 'Four-corner built-in feet',
+  'panel.organizerBox.interface.cornerSeatDescription':
+    'Use the Grid Box-style four-corner built-in feet without a full stacking profile.',
+  'panel.organizerBox.interface.detachableCornerSeat': 'Locking corner seats',
+  'panel.organizerBox.interface.detachableCornerSeatDescription':
+    'Form four retaining-tab sockets directly in the box bottom, then press separately printed locking corner seats in from below.',
+  'panel.organizerBox.interface.stackable': 'Stacking structure',
+  'panel.organizerBox.interface.stackableDescription':
+    'Use the OpenGrid box stacking bottom structure without four-corner built-in feet.',
   'panel.pillar.version': 'Post version',
   'panel.pillar.stacking': 'Stacking',
   'panel.pillar.thinShell': 'Thin shell',
   'panel.pillar.positioning': 'Object positioning',
+  'panel.pillar.detachableCornerSeat': 'Detachable corner seat',
+  'panel.pillar.detachableCornerSeatDescription':
+    'Fixed 4.5 mm seat with a 0.2 mm insertion lead-in and 0.15 mm wear surface.',
   'panel.pillar.fixedLength': 'Fixed total length {length} mm',
   'panel.snap.variant': 'Snap variant',
   'panel.snap.variantAria': 'OpenGrid Snap variant',

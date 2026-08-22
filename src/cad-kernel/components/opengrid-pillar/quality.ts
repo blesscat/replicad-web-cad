@@ -5,6 +5,7 @@ import {
   pillarBodyDiameterForParameters,
   pillarFlangeDiameterForParameters,
   pillarLengthForParameters,
+  OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   PILLAR_CONFIGURATION,
   type ModelBounds,
   type PillarParameters,
@@ -234,11 +235,84 @@ function inspectPositioningEndProfiles(
   )
 }
 
+function hasFaceSpanningZ(
+  shape: Shape3D,
+  expectedMinZ: number,
+  expectedMaxZ: number,
+): boolean {
+  let found = false
+  for (const face of shape.faces) {
+    const boundingBox = face.boundingBox
+    try {
+      const [min, max] = boundingBox.bounds as [
+        [number, number, number],
+        [number, number, number],
+      ]
+      const hasPlanarExtent =
+        max[0] - min[0] > QUALITY_TOLERANCE ||
+        max[1] - min[1] > QUALITY_TOLERANCE
+      if (
+        hasPlanarExtent &&
+        Math.abs(min[2] - expectedMinZ) <= QUALITY_TOLERANCE &&
+        Math.abs(max[2] - expectedMaxZ) <= QUALITY_TOLERANCE
+      ) {
+        found = true
+      }
+    } finally {
+      boundingBox.delete()
+      face.delete()
+    }
+  }
+  return found
+}
+
+function inspectDetachableCornerSeatProfiles(
+  shape: Shape3D,
+  failures: string[],
+): void {
+  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male
+  expectMaterial(shape, failures, 'lead-in-bottom-inside', 2.2, 0.05, true)
+  expectMaterial(shape, failures, 'lead-in-bottom-outside', 2.45, 0.05, false)
+  expectMaterial(
+    shape,
+    failures,
+    'lead-in-upper-inside',
+    2.4,
+    configuration.leadInHeight + 0.05,
+    true,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'body-upper-inside',
+    2.4,
+    configuration.bodyHeight - 0.05,
+    true,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'body-upper-outside',
+    2.6,
+    configuration.bodyHeight - 0.05,
+    false,
+  )
+  if (
+    !hasFaceSpanningZ(shape, configuration.taperTopZ, configuration.totalHeight)
+  ) {
+    failures.push('profile:wear-cap')
+  }
+}
+
 function inspectEndProfiles(
   shape: Shape3D,
   parameters: PillarParameters,
   failures: string[],
 ): void {
+  if (parameters.mode === 'detachable-corner-seat') {
+    inspectDetachableCornerSeatProfiles(shape, failures)
+    return
+  }
   if (parameters.mode === 'positioning') {
     inspectPositioningEndProfiles(shape, parameters, failures)
     return
@@ -272,6 +346,15 @@ export function inspectPillarShapeQuality(
     volume = measureVolume(shape)
     if (!Number.isFinite(volume) || volume <= 0) {
       failures.push('volume:non-positive-or-non-finite')
+    }
+    if (
+      parameters.mode === 'detachable-corner-seat' &&
+      Math.abs(
+        volume -
+          OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male.nominalVolume,
+      ) > OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.volumeTolerance
+    ) {
+      failures.push('volume:detachable-reference-mismatch')
     }
   } catch (error) {
     failures.push(

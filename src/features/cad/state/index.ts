@@ -5,6 +5,7 @@ import {
   OPENGRID_DIVIDER_CONFIGURATION,
   OPENGRID_CONFIGURATION,
   OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
+  OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   OPENGRID_SNAP_CONFIGURATION,
@@ -71,6 +72,9 @@ function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
   }
   if (modelId === 'opengrid-stackable-box') {
     return { ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS }
+  }
+  if (modelId === 'opengrid-organizer-box') {
+    return { ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS }
   }
   if (modelId === 'opengrid-stackable-cylinder') {
     return { ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS }

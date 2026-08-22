@@ -26,6 +26,11 @@
       value: 'positioning',
       labelKey: 'panel.pillar.positioning',
     },
+    {
+      value: 'detachable-corner-seat',
+      labelKey: 'panel.pillar.detachableCornerSeat',
+      descriptionKey: 'panel.pillar.detachableCornerSeatDescription',
+    },
   ] as const
 
   const POSITIONING_LENGTH_FIELD = opengridPillarDefinition.parameterSchema[0]!
@@ -66,11 +71,15 @@
         />
         <span class="grid gap-1">
           <span class="font-[650]">{translate(locale, option.labelKey)}</span>
-          {#if option.value !== 'positioning'}
+          {#if 'length' in option}
             <span class="text-sm text-muted">
               {translate(locale, 'panel.pillar.fixedLength', {
                 length: option.length,
               })}
+            </span>
+          {:else if 'descriptionKey' in option}
+            <span class="text-sm text-muted">
+              {translate(locale, option.descriptionKey)}
             </span>
           {/if}
         </span>
@@ -102,26 +111,28 @@
     </ParameterField>
   {/if}
 
-  {#each OFFSET_FIELDS as field (field.key)}
-    {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
-    <ParameterField
-      {locale}
-      label={displayParameterLabel(field, locale)}
-      unit={unitLabelFor(locale, field.unit)}
-      changed={value !== String(field.defaultValue)}
-      error={fieldErrors[field.key]}
-      errorId={`pillar-${field.key}-error`}
-      onRestore={() => onInputChange(field.key, String(field.defaultValue))}
-    >
-      <ParameterControl
+  {#if rawParameters.mode !== 'detachable-corner-seat'}
+    {#each OFFSET_FIELDS as field (field.key)}
+      {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
+      <ParameterField
         {locale}
-        {field}
-        {value}
+        label={displayParameterLabel(field, locale)}
+        unit={unitLabelFor(locale, field.unit)}
+        changed={value !== String(field.defaultValue)}
         error={fieldErrors[field.key]}
-        onChange={(nextValue) => onInputChange(field.key, nextValue)}
-      />
-    </ParameterField>
-  {/each}
+        errorId={`pillar-${field.key}-error`}
+        onRestore={() => onInputChange(field.key, String(field.defaultValue))}
+      >
+        <ParameterControl
+          {locale}
+          {field}
+          {value}
+          error={fieldErrors[field.key]}
+          onChange={(nextValue) => onInputChange(field.key, nextValue)}
+        />
+      </ParameterField>
+    {/each}
+  {/if}
 
   {#if fieldErrors.mode}
     <span class="text-sm text-error" id="pillar-mode-error" role="alert">

@@ -15,6 +15,7 @@ import {
   parseDimensionInput,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
+  OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
   type OpenGridOpenShelfParameters,
   PILLAR_CONFIGURATION,
   validateModelParameters,
@@ -24,6 +25,7 @@ import {
   type ModelParameterKey,
   type ModelParameterValues,
   type OpenGridSnapParameters,
+  type OpenGridOrganizerBoxParameters,
   type ScalarModelParameterKey,
   type ValidationIssue,
 } from '../../../cad-contract/units'
@@ -86,6 +88,18 @@ export const OPENGRID_OPEN_SHELF_PARAMETER_KEYS: ModelParameterKey[] = [
   'angle',
   'honeycombMode',
 ]
+export const OPENGRID_ORGANIZER_BOX_PARAMETER_KEYS: ModelParameterKey[] = [
+  'holeCountX',
+  'holeCountY',
+  'holeSpacingMode',
+  'holeSpacingX',
+  'holeSpacingY',
+  'holeShape',
+  'holeDiameter',
+  'holeDepth',
+  'bottomThickness',
+  'bottomInterfaceMode',
+]
 
 function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'box') return DIMENSION_KEYS
@@ -94,6 +108,9 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'hexagonal-column') return HEXAGONAL_COLUMN_PARAMETER_KEYS
   if (modelId === 'opengrid-stackable-box') {
     return OPENGRID_STACKABLE_BOX_PARAMETER_KEYS
+  }
+  if (modelId === 'opengrid-organizer-box') {
+    return OPENGRID_ORGANIZER_BOX_PARAMETER_KEYS
   }
   if (modelId === 'opengrid-stackable-cylinder') {
     return OPENGRID_STACKABLE_CYLINDER_PARAMETER_KEYS
@@ -237,6 +254,20 @@ function parseSeatModeRawParameter(
   }
 }
 
+function pillarModelParameterField(
+  field: string | undefined,
+): ModelParameterKey | undefined {
+  if (field === 'mode' || field === 'length' || field === 'offset') return field
+  return undefined
+}
+
+function modelParameterFieldFromDiagnostic(
+  field: string | undefined,
+): ModelParameterKey | undefined {
+  if (!field || field === 'parameters') return undefined
+  return field as ModelParameterKey
+}
+
 function parsePillarRawParameters(raw: RawParameters):
   | { valid: true; value: ModelParameterValues }
   | {
@@ -246,12 +277,29 @@ function parsePillarRawParameters(raw: RawParameters):
       params?: DiagnosticParams
     } {
   const mode = raw.mode
-  if (mode !== 'standard' && mode !== 'thin-shell' && mode !== 'positioning') {
+  if (
+    mode !== 'standard' &&
+    mode !== 'thin-shell' &&
+    mode !== 'positioning' &&
+    mode !== 'detachable-corner-seat'
+  ) {
     return {
       valid: false,
       messageId: 'validation.invalid',
       field: 'mode',
     }
+  }
+
+  if (mode === 'detachable-corner-seat') {
+    const validation = validatePillarParameters({ mode })
+    if (!validation.valid) {
+      return {
+        valid: false,
+        messageId: validation.issues[0]?.messageId ?? 'validation.invalid',
+        field: 'mode',
+      }
+    }
+    return { valid: true, value: validation.value }
   }
 
   const rawOffset = (field: 'offset'): number | null => {
@@ -278,7 +326,7 @@ function parsePillarRawParameters(raw: RawParameters):
       return {
         valid: false,
         messageId: issue?.messageId ?? 'validation.invalid',
-        field: issue?.field === 'parameters' ? undefined : issue?.field,
+        field: pillarModelParameterField(issue?.field),
       }
     }
     return { valid: true, value: validation.value }
@@ -305,10 +353,123 @@ function parsePillarRawParameters(raw: RawParameters):
     return {
       valid: false,
       messageId: issue?.messageId ?? 'validation.invalid',
-      field: issue?.field === 'parameters' ? undefined : issue?.field,
+      field: pillarModelParameterField(issue?.field),
     }
   }
   return { valid: true, value: validation.value }
+}
+
+function parseOpenGridOrganizerBoxRawParameters(raw: RawParameters):
+  | { valid: true; value: ModelParameterValues }
+  | {
+      valid: false
+      messageId: string
+      field?: ModelParameterKey
+      params?: DiagnosticParams
+    } {
+  const defaults = OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS
+
+  const countFor = (field: 'holeCountX' | 'holeCountY'): number | null =>
+    parseDimensionInput(raw[field] ?? String(defaults[field]))
+  const decimalFor = (
+    field:
+      | 'holeSpacingX'
+      | 'holeSpacingY'
+      | 'holeDiameter'
+      | 'holeDepth'
+      | 'bottomThickness',
+    fallback: number,
+  ): number | null => parseHalfStepInput(raw[field] ?? String(fallback))
+  const invalid = (field: ModelParameterKey) => ({
+    valid: false as const,
+    messageId: 'validation.invalid',
+    field,
+  })
+
+  const requiredFields = [
+    'holeCountX',
+    'holeCountY',
+    'holeSpacingMode',
+    'holeSpacingX',
+    'holeSpacingY',
+    'holeShape',
+    'holeDiameter',
+    'holeDepth',
+    'bottomThickness',
+    'bottomInterfaceMode',
+  ] as const
+  const missingField = requiredFields.find((field) => raw[field] === undefined)
+  if (missingField) return invalid(missingField)
+
+  const holeCountX = countFor('holeCountX')
+  if (holeCountX === null) return invalid('holeCountX')
+  const holeCountY = countFor('holeCountY')
+  if (holeCountY === null) return invalid('holeCountY')
+
+  const holeSpacingMode = raw.holeSpacingMode ?? defaults.holeSpacingMode
+  if (holeSpacingMode !== 'linked' && holeSpacingMode !== 'independent') {
+    return invalid('holeSpacingMode')
+  }
+  const holeSpacingX = decimalFor('holeSpacingX', defaults.holeSpacingX)
+  if (holeSpacingX === null) return invalid('holeSpacingX')
+  const holeSpacingY = decimalFor(
+    'holeSpacingY',
+    holeSpacingMode === 'linked' ? holeSpacingX : defaults.holeSpacingY,
+  )
+  if (holeSpacingY === null) return invalid('holeSpacingY')
+
+  const holeShape = raw.holeShape ?? defaults.holeShape
+  if (
+    holeShape !== 'circle' &&
+    holeShape !== 'triangle' &&
+    holeShape !== 'square' &&
+    holeShape !== 'pentagon' &&
+    holeShape !== 'hexagon'
+  ) {
+    return invalid('holeShape')
+  }
+  const holeDiameter = decimalFor('holeDiameter', defaults.holeDiameter)
+  if (holeDiameter === null) return invalid('holeDiameter')
+  const holeDepth = decimalFor('holeDepth', defaults.holeDepth)
+  if (holeDepth === null) return invalid('holeDepth')
+  const bottomThickness = decimalFor(
+    'bottomThickness',
+    defaults.bottomThickness,
+  )
+  if (bottomThickness === null) return invalid('bottomThickness')
+
+  const bottomInterfaceMode =
+    raw.bottomInterfaceMode ?? defaults.bottomInterfaceMode
+  if (
+    bottomInterfaceMode !== 'corner-seat' &&
+    bottomInterfaceMode !== 'detachable-corner-seat' &&
+    bottomInterfaceMode !== 'stackable'
+  ) {
+    return invalid('bottomInterfaceMode')
+  }
+
+  const validation = validateModelParameters('opengrid-organizer-box', {
+    holeCountX,
+    holeCountY,
+    holeSpacingMode,
+    holeSpacingX,
+    holeSpacingY,
+    holeShape,
+    holeDiameter,
+    holeDepth,
+    bottomThickness,
+    bottomInterfaceMode,
+  })
+  if (!validation.valid) {
+    const issue = validation.issues[0]
+    return {
+      valid: false,
+      messageId: issue?.messageId ?? 'validation.invalid',
+      field: modelParameterFieldFromDiagnostic(issue?.field),
+      ...(issue?.params ? { params: issue.params } : {}),
+    }
+  }
+  return { valid: true, value: validation.value.parameters }
 }
 
 export function rawFromParameters(
@@ -343,6 +504,22 @@ export function rawFromParameters(
     return raw
   }
 
+  if ('holeCountX' in parameters) {
+    const organizerParameters = parameters as OpenGridOrganizerBoxParameters
+    return {
+      holeCountX: String(organizerParameters.holeCountX),
+      holeCountY: String(organizerParameters.holeCountY),
+      holeSpacingMode: organizerParameters.holeSpacingMode,
+      holeSpacingX: String(organizerParameters.holeSpacingX),
+      holeSpacingY: String(organizerParameters.holeSpacingY),
+      holeShape: organizerParameters.holeShape,
+      holeDiameter: String(organizerParameters.holeDiameter),
+      holeDepth: String(organizerParameters.holeDepth),
+      bottomThickness: String(organizerParameters.bottomThickness),
+      bottomInterfaceMode: organizerParameters.bottomInterfaceMode,
+    }
+  }
+
   if ('width' in parameters) {
     return {
       width: String(parameters.width),
@@ -352,6 +529,9 @@ export function rawFromParameters(
   }
 
   if ('mode' in parameters) {
+    if (parameters.mode === 'detachable-corner-seat') {
+      return { mode: parameters.mode }
+    }
     if (parameters.mode === 'positioning' && 'length' in parameters) {
       return {
         mode: parameters.mode,
@@ -618,11 +798,15 @@ export function parseRawParameters(
       return {
         valid: false,
         messageId: issue?.messageId ?? 'validation.invalid',
-        field: field === 'parameters' ? undefined : field,
+        field: modelParameterFieldFromDiagnostic(field),
         ...(issue?.params ? { params: issue.params } : {}),
       }
     }
     return { valid: true, value: validation.value.parameters }
+  }
+
+  if (modelId === 'opengrid-organizer-box') {
+    return parseOpenGridOrganizerBoxRawParameters(raw)
   }
 
   const parsed: Partial<
@@ -688,7 +872,7 @@ export function parseRawParameters(
     return {
       valid: false,
       messageId: issue?.messageId ?? 'validation.invalid',
-      field: field === 'parameters' ? undefined : field,
+      field: modelParameterFieldFromDiagnostic(field),
       ...(issue?.params ? { params: issue.params } : {}),
     }
   }

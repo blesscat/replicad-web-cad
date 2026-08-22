@@ -11,6 +11,7 @@
   import ModularGridBaseComponentPanel from './modular-grid-base/ModularGridBaseComponentPanel.svelte'
   import OpenGridComponentPanel from './opengrid/OpenGridComponentPanel.svelte'
   import OpenGridDividerComponentPanel from './opengrid-divider/OpenGridDividerComponentPanel.svelte'
+  import OpenGridOrganizerBoxComponentPanel from './opengrid-organizer-box/OpenGridOrganizerBoxComponentPanel.svelte'
   import OpenGridStackableBoxComponentPanel from './opengrid-stackable-box/OpenGridStackableBoxComponentPanel.svelte'
   import OpenGridStackableCylinderComponentPanel from './opengrid-stackable-cylinder/OpenGridStackableCylinderComponentPanel.svelte'
   import OpenGridSnapComponentPanel from './opengrid-snap/OpenGridSnapComponentPanel.svelte'
@@ -81,6 +82,13 @@
   />
 {:else if modelId === 'opengrid-divider'}
   <OpenGridDividerComponentPanel
+    {locale}
+    {rawParameters}
+    {fieldErrors}
+    {onInputChange}
+  />
+{:else if modelId === 'opengrid-organizer-box'}
+  <OpenGridOrganizerBoxComponentPanel
     {locale}
     {rawParameters}
     {fieldErrors}

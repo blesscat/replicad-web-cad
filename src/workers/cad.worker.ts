@@ -20,12 +20,17 @@ import {
   type OpenGridSnapFixedFootprint,
 } from '../cad-kernel/components/opengrid-snap/builder'
 import { loadOpenGridSnapRemoverAsset } from '../cad-kernel/components/opengrid-snap-remover/builder'
+import {
+  loadOpenGridDetachableCornerSeatHolderReference,
+  loadOpenGridDetachableCornerSeatReference,
+} from '../cad-kernel/components/opengrid-locating-assembly/reference'
 import { buildModelBRep, type KernelBuildContext } from '../cad-kernel/model'
 import { assertOpenGridShapeQuality } from '../cad-kernel/components/opengrid/quality'
 import { assertOpenGridSnapShapeQuality } from '../cad-kernel/components/opengrid-snap/quality'
 import { assertOpenGridDividerShapeQuality } from '../cad-kernel/components/opengrid-divider/quality'
 import { assertPillarShapeQuality } from '../cad-kernel/components/opengrid-pillar/quality'
 import { assertOpenGridOpenShelfShapeQuality } from '../cad-kernel/components/opengrid-open-shelf/quality'
+import { assertOpenGridOrganizerBoxGeometry } from '../cad-kernel/components/opengrid-organizer-box/quality'
 import { meshBRep, serializeMesh, type MeshData } from '../cad-kernel/mesh'
 import {
   createBooleanOperationReporter,
@@ -58,6 +63,7 @@ import {
   isHswCellParameters,
   isOpenGridDividerModelParameters,
   isOpenGridOpenShelfParameters,
+  isOpenGridOrganizerBoxParameters,
   isOpenGridParameters,
   normalizeOpenGridDividerParameters,
   normalizeOpenGridParameters,
@@ -150,6 +156,12 @@ export class CadWorkerRuntime {
   >()
   private openGridSnapRemoverAsset: Promise<import('replicad').Shape3D> | null =
     null
+  private openGridDetachableCornerSeatReference: Promise<
+    import('replicad').Shape3D
+  > | null = null
+  private openGridDetachableCornerSeatHolderReference: Promise<
+    import('replicad').Shape3D
+  > | null = null
   private readonly lifetime: RevisionLifetime
   private readonly candidateTimers = new Map<
     string,
@@ -240,6 +252,8 @@ export class CadWorkerRuntime {
           this.disposeOpenGridSnapReferences()
           this.disposeOpenGridSnapFixedFootprints()
           this.disposeOpenGridSnapRemoverAsset()
+          this.disposeOpenGridDetachableCornerSeatReference()
+          this.disposeOpenGridDetachableCornerSeatHolderReference()
           this.initialized = false
           this.initializing = null
           this.invalidatedGeneration = 0
@@ -350,6 +364,10 @@ export class CadWorkerRuntime {
         getOpenGridSnapFixedFootprint: (footprint) =>
           this.getOpenGridSnapFixedFootprint(footprint),
         getOpenGridSnapRemoverAsset: () => this.getOpenGridSnapRemoverAsset(),
+        getOpenGridDetachableCornerSeatReference: () =>
+          this.getOpenGridDetachableCornerSeatReference(),
+        getOpenGridDetachableCornerSeatHolderReference: () =>
+          this.getOpenGridDetachableCornerSeatHolderReference(),
         yieldToEventLoop: yieldToWorkerEventLoop,
         isGenerationCurrent: () => this.isGenerationCurrent(command.generation),
         booleanOperations,
@@ -478,6 +496,29 @@ export class CadWorkerRuntime {
             shape,
             generationParameters,
             mesh,
+          ),
+        )
+      }
+      if (command.modelId === 'opengrid-organizer-box') {
+        if (!isOpenGridOrganizerBoxParameters(generationParameters)) {
+          throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-organizer-box')
+        }
+        let maleReference: Shape3D | undefined
+        let holderReference: Shape3D | undefined
+        if (
+          generationParameters.bottomInterfaceMode === 'detachable-corner-seat'
+        ) {
+          ;[maleReference, holderReference] = await Promise.all([
+            this.getOpenGridDetachableCornerSeatReference(),
+            this.getOpenGridDetachableCornerSeatHolderReference(),
+          ])
+        }
+        timing.measureSync('quality', () =>
+          assertOpenGridOrganizerBoxGeometry(
+            shape,
+            generationParameters,
+            holderReference,
+            maleReference,
           ),
         )
       }
@@ -1035,6 +1076,55 @@ export class CadWorkerRuntime {
     return this.openGridSnapRemoverAsset
   }
 
+  private getOpenGridDetachableCornerSeatReference(): Promise<
+    import('replicad').Shape3D
+  > {
+    if (!this.openGridDetachableCornerSeatReference) {
+      const referencePromise = loadOpenGridDetachableCornerSeatReference()
+        .then((reference) => {
+          if (this.disposed) {
+            reference.delete()
+            throw new Error('WORKER_TERMINATED')
+          }
+          return reference
+        })
+        .catch((error) => {
+          if (this.openGridDetachableCornerSeatReference === referencePromise) {
+            this.openGridDetachableCornerSeatReference = null
+          }
+          throw error
+        })
+      this.openGridDetachableCornerSeatReference = referencePromise
+    }
+    return this.openGridDetachableCornerSeatReference
+  }
+
+  private getOpenGridDetachableCornerSeatHolderReference(): Promise<
+    import('replicad').Shape3D
+  > {
+    if (!this.openGridDetachableCornerSeatHolderReference) {
+      const referencePromise = loadOpenGridDetachableCornerSeatHolderReference()
+        .then((reference) => {
+          if (this.disposed) {
+            reference.delete()
+            throw new Error('WORKER_TERMINATED')
+          }
+          return reference
+        })
+        .catch((error) => {
+          if (
+            this.openGridDetachableCornerSeatHolderReference ===
+            referencePromise
+          ) {
+            this.openGridDetachableCornerSeatHolderReference = null
+          }
+          throw error
+        })
+      this.openGridDetachableCornerSeatHolderReference = referencePromise
+    }
+    return this.openGridDetachableCornerSeatHolderReference
+  }
+
   private isGenerationCurrent(generation: number): boolean {
     return (
       !this.disposed &&
@@ -1115,6 +1205,24 @@ export class CadWorkerRuntime {
     this.openGridSnapRemoverAsset = null
     if (!assetPromise) return
     void assetPromise.then((asset) => asset.delete()).catch(() => undefined)
+  }
+
+  private disposeOpenGridDetachableCornerSeatReference(): void {
+    const referencePromise = this.openGridDetachableCornerSeatReference
+    this.openGridDetachableCornerSeatReference = null
+    if (!referencePromise) return
+    void referencePromise
+      .then((reference) => reference.delete())
+      .catch(() => undefined)
+  }
+
+  private disposeOpenGridDetachableCornerSeatHolderReference(): void {
+    const referencePromise = this.openGridDetachableCornerSeatHolderReference
+    this.openGridDetachableCornerSeatHolderReference = null
+    if (!referencePromise) return
+    void referencePromise
+      .then((reference) => reference.delete())
+      .catch(() => undefined)
   }
 
   private toCadError(error: unknown, command: WorkerCommand): CadError {

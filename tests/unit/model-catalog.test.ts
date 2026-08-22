@@ -43,6 +43,7 @@ describe('CAD component catalog', () => {
       'opengrid-snap',
       'opengrid-pillar',
       'opengrid-divider',
+      'opengrid-organizer-box',
       'opengrid-stackable-box',
       'opengrid-stackable-cylinder',
       'opengrid-snap-remover',
@@ -95,6 +96,7 @@ describe('CAD component catalog', () => {
       'opengrid-snap',
       'opengrid-pillar',
       'opengrid-divider',
+      'opengrid-organizer-box',
       'opengrid-stackable-box',
       'opengrid-stackable-cylinder',
       'opengrid-snap-remover',
@@ -162,6 +164,7 @@ describe('CAD component catalog', () => {
       'opengrid-snap',
       'opengrid-pillar',
       'opengrid-divider',
+      'opengrid-organizer-box',
       'opengrid-stackable-box',
       'opengrid-stackable-cylinder',
       'opengrid-snap-remover',
@@ -807,11 +810,20 @@ describe('CAD component catalog', () => {
       min: [-2.625, -2.625, 0],
       max: [2.625, 2.625, 25],
     })
+    expect(
+      definition?.boundsForParameters({ mode: 'detachable-corner-seat' }),
+    ).toEqual({
+      min: [-2.5, -2.5, 0],
+      max: [2.5, 2.5, 5.3],
+    })
     expect(definition?.exportFileName({ mode: 'standard', offset: 0 })).toBe(
       'pillar-9-standard.step',
     )
     expect(definition?.stlFileName({ mode: 'thin-shell', offset: 0 })).toBe(
       'pillar-6-thin-shell.stl',
+    )
+    expect(definition?.exportFileName({ mode: 'detachable-corner-seat' })).toBe(
+      'pillar-5.3-detachable-corner-seat.step',
     )
     expect(cadPathForModel('opengrid-pillar')).toBe('/cad/opengrid-pillar')
     expect(modelIdForCadPath('/cad/opengrid-pillar/')).toBe('opengrid-pillar')

@@ -8,6 +8,7 @@ import type {
 } from '../../src/cad-contract/units'
 import {
   OPENGRID_CONFIGURATION,
+  OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_PREVIEW_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
@@ -530,6 +531,31 @@ describe('CAD model generation debounce', () => {
         operationId: generateCommand?.operationId,
       }),
       client,
+    )
+  })
+
+  it('debounces organizer-box input with its independent typed snapshot', () => {
+    const { send, context } = createRuntimeContext('opengrid-organizer-box', {
+      ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+    })
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('holeShape', 'hexagon')
+    handlers.handleInputChange('holeSpacingMode', 'independent')
+    handlers.handleInputChange('holeSpacingY', '4')
+    vi.advanceTimersByTime(500)
+
+    expect(send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.generate',
+        modelId: 'opengrid-organizer-box',
+        parameters: {
+          ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+          holeShape: 'hexagon',
+          holeSpacingMode: 'independent',
+          holeSpacingY: 4,
+        },
+      }),
     )
   })
 

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { KernelBuildContext } from '../../src/cad-kernel/model'
 import type { ModelParameterValues } from '../../src/cad-contract/units'
+import { OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS } from '../../src/cad-contract/units'
 
 const mocks = vi.hoisted(() => ({
   buildBoxBRep: vi.fn(() => ({ model: 'box', delete: vi.fn() })),
@@ -23,6 +24,10 @@ const mocks = vi.hoisted(() => ({
   })),
   buildOpenGridStackableBox: vi.fn(() => ({
     model: 'opengrid-stackable-box',
+    delete: vi.fn(),
+  })),
+  buildOpenGridOrganizerBox: vi.fn(() => ({
+    model: 'opengrid-organizer-box',
     delete: vi.fn(),
   })),
   buildOpenGridDivider: vi.fn(async () => ({
@@ -71,6 +76,12 @@ vi.mock(
     buildOpenGridStackableCylinder: mocks.buildOpenGridStackableCylinder,
   }),
 )
+vi.mock(
+  '../../src/cad-kernel/components/opengrid-organizer-box/builder',
+  () => ({
+    buildOpenGridOrganizerBox: mocks.buildOpenGridOrganizerBox,
+  }),
+)
 
 vi.mock('../../src/cad-kernel/components/opengrid-divider/builder', () => ({
   buildOpenGridDivider: mocks.buildOpenGridDivider,
@@ -85,6 +96,14 @@ const context = {
   getModularGridBaseTemplate: vi.fn(async () => ({ delete: vi.fn() })),
   getHswCellTemplate: vi.fn(async () => ({ delete: vi.fn() })),
   getHexagonalColumnReference: vi.fn(async () => ({ delete: vi.fn() })),
+  getOpenGridDetachableCornerSeatReference: vi.fn(async () => ({
+    model: 'detachable-corner-seat-reference',
+    delete: vi.fn(),
+  })),
+  getOpenGridDetachableCornerSeatHolderReference: vi.fn(async () => ({
+    model: 'detachable-corner-seat-holder-reference',
+    delete: vi.fn(),
+  })),
   getOpenGridSnapReference: vi.fn(async () => ({ delete: vi.fn() })),
 } as unknown as KernelBuildContext
 
@@ -102,6 +121,7 @@ describe('HSW kernel model registration', () => {
       'opengrid-pillar',
       'opengrid',
       'opengrid-stackable-box',
+      'opengrid-organizer-box',
       'opengrid-stackable-cylinder',
       'opengrid-open-shelf',
       'opengrid-snap',
@@ -251,7 +271,7 @@ describe('HSW kernel model registration', () => {
     expect(mocks.buildHswCell).not.toHaveBeenCalled()
     expect(mocks.buildModularGridBase).not.toHaveBeenCalled()
   })
-  it('routes pillar directly to its asset-free builder', async () => {
+  it('keeps adjustable pillar modes asset-free', async () => {
     const shape = await buildModelBRep(
       'opengrid-pillar',
       { mode: 'thin-shell', offset: 0 },
@@ -267,5 +287,57 @@ describe('HSW kernel model registration', () => {
       }),
     )
     expect(context.getHexagonalColumnReference).not.toHaveBeenCalled()
+    expect(
+      context.getOpenGridDetachableCornerSeatReference,
+    ).not.toHaveBeenCalled()
+  })
+
+  it('loads the shared male reference only for the detachable pillar mode', async () => {
+    const parameters = { mode: 'detachable-corner-seat' } as const
+    const shape = await buildModelBRep('opengrid-pillar', parameters, context)
+
+    expect(shape).toMatchObject({ model: 'opengrid-pillar' })
+    expect(
+      context.getOpenGridDetachableCornerSeatReference,
+    ).toHaveBeenCalledOnce()
+    expect(mocks.buildPillar).toHaveBeenCalledWith(
+      parameters,
+      expect.objectContaining({
+        detachableCornerSeatReference: expect.objectContaining({
+          model: 'detachable-corner-seat-reference',
+        }),
+      }),
+    )
+  })
+
+  it('loads both shared references only for the detachable organizer-box mode', async () => {
+    const parameters = {
+      ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+      bottomInterfaceMode: 'detachable-corner-seat' as const,
+    }
+    const shape = await buildModelBRep(
+      'opengrid-organizer-box',
+      parameters,
+      context,
+    )
+
+    expect(shape).toMatchObject({ model: 'opengrid-organizer-box' })
+    expect(
+      context.getOpenGridDetachableCornerSeatHolderReference,
+    ).toHaveBeenCalledOnce()
+    expect(
+      context.getOpenGridDetachableCornerSeatReference,
+    ).toHaveBeenCalledOnce()
+    expect(mocks.buildOpenGridOrganizerBox).toHaveBeenCalledWith(
+      parameters,
+      expect.objectContaining({
+        detachableCornerSeatReference: expect.objectContaining({
+          model: 'detachable-corner-seat-reference',
+        }),
+        detachableCornerSeatHolderReference: expect.objectContaining({
+          model: 'detachable-corner-seat-holder-reference',
+        }),
+      }),
+    )
   })
 })

@@ -1,0 +1,2 @@
+# Canonical CAD references must retain their exact source bytes.
+src/cad-kernel/components/opengrid-locating-assembly/assets/*.step binary

@@ -34,6 +34,7 @@ const boardEntry = entryFor('board')
 const snapEntry = entryFor('snap')
 const locatingPostEntry = entryFor('locating-post')
 const gridBoxEntry = entryFor('grid-box')
+const organizerBoxEntry = entryFor('organizer-box')
 const roundBoxEntry = entryFor('round-box')
 ---
 
@@ -144,6 +145,10 @@ const roundBoxEntry = entryFor('round-box')
               >
               <a
                 class="text-ink underline underline-offset-4"
+                href={organizerBoxEntry.href}>{t(organizerBoxEntry.labelKey)}</a
+              >
+              <a
+                class="text-ink underline underline-offset-4"
                 href={roundBoxEntry.href}>{t(roundBoxEntry.labelKey)}</a
               >
             </p>
@@ -241,6 +246,12 @@ const roundBoxEntry = entryFor('round-box')
               class="text-ink underline underline-offset-4"
               href={gridBoxEntry.href}>{t(gridBoxEntry.labelKey)}</a
             > — {t('docs.deskQuickStart.checklist.gridBox')}
+          </li>
+          <li>
+            <a
+              class="text-ink underline underline-offset-4"
+              href={organizerBoxEntry.href}>{t(organizerBoxEntry.labelKey)}</a
+            > — {t('docs.deskQuickStart.checklist.organizerBox')}
           </li>
           <li>
             <a
