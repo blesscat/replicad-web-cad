@@ -119,9 +119,9 @@ export const OPENGRID_ORGANIZER_BOX_CONFIGURATION = {
   defaultHoleShape: 'circle' as OpenGridOrganizerBoxShape,
   defaultHoleDiameter: 20,
   defaultHoleDepth: 20,
-  defaultBottomThickness: 2,
+  defaultBottomThickness: 1,
   defaultBottomInterfaceMode:
-    'corner-seat' as OpenGridOrganizerBoxBottomInterfaceMode,
+    'detachable-corner-seat' as OpenGridOrganizerBoxBottomInterfaceMode,
   minHoleCount: 1,
   maxHoleCount: 20,
   minHoleSpacing: 0.5,

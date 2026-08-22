@@ -396,6 +396,7 @@ describe('OpenGrid organizer-box B-Rep', () => {
         holeSpacingX: 3,
         holeSpacingY: 5,
         bottomThickness: 4,
+        bottomInterfaceMode: 'corner-seat',
       })
       const shape = buildOpenGridOrganizerBox(input)
 
@@ -411,7 +412,11 @@ describe('OpenGrid organizer-box B-Rep', () => {
   )
 
   it('is available through the kernel registry without loading external assets', async () => {
-    const input = parameters({ holeCountX: 1, holeCountY: 1 })
+    const input = parameters({
+      holeCountX: 1,
+      holeCountY: 1,
+      bottomInterfaceMode: 'corner-seat',
+    })
     const context: KernelBuildContext = {
       getModularGridBaseTemplate: async () => {
         throw new Error('UNEXPECTED_TEMPLATE_LOAD')

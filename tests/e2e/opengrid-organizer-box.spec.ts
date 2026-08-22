@@ -66,13 +66,30 @@ test('OpenGrid organizer-box is listed and exposes the cavity controls', async (
   const interfaceMode = page.getByTestId(
     'opengrid-organizer-box-interface-mode',
   )
-  const revisionBeforeDetachable = await viewport.getAttribute(
+  const lockingCornerSeat = interfaceMode.getByRole('radio', {
+    name: '鎖定角座',
+  })
+  await expect(lockingCornerSeat).toBeChecked()
+
+  const revisionBeforeCornerSeat = await viewport.getAttribute(
     'data-model-revision',
   )
-  await interfaceMode.getByRole('radio', { name: '可拆式角座' }).check()
+  await interfaceMode.getByRole('radio', { name: '四角固定座' }).check()
   await expect(
-    interfaceMode.getByRole('radio', { name: '可拆式角座' }),
+    interfaceMode.getByRole('radio', { name: '四角固定座' }),
   ).toBeChecked()
+  await expect(viewport).not.toHaveAttribute(
+    'data-model-revision',
+    revisionBeforeCornerSeat ?? '',
+    { timeout: 90_000 },
+  )
+  await waitForCadReady(page, 90_000)
+
+  const revisionBeforeLockingCornerSeat = await viewport.getAttribute(
+    'data-model-revision',
+  )
+  await lockingCornerSeat.check()
+  await expect(lockingCornerSeat).toBeChecked()
   await expect(
     interfaceMode.getByRole('radio', { name: '四角固定座' }),
   ).not.toBeChecked()
@@ -81,7 +98,7 @@ test('OpenGrid organizer-box is listed and exposes the cavity controls', async (
   ).not.toBeChecked()
   await expect(viewport).not.toHaveAttribute(
     'data-model-revision',
-    revisionBeforeDetachable ?? '',
+    revisionBeforeLockingCornerSeat ?? '',
     { timeout: 90_000 },
   )
   await waitForCadReady(page, 90_000)
@@ -111,6 +128,6 @@ test('OpenGrid organizer-box is listed and exposes the cavity controls', async (
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-organizer-box-2x2-hexagon-sm-independent-d20-sx3-sy3-h20-b2-istackable.step',
+    'opengrid-organizer-box-2x2-hexagon-sm-independent-d20-sx3-sy3-h20-b1-istackable.step',
   )
 })

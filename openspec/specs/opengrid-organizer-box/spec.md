@@ -41,7 +41,7 @@ The canonical organizer-box snapshot MUST contain typed
 `corner-seat`, `detachable-corner-seat`, or `stackable`.
 
 Hole counts MUST be positive integers. All dimensional values MUST be finite
-positive millimetres, and the bottom thickness MUST default to 2 mm. The
+positive millimetres, and the bottom thickness MUST default to 1 mm. The
 component MUST reject any snapshot whose derived footprint exceeds the existing
 OpenGrid 500 mm workspace limit, whose cavities cannot fit with the required
 material boundaries, whose detachable sockets would leave less than 0.5 mm of
@@ -54,8 +54,9 @@ equal; in independent mode they MAY differ.
 - **WHEN** the organizer-box route has no valid persisted parameters
 - **THEN** it MUST select a circle cavity shape
 - **AND** it MUST select linked X/Y spacing
-- **AND** it MUST use a 2 mm bottom thickness
-- **AND** it MUST select exactly one bottom interface mode
+- **AND** it MUST use a 1 mm bottom thickness
+- **AND** it MUST select `鎖定角座`, normalized as
+  `bottomInterfaceMode=detachable-corner-seat`
 
 #### Scenario: Linked spacing control
 
@@ -171,7 +172,7 @@ axes. Orientation MUST NOT be independently configurable per cavity or per axis.
 ### Requirement: Mutually exclusive bottom interfaces
 
 The organizer-box panel MUST expose exactly one radio group with exactly three
-options: `四角固定座`, `可拆式角座`, and `堆疊結構`. The normalized
+options: `四角固定座`, `鎖定角座`, and `堆疊結構`. The normalized
 `bottomInterfaceMode` MUST contain exactly one corresponding value.
 
 In `corner-seat` mode, the result MUST preserve the existing Grid Box fixed
@@ -194,9 +195,9 @@ seat. The three interface modes MUST NOT be combined.
 - **AND** the generated result MUST NOT require a separate foot inserted from below
 - **AND** both the detachable sockets and full stacking guide MUST be absent
 
-#### Scenario: Detachable corner-seat selection
+#### Scenario: Locking corner-seat selection
 
-- **WHEN** the user selects `可拆式角座`
+- **WHEN** the user selects `鎖定角座`
 - **THEN** exactly that radio option MUST be selected
 - **AND** the generated result MUST contain the four integrated female sockets
 - **AND** the downward built-in feet and full stacking guide MUST be absent

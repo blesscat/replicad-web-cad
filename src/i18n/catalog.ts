@@ -397,9 +397,9 @@ export const zhHantMessages = {
   'panel.organizerBox.interface.cornerSeat': '四角固定座',
   'panel.organizerBox.interface.cornerSeatDescription':
     '直接融合方盒內建的四角實體腳座，不需要從底部插入腳座。',
-  'panel.organizerBox.interface.detachableCornerSeat': '可拆式角座',
+  'panel.organizerBox.interface.detachableCornerSeat': '鎖定角座',
   'panel.organizerBox.interface.detachableCornerSeatDescription':
-    '在盒底直接形成四個有擋片的插槽；另列印可拆角座並由底部壓入。',
+    '在盒底直接形成四個有擋片的插槽；另列印鎖定角座並由底部壓入。',
   'panel.organizerBox.interface.stackable': '堆疊結構',
   'panel.organizerBox.interface.stackableDescription':
     '使用 OpenGrid 方盒的堆疊底部結構，不建立四角內建實體腳座。',
@@ -941,10 +941,9 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'panel.organizerBox.interface.cornerSeat': 'Four-corner built-in feet',
   'panel.organizerBox.interface.cornerSeatDescription':
     'Use the Grid Box-style four-corner built-in feet without a full stacking profile.',
-  'panel.organizerBox.interface.detachableCornerSeat':
-    'Detachable corner seats',
+  'panel.organizerBox.interface.detachableCornerSeat': 'Locking corner seats',
   'panel.organizerBox.interface.detachableCornerSeatDescription':
-    'Form four retaining-tab sockets directly in the box bottom, then press separately printed seats in from below.',
+    'Form four retaining-tab sockets directly in the box bottom, then press separately printed locking corner seats in from below.',
   'panel.organizerBox.interface.stackable': 'Stacking structure',
   'panel.organizerBox.interface.stackableDescription':
     'Use the OpenGrid box stacking bottom structure without four-corner built-in feet.',

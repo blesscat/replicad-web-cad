@@ -57,4 +57,11 @@ describe('localized model catalog copy', () => {
     expect(definition.id).toBe('hexagonal-column')
     expect(definition.buildKey).toBe('hexagonal-column')
   })
+
+  it('labels the organizer-box retaining interface as locking corner seats', () => {
+    const key = 'panel.organizerBox.interface.detachableCornerSeat'
+
+    expect(translate('zh-Hant', key)).toBe('鎖定角座')
+    expect(translate('en', key)).toBe('Locking corner seats')
+  })
 })

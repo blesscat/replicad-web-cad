@@ -50,7 +50,8 @@ describe('OpenGrid organizer-box contract', () => {
     })
     expect(value.holeSpacingMode).toBe('linked')
     expect(value.holeSpacingX).toBe(value.holeSpacingY)
-    expect(value.bottomThickness).toBe(2)
+    expect(value.bottomThickness).toBe(1)
+    expect(value.bottomInterfaceMode).toBe('detachable-corner-seat')
   })
 
   it('derives centered cavities from outer-to-outer spacing', () => {
