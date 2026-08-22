@@ -134,16 +134,29 @@ test('OpenGrid Snap route exposes profiles, features, and one shared outer offse
   await expect(squareWidth).toBeVisible()
   await expect(squareThickness).toBeVisible()
   await expect(squareLength).toHaveAttribute('type', 'range')
+  for (const slider of [squareLength, squareWidth, squareThickness]) {
+    await expect(slider).toHaveAttribute('min', '1')
+    await expect(slider).toHaveAttribute(
+      'step',
+      String(OPENGRID_SNAP_CONFIGURATION.magnetHole.dimensionStep),
+    )
+  }
+  await expect(squareLength).toHaveValue('5')
+  await expect(squareWidth).toHaveValue('5')
+  await expect(squareThickness).toHaveValue('2')
+  await expect(squareLength).toHaveAttribute('max', '15')
+  await expect(squareWidth).toHaveAttribute('max', '15')
+  await expect(squareThickness).toHaveAttribute('max', '6')
   await squareLength.press('Home')
-  for (let index = 0; index < 40; index += 1) {
+  for (let index = 0; index < 100; index += 1) {
     await squareLength.press('ArrowRight')
   }
   await squareWidth.press('Home')
-  for (let index = 0; index < 20; index += 1) {
+  for (let index = 0; index < 60; index += 1) {
     await squareWidth.press('ArrowRight')
   }
   await squareThickness.press('Home')
-  for (let index = 0; index < 19; index += 1) {
+  for (let index = 0; index < 20; index += 1) {
     await squareThickness.press('ArrowRight')
   }
   await expect
@@ -174,12 +187,26 @@ test('OpenGrid Snap route exposes profiles, features, and one shared outer offse
   await magnetShape.selectOption('round')
   const roundDiameter = page.getByRole('slider', { name: '直徑（XY）' })
   const roundThickness = page.getByRole('slider', { name: '厚度（Z）' })
+  await expect(roundDiameter).toHaveValue('5')
+  await expect(roundThickness).toHaveValue('2')
+  await expect(roundDiameter).toHaveAttribute('min', '1')
+  await expect(roundDiameter).toHaveAttribute('max', '15')
+  await expect(roundDiameter).toHaveAttribute(
+    'step',
+    String(OPENGRID_SNAP_CONFIGURATION.magnetHole.dimensionStep),
+  )
+  await expect(roundThickness).toHaveAttribute('min', '1')
+  await expect(roundThickness).toHaveAttribute('max', '6')
+  await expect(roundThickness).toHaveAttribute(
+    'step',
+    String(OPENGRID_SNAP_CONFIGURATION.magnetHole.dimensionStep),
+  )
   await roundDiameter.press('Home')
-  for (let index = 0; index < 60; index += 1) {
+  for (let index = 0; index < 140; index += 1) {
     await roundDiameter.press('ArrowRight')
   }
   await roundThickness.press('Home')
-  for (let index = 0; index < 19; index += 1) {
+  for (let index = 0; index < 20; index += 1) {
     await roundThickness.press('ArrowRight')
   }
   await profile.selectOption('Directional')

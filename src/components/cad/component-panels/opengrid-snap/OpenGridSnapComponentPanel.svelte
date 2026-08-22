@@ -95,6 +95,18 @@
     magnetControlsAreDisabled || !magnetHoleIsActive,
   )
 
+  function initializeMagnetDimension(
+    key: (typeof magnetDimensionKeys)[number],
+    rawValue: string,
+    minimum: number,
+    defaultValue: number,
+  ): void {
+    const numericValue = Number(rawValue)
+    if (!Number.isFinite(numericValue) || numericValue < minimum) {
+      onInputChange(key, String(defaultValue))
+    }
+  }
+
   function clearMagnetHole(): void {
     onInputChange('magnetHoleShape', 'none')
     for (const key of magnetDimensionKeys) onInputChange(key, '0')
@@ -114,9 +126,33 @@
 
     onInputChange('fourCornerLocatingHoles', 'false')
     onInputChange('centerRemoverHole', 'false')
+    initializeMagnetDimension(
+      'magnetHoleThickness',
+      rawMagnetHoleThickness,
+      magnetThicknessField.min,
+      magnetThicknessField.defaultValue,
+    )
     if (shape === 'square') {
+      initializeMagnetDimension(
+        'magnetHoleLength',
+        rawMagnetHoleLength,
+        magnetLengthField.min,
+        magnetLengthField.defaultValue,
+      )
+      initializeMagnetDimension(
+        'magnetHoleWidth',
+        rawMagnetHoleWidth,
+        magnetWidthField.min,
+        magnetWidthField.defaultValue,
+      )
       onInputChange('magnetHoleDiameter', '0')
     } else {
+      initializeMagnetDimension(
+        'magnetHoleDiameter',
+        rawMagnetHoleDiameter,
+        magnetDiameterField.min,
+        magnetDiameterField.defaultValue,
+      )
       onInputChange('magnetHoleLength', '0')
       onInputChange('magnetHoleWidth', '0')
     }

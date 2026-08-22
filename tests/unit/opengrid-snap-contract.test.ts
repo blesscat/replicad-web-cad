@@ -51,6 +51,28 @@ describe('OpenGrid Snap contract', () => {
     ).toBe(true)
   })
 
+  it('configures magnet dimensions for the requested slider ranges', () => {
+    expect(OPENGRID_SNAP_CONFIGURATION.magnetHole).toMatchObject({
+      minPlanDimension: 1,
+      defaultPlanDimension: 5,
+      maxPlanDimension: 15,
+      minThickness: 1,
+      defaultThickness: 2,
+      dimensionStep: 0.05,
+    })
+    expect(OPENGRID_SNAP_CONFIGURATION.magnetHole.maxThickness.Full).toBe(6)
+    expect(
+      validateOpenGridSnapParameters(
+        parameters({
+          magnetHoleShape: 'square',
+          magnetHoleLength: 1,
+          magnetHoleWidth: 15,
+          magnetHoleThickness: 6,
+        }),
+      ).valid,
+    ).toBe(true)
+  })
+
   it('accepts only the typed footprint contract and preserves defaults', () => {
     const full = parameters({ variant: 'Full', offset: 0.2 })
     const lite = parameters({ variant: 'Lite', offset: 0.4 })

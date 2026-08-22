@@ -395,6 +395,39 @@ describe('CAD component catalog', () => {
     expect(
       snap?.parameterSchema.slice(1).map((field) => field.control),
     ).toEqual(['range', 'range', 'range', 'range'])
+    expect(snap?.parameterSchema.slice(1)).toEqual([
+      expect.objectContaining({
+        key: 'magnetHoleLength',
+        defaultValue:
+          OPENGRID_SNAP_CONFIGURATION.magnetHole.defaultPlanDimension,
+        min: OPENGRID_SNAP_CONFIGURATION.magnetHole.minPlanDimension,
+        max: OPENGRID_SNAP_CONFIGURATION.magnetHole.maxPlanDimension,
+        step: OPENGRID_SNAP_CONFIGURATION.magnetHole.dimensionStep,
+      }),
+      expect.objectContaining({
+        key: 'magnetHoleWidth',
+        defaultValue:
+          OPENGRID_SNAP_CONFIGURATION.magnetHole.defaultPlanDimension,
+        min: OPENGRID_SNAP_CONFIGURATION.magnetHole.minPlanDimension,
+        max: OPENGRID_SNAP_CONFIGURATION.magnetHole.maxPlanDimension,
+        step: OPENGRID_SNAP_CONFIGURATION.magnetHole.dimensionStep,
+      }),
+      expect.objectContaining({
+        key: 'magnetHoleDiameter',
+        defaultValue:
+          OPENGRID_SNAP_CONFIGURATION.magnetHole.defaultPlanDimension,
+        min: OPENGRID_SNAP_CONFIGURATION.magnetHole.minPlanDimension,
+        max: OPENGRID_SNAP_CONFIGURATION.magnetHole.maxPlanDimension,
+        step: OPENGRID_SNAP_CONFIGURATION.magnetHole.dimensionStep,
+      }),
+      expect.objectContaining({
+        key: 'magnetHoleThickness',
+        defaultValue: OPENGRID_SNAP_CONFIGURATION.magnetHole.defaultThickness,
+        min: OPENGRID_SNAP_CONFIGURATION.magnetHole.minThickness,
+        max: OPENGRID_SNAP_CONFIGURATION.magnetHole.maxThickness.Full,
+        step: OPENGRID_SNAP_CONFIGURATION.magnetHole.dimensionStep,
+      }),
+    ])
     expect(snap?.defaultParameters).toEqual({
       variant: 'Full',
       profile: 'Standard',

@@ -140,9 +140,12 @@ non-zero outer offset scales the non-hole assembly.
 The Snap panel MUST expose the magnet shape and its shape-specific dimensions
 next to the existing locating-hole and remover-hole controls on every supported
 Snap route. The shape-specific numeric dimensions MUST use slider controls, and
-their displayed labels MUST omit the `magnet-hole` prefix. The inactive shape
-option MUST be labelled `無` in the Traditional Chinese locale and `None` in
-English. The controls MUST NOT be hidden or enabled only by `system=wall`.
+their displayed labels MUST omit the `magnet-hole` prefix. Length, width, and
+diameter sliders MUST range from 1 mm through 15 mm, default to 5 mm, and use
+0.05 mm steps. Thickness MUST range from 1 mm through 6 mm and use 0.05 mm
+steps for the Full variant. The inactive shape option MUST be labelled `無` in
+the Traditional Chinese locale and `None` in English. The controls MUST NOT
+be hidden or enabled only by `system=wall`.
 Selecting a square or round magnet mode MUST clear or disable both existing
 hole controls, and selecting either existing hole feature MUST return the
 magnet mode to `none`; the resulting normalized snapshot MUST never contain a
