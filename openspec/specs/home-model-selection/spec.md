@@ -4,7 +4,7 @@
 ## Requirements
 ### Requirement: 首頁模型選擇
 
-The system MUST provide a static model-selection page at `/models` driven by the registered model catalog. Every model rendered in the chooser MUST have an understandable display name, a catalog-provided static preview image, and a link to its model-specific CAD route. The chooser content MUST NOT render introductory copy, family descriptions, model descriptions, or adjustable-parameter summaries. The chooser MUST display the OpenGrid series before the HSW series, including `opengrid`, `opengrid-pillar`, `opengrid-divider`, `opengrid-stackable-box`, `opengrid-stackable-cylinder`, `opengrid-snap`, `opengrid-snap-remover`, `opengrid-open-shelf`, and `hsw-cell`. Registered models outside these visible series MAY remain available through direct CAD routes but MUST NOT be rendered as chooser entries. The root path `/` MUST remain a separate static product homepage and MUST link to `/models` without rendering the model chooser. The `/models` page MUST expose a page-level selection heading without requiring an additional outer visual panel around the entire chooser. The OpenGrid and HSW series MUST remain visually distinguishable by series headings, and the OpenGrid Desk/Wall subgroups MUST remain distinguishable by subgroup headings, spacing, or separators without requiring redundant family badges or nested bordered panels. Model cards MUST use an adaptive layout that uses more than two columns when a wide viewport has enough room and collapses to one column on a narrow viewport.
+The system MUST provide a static model-selection page at `/models` driven by the registered model catalog. Every model rendered in the chooser MUST have an understandable display name, a catalog-provided static preview image, a concise visible capability summary, and a link to its model-specific CAD route. Configurable components MUST describe their main adjustable settings in localized visible text; fixed components MUST be clearly identified as fixed. The chooser MUST NOT use a generic schema field count as the sole source of truth for custom or conditional parameter presentations, and MUST NOT invent a raw numeric count for such presentations. Detailed parameter names, ranges, constraints, units, and export formats MUST remain available in server-rendered HTML through an accessible out-of-flow details presentation. The chooser MUST display the OpenGrid series before the HSW series, including `opengrid`, `opengrid-pillar`, `opengrid-divider`, `opengrid-stackable-box`, `opengrid-stackable-cylinder`, `opengrid-snap`, `opengrid-snap-remover`, `opengrid-open-shelf`, and `hsw-cell`. Registered models outside these visible series MAY remain available through direct CAD routes but MUST NOT be rendered as chooser entries. The root path `/` MUST remain a separate static product homepage and MUST link to `/models` without rendering the model chooser. The `/models` page MUST expose a page-level selection heading without requiring an additional outer visual panel around the entire chooser. The OpenGrid and HSW series MUST remain visually distinguishable by series headings, and the OpenGrid Desk/Wall subgroups MUST remain distinguishable by subgroup headings, spacing, or separators without requiring redundant family badges or nested bordered panels. Model cards MUST use an adaptive layout that uses more than two columns when a wide viewport has enough room and collapses to one column on a narrow viewport.
 
 #### Scenario: 真正首頁不顯示模型選擇器
 
@@ -22,7 +22,6 @@ The system MUST provide a static model-selection page at `/models` driven by the
 - **AND** 每個可見模型 MUST 顯示其 catalog-provided static preview image、可理解模型名稱與 `編輯 →` 入口
 - **AND** 每個 preview image MUST expose alternative text that identifies the model it represents
 - **AND** `box`、`box-normal`、`modular-grid-base` 與 `hexagonal-column` MUST NOT appear as chooser entries
-- **AND** `/models` MUST NOT 顯示模型用途說明、可調整參數摘要、系列說明或選擇頁導言
 - **AND** `/models` MUST NOT 初始化 CAD Worker、WebAssembly CAD kernel、WebGL renderer 或 Svelte CAD workspace
 - **AND** 頁面 MUST 顯示選擇模型的頁面標題，而不以整個 chooser 的外框 panel 包住內容
 - **AND** OpenGrid 系列與 HSW 系列 MUST 以系列標題區分，OpenGrid 的 `Desk System` 與 `Wall Related` MUST 以 subgroup 標題、間距或分隔線區分
@@ -155,7 +154,7 @@ The registered model catalog MUST resolve `/cad/hsw-cell` to `modelId=hsw-cell`,
 
 ### Requirement: 模型系列分類
 
-The model-selection page MUST render the registered catalog entries in the two visible user-facing series `OpenGrid 系列` and `HSW 系列`, in that order. Each registered model definition MUST declare exactly one series key, and the page MUST derive membership, labels, ordering within a series, and model links from catalog metadata rather than a second hardcoded model-id list. Models in other registered series MUST remain routable but MUST NOT be rendered by the chooser.
+The model-selection page MUST render the registered catalog entries in the two visible user-facing series `OpenGrid 系列` and `HSW 系列`, in that order. Each registered model definition MUST declare exactly one series key, and the page MUST derive membership, labels, ordering within a series, model links, and capability summaries from catalog metadata rather than a second hardcoded model-id list. Models in other registered series MUST remain routable but MUST NOT be rendered by the chooser.
 
 #### Scenario: Catalog entries appear in one series
 
@@ -175,9 +174,31 @@ The model-selection page MUST render the registered catalog entries in the two v
 #### Scenario: Series page remains a static chooser
 
 - **WHEN** a user views any series on `/models`
-- **THEN** each model entry MUST expose its display name and model-specific route link
-- **AND** the chooser MUST NOT render family descriptions, model descriptions, or parameter summaries
+- **THEN** each model entry MUST expose its display name, localized capability summary, and model-specific route link
+- **AND** detailed capability and parameter content MUST remain available in server-rendered HTML without requiring a CAD Worker or CAD workspace
 - **AND** the series layout MUST NOT instantiate a CAD Worker or CAD workspace
+
+### Requirement: 模型卡片參數詳情不改變排列
+
+The model chooser MUST provide full parameter details through an out-of-flow accessible presentation for every visible model card that has additional details. Opening or closing the presentation MUST NOT change the card's height, the grid row height, or the position or stretch state of neighboring cards. The presentation MUST provide a clear close action, support Escape dismissal and focus return, keep long content scrollable, and remain usable on narrow viewports.
+
+#### Scenario: 開啟參數詳情不推動其他卡片
+
+- **WHEN** 使用者在任一模型卡片開啟完整參數
+- **THEN** 詳情 MUST appear outside the card/grid layout flow
+- **AND** the card and neighboring cards MUST retain their pre-opened dimensions and positions
+
+#### Scenario: 使用者可以關閉參數詳情
+
+- **WHEN** 參數詳情 presentation is open
+- **THEN** 使用者 MUST be able to close it with a visible close control or Escape
+- **AND** focus MUST return to the control that opened it
+
+#### Scenario: 狹窄視窗仍可閱讀完整參數
+
+- **WHEN** 使用者在 narrow viewport 開啟參數詳情
+- **THEN** presentation MUST fit within the viewport without horizontal overflow
+- **AND** long parameter content MUST scroll within the presentation
 
 ### Requirement: OpenGrid Snap model selection entry
 

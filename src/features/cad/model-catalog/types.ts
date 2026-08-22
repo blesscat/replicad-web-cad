@@ -53,6 +53,18 @@ export type ModelPreviewImage = {
   height: number
 }
 
+export type ModelParameterPresentation =
+  | {
+      kind: 'adjustable'
+      /** Stable translation key for custom or conditional setting categories. */
+      summaryKey?: string
+      /** Stable translation key for the custom setting ranges and constraints. */
+      detailsKey?: string
+    }
+  | {
+      kind: 'fixed'
+    }
+
 export type FixedStepDownload = {
   url: string
   fileName: string
@@ -68,6 +80,7 @@ export type ModelDefinition = {
   /** Stable translation key; never render this value directly. */
   selectionDescription: string
   parameterSchema: ReadonlyArray<ParameterField>
+  parameterPresentation?: ModelParameterPresentation
   defaultParameters: ModelParameterValues
   previewMetadata: { centeredOnXY: boolean; baseAtZ: number }
   previewImage?: ModelPreviewImage
