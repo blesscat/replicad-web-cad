@@ -18,15 +18,16 @@ Never merge the pull request or push directly to `main`.
 When this skill is started in the Codex desktop app, use this setup before any
 OpenSpec or repository workflow work:
 
-請使用 Codex 內建的 Worktree，從 main 建立這個 task 的獨立工作環境。
+Use Codex's built-in Worktree to create an isolated work environment for this
+task from `main`.
 
-建立完成後，請先確認：
+After creating it, confirm the following before continuing:
 
-1. 目前工作目錄已經是新的 worktree
-2. Environment／terminal 已經跟著這個 worktree
-3. 不要只在原本的 main checkout 執行 git worktree add
+1. The current working directory is the new worktree.
+2. The environment and terminal are attached to this worktree.
+3. Do not run `git worktree add` only from the original `main` checkout.
 
-請回報以下結果後再開始工作：
+Report the following results before starting work:
 pwd
 git status --short --branch
 git worktree list --porcelain
