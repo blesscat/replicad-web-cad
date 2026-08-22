@@ -1,14 +1,17 @@
 import {
   basicFaceExtrusion,
-  deserializeShape,
+  cast,
+  getOC,
   importSTEP,
-  makeCompound,
+  isShape3D,
   makeCylinder,
   measureVolume,
+  Solid,
   Vector,
   type Face,
   type Shape3D,
 } from 'replicad'
+import type { BOPAlgo_GlueEnum, TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import { OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION } from '../../../cad-contract/units'
 import {
   countSolids,
@@ -61,6 +64,31 @@ function runGeometryStage<T>(code: string, operation: () => T): T {
   }
 }
 
+function fuseWithoutSimplifying(first: Shape3D, second: Shape3D): Shape3D {
+  const oc = getOC()
+  const progress = new oc.Message_ProgressRange_1()
+  const operation = new oc.BRepAlgoAPI_Fuse_3(
+    first.wrapped,
+    second.wrapped,
+    progress,
+  )
+  try {
+    operation.SetGlue(
+      oc.BOPAlgo_GlueEnum.BOPAlgo_GlueShift as unknown as BOPAlgo_GlueEnum,
+    )
+    operation.Build(progress)
+    const result = cast(operation.Shape())
+    if (!isShape3D(result)) {
+      deleteShape(result)
+      throw new Error('OPENGRID_DETACHABLE_CORNER_SEAT_HOLDER_FUSE_NOT_3D')
+    }
+    return result
+  } finally {
+    operation.delete()
+    progress.delete()
+  }
+}
+
 function readBounds(shape: Shape3D): number[][] {
   const boundingBox = shape.boundingBox
   try {
@@ -77,6 +105,30 @@ function inspectReference(shape: Shape3D): ReferenceInspection {
     solidCount: countSolids(shape),
     valid: isBRepValid(shape),
   }
+}
+
+function copySingleSolid(shape: Shape3D): Solid {
+  const oc = getOC()
+  const solidType = oc.TopAbs_ShapeEnum
+    .TopAbs_SOLID as unknown as TopAbs_ShapeEnum
+  const shapeType = oc.TopAbs_ShapeEnum
+    .TopAbs_SHAPE as unknown as TopAbs_ShapeEnum
+  const explorer = new oc.TopExp_Explorer_2(shape.wrapped, solidType, shapeType)
+  const solids: Solid[] = []
+  try {
+    while (explorer.More()) {
+      solids.push(new Solid(oc.TopoDS.Solid_1(explorer.Current())))
+      explorer.Next()
+    }
+  } finally {
+    explorer.delete()
+  }
+
+  if (solids.length !== 1) {
+    solids.forEach(deleteShape)
+    throw new Error('OPENGRID_DETACHABLE_CORNER_SEAT_NOT_SINGLE_SOLID')
+  }
+  return solids[0]
 }
 
 function expectedReference(kind: ReferenceKind) {
@@ -160,7 +212,7 @@ function assertGeneratedFemale(shape: Shape3D): void {
     Math.abs(inspection.volume - expected.nominalVolume) <=
     configuration.volumeTolerance
   if (
-    inspection.solidCount < 1 ||
+    inspection.solidCount !== 1 ||
     !inspection.valid ||
     !boundsMatch(inspection.bounds, expected.bounds) ||
     !volumeMatches
@@ -220,21 +272,30 @@ export function buildOpenGridDetachableCornerSeatHolderFromReference(
     throw new Error('OPENGRID_DETACHABLE_CORNER_SEAT_HOLDER_TOP_FACE_MISSING')
   }
 
-  const extrusionVector = new Vector([0, 0, extensionHeight])
-  const parts: Shape3D[] = [deserializeShape(reference.serialize()).asShape3D()]
-  let holder: Shape3D | null = null
+  const fusionOverlap = configuration.geometryTolerance / 2
+  const extrusionVector = new Vector([0, 0, extensionHeight + fusionOverlap])
+  let holder: Shape3D | null = copySingleSolid(reference)
   try {
     for (const face of topFaces) {
-      parts.push(
-        runGeometryStage(
+      let extrusionFace: Face | null = null
+      let extension: Shape3D | null = null
+      try {
+        extrusionFace = face.translateZ(-fusionOverlap)
+        extension = runGeometryStage(
           'OPENGRID_DETACHABLE_CORNER_SEAT_HOLDER_EXTRUSION_FAILED',
-          () => basicFaceExtrusion(face, extrusionVector),
-        ),
-      )
-    }
-    holder = makeCompound(parts).asShape3D()
-    if (!holder) {
-      throw new Error('OPENGRID_DETACHABLE_CORNER_SEAT_HOLDER_COMPOUND_EMPTY')
+          () => basicFaceExtrusion(extrusionFace!, extrusionVector),
+        )
+        holder = replaceOwnedShape(
+          holder,
+          runGeometryStage(
+            'OPENGRID_DETACHABLE_CORNER_SEAT_HOLDER_FUSION_FAILED',
+            () => fuseWithoutSimplifying(holder!, extension!),
+          ),
+        )
+      } finally {
+        deleteShape(extension)
+        deleteShape(extrusionFace)
+      }
     }
     assertGeneratedFemale(holder)
     const generated = holder
@@ -242,7 +303,6 @@ export function buildOpenGridDetachableCornerSeatHolderFromReference(
     return generated
   } finally {
     deleteShape(holder)
-    parts.forEach(deleteShape)
     topFaces.forEach(deleteShape)
     extrusionVector.delete()
   }
@@ -359,7 +419,7 @@ export function buildOpenGridDetachableCornerSeatSocketVoid(
   assertReference(holderReference, 'female')
   const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female
   const envelope = makeCylinder(
-    configuration.outerDiameter / 2,
+    configuration.outerDiameter / 2 - configuration.hostOverlap,
     configuration.depth,
     [0, 0, configuration.sourceMinZ],
   )

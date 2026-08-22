@@ -17,6 +17,7 @@ It therefore keeps the supplied Ø4.6-to-Ø5 insertion chamfer and 0.15 mm raise
 wear surface while increasing the locating body to 3.8 mm and total height to
 5.3 mm. The supplied female remains unchanged on disk; at build time its top
 planar faces are extended by 0.25 mm, from 1.5 mm to 1.75 mm effective depth.
-The Organizer Box subtracts `Ø7 × 1.75 mm envelope - extended holder` so the
-retaining tabs remain part of the exported box solid rather than becoming a
-separate printable part.
+The extension is fused into one holder solid. The Organizer Box derives the
+socket cutter from the extended Ø7 mm holder while preserving 0.01 mm of radial
+overlap with the host body, so the retaining tabs become a manifold part of the
+exported box rather than a coincident or separate printable part.

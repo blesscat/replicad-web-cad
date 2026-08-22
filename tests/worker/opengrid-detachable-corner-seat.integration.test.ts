@@ -13,6 +13,7 @@ import {
   inspectOpenGridDetachableCornerSeatCompatibility,
   placeOpenGridDetachableCornerSeatSocketShape,
 } from '../../src/cad-kernel/components/opengrid-locating-assembly/reference'
+import { countSolids } from '../../src/cad-kernel/components/opengrid-stackable-box/quality-metrics'
 
 ;(globalThis as typeof globalThis & { __dirname?: string }).__dirname = dirname(
   fileURLToPath(import.meta.url),
@@ -159,6 +160,7 @@ describe('OpenGrid detachable corner-seat canonical references', () => {
       expect(bounds[0]?.[2]).toBeCloseTo(3, 5)
       expect(bounds[1]?.[2]).toBeCloseTo(4.75, 5)
       expect((bounds[1]?.[2] ?? 0) - (bounds[0]?.[2] ?? 0)).toBeCloseTo(1.75, 5)
+      expect(countSolids(extended)).toBe(1)
       expect(measureVolume(extended)).toBeCloseTo(
         configuration.female.nominalVolume,
         5,

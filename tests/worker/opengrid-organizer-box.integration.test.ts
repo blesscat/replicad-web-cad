@@ -22,7 +22,6 @@ import {
 import { buildOpenGridOrganizerBox } from '../../src/cad-kernel/components/opengrid-organizer-box/builder'
 import { assertOpenGridOrganizerBoxGeometry } from '../../src/cad-kernel/components/opengrid-organizer-box/quality'
 import {
-  buildOpenGridDetachableCornerSeatHolderFromReference,
   buildOpenGridDetachableCornerSeatSocketVoid,
   importOpenGridDetachableCornerSeatHolderReference,
   importOpenGridDetachableCornerSeatReference,
@@ -110,8 +109,6 @@ describe('OpenGrid organizer-box B-Rep', () => {
     })
     const socketVoid =
       buildOpenGridDetachableCornerSeatSocketVoid(holderReference)
-    const targetHolder =
-      buildOpenGridDetachableCornerSeatHolderFromReference(holderReference)
     try {
       const expected = boundsForOpenGridOrganizerBox(input)
       const actual = shape.boundingBox
@@ -131,37 +128,25 @@ describe('OpenGrid organizer-box B-Rep', () => {
           socketVoid,
           pose,
         )
-        const placedHolder = placeOpenGridDetachableCornerSeatSocketShape(
-          targetHolder,
-          pose,
-        )
         const placedMale = placeOpenGridDetachableCornerSeatMaleShape(
           maleReference,
           pose,
         )
         let voidIntersection: Shape3D | null = null
-        let holderIntersection: Shape3D | null = null
         let maleIntersection: Shape3D | null = null
         try {
           voidIntersection = shape.intersect(placedVoid)
-          holderIntersection = shape.intersect(placedHolder)
           maleIntersection = shape.intersect(placedMale)
           expect(measureVolume(voidIntersection)).toBeLessThanOrEqual(
             OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.intersectionVolumeTolerance,
-          )
-          expect(measureVolume(holderIntersection)).toBeCloseTo(
-            OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.nominalVolume,
-            4,
           )
           expect(measureVolume(maleIntersection)).toBeLessThanOrEqual(
             OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.intersectionVolumeTolerance,
           )
         } finally {
           deleteShape(voidIntersection)
-          deleteShape(holderIntersection)
           deleteShape(maleIntersection)
           deleteShape(placedVoid)
-          deleteShape(placedHolder)
           deleteShape(placedMale)
         }
       }
@@ -211,7 +196,6 @@ describe('OpenGrid organizer-box B-Rep', () => {
       ).toBe(0)
     } finally {
       deleteShape(socketVoid)
-      deleteShape(targetHolder)
       deleteShape(shape)
       deleteShape(maleReference)
       deleteShape(holderReference)

@@ -319,7 +319,7 @@ function cutDetachableCornerSeatSockets(
     const cut = measureBooleanInScope(
       context.booleanOperations?.createScope(1),
       'cut',
-      () => shape.cut(compoundCutter),
+      () => shape.cut(compoundCutter, { optimisation: 'none' }),
     )
     deleteShape(shape)
     return cut

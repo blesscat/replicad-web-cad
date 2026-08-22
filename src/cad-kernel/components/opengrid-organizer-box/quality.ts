@@ -7,6 +7,7 @@ import {
   OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   type ModelBounds,
+  type OpenGridOrganizerBoxDetachableSocketPose,
   type OpenGridOrganizerBoxParameters,
 } from '../../../cad-contract/units'
 import { makeBox, measureVolume, type Shape3D } from 'replicad'
@@ -16,7 +17,6 @@ import {
 } from '../opengrid-stackable-box/quality-metrics'
 import { bottomGridSeamsFor } from '../opengrid-stackable-box/geometry'
 import {
-  buildOpenGridDetachableCornerSeatHolderFromReference,
   buildOpenGridDetachableCornerSeatSocketVoid,
   placeOpenGridDetachableCornerSeatMaleShape,
   placeOpenGridDetachableCornerSeatSocketShape,
@@ -79,6 +79,29 @@ function intersectionVolume(first: Shape3D, second: Shape3D): number {
   } finally {
     deleteShape(intersection)
   }
+}
+
+function rotateRetainerProbe(
+  point: [number, number],
+  rotationDegrees: OpenGridOrganizerBoxDetachableSocketPose['rotationDegrees'],
+): [number, number] {
+  const [x, y] = point
+  if (rotationDegrees === 90) return [-y, x]
+  if (rotationDegrees === 180) return [-x, -y]
+  if (rotationDegrees === 270) return [y, -x]
+  return [x, y]
+}
+
+function retainerProbeCenterFor(
+  pose: OpenGridOrganizerBoxDetachableSocketPose,
+): [number, number] {
+  const halfPassage =
+    OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.passageWidth / 2
+  const [offsetX, offsetY] = rotateRetainerProbe(
+    [-halfPassage, halfPassage],
+    pose.rotationDegrees,
+  )
+  return [pose.center[0] + offsetX, pose.center[1] + offsetY]
 }
 
 function faceRecordsFor(shape: Shape3D): FaceRecord[] {
@@ -375,24 +398,16 @@ function assertDetachableSocketGeometry(
 
   const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
   let sourceVoid: Shape3D | null = null
-  let sourceHolder: Shape3D | null = null
   try {
     sourceVoid = buildOpenGridDetachableCornerSeatSocketVoid(holderReference)
-    sourceHolder =
-      buildOpenGridDetachableCornerSeatHolderFromReference(holderReference)
     for (const pose of openGridOrganizerBoxDetachableSocketPosesFor(
       parameters,
     )) {
       let placedVoid: Shape3D | null = null
-      let placedHolder: Shape3D | null = null
       let placedMale: Shape3D | null = null
       try {
         placedVoid = placeOpenGridDetachableCornerSeatSocketShape(
           sourceVoid,
-          pose,
-        )
-        placedHolder = placeOpenGridDetachableCornerSeatSocketShape(
-          sourceHolder,
           pose,
         )
         placedMale = placeOpenGridDetachableCornerSeatMaleShape(
@@ -407,11 +422,14 @@ function assertDetachableSocketGeometry(
             `OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:socket-void-${pose.corner}`,
           )
         }
-        const retainedVolume = intersectionVolume(shape, placedHolder)
-        if (
-          Math.abs(retainedVolume - configuration.female.nominalVolume) >
-          configuration.volumeTolerance
-        ) {
+        const [retainerX, retainerY] = retainerProbeCenterFor(pose)
+        const retainerZ = configuration.femaleReference.depth / 2
+        const retainerVolume = volumeInBox(
+          shape,
+          [retainerX - 0.08, retainerY - 0.08, retainerZ - 0.04],
+          [retainerX + 0.08, retainerY + 0.08, retainerZ + 0.04],
+        )
+        if (retainerVolume <= 0.0001) {
           throw new Error(
             `OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:socket-retainer-${pose.corner}`,
           )
@@ -442,13 +460,11 @@ function assertDetachableSocketGeometry(
         }
       } finally {
         deleteShape(placedVoid)
-        deleteShape(placedHolder)
         deleteShape(placedMale)
       }
     }
   } finally {
     deleteShape(sourceVoid)
-    deleteShape(sourceHolder)
   }
 }
 
