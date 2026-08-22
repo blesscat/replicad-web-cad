@@ -26,6 +26,11 @@ export type OpenGridOrganizerBoxDetachableSocketPose = {
   rotationDegrees: 0 | 90 | 180 | 270
 }
 
+export type OpenGridOrganizerBoxDetachableIndicatorPlacement = {
+  center: OpenGridOrganizerBoxPoint2D
+  rotationDegrees: 0 | 90 | 180 | 270
+}
+
 export type OpenGridOrganizerBoxParameterKey =
   | 'holeCountX'
   | 'holeCountY'
@@ -649,6 +654,44 @@ export function openGridOrganizerBoxDetachableSocketPosesFor(
       rotationDegrees: 270,
     },
   ]
+}
+
+function detachableIndicatorHorizontalSignFor(
+  corner: OpenGridOrganizerBoxDetachableSocketCorner,
+): -1 | 1 {
+  if (corner === 'upper-left' || corner === 'lower-left') return -1
+  return 1
+}
+
+function detachableIndicatorRotationFor(
+  socketRotation: OpenGridOrganizerBoxDetachableSocketPose['rotationDegrees'],
+): OpenGridOrganizerBoxDetachableIndicatorPlacement['rotationDegrees'] {
+  const lockRotation =
+    OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.lockRotationDegrees
+  const indicatorRotation = (socketRotation + lockRotation) % 360
+  if (indicatorRotation === 0) return 0
+  if (indicatorRotation === 90) return 90
+  if (indicatorRotation === 180) return 180
+  if (indicatorRotation === 270) return 270
+  throw new Error('OPENGRID_ORGANIZER_BOX_INDICATOR_ROTATION_INVALID')
+}
+
+export function openGridOrganizerBoxDetachableIndicatorPlacementFor(
+  pose: OpenGridOrganizerBoxDetachableSocketPose,
+): OpenGridOrganizerBoxDetachableIndicatorPlacement {
+  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+  const offsetFromSocket =
+    configuration.female.outerDiameter / 2 +
+    configuration.indicator.socketBoundaryClearance +
+    configuration.indicator.radialLength / 2
+  const horizontalSign = detachableIndicatorHorizontalSignFor(pose.corner)
+  return {
+    center: [
+      pose.center[0] + horizontalSign * offsetFromSocket,
+      pose.center[1],
+    ],
+    rotationDegrees: detachableIndicatorRotationFor(pose.rotationDegrees),
+  }
 }
 
 export function validateOpenGridOrganizerBoxParameters(

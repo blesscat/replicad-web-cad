@@ -4,6 +4,7 @@ import {
   openGridOrganizerBoxCavityEnvelopeFor,
   openGridOrganizerBoxLayoutFor,
   openGridOrganizerBoxDetachableSocketPosesFor,
+  openGridOrganizerBoxDetachableIndicatorPlacementFor,
   openGridOrganizerBoxFileName,
   openGridOrganizerBoxStlFileName,
   OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
@@ -195,6 +196,45 @@ describe('OpenGrid organizer-box contract', () => {
     expect(openGridOrganizerBoxFileName(value)).toContain(
       'idetachable-corner-seat',
     )
+  })
+
+  it('places lock indicators one quarter-turn past each insertion pose', () => {
+    const value = parameters({
+      holeCountX: 1,
+      holeCountY: 1,
+      bottomInterfaceMode: 'detachable-corner-seat',
+    })
+    const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+    const poses = openGridOrganizerBoxDetachableSocketPosesFor(value)
+    const placements = poses.map(
+      openGridOrganizerBoxDetachableIndicatorPlacementFor,
+    )
+    const offset =
+      configuration.female.outerDiameter / 2 +
+      configuration.indicator.socketBoundaryClearance +
+      configuration.indicator.radialLength / 2
+
+    expect(placements.map(({ rotationDegrees }) => rotationDegrees)).toEqual([
+      90, 180, 270, 0,
+    ])
+    expect(placements[0]?.center[0]).toBeCloseTo(
+      (poses[0]?.center[0] ?? 0) - offset,
+      8,
+    )
+    expect(placements[1]?.center[0]).toBeCloseTo(
+      (poses[1]?.center[0] ?? 0) + offset,
+      8,
+    )
+    expect(
+      Math.abs((placements[0]?.center[0] ?? 0) - (poses[0]?.center[0] ?? 0)) -
+        configuration.indicator.radialLength / 2,
+    ).toBeCloseTo(
+      configuration.female.outerDiameter / 2 +
+        configuration.indicator.socketBoundaryClearance,
+      8,
+    )
+    expect(placements[0]?.center[1]).toBe(poses[0]?.center[1])
+    expect(placements[1]?.center[1]).toBe(poses[1]?.center[1])
   })
 
   it('measures detachable bottom thickness above the holder top', () => {
