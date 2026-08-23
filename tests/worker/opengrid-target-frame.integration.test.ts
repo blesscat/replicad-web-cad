@@ -327,4 +327,30 @@ describe('OpenGrid target frame builder', () => {
     },
     60_000,
   )
+
+  it('applies a five millimetre fillet to a centred target frame', async () => {
+    const input = parameters({
+      variant: 'Lite',
+      rows: 3,
+      columns: 3,
+      targetWidth: 100,
+      targetDepth: 100,
+      fitToTarget: true,
+      targetFrameShape: 'fillet',
+      chamfers: 'none',
+      connectorHoles: 'none',
+      screwMode: 'none',
+    })
+    const shape = await buildOpenGridBRep(input)
+    try {
+      expect(
+        measureIntersectionVolume(shape, [48.8, 48.8, 1], [49.5, 49.5, 3]),
+      ).toBeLessThan(0.01)
+      expect(
+        measureIntersectionVolume(shape, [47, 47, 1], [47.8, 47.8, 3]),
+      ).toBeGreaterThan(0.01)
+    } finally {
+      shape.delete()
+    }
+  }, 60_000)
 })

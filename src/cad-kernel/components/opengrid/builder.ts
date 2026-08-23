@@ -2431,7 +2431,7 @@ const TARGET_FRAME_OVERLAP = 0.2
 const TARGET_FRAME_CHAMFER_SIZE = Math.sqrt(
   OPENGRID_CONFIGURATION.intersectionDistance ** 2 * 2,
 )
-const TARGET_FRAME_FILLET_RADIUS = 2
+const TARGET_FRAME_FILLET_RADIUS = 5
 
 type Point3D = [number, number, number]
 
@@ -2628,7 +2628,9 @@ function targetFrameFilletRadius(geometry: TargetFrameGeometry): number {
     (extension) => extension > TARGET_FRAME_EPSILON,
   )
   if (extensions.length === 0) return 0
-  return Math.min(TARGET_FRAME_FILLET_RADIUS, ...extensions) / 2
+  // Keep the fillet inside the narrowest physical frame strip while allowing
+  // the requested beta radius on normal target-frame widths.
+  return Math.min(TARGET_FRAME_FILLET_RADIUS, ...extensions)
 }
 
 function isTargetFrameOuterVerticalEdge(
