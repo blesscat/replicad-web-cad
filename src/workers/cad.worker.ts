@@ -27,10 +27,7 @@ import {
 } from '../cad-kernel/components/opengrid-locating-assembly/reference'
 import { buildModelBRep, type KernelBuildContext } from '../cad-kernel/model'
 import { assertOpenGridShapeQuality } from '../cad-kernel/components/opengrid/quality'
-import {
-  assertOpenGridSnapOpenConnectShapeQuality,
-  assertOpenGridSnapShapeQuality,
-} from '../cad-kernel/components/opengrid-snap/quality'
+import { assertOpenGridSnapOpenConnectShapeQuality } from '../cad-kernel/components/opengrid-snap/quality'
 import { assertOpenGridDividerShapeQuality } from '../cad-kernel/components/opengrid-divider/quality'
 import { assertPillarShapeQuality } from '../cad-kernel/components/opengrid-pillar/quality'
 import { assertOpenGridOpenShelfShapeQuality } from '../cad-kernel/components/opengrid-open-shelf/quality'
@@ -63,7 +60,6 @@ import {
 import {
   modelFileName,
   modelStlFileName,
-  boundsForOpenGridSnap,
   isHswCellParameters,
   isOpenGridDividerModelParameters,
   isOpenGridOpenShelfParameters,
@@ -71,6 +67,7 @@ import {
   isOpenGridParameters,
   normalizeOpenGridDividerParameters,
   normalizeOpenGridParameters,
+  normalizeOpenGridSnapParameters,
   PROTOTYPE_CONFIGURATION,
   type ModelParameterValues,
   type OpenGridSnapParameters,
@@ -345,6 +342,15 @@ export class CadWorkerRuntime {
         command.parameters,
       )
     }
+    if (command.modelId === 'opengrid-snap') {
+      const normalizedParameters = normalizeOpenGridSnapParameters(
+        command.parameters,
+      )
+      if (!isOpenGridSnapParameters(normalizedParameters)) {
+        throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
+      }
+      generationParameters = normalizedParameters
+    }
     const hswProgress =
       command.modelId === 'hsw-cell' && isHswCellParameters(command.parameters)
         ? {
@@ -449,12 +455,6 @@ export class CadWorkerRuntime {
         if (!isOpenGridSnapParameters(generationParameters)) {
           throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
         }
-        if (
-          generationParameters.footprint === 'full' &&
-          !generationParameters.openConnect
-        ) {
-          mesh.bounds = boundsForOpenGridSnap(generationParameters)
-        }
       }
       if (command.modelId === 'opengrid') {
         if (!isOpenGridParameters(generationParameters)) {
@@ -473,25 +473,14 @@ export class CadWorkerRuntime {
             generationParameters.variant,
             generationParameters.profile,
           )
-          if (generationParameters.openConnect) {
-            timing.measureSync('quality', () =>
-              assertOpenGridSnapOpenConnectShapeQuality(
-                shape,
-                generationParameters,
-                mesh,
-                reference,
-              ),
-            )
-          } else {
-            timing.measureSync('quality', () =>
-              assertOpenGridSnapShapeQuality(
-                shape,
-                generationParameters,
-                mesh,
-                reference,
-              ),
-            )
-          }
+          timing.measureSync('quality', () =>
+            assertOpenGridSnapOpenConnectShapeQuality(
+              shape,
+              generationParameters,
+              mesh,
+              reference,
+            ),
+          )
         }
       }
 

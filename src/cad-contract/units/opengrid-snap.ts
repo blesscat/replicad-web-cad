@@ -119,7 +119,7 @@ export const OPENGRID_SNAP_CONFIGURATION = {
     footprint: 'full' as OpenGridSnapFootprint,
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
-    openConnect: false,
+    openConnect: true,
     magnetHoleShape: 'none' as OpenGridSnapMagnetHoleShape,
     magnetHoleLength: 0,
     magnetHoleWidth: 0,
@@ -510,7 +510,7 @@ export function normalizeOpenGridSnapParameters(value: unknown): unknown {
     normalized.centerRemoverHole = false
   }
   if (!Object.prototype.hasOwnProperty.call(normalized, 'openConnect')) {
-    normalized.openConnect = false
+    normalized.openConnect = true
   }
   if (!Object.prototype.hasOwnProperty.call(normalized, 'magnetHoleShape')) {
     normalized.magnetHoleShape = 'none'
@@ -530,6 +530,9 @@ export function normalizeOpenGridSnapParameters(value: unknown): unknown {
     normalized.magnetHoleThickness = 0
   }
   if (Object.prototype.hasOwnProperty.call(normalized, 'footprint')) {
+    if (typeof normalized.openConnect === 'boolean') {
+      normalized.openConnect = normalized.footprint === 'full'
+    }
     return normalized
   }
 
@@ -552,7 +555,15 @@ export function normalizeOpenGridSnapParameters(value: unknown): unknown {
     halfCellY: _halfCellY,
     ...withoutLegacyAxes
   } = normalized
-  return { ...withoutLegacyAxes, footprint: legacyFootprint }
+  const openConnect =
+    typeof normalized.openConnect === 'boolean'
+      ? legacyFootprint === 'full'
+      : normalized.openConnect
+  return {
+    ...withoutLegacyAxes,
+    footprint: legacyFootprint,
+    openConnect,
+  }
 }
 
 export function isOpenGridSnapParameters(
@@ -649,7 +660,9 @@ export function openGridSnapStlFileName(
 function openGridSnapOpenConnectFileNameSuffix(
   parameters: OpenGridSnapParameters,
 ): string {
-  return parameters.openConnect ? '-openconnect' : ''
+  return parameters.footprint === 'full' || parameters.openConnect
+    ? '-openconnect'
+    : ''
 }
 
 function openGridSnapMagnetFileNameSuffix(

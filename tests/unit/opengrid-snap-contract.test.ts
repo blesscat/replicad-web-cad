@@ -25,14 +25,15 @@ describe('OpenGrid Snap contract', () => {
       magnetHoleThickness: number
     }> = {},
   ) {
+    const footprint = overrides.footprint ?? 'full'
     return {
       variant: 'Full' as const,
       profile: 'Standard' as const,
       offset: 0,
-      footprint: 'full' as const,
+      footprint,
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
-      openConnect: false,
+      openConnect: footprint === 'full',
       magnetHoleShape: 'none' as const,
       magnetHoleLength: 0,
       magnetHoleWidth: 0,
@@ -119,15 +120,27 @@ describe('OpenGrid Snap contract', () => {
     ).toMatchObject({ valid: false })
   })
 
-  it('normalizes legacy snapshots with OpenConnect disabled', async () => {
+  it('normalizes legacy full snapshots with fixed OpenConnect enabled', async () => {
     const { normalizeOpenGridSnapParameters } =
       await import('../../src/cad-contract/units')
     const legacy = parameters()
     delete (legacy as Partial<typeof legacy>).openConnect
 
     expect(normalizeOpenGridSnapParameters(legacy)).toMatchObject({
-      openConnect: false,
+      openConnect: true,
     })
+
+    expect(
+      normalizeOpenGridSnapParameters({ ...legacy, openConnect: false }),
+    ).toMatchObject({ openConnect: true })
+
+    expect(
+      normalizeOpenGridSnapParameters({
+        ...legacy,
+        footprint: 'half',
+        openConnect: true,
+      }),
+    ).toMatchObject({ openConnect: false })
   })
 
   it('treats offset as a centered total envelope delta', () => {
@@ -239,8 +252,8 @@ describe('OpenGrid Snap contract', () => {
     expect(openGridSnapStlFileName(round)).toContain('-magnet-round-d8-t2.stl')
   })
 
-  it('distinguishes OpenConnect-enabled Full exports', () => {
-    const input = parameters({ openConnect: true })
+  it('distinguishes every Full export as OpenConnect-equipped', () => {
+    const input = parameters({ openConnect: false })
 
     expect(openGridSnapFileName(input)).toContain('-openconnect')
     expect(openGridSnapStlFileName(input)).toContain('-openconnect')
@@ -368,7 +381,7 @@ describe('OpenGrid Snap contract', () => {
       profile: 'Standard',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
-      openConnect: false,
+      openConnect: true,
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,

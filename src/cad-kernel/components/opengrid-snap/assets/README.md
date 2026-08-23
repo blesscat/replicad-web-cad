@@ -18,8 +18,14 @@ not read the Downloads path. Confirm ownership and permission before publishing
 these assets outside the local repository.
 
 `openconnect-head.step` is the repository-owned OpenConnect interface source.
-The supplied `openConnect_Snap_Directional_Lite(1).stl` is placement reference
-only and is not loaded by the runtime.
+The supplied `openConnect_Snap_Directional_Lite(1).stl`,
+`openConnect_Snap_Directional_Standard(1).stl`, and
+`openConnect_Snap_Symmetric_Standard.stl` are placement/topology references
+only and are not loaded by the runtime. The full-footprint builder always
+composes the STEP head. Lite outputs also generate a nominal 0.6 mm
+parametric interface layer inferred from the Lite reference meshes because no
+matching STEP/CAD source is available; that layer is an approximation rather
+than a claim of exact STL reconstruction.
 
 ## Upstream attribution and derived downloads
 

@@ -278,6 +278,7 @@ function normalizeSystemScopedEntries(
       footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      openConnect: true,
     },
   }
 }

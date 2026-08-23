@@ -221,6 +221,7 @@ describe('component parameter store', () => {
       variant: 'Lite' as const,
       offset: 0.2,
       footprint: 'half' as const,
+      openConnect: false,
     }
     const storage = createMemoryStorage(
       createPayload(
@@ -283,7 +284,7 @@ describe('component parameter store', () => {
       footprint: 'full',
       fourCornerLocatingHoles: true,
       centerRemoverHole: true,
-      openConnect: false,
+      openConnect: true,
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,
@@ -545,7 +546,7 @@ describe('component parameter store', () => {
       footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
-      openConnect: false,
+      openConnect: true,
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,
@@ -894,6 +895,7 @@ describe('component parameter store', () => {
         footprint: 'quarter',
         fourCornerLocatingHoles: true,
         centerRemoverHole: false,
+        openConnect: false,
       }),
     ).toBe(true)
     expect(store.get('opengrid')).toMatchObject({

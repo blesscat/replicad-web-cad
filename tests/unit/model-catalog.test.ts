@@ -438,7 +438,7 @@ describe('CAD component catalog', () => {
       footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
-      openConnect: false,
+      openConnect: true,
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,
@@ -462,7 +462,7 @@ describe('CAD component catalog', () => {
       }),
     ).toEqual({
       min: [-12.9, -12.9, 0],
-      max: [12.9, 12.9, 3.4],
+      max: [12.9, 12.9, 6.6],
     })
     expect(
       snap?.boundsForParameters({
@@ -481,7 +481,7 @@ describe('CAD component catalog', () => {
       }),
     ).toEqual({
       min: [-12.9, -12.9, 0],
-      max: [12.9, 12.9, 6],
+      max: [12.9, 12.9, 6.6],
     })
     expect(
       snap?.boundsForParameters({
@@ -517,7 +517,9 @@ describe('CAD component catalog', () => {
         magnetHoleDiameter: 0,
         magnetHoleThickness: 0,
       }),
-    ).toBe('opengrid-snap-standard-full-offset0.2-full-corners0-center0.step')
+    ).toBe(
+      'opengrid-snap-standard-full-offset0.2-full-corners0-center0-openconnect.step',
+    )
     expect(
       snap?.stlFileName({
         variant: 'Lite',
@@ -533,7 +535,9 @@ describe('CAD component catalog', () => {
         magnetHoleDiameter: 0,
         magnetHoleThickness: 0,
       }),
-    ).toBe('opengrid-snap-standard-lite-offset0.15-full-corners0-center0.stl')
+    ).toBe(
+      'opengrid-snap-standard-lite-offset0.15-full-corners0-center0-openconnect.stl',
+    )
     expect(
       snap?.fixedStepDownload?.({
         variant: 'Lite',
@@ -614,7 +618,7 @@ describe('CAD component catalog', () => {
           footprint: 'full',
           fourCornerLocatingHoles: true,
           centerRemoverHole: true,
-          openConnect: false,
+          openConnect: true,
           magnetHoleShape: 'none',
           magnetHoleLength: 0,
           magnetHoleWidth: 0,

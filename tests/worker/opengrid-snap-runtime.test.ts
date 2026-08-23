@@ -74,6 +74,7 @@ function snapParameters(
     >
   > = {},
 ): OpenGridSnapParameters {
+  const fixedFootprintOpenConnect = footprint === 'full'
   return {
     variant,
     profile: 'Standard',
@@ -81,7 +82,7 @@ function snapParameters(
     footprint,
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
-    openConnect: false,
+    openConnect: fixedFootprintOpenConnect,
     magnetHoleShape: 'none',
     magnetHoleLength: 0,
     magnetHoleWidth: 0,
@@ -189,7 +190,10 @@ describe('OpenGrid Snap Worker runtime', () => {
       'Full',
       'Directional',
     )
-    expect(mocks.assertOpenGridSnapShapeQuality).toHaveBeenCalledTimes(4)
+    expect(
+      mocks.assertOpenGridSnapOpenConnectShapeQuality,
+    ).toHaveBeenCalledTimes(4)
+    expect(mocks.assertOpenGridSnapShapeQuality).not.toHaveBeenCalled()
     expect(events).toContainEqual(
       expect.objectContaining({
         kind: 'model.candidate-ready',
@@ -259,7 +263,7 @@ describe('OpenGrid Snap Worker runtime', () => {
           getOpenGridSnapOpenConnectHead?: () => Promise<unknown>
         },
       ) => {
-        if (parameters.openConnect) {
+        if (parameters.footprint === 'full') {
           await context.getOpenGridSnapOpenConnectHead?.()
         }
         return { delete: vi.fn() }
@@ -275,7 +279,7 @@ describe('OpenGrid Snap Worker runtime', () => {
       generateCommand(
         snapParameters('Full', 0.2, 'full', {
           profile: 'Directional',
-          openConnect: true,
+          openConnect: false,
         }),
       ),
     )
@@ -355,9 +359,11 @@ describe('OpenGrid Snap Worker runtime', () => {
 
   it('discards a quality-failed Snap candidate while retaining the next valid one', async () => {
     const events: unknown[] = []
-    mocks.assertOpenGridSnapShapeQuality.mockImplementationOnce(() => {
-      throw new Error('OPENGRID_SNAP_QUALITY_INVALID')
-    })
+    mocks.assertOpenGridSnapOpenConnectShapeQuality.mockImplementationOnce(
+      () => {
+        throw new Error('OPENGRID_SNAP_QUALITY_INVALID')
+      },
+    )
     const runtime = new CadWorkerRuntime('epoch-snap-quality', (event) =>
       events.push(event),
     )

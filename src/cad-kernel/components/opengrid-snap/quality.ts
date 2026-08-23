@@ -23,6 +23,7 @@ import {
 } from './profile'
 import {
   OPENGRID_SNAP_OPEN_CONNECT_HEAD_SOURCE_BOUNDS,
+  openGridSnapOpenConnectLiteInterfaceBoundsForAnchor,
   openGridSnapOpenConnectAnchorForXYTransform,
   openGridSnapOpenConnectCompositeBounds,
   openGridSnapOpenConnectHeadBoundsForAnchor,
@@ -1042,9 +1043,13 @@ function isOpenConnectHeadSolid(bounds: ModelBounds): boolean {
   return actualSpan.every((span, index) => isClose(span, sourceSpan[index]!))
 }
 
-function baseAssemblyWithoutOpenConnectHead(shape: Shape3D): {
+function baseAssemblyWithoutOpenConnectHead(
+  shape: Shape3D,
+  expectedLiteInterfaceBounds: ModelBounds | null,
+): {
   base: Shape3D
   headBounds: ModelBounds
+  liteInterfaceBounds: ModelBounds | null
 } {
   const oc = getOC()
   const explorer = new oc.TopExp_Explorer_2(
@@ -1054,6 +1059,7 @@ function baseAssemblyWithoutOpenConnectHead(shape: Shape3D): {
   )
   const solids: Solid[] = []
   let headBounds: ModelBounds | null = null
+  let liteInterfaceBounds: ModelBounds | null = null
   try {
     while (explorer.More()) {
       const solid = new Solid(oc.TopoDS.Solid_1(explorer.Current()))
@@ -1064,6 +1070,16 @@ function baseAssemblyWithoutOpenConnectHead(shape: Shape3D): {
           throw new Error('OPENGRID_SNAP_OPEN_CONNECT_HEAD_DUPLICATE')
         }
         headBounds = bounds
+        deleteShape(solid)
+      } else if (
+        expectedLiteInterfaceBounds &&
+        boundsMatch(bounds, expectedLiteInterfaceBounds, 0.45)
+      ) {
+        if (liteInterfaceBounds) {
+          deleteShape(solid)
+          throw new Error('OPENGRID_SNAP_OPEN_CONNECT_INTERFACE_DUPLICATE')
+        }
+        liteInterfaceBounds = bounds
         deleteShape(solid)
       } else {
         solids.push(solid)
@@ -1092,7 +1108,7 @@ function baseAssemblyWithoutOpenConnectHead(shape: Shape3D): {
         ? clonedSolids[0]
         : makeCompound(clonedSolids).asShape3D()
     if (!base) throw new Error('OPENGRID_SNAP_BASE_ASSEMBLY_MISSING')
-    return { base, headBounds }
+    return { base, headBounds, liteInterfaceBounds }
   } catch (error) {
     for (const cloned of clonedSolids) deleteShape(cloned)
     throw error
@@ -1124,16 +1140,35 @@ export function inspectOpenGridSnapOpenConnectShapeQuality(
   let baseAssembly: Shape3D | null = null
 
   try {
-    const extracted = baseAssemblyWithoutOpenConnectHead(shape)
-    baseAssembly = extracted.base
-    const expectedHeadBounds = openGridSnapOpenConnectHeadBoundsForAnchor(
-      openGridSnapOpenConnectAnchorForXYTransform(
-        xyEnvelopeTransformFor(parameters, readBounds(reference)),
-        parameters.variant,
-      ),
+    const expectedAnchor = openGridSnapOpenConnectAnchorForXYTransform(
+      xyEnvelopeTransformFor(parameters, readBounds(reference)),
+      parameters.variant,
     )
+    const expectedLiteInterfaceBounds =
+      parameters.variant === 'Lite'
+        ? openGridSnapOpenConnectLiteInterfaceBoundsForAnchor(expectedAnchor)
+        : null
+    const extracted = baseAssemblyWithoutOpenConnectHead(
+      shape,
+      expectedLiteInterfaceBounds,
+    )
+    baseAssembly = extracted.base
+    const expectedHeadBounds =
+      openGridSnapOpenConnectHeadBoundsForAnchor(expectedAnchor)
     if (!boundsMatch(extracted.headBounds, expectedHeadBounds, 0.45)) {
       failures.push('openconnect:interface-placement')
+    }
+    if (
+      parameters.variant === 'Lite' &&
+      (!extracted.liteInterfaceBounds ||
+        !expectedLiteInterfaceBounds ||
+        !boundsMatch(
+          extracted.liteInterfaceBounds,
+          expectedLiteInterfaceBounds,
+          0.45,
+        ))
+    ) {
+      failures.push('openconnect:lite-interface-placement')
     }
     baseReport = inspectOpenGridSnapShapeQuality(
       baseAssembly,
@@ -1171,7 +1206,9 @@ export function inspectOpenGridSnapOpenConnectShapeQuality(
     solidCount = countSolids(shape)
     const expectedSolidCount =
       openGridSnapProfileFor(parameters.profile, parameters.variant)
-        .expectedSolidCount + 1
+        .expectedSolidCount +
+      1 +
+      (parameters.variant === 'Lite' ? 1 : 0)
     if (solidCount !== expectedSolidCount) {
       failures.push('openconnect:expected-solid-count')
     }

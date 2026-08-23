@@ -107,7 +107,7 @@ describe('OpenGrid Snap footprint contract', () => {
       footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
-      openConnect: false,
+      openConnect: true,
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,

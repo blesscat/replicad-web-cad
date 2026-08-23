@@ -15,7 +15,7 @@ import {
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import { initialiseCadKernel } from '../../src/cad-kernel/initialise'
 import {
-  buildOpenGridSnap,
+  buildOpenGridSnap as buildOpenGridSnapImplementation,
   importOpenGridSnapFixedFootprint,
   importOpenGridSnapOpenConnectHead,
   importOpenGridSnapReference,
@@ -362,6 +362,32 @@ function openConnectHeadBlob(): Blob {
   ])
 }
 
+type SnapBuildParameters = Parameters<typeof buildOpenGridSnapImplementation>[0]
+type SnapBuildContext = Parameters<typeof buildOpenGridSnapImplementation>[1]
+
+async function buildOpenGridSnap(
+  parameters: SnapBuildParameters,
+  context: SnapBuildContext,
+): Promise<Shape3D> {
+  if (
+    parameters.footprint !== 'full' ||
+    !parameters.openConnect ||
+    context.getOpenGridSnapOpenConnectHead
+  ) {
+    return buildOpenGridSnapImplementation(parameters, context)
+  }
+
+  const head = await importOpenGridSnapOpenConnectHead(openConnectHeadBlob())
+  try {
+    return await buildOpenGridSnapImplementation(parameters, {
+      ...context,
+      getOpenGridSnapOpenConnectHead: async () => head,
+    })
+  } finally {
+    head.delete()
+  }
+}
+
 function snapParameters(
   variant: 'Full' | 'Lite',
   offset: number,
@@ -418,7 +444,7 @@ describe('OpenGrid Snap reference builder', () => {
     }
   })
 
-  it('turns the OpenConnect head to match the supplied placement reference', async () => {
+  it('adds the inferred Lite interface below the rotated OpenConnect head', async () => {
     const reference = await importOpenGridSnapReference(
       assetBlob('Lite', 'Directional'),
       'Lite',
@@ -437,12 +463,12 @@ describe('OpenGrid Snap reference builder', () => {
     )
 
     try {
-      const referenceOnlySideProbe = volumeInBox(
+      const liteInterfaceSideProbe = volumeInBox(
         generated,
         [-8, -1, 3.5],
         [-7, 0, 3.8],
       )
-      expect(referenceOnlySideProbe).toBeLessThan(0.1)
+      expect(liteInterfaceSideProbe).toBeGreaterThan(0.1)
     } finally {
       generated.delete()
       head.delete()
@@ -467,7 +493,7 @@ describe('OpenGrid Snap reference builder', () => {
         openConnectHeadBlob(),
       )
       const generated = await buildOpenGridSnap(
-        snapParameters(variant, 0.2, 'full', { profile, openConnect: true }),
+        snapParameters(variant, 0.2, 'full', { profile, openConnect: false }),
         {
           getOpenGridSnapReference: async () => reference,
           getOpenGridSnapOpenConnectHead: async () => head,
@@ -476,11 +502,11 @@ describe('OpenGrid Snap reference builder', () => {
 
       try {
         expect(countSolids(generated)).toBe(
-          openGridSnapProfileFor(profile, variant).expectedSolidCount + 1,
+          openGridSnapProfileFor(profile, variant).expectedSolidCount +
+            (variant === 'Lite' ? 2 : 1),
         )
-        const selectedDefinition = openGridSnapProfileFor(profile, variant)
         const headBounds = openGridSnapOpenConnectHeadBounds(variant)
-        const expectedHeadBaseZ = selectedDefinition.expectedBounds.max[2]
+        const expectedHeadBaseZ = headBounds.min[2]
         const headDescriptor = solidDescriptors(generated).find(({ bounds }) =>
           bounds.every((point, pointIndex) =>
             point.every(
@@ -498,7 +524,7 @@ describe('OpenGrid Snap reference builder', () => {
         expect(headDescriptor?.bounds[0]?.[2]).toBeCloseTo(expectedHeadBaseZ, 2)
         const quality = assertOpenGridSnapOpenConnectShapeQuality(
           generated,
-          snapParameters(variant, 0.2, 'full', { profile, openConnect: true }),
+          snapParameters(variant, 0.2, 'full', { profile, openConnect: false }),
           meshBRep(generated, { tolerance: 0.05, angularTolerance: 0.1 }),
           reference,
         )

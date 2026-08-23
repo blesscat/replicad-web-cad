@@ -39,6 +39,9 @@ import {
   OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_AXIS,
   OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_DEGREES,
   OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_ORIGIN,
+  OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_HEIGHT,
+  OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_INNER_HALF_SIZE,
+  OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_OUTER_HALF_SIZE,
   openGridSnapOpenConnectAnchorForXYTransform,
   type OpenGridSnapOpenConnectAnchor,
 } from './openconnect'
@@ -1124,16 +1127,55 @@ function placeOpenConnectHead(
   }
 }
 
+function makeOpenConnectLiteInterface(
+  anchor: OpenGridSnapOpenConnectAnchor,
+): Shape3D {
+  const outerHalfSize =
+    OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_OUTER_HALF_SIZE
+  const innerHalfSize =
+    OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_INNER_HALF_SIZE
+  const baseZ = anchor[2] - OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_HEIGHT
+  const outer = makeBox(
+    [anchor[0] - outerHalfSize, anchor[1] - outerHalfSize, baseZ],
+    [anchor[0] + outerHalfSize, anchor[1] + outerHalfSize, anchor[2]],
+  )
+  const inner = makeBox(
+    [anchor[0] - innerHalfSize, anchor[1] - innerHalfSize, baseZ - 0.01],
+    [anchor[0] + innerHalfSize, anchor[1] + innerHalfSize, anchor[2] + 0.01],
+  )
+
+  try {
+    const result = outer.cut(inner)
+    if (result !== outer) deleteShape(outer)
+    deleteShape(inner)
+    return result
+  } catch (error) {
+    deleteShape(outer)
+    deleteShape(inner)
+    throw error
+  }
+}
+
 function composeOpenConnectAssembly(
   assembly: Shape3D,
   head: Shape3D,
   anchor: OpenGridSnapOpenConnectAnchor,
+  variant: OpenGridSnapVariant,
 ): Shape3D {
   const placedHead = placeOpenConnectHead(cloneImportedAssembly(head), anchor)
+  let liteInterface: Shape3D | null = null
   try {
-    return makeCompound([assembly, placedHead]).asShape3D()
+    if (variant === 'Lite') {
+      liteInterface = makeOpenConnectLiteInterface(anchor)
+    }
+    return makeCompound(
+      [assembly, liteInterface, placedHead].filter(
+        (part): part is Shape3D => part !== null,
+      ),
+    ).asShape3D()
   } catch (error) {
     deleteShape(assembly)
+    deleteShape(liteInterface)
     deleteShape(placedHead)
     throw error
   }
@@ -1186,7 +1228,9 @@ export async function buildOpenGridSnap(
   )
 
   if (parameters.footprint === 'full') {
-    if (!parameters.openConnect) return assembly
+    if (!parameters.openConnect && !context.getOpenGridSnapOpenConnectHead) {
+      return assembly
+    }
     if (!context.getOpenGridSnapOpenConnectHead) {
       deleteShape(assembly)
       throw new Error('OPENGRID_SNAP_OPEN_CONNECT_HEAD_MISSING')
@@ -1197,6 +1241,7 @@ export async function buildOpenGridSnap(
       assembly,
       head,
       openConnectAnchorFor(reference, parameters, targetBounds),
+      parameters.variant,
     )
   }
 

@@ -15,6 +15,13 @@ export const OPENGRID_SNAP_OPEN_CONNECT_HEAD_TRANSLATION: readonly [
   number,
 ] = [0, 0, OPENGRID_SNAP_CONFIGURATION.variantHeights.Lite]
 
+// The supplied Lite reference implies a thin interface layer between the
+// repository Snap reference and the unchanged OpenConnect head.  Its exact
+// CAD source is unavailable, so keep the approximation explicit and local.
+export const OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_HEIGHT = 0.6
+export const OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_OUTER_HALF_SIZE = 12.4
+export const OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_INNER_HALF_SIZE = 4.6
+
 // The supplied STEP is authored opposite to the assembled placement reference.
 export const OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_DEGREES = 180
 export const OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_ORIGIN: readonly [
@@ -37,12 +44,10 @@ export const OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_AXIS: readonly [
 export function openGridSnapOpenConnectHeadBaseZFor(
   variant: OpenGridSnapVariant,
 ): number {
-  const liteHeight = OPENGRID_SNAP_CONFIGURATION.variantHeights.Lite
   const selectedHeight = OPENGRID_SNAP_CONFIGURATION.variantHeights[variant]
-  return (
-    OPENGRID_SNAP_OPEN_CONNECT_HEAD_TRANSLATION[2] +
-    (selectedHeight - liteHeight)
-  )
+  const liteInterfaceHeight =
+    variant === 'Lite' ? OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_HEIGHT : 0
+  return selectedHeight + liteInterfaceHeight
 }
 
 export type OpenGridSnapOpenConnectAnchor = readonly [number, number, number]
@@ -102,6 +107,20 @@ export function openGridSnapOpenConnectHeadBoundsForAnchor(
   }
 }
 
+export function openGridSnapOpenConnectLiteInterfaceBoundsForAnchor(
+  anchor: OpenGridSnapOpenConnectAnchor,
+): ModelBounds {
+  const halfSize = OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_OUTER_HALF_SIZE
+  return {
+    min: [
+      anchor[0] - halfSize,
+      anchor[1] - halfSize,
+      anchor[2] - OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_HEIGHT,
+    ],
+    max: [anchor[0] + halfSize, anchor[1] + halfSize, anchor[2]],
+  }
+}
+
 export function openGridSnapOpenConnectHeadBounds(
   variant: OpenGridSnapVariant = 'Lite',
 ): ModelBounds {
@@ -116,19 +135,46 @@ export function openGridSnapOpenConnectCompositeBounds(
   snapBounds: ModelBounds,
   variant: OpenGridSnapVariant = 'Lite',
 ): ModelBounds {
-  const headBounds = openGridSnapOpenConnectHeadBoundsForAnchor(
-    openGridSnapOpenConnectAnchorForSnapBounds(snapBounds, variant),
-  )
+  const anchor = openGridSnapOpenConnectAnchorForSnapBounds(snapBounds, variant)
+  const headBounds = openGridSnapOpenConnectHeadBoundsForAnchor(anchor)
+  const interfaceBounds =
+    variant === 'Lite'
+      ? openGridSnapOpenConnectLiteInterfaceBoundsForAnchor(anchor)
+      : null
   return {
     min: [
-      Math.min(snapBounds.min[0], headBounds.min[0]),
-      Math.min(snapBounds.min[1], headBounds.min[1]),
-      Math.min(snapBounds.min[2], headBounds.min[2]),
+      Math.min(
+        snapBounds.min[0],
+        headBounds.min[0],
+        interfaceBounds?.min[0] ?? Number.POSITIVE_INFINITY,
+      ),
+      Math.min(
+        snapBounds.min[1],
+        headBounds.min[1],
+        interfaceBounds?.min[1] ?? Number.POSITIVE_INFINITY,
+      ),
+      Math.min(
+        snapBounds.min[2],
+        headBounds.min[2],
+        interfaceBounds?.min[2] ?? Number.POSITIVE_INFINITY,
+      ),
     ],
     max: [
-      Math.max(snapBounds.max[0], headBounds.max[0]),
-      Math.max(snapBounds.max[1], headBounds.max[1]),
-      Math.max(snapBounds.max[2], headBounds.max[2]),
+      Math.max(
+        snapBounds.max[0],
+        headBounds.max[0],
+        interfaceBounds?.max[0] ?? Number.NEGATIVE_INFINITY,
+      ),
+      Math.max(
+        snapBounds.max[1],
+        headBounds.max[1],
+        interfaceBounds?.max[1] ?? Number.NEGATIVE_INFINITY,
+      ),
+      Math.max(
+        snapBounds.max[2],
+        headBounds.max[2],
+        interfaceBounds?.max[2] ?? Number.NEGATIVE_INFINITY,
+      ),
     ],
   }
 }

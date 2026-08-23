@@ -109,10 +109,6 @@
   let magnetDimensionControlsAreDisabled = $derived(
     magnetControlsAreDisabled || !magnetHoleIsActive,
   )
-  let rawOpenConnect = $derived(
-    rawParameters.openConnect ?? String(parameters.openConnect),
-  )
-
   function initializeMagnetDimension(
     key: (typeof magnetDimensionKeys)[number],
     rawValue: string,
@@ -181,6 +177,7 @@
     if (isWallSystem) return
     const footprint = event.currentTarget.value as OpenGridSnapFootprint
     onInputChange('footprint', footprint)
+    onInputChange('openConnect', String(footprint === 'full'))
     if (footprint !== 'full') {
       onInputChange('offset', String(offsetField.defaultValue))
       onInputChange('fourCornerLocatingHoles', 'false')
@@ -363,30 +360,9 @@
   {/if}
 
   {#if isWallSystem}
-    <label class="flex items-center gap-2 text-sm text-ink">
-      <input
-        type="checkbox"
-        aria-label={translate(locale, 'panel.snap.openConnect')}
-        aria-describedby={fieldError('openConnect')
-          ? 'opengrid-snap-open-connect-error'
-          : undefined}
-        aria-invalid={Boolean(fieldError('openConnect'))}
-        checked={rawOpenConnect === 'true'}
-        onchange={(event) => {
-          if (event.currentTarget instanceof HTMLInputElement) {
-            onInputChange('openConnect', String(event.currentTarget.checked))
-          }
-        }}
-      />
-      {translate(locale, 'panel.snap.openConnect')}
-    </label>
-    {#if fieldError('openConnect')}
-      <span
-        id="opengrid-snap-open-connect-error"
-        class="text-sm text-error"
-        role="alert">{fieldErrorMessage('openConnect')}</span
-      >
-    {/if}
+    <p class="m-0 text-sm text-ink" role="status">
+      {translate(locale, 'panel.snap.openConnectFixed')}
+    </p>
   {/if}
 
   <ParameterField
