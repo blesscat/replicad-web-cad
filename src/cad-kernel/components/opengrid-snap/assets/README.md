@@ -22,10 +22,11 @@ The supplied `openConnect_Snap_Directional_Lite(1).stl`,
 `openConnect_Snap_Directional_Standard(1).stl`, and
 `openConnect_Snap_Symmetric_Standard.stl` are placement/topology references
 only and are not loaded by the runtime. The full-footprint builder always
-composes the STEP head. Lite outputs also generate a nominal 0.6 mm
-parametric interface layer inferred from the Lite reference meshes because no
-matching STEP/CAD source is available; that layer is an approximation rather
-than a claim of exact STL reconstruction.
+composes the STEP head directly on the selected Snap top. Before composition,
+the builder cuts an approximate 5 mm-wide negative-Y underside notch from the
+Snap assembly. The notch dimensions are inferred from the supplied STL
+references because no matching STEP/CAD source is available; the runtime does
+not add an interface layer or increase the selected Snap height.
 
 ## Upstream attribution and derived downloads
 

@@ -23,10 +23,10 @@ import {
 } from './profile'
 import {
   OPENGRID_SNAP_OPEN_CONNECT_HEAD_SOURCE_BOUNDS,
-  openGridSnapOpenConnectLiteInterfaceBoundsForAnchor,
   openGridSnapOpenConnectAnchorForXYTransform,
   openGridSnapOpenConnectCompositeBounds,
   openGridSnapOpenConnectHeadBoundsForAnchor,
+  openGridSnapOpenConnectNotchBoundsFor,
 } from './openconnect'
 import type { MeshSnapshot } from '../../../cad-contract/messages'
 import type { MeshData } from '../../mesh'
@@ -1043,13 +1043,9 @@ function isOpenConnectHeadSolid(bounds: ModelBounds): boolean {
   return actualSpan.every((span, index) => isClose(span, sourceSpan[index]!))
 }
 
-function baseAssemblyWithoutOpenConnectHead(
-  shape: Shape3D,
-  expectedLiteInterfaceBounds: ModelBounds | null,
-): {
+function baseAssemblyWithoutOpenConnectHead(shape: Shape3D): {
   base: Shape3D
   headBounds: ModelBounds
-  liteInterfaceBounds: ModelBounds | null
 } {
   const oc = getOC()
   const explorer = new oc.TopExp_Explorer_2(
@@ -1059,7 +1055,6 @@ function baseAssemblyWithoutOpenConnectHead(
   )
   const solids: Solid[] = []
   let headBounds: ModelBounds | null = null
-  let liteInterfaceBounds: ModelBounds | null = null
   try {
     while (explorer.More()) {
       const solid = new Solid(oc.TopoDS.Solid_1(explorer.Current()))
@@ -1070,16 +1065,6 @@ function baseAssemblyWithoutOpenConnectHead(
           throw new Error('OPENGRID_SNAP_OPEN_CONNECT_HEAD_DUPLICATE')
         }
         headBounds = bounds
-        deleteShape(solid)
-      } else if (
-        expectedLiteInterfaceBounds &&
-        boundsMatch(bounds, expectedLiteInterfaceBounds, 0.45)
-      ) {
-        if (liteInterfaceBounds) {
-          deleteShape(solid)
-          throw new Error('OPENGRID_SNAP_OPEN_CONNECT_INTERFACE_DUPLICATE')
-        }
-        liteInterfaceBounds = bounds
         deleteShape(solid)
       } else {
         solids.push(solid)
@@ -1108,7 +1093,7 @@ function baseAssemblyWithoutOpenConnectHead(
         ? clonedSolids[0]
         : makeCompound(clonedSolids).asShape3D()
     if (!base) throw new Error('OPENGRID_SNAP_BASE_ASSEMBLY_MISSING')
-    return { base, headBounds, liteInterfaceBounds }
+    return { base, headBounds }
   } catch (error) {
     for (const cloned of clonedSolids) deleteShape(cloned)
     throw error
@@ -1124,6 +1109,23 @@ function openConnectExpectedBounds(
     boundsForOpenGridSnap(parameters),
     parameters.variant,
   )
+}
+
+function openConnectNotchProbeFor(
+  parameters: OpenGridSnapParameters,
+  reference: Shape3D,
+): Probe {
+  const notchBounds = openGridSnapOpenConnectNotchBoundsFor(parameters.variant)
+  const sourceProbe: Probe = {
+    min: [notchBounds.min[0] + 0.5, -11.9, notchBounds.min[2] + 0.1],
+    max: [
+      notchBounds.max[0] - 0.5,
+      notchBounds.max[1] - 0.195,
+      notchBounds.max[2] - 0.1,
+    ],
+  }
+  const transform = xyEnvelopeTransformFor(parameters, readBounds(reference))
+  return transformProbeXY(sourceProbe, transform)
 }
 
 export function inspectOpenGridSnapOpenConnectShapeQuality(
@@ -1144,35 +1146,16 @@ export function inspectOpenGridSnapOpenConnectShapeQuality(
       xyEnvelopeTransformFor(parameters, readBounds(reference)),
       parameters.variant,
     )
-    const expectedLiteInterfaceBounds =
-      parameters.variant === 'Lite'
-        ? openGridSnapOpenConnectLiteInterfaceBoundsForAnchor(expectedAnchor)
-        : null
-    const extracted = baseAssemblyWithoutOpenConnectHead(
-      shape,
-      expectedLiteInterfaceBounds,
-    )
+    const extracted = baseAssemblyWithoutOpenConnectHead(shape)
     baseAssembly = extracted.base
     const expectedHeadBounds =
       openGridSnapOpenConnectHeadBoundsForAnchor(expectedAnchor)
     if (!boundsMatch(extracted.headBounds, expectedHeadBounds, 0.45)) {
       failures.push('openconnect:interface-placement')
     }
-    if (
-      parameters.variant === 'Lite' &&
-      (!extracted.liteInterfaceBounds ||
-        !expectedLiteInterfaceBounds ||
-        !boundsMatch(
-          extracted.liteInterfaceBounds,
-          expectedLiteInterfaceBounds,
-          0.45,
-        ))
-    ) {
-      failures.push('openconnect:lite-interface-placement')
-    }
     baseReport = inspectOpenGridSnapShapeQuality(
       baseAssembly,
-      { ...parameters, openConnect: false },
+      { ...parameters, openConnect: true },
       mesh,
       reference,
     )
@@ -1183,6 +1166,20 @@ export function inspectOpenGridSnapOpenConnectShapeQuality(
     )
   } finally {
     deleteShape(baseAssembly)
+  }
+
+  try {
+    const notchVolume = volumeInProbe(
+      shape,
+      openConnectNotchProbeFor(parameters, reference),
+    )
+    if (notchVolume > 0.02) {
+      failures.push('openconnect:underside-notch-missing')
+    }
+  } catch (error) {
+    failures.push(
+      `openconnect:notch:${error instanceof Error ? error.message : String(error)}`,
+    )
   }
 
   try {
@@ -1206,9 +1203,7 @@ export function inspectOpenGridSnapOpenConnectShapeQuality(
     solidCount = countSolids(shape)
     const expectedSolidCount =
       openGridSnapProfileFor(parameters.profile, parameters.variant)
-        .expectedSolidCount +
-      1 +
-      (parameters.variant === 'Lite' ? 1 : 0)
+        .expectedSolidCount + 1
     if (solidCount !== expectedSolidCount) {
       failures.push('openconnect:expected-solid-count')
     }
@@ -1423,6 +1418,7 @@ function compareTransformedCore(
       failures.push('transformed-core:central-bounds-mismatch')
     }
     if (
+      !parameters.openConnect &&
       !isClose(
         centralVolume,
         referenceVolume * transform.scaleX * transform.scaleY,
@@ -1471,6 +1467,7 @@ function compareTransformedStandardAssembly(
     failures.push('transformed-assembly:member-count-mismatch')
     return
   }
+  if (parameters.openConnect) return
 
   for (let index = 0; index < referenceMembers.length; index += 1) {
     const referenceMember = referenceMembers[index]
@@ -1488,12 +1485,12 @@ function compareTransformedStandardAssembly(
     ) {
       failures.push('transformed-assembly:member-bounds-mismatch')
     }
-    if (
+    const shouldCompareVolume =
       index > 0 ||
       (!parameters.fourCornerLocatingHoles &&
         !parameters.centerRemoverHole &&
         parameters.magnetHoleShape === 'none')
-    ) {
+    if (shouldCompareVolume) {
       const expectedVolume =
         referenceMember.volume * transform.scaleX * transform.scaleY
       if (
@@ -1857,6 +1854,7 @@ function inspectProfileQuality(
         failures.push('profile:directional-asymmetry-missing')
       }
       if (
+        !parameters.openConnect &&
         !parameters.fourCornerLocatingHoles &&
         !parameters.centerRemoverHole &&
         parameters.magnetHoleShape === 'none' &&

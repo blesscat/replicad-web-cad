@@ -444,37 +444,62 @@ describe('OpenGrid Snap reference builder', () => {
     }
   })
 
-  it('adds the inferred Lite interface below the rotated OpenConnect head', async () => {
-    const reference = await importOpenGridSnapReference(
-      assetBlob('Lite', 'Directional'),
-      'Lite',
-      'Directional',
-    )
-    const head = await importOpenGridSnapOpenConnectHead(openConnectHeadBlob())
-    const generated = await buildOpenGridSnap(
-      snapParameters('Lite', 0, 'full', {
-        profile: 'Directional',
-        openConnect: true,
-      }),
-      {
-        getOpenGridSnapReference: async () => reference,
-        getOpenGridSnapOpenConnectHead: async () => head,
-      },
-    )
-
-    try {
-      const liteInterfaceSideProbe = volumeInBox(
-        generated,
-        [-8, -1, 3.5],
-        [-7, 0, 3.8],
+  it.each([
+    ['Standard', 'Lite', 2.605, 3.205],
+    ['Standard', 'Full', 4.605, 5.605],
+    ['Directional', 'Lite', 2.605, 3.205],
+    ['Directional', 'Full', 4.605, 5.605],
+  ] as const)(
+    'cuts the fixed OpenConnect underside notch without raising %s %s',
+    async (profile, variant, notchMinZ, notchMaxZ) => {
+      const reference = await importOpenGridSnapReference(
+        assetBlob(variant, profile),
+        variant,
+        profile,
       )
-      expect(liteInterfaceSideProbe).toBeGreaterThan(0.1)
-    } finally {
-      generated.delete()
-      head.delete()
-      reference.delete()
-    }
-  })
+      const head = await importOpenGridSnapOpenConnectHead(
+        openConnectHeadBlob(),
+      )
+      const generated = await buildOpenGridSnap(
+        snapParameters(variant, 0, 'full', {
+          profile,
+          openConnect: true,
+        }),
+        {
+          getOpenGridSnapReference: async () => reference,
+          getOpenGridSnapOpenConnectHead: async () => head,
+        },
+      )
+
+      try {
+        const notchProbe = volumeInBox(
+          generated,
+          [-2, -11.9, notchMinZ + 0.1],
+          [2, -10.8, notchMaxZ - 0.1],
+        )
+        const neighboringMaterialProbe = volumeInBox(
+          generated,
+          [3, -11.9, notchMinZ + 0.1],
+          [4, -10.8, notchMaxZ - 0.1],
+        )
+        const expectedMaxZ =
+          (variant === 'Lite' ? 3.4 : 6.8) +
+          (openGridSnapOpenConnectHeadBounds(variant).max[2] -
+            openGridSnapOpenConnectHeadBounds(variant).min[2])
+
+        expect(notchProbe).toBeLessThan(0.01)
+        expect(neighboringMaterialProbe).toBeGreaterThan(0.05)
+        expect(shapeBounds(generated)[1]?.[2]).toBeCloseTo(expectedMaxZ, 2)
+        expect(countSolids(generated)).toBe(
+          openGridSnapProfileFor(profile, variant).expectedSolidCount + 1,
+        )
+      } finally {
+        generated.delete()
+        head.delete()
+        reference.delete()
+      }
+    },
+  )
 
   it.each([
     ['Standard', 'Lite'],
@@ -502,8 +527,7 @@ describe('OpenGrid Snap reference builder', () => {
 
       try {
         expect(countSolids(generated)).toBe(
-          openGridSnapProfileFor(profile, variant).expectedSolidCount +
-            (variant === 'Lite' ? 2 : 1),
+          openGridSnapProfileFor(profile, variant).expectedSolidCount + 1,
         )
         const headBounds = openGridSnapOpenConnectHeadBounds(variant)
         const expectedHeadBaseZ = headBounds.min[2]

@@ -39,10 +39,8 @@ import {
   OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_AXIS,
   OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_DEGREES,
   OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_ORIGIN,
-  OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_HEIGHT,
-  OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_INNER_HALF_SIZE,
-  OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_OUTER_HALF_SIZE,
   openGridSnapOpenConnectAnchorForXYTransform,
+  openGridSnapOpenConnectNotchBoundsFor,
   type OpenGridSnapOpenConnectAnchor,
 } from './openconnect'
 
@@ -1127,32 +1125,18 @@ function placeOpenConnectHead(
   }
 }
 
-function makeOpenConnectLiteInterface(
-  anchor: OpenGridSnapOpenConnectAnchor,
+function makeOpenConnectUndersideNotch(
+  variant: OpenGridSnapVariant,
+  transform: XYScaleTransform | null,
 ): Shape3D {
-  const outerHalfSize =
-    OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_OUTER_HALF_SIZE
-  const innerHalfSize =
-    OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_INNER_HALF_SIZE
-  const baseZ = anchor[2] - OPENGRID_SNAP_OPEN_CONNECT_LITE_INTERFACE_HEIGHT
-  const outer = makeBox(
-    [anchor[0] - outerHalfSize, anchor[1] - outerHalfSize, baseZ],
-    [anchor[0] + outerHalfSize, anchor[1] + outerHalfSize, anchor[2]],
-  )
-  const inner = makeBox(
-    [anchor[0] - innerHalfSize, anchor[1] - innerHalfSize, baseZ - 0.01],
-    [anchor[0] + innerHalfSize, anchor[1] + innerHalfSize, anchor[2] + 0.01],
-  )
+  const bounds = openGridSnapOpenConnectNotchBoundsFor(variant)
+  const cutter = makeBox(bounds.min, bounds.max)
+  if (!transform) return cutter
 
   try {
-    const result = outer.cut(inner)
-    if (result !== outer) deleteShape(outer)
-    deleteShape(inner)
-    return result
-  } catch (error) {
-    deleteShape(outer)
-    deleteShape(inner)
-    throw error
+    return transformShapeXY(cutter, transform)
+  } finally {
+    deleteShape(cutter)
   }
 }
 
@@ -1160,22 +1144,12 @@ function composeOpenConnectAssembly(
   assembly: Shape3D,
   head: Shape3D,
   anchor: OpenGridSnapOpenConnectAnchor,
-  variant: OpenGridSnapVariant,
 ): Shape3D {
   const placedHead = placeOpenConnectHead(cloneImportedAssembly(head), anchor)
-  let liteInterface: Shape3D | null = null
   try {
-    if (variant === 'Lite') {
-      liteInterface = makeOpenConnectLiteInterface(anchor)
-    }
-    return makeCompound(
-      [assembly, liteInterface, placedHead].filter(
-        (part): part is Shape3D => part !== null,
-      ),
-    ).asShape3D()
+    return makeCompound([assembly, placedHead]).asShape3D()
   } catch (error) {
     deleteShape(assembly)
-    deleteShape(liteInterface)
     deleteShape(placedHead)
     throw error
   }
@@ -1237,11 +1211,23 @@ export async function buildOpenGridSnap(
     }
     const head = await context.getOpenGridSnapOpenConnectHead()
     assertGenerationCurrent(context)
-    return composeOpenConnectAssembly(
+    const definition = openGridSnapProfileFor(
+      parameters.profile,
+      parameters.variant,
+    )
+    const notchTransform =
+      parameters.offset > 0
+        ? xyScaleTransformFor(reference, targetBounds, definition)
+        : null
+    const notchedAssembly = cutShape(
       assembly,
+      makeOpenConnectUndersideNotch(parameters.variant, notchTransform),
+      context.booleanOperations?.createScope(1),
+    )
+    return composeOpenConnectAssembly(
+      notchedAssembly,
       head,
       openConnectAnchorFor(reference, parameters, targetBounds),
-      parameters.variant,
     )
   }
 

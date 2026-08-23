@@ -141,10 +141,11 @@ production mesh. The selected Snap profile and variant MUST be built first and
 MUST receive the requested full-footprint XY offset transform. The final
 OpenConnect interface position MUST then be derived from that adjusted Snap.
 The unchanged head MUST be composed at that position and MUST NOT receive the
-Snap's XY scale transform. For a Lite Snap, the generated result MUST include
-an approximate nominal 0.6 mm interface layer between the Snap top and the
-head; for a Full Snap, the head MUST start at the Snap top without that extra
-layer.
+Snap's XY scale transform. Before head composition, every Standard and
+Directional result MUST receive the fixed negative-Y underside notch inferred
+from the supplied STL references. The notch MUST remove material from the Snap
+assembly without increasing its external height. Both Lite and Full heads MUST
+start directly at the selected Snap top.
 
 #### Scenario: OpenConnect uses the supplied STEP size
 
@@ -154,8 +155,9 @@ layer.
   the OpenConnect head from the repository-owned STEP source
 - **AND** the head's measurable source dimensions MUST match the STEP source
   within the configured CAD tolerance
-- **AND** a Lite result MUST include the inferred interface layer while a Full
-  result MUST place the head directly at the selected Snap top
+- **AND** both variants MUST place the head directly at the selected Snap top
+- **AND** the selected Snap MUST contain the fixed negative-Y underside notch
+  while neighboring support material remains present
 - **AND** the STL reference MUST not add duplicate or unrelated production
   geometry
 
@@ -166,9 +168,10 @@ layer.
 - **THEN** the selected Snap assembly MUST use its normal full-footprint XY
   transform and retain its selected profile and variant Z bounds
 - **AND** the OpenConnect head MUST retain its original XY dimensions
+- **AND** the fixed underside notch MUST follow the selected Snap's XY
+  transform
 - **AND** the OpenConnect interface MUST be placed using the final adjusted
-  Snap coordinates before the fixed head and any Lite interface layer are
-  composed
+  Snap coordinates before the fixed head is composed
 
 #### Scenario: Snap-only cutters do not resize the OpenConnect head
 
@@ -176,20 +179,20 @@ layer.
   cutter applicable to the active system scope
 - **THEN** the cutter MUST apply to the Snap geometry according to the existing
   feature contract
-- **AND** the OpenConnect head and Lite interface placement MUST remain fixed
-  relative to the adjusted Snap without scaling the head
+- **AND** the OpenConnect head placement MUST remain fixed relative to the
+  adjusted Snap without scaling the head
 
 ### Requirement: OpenConnect quality and committed export metadata
 
 Before committing a full-footprint OpenConnect candidate, the Worker MUST
-verify that the selected Snap assembly, any required Lite interface layer, and
-OpenConnect head are present, the head remains within its source geometry
-tolerance, the final interface placement is valid, the combined result has
-valid B-Rep geometry, and the committed mesh is finite and non-empty. Every
-full-footprint STEP and STL filename MUST identify the fixed OpenConnect
-composition so that it cannot be confused with an OpenConnect-free full
-export. A failed OpenConnect quality check MUST discard the candidate and keep
-STEP/STL export disabled for that generation.
+verify that the selected Snap assembly, fixed underside notch, and OpenConnect
+head are present, the head remains within its source geometry tolerance, the
+final interface placement is valid, the combined result has valid B-Rep
+geometry, and the committed mesh is finite and non-empty. Every full-footprint
+STEP and STL filename MUST identify the fixed OpenConnect composition so that
+it cannot be confused with an OpenConnect-free full export. A failed
+OpenConnect quality check MUST discard the candidate and keep STEP/STL export
+disabled for that generation.
 
 #### Scenario: Valid OpenConnect candidate becomes exportable
 
@@ -202,7 +205,7 @@ STEP/STL export disabled for that generation.
 
 #### Scenario: Invalid OpenConnect candidate remains stale
 
-- **WHEN** the OpenConnect source cannot be loaded, the Lite interface is
+- **WHEN** the OpenConnect source cannot be loaded, the underside notch is
   missing, the interface is misplaced, the head is scaled or missing, or the
   combined result fails B-Rep or mesh validation
 - **THEN** the candidate MUST be discarded

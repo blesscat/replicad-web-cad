@@ -462,7 +462,7 @@ describe('CAD component catalog', () => {
       }),
     ).toEqual({
       min: [-12.9, -12.9, 0],
-      max: [12.9, 12.9, 6.6],
+      max: [12.9, 12.9, 6],
     })
     expect(
       snap?.boundsForParameters({
@@ -481,7 +481,7 @@ describe('CAD component catalog', () => {
       }),
     ).toEqual({
       min: [-12.9, -12.9, 0],
-      max: [12.9, 12.9, 6.6],
+      max: [12.9, 12.9, 6],
     })
     expect(
       snap?.boundsForParameters({
