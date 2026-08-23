@@ -8,6 +8,18 @@
 
 公開頁面使用 `/zh-Hant/` 與 `/en/` 前綴；未帶 locale 的舊網址會導向繁體中文版本。production 預設 origin 設定在 `.env.production` 的 `PUBLIC_SITE_URL`（目前為 `https://shape-shortcut.blesscat.dev`），其他部署環境可用同名環境變數覆寫，讓 canonical、`hreflang` 與 `/sitemap.xml` 使用正確網址；本機開發與測試未設定時才會使用 `http://localhost:3456` fallback。Cloudflare Pages 會讀取 `public/_redirects`，以同 origin 的相對路徑發出保留 query string 的 308 redirect；其他 static hosting 需要用等效的 redirect 設定。靜態 fallback 仍會使用 `noindex`、canonical、meta refresh 與 JavaScript 導向，其中 JavaScript 會保留 query string，靜態 meta refresh 與無 JavaScript anchor 僅能導向穩定路徑。
 
+## Portaly 支持設定
+
+網站導覽列的「支持這個專案」按鈕會連到 Portaly 的外部贊助頁。目前 production 使用：
+
+```env
+PUBLIC_PORTALY_SUPPORT_URL=https://portaly.cc/blesscat/support
+```
+
+這是公開的 build-time 設定，不是 API secret。若要在其他環境啟用，請在 Astro build 前設定同名環境變數；修改後必須重新 build 與部署。Portaly 贊助頁應設定為單筆支持，可提供建議金額與自訂金額，不在 Shape Shortcut 內收集付款資料、發票資料或付款狀態。
+
+部署後請從首頁、文件頁與任一 CAD 頁確認按鈕可見、會在新分頁開啟 Portaly，且原本的 CAD workspace 不會被關閉。
+
 ## 主要架構
 
 Astro 負責網站 shell 與路由，Svelte workspace 負責瀏覽器端 UI，專用 CAD Worker 負責所有 CAD kernel 工作：
