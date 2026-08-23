@@ -297,7 +297,7 @@ async function buildOpenGridOrganizerBoxModel(
   }
   let detachableCornerSeatReference: Shape3D | undefined
   let detachableCornerSeatHolderReference: Shape3D | undefined
-  if (parameters.bottomInterfaceMode === 'detachable-corner-seat') {
+  if (parameters.cornerSeatMode === 'detachable-corner-seat') {
     if (!context.getOpenGridDetachableCornerSeatReference) {
       throw new Error('MODEL_ASSET_CONTEXT_MISSING:detachable-corner-seat')
     }

@@ -87,14 +87,32 @@ function innerCavitySections(
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
   const upperInnerRimZ = configuration.bottomAssemblyHeight + parameters.height
-  const firstTransitionZ = upperInnerRimZ + configuration.topRailInnerChamfer
+  return [
+    insetSection(
+      width,
+      depth,
+      configuration.outerCornerRadius,
+      configuration.wallThickness,
+      configuration.bottomAssemblyHeight,
+    ),
+    ...topRailInnerSections(width, depth, upperInnerRimZ),
+  ]
+}
+
+function topRailInnerSections(
+  width: number,
+  depth: number,
+  railBaseZ: number,
+): RoundedRectangleSection[] {
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const firstTransitionZ = railBaseZ + configuration.topRailInnerChamfer
   const firstVerticalTopZ =
     firstTransitionZ + configuration.topRailInnerVerticalHeight
   const secondTransitionZ =
     firstVerticalTopZ + configuration.topRailMiddleChamfer
   const secondVerticalTopZ =
     secondTransitionZ + configuration.topRailOuterVerticalHeight
-  const externalHeight = upperInnerRimZ + configuration.topRailHeight
+  const externalHeight = railBaseZ + configuration.topRailHeight
   const finalInset =
     configuration.wallThickness +
     configuration.topRailInnerChamfer -
@@ -107,14 +125,7 @@ function innerCavitySections(
       depth,
       configuration.outerCornerRadius,
       configuration.wallThickness,
-      configuration.bottomAssemblyHeight,
-    ),
-    insetSection(
-      width,
-      depth,
-      configuration.outerCornerRadius,
-      configuration.wallThickness,
-      upperInnerRimZ,
+      railBaseZ,
     ),
     insetSection(
       width,
@@ -381,6 +392,60 @@ export function makeBoxShell(
     deleteShape(cavity)
     deleteShape(shell)
     throw error
+  }
+}
+
+export type OpenGridStackingTopRailInput = {
+  footprint: readonly [number, number]
+  hostTopZ: number
+  riserHeight: number
+}
+
+export function makeOpenGridStackingTopRail(
+  input: OpenGridStackingTopRailInput,
+  reporter: BooleanOperationReporter | undefined = undefined,
+): Shape3D {
+  const [width, depth] = input.footprint
+  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
+  const overlap = 0.02
+  const railBaseZ = input.hostTopZ + input.riserHeight
+  const externalTopZ = railBaseZ + configuration.topRailHeight
+  const outer = loftRoundedSections([
+    {
+      width,
+      depth,
+      radius: configuration.outerCornerRadius,
+      z: input.hostTopZ - overlap,
+    },
+    {
+      width,
+      depth,
+      radius: configuration.outerCornerRadius,
+      z: externalTopZ,
+    },
+  ])
+  let inner: Shape3D | null = null
+  try {
+    inner = loftRoundedSections([
+      insetSection(
+        width,
+        depth,
+        configuration.outerCornerRadius,
+        configuration.wallThickness,
+        input.hostTopZ - overlap,
+      ),
+      ...topRailInnerSections(width, depth, railBaseZ),
+    ])
+    const cut = measureBooleanInScope(reporter?.createScope(1), 'cut', () =>
+      outer.cut(inner!),
+    )
+    deleteShape(outer)
+    return cut
+  } catch (error) {
+    deleteShape(outer)
+    throw error
+  } finally {
+    deleteShape(inner)
   }
 }
 

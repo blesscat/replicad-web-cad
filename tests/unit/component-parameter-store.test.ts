@@ -81,7 +81,9 @@ describe('component parameter store', () => {
       holeSpacingX: 3,
       holeSpacingY: 4,
       holeShape: 'hexagon' as const,
-      bottomInterfaceMode: 'detachable-corner-seat' as const,
+      cornerSeatMode: 'detachable-corner-seat' as const,
+      boxMode: 'stackable' as const,
+      stackingClearanceHeight: 4,
     }
     const store = createComponentParameterStore({ storage })
 
@@ -112,6 +114,57 @@ describe('component parameter store', () => {
     )
     malformedStore.dispose()
   })
+
+  it.each([
+    ['corner-seat', 'integrated', 'normal'],
+    ['detachable-corner-seat', 'detachable-corner-seat', 'normal'],
+    ['stackable', 'none', 'stackable'],
+  ] as const)(
+    'hydrates legacy organizer mode %s as seat %s and body %s',
+    (bottomInterfaceMode, cornerSeatMode, boxMode) => {
+      const {
+        cornerSeatMode: _cornerSeatMode,
+        boxMode: _boxMode,
+        stackingClearanceHeight: _stackingClearanceHeight,
+        ...legacyDefaults
+      } = OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS
+      const storage = createMemoryStorage(
+        createPayload({
+          'opengrid-organizer-box': {
+            ...legacyDefaults,
+            bottomInterfaceMode,
+          },
+        }),
+      )
+      const store = createComponentParameterStore({ storage })
+
+      expect(store.get('opengrid-organizer-box')).toEqual({
+        ...legacyDefaults,
+        cornerSeatMode,
+        boxMode,
+        stackingClearanceHeight: 3.5,
+      })
+
+      expect(
+        store.set(
+          'opengrid-organizer-box',
+          store.get('opengrid-organizer-box'),
+        ),
+      ).toBe(true)
+      const persisted = JSON.parse(
+        storage.data.get(COMPONENT_PARAMETER_STORAGE_KEY) ?? '{}',
+      ) as { values?: Record<string, Record<string, Record<string, unknown>>> }
+      const organizer =
+        persisted.values?.legacy?.['opengrid-organizer-box'] ?? {}
+      expect(organizer).toMatchObject({
+        cornerSeatMode,
+        boxMode,
+        stackingClearanceHeight: 3.5,
+      })
+      expect(organizer).not.toHaveProperty('bottomInterfaceMode')
+      store.dispose()
+    },
+  )
 
   it('keeps Desk and Wall parameter snapshots in separate scopes', () => {
     const storage = createMemoryStorage()

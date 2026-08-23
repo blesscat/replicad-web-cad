@@ -112,7 +112,7 @@ pages/
 - OpenGrid stackable-box 與 stackable-cylinder 都以 `detachable-corner-seat`（`鎖定角座`）為預設，並提供 `none`（`無角座`）、`detachable-corner-seat`（`鎖定角座`）、`integrated`（`內建角座`）三種互斥座模式；舊的 `hole` 值會正規化為 `detachable-corner-seat`。`integrated` 會在既有定位位置融合 Ø5 mm × 3.8 mm、由 Z=-3.8 mm 延伸至 Z=0 的實體圓座，底部採 0.2 mm 導角；兩者的 STEP/STL 檔名都包含唯一的 `-seats-none`、`-seats-detachable-corner-seat` 或 `-seats-integrated` 後綴。
 - OpenGrid Open Shelf 固定使用四個 OpenGrid 角落定位柱，沿用同一個 Ø5 mm × 3.8 mm 內建座契約與 0.2 mm 底部導角，柱體仍直接融合到底板且不提供座模式選擇。
 - OpenGrid Divider 的底部定位柱也沿用同一個 Ø5 mm × 3.8 mm 內建座契約與 0.2 mm 底部導角；分隔牆本體的其他底部支撐圓角維持原設定。
-- `opengrid-organizer-box` 沿用 OpenGrid 方盒外觀，頂部為實體盲孔，可選圓形或固定方向的 3–6 邊正多邊形；多邊形直徑定義為內切圓直徑。X/Y 孔數、孔外圍對外圍間距、孔深與底部加厚（預設 2 mm）會共同決定盒體尺寸；孔距可連動或分開設定。底部介面以 radio 三選一：`四角固定座`、`鎖定角座` 或 `堆疊結構`，三者不會同時建立。`四角固定座` 會直接融合方盒內建的四個 Ø5 mm × 3.8 mm 實體腳座（Z=-3.8 mm 至 Z=0 mm），底部採 0.2 mm 導角；`鎖定角座` 則把 Ø7 × 1.75 mm、有擋片的 female socket 直接形成為盒體的一部分，不會輸出另一個 holder。由盒底觀看，左上、右上、右下、左下 socket 固定採 0°、90°、180°、270° 的 B 方向。
+- `opengrid-organizer-box` 沿用 OpenGrid 方盒外觀，頂部為實體盲孔，可選圓形或固定方向的 3–6 邊正多邊形；多邊形直徑定義為內切圓直徑。X/Y 孔數、孔外圍對外圍間距、孔深與底部加厚（預設 1 mm）會共同決定盒體尺寸；孔距可連動或分開設定。面板最上方把介面拆成兩組獨立 radio：`角座模式` 可選 `無角座`、`鎖定角座`、`內建角座`，`盒體模式` 可選 `普通模式` 或 `堆疊模式`，共六種可組合狀態。普通模式維持既有平頂盒體；堆疊模式同時建立方盒標準的底部堆疊結構與頂部階梯滑軌，並顯示 `堆疊淨空（Z）`。Z 直接代表孔洞開口平面到上一層盒底基準面的距離，採 0.5 mm 級距、最小與預設 3.5 mm；標準滑軌的幾何下限為 3.20 mm，因此 3.5 mm 是不改動堆疊剖面的第一個合法輸入。`內建角座` 會融合四個 Ø5 mm × 3.8 mm 實體腳座（Z=-3.8 mm 至 Z=0 mm），底部採 0.2 mm 導角；`鎖定角座` 則把 Ø7 × 1.75 mm、有擋片的 female socket 直接形成為盒體的一部分，不會輸出另一個 holder。由盒底觀看，左上、右上、右下、左下 socket 固定採 0°、90°、180°、270° 的 B 方向。
 - `鎖定角座` 由 `opengrid-pillar` 的 `{ mode: 'detachable-corner-seat' }` 另行輸出，預設顯示在第一個模式。幾何固定為 5.3 mm 高：定位段高 3.8 mm，底面 Ø4.6 並以 0.2 mm 倒角恢復 Ø5，頂部保留 0.15 mm 耐磨平面；此模式不接受長度或 XY 增量。這項介面目前只在 Organizer Box 試作；四角都必須能手壓到底、提起盒體時不脫落、刻意手拉時仍可拆下，三項實體列印驗收全部通過後才可導入其他模型。
 - 預覽：由 Worker 產生的 B-Rep mesh。
 - 匯出：由 Worker 目前 committed B-Rep 產生 STEP 或 binary STL。
@@ -145,7 +145,7 @@ opengrid-stackable-box-{x}x{y}-h{height}-seats-{none|hole|integrated}.step
 opengrid-stackable-cylinder-d{diameter}-h{height}-seats-{none|hole|integrated}.step
 pillar-{length}-positioning[-xy{offset}].step
 pillar-5.3-detachable-corner-seat.step
-opengrid-organizer-box-{countX}x{countY}-{shape}-sm-{linked|independent}-d{diameter}-sx{spacingX}-sy{spacingY}-h{depth}-b{bottomThickness}-i{corner-seat|detachable-corner-seat|stackable}.step
+opengrid-organizer-box-{countX}x{countY}-{shape}-sm-{linked|independent}-d{diameter}-sx{spacingX}-sy{spacingY}-h{depth}-b{bottomThickness}-seats-{none|detachable-corner-seat|integrated}-body-{normal|stackable}[-z{stackingClearanceHeight}].step
 ```
 
 這個 Prototype 不提供任意 STEP 的產品匯入或 round-trip parser；目前的 `board-cell-template.step` 是 repository 內受控的 canonical asset，並由 CAD kernel integration tests 驗證其 single-solid、尺寸與幾何條件。
@@ -165,7 +165,7 @@ opengrid-stackable-box-{x}x{y}-h{height}-seats-{none|hole|integrated}.stl
 opengrid-stackable-cylinder-d{diameter}-h{height}-seats-{none|hole|integrated}.stl
 pillar-{length}-positioning[-xy{offset}].stl
 pillar-5.3-detachable-corner-seat.stl
-opengrid-organizer-box-{countX}x{countY}-{shape}-sm-{linked|independent}-d{diameter}-sx{spacingX}-sy{spacingY}-h{depth}-b{bottomThickness}-i{corner-seat|detachable-corner-seat|stackable}.stl
+opengrid-organizer-box-{countX}x{countY}-{shape}-sm-{linked|independent}-d{diameter}-sx{spacingX}-sy{spacingY}-h{depth}-b{bottomThickness}-seats-{none|detachable-corner-seat|integrated}-body-{normal|stackable}[-z{stackingClearanceHeight}].stl
 ```
 
 下載完成後，使用者可在 Bambu Studio 透過一般的本機檔案開啟/匯入流程載入 STL。瀏覽器不會直接啟動或控制 Bambu Studio，也不會產生 3MF、G-code 或印表機設定檔。初始 STL tessellation 設定為 `tolerance = 0.001 mm`、`angularTolerance = 0.1`；這些設定與 viewport preview mesh 分開管理。

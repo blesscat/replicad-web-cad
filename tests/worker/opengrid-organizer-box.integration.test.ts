@@ -18,6 +18,7 @@ import {
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+  OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   openGridOrganizerBoxLayoutFor,
   type OpenGridOrganizerBoxParameters,
@@ -28,6 +29,8 @@ import {
 } from '../../src/cad-kernel/model'
 import { buildOpenGridOrganizerBox } from '../../src/cad-kernel/components/opengrid-organizer-box/builder'
 import { assertOpenGridOrganizerBoxGeometry } from '../../src/cad-kernel/components/opengrid-organizer-box/quality'
+import { makeOpenGridStackingTopRail } from '../../src/cad-kernel/components/opengrid-stackable-box/geometry'
+import { buildOpenGridStackableBox } from '../../src/cad-kernel/components/opengrid-stackable-box/builder'
 import {
   buildOpenGridDetachableCornerSeatFromReference,
   buildOpenGridDetachableCornerSeatSocketVoid,
@@ -259,12 +262,148 @@ function markerVerticesRelativeTo(
     })
 }
 
+function expectMarkerTrianglesToMatchReference(
+  box: Shape3D,
+  markedMale: Shape3D,
+  input: OpenGridOrganizerBoxParameters,
+): void {
+  const maleVertices = markerTriangleVerticesAt(markedMale, [0, 0])
+  expect(maleVertices).not.toBeNull()
+  if (!maleVertices) throw new Error('EXPECTED_MALE_INDICATOR_TRIANGLE')
+
+  const maleRelativeVertices = markerVerticesRelativeTo(maleVertices, [0, 0])
+  const maleApex = [...maleRelativeVertices].sort(
+    ([firstX], [secondX]) => secondX - firstX,
+  )[0]
+  expect(maleApex?.[0]).toBeCloseTo(
+    OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.radialLength / 2,
+    3,
+  )
+  expect(maleApex?.[1]).toBeCloseTo(0, 3)
+
+  for (const pose of openGridOrganizerBoxDetachableSocketPosesFor(input)) {
+    const placement = openGridOrganizerBoxDetachableIndicatorPlacementFor(pose)
+    const femaleVertices = markerTriangleVerticesAt(box, placement.center)
+    expect(femaleVertices, pose.corner).not.toBeNull()
+    if (!femaleVertices) continue
+
+    const expectedVertices = markerVerticesRelativeTo(
+      maleVertices.map((vertex) =>
+        rotateBottomViewPoint(
+          vertex,
+          pose.rotationDegrees +
+            OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator
+              .lockRotationDegrees +
+            (pose.corner === 'upper-left' || pose.corner === 'lower-right'
+              ? 0
+              : 180),
+        ),
+      ),
+      [0, 0],
+    )
+    const actualVertices = markerVerticesRelativeTo(
+      femaleVertices,
+      placement.center,
+    )
+    expect(actualVertices, pose.corner).toHaveLength(3)
+    actualVertices.forEach((actual, index) => {
+      const expected = expectedVertices[index]
+      expect(actual[0], pose.corner).toBeCloseTo(expected?.[0] ?? NaN, 3)
+      expect(actual[1], pose.corner).toBeCloseTo(expected?.[1] ?? NaN, 3)
+    })
+  }
+}
+
 describe('OpenGrid organizer-box B-Rep', () => {
+  it('builds the standard top rail as a standalone perimeter solid', () => {
+    const input = parameters({
+      holeCountX: 1,
+      holeCountY: 1,
+      holeDiameter: 10,
+      holeDepth: 8,
+      cornerSeatMode: 'none',
+      boxMode: 'stackable',
+    })
+    const layout = openGridOrganizerBoxLayoutFor(input)
+    if (!layout.stacking) {
+      throw new Error('EXPECTED_ORGANIZER_BOX_STACKING_LAYOUT')
+    }
+    const rail = makeOpenGridStackingTopRail({
+      footprint: layout.footprint,
+      hostTopZ: layout.bodyHeight,
+      riserHeight: layout.stacking.riserHeight,
+    })
+    try {
+      const bounds = rail.boundingBox
+      try {
+        expect(bounds.bounds[0][2]).toBeCloseTo(layout.bodyHeight - 0.02, 5)
+        expect(bounds.bounds[1][2]).toBeCloseTo(layout.stacking.externalTopZ, 5)
+      } finally {
+        bounds.delete()
+      }
+      expect(measureVolume(rail)).toBeGreaterThan(0)
+    } finally {
+      deleteShape(rail)
+    }
+  })
+
+  it('mates a standard Grid Box at the requested upper-bottom datum', () => {
+    const input = parameters({
+      holeCountX: 1,
+      holeCountY: 1,
+      holeDiameter: 10,
+      holeDepth: 8,
+      cornerSeatMode: 'none',
+      boxMode: 'stackable',
+      stackingClearanceHeight: 3.5,
+    })
+    const layout = openGridOrganizerBoxLayoutFor(input)
+    if (!layout.stacking) {
+      throw new Error('EXPECTED_ORGANIZER_BOX_STACKING_LAYOUT')
+    }
+    const organizer = buildOpenGridOrganizerBox(input)
+    const upper = buildOpenGridStackableBox({
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+      x: layout.gridCountX,
+      y: layout.gridCountY,
+      height: 10,
+      cornerSeatMode: 'none',
+    })
+    try {
+      const seated = upper.clone().translate(0, 0, layout.stacking.seatDatumZ)
+      const overLowered = upper
+        .clone()
+        .translate(
+          0,
+          0,
+          layout.stacking.seatDatumZ -
+            OPENGRID_STACKABLE_BOX_CONFIGURATION.stackingClearance -
+            0.05,
+        )
+      let seatedIntersection: Shape3D | null = null
+      let overLoweredIntersection: Shape3D | null = null
+      try {
+        seatedIntersection = organizer.intersect(seated)
+        overLoweredIntersection = organizer.intersect(overLowered)
+        expect(measureVolume(seatedIntersection)).toBeLessThan(0.01)
+        expect(measureVolume(overLoweredIntersection)).toBeGreaterThan(0.01)
+      } finally {
+        deleteShape(seatedIntersection)
+        deleteShape(overLoweredIntersection)
+        deleteShape(seated)
+        deleteShape(overLowered)
+      }
+    } finally {
+      deleteShape(organizer)
+      deleteShape(upper)
+    }
+  }, 180_000)
+
   it('places each female marker on its locked reference-arrow side', async () => {
     const input = parameters({
       holeCountX: 1,
       holeCountY: 1,
-      bottomInterfaceMode: 'detachable-corner-seat',
+      cornerSeatMode: 'detachable-corner-seat',
     })
     const [maleReference, holderReference] = await Promise.all([
       importOpenGridDetachableCornerSeatReference(
@@ -285,55 +424,63 @@ describe('OpenGrid organizer-box B-Rep', () => {
       detachableCornerSeatHolderReference: holderReference,
     })
     try {
-      const maleVertices = markerTriangleVerticesAt(markedMale, [0, 0])
-      expect(maleVertices).not.toBeNull()
-      if (!maleVertices) return
-      const maleRelativeVertices = markerVerticesRelativeTo(
-        maleVertices,
-        [0, 0],
-      )
-      const maleApex = [...maleRelativeVertices].sort(
-        ([firstX], [secondX]) => secondX - firstX,
-      )[0]
-      expect(maleApex?.[0]).toBeCloseTo(
-        OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.radialLength /
-          2,
-        3,
-      )
-      expect(maleApex?.[1]).toBeCloseTo(0, 3)
+      expectMarkerTrianglesToMatchReference(box, markedMale, input)
+    } finally {
+      deleteShape(box)
+      deleteShape(markedMale)
+      deleteShape(maleReference)
+      deleteShape(holderReference)
+    }
+  }, 180_000)
 
-      for (const pose of openGridOrganizerBoxDetachableSocketPosesFor(input)) {
-        const placement =
-          openGridOrganizerBoxDetachableIndicatorPlacementFor(pose)
-        const femaleVertices = markerTriangleVerticesAt(box, placement.center)
-        expect(femaleVertices, pose.corner).not.toBeNull()
-        if (!femaleVertices) continue
+  it('grows a half-grid candidate to keep stacking seams and lock indicators intact', async () => {
+    const input = parameters({
+      holeCountX: 1,
+      holeCountY: 1,
+      holeDiameter: 20,
+      cornerSeatMode: 'detachable-corner-seat',
+      boxMode: 'stackable',
+    })
+    const [maleReference, holderReference] = await Promise.all([
+      importOpenGridDetachableCornerSeatReference(
+        new Blob([await readFile(DETACHABLE_CORNER_SEAT_ASSET_URL)], {
+          type: 'model/step',
+        }),
+      ),
+      importOpenGridDetachableCornerSeatHolderReference(
+        new Blob([await readFile(DETACHABLE_CORNER_SEAT_HOLDER_ASSET_URL)], {
+          type: 'model/step',
+        }),
+      ),
+    ])
+    const markedMale =
+      buildOpenGridDetachableCornerSeatFromReference(maleReference)
+    const box = buildOpenGridOrganizerBox(input, {
+      detachableCornerSeatReference: maleReference,
+      detachableCornerSeatHolderReference: holderReference,
+    })
+    try {
+      const layout = openGridOrganizerBoxLayoutFor(input)
+      expect(layout.gridCountX).toBe(2)
+      expect(layout.gridCountY).toBe(2)
+      expect(markerTriangleFloorCount(box)).toBe(4)
+      expectMarkerTrianglesToMatchReference(box, markedMale, input)
 
-        const expectedVertices = markerVerticesRelativeTo(
-          maleVertices.map((vertex) =>
-            rotateBottomViewPoint(
-              vertex,
-              pose.rotationDegrees +
-                OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator
-                  .lockRotationDegrees +
-                (pose.corner === 'upper-left' || pose.corner === 'lower-right'
-                  ? 0
-                  : 180),
-            ),
-          ),
-          [0, 0],
-        )
-        const actualVertices = markerVerticesRelativeTo(
-          femaleVertices,
-          placement.center,
-        )
-        expect(actualVertices, pose.corner).toHaveLength(3)
-        actualVertices.forEach((actual, index) => {
-          const expected = expectedVertices[index]
-          expect(actual[0], pose.corner).toBeCloseTo(expected?.[0] ?? NaN, 3)
-          expect(actual[1], pose.corner).toBeCloseTo(expected?.[1] ?? NaN, 3)
-        })
-      }
+      const [width, depth] = layout.footprint
+      const seamX = -width / 2 + OPENGRID_STACKABLE_BOX_CONFIGURATION.gridPitch
+      const seamY = -depth / 2 + OPENGRID_STACKABLE_BOX_CONFIGURATION.gridPitch
+      expect(
+        probeVolume(box, [
+          [seamX - 0.1, 4.9, 0.05],
+          [seamX + 0.1, 5.1, 0.15],
+        ]),
+      ).toBe(0)
+      expect(
+        probeVolume(box, [
+          [4.9, seamY - 0.1, 0.05],
+          [5.1, seamY + 0.1, 0.15],
+        ]),
+      ).toBe(0)
     } finally {
       deleteShape(box)
       deleteShape(markedMale)
@@ -358,7 +505,7 @@ describe('OpenGrid organizer-box B-Rep', () => {
     const input = parameters({
       holeCountX: 1,
       holeCountY: 1,
-      bottomInterfaceMode: 'detachable-corner-seat',
+      cornerSeatMode: 'detachable-corner-seat',
     })
     const shape = buildOpenGridOrganizerBox(input, {
       detachableCornerSeatReference: maleReference,
@@ -506,13 +653,13 @@ describe('OpenGrid organizer-box B-Rep', () => {
     }
   }, 180_000)
 
-  it.each(['corner-seat', 'stackable'] as const)(
-    'does not add detachable marker floors in %s mode',
-    (bottomInterfaceMode) => {
+  it.each(['none', 'integrated'] as const)(
+    'does not add detachable marker floors in %s seat mode',
+    (cornerSeatMode) => {
       const input = parameters({
         holeCountX: 1,
         holeCountY: 1,
-        bottomInterfaceMode,
+        cornerSeatMode,
       })
       const shape = buildOpenGridOrganizerBox(input)
       try {
@@ -523,6 +670,157 @@ describe('OpenGrid organizer-box B-Rep', () => {
     },
   )
 
+  it.each([
+    ['normal', 'none'],
+    ['normal', 'detachable-corner-seat'],
+    ['normal', 'integrated'],
+    ['stackable', 'none'],
+    ['stackable', 'detachable-corner-seat'],
+    ['stackable', 'integrated'],
+  ] as const)(
+    'builds one valid solid for the %s/%s combination',
+    async (boxMode, cornerSeatMode) => {
+      const input = parameters({
+        holeCountX: 1,
+        holeCountY: 1,
+        holeDiameter: 10,
+        holeDepth: 8,
+        boxMode,
+        cornerSeatMode,
+      })
+      let maleReference: Shape3D | undefined
+      let holderReference: Shape3D | undefined
+      if (cornerSeatMode === 'detachable-corner-seat') {
+        ;[maleReference, holderReference] = await Promise.all([
+          importOpenGridDetachableCornerSeatReference(
+            new Blob([await readFile(DETACHABLE_CORNER_SEAT_ASSET_URL)], {
+              type: 'model/step',
+            }),
+          ),
+          importOpenGridDetachableCornerSeatHolderReference(
+            new Blob(
+              [await readFile(DETACHABLE_CORNER_SEAT_HOLDER_ASSET_URL)],
+              { type: 'model/step' },
+            ),
+          ),
+        ])
+      }
+
+      const shape = buildOpenGridOrganizerBox(input, {
+        detachableCornerSeatReference: maleReference,
+        detachableCornerSeatHolderReference: holderReference,
+      })
+      try {
+        const layout = openGridOrganizerBoxLayoutFor(input)
+        const expected = boundsForOpenGridOrganizerBox(input)
+        const actual = shape.boundingBox
+        try {
+          expect(actual.bounds[0][2]).toBeCloseTo(expected.min[2], 2)
+          expect(actual.bounds[1][2]).toBeCloseTo(expected.max[2], 2)
+        } finally {
+          actual.delete()
+        }
+        expect(measureVolume(shape)).toBeGreaterThan(0)
+        expect(markerTriangleFloorCount(shape)).toBe(
+          cornerSeatMode === 'detachable-corner-seat' ? 4 : 0,
+        )
+
+        const halfWidth = layout.footprint[0] / 2
+        const bottomEdgeVolume = probeVolume(shape, [
+          [halfWidth - 0.1, -0.2, 0.05],
+          [halfWidth + 0.2, 0.2, 0.15],
+        ])
+        if (boxMode === 'stackable') {
+          expect(bottomEdgeVolume).toBe(0)
+          expect(layout.stacking).not.toBeNull()
+          const railBaseZ = layout.stacking?.railBaseZ
+          if (railBaseZ === undefined) {
+            throw new Error('EXPECTED_ORGANIZER_BOX_STACKING_LAYOUT')
+          }
+          expect(
+            probeVolume(shape, [
+              [halfWidth - 0.5, -0.1, railBaseZ + 0.8],
+              [halfWidth - 0.3, 0.1, railBaseZ + 0.9],
+            ]),
+          ).toBeGreaterThan(0)
+        } else {
+          expect(bottomEdgeVolume).toBeGreaterThan(0)
+          expect(layout.stacking).toBeNull()
+        }
+      } finally {
+        deleteShape(shape)
+        deleteShape(maleReference)
+        deleteShape(holderReference)
+      }
+    },
+    180_000,
+  )
+
+  it('raises the fixed top rail by Z without moving the cavity', () => {
+    const minimumInput = parameters({
+      holeCountX: 1,
+      holeCountY: 1,
+      holeDiameter: 10,
+      holeDepth: 8,
+      cornerSeatMode: 'none',
+      boxMode: 'stackable',
+      stackingClearanceHeight: 3.5,
+    })
+    const raisedInput = { ...minimumInput, stackingClearanceHeight: 4 }
+    const minimumShape = buildOpenGridOrganizerBox(minimumInput)
+    const raisedShape = buildOpenGridOrganizerBox(raisedInput)
+    try {
+      const minimumLayout = openGridOrganizerBoxLayoutFor(minimumInput)
+      const raisedLayout = openGridOrganizerBoxLayoutFor(raisedInput)
+      expect(minimumLayout.stacking?.riserHeight).toBeCloseTo(0.3, 8)
+      expect(minimumLayout.stacking?.seatDatumZ).toBeCloseTo(
+        minimumLayout.bodyHeight + minimumInput.stackingClearanceHeight,
+        8,
+      )
+      expect(raisedLayout.bodyHeight).toBe(minimumLayout.bodyHeight)
+      expect(raisedLayout.cavityCenters).toEqual(minimumLayout.cavityCenters)
+
+      const minimumBounds = minimumShape.boundingBox
+      const raisedBounds = raisedShape.boundingBox
+      try {
+        expect(
+          raisedBounds.bounds[1][2] - minimumBounds.bounds[1][2],
+        ).toBeCloseTo(0.5, 5)
+        expect(raisedBounds.bounds[0][2]).toBeCloseTo(
+          minimumBounds.bounds[0][2],
+          5,
+        )
+      } finally {
+        minimumBounds.delete()
+        raisedBounds.delete()
+      }
+
+      const center = minimumLayout.cavityCenters[0]
+      if (!center) throw new Error('EXPECTED_ORGANIZER_BOX_CAVITY')
+      const minimumFloor = Math.max(
+        ...horizontalFaceZValuesAt(minimumShape, center).filter(
+          (z) => z < minimumLayout.bodyHeight,
+        ),
+      )
+      const raisedFloor = Math.max(
+        ...horizontalFaceZValuesAt(raisedShape, center).filter(
+          (z) => z < raisedLayout.bodyHeight,
+        ),
+      )
+      expect(raisedFloor).toBeCloseTo(minimumFloor, 5)
+      const minimumStacking = minimumLayout.stacking
+      if (!minimumStacking) {
+        throw new Error('EXPECTED_ORGANIZER_BOX_STACKING_LAYOUT')
+      }
+      expect(
+        minimumStacking.externalTopZ - minimumStacking.railBaseZ,
+      ).toBeCloseTo(OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailHeight, 8)
+    } finally {
+      deleteShape(minimumShape)
+      deleteShape(raisedShape)
+    }
+  }, 180_000)
+
   it('builds blind circular cavities with a solid top and four-corner mode', () => {
     const input = parameters({
       holeCountX: 2,
@@ -530,7 +828,8 @@ describe('OpenGrid organizer-box B-Rep', () => {
       holeDiameter: 12,
       holeDepth: 18,
       bottomThickness: 3,
-      bottomInterfaceMode: 'corner-seat',
+      cornerSeatMode: 'integrated',
+      boxMode: 'normal',
     })
     const shape = buildOpenGridOrganizerBox(input)
 
@@ -634,7 +933,8 @@ describe('OpenGrid organizer-box B-Rep', () => {
       holeSpacingY: 4,
       holeShape: 'hexagon',
       holeDiameter: 12,
-      bottomInterfaceMode: 'stackable',
+      cornerSeatMode: 'none',
+      boxMode: 'stackable',
     })
     const shape = buildOpenGridOrganizerBox(input)
 
@@ -675,7 +975,8 @@ describe('OpenGrid organizer-box B-Rep', () => {
         holeSpacingX: 3,
         holeSpacingY: 5,
         bottomThickness: 4,
-        bottomInterfaceMode: 'corner-seat',
+        cornerSeatMode: 'integrated',
+        boxMode: 'normal',
       })
       const shape = buildOpenGridOrganizerBox(input)
 
@@ -694,7 +995,8 @@ describe('OpenGrid organizer-box B-Rep', () => {
     const input = parameters({
       holeCountX: 1,
       holeCountY: 1,
-      bottomInterfaceMode: 'corner-seat',
+      cornerSeatMode: 'integrated',
+      boxMode: 'normal',
     })
     const context: KernelBuildContext = {
       getModularGridBaseTemplate: async () => {

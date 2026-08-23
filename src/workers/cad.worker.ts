@@ -529,9 +529,7 @@ export class CadWorkerRuntime {
         }
         let maleReference: Shape3D | undefined
         let holderReference: Shape3D | undefined
-        if (
-          generationParameters.bottomInterfaceMode === 'detachable-corner-seat'
-        ) {
+        if (generationParameters.cornerSeatMode === 'detachable-corner-seat') {
           ;[maleReference, holderReference] = await Promise.all([
             this.getOpenGridDetachableCornerSeatReference(),
             this.getOpenGridDetachableCornerSeatHolderReference(),

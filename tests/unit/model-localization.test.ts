@@ -91,10 +91,19 @@ describe('localized model catalog copy', () => {
     )
   })
 
-  it('labels the organizer-box retaining interface as locking corner seats', () => {
-    const key = 'panel.organizerBox.interface.detachableCornerSeat'
+  it('shares seat labels and localizes organizer body modes and Z', () => {
+    const key = 'panel.seat.detachableCornerSeat'
 
     expect(translate('zh-Hant', key)).toBe('鎖定角座')
     expect(translate('en', key)).toBe('Locking corner seats')
+    expect(translate('zh-Hant', 'panel.organizerBox.body.normal')).toBe(
+      '普通模式',
+    )
+    expect(translate('zh-Hant', 'panel.organizerBox.body.stackable')).toBe(
+      '堆疊模式',
+    )
+    expect(translate('zh-Hant', 'parameter.organizerStackingClearance')).toBe(
+      '堆疊淨空',
+    )
   })
 })

@@ -134,7 +134,7 @@ export const zhHantMessages = {
     'OpenGrid Organizer Box (收納方盒)',
   'models.model.opengrid-organizer-box.selection': 'Organizer Box (收納方盒)',
   'models.model.opengrid-organizer-box.description':
-    '外觀類似方盒、頂部可挖圓形或規則多邊形盲孔的 OpenGrid Organizer Box (收納方盒)；可放電池與工具頭。',
+    '頂部可挖圓形或規則多邊形盲孔，角座與普通／堆疊盒體可獨立選擇；堆疊模式可設定孔洞到上一層盒底的 Z 淨空。',
   'models.model.opengrid-organizer-box.alt':
     'OpenGrid Organizer Box (收納方盒) 預覽',
   'models.model.opengrid-stackable-box.name': 'Grid Box (方盒)',
@@ -316,6 +316,7 @@ export const zhHantMessages = {
   'parameter.organizerHoleDiameter': '孔直徑（多邊形為內切圓直徑）',
   'parameter.organizerHoleDepth': '孔深度',
   'parameter.organizerBottomThickness': '底部加厚',
+  'parameter.organizerStackingClearance': '堆疊淨空',
   'parameter.organizerHoleShape': '孔形狀',
   'cad.action.step': '下載 STEP',
   'cad.action.stl': '下載 STL',
@@ -467,16 +468,12 @@ export const zhHantMessages = {
   'panel.organizerBox.shape.square': '四角形',
   'panel.organizerBox.shape.pentagon': '五角形',
   'panel.organizerBox.shape.hexagon': '六角形',
-  'panel.organizerBox.interfaceMode': '底部介面（三選一）',
-  'panel.organizerBox.interface.cornerSeat': '四角固定座',
-  'panel.organizerBox.interface.cornerSeatDescription':
-    '直接融合方盒內建的四角實體腳座，不需要從底部插入腳座。',
-  'panel.organizerBox.interface.detachableCornerSeat': '鎖定角座',
-  'panel.organizerBox.interface.detachableCornerSeatDescription':
-    '在盒底直接形成四個有擋片的插槽；另列印鎖定角座並由底部壓入。',
-  'panel.organizerBox.interface.stackable': '堆疊結構',
-  'panel.organizerBox.interface.stackableDescription':
-    '使用 OpenGrid 方盒的堆疊底部結構，不建立四角內建實體腳座。',
+  'panel.organizerBox.body.normal': '普通模式',
+  'panel.organizerBox.body.normalDescription':
+    '維持目前的平頂收納方盒，不建立上下堆疊結構。',
+  'panel.organizerBox.body.stackable': '堆疊模式',
+  'panel.organizerBox.body.stackableDescription':
+    '底部與頂部皆使用方盒堆疊結構；Z 是孔洞開口到上一層盒底的距離。',
   'panel.pillar.version': '支柱版本',
   'panel.pillar.positioning': '物件定位用',
   'panel.pillar.detachableCornerSeat': '鎖定角座',
@@ -759,7 +756,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'models.model.opengrid-organizer-box.name': 'OpenGrid Organizer Box',
   'models.model.opengrid-organizer-box.selection': 'Organizer Box',
   'models.model.opengrid-organizer-box.description':
-    'A solid-top OpenGrid organizer box with blind circular or regular polygon cavities for batteries and tool bits.',
+    'A solid-top organizer with blind cavities, independent seat/body modes, and configurable cavity-to-upper-box Z clearance when stackable.',
   'models.model.opengrid-organizer-box.alt': 'OpenGrid organizer box preview',
   'models.model.opengrid-stackable-box.name': 'OpenGrid Grid Box',
   'models.model.opengrid-stackable-box.selection': 'Grid Box',
@@ -947,6 +944,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'parameter.organizerHoleDiameter': 'Hole diameter (inscribed for polygons)',
   'parameter.organizerHoleDepth': 'Hole depth',
   'parameter.organizerBottomThickness': 'Bottom thickness',
+  'parameter.organizerStackingClearance': 'Stacking clearance',
   'parameter.organizerHoleShape': 'Hole shape',
   'cad.action.step': 'Download STEP',
   'cad.action.stl': 'Download STL',
@@ -1113,16 +1111,12 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'panel.organizerBox.shape.square': 'Square',
   'panel.organizerBox.shape.pentagon': 'Pentagon',
   'panel.organizerBox.shape.hexagon': 'Hexagon',
-  'panel.organizerBox.interfaceMode': 'Bottom interface (choose one of three)',
-  'panel.organizerBox.interface.cornerSeat': 'Four-corner built-in feet',
-  'panel.organizerBox.interface.cornerSeatDescription':
-    'Use the Grid Box-style four-corner built-in feet without a full stacking profile.',
-  'panel.organizerBox.interface.detachableCornerSeat': 'Locking corner seats',
-  'panel.organizerBox.interface.detachableCornerSeatDescription':
-    'Form four retaining-tab sockets directly in the box bottom, then press separately printed locking corner seats in from below.',
-  'panel.organizerBox.interface.stackable': 'Stacking structure',
-  'panel.organizerBox.interface.stackableDescription':
-    'Use the OpenGrid box stacking bottom structure without four-corner built-in feet.',
+  'panel.organizerBox.body.normal': 'Normal mode',
+  'panel.organizerBox.body.normalDescription':
+    'Keep the current flat-top organizer body without top or bottom stacking geometry.',
+  'panel.organizerBox.body.stackable': 'Stackable mode',
+  'panel.organizerBox.body.stackableDescription':
+    'Use Grid Box stacking geometry on both bottom and top; Z is the distance from the cavity opening to the box bottom above.',
   'panel.pillar.version': 'Post version',
   'panel.pillar.positioning': 'Object positioning',
   'panel.pillar.detachableCornerSeat': 'Locking corner seat',

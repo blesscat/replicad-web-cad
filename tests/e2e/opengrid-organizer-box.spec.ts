@@ -31,16 +31,33 @@ test('OpenGrid organizer-box is listed and exposes the cavity controls', async (
     }),
   ).toBeVisible()
   await expect(
-    page
-      .getByTestId('opengrid-organizer-box-interface-mode')
-      .getByRole('radio'),
+    page.getByTestId('opengrid-organizer-box-seat-mode').getByRole('radio'),
   ).toHaveCount(3)
+  await expect(
+    page.getByTestId('opengrid-organizer-box-body-mode').getByRole('radio'),
+  ).toHaveCount(2)
   await expect(
     page.getByTestId('opengrid-organizer-box-spacing-mode').getByRole('radio'),
   ).toHaveCount(2)
   await expect(
     page.getByRole('textbox', { name: '孔外圍間距（Y）' }),
   ).toHaveCount(0)
+  await expect(
+    page.getByRole('textbox', { name: '堆疊淨空（Z）' }),
+  ).toHaveCount(0)
+
+  const controlOrder = await page
+    .locator(
+      '[data-testid="opengrid-organizer-box-seat-mode"], [data-testid="opengrid-organizer-box-body-mode"], [data-testid="opengrid-organizer-box-hole-counts"]',
+    )
+    .evaluateAll((elements) =>
+      elements.map((element) => element.getAttribute('data-testid')),
+    )
+  expect(controlOrder).toEqual([
+    'opengrid-organizer-box-seat-mode',
+    'opengrid-organizer-box-body-mode',
+    'opengrid-organizer-box-hole-counts',
+  ])
   const viewport = page.getByTestId('cad-viewport')
   const initialRevision = await viewport.getAttribute('data-model-revision')
   expect(initialRevision).toBeTruthy()
@@ -63,21 +80,35 @@ test('OpenGrid organizer-box is listed and exposes the cavity controls', async (
   await expect(shapes).toHaveValue('hexagon')
   await waitForCadReady(page, 90_000)
 
-  const interfaceMode = page.getByTestId(
-    'opengrid-organizer-box-interface-mode',
-  )
-  const lockingCornerSeat = interfaceMode.getByRole('radio', {
+  const seatMode = page.getByTestId('opengrid-organizer-box-seat-mode')
+  const bodyMode = page.getByTestId('opengrid-organizer-box-body-mode')
+  const lockingCornerSeat = seatMode.getByRole('radio', {
     name: '鎖定角座',
   })
   await expect(lockingCornerSeat).toBeChecked()
+  await expect(bodyMode.getByRole('radio', { name: '普通模式' })).toBeChecked()
+
+  for (const bodyLabel of ['普通模式', '堆疊模式']) {
+    await bodyMode.getByRole('radio', { name: bodyLabel }).check()
+    for (const seatLabel of ['無角座', '鎖定角座', '內建角座']) {
+      await seatMode.getByRole('radio', { name: seatLabel }).check()
+      await expect(
+        bodyMode.getByRole('radio', { name: bodyLabel }),
+      ).toBeChecked()
+      await expect(
+        seatMode.getByRole('radio', { name: seatLabel }),
+      ).toBeChecked()
+    }
+  }
+  await bodyMode.getByRole('radio', { name: '普通模式' }).check()
+  await lockingCornerSeat.check()
+  await waitForCadReady(page, 90_000)
 
   const revisionBeforeCornerSeat = await viewport.getAttribute(
     'data-model-revision',
   )
-  await interfaceMode.getByRole('radio', { name: '四角固定座' }).check()
-  await expect(
-    interfaceMode.getByRole('radio', { name: '四角固定座' }),
-  ).toBeChecked()
+  await seatMode.getByRole('radio', { name: '內建角座' }).check()
+  await expect(seatMode.getByRole('radio', { name: '內建角座' })).toBeChecked()
   await expect(viewport).not.toHaveAttribute(
     'data-model-revision',
     revisionBeforeCornerSeat ?? '',
@@ -91,11 +122,9 @@ test('OpenGrid organizer-box is listed and exposes the cavity controls', async (
   await lockingCornerSeat.check()
   await expect(lockingCornerSeat).toBeChecked()
   await expect(
-    interfaceMode.getByRole('radio', { name: '四角固定座' }),
+    seatMode.getByRole('radio', { name: '內建角座' }),
   ).not.toBeChecked()
-  await expect(
-    interfaceMode.getByRole('radio', { name: '堆疊結構' }),
-  ).not.toBeChecked()
+  await expect(bodyMode.getByRole('radio', { name: '普通模式' })).toBeChecked()
   await expect(viewport).not.toHaveAttribute(
     'data-model-revision',
     revisionBeforeLockingCornerSeat ?? '',
@@ -106,13 +135,19 @@ test('OpenGrid organizer-box is listed and exposes the cavity controls', async (
   const revisionBeforeStackable = await viewport.getAttribute(
     'data-model-revision',
   )
-  await interfaceMode.getByRole('radio', { name: '堆疊結構' }).check()
-  await expect(
-    interfaceMode.getByRole('radio', { name: '堆疊結構' }),
-  ).toBeChecked()
-  await expect(
-    interfaceMode.getByRole('radio', { name: '四角固定座' }),
-  ).not.toBeChecked()
+  await bodyMode.getByRole('radio', { name: '堆疊模式' }).check()
+  await expect(bodyMode.getByRole('radio', { name: '堆疊模式' })).toBeChecked()
+  await expect(seatMode.getByRole('radio', { name: '鎖定角座' })).toBeChecked()
+
+  const stackingZ = page.getByRole('textbox', { name: '堆疊淨空（Z）' })
+  await expect(stackingZ).toHaveValue('3.5')
+  await stackingZ.fill('4.5')
+  await seatMode.getByRole('radio', { name: '內建角座' }).check()
+  await expect(bodyMode.getByRole('radio', { name: '堆疊模式' })).toBeChecked()
+  await bodyMode.getByRole('radio', { name: '普通模式' }).check()
+  await expect(stackingZ).toHaveCount(0)
+  await bodyMode.getByRole('radio', { name: '堆疊模式' }).check()
+  await expect(stackingZ).toHaveValue('4.5')
 
   await expect(viewport).not.toHaveAttribute(
     'data-model-revision',
@@ -128,6 +163,6 @@ test('OpenGrid organizer-box is listed and exposes the cavity controls', async (
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-organizer-box-2x2-hexagon-sm-independent-d20-sx3-sy3-h20-b1-istackable.step',
+    'opengrid-organizer-box-2x2-hexagon-sm-independent-d20-sx3-sy3-h20-b1-seats-integrated-body-stackable-z4p5.step',
   )
 })

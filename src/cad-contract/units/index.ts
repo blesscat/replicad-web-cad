@@ -47,6 +47,7 @@ import type {
 import {
   boundsForOpenGridOrganizerBox,
   isOpenGridOrganizerBoxParameters,
+  normalizeOpenGridOrganizerBoxParameters,
   openGridOrganizerBoxDetachableIndicatorPlacementFor,
   openGridOrganizerBoxFileName,
   openGridOrganizerBoxStlFileName,
@@ -277,6 +278,7 @@ export {
 export {
   boundsForOpenGridOrganizerBox,
   isOpenGridOrganizerBoxParameters,
+  normalizeOpenGridOrganizerBoxParameters,
   openGridOrganizerBoxCavityEnvelopeFor,
   openGridOrganizerBoxDetachableIndicatorPlacementFor,
   openGridOrganizerBoxDetachableSocketPosesFor,
@@ -368,7 +370,7 @@ export type {
   OpenGridStackableBoxValidationIssue,
 } from './opengrid-stackable-box'
 export type {
-  OpenGridOrganizerBoxBottomInterfaceMode,
+  OpenGridOrganizerBoxBoxMode,
   OpenGridOrganizerBoxCavityEnvelope,
   OpenGridOrganizerBoxCavityEnvelopeInput,
   OpenGridOrganizerBoxDetachableIndicatorPlacement,
@@ -380,6 +382,7 @@ export type {
   OpenGridOrganizerBoxPoint2D,
   OpenGridOrganizerBoxShape,
   OpenGridOrganizerBoxSpacingMode,
+  OpenGridOrganizerBoxStackingLayout,
   OpenGridOrganizerBoxValidation,
   OpenGridOrganizerBoxValidationIssue,
 } from './opengrid-organizer-box'

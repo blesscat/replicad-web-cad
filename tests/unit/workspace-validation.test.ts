@@ -31,7 +31,7 @@ describe('CAD workspace validation helpers', () => {
     expect(parseRawParameters(raw)).toEqual({ valid: true, value: parameters })
   })
 
-  it('round-trips organizer-box shape, spacing, and bottom-interface inputs', () => {
+  it('round-trips organizer-box shape, spacing, seat, body, and Z inputs', () => {
     const parameters: OpenGridOrganizerBoxParameters = {
       ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
       holeCountX: 3,
@@ -43,7 +43,9 @@ describe('CAD workspace validation helpers', () => {
       holeDiameter: 12.5,
       holeDepth: 18,
       bottomThickness: 3.5,
-      bottomInterfaceMode: 'stackable',
+      cornerSeatMode: 'integrated',
+      boxMode: 'stackable',
+      stackingClearanceHeight: 4.5,
     }
     const raw = rawFromParameters(parameters)
 
@@ -74,10 +76,12 @@ describe('CAD workspace validation helpers', () => {
     })
   })
 
-  it('round-trips the organizer-box detachable interface mode', () => {
+  it('preserves inactive organizer-box Z in normal mode', () => {
     const parameters: OpenGridOrganizerBoxParameters = {
       ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
-      bottomInterfaceMode: 'detachable-corner-seat',
+      cornerSeatMode: 'detachable-corner-seat',
+      boxMode: 'normal',
+      stackingClearanceHeight: 12.5,
     }
 
     expect(
@@ -87,6 +91,24 @@ describe('CAD workspace validation helpers', () => {
       ),
     ).toEqual({ valid: true, value: parameters })
   })
+
+  it.each(['3', '3.2', '3.6'])(
+    'rejects organizer-box Z value %s outside the safe half-step grid',
+    (stackingClearanceHeight) => {
+      const raw = rawFromParameters(OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS)
+
+      expect(
+        parseRawParameters(
+          { ...raw, stackingClearanceHeight },
+          'opengrid-organizer-box',
+        ),
+      ).toEqual({
+        valid: false,
+        messageId: 'validation.invalid',
+        field: 'stackingClearanceHeight',
+      })
+    },
+  )
 
   it('returns the first invalid dimension field and its user-facing message', () => {
     expect(

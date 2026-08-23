@@ -98,6 +98,20 @@ const OPENGRID_ORGANIZER_BOX_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
     sliderMin: OPENGRID_ORGANIZER_BOX_CONFIGURATION.minBottomThickness,
     sliderMax: 30,
   },
+  {
+    key: 'stackingClearanceHeight',
+    label: 'parameter.organizerStackingClearance',
+    axis: 'Z',
+    unit: 'mm',
+    control: 'range-text',
+    defaultValue:
+      OPENGRID_ORGANIZER_BOX_CONFIGURATION.defaultStackingClearanceHeight,
+    min: OPENGRID_ORGANIZER_BOX_CONFIGURATION.minStackingClearanceHeight,
+    max: OPENGRID_ORGANIZER_BOX_CONFIGURATION.maxStackingClearanceHeight,
+    step: 0.5,
+    sliderMin: OPENGRID_ORGANIZER_BOX_CONFIGURATION.minStackingClearanceHeight,
+    sliderMax: 50,
+  },
 ]
 
 function validateDefinitionParameters(value: unknown) {

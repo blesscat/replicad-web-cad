@@ -321,7 +321,7 @@ describe('HSW kernel model registration', () => {
   it('loads both shared references only for the detachable organizer-box mode', async () => {
     const parameters = {
       ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
-      bottomInterfaceMode: 'detachable-corner-seat' as const,
+      cornerSeatMode: 'detachable-corner-seat' as const,
     }
     const shape = await buildModelBRep(
       'opengrid-organizer-box',
