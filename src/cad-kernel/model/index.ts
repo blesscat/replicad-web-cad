@@ -35,6 +35,8 @@ import { buildOpenGridStackableBox } from '../components/opengrid-stackable-box/
 import { buildOpenGridStackableCylinder } from '../components/opengrid-stackable-cylinder/builder'
 import {
   buildOpenGridSnap,
+  buildOpenGridSnapWithFlatText,
+  type OpenGridSnapNativePart,
   type OpenGridSnapFixedFootprint,
 } from '../components/opengrid-snap/builder'
 import { buildOpenGridSnapRemover } from '../components/opengrid-snap-remover/builder'
@@ -96,6 +98,12 @@ export type KernelModelDefinition = {
     parameters: ModelParameterValues,
     context: KernelBuildContext,
   ) => Shape3D | Promise<Shape3D>
+}
+
+export type KernelModelBuildResult = {
+  shape: Shape3D
+  qualityShape?: Shape3D
+  parts?: OpenGridSnapNativePart[]
 }
 
 function buildBoxModel(
@@ -494,4 +502,30 @@ export async function buildModelBRep(
   const definition = getKernelModelDefinition(modelId)
   if (!definition) throw new Error(`MODEL_DEFINITION_MISSING:${modelId}`)
   return definition.build(parameters, context)
+}
+
+export async function buildModelBRepWithParts(
+  modelId: ModelId,
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Promise<KernelModelBuildResult> {
+  if (
+    modelId === 'opengrid-snap' &&
+    isOpenGridSnapParameters(parameters) &&
+    parameters.topText === 'SNAP'
+  ) {
+    const result = await buildOpenGridSnapWithFlatText(parameters, {
+      getOpenGridSnapReference: context.getOpenGridSnapReference,
+      getOpenGridSnapFixedFootprint: context.getOpenGridSnapFixedFootprint,
+      getOpenGridSnapOpenConnectHead: context.getOpenGridSnapOpenConnectHead,
+      yieldToEventLoop: context.yieldToEventLoop,
+      isGenerationCurrent: context.isGenerationCurrent,
+      booleanOperations: context.booleanOperations,
+    })
+    return result
+  }
+
+  return {
+    shape: await buildModelBRep(modelId, parameters, context),
+  }
 }

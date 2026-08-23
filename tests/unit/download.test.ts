@@ -6,8 +6,11 @@ import {
 import {
   validateStepResponse,
   validateStlResponse,
+  validateThreeMfPackage,
+  validateThreeMfResponse,
   triggerFixedStepDownload,
   triggerStlDownload,
+  triggerThreeMfDownload,
 } from '../../src/features/cad/download'
 
 function stepResponse(
@@ -164,6 +167,179 @@ describe('STL browser download adapter', () => {
     expect(click).toHaveBeenCalledOnce()
     cleanup()
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:stl')
+
+    vi.unstubAllGlobals()
+  })
+})
+
+function threeMfBytes(
+  modelTransform: (xml: string) => string = (xml) => xml,
+): ArrayBuffer {
+  let crc = (bytes: Uint8Array): number => {
+    let value = 0xffffffff
+    for (const byte of bytes) {
+      value ^= byte
+      for (let bit = 0; bit < 8; bit += 1) {
+        value = (value >>> 1) ^ (value & 1 ? 0xedb88320 : 0)
+      }
+    }
+    return (value ^ 0xffffffff) >>> 0
+  }
+  const encoder = new TextEncoder()
+  const entries = [
+    [
+      '[Content_Types].xml',
+      `<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>`,
+    ],
+    [
+      '_rels/.rels',
+      `<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel-1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>`,
+    ],
+    [
+      '3D/3dmodel.model',
+      `<?xml version="1.0"?><model xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" unit="millimeter"><resources><basematerials id="1"><base name="Snap Body" displaycolor="#657080"/><base name="Snap Text" displaycolor="#F4C542"/></basematerials><object id="1" type="model" name="body" pid="1" pindex="0"><mesh><vertices><vertex x="0" y="0" z="0"/><vertex x="1" y="0" z="0"/><vertex x="0" y="1" z="0"/></vertices><triangles><triangle v1="0" v2="1" v3="2"/></triangles></mesh></object><object id="2" type="model" name="text" pid="1" pindex="1"><mesh><vertices><vertex x="0" y="0" z="0"/><vertex x="1" y="0" z="0"/><vertex x="0" y="1" z="0"/></vertices><triangles><triangle v1="0" v2="1" v3="2"/></triangles></mesh></object><object id="3" type="model" name="OpenGrid Snap SNAP"><components><component objectid="1"/><component objectid="2"/></components></object></resources><build><item objectid="3"/></build></model>`,
+    ],
+  ] as const
+  const encodedEntries = entries.map(([name, content]) => {
+    const nameBytes = encoder.encode(name)
+    const bytes = encoder.encode(
+      name === '3D/3dmodel.model' ? modelTransform(content) : content,
+    )
+    return { nameBytes, bytes, checksum: crc(bytes) }
+  })
+  const localSize = encodedEntries.reduce(
+    (total, entry) => total + 30 + entry.nameBytes.length + entry.bytes.length,
+    0,
+  )
+  const centralSize = encodedEntries.reduce(
+    (total, entry) => total + 46 + entry.nameBytes.length,
+    0,
+  )
+  const raw = new Uint8Array(localSize + centralSize + 22)
+  const view = new DataView(raw.buffer)
+  let offset = 0
+  const localOffsets: number[] = []
+  for (const entry of encodedEntries) {
+    localOffsets.push(offset)
+    view.setUint32(offset, 0x04034b50, true)
+    view.setUint16(offset + 4, 20, true)
+    view.setUint16(offset + 6, 0x800, true)
+    view.setUint32(offset + 14, entry.checksum, true)
+    view.setUint32(offset + 18, entry.bytes.length, true)
+    view.setUint32(offset + 22, entry.bytes.length, true)
+    view.setUint16(offset + 26, entry.nameBytes.length, true)
+    raw.set(entry.nameBytes, offset + 30)
+    raw.set(entry.bytes, offset + 30 + entry.nameBytes.length)
+    offset += 30 + entry.nameBytes.length + entry.bytes.length
+  }
+  const centralOffset = offset
+  encodedEntries.forEach((entry, index) => {
+    view.setUint32(offset, 0x02014b50, true)
+    view.setUint16(offset + 4, 20, true)
+    view.setUint16(offset + 6, 20, true)
+    view.setUint16(offset + 8, 0x800, true)
+    view.setUint32(offset + 16, entry.checksum, true)
+    view.setUint32(offset + 20, entry.bytes.length, true)
+    view.setUint32(offset + 24, entry.bytes.length, true)
+    view.setUint16(offset + 28, entry.nameBytes.length, true)
+    view.setUint32(offset + 42, localOffsets[index]!, true)
+    raw.set(entry.nameBytes, offset + 46)
+    offset += 46 + entry.nameBytes.length
+  })
+  view.setUint32(offset, 0x06054b50, true)
+  view.setUint16(offset + 8, encodedEntries.length, true)
+  view.setUint16(offset + 10, encodedEntries.length, true)
+  view.setUint32(offset + 12, centralSize, true)
+  view.setUint32(offset + 16, centralOffset, true)
+  return raw.buffer
+}
+
+function threeMfResponse(
+  overrides: Record<string, unknown> = {},
+): ExportReadyEvent {
+  return {
+    version: PROTOCOL_VERSION,
+    kind: 'export.ready',
+    requestId: 'response-3mf-1',
+    operationId: 'export-3mf-1',
+    modelRevision: 'rev-1',
+    workerEpoch: 'epoch-1',
+    format: '3mf',
+    bytes: threeMfBytes(),
+    mime: 'model/3mf',
+    fileName: 'opengrid-snap-standard-full-text-snap.3mf',
+    ...overrides,
+  } as ExportReadyEvent
+}
+
+describe('3MF response validation', () => {
+  it('accepts the expected multipart package markers', () => {
+    expect(validateThreeMfPackage(threeMfBytes())).toBe(true)
+    expect(
+      validateThreeMfResponse(
+        threeMfResponse(),
+        'rev-1',
+        'epoch-1',
+        'opengrid-snap-standard-full-text-snap.3mf',
+      ),
+    ).toEqual({ valid: true })
+  })
+
+  it('rejects an invalid package or metadata', () => {
+    expect(validateThreeMfPackage(new ArrayBuffer(4))).toBe(false)
+    const corrupted = new Uint8Array(threeMfBytes())
+    corrupted[30 + new TextEncoder().encode('[Content_Types].xml').length] ^= 1
+    expect(validateThreeMfPackage(corrupted.buffer)).toBe(false)
+    expect(
+      validateThreeMfPackage(threeMfBytes((xml) => xml.replace('v1="0"', ''))),
+    ).toBe(false)
+    expect(
+      validateThreeMfPackage(
+        threeMfBytes((xml) => xml.replace('</model>', '')),
+      ),
+    ).toBe(false)
+    expect(
+      validateThreeMfPackage(
+        threeMfBytes((xml) => xml.replace('v3="2"', 'v3="1"')),
+      ),
+    ).toBe(false)
+    expect(
+      validateThreeMfResponse(
+        threeMfResponse({ mime: 'model/stl' }),
+        'rev-1',
+        'epoch-1',
+      ).valid,
+    ).toBe(false)
+    expect(
+      validateThreeMfResponse(
+        threeMfResponse({ bytes: new Uint8Array([1]).buffer }),
+        'rev-1',
+        'epoch-1',
+      ).valid,
+    ).toBe(false)
+  })
+})
+
+describe('3MF browser download adapter', () => {
+  it('triggers one download and returns Object URL cleanup', () => {
+    const click = vi.fn()
+    const anchor = { href: '', download: '', click }
+    const createObjectURL = vi.fn(() => 'blob:3mf')
+    const revokeObjectURL = vi.fn()
+    vi.stubGlobal('document', {
+      createElement: vi.fn(() => anchor),
+    })
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL })
+
+    const cleanup = triggerThreeMfDownload(threeMfResponse())
+
+    expect(anchor).toMatchObject({
+      href: 'blob:3mf',
+      download: 'opengrid-snap-standard-full-text-snap.3mf',
+    })
+    expect(click).toHaveBeenCalledOnce()
+    cleanup()
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:3mf')
 
     vi.unstubAllGlobals()
   })

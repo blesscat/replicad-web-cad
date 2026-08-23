@@ -412,6 +412,7 @@ function snapParameters(
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
     openConnect: false,
+    topText: 'none' as const,
     magnetHoleShape: 'none' as const,
     magnetHoleLength: 0,
     magnetHoleWidth: 0,

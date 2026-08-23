@@ -135,6 +135,7 @@
       rawParameters={snapshot.rawParameters}
       fieldErrors={snapshot.fieldErrors}
       canExport={snapshot.canExport}
+      canExportThreeMf={snapshot.canExportThreeMf}
       onInputChange={handleInputChange}
       onSystemContextChange={handleSystemContextChange}
       onOpenGridParametersChange={handleOpenGridParametersChange}

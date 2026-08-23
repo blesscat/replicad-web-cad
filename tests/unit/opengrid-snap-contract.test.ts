@@ -4,6 +4,7 @@ import {
   isOpenGridSnapParameters,
   openGridSnapFileName,
   openGridSnapStlFileName,
+  openGridSnapThreeMfFileName,
   OPENGRID_SNAP_CONFIGURATION,
   validateOpenGridSnapParameters,
 } from '../../src/cad-contract/units'
@@ -18,6 +19,7 @@ describe('OpenGrid Snap contract', () => {
       fourCornerLocatingHoles: boolean
       centerRemoverHole: boolean
       openConnect: boolean
+      topText: 'none' | 'SNAP'
       magnetHoleShape: 'none' | 'square' | 'round'
       magnetHoleLength: number
       magnetHoleWidth: number
@@ -33,6 +35,7 @@ describe('OpenGrid Snap contract', () => {
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
       openConnect: false,
+      topText: 'none' as const,
       magnetHoleShape: 'none' as const,
       magnetHoleLength: 0,
       magnetHoleWidth: 0,
@@ -246,6 +249,34 @@ describe('OpenGrid Snap contract', () => {
     expect(openGridSnapStlFileName(input)).toContain('-openconnect')
   })
 
+  it('accepts only the fixed flat SNAP text combination', () => {
+    const text = parameters({ topText: 'SNAP' })
+    expect(validateOpenGridSnapParameters(text)).toEqual({
+      valid: true,
+      value: text,
+    })
+    expect(openGridSnapThreeMfFileName(text)).toBe(
+      'opengrid-snap-standard-full-text-snap.3mf',
+    )
+    expect(openGridSnapFileName(text)).toContain('-text-snap.step')
+    expect(openGridSnapStlFileName(text)).toContain('-text-snap.stl')
+
+    for (const overrides of [
+      { variant: 'Lite' as const },
+      { profile: 'Directional' as const },
+      { offset: 0.05 },
+      { footprint: 'half' as const },
+      { openConnect: true },
+      { fourCornerLocatingHoles: true },
+      { centerRemoverHole: true },
+      { magnetHoleShape: 'round' as const },
+    ]) {
+      expect(
+        validateOpenGridSnapParameters({ ...text, ...overrides }),
+      ).toMatchObject({ valid: false })
+    }
+  })
+
   it('uses fixed STEP filenames for half and quarter downloads', () => {
     expect(
       openGridSnapFileName(
@@ -369,6 +400,7 @@ describe('OpenGrid Snap contract', () => {
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
       openConnect: false,
+      topText: 'none',
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,

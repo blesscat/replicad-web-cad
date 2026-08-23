@@ -12,6 +12,7 @@ import {
 export type OpenGridSnapVariant = 'Full' | 'Lite'
 export type OpenGridSnapProfile = 'Standard' | 'Directional'
 export type OpenGridSnapFootprint = 'full' | 'half' | 'quarter'
+export type OpenGridSnapTopText = 'none' | 'SNAP'
 export type OpenGridSnapMagnetHoleShape = 'none' | 'square' | 'round'
 
 export type OpenGridSnapParameterKey =
@@ -22,6 +23,7 @@ export type OpenGridSnapParameterKey =
   | 'fourCornerLocatingHoles'
   | 'centerRemoverHole'
   | 'openConnect'
+  | 'topText'
   | 'magnetHoleShape'
   | 'magnetHoleLength'
   | 'magnetHoleWidth'
@@ -37,6 +39,7 @@ export type OpenGridSnapParameters = {
   fourCornerLocatingHoles: boolean
   centerRemoverHole: boolean
   openConnect: boolean
+  topText: OpenGridSnapTopText
   magnetHoleShape: OpenGridSnapMagnetHoleShape
   magnetHoleLength: number
   magnetHoleWidth: number
@@ -120,6 +123,7 @@ export const OPENGRID_SNAP_CONFIGURATION = {
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
     openConnect: false,
+    topText: 'none' as OpenGridSnapTopText,
     magnetHoleShape: 'none' as OpenGridSnapMagnetHoleShape,
     magnetHoleLength: 0,
     magnetHoleWidth: 0,
@@ -136,6 +140,7 @@ const PARAMETER_KEYS: readonly OpenGridSnapParameterKey[] = [
   'fourCornerLocatingHoles',
   'centerRemoverHole',
   'openConnect',
+  'topText',
   'magnetHoleShape',
   'magnetHoleLength',
   'magnetHoleWidth',
@@ -175,6 +180,12 @@ export function isOpenGridSnapMagnetHoleShape(
   value: unknown,
 ): value is OpenGridSnapMagnetHoleShape {
   return value === 'none' || value === 'square' || value === 'round'
+}
+
+export function isOpenGridSnapTopText(
+  value: unknown,
+): value is OpenGridSnapTopText {
+  return value === 'none' || value === 'SNAP'
 }
 
 function formatNumber(value: number): string {
@@ -286,6 +297,27 @@ export function validateOpenGridSnapParameters(
       field: 'openConnect',
       messageId: 'validation.invalid',
     })
+  }
+
+  if (!isOpenGridSnapTopText(value.topText)) {
+    issues.push({ field: 'topText', messageId: 'validation.invalid' })
+  }
+  if (
+    value.topText === 'SNAP' &&
+    (value.variant !== 'Full' ||
+      value.profile !== 'Standard' ||
+      value.offset !== 0 ||
+      value.footprint !== 'full' ||
+      value.openConnect !== false ||
+      value.fourCornerLocatingHoles !== false ||
+      value.centerRemoverHole !== false ||
+      value.magnetHoleShape !== 'none' ||
+      value.magnetHoleLength !== 0 ||
+      value.magnetHoleWidth !== 0 ||
+      value.magnetHoleDiameter !== 0 ||
+      value.magnetHoleThickness !== 0)
+  ) {
+    issues.push({ field: 'topText', messageId: 'validation.invalid' })
   }
 
   if (!isOpenGridSnapMagnetHoleShape(value.magnetHoleShape)) {
@@ -485,6 +517,7 @@ export function validateOpenGridSnapParameters(
       fourCornerLocatingHoles: value.fourCornerLocatingHoles as boolean,
       centerRemoverHole: value.centerRemoverHole as boolean,
       openConnect: value.openConnect as boolean,
+      topText: value.topText as OpenGridSnapTopText,
       magnetHoleShape: value.magnetHoleShape as OpenGridSnapMagnetHoleShape,
       magnetHoleLength: value.magnetHoleLength as number,
       magnetHoleWidth: value.magnetHoleWidth as number,
@@ -511,6 +544,9 @@ export function normalizeOpenGridSnapParameters(value: unknown): unknown {
   }
   if (!Object.prototype.hasOwnProperty.call(normalized, 'openConnect')) {
     normalized.openConnect = false
+  }
+  if (!Object.prototype.hasOwnProperty.call(normalized, 'topText')) {
+    normalized.topText = 'none'
   }
   if (!Object.prototype.hasOwnProperty.call(normalized, 'magnetHoleShape')) {
     normalized.magnetHoleShape = 'none'
@@ -637,13 +673,22 @@ export function openGridSnapFileName(
 ): string {
   if (parameters.footprint === 'half') return 'Half.step'
   if (parameters.footprint === 'quarter') return 'Quarter.step'
-  return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-${parameters.footprint}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}${openGridSnapOpenConnectFileNameSuffix(parameters)}${openGridSnapMagnetFileNameSuffix(parameters)}.step`
+  return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-${parameters.footprint}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}${openGridSnapOpenConnectFileNameSuffix(parameters)}${openGridSnapMagnetFileNameSuffix(parameters)}${openGridSnapTopTextFileNameSuffix(parameters)}.step`
 }
 
 export function openGridSnapStlFileName(
   parameters: OpenGridSnapParameters,
 ): string {
-  return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-${parameters.footprint}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}${openGridSnapOpenConnectFileNameSuffix(parameters)}${openGridSnapMagnetFileNameSuffix(parameters)}.stl`
+  return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-${parameters.footprint}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}${openGridSnapOpenConnectFileNameSuffix(parameters)}${openGridSnapMagnetFileNameSuffix(parameters)}${openGridSnapTopTextFileNameSuffix(parameters)}.stl`
+}
+
+export function openGridSnapThreeMfFileName(
+  parameters: OpenGridSnapParameters,
+): string {
+  if (parameters.topText !== 'SNAP') {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap-3mf')
+  }
+  return 'opengrid-snap-standard-full-text-snap.3mf'
 }
 
 function openGridSnapOpenConnectFileNameSuffix(
@@ -660,6 +705,12 @@ function openGridSnapMagnetFileNameSuffix(
     return `-magnet-square-l${formatNumber(parameters.magnetHoleLength)}-w${formatNumber(parameters.magnetHoleWidth)}-t${formatNumber(parameters.magnetHoleThickness)}`
   }
   return `-magnet-round-d${formatNumber(parameters.magnetHoleDiameter)}-t${formatNumber(parameters.magnetHoleThickness)}`
+}
+
+function openGridSnapTopTextFileNameSuffix(
+  parameters: OpenGridSnapParameters,
+): string {
+  return parameters.topText === 'SNAP' ? '-text-snap' : ''
 }
 
 export function openGridSnapHeightFor(variant: OpenGridSnapVariant): number {

@@ -25,3 +25,9 @@ export async function exportStlBytes(
   if (bytes.byteLength === 0) throw new Error('STL_EMPTY')
   return bytes
 }
+
+export {
+  exportThreeMfBytes,
+  isThreeMfPackage,
+  type ThreeMfShapePart,
+} from './three-mf'

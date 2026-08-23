@@ -30,6 +30,7 @@ import {
 import type { MeshSnapshot } from '../../../cad-contract/messages'
 import type { MeshData } from '../../mesh'
 import { OPENGRID_SNAP_BOUNDARY_PROFILE } from './boundary'
+import { isOpenGridSnapFlatTextConfiguration } from './flat-text'
 
 const QUALITY_TOLERANCE = 0.05
 // Meshing an offset assembly can add a small OCC boundary epsilon to the
@@ -2188,5 +2189,74 @@ export function assertOpenGridSnapShapeQuality(
       `OPENGRID_SNAP_QUALITY_INVALID:${report.failures.join(';')}`,
     )
   }
+  return report
+}
+
+export function assertOpenGridSnapFlatTextShapeQuality(
+  baseShape: Shape3D,
+  bodyShape: Shape3D,
+  textShape: Shape3D,
+  parameters: OpenGridSnapParameters,
+  baseMesh: MeshData | MeshSnapshot,
+  textMesh: MeshData | MeshSnapshot,
+  reference: Shape3D,
+): OpenGridSnapQualityReport {
+  if (!isOpenGridSnapFlatTextConfiguration(parameters)) {
+    throw new Error('OPENGRID_SNAP_QUALITY_INVALID:flat-text-configuration')
+  }
+
+  const report = assertOpenGridSnapShapeQuality(
+    baseShape,
+    parameters,
+    baseMesh,
+    reference,
+  )
+  const textBounds = readBounds(textShape)
+  const expectedTop = OPENGRID_SNAP_CONFIGURATION.variantHeights.Full
+  const expectedBottom = expectedTop - 0.4
+  const textCoordinates = [...textBounds.min, ...textBounds.max]
+  if (
+    countSolids(textShape) === 0 ||
+    textCoordinates.some((coordinate) => !Number.isFinite(coordinate)) ||
+    !isClose(textBounds.min[2], expectedBottom) ||
+    !isClose(textBounds.max[2], expectedTop) ||
+    !meshIsFinite(textMesh) ||
+    textMesh.triangleCount <= 0
+  ) {
+    throw new Error('OPENGRID_SNAP_QUALITY_INVALID:flat-text-bounds')
+  }
+
+  let bodyTextIntersection: Shape3D | null = null
+  try {
+    bodyTextIntersection = bodyShape.intersect(textShape)
+    const overlapVolume = measureVolume(bodyTextIntersection)
+    if (!Number.isFinite(overlapVolume) || overlapVolume > 0.01) {
+      throw new Error('OPENGRID_SNAP_QUALITY_INVALID:flat-text-cavity')
+    }
+  } catch {
+    throw new Error('OPENGRID_SNAP_QUALITY_INVALID:flat-text-cavity')
+  } finally {
+    deleteShape(bodyTextIntersection)
+  }
+
+  let containedTextIntersection: Shape3D | null = null
+  try {
+    const textVolume = measureVolume(textShape)
+    containedTextIntersection = baseShape.intersect(textShape)
+    const containedVolume = measureVolume(containedTextIntersection)
+    if (
+      !Number.isFinite(textVolume) ||
+      textVolume <= 0 ||
+      !Number.isFinite(containedVolume) ||
+      Math.abs(textVolume - containedVolume) > 0.01
+    ) {
+      throw new Error('OPENGRID_SNAP_QUALITY_INVALID:flat-text-containment')
+    }
+  } catch {
+    throw new Error('OPENGRID_SNAP_QUALITY_INVALID:flat-text-containment')
+  } finally {
+    deleteShape(containedTextIntersection)
+  }
+
   return report
 }

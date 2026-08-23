@@ -22,7 +22,8 @@ function createContext(
   pillarMode:
     'detachable-corner-seat' | 'positioning' = 'detachable-corner-seat',
   snapOffset = 0.35,
-  snapFootprint: 'half' | 'quarter' = 'half',
+  snapFootprint: 'full' | 'half' | 'quarter' = 'half',
+  snapFlatText = false,
 ): {
   context: RuntimeContext
   refs: RuntimeRefs
@@ -35,13 +36,14 @@ function createContext(
 
   if (modelId === 'opengrid-snap') {
     const snapParameters: OpenGridSnapParameters = {
-      variant: 'Lite',
-      profile: 'Directional',
-      offset: snapOffset,
-      footprint: snapFootprint,
-      fourCornerLocatingHoles: true,
-      centerRemoverHole: true,
+      variant: snapFlatText ? 'Full' : 'Lite',
+      profile: snapFlatText ? 'Standard' : 'Directional',
+      offset: snapFlatText ? 0 : snapOffset,
+      footprint: snapFlatText ? 'full' : snapFootprint,
+      fourCornerLocatingHoles: snapFlatText ? false : true,
+      centerRemoverHole: snapFlatText ? false : true,
       openConnect: false,
+      topText: snapFlatText ? 'SNAP' : 'none',
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,
@@ -50,13 +52,14 @@ function createContext(
     }
     parameters = snapParameters
     rawParameters = {
-      variant: 'Lite',
-      profile: 'Directional',
-      offset: String(snapOffset),
-      footprint: snapFootprint,
-      fourCornerLocatingHoles: 'true',
-      centerRemoverHole: 'true',
+      variant: snapFlatText ? 'Full' : 'Lite',
+      profile: snapFlatText ? 'Standard' : 'Directional',
+      offset: String(snapFlatText ? 0 : snapOffset),
+      footprint: snapFlatText ? 'full' : snapFootprint,
+      fourCornerLocatingHoles: String(!snapFlatText),
+      centerRemoverHole: String(!snapFlatText),
       openConnect: 'false',
+      topText: snapFlatText ? 'SNAP' : 'none',
       magnetHoleShape: 'none',
       magnetHoleLength: '0',
       magnetHoleWidth: '0',
@@ -156,6 +159,32 @@ describe('CAD export runtime', () => {
       workerEpoch: 'epoch-1',
       fileName: 'box-20x30x40.stl',
       downloaded: false,
+    })
+  })
+
+  it('sends a 3MF command only for the flat SNAP text preset', () => {
+    const { context, refs, client } = createContext(
+      'opengrid-snap',
+      'detachable-corner-seat',
+      0,
+      'full',
+      true,
+    )
+    createExportHandlers(context).handleExport('3mf')
+
+    expect(client.send).toHaveBeenCalledWith({
+      kind: 'export.3mf',
+      operationId: expect.stringMatching(/^export-3mf-/),
+      modelRevision: 'revision-1',
+      workerEpoch: 'epoch-1',
+      file: {
+        name: 'opengrid-snap-standard-full-text-snap.3mf',
+        mime: 'model/3mf',
+      },
+    })
+    expect(refs.exportRequest.current).toMatchObject({
+      format: '3mf',
+      fileName: 'opengrid-snap-standard-full-text-snap.3mf',
     })
   })
 

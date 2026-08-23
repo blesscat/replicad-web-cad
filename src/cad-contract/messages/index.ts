@@ -85,6 +85,13 @@ export type ExportStlCommand = Envelope<'export.stl'> & {
   file: { name: string; mime: 'model/stl' }
 }
 
+export type ExportThreeMfCommand = Envelope<'export.3mf'> & {
+  operationId: string
+  modelRevision: string
+  workerEpoch: string
+  file: { name: string; mime: 'model/3mf' }
+}
+
 export type WorkerDisposeCommand = Envelope<'worker.dispose'> & {
   operationId: string
 }
@@ -97,6 +104,7 @@ export type WorkerCommand =
   | ModelDiscardCommand
   | ExportStepCommand
   | ExportStlCommand
+  | ExportThreeMfCommand
   | WorkerDisposeCommand
 
 export type WorkerCommandInput =
@@ -114,6 +122,8 @@ export type WorkerCommandInput =
       Partial<Pick<ExportStepCommand, 'version' | 'requestId'>>)
   | (Omit<ExportStlCommand, 'version' | 'requestId'> &
       Partial<Pick<ExportStlCommand, 'version' | 'requestId'>>)
+  | (Omit<ExportThreeMfCommand, 'version' | 'requestId'> &
+      Partial<Pick<ExportThreeMfCommand, 'version' | 'requestId'>>)
   | (Omit<WorkerDisposeCommand, 'version' | 'requestId'> &
       Partial<Pick<WorkerDisposeCommand, 'version' | 'requestId'>>)
 
@@ -224,7 +234,13 @@ export type ExportStlReadyEvent = ExportReadyEventBase & {
   mime: 'model/stl'
 }
 
-export type ExportReadyEvent = ExportStepReadyEvent | ExportStlReadyEvent
+export type ExportThreeMfReadyEvent = ExportReadyEventBase & {
+  format: '3mf'
+  mime: 'model/3mf'
+}
+
+export type ExportReadyEvent =
+  ExportStepReadyEvent | ExportStlReadyEvent | ExportThreeMfReadyEvent
 
 export type WorkerEvent =
   | EngineReadyEvent
@@ -374,6 +390,12 @@ function isExportReadyEvent(value: Record<string, unknown>): boolean {
       value.fileName.endsWith(PROTOTYPE_CONFIGURATION.stlExtension)
     )
   }
+  if (value.format === '3mf') {
+    return (
+      value.mime === PROTOTYPE_CONFIGURATION.threeMfMime &&
+      value.fileName.endsWith(PROTOTYPE_CONFIGURATION.threeMfExtension)
+    )
+  }
   return false
 }
 
@@ -471,6 +493,8 @@ const CAD_ERROR_CODES: readonly CadErrorCode[] = [
   'STEP_METADATA_INVALID',
   'STL_EXPORT_FAILED',
   'STL_METADATA_INVALID',
+  'THREEMF_EXPORT_FAILED',
+  'THREEMF_METADATA_INVALID',
   'UNKNOWN_ERROR',
 ]
 
@@ -540,6 +564,12 @@ export function isWorkerCommand(value: unknown): value is WorkerCommand {
         value,
         PROTOTYPE_CONFIGURATION.stlExtension,
         PROTOTYPE_CONFIGURATION.stlMime,
+      )
+    case 'export.3mf':
+      return isExportCommand(
+        value,
+        PROTOTYPE_CONFIGURATION.threeMfExtension,
+        PROTOTYPE_CONFIGURATION.threeMfMime,
       )
     case 'worker.dispose':
       return true

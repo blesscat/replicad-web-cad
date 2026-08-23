@@ -80,7 +80,7 @@ export const zhHantMessages = {
   'models.parameterRange': '{label}：{min}–{max} {unit}',
   'models.fixedParameters': '固定幾何，沒有可調參數。',
   'models.exportFormats': '匯出格式',
-  'models.exportFormatsValue': 'STEP 與 STL',
+  'models.exportFormatsValue': 'STEP、STL 與受限 Snap 3MF POC',
   'models.exportFormatsLine': '{label}：{value}',
   'models.previewUnavailable': '預覽圖片暫時無法載入',
   'models.edit': '編輯 →',
@@ -320,6 +320,7 @@ export const zhHantMessages = {
   'parameter.organizerHoleShape': '孔形狀',
   'cad.action.step': '下載 STEP',
   'cad.action.stl': '下載 STL',
+  'cad.action.threeMf': '下載 3MF',
   'cad.action.retry': '重試',
   'cad.system.current': '目前系統：{name}',
   'cad.error.title.initializing': 'CAD engine 載入失敗',
@@ -336,6 +337,8 @@ export const zhHantMessages = {
   'diagnostic.workerTerminated': 'CAD Worker 已停止，請重試。',
   'diagnostic.stlMetadataInvalid': 'STL 匯出資料不正確，請重試。',
   'diagnostic.stlExportFailed': 'STL 匯出失敗，請重試。',
+  'diagnostic.threeMfMetadataInvalid': '3MF 匯出資料不正確，請重試。',
+  'diagnostic.threeMfExportFailed': '3MF 匯出失敗，請重試。',
   'diagnostic.opengridUnsupported':
     'OpenGrid 參數與目前規格不相容，請檢查設定後重試。',
   'diagnostic.cylinderParametersInvalid':
@@ -356,6 +359,7 @@ export const zhHantMessages = {
   'diagnostic.exportInvalid': '匯出檔案驗證失敗，請重試。',
   'diagnostic.stlExportTimeout': 'STL 匯出超時，請重試。',
   'diagnostic.stepExportTimeout': 'STEP 匯出超時，請重試。',
+  'diagnostic.threeMfExportTimeout': '3MF 匯出超時，請重試。',
   'diagnostic.engineTimeout': 'CAD engine 載入超時，請重試。',
   'diagnostic.workerTimeout': 'CAD Worker 處理超時，請重試。',
   'diagnostic.meshInvalid': '預覽模型資料無效，Worker 將重新啟動。',
@@ -502,6 +506,12 @@ export const zhHantMessages = {
   'panel.snap.magnetSquare': '方形',
   'panel.snap.magnetRound': '圓形',
   'panel.snap.magnetHoleInvalid': 'Half／Quarter 固定格型不接受挖孔',
+  'panel.snap.topText': '頂面文字',
+  'panel.snap.topTextAria': 'Snap 頂面文字顏色零件',
+  'panel.snap.topTextNone': '無',
+  'panel.snap.topTextSnap': 'SNAP（平面雙色）',
+  'panel.snap.topTextHelp':
+    '目前只支援 Full／Standard、Full 格、增量 0、無孔與關閉 OpenConnect。',
   'panel.pillar.fixedVersionAria': '支柱版本',
   'panel.opengrid.profile': '板型',
   'panel.opengrid.profileAria': 'OpenGrid 板型',
@@ -692,7 +702,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'models.parameterRange': '{label}: {min}–{max} {unit}',
   'models.fixedParameters': 'Fixed geometry with no adjustable parameters.',
   'models.exportFormats': 'Export formats',
-  'models.exportFormatsValue': 'STEP and STL',
+  'models.exportFormatsValue': 'STEP, STL, and the limited Snap 3MF POC',
   'models.exportFormatsLine': '{label}: {value}',
   'models.previewUnavailable': 'Preview image is temporarily unavailable',
   'models.edit': 'Edit →',
@@ -939,6 +949,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'parameter.organizerHoleShape': 'Hole shape',
   'cad.action.step': 'Download STEP',
   'cad.action.stl': 'Download STL',
+  'cad.action.threeMf': 'Download 3MF',
   'cad.action.retry': 'Retry',
   'cad.system.current': 'Current system: {name}',
   'cad.error.title.initializing': 'CAD engine failed to load',
@@ -959,6 +970,9 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'diagnostic.stlMetadataInvalid':
     'The STL export metadata is invalid. Try again.',
   'diagnostic.stlExportFailed': 'The STL export failed. Try again.',
+  'diagnostic.threeMfMetadataInvalid':
+    'The 3MF export metadata is invalid. Try again.',
+  'diagnostic.threeMfExportFailed': 'The 3MF export failed. Try again.',
   'diagnostic.opengridUnsupported':
     'The OpenGrid parameters are incompatible with the current specification. Check the settings and try again.',
   'diagnostic.cylinderParametersInvalid':
@@ -980,6 +994,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'diagnostic.exportInvalid': 'The export file failed validation. Try again.',
   'diagnostic.stlExportTimeout': 'The STL export timed out. Try again.',
   'diagnostic.stepExportTimeout': 'The STEP export timed out. Try again.',
+  'diagnostic.threeMfExportTimeout': 'The 3MF export timed out. Try again.',
   'diagnostic.engineTimeout':
     'The CAD engine timed out while loading. Try again.',
   'diagnostic.workerTimeout': 'The CAD Worker timed out. Try again.',
@@ -1137,6 +1152,12 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'panel.snap.magnetRound': 'Round',
   'panel.snap.magnetHoleInvalid':
     'Fixed Half/Quarter footprints do not accept holes',
+  'panel.snap.topText': 'Top text',
+  'panel.snap.topTextAria': 'Snap top-text color part',
+  'panel.snap.topTextNone': 'None',
+  'panel.snap.topTextSnap': 'SNAP (flat two-color)',
+  'panel.snap.topTextHelp':
+    'Currently supported only for Full/Standard, Full footprint, offset 0, no holes, and OpenConnect off.',
   'panel.pillar.fixedVersionAria': 'Post version',
   'panel.opengrid.profile': 'Board profile',
   'panel.opengrid.profileAria': 'OpenGrid board profile',

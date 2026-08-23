@@ -29,6 +29,7 @@
       Record<ModelParameterKey | 'parameters', ValidationIssue>
     >
     canExport: boolean
+    canExportThreeMf: boolean
     onInputChange: (key: ModelParameterKey, value: string) => void
     onSystemContextChange: (context: OpenGridSystemContext | undefined) => void
     onOpenGridParametersChange: (parameters: OpenGridParameters) => void
@@ -48,6 +49,7 @@
     rawParameters,
     fieldErrors,
     canExport,
+    canExportThreeMf,
     onInputChange,
     onSystemContextChange,
     onOpenGridParametersChange,
@@ -105,6 +107,16 @@
     >
       {t('cad.action.stl')}
     </button>
+    {#if modelId === 'opengrid-snap'}
+      <button
+        class={ACTION_BUTTON_CLASS}
+        type="button"
+        disabled={!canExportThreeMf}
+        onclick={() => onExport('3mf')}
+      >
+        {t('cad.action.threeMf')}
+      </button>
+    {/if}
     {#if state.status === 'recoverable-error' || state.status === 'fatal-worker-error'}
       <button class={ACTION_BUTTON_CLASS} type="button" onclick={onRetry}>
         {t('cad.action.retry')}

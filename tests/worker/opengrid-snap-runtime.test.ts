@@ -2,16 +2,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   buildModelBRep: vi.fn(),
+  buildModelBRepWithParts: vi.fn(),
   initialiseCadKernel: vi.fn(),
   meshBRep: vi.fn(),
   serializeMesh: vi.fn(),
   assertOpenGridSnapShapeQuality: vi.fn(),
   assertOpenGridSnapOpenConnectShapeQuality: vi.fn(),
+  assertOpenGridSnapFlatTextShapeQuality: vi.fn(),
   loadOpenGridSnapReference: vi.fn(),
   loadOpenGridSnapFixedFootprint: vi.fn(),
   loadOpenGridSnapOpenConnectHead: vi.fn(),
   exportStepBytes: vi.fn(),
   exportStlBytes: vi.fn(),
+  exportThreeMfBytes: vi.fn(),
+  isThreeMfPackage: vi.fn(),
 }))
 
 vi.mock('../../src/cad-kernel/initialise', () => ({
@@ -19,6 +23,7 @@ vi.mock('../../src/cad-kernel/initialise', () => ({
 }))
 vi.mock('../../src/cad-kernel/model', () => ({
   buildModelBRep: mocks.buildModelBRep,
+  buildModelBRepWithParts: mocks.buildModelBRepWithParts,
 }))
 vi.mock('../../src/cad-kernel/mesh', () => ({
   meshBRep: mocks.meshBRep,
@@ -31,6 +36,8 @@ vi.mock('../../src/cad-kernel/components/opengrid-snap/quality', () => ({
   assertOpenGridSnapShapeQuality: mocks.assertOpenGridSnapShapeQuality,
   assertOpenGridSnapOpenConnectShapeQuality:
     mocks.assertOpenGridSnapOpenConnectShapeQuality,
+  assertOpenGridSnapFlatTextShapeQuality:
+    mocks.assertOpenGridSnapFlatTextShapeQuality,
 }))
 vi.mock('../../src/cad-kernel/components/opengrid-snap/builder', () => ({
   loadOpenGridSnapReference: mocks.loadOpenGridSnapReference,
@@ -40,12 +47,15 @@ vi.mock('../../src/cad-kernel/components/opengrid-snap/builder', () => ({
 vi.mock('../../src/cad-kernel/export', () => ({
   exportStepBytes: mocks.exportStepBytes,
   exportStlBytes: mocks.exportStlBytes,
+  exportThreeMfBytes: mocks.exportThreeMfBytes,
+  isThreeMfPackage: mocks.isThreeMfPackage,
 }))
 
 import { CadWorkerRuntime } from '../../src/workers/cad.worker'
 import {
   openGridSnapFileName,
   openGridSnapStlFileName,
+  openGridSnapThreeMfFileName,
   type OpenGridSnapParameters,
 } from '../../src/cad-contract/units'
 
@@ -66,6 +76,7 @@ function snapParameters(
       | 'fourCornerLocatingHoles'
       | 'centerRemoverHole'
       | 'openConnect'
+      | 'topText'
       | 'magnetHoleShape'
       | 'magnetHoleLength'
       | 'magnetHoleWidth'
@@ -82,6 +93,7 @@ function snapParameters(
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
     openConnect: false,
+    topText: 'none',
     magnetHoleShape: 'none',
     magnetHoleLength: 0,
     magnetHoleWidth: 0,
@@ -134,6 +146,14 @@ function configureMocks() {
     triangleCount: mesh.triangleCount,
   }))
   mocks.buildModelBRep.mockImplementation(async () => ({ delete: vi.fn() }))
+  mocks.buildModelBRepWithParts.mockImplementation(async () => ({
+    shape: { delete: vi.fn() },
+    qualityShape: { delete: vi.fn() },
+    parts: [
+      { name: 'body', shape: { delete: vi.fn() } },
+      { name: 'text', shape: { delete: vi.fn() } },
+    ],
+  }))
   mocks.loadOpenGridSnapReference.mockImplementation(async () => ({
     delete: vi.fn(),
   }))
@@ -145,6 +165,10 @@ function configureMocks() {
   }))
   mocks.exportStepBytes.mockResolvedValue(new Uint8Array([1, 2, 3]).buffer)
   mocks.exportStlBytes.mockResolvedValue(new Uint8Array([4, 5, 6]).buffer)
+  mocks.exportThreeMfBytes.mockResolvedValue(
+    new Uint8Array([0x50, 0x4b, 0x03, 0x04]).buffer,
+  )
+  mocks.isThreeMfPackage.mockReturnValue(true)
 }
 
 describe('OpenGrid Snap Worker runtime', () => {
@@ -519,6 +543,76 @@ describe('OpenGrid Snap Worker runtime', () => {
           event.kind === 'export.ready',
       ),
     ).toHaveLength(2)
+  })
+
+  it('exports the committed flat SNAP text revision as multipart 3MF', async () => {
+    const events: unknown[] = []
+    const runtime = new CadWorkerRuntime('epoch-snap-3mf', (event) =>
+      events.push(event),
+    )
+    const parameters = snapParameters('Full', 0, 'full', { topText: 'SNAP' })
+    await runtime.handle(initCommand())
+    await runtime.handle(generateCommand(parameters))
+
+    const candidate = events.find(
+      (event) =>
+        typeof event === 'object' &&
+        event !== null &&
+        'kind' in event &&
+        event.kind === 'model.candidate-ready',
+    ) as { candidateId: string } | undefined
+    expect(candidate).toBeDefined()
+    await runtime.handle({
+      ...base,
+      requestId: 'snap-3mf-commit-request',
+      operationId: 'snap-3mf-commit-operation',
+      kind: 'model.commit' as const,
+      generation: 1,
+      candidateId: candidate!.candidateId,
+      workerEpoch: 'epoch-snap-3mf',
+    })
+
+    const ready = events.find(
+      (event) =>
+        typeof event === 'object' &&
+        event !== null &&
+        'kind' in event &&
+        event.kind === 'model.ready',
+    ) as { modelRevision: string } | undefined
+    expect(ready).toBeDefined()
+
+    await runtime.handle({
+      ...base,
+      requestId: 'snap-3mf-export-request',
+      operationId: 'snap-3mf-export-operation',
+      kind: 'export.3mf' as const,
+      modelRevision: ready!.modelRevision,
+      workerEpoch: 'epoch-snap-3mf',
+      file: {
+        name: openGridSnapThreeMfFileName(parameters),
+        mime: 'model/3mf' as const,
+      },
+    })
+
+    expect(mocks.buildModelBRepWithParts).toHaveBeenCalledOnce()
+    expect(mocks.exportThreeMfBytes).toHaveBeenCalledOnce()
+    expect(
+      events.filter(
+        (event) =>
+          typeof event === 'object' &&
+          event !== null &&
+          'kind' in event &&
+          event.kind === 'export.ready',
+      ),
+    ).toHaveLength(1)
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'export.ready',
+        format: '3mf',
+        mime: 'model/3mf',
+        fileName: 'opengrid-snap-standard-full-text-snap.3mf',
+      }),
+    )
   })
 
   it('disposes loaded variant references once', async () => {

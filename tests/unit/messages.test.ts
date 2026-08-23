@@ -125,6 +125,7 @@ describe('Worker contract runtime validation', () => {
         fourCornerLocatingHoles: false,
         centerRemoverHole: false,
         openConnect: false,
+        topText: 'none' as const,
         magnetHoleShape: 'none' as const,
         magnetHoleLength: 0,
         magnetHoleWidth: 0,
@@ -450,6 +451,43 @@ describe('Worker contract runtime validation', () => {
         fileName: 'box-20x30x40.step',
       }),
     ).toBe(false)
+  })
+
+  it('accepts a validated 3MF export command and response', () => {
+    const command = {
+      version: PROTOCOL_VERSION,
+      kind: 'export.3mf',
+      requestId: '3mf-request-1',
+      operationId: '3mf-operation-1',
+      modelRevision: 'rev-1',
+      workerEpoch: 'epoch-1',
+      file: {
+        name: 'opengrid-snap-standard-full-text-snap.3mf',
+        mime: 'model/3mf',
+      },
+    }
+    const event = {
+      version: PROTOCOL_VERSION,
+      kind: 'export.ready',
+      requestId: '3mf-response-1',
+      operationId: '3mf-operation-1',
+      modelRevision: 'rev-1',
+      workerEpoch: 'epoch-1',
+      format: '3mf',
+      bytes: new Uint8Array([0x50, 0x4b, 0x03, 0x04]).buffer,
+      mime: 'model/3mf',
+      fileName: 'opengrid-snap-standard-full-text-snap.3mf',
+    }
+
+    expect(isWorkerCommand(command)).toBe(true)
+    expect(isWorkerEvent(event)).toBe(true)
+    expect(
+      isWorkerCommand({
+        ...command,
+        file: { ...command.file, name: 'snap.stl' },
+      }),
+    ).toBe(false)
+    expect(isWorkerEvent({ ...event, mime: 'model/stl' })).toBe(false)
   })
 
   it('accepts transferable mesh responses only when buffers and counts are valid', () => {

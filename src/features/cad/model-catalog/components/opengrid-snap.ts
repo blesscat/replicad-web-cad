@@ -4,6 +4,7 @@ import {
   isOpenGridSnapParameters,
   openGridSnapFileName,
   openGridSnapStlFileName,
+  openGridSnapThreeMfFileName,
   OPENGRID_SNAP_CONFIGURATION,
   validateOpenGridSnapParameters,
 } from '../../../../cad-contract/units'
@@ -111,6 +112,17 @@ function openGridSnapStlFileNameFor(parameters: ModelParameterValues): string {
   return openGridSnapStlFileName(parameters)
 }
 
+function openGridSnapThreeMfFileNameFor(
+  parameters: ModelParameterValues,
+): string | null {
+  if (!isOpenGridSnapParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
+  }
+  return parameters.topText === 'SNAP'
+    ? openGridSnapThreeMfFileName(parameters)
+    : null
+}
+
 function fixedStepDownloadFor(
   parameters: ModelParameterValues,
 ): FixedStepDownload | null {
@@ -151,5 +163,6 @@ export const opengridSnapDefinition: ModelDefinition = {
   boundsForParameters: boundsForOpenGridSnapDefinition,
   exportFileName: openGridSnapFileNameFor,
   stlFileName: openGridSnapStlFileNameFor,
+  threeMfFileName: openGridSnapThreeMfFileNameFor,
   fixedStepDownload: fixedStepDownloadFor,
 }

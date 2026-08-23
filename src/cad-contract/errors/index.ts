@@ -28,6 +28,8 @@ export type CadErrorCode =
   | 'STEP_METADATA_INVALID'
   | 'STL_EXPORT_FAILED'
   | 'STL_METADATA_INVALID'
+  | 'THREEMF_EXPORT_FAILED'
+  | 'THREEMF_METADATA_INVALID'
   | 'UNKNOWN_ERROR'
 
 export type CadErrorStage =

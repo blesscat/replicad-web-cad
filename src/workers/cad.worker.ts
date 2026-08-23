@@ -1,9 +1,15 @@
-import { exportStlBytes, exportStepBytes } from '../cad-kernel/export'
+import {
+  exportStlBytes,
+  exportStepBytes,
+  exportThreeMfBytes,
+  isThreeMfPackage,
+} from '../cad-kernel/export'
 import { initialiseCadKernel } from '../cad-kernel/initialise'
 import type { Shape3D } from 'replicad'
 import {
   RevisionLifetime,
   type CandidateRecord,
+  type NativeModelPart,
   type RevisionRecord,
 } from '../cad-kernel/lifetime'
 import { loadHswCellTemplate } from '../cad-kernel/components/hsw-cell/builder'
@@ -25,10 +31,16 @@ import {
   loadOpenGridDetachableCornerSeatHolderReference,
   loadOpenGridDetachableCornerSeatReference,
 } from '../cad-kernel/components/opengrid-locating-assembly/reference'
-import { buildModelBRep, type KernelBuildContext } from '../cad-kernel/model'
+import {
+  buildModelBRep,
+  buildModelBRepWithParts,
+  type KernelBuildContext,
+  type KernelModelBuildResult,
+} from '../cad-kernel/model'
 import { assertOpenGridShapeQuality } from '../cad-kernel/components/opengrid/quality'
 import {
   assertOpenGridSnapOpenConnectShapeQuality,
+  assertOpenGridSnapFlatTextShapeQuality,
   assertOpenGridSnapShapeQuality,
 } from '../cad-kernel/components/opengrid-snap/quality'
 import { assertOpenGridDividerShapeQuality } from '../cad-kernel/components/opengrid-divider/quality'
@@ -63,6 +75,7 @@ import {
 import {
   modelFileName,
   modelStlFileName,
+  openGridSnapThreeMfFileName,
   boundsForOpenGridSnap,
   isHswCellParameters,
   isOpenGridDividerModelParameters,
@@ -112,6 +125,31 @@ type CandidateTerminal = {
 
 function id(): string {
   return crypto.randomUUID()
+}
+
+function deleteShape(shape: { delete?: () => void } | null | undefined): void {
+  try {
+    shape?.delete?.()
+  } catch {
+    // Keep the original Worker error when native cleanup is already incomplete.
+  }
+}
+
+function deleteBuildShapes(
+  shape: Shape3D | null | undefined,
+  qualityShape: Shape3D | null | undefined,
+  parts: readonly NativeModelPart[] | undefined,
+): void {
+  const deleted = new Set<Shape3D>()
+  for (const candidate of [
+    shape,
+    qualityShape,
+    ...(parts ?? []).map((part) => part.shape),
+  ]) {
+    if (!candidate || deleted.has(candidate)) continue
+    deleted.add(candidate)
+    deleteShape(candidate)
+  }
 }
 
 function makeError(
@@ -244,6 +282,9 @@ export class CadWorkerRuntime {
         case 'export.stl':
           await this.exportStl(value)
           return
+        case 'export.3mf':
+          await this.exportThreeMf(value)
+          return
         case 'worker.dispose':
           if (this.disposed) return
           this.clearCandidateTimers()
@@ -355,6 +396,8 @@ export class CadWorkerRuntime {
         : undefined
     this.emitProgress(command, 'building', undefined, hswProgress)
     let shape: Shape3D
+    let qualityShape: Shape3D | null = null
+    let nativeParts: NativeModelPart[] | undefined
     try {
       const {
         useOpenGridCanonicalTileCache = true,
@@ -405,9 +448,32 @@ export class CadWorkerRuntime {
         buildContext.getOpenGridHalfCellPrototype = (key, factory) =>
           this.getOpenGridHalfCellPrototype(key, factory)
       }
-      shape = await timing.measure('build', () =>
-        buildModelBRep(command.modelId, generationParameters, buildContext),
+      const usesSnapText =
+        command.modelId === 'opengrid-snap' &&
+        isOpenGridSnapParameters(generationParameters) &&
+        generationParameters.topText === 'SNAP'
+      const buildResult: KernelModelBuildResult = await timing.measure(
+        'build',
+        async () => {
+          if (usesSnapText) {
+            return buildModelBRepWithParts(
+              command.modelId,
+              generationParameters,
+              buildContext,
+            )
+          }
+          return {
+            shape: await buildModelBRep(
+              command.modelId,
+              generationParameters,
+              buildContext,
+            ),
+          }
+        },
       )
+      shape = buildResult.shape
+      qualityShape = buildResult.qualityShape ?? shape
+      nativeParts = buildResult.parts
     } catch (error) {
       if (error instanceof Error && error.message === 'STALE_GENERATION') {
         this.superseded(command, 'STALE_GENERATION')
@@ -419,7 +485,7 @@ export class CadWorkerRuntime {
       command.generation !== this.latestInputGeneration ||
       this.invalidatedGeneration === command.generation
     ) {
-      shape.delete()
+      deleteBuildShapes(shape, qualityShape, nativeParts)
       this.superseded(command, 'STALE_GENERATION')
       return
     }
@@ -434,6 +500,13 @@ export class CadWorkerRuntime {
           }),
       )
       this.emitProgress(command, 'meshing')
+      const qualityMesh =
+        qualityShape && qualityShape !== shape
+          ? meshBRep(qualityShape, {
+              ...command.previewConfig,
+              reportFaceProgress,
+            })
+          : null
       try {
         mesh = timing.measureSync('mesh', () =>
           meshBRep(shape, {
@@ -476,18 +549,35 @@ export class CadWorkerRuntime {
           if (generationParameters.openConnect) {
             timing.measureSync('quality', () =>
               assertOpenGridSnapOpenConnectShapeQuality(
-                shape,
+                qualityShape ?? shape,
                 generationParameters,
-                mesh,
+                qualityMesh ?? mesh,
+                reference,
+              ),
+            )
+          } else if (generationParameters.topText === 'SNAP' && nativeParts) {
+            const bodyPart = nativeParts.find((part) => part.name === 'body')
+            const textPart = nativeParts.find((part) => part.name === 'text')
+            if (!bodyPart || !textPart)
+              throw new Error('OPENGRID_SNAP_FLAT_TEXT_PART_MISSING')
+            const textMesh = meshBRep(textPart.shape, command.previewConfig)
+            timing.measureSync('quality', () =>
+              assertOpenGridSnapFlatTextShapeQuality(
+                qualityShape ?? shape,
+                bodyPart.shape,
+                textPart.shape,
+                generationParameters,
+                qualityMesh ?? mesh,
+                textMesh,
                 reference,
               ),
             )
           } else {
             timing.measureSync('quality', () =>
               assertOpenGridSnapShapeQuality(
-                shape,
+                qualityShape ?? shape,
                 generationParameters,
-                mesh,
+                qualityMesh ?? mesh,
                 reference,
               ),
             )
@@ -544,12 +634,12 @@ export class CadWorkerRuntime {
           ),
         )
       }
-    } catch (error) {
-      try {
-        shape.delete()
-      } catch {
-        // A failed native delete must not hide the original mesh error.
+      if (qualityShape && qualityShape !== shape) {
+        deleteShape(qualityShape)
+        qualityShape = null
       }
+    } catch (error) {
+      deleteBuildShapes(shape, qualityShape, nativeParts)
       throw error
     }
     const candidate: CandidateRecord = {
@@ -561,6 +651,7 @@ export class CadWorkerRuntime {
       modelId: command.modelId,
       parameters: generationParameters,
       shape,
+      parts: nativeParts,
       mesh,
       previewTiming: timing.snapshot(),
       createdAt: Date.now(),
@@ -813,6 +904,79 @@ export class CadWorkerRuntime {
           format: 'stl',
           bytes,
           mime: PROTOTYPE_CONFIGURATION.stlMime,
+          fileName: command.file.name,
+        },
+        [bytes],
+      )
+    } finally {
+      this.lifetime.unpin(revision.modelRevision)
+    }
+  }
+
+  private async exportThreeMf(
+    command: Extract<WorkerCommand, { kind: 'export.3mf' }>,
+  ): Promise<void> {
+    if (command.workerEpoch !== this.epoch) throw new Error('WORKER_RESTARTED')
+    const revision = this.lifetime.pin(command.modelRevision)
+    try {
+      const validation = validateModelParameters(
+        revision.modelId,
+        revision.parameters,
+      )
+      if (
+        !validation.valid ||
+        revision.modelId !== 'opengrid-snap' ||
+        !isOpenGridSnapParameters(validation.value.parameters) ||
+        validation.value.parameters.topText !== 'SNAP'
+      ) {
+        throw new Error('THREEMF_METADATA_INVALID')
+      }
+      if (
+        command.file.name !==
+        openGridSnapThreeMfFileName(validation.value.parameters)
+      ) {
+        throw new Error('THREEMF_METADATA_INVALID')
+      }
+      const parts = revision.parts
+      if (
+        !parts ||
+        parts.length !== 2 ||
+        parts[0]?.name !== 'body' ||
+        parts[1]?.name !== 'text'
+      ) {
+        throw new Error('THREEMF_PARTS_INVALID')
+      }
+      const threeMfParts = [
+        { name: 'body' as const, shape: parts[0].shape },
+        { name: 'text' as const, shape: parts[1].shape },
+      ]
+      this.emit({
+        version: PROTOCOL_VERSION,
+        kind: 'export.accepted',
+        requestId: id(),
+        operationId: command.operationId,
+        modelRevision: revision.modelRevision,
+        workerEpoch: this.epoch,
+      })
+      this.emitProgress(command, 'exporting', revision.modelRevision)
+      const bytes = await exportThreeMfBytes(threeMfParts, {
+        tolerance: PROTOTYPE_CONFIGURATION.stlTolerance,
+        angularTolerance: PROTOTYPE_CONFIGURATION.stlAngularTolerance,
+      })
+      if (bytes.byteLength === 0 || !isThreeMfPackage(bytes)) {
+        throw new Error('THREEMF_EXPORT_FAILED')
+      }
+      this.emit(
+        {
+          version: PROTOCOL_VERSION,
+          kind: 'export.ready',
+          requestId: id(),
+          operationId: command.operationId,
+          modelRevision: revision.modelRevision,
+          workerEpoch: this.epoch,
+          format: '3mf',
+          bytes,
+          mime: PROTOTYPE_CONFIGURATION.threeMfMime,
           fileName: command.file.name,
         },
         [bytes],
@@ -1286,6 +1450,13 @@ export class CadWorkerRuntime {
         code === 'STL_METADATA_INVALID'
           ? 'diagnostic.stlMetadataInvalid'
           : 'diagnostic.stlExportFailed'
+      return makeError(stage, code, diagnostic(messageId), true)
+    }
+    if (command.kind === 'export.3mf') {
+      const messageId =
+        code === 'THREEMF_METADATA_INVALID'
+          ? 'diagnostic.threeMfMetadataInvalid'
+          : 'diagnostic.threeMfExportFailed'
       return makeError(stage, code, diagnostic(messageId), true)
     }
     if (code === 'OPENGRID_UNSUPPORTED_CONFIGURATION') {

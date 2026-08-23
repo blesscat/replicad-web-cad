@@ -27,6 +27,10 @@ import {
   type OpenGridSnapProfileDefinition,
 } from './profile'
 import { buildOpenGridSnapBoundaryObstacle } from './boundary'
+import {
+  isOpenGridSnapFlatTextConfiguration,
+  makeOpenGridSnapFlatTextShape,
+} from './flat-text'
 import { transformShapeXY, type XYScaleTransform } from '../../transform'
 import {
   measureBoolean,
@@ -98,6 +102,17 @@ export type OpenGridSnapReferenceReport = {
   bounds: ModelBounds
   solidCount: number
   height: number
+}
+
+export type OpenGridSnapNativePart = {
+  name: 'body' | 'text'
+  shape: Shape3D
+}
+
+export type OpenGridSnapMultipartBuild = {
+  shape: Shape3D
+  qualityShape: Shape3D
+  parts: OpenGridSnapNativePart[]
 }
 
 function deleteShape(shape: { delete?: () => void } | null | undefined): void {
@@ -1225,6 +1240,88 @@ export async function buildOpenGridSnap(
     return clipped
   } catch (error) {
     deleteShape(assembly)
+    throw error
+  }
+}
+
+export async function buildOpenGridSnapWithFlatText(
+  parameters: OpenGridSnapParameters,
+  context: OpenGridSnapBuildContext,
+): Promise<OpenGridSnapMultipartBuild> {
+  if (!isOpenGridSnapFlatTextConfiguration(parameters)) {
+    throw new Error('OPENGRID_SNAP_FLAT_TEXT_DISABLED')
+  }
+
+  assertGenerationCurrent(context)
+  const baseAssembly = await buildOpenGridSnap(
+    { ...parameters, topText: 'none' },
+    context,
+  )
+  let qualityShape: Shape3D | null = cloneImportedAssembly(baseAssembly)
+  let sourceSolids: Solid[] = []
+  let textPart: Shape3D | null = null
+  let basePart: Shape3D | null = null
+  let previewShape: Shape3D | null = null
+
+  try {
+    const definition = openGridSnapProfileFor(
+      parameters.profile,
+      parameters.variant,
+    )
+    sourceSolids = extractSolids(baseAssembly)
+    if (sourceSolids.length !== definition.expectedSolidCount) {
+      throw new Error('OPENGRID_SNAP_FLAT_TEXT_ASSEMBLY_INVALID')
+    }
+    const centralIndex = centralSolidIndex(sourceSolids)
+    const body = sourceSolids[centralIndex]
+    if (!body) throw new Error('OPENGRID_SNAP_FLAT_TEXT_BODY_MISSING')
+
+    textPart = makeOpenGridSnapFlatTextShape(parameters)
+    const bodyWithCavity = cutShape(
+      body,
+      cloneImportedAssembly(textPart),
+      context.booleanOperations?.createScope(1),
+    )
+    sourceSolids[centralIndex] = bodyWithCavity
+
+    const baseMembers = sourceSolids.map((solid) =>
+      cloneImportedAssembly(solid),
+    )
+    basePart = makeCompound(baseMembers).asShape3D()
+    deleteDistinctShapes(sourceSolids)
+    sourceSolids = []
+    deleteShape(baseAssembly)
+
+    previewShape = makeCompound([
+      cloneImportedAssembly(basePart),
+      cloneImportedAssembly(textPart),
+    ]).asShape3D()
+
+    const completedBasePart = basePart
+    const completedTextPart = textPart
+    const completedPreviewShape = previewShape
+    const completedQualityShape = qualityShape
+    basePart = null
+    textPart = null
+    previewShape = null
+    qualityShape = null
+    return {
+      shape: completedPreviewShape,
+      qualityShape: completedQualityShape,
+      parts: [
+        { name: 'body', shape: completedBasePart },
+        { name: 'text', shape: completedTextPart },
+      ],
+    }
+  } catch (error) {
+    deleteDistinctShapes([
+      baseAssembly,
+      qualityShape,
+      ...sourceSolids,
+      textPart,
+      basePart,
+      previewShape,
+    ])
     throw error
   }
 }

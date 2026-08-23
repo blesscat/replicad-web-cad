@@ -9,40 +9,46 @@
 The system MUST register the independent `opengrid-snap` model with `Full` and
 `Lite` variants and `Standard` and `Directional` profiles. Its normalized
 parameter snapshot MUST contain exactly `variant`, `profile`, `offset`,
-`footprint`, `fourCornerLocatingHoles`, `centerRemoverHole`,
-`openConnect`, `magnetHoleShape`, `magnetHoleLength`, `magnetHoleWidth`,
+`footprint`, `fourCornerLocatingHoles`, `centerRemoverHole`, `openConnect`,
+`topText`, `magnetHoleShape`, `magnetHoleLength`, `magnetHoleWidth`,
 `magnetHoleDiameter`, and `magnetHoleThickness`. `variant` MUST be `Full` or
 `Lite`; `profile` MUST be `Standard` or `Directional`; and `footprint` MUST be
 `full`, `half`, or `quarter`. `openConnect` MUST be boolean and, when true,
 `footprint` MUST be `full`; the selected profile and variant MUST be used
-without restricting OpenConnect to Directional geometry. `magnetHoleShape`
-MUST be `none`, `square`, or `round`. When the shape is `none`, all four magnet dimensions MUST be zero and
-the magnet feature MUST have no geometric effect. When the shape is `square`,
+without restricting OpenConnect to Directional geometry. `topText` MUST be
+`none` or `SNAP`. When `topText` is `SNAP`, the snapshot MUST use
+`variant=Full`, `profile=Standard`, `offset=0`, `footprint=full`,
+`openConnect=false`, `fourCornerLocatingHoles=false`,
+`centerRemoverHole=false`, and `magnetHoleShape=none` with all magnet
+dimensions zero. `magnetHoleShape` MUST be `none`, `square`, or `round`. When
+the shape is `none`, all four magnet dimensions MUST be zero and the magnet
+feature MUST have no geometric effect. When the shape is `square`,
 `magnetHoleLength`, `magnetHoleWidth`, and `magnetHoleThickness` MUST be
 finite positive values and `magnetHoleDiameter` MUST be zero. When the shape
 is `round`, `magnetHoleDiameter` and `magnetHoleThickness` MUST be finite
 positive values and `magnetHoleLength` and `magnetHoleWidth` MUST be zero.
 The magnet feature MUST be mutually exclusive with
 `fourCornerLocatingHoles` and `centerRemoverHole`; invalid combinations MUST
-be rejected. For `footprint=half` or `footprint=quarter`, the magnet shape MUST be `none`,
-all magnet dimensions MUST be zero, and `openConnect` MUST be false. The
-system radio used to select Desktop or Wall persistence MUST NOT be added to
-this normalized CAD snapshot or change the existing `opengrid-snap` modelId,
-buildKey, route, Worker request model id, or export contract. A Snap snapshot MUST
-NOT contain board rows, columns, Heavy, screws, connectors, chamfers,
-`halfCellX`, `halfCellY`, `allowHalfCell`, or direction-specific/diagonal
-fields. The OpenGrid board MAY continue to use its own `halfCellX` and
-`halfCellY` contract. The existing `opengrid-snap` modelId, buildKey, and route
-MUST remain unchanged. A zero-offset, full-footprint Standard snapshot with
-all features disabled and `openConnect=false` MUST use the repository-owned
-Bare Standard reference
-or its equivalent programmatic baseline.
+be rejected. For `footprint=half` or `footprint=quarter`, the magnet shape
+MUST be `none`, all magnet dimensions MUST be zero, `topText` MUST be `none`,
+and `openConnect` MUST be false. The system radio used to select Desktop or
+Wall persistence MUST NOT be added to this normalized CAD snapshot or change
+the existing `opengrid-snap` modelId, buildKey, route, Worker request model
+id, or export contract. A Snap snapshot MUST NOT contain board rows, columns,
+Heavy, screws, connectors, chamfers, `halfCellX`, `halfCellY`,
+`allowHalfCell`, or direction-specific/diagonal fields. The OpenGrid board MAY
+continue to use its own `halfCellX` and `halfCellY` contract. The existing
+`opengrid-snap` modelId, buildKey, and route MUST remain unchanged. A
+zero-offset, full-footprint Standard snapshot with all features disabled,
+`openConnect=false`, and `topText=none` MUST use the repository-owned Bare
+Standard reference or its equivalent programmatic baseline.
 
 #### Scenario: Valid full-footprint Standard snapshot
 
 - **WHEN** a complete `opengrid-snap` snapshot has `variant=Full`,
-  `profile=Standard`, `offset=0`, `footprint=full`, `openConnect=false`, both existing hole flags
-  `false`, `magnetHoleShape=none`, and all magnet dimensions `0`
+  `profile=Standard`, `offset=0`, `footprint=full`, `openConnect=false`,
+  `topText=none`, both existing hole flags `false`, `magnetHoleShape=none`,
+  and all magnet dimensions `0`
 - **THEN** validation MUST accept it as a typed Snap snapshot
 - **AND** generation MUST select the Full Bare Standard baseline
 - **AND** the body MUST remain solid except for fixed geometry already present
@@ -52,6 +58,7 @@ or its equivalent programmatic baseline.
 
 - **WHEN** a complete full-footprint snapshot enables `openConnect` for any of
   `Standard Lite`, `Standard Full`, `Directional Lite`, or `Directional Full`
+  with `topText=none`
 - **THEN** validation MUST accept the selected profile and variant combination
 - **AND** generation MUST use the corresponding Snap profile and variant
 - **AND** generation MUST retain `openConnect=true` without substituting a
@@ -64,11 +71,23 @@ or its equivalent programmatic baseline.
 - **THEN** validation MUST reject the snapshot with a diagnosable field error
 - **AND** the Worker MUST NOT generate or export that snapshot
 
+#### Scenario: Valid flat SNAP text snapshot
+
+- **WHEN** a complete snapshot has `variant=Full`, `profile=Standard`,
+  `offset=0`, `footprint=full`, `openConnect=false`, both existing hole flags
+  `false`, `magnetHoleShape=none`, all magnet dimensions `0`, and
+  `topText=SNAP`
+- **THEN** validation MUST accept it
+- **AND** generation MUST keep the overall Z bounds at approximately `0` to
+  `6.8` mm
+- **AND** generation MUST represent the body with a shallow top text cavity
+  and a separate `SNAP` text part whose top is coplanar with the body top
+
 #### Scenario: Valid square magnet snapshot
 
 - **WHEN** a full-footprint snapshot selects `magnetHoleShape=square` with
-  positive length, width, and thickness, zero diameter, and both existing hole
-  flags `false`
+  positive length, width, and thickness, zero diameter, both existing hole
+  flags `false`, and `topText=none`
 - **THEN** validation MUST accept it when the dimensions fit the selected
   profile's printable body and retaining structure
 - **AND** generation MUST apply one centered square magnet feature
@@ -76,8 +95,8 @@ or its equivalent programmatic baseline.
 #### Scenario: Valid round magnet snapshot
 
 - **WHEN** a full-footprint snapshot selects `magnetHoleShape=round` with
-  positive diameter and thickness, zero length and width, and both existing
-  hole flags `false`
+  positive diameter and thickness, zero length and width, both existing hole
+  flags `false`, and `topText=none`
 - **THEN** validation MUST accept it when the dimensions fit the selected
   profile's printable body and retaining structure
 - **AND** generation MUST apply one centered round magnet feature
@@ -85,8 +104,9 @@ or its equivalent programmatic baseline.
 #### Scenario: Valid canonical half-footprint snapshot
 
 - **WHEN** a complete Snap snapshot has `variant=Lite`, `profile=Standard`,
-  `offset=0`, `footprint=half`, `openConnect=false`, both existing hole flags `false`,
-  `magnetHoleShape=none`, and all magnet dimensions `0`
+  `offset=0`, `footprint=half`, `openConnect=false`, `topText=none`, both
+  existing hole flags `false`, `magnetHoleShape=none`, and all magnet
+  dimensions `0`
 - **THEN** validation MUST accept it
 - **AND** production preview generation MUST use the repository-owned fixed
   `snap-half.step` asset
@@ -95,8 +115,9 @@ or its equivalent programmatic baseline.
 #### Scenario: Valid canonical quarter-footprint snapshot
 
 - **WHEN** a complete Snap snapshot has `variant=Lite`,
-  `profile=Directional`, `offset=0`, `footprint=quarter`, both existing hole
-  flags `false`, `openConnect=false`, `magnetHoleShape=none`, and all magnet dimensions `0`
+  `profile=Directional`, `offset=0`, `footprint=quarter`, `topText=none`,
+  both existing hole flags `false`, `openConnect=false`,
+  `magnetHoleShape=none`, and all magnet dimensions `0`
 - **THEN** validation MUST accept it
 - **AND** production preview generation MUST use the repository-owned fixed
   `snap-quarter.step` asset
@@ -104,19 +125,45 @@ or its equivalent programmatic baseline.
 
 #### Scenario: Legacy Snap snapshots normalize OpenConnect off
 
-- **WHEN** a persisted or imported Snap snapshot predates the `openConnect`
-  field and otherwise contains a valid current Snap configuration
-- **THEN** normalization MUST add `openConnect=false`
+- **WHEN** a persisted or imported Snap snapshot predates the `openConnect` or
+  `topText` fields and otherwise contains a valid current Snap configuration
+- **THEN** normalization MUST add `openConnect=false` and `topText=none`
 - **AND** the normalized snapshot MUST remain compatible with the existing
   generation and export behavior
 
 #### Scenario: Board or direction fields are rejected by the normalized Snap validator
 
 - **WHEN** a normalized Snap snapshot contains forbidden board/direction fields,
-  an unknown OpenConnect value, an unknown magnet shape, non-zero inactive magnet dimensions, non-positive or
-  non-finite active dimensions, or a magnet conflict with an existing hole flag
+  an unknown OpenConnect value, an unknown `topText` value, an unsupported
+  `topText=SNAP` combination, an unknown magnet shape, non-zero inactive magnet
+  dimensions, non-positive or non-finite active dimensions, or a magnet conflict
+  with an existing hole flag
 - **THEN** validation MUST reject the snapshot as a model-parameter mismatch
 - **AND** the Worker MUST NOT generate or export that snapshot
+
+### Requirement: Flat SNAP text remains a separate printable part
+
+When a valid Full Standard Snap requests `topText=SNAP`, the Worker MUST
+retain a body part and a text part separately through the committed revision.
+The text part MUST occupy a cavity in the body from the configured inlay floor
+to the original top surface, MUST not extend above that surface, and MUST be
+available to a multipart export without relying on viewport color metadata.
+
+#### Scenario: Flat text has no embossed height
+
+- **WHEN** a valid `topText=SNAP` candidate is quality-checked
+- **THEN** the body and text part maximum Z values MUST match within the
+  documented CAD tolerance
+- **AND** the candidate MUST preserve the original Full Standard outer bounds
+- **AND** the text MUST not be represented only as a display-time triangle
+  material or as raised geometry
+
+#### Scenario: Text-disabled Snap remains unchanged
+
+- **WHEN** a valid Snap snapshot has `topText=none`
+- **THEN** generation MUST not add a text cavity or text part
+- **AND** existing Snap geometry, preview, STEP/STL behavior, and filenames
+  MUST remain unchanged
 
 ### Requirement: OpenConnect reference geometry and composition
 

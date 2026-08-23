@@ -70,8 +70,10 @@
   }
 
   let rawOffset = $derived(rawParameters.offset ?? String(parameters.offset))
+  let rawVariant = $derived(rawParameters.variant ?? parameters.variant)
   let rawProfile = $derived(rawParameters.profile ?? parameters.profile)
   let rawFootprint = $derived(rawParameters.footprint ?? parameters.footprint)
+  let rawTopText = $derived(rawParameters.topText ?? parameters.topText)
   let isWallSystem = $derived(systemContext === 'wall')
   let showDeskSystemControls = $derived(!isWallSystem)
   let offsetIsAdjustable = $derived(isWallSystem || rawFootprint === 'full')
@@ -112,6 +114,27 @@
   let rawOpenConnect = $derived(
     rawParameters.openConnect ?? String(parameters.openConnect),
   )
+  let flatTextIsSupported = $derived(
+    rawVariant === 'Full' &&
+      rawProfile === 'Standard' &&
+      rawFootprint === 'full' &&
+      Number(rawOffset) === 0 &&
+      rawFourCornerLocatingHoles === 'false' &&
+      rawCenterRemoverHole === 'false' &&
+      rawMagnetHoleShape === 'none' &&
+      rawMagnetHoleLength === '0' &&
+      rawMagnetHoleWidth === '0' &&
+      rawMagnetHoleDiameter === '0' &&
+      rawMagnetHoleThickness === '0' &&
+      rawOpenConnect === 'false',
+  )
+
+  function updateSnapInput(key: ModelParameterKey, value: string): void {
+    if (key !== 'topText' && rawTopText === 'SNAP') {
+      onInputChange('topText', 'none')
+    }
+    onInputChange(key, value)
+  }
 
   function initializeMagnetDimension(
     key: (typeof magnetDimensionKeys)[number],
@@ -121,13 +144,13 @@
   ): void {
     const numericValue = Number(rawValue)
     if (!Number.isFinite(numericValue) || numericValue < minimum) {
-      onInputChange(key, String(defaultValue))
+      updateSnapInput(key, String(defaultValue))
     }
   }
 
   function clearMagnetHole(): void {
-    onInputChange('magnetHoleShape', 'none')
-    for (const key of magnetDimensionKeys) onInputChange(key, '0')
+    updateSnapInput('magnetHoleShape', 'none')
+    for (const key of magnetDimensionKeys) updateSnapInput(key, '0')
   }
 
   function updateMagnetShape(event: Event): void {
@@ -136,14 +159,14 @@
     const shape = event.currentTarget.value
     if (shape !== 'none' && shape !== 'square' && shape !== 'round') return
 
-    onInputChange('magnetHoleShape', shape)
+    updateSnapInput('magnetHoleShape', shape)
     if (shape === 'none') {
-      for (const key of magnetDimensionKeys) onInputChange(key, '0')
+      for (const key of magnetDimensionKeys) updateSnapInput(key, '0')
       return
     }
 
-    onInputChange('fourCornerLocatingHoles', 'false')
-    onInputChange('centerRemoverHole', 'false')
+    updateSnapInput('fourCornerLocatingHoles', 'false')
+    updateSnapInput('centerRemoverHole', 'false')
     initializeMagnetDimension(
       'magnetHoleThickness',
       rawMagnetHoleThickness,
@@ -163,7 +186,7 @@
         magnetWidthField.min,
         magnetWidthField.defaultValue,
       )
-      onInputChange('magnetHoleDiameter', '0')
+      updateSnapInput('magnetHoleDiameter', '0')
     } else {
       initializeMagnetDimension(
         'magnetHoleDiameter',
@@ -171,8 +194,8 @@
         magnetDiameterField.min,
         magnetDiameterField.defaultValue,
       )
-      onInputChange('magnetHoleLength', '0')
-      onInputChange('magnetHoleWidth', '0')
+      updateSnapInput('magnetHoleLength', '0')
+      updateSnapInput('magnetHoleWidth', '0')
     }
   }
 
@@ -180,17 +203,17 @@
     if (!(event.currentTarget instanceof HTMLSelectElement)) return
     if (isWallSystem) return
     const footprint = event.currentTarget.value as OpenGridSnapFootprint
-    onInputChange('footprint', footprint)
+    updateSnapInput('footprint', footprint)
     if (footprint !== 'full') {
-      onInputChange('offset', String(offsetField.defaultValue))
-      onInputChange('fourCornerLocatingHoles', 'false')
-      onInputChange('centerRemoverHole', 'false')
+      updateSnapInput('offset', String(offsetField.defaultValue))
+      updateSnapInput('fourCornerLocatingHoles', 'false')
+      updateSnapInput('centerRemoverHole', 'false')
       clearMagnetHole()
     }
   }
 
   function restoreOffset(): void {
-    onInputChange('offset', String(offsetField.defaultValue))
+    updateSnapInput('offset', String(offsetField.defaultValue))
   }
 
   function updateBoolean(
@@ -200,7 +223,7 @@
     if (!(event.currentTarget instanceof HTMLInputElement)) return
     if (fixedFootprintFeaturesAreDisabled) return
     if (event.currentTarget.checked) clearMagnetHole()
-    onInputChange(key, String(event.currentTarget.checked))
+    updateSnapInput(key, String(event.currentTarget.checked))
   }
 </script>
 
@@ -220,7 +243,10 @@
         name="opengrid-snap-system"
         value="desk"
         checked={systemContext === 'desk'}
-        onchange={() => onSystemContextChange('desk')}
+        onchange={() => {
+          if (rawTopText === 'SNAP') onInputChange('topText', 'none')
+          onSystemContextChange('desk')
+        }}
       />
       {translate(locale, 'panel.snap.systemDesk')}
     </label>
@@ -230,7 +256,10 @@
         name="opengrid-snap-system"
         value="wall"
         checked={systemContext === 'wall'}
-        onchange={() => onSystemContextChange('wall')}
+        onchange={() => {
+          if (rawTopText === 'SNAP') onInputChange('topText', 'none')
+          onSystemContextChange('wall')
+        }}
       />
       {translate(locale, 'panel.snap.systemWall')}
     </label>
@@ -252,7 +281,7 @@
       value={rawParameters.variant ?? parameters.variant}
       onchange={(event) => {
         if (event.currentTarget instanceof HTMLSelectElement) {
-          onInputChange('variant', event.currentTarget.value)
+          updateSnapInput('variant', event.currentTarget.value)
         }
       }}
     >
@@ -268,7 +297,7 @@
     label={translate(locale, 'panel.snap.geometry')}
     error={fieldError('profile')}
     errorId="opengrid-snap-profile-error"
-    onRestore={() => onInputChange('profile', 'Standard')}
+    onRestore={() => updateSnapInput('profile', 'Standard')}
   >
     <select
       class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
@@ -280,7 +309,7 @@
       value={rawProfile}
       onchange={(event) => {
         if (event.currentTarget instanceof HTMLSelectElement) {
-          onInputChange('profile', event.currentTarget.value)
+          updateSnapInput('profile', event.currentTarget.value)
         }
       }}
     >
@@ -309,7 +338,7 @@
       value={displayedOffset}
       error={fieldError('offset')}
       disabled={!offsetIsAdjustable}
-      onChange={(nextValue) => onInputChange('offset', nextValue)}
+      onChange={(nextValue) => updateSnapInput('offset', nextValue)}
     />
     {#if !offsetIsAdjustable}
       <p class="m-0 text-sm text-muted" role="status">
@@ -324,7 +353,7 @@
       label={translate(locale, 'panel.snap.footprint')}
       error={fieldError('footprint')}
       errorId="opengrid-snap-footprint-error"
-      onRestore={() => onInputChange('footprint', 'full')}
+      onRestore={() => updateSnapInput('footprint', 'full')}
     >
       <select
         class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
@@ -362,6 +391,47 @@
     </ParameterField>
   {/if}
 
+  <ParameterField
+    {locale}
+    label={translate(locale, 'panel.snap.topText')}
+    error={fieldError('topText')}
+    errorId="opengrid-snap-top-text-error"
+    onRestore={() => onInputChange('topText', 'none')}
+  >
+    <select
+      class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+      aria-label={translate(locale, 'panel.snap.topTextAria')}
+      aria-describedby={fieldError('topText')
+        ? 'opengrid-snap-top-text-error'
+        : undefined}
+      aria-invalid={Boolean(fieldError('topText'))}
+      value={rawTopText}
+      disabled={!flatTextIsSupported && rawTopText !== 'SNAP'}
+      onchange={(event) => {
+        if (event.currentTarget instanceof HTMLSelectElement) {
+          updateSnapInput('topText', event.currentTarget.value)
+        }
+      }}
+    >
+      <option value="none">{translate(locale, 'panel.snap.topTextNone')}</option
+      >
+      <option value="SNAP">{translate(locale, 'panel.snap.topTextSnap')}</option
+      >
+    </select>
+    {#if !flatTextIsSupported}
+      <p class="m-0 text-sm text-muted" role="status">
+        {translate(locale, 'panel.snap.topTextHelp')}
+      </p>
+    {/if}
+    {#if fieldError('topText')}
+      <span
+        id="opengrid-snap-top-text-error"
+        class="text-sm text-error"
+        role="alert">{fieldErrorMessage('topText')}</span
+      >
+    {/if}
+  </ParameterField>
+
   {#if isWallSystem}
     <label class="flex items-center gap-2 text-sm text-ink">
       <input
@@ -374,7 +444,7 @@
         checked={rawOpenConnect === 'true'}
         onchange={(event) => {
           if (event.currentTarget instanceof HTMLInputElement) {
-            onInputChange('openConnect', String(event.currentTarget.checked))
+            updateSnapInput('openConnect', String(event.currentTarget.checked))
           }
         }}
       />
@@ -438,7 +508,7 @@
             error={fieldError('magnetHoleLength')}
             disabled={magnetDimensionControlsAreDisabled}
             onChange={(nextValue) =>
-              onInputChange('magnetHoleLength', nextValue)}
+              updateSnapInput('magnetHoleLength', nextValue)}
           />
         </ParameterField>
         <ParameterField
@@ -455,7 +525,7 @@
             error={fieldError('magnetHoleWidth')}
             disabled={magnetDimensionControlsAreDisabled}
             onChange={(nextValue) =>
-              onInputChange('magnetHoleWidth', nextValue)}
+              updateSnapInput('magnetHoleWidth', nextValue)}
           />
         </ParameterField>
       {:else}
@@ -473,7 +543,7 @@
             error={fieldError('magnetHoleDiameter')}
             disabled={magnetDimensionControlsAreDisabled}
             onChange={(nextValue) =>
-              onInputChange('magnetHoleDiameter', nextValue)}
+              updateSnapInput('magnetHoleDiameter', nextValue)}
           />
         </ParameterField>
       {/if}
@@ -491,7 +561,7 @@
           error={fieldError('magnetHoleThickness')}
           disabled={magnetDimensionControlsAreDisabled}
           onChange={(nextValue) =>
-            onInputChange('magnetHoleThickness', nextValue)}
+            updateSnapInput('magnetHoleThickness', nextValue)}
         />
       </ParameterField>
     </div>

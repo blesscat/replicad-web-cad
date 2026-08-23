@@ -87,6 +87,33 @@ describe('revision lifetime', () => {
     expect(store.pendingCandidates).toHaveLength(0)
   })
 
+  it('releases multipart native shapes with their candidate or revision', () => {
+    const store = new RevisionLifetime('epoch-1', 2, 30_000, () => 100)
+    const body = { delete: vi.fn() } as unknown as Solid
+    const text = { delete: vi.fn() } as unknown as Solid
+    const record = candidate('multipart', 1, body)
+    record.parts = [
+      { name: 'body', shape: body },
+      { name: 'text', shape: text },
+    ]
+
+    store.addCandidate(record)
+    const revision = store.commitCandidate('multipart')
+    store.pin(revision.modelRevision)
+
+    const replacement = candidate('replacement', 2, {
+      delete: vi.fn(),
+    } as unknown as Solid)
+    store.addCandidate(replacement)
+    store.commitCandidate('replacement')
+    expect(body.delete).not.toHaveBeenCalled()
+    expect(text.delete).not.toHaveBeenCalled()
+
+    store.unpin(revision.modelRevision)
+    expect(body.delete).toHaveBeenCalledOnce()
+    expect(text.delete).toHaveBeenCalledOnce()
+  })
+
   it('prunes old commit idempotency records when a newer generation starts', () => {
     const store = new RevisionLifetime('epoch-1', 2, 30_000, () => 100)
     const shape = { delete: vi.fn() } as unknown as Solid

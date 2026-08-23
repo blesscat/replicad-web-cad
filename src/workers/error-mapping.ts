@@ -67,6 +67,9 @@ export function cadErrorCodeFor(
   }
   if (message.includes('STEP_METADATA_INVALID')) return 'STEP_METADATA_INVALID'
   if (message.includes('STL_METADATA_INVALID')) return 'STL_METADATA_INVALID'
+  if (message.includes('THREEMF_METADATA_INVALID')) {
+    return 'THREEMF_METADATA_INVALID'
+  }
   if (message.includes('MESH_INVALID')) return 'MESH_INVALID'
   if (
     message.includes('MODEL_ASSET_INVALID') ||
@@ -83,6 +86,7 @@ export function cadErrorCodeFor(
   if (commandKind === 'engine.init') return 'ENGINE_INIT_FAILED'
   if (commandKind === 'export.step') return 'STEP_EXPORT_FAILED'
   if (commandKind === 'export.stl') return 'STL_EXPORT_FAILED'
+  if (commandKind === 'export.3mf') return 'THREEMF_EXPORT_FAILED'
   return 'MODEL_BUILD_FAILED'
 }
 
@@ -121,6 +125,7 @@ export function cadErrorStageFor(
       return 'initializing'
     case 'export.step':
     case 'export.stl':
+    case 'export.3mf':
       return 'exporting'
     case 'model.generate':
       return 'building'
