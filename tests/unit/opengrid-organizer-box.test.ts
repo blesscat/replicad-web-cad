@@ -7,11 +7,11 @@ import {
   openGridOrganizerBoxDetachableIndicatorPlacementFor,
   openGridOrganizerBoxFileName,
   openGridOrganizerBoxStlFileName,
+  normalizeOpenGridOrganizerBoxParameters,
   OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
-  type OpenGridOrganizerBoxParameters,
   validateOpenGridOrganizerBoxParameters,
 } from '../../src/cad-contract/units'
 
@@ -25,20 +25,34 @@ function parameters(
 }
 
 function interfaceTopFor(
-  mode: OpenGridOrganizerBoxParameters['bottomInterfaceMode'],
+  boxMode: 'normal' | 'stackable',
+  cornerSeatMode: 'none' | 'detachable-corner-seat' | 'integrated',
 ): number {
-  if (mode === 'corner-seat') {
+  if (cornerSeatMode === 'integrated') {
     return OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ
   }
-  if (mode === 'detachable-corner-seat') {
+  if (boxMode === 'normal' && cornerSeatMode === 'detachable-corner-seat') {
     return OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.depth
   }
+  if (boxMode === 'normal') return 0
   return (
     OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomFootChamferHeight +
     OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomSupportBandHeight +
     OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomStackingLeadIn +
     OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomGridSeamOpeningWidth / 2
   )
+}
+
+function legacyParameters(
+  bottomInterfaceMode: 'corner-seat' | 'detachable-corner-seat' | 'stackable',
+) {
+  const {
+    cornerSeatMode: _cornerSeatMode,
+    boxMode: _boxMode,
+    stackingClearanceHeight: _stackingClearanceHeight,
+    ...legacy
+  } = OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS
+  return { ...legacy, bottomInterfaceMode }
 }
 
 describe('OpenGrid organizer-box contract', () => {
@@ -52,7 +66,54 @@ describe('OpenGrid organizer-box contract', () => {
     expect(value.holeSpacingMode).toBe('linked')
     expect(value.holeSpacingX).toBe(value.holeSpacingY)
     expect(value.bottomThickness).toBe(1)
-    expect(value.bottomInterfaceMode).toBe('detachable-corner-seat')
+    expect(value.cornerSeatMode).toBe('detachable-corner-seat')
+    expect(value.boxMode).toBe('normal')
+    expect(value.stackingClearanceHeight).toBe(3.5)
+  })
+
+  it.each([
+    ['corner-seat', 'integrated', 'normal'],
+    ['detachable-corner-seat', 'detachable-corner-seat', 'normal'],
+    ['stackable', 'none', 'stackable'],
+  ] as const)(
+    'migrates legacy %s parameters to seat %s and body %s',
+    (bottomInterfaceMode, cornerSeatMode, boxMode) => {
+      const legacy = legacyParameters(bottomInterfaceMode)
+      const normalized = normalizeOpenGridOrganizerBoxParameters(legacy)
+
+      expect(normalized).toEqual({
+        ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+        cornerSeatMode,
+        boxMode,
+        stackingClearanceHeight: 3.5,
+      })
+      expect(validateOpenGridOrganizerBoxParameters(legacy).valid).toBe(false)
+      expect(validateOpenGridOrganizerBoxParameters(normalized).valid).toBe(
+        true,
+      )
+    },
+  )
+
+  it('enforces the stackable Z minimum and half-millimetre grid', () => {
+    for (const stackingClearanceHeight of [3, 3.2, 3.6]) {
+      const validation = validateOpenGridOrganizerBoxParameters(
+        parameters({ stackingClearanceHeight }),
+      )
+      expect(validation.valid).toBe(false)
+      if (!validation.valid) {
+        expect(validation.issues.map(({ field }) => field)).toContain(
+          'stackingClearanceHeight',
+        )
+      }
+    }
+
+    for (const stackingClearanceHeight of [3.5, 4, 12.5]) {
+      expect(
+        validateOpenGridOrganizerBoxParameters(
+          parameters({ stackingClearanceHeight }),
+        ).valid,
+      ).toBe(true)
+    }
   })
 
   it('derives centered cavities from outer-to-outer spacing', () => {
@@ -138,26 +199,44 @@ describe('OpenGrid organizer-box contract', () => {
       holeDiameter: 12,
       holeDepth: 18,
       bottomThickness: 3,
-      bottomInterfaceMode: 'stackable',
+      cornerSeatMode: 'none',
+      boxMode: 'stackable',
+      stackingClearanceHeight: 4,
     })
 
     const bounds = boundsForOpenGridOrganizerBox(value)
+    const layout = openGridOrganizerBoxLayoutFor(value)
     expect(bounds.max[0]).toBe(-bounds.min[0])
     expect(bounds.max[1]).toBe(-bounds.min[1])
     expect(bounds.min[2]).toBe(0)
-    expect(bounds.max[2]).toBeGreaterThan(value.holeDepth)
+    expect(layout.stacking).not.toBeNull()
+    expect(layout.stacking?.riserHeight).toBeCloseTo(0.8, 8)
+    expect(layout.stacking?.seatDatumZ).toBeCloseTo(
+      layout.bodyHeight + value.stackingClearanceHeight,
+      8,
+    )
+    expect(bounds.max[2]).toBeCloseTo(
+      layout.bodyHeight +
+        value.stackingClearanceHeight +
+        (OPENGRID_STACKABLE_BOX_CONFIGURATION.topRailHeight - 3.2),
+      8,
+    )
 
     const step = openGridOrganizerBoxFileName(value)
     const stl = openGridOrganizerBoxStlFileName(value)
     expect(step).toContain('opengrid-organizer-box')
     expect(step).toContain('hexagon')
     expect(step).toContain('sm-linked')
+    expect(step).toContain('seats-none')
+    expect(step).toContain('body-stackable')
+    expect(step).toContain('z4')
     expect(step.endsWith('.step')).toBe(true)
     expect(stl.endsWith('.stl')).toBe(true)
     expect(
       boundsForOpenGridOrganizerBox({
         ...value,
-        bottomInterfaceMode: 'corner-seat',
+        cornerSeatMode: 'integrated',
+        boxMode: 'normal',
       }).min[2],
     ).toBe(OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ)
     expect(
@@ -166,13 +245,41 @@ describe('OpenGrid organizer-box contract', () => {
         holeSpacingMode: 'independent',
       }),
     ).not.toBe(step)
+
+    const normalAtDifferentZ = openGridOrganizerBoxFileName({
+      ...value,
+      boxMode: 'normal',
+    })
+    expect(
+      openGridOrganizerBoxFileName({
+        ...value,
+        boxMode: 'normal',
+        stackingClearanceHeight: 12,
+      }),
+    ).toBe(normalAtDifferentZ)
+  })
+
+  it('grows half-grid stackable locking-seat footprints to protect the indicators', () => {
+    const value = parameters({
+      holeCountX: 1,
+      holeCountY: 1,
+      holeDiameter: 20,
+      boxMode: 'stackable',
+      cornerSeatMode: 'detachable-corner-seat',
+    })
+
+    expect(validateOpenGridOrganizerBoxParameters(value).valid).toBe(true)
+    expect(openGridOrganizerBoxLayoutFor(value)).toMatchObject({
+      gridCountX: 2,
+      gridCountY: 2,
+    })
   })
 
   it('accepts the detachable interface with B-oriented four-corner sockets', () => {
     const value = parameters({
       holeCountX: 1,
       holeCountY: 1,
-      bottomInterfaceMode: 'detachable-corner-seat',
+      cornerSeatMode: 'detachable-corner-seat',
     })
 
     expect(validateOpenGridOrganizerBoxParameters(value)).toEqual({
@@ -194,7 +301,7 @@ describe('OpenGrid organizer-box contract', () => {
     ])
     expect(boundsForOpenGridOrganizerBox(value).min[2]).toBe(0)
     expect(openGridOrganizerBoxFileName(value)).toContain(
-      'idetachable-corner-seat',
+      'seats-detachable-corner-seat',
     )
   })
 
@@ -202,7 +309,7 @@ describe('OpenGrid organizer-box contract', () => {
     const value = parameters({
       holeCountX: 1,
       holeCountY: 1,
-      bottomInterfaceMode: 'detachable-corner-seat',
+      cornerSeatMode: 'detachable-corner-seat',
     })
     const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
     const poses = openGridOrganizerBoxDetachableSocketPosesFor(value)
@@ -251,7 +358,8 @@ describe('OpenGrid organizer-box contract', () => {
     const value = parameters({
       holeDepth: 30,
       bottomThickness: 2,
-      bottomInterfaceMode: 'detachable-corner-seat',
+      cornerSeatMode: 'detachable-corner-seat',
+      boxMode: 'normal',
     })
 
     const layout = openGridOrganizerBoxLayoutFor(value)
@@ -261,20 +369,28 @@ describe('OpenGrid organizer-box contract', () => {
     expect(cavityFloor - holderTop).toBeCloseTo(value.bottomThickness, 8)
   })
 
-  it.each(['corner-seat', 'detachable-corner-seat', 'stackable'] as const)(
-    'keeps the %s bottom interface below the cavity floor',
-    (bottomInterfaceMode) => {
+  it.each([
+    ['normal', 'none'],
+    ['normal', 'detachable-corner-seat'],
+    ['normal', 'integrated'],
+    ['stackable', 'none'],
+    ['stackable', 'detachable-corner-seat'],
+    ['stackable', 'integrated'],
+  ] as const)(
+    'keeps the %s/%s interfaces below the cavity floor',
+    (boxMode, cornerSeatMode) => {
       const value = parameters({
         holeCountX: 1,
         holeCountY: 1,
         holeDiameter: 10,
         holeDepth: 1,
         bottomThickness: 1,
-        bottomInterfaceMode,
+        boxMode,
+        cornerSeatMode,
       })
       const layout = openGridOrganizerBoxLayoutFor(value)
       const cavityFloor = layout.bodyHeight - value.holeDepth
-      const interfaceTop = interfaceTopFor(bottomInterfaceMode)
+      const interfaceTop = interfaceTopFor(boxMode, cornerSeatMode)
 
       expect(cavityFloor).toBeGreaterThan(interfaceTop)
       expect(layout.minimumFootprintSpan.x).toBeGreaterThan(
@@ -285,4 +401,32 @@ describe('OpenGrid organizer-box contract', () => {
       )
     },
   )
+
+  it('uses body mode first when deriving the active cavity-floor datum', () => {
+    const normalDetachable = openGridOrganizerBoxLayoutFor(
+      parameters({
+        boxMode: 'normal',
+        cornerSeatMode: 'detachable-corner-seat',
+      }),
+    )
+    const normalNone = openGridOrganizerBoxLayoutFor(
+      parameters({ boxMode: 'normal', cornerSeatMode: 'none' }),
+    )
+    const stackableDetachable = openGridOrganizerBoxLayoutFor(
+      parameters({
+        boxMode: 'stackable',
+        cornerSeatMode: 'detachable-corner-seat',
+      }),
+    )
+
+    expect(normalDetachable.interfaceFloorDatum).toBe(
+      OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.depth,
+    )
+    expect(normalNone.interfaceFloorDatum).toBe(
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight,
+    )
+    expect(stackableDetachable.interfaceFloorDatum).toBe(
+      OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight,
+    )
+  })
 })

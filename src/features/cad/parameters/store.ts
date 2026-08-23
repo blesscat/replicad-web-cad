@@ -5,6 +5,7 @@ import {
   OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   normalizeOpenGridLocatingSeatMode,
+  normalizeOpenGridOrganizerBoxParameters,
   isOpenGridSnapParameters,
   normalizePillarParameters,
   type ModelId,
@@ -93,6 +94,9 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
   }
   if (modelId === 'opengrid-snap') {
     return normalizeOpenGridSnapParameters(value)
+  }
+  if (modelId === 'opengrid-organizer-box') {
+    return normalizeOpenGridOrganizerBoxParameters(value)
   }
   if (modelId === 'opengrid-stackable-cylinder' && isRecord(value)) {
     const withoutLegacy = { ...value }

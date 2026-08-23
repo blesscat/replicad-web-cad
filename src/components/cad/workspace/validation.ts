@@ -99,7 +99,9 @@ export const OPENGRID_ORGANIZER_BOX_PARAMETER_KEYS: ModelParameterKey[] = [
   'holeDiameter',
   'holeDepth',
   'bottomThickness',
-  'bottomInterfaceMode',
+  'cornerSeatMode',
+  'boxMode',
+  'stackingClearanceHeight',
 ]
 
 function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
@@ -370,7 +372,8 @@ function parseOpenGridOrganizerBoxRawParameters(raw: RawParameters):
       | 'holeSpacingY'
       | 'holeDiameter'
       | 'holeDepth'
-      | 'bottomThickness',
+      | 'bottomThickness'
+      | 'stackingClearanceHeight',
     fallback: number,
   ): number | null => parseHalfStepInput(raw[field] ?? String(fallback))
   const invalid = (field: ModelParameterKey) => ({
@@ -389,7 +392,9 @@ function parseOpenGridOrganizerBoxRawParameters(raw: RawParameters):
     'holeDiameter',
     'holeDepth',
     'bottomThickness',
-    'bottomInterfaceMode',
+    'cornerSeatMode',
+    'boxMode',
+    'stackingClearanceHeight',
   ] as const
   const missingField = requiredFields.find((field) => raw[field] === undefined)
   if (missingField) return invalid(missingField)
@@ -431,14 +436,26 @@ function parseOpenGridOrganizerBoxRawParameters(raw: RawParameters):
   )
   if (bottomThickness === null) return invalid('bottomThickness')
 
-  const bottomInterfaceMode =
-    raw.bottomInterfaceMode ?? defaults.bottomInterfaceMode
+  const cornerSeatMode = raw.cornerSeatMode ?? defaults.cornerSeatMode
   if (
-    bottomInterfaceMode !== 'corner-seat' &&
-    bottomInterfaceMode !== 'detachable-corner-seat' &&
-    bottomInterfaceMode !== 'stackable'
+    cornerSeatMode !== 'none' &&
+    cornerSeatMode !== 'detachable-corner-seat' &&
+    cornerSeatMode !== 'integrated'
   ) {
-    return invalid('bottomInterfaceMode')
+    return invalid('cornerSeatMode')
+  }
+
+  const boxMode = raw.boxMode ?? defaults.boxMode
+  if (boxMode !== 'normal' && boxMode !== 'stackable') {
+    return invalid('boxMode')
+  }
+
+  const stackingClearanceHeight = decimalFor(
+    'stackingClearanceHeight',
+    defaults.stackingClearanceHeight,
+  )
+  if (stackingClearanceHeight === null) {
+    return invalid('stackingClearanceHeight')
   }
 
   const validation = validateModelParameters('opengrid-organizer-box', {
@@ -451,7 +468,9 @@ function parseOpenGridOrganizerBoxRawParameters(raw: RawParameters):
     holeDiameter,
     holeDepth,
     bottomThickness,
-    bottomInterfaceMode,
+    cornerSeatMode,
+    boxMode,
+    stackingClearanceHeight,
   })
   if (!validation.valid) {
     const issue = validation.issues[0]
@@ -511,7 +530,11 @@ export function rawFromParameters(
       holeDiameter: String(organizerParameters.holeDiameter),
       holeDepth: String(organizerParameters.holeDepth),
       bottomThickness: String(organizerParameters.bottomThickness),
-      bottomInterfaceMode: organizerParameters.bottomInterfaceMode,
+      cornerSeatMode: organizerParameters.cornerSeatMode,
+      boxMode: organizerParameters.boxMode,
+      stackingClearanceHeight: String(
+        organizerParameters.stackingClearanceHeight,
+      ),
     }
   }
 

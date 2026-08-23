@@ -330,7 +330,7 @@ function assertCavityAndWallGeometry(
   }
 }
 
-function assertInterfaceExclusivity(
+function assertInterfaceComposition(
   shape: Shape3D,
   parameters: OpenGridOrganizerBoxParameters,
 ): void {
@@ -372,13 +372,13 @@ function assertInterfaceExclusivity(
   )
   const hasAllBuiltInFeet = footVolumes.every((volume) => volume > 0.001)
   if (
-    parameters.bottomInterfaceMode === 'corner-seat' &&
+    parameters.cornerSeatMode === 'integrated' &&
     (!hasAllBuiltInFeet || !hasAllBuiltInSeatChamfers)
   ) {
     throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:built-in-feet')
   }
   if (
-    parameters.bottomInterfaceMode !== 'corner-seat' &&
+    parameters.cornerSeatMode !== 'integrated' &&
     (footVolumes.some((volume) => volume > 0.001) || hasAnyBuiltInSeatChamfer)
   ) {
     throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:combined-interface')
@@ -403,16 +403,27 @@ function assertInterfaceExclusivity(
         ),
   )
   if (
-    parameters.bottomInterfaceMode === 'stackable' &&
+    parameters.boxMode === 'stackable' &&
     seamVolumes.some((volume) => volume > 0.001)
   ) {
     throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:stacking-guide')
   }
   if (
-    parameters.bottomInterfaceMode !== 'stackable' &&
+    parameters.boxMode !== 'stackable' &&
     seamVolumes.some((volume) => volume <= 0.001)
   ) {
     throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:combined-interface')
+  }
+
+  if (!layout.stacking) return
+  const [width] = layout.footprint
+  const railVolume = volumeInBox(
+    shape,
+    [width / 2 - 0.5, -0.1, layout.stacking.railBaseZ + 0.8],
+    [width / 2 - 0.3, 0.1, layout.stacking.railBaseZ + 0.9],
+  )
+  if (railVolume <= 0.001) {
+    throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:top-rail')
   }
 }
 
@@ -422,7 +433,7 @@ function assertDetachableSocketGeometry(
   holderReference: Shape3D | undefined,
   maleReference: Shape3D | undefined,
 ): void {
-  if (parameters.bottomInterfaceMode !== 'detachable-corner-seat') return
+  if (parameters.cornerSeatMode !== 'detachable-corner-seat') return
   if (!holderReference) {
     throw new Error(
       'OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:holder-reference-missing',
@@ -515,7 +526,9 @@ export function assertOpenGridOrganizerBoxGeometry(
   const actualBounds = boundsOf(shape)
   const expectedBounds = boundsForOpenGridOrganizerBox(parameters)
   if (!boundsMatch(actualBounds, expectedBounds)) {
-    throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:bounds')
+    throw new Error(
+      `OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:bounds:${JSON.stringify({ actualBounds, expectedBounds })}`,
+    )
   }
 
   const volume = measureVolume(shape)
@@ -530,7 +543,7 @@ export function assertOpenGridOrganizerBoxGeometry(
   }
   assertCavityAndWallGeometry(shape, parameters)
   assertCavityFaceGeometry(shape, parameters)
-  assertInterfaceExclusivity(shape, parameters)
+  assertInterfaceComposition(shape, parameters)
   assertDetachableSocketGeometry(
     shape,
     parameters,

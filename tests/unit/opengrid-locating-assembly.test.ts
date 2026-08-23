@@ -174,7 +174,7 @@ describe('OpenGrid locating and assembly interface contract', () => {
       ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
       holeCountX: 1,
       holeCountY: 1,
-      bottomInterfaceMode: 'detachable-corner-seat' as const,
+      cornerSeatMode: 'detachable-corner-seat' as const,
     }
     const organizerPoses =
       openGridOrganizerBoxDetachableSocketPosesFor(organizerParameters)

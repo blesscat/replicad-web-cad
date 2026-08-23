@@ -20,6 +20,7 @@ import {
 import {
   addMountingSockets,
   applyStackingProfile,
+  makeOpenGridStackingTopRail,
 } from '../opengrid-stackable-box/geometry'
 import {
   measureBooleanInScope,
@@ -167,7 +168,7 @@ function outerEnvelopeFor(parameters: OpenGridOrganizerBoxParameters): Shape3D {
   const layout = openGridOrganizerBoxLayoutFor(parameters)
   const [width, depth] = layout.footprint
   const sections =
-    parameters.bottomInterfaceMode === 'stackable'
+    parameters.boxMode === 'stackable'
       ? stackingOuterEnvelopeSections(width, depth, layout.bodyHeight)
       : cornerSeatOuterEnvelopeSections(width, depth, layout.bodyHeight)
   return loftRoundedSections(sections)
@@ -186,8 +187,7 @@ function stackableAdapterFor(
       layout.bodyHeight -
         OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight,
     ),
-    cornerSeatMode:
-      parameters.bottomInterfaceMode === 'corner-seat' ? 'integrated' : 'none',
+    cornerSeatMode: parameters.cornerSeatMode,
     fullBottomHoleGrid: false,
     basePlateMode: false,
     thinShellMode: false,
@@ -343,6 +343,47 @@ function cutDetachableCornerSeatSockets(
   }
 }
 
+function addStackingTopRail(
+  shape: Shape3D,
+  parameters: OpenGridOrganizerBoxParameters,
+  context: OpenGridOrganizerBoxBuildContext,
+): Shape3D {
+  const layout = openGridOrganizerBoxLayoutFor(parameters)
+  if (!layout.stacking) return shape
+
+  const rail = makeOpenGridStackingTopRail(
+    {
+      footprint: layout.footprint,
+      hostTopZ: layout.bodyHeight,
+      riserHeight: layout.stacking.riserHeight,
+    },
+    context.booleanOperations,
+  )
+  try {
+    const fused = measureBooleanInScope(
+      context.booleanOperations?.createScope(1),
+      'fuse',
+      () => shape.fuse(rail, { optimisation: 'none' }),
+    )
+    deleteShape(shape)
+    return fused
+  } finally {
+    deleteShape(rail)
+  }
+}
+
+function applyCornerSeatMode(
+  shape: Shape3D,
+  parameters: OpenGridOrganizerBoxParameters,
+  context: OpenGridOrganizerBoxBuildContext,
+): Shape3D {
+  if (parameters.cornerSeatMode === 'none') return shape
+  if (parameters.cornerSeatMode === 'integrated') {
+    return addMountingSockets(shape, stackableAdapterFor(parameters), context)
+  }
+  return cutDetachableCornerSeatSockets(shape, parameters, context)
+}
+
 export function buildOpenGridOrganizerBox(
   parameters: OpenGridOrganizerBoxParameters,
   context: OpenGridOrganizerBoxBuildContext = {},
@@ -353,13 +394,11 @@ export function buildOpenGridOrganizerBox(
   let shape = outerEnvelopeFor(parameters)
   try {
     const adapter = stackableAdapterFor(parameters)
-    if (parameters.bottomInterfaceMode === 'stackable') {
+    if (parameters.boxMode === 'stackable') {
       shape = applyStackingProfile(shape, adapter, context)
-    } else if (parameters.bottomInterfaceMode === 'corner-seat') {
-      shape = addMountingSockets(shape, adapter, context)
-    } else {
-      shape = cutDetachableCornerSeatSockets(shape, parameters, context)
     }
+    shape = applyCornerSeatMode(shape, parameters, context)
+    shape = addStackingTopRail(shape, parameters, context)
     assertGenerationCurrent(context)
     shape = cutCavities(shape, parameters, context, context.booleanOperations)
     assertGenerationCurrent(context)
