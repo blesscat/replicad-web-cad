@@ -18,6 +18,7 @@ import { opengridWallCoverDefinition } from './components/opengrid-wall-cover'
 import { openGridSnapRemoverDefinition } from './components/opengrid-snap-remover'
 import { opengridPillarDefinition } from './components/opengrid-pillar'
 import { opengridOpenShelfDefinition } from './components/opengrid-open-shelf'
+import { opengridOpenConnectShelfDefinition } from './components/opengrid-openconnect-shelf'
 import type {
   ModelDefinition,
   ModelFamily,
@@ -58,6 +59,7 @@ export { opengridWallCoverDefinition } from './components/opengrid-wall-cover'
 export { openGridSnapRemoverDefinition } from './components/opengrid-snap-remover'
 export { opengridPillarDefinition } from './components/opengrid-pillar'
 export { opengridOpenShelfDefinition } from './components/opengrid-open-shelf'
+export { opengridOpenConnectShelfDefinition } from './components/opengrid-openconnect-shelf'
 
 export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   boxDefinition,
@@ -74,6 +76,7 @@ export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   opengridStackableCylinderDefinition,
   openGridSnapRemoverDefinition,
   opengridOpenShelfDefinition,
+  opengridOpenConnectShelfDefinition,
 ]
 
 export const modelFamilyOrder: ReadonlyArray<ModelFamily> = ['opengrid', 'hsw']
@@ -127,16 +130,17 @@ function openGridSubgroups(
   const openGridDefinitions = definitions.filter(
     (definition) => definition.family === 'opengrid',
   )
+  const supportsContext = (
+    definition: ModelDefinition,
+    context: OpenGridSystemContext,
+  ): boolean => {
+    return definition.supportedSystemContexts?.includes(context) ?? false
+  }
   const desk = openGridDefinitions
-    .filter((definition) => definition.id !== 'opengrid-wall-cover')
+    .filter((definition) => supportsContext(definition, 'desk'))
     .map((definition) => entryForContext(definition, 'desk'))
   const wall = openGridDefinitions
-    .filter(
-      (definition) =>
-        definition.id === 'opengrid' ||
-        definition.id === 'opengrid-snap' ||
-        definition.id === 'opengrid-wall-cover',
-    )
+    .filter((definition) => supportsContext(definition, 'wall'))
     .map((definition) => entryForContext(definition, 'wall'))
   return [
     {

@@ -8,6 +8,7 @@ import {
   OPENGRID_DIVIDER_CONFIGURATION,
   OPENGRID_CONFIGURATION,
   OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
+  OPENGRID_OPENCONNECT_SHELF_DEFAULT_PARAMETERS,
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
@@ -97,6 +98,9 @@ function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
   }
   if (modelId === 'opengrid-open-shelf') {
     return { ...OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS }
+  }
+  if (modelId === 'opengrid-openconnect-shelf') {
+    return { ...OPENGRID_OPENCONNECT_SHELF_DEFAULT_PARAMETERS }
   }
   throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
 }

@@ -19,6 +19,7 @@ import {
   normalizeOpenGridLocatingSeatMode,
   isOpenGridWallCoverParameters,
   type OpenGridOpenShelfParameters,
+  type OpenGridOpenConnectShelfParameters,
   PILLAR_CONFIGURATION,
   validateModelParameters,
   validatePillarParameters,
@@ -90,6 +91,11 @@ export const OPENGRID_OPEN_SHELF_PARAMETER_KEYS: ModelParameterKey[] = [
   'angle',
   'honeycombMode',
 ]
+export const OPENGRID_OPENCONNECT_SHELF_PARAMETER_KEYS: ModelParameterKey[] = [
+  'columns',
+  'rows',
+  'angle',
+]
 export const OPENGRID_ORGANIZER_BOX_PARAMETER_KEYS: ModelParameterKey[] = [
   'holeCountX',
   'holeCountY',
@@ -146,6 +152,9 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'opengrid-pillar') return PILLAR_PARAMETER_KEYS
   if (modelId === 'opengrid-open-shelf') {
     return OPENGRID_OPEN_SHELF_PARAMETER_KEYS
+  }
+  if (modelId === 'opengrid-openconnect-shelf') {
+    return OPENGRID_OPENCONNECT_SHELF_PARAMETER_KEYS
   }
   throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
 }
@@ -577,6 +586,19 @@ export function rawFromParameters(
       cellZ: String(openShelfParameters.cellZ),
       angle: String(openShelfParameters.angle),
       honeycombMode: String(openShelfParameters.honeycombMode ?? false),
+    }
+  }
+
+  if (
+    'columns' in parameters &&
+    'rows' in parameters &&
+    'angle' in parameters
+  ) {
+    const shelfParameters = parameters as OpenGridOpenConnectShelfParameters
+    return {
+      columns: String(shelfParameters.columns),
+      rows: String(shelfParameters.rows),
+      angle: String(shelfParameters.angle),
     }
   }
 

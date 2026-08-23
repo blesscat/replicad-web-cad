@@ -52,6 +52,7 @@ const attributionCases = [
     derivedPartsLicenseText: '衍生／產生零件：CC BY 4.0',
     openConnectLicenseText: 'OpenConnect 原始碼與介面幾何：CC BY 4.0',
     modifiedText: '修改的衍生版本',
+    expectsSnapDerivatives: true,
   },
   {
     path: '/en/cad/opengrid-snap',
@@ -69,6 +70,36 @@ const attributionCases = [
     openConnectLicenseText:
       'OpenConnect source and interface geometry: CC BY 4.0',
     modifiedText: 'modified derivatives',
+    expectsSnapDerivatives: true,
+  },
+  {
+    path: '/zh-Hant/cad/opengrid-openconnect-shelf?system=wall',
+    heading: '來源與授權',
+    creditsText: '原始系統作者：',
+    authors: [
+      { name: 'David D', url: DAVID_D_PROFILE_URL },
+      { name: 'mitufy', url: OPENCONNECT_AUTHOR_PROFILE_URL },
+    ],
+    removedSourceLinkText: '查看固定版本的上游來源',
+    sourceCodeLicenseText: '上游程式碼：CC BY-NC-SA 4.0',
+    derivedPartsLicenseText: '衍生／產生零件：CC BY 4.0',
+    openConnectLicenseText: 'OpenConnect 原始碼與鎖定孔幾何：CC BY 4.0',
+    modifiedText: '附帶的鎖定孔 STEP',
+  },
+  {
+    path: '/en/cad/opengrid-openconnect-shelf?system=wall',
+    heading: 'Source and licensing',
+    creditsText: 'Original system authors:',
+    authors: [
+      { name: 'David D', url: DAVID_D_PROFILE_URL },
+      { name: 'mitufy', url: OPENCONNECT_AUTHOR_PROFILE_URL },
+    ],
+    removedSourceLinkText: 'View the pinned upstream source',
+    sourceCodeLicenseText: 'Upstream source code: CC BY-NC-SA 4.0',
+    derivedPartsLicenseText: 'Derived/generated parts: CC BY 4.0',
+    openConnectLicenseText:
+      'OpenConnect source and locked-socket geometry: CC BY 4.0',
+    modifiedText: 'supplied locked-socket STEP',
   },
 ] as const
 
@@ -126,6 +157,13 @@ for (const attributionCase of attributionCases) {
         name: attributionCase.derivedPartsLicenseText,
       }),
     ).toHaveAttribute('href', DERIVED_PARTS_LICENSE_URL)
+    if ('openConnectLicenseText' in attributionCase) {
+      await expect(
+        notice.getByRole('link', {
+          name: attributionCase.openConnectLicenseText,
+        }),
+      ).toHaveAttribute('href', DERIVED_PARTS_LICENSE_URL)
+    }
 
     if ('openConnectAuthors' in attributionCase) {
       for (const author of attributionCase.openConnectAuthors) {
@@ -142,6 +180,11 @@ for (const attributionCase of attributionCases) {
 
     if (attributionCase.modifiedText) {
       await expect(notice).toContainText(attributionCase.modifiedText)
+    }
+    if (
+      'expectsSnapDerivatives' in attributionCase &&
+      attributionCase.expectsSnapDerivatives
+    ) {
       await expect(notice).toContainText('snap-half')
       await expect(notice).toContainText('snap-quarter')
     }

@@ -18,6 +18,7 @@
   import OpenGridPillarComponentPanel from './opengrid-pillar/OpenGridPillarComponentPanel.svelte'
   import type { OpenGridSystemContext } from '../../../features/cad/system-entry-context'
   import OpenGridOpenShelfComponentPanel from './opengrid-open-shelf/OpenGridOpenShelfComponentPanel.svelte'
+  import OpenGridOpenConnectShelfComponentPanel from './opengrid-openconnect-shelf/OpenGridOpenConnectShelfComponentPanel.svelte'
   import type { ComponentPanelProps } from './types'
 
   type Props = ComponentPanelProps & {
@@ -122,6 +123,13 @@
   />
 {:else if modelId === 'opengrid-open-shelf'}
   <OpenGridOpenShelfComponentPanel
+    {locale}
+    {rawParameters}
+    {fieldErrors}
+    {onInputChange}
+  />
+{:else if modelId === 'opengrid-openconnect-shelf'}
+  <OpenGridOpenConnectShelfComponentPanel
     {locale}
     {rawParameters}
     {fieldErrors}

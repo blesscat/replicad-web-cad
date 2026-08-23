@@ -93,11 +93,42 @@ const OPENGRID_ATTRIBUTION_BY_MODEL_ID = {
     ],
     modificationKey: 'cad.attribution.snap.modified',
   },
-} satisfies Readonly<Record<'opengrid' | 'opengrid-snap', OpenGridAttribution>>
+  'opengrid-openconnect-shelf': {
+    summaryKey: 'cad.attribution.openConnectShelf.summary',
+    creditsKey: 'cad.attribution.openConnectShelf.credits',
+    authors: [
+      DAVID_D_AUTHOR,
+      {
+        label: 'mitufy',
+        roleKey: 'cad.attribution.author.openConnectRole',
+        url: OPENCONNECT_AUTHOR_PROFILE_URL,
+      },
+    ],
+    licenses: [
+      ...STANDARD_OPENGRID_LICENSES,
+      {
+        labelKey: 'cad.attribution.openConnectSocketLicense',
+        url: OPENCONNECT_LICENSE_URL,
+      },
+    ],
+    modificationKey: 'cad.attribution.openConnectShelf.modified',
+  },
+} satisfies Readonly<
+  Record<
+    'opengrid' | 'opengrid-snap' | 'opengrid-openconnect-shelf',
+    OpenGridAttribution
+  >
+>
 
 export function getOpenGridAttribution(
   modelId: ModelId,
 ): OpenGridAttribution | null {
-  if (modelId !== 'opengrid' && modelId !== 'opengrid-snap') return null
+  if (
+    modelId !== 'opengrid' &&
+    modelId !== 'opengrid-snap' &&
+    modelId !== 'opengrid-openconnect-shelf'
+  ) {
+    return null
+  }
   return OPENGRID_ATTRIBUTION_BY_MODEL_ID[modelId]
 }

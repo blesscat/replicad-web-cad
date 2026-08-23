@@ -92,5 +92,6 @@ export type ModelDefinition = {
   fixedStepDownload?: (
     parameters: ModelParameterValues,
   ) => FixedStepDownload | null
+  supportedSystemContexts?: ReadonlyArray<OpenGridSystemContext>
   systemContext?: OpenGridSystemContext
 }

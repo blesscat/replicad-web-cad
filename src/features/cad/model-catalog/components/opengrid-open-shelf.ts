@@ -124,6 +124,7 @@ export const opengridOpenShelfDefinition: ModelDefinition = {
   id: 'opengrid-open-shelf',
   buildKey: 'opengrid-open-shelf',
   family: 'opengrid',
+  supportedSystemContexts: ['desk'],
   displayName: 'models.model.opengrid-open-shelf.name',
   selectionLabel: 'models.model.opengrid-open-shelf.selection',
   selectionDescription: 'models.model.opengrid-open-shelf.description',

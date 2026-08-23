@@ -11,10 +11,13 @@ import { waitForCadReady } from './helpers'
 const PREVIEW_WIDTH = 640
 const PREVIEW_HEIGHT = 400
 const CAPTURE_MODEL_PREVIEWS = process.env.CAPTURE_MODEL_PREVIEWS === '1'
+const MODEL_PREVIEW_ID = process.env.MODEL_PREVIEW_ID
 const PREVIEW_DIRECTORY = path.resolve(process.cwd(), 'public/model-previews')
-const VISIBLE_MODEL_DEFINITIONS = groupModelDefinitions().flatMap(
-  (group) => group.definitions,
-)
+const VISIBLE_MODEL_DEFINITIONS = groupModelDefinitions()
+  .flatMap((group) => group.definitions)
+  .filter(
+    (definition) => !MODEL_PREVIEW_ID || definition.id === MODEL_PREVIEW_ID,
+  )
 
 function entryKey(
   definition: (typeof VISIBLE_MODEL_DEFINITIONS)[number],

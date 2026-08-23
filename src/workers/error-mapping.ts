@@ -59,6 +59,7 @@ export function cadErrorCodeFor(
   }
   if (
     message.includes('OPENGRID_QUALITY_INVALID') ||
+    message.includes('OPENGRID_OPENCONNECT_SHELF_QUALITY_FAILED') ||
     message.includes('OPENGRID_BREP_INVALID') ||
     message.includes('OPENGRID_STACKABLE_BOX_') ||
     message.includes('OPENGRID_ORGANIZER_BOX_')
@@ -83,7 +84,8 @@ export function cadErrorCodeFor(
     message.includes('OPENGRID_SNAP_ASSET') ||
     message.includes('OPENGRID_SNAP_OPEN_CONNECT_HEAD') ||
     message.includes('OPENGRID_SNAP_REMOVER_ASSET') ||
-    message.includes('OPENGRID_WALL_COVER_ASSET')
+    message.includes('OPENGRID_WALL_COVER_ASSET') ||
+    message.includes('OPENGRID_OPENCONNECT_SLOT_ASSET')
   ) {
     return 'MODEL_ASSET_INVALID'
   }
@@ -120,6 +122,7 @@ export function cadErrorStageFor(
   if (message.includes('OPENGRID_SNAP_HOLD_')) return 'meshing'
   if (
     message.includes('OPENGRID_QUALITY_INVALID') ||
+    message.includes('OPENGRID_OPENCONNECT_SHELF_QUALITY_FAILED') ||
     message.includes('OPENGRID_STACKABLE_BOX_') ||
     message.includes('OPENGRID_ORGANIZER_BOX_')
   ) {

@@ -203,6 +203,19 @@ import type {
   OpenGridOpenShelfValidation,
   OpenGridOpenShelfValidationIssue,
 } from './opengrid-open-shelf'
+import {
+  boundsForOpenGridOpenConnectShelf,
+  isOpenGridOpenConnectShelfParameters,
+  openGridOpenConnectShelfFileName,
+  openGridOpenConnectShelfStlFileName,
+  OPENGRID_OPENCONNECT_SHELF_CONFIGURATION,
+  OPENGRID_OPENCONNECT_SHELF_DEFAULT_PARAMETERS,
+  validateOpenGridOpenConnectShelfParameters,
+} from './opengrid-openconnect-shelf'
+import type {
+  OpenGridOpenConnectShelfParameterKey,
+  OpenGridOpenConnectShelfParameters,
+} from './opengrid-openconnect-shelf'
 
 export {
   OPENGRID_CONFIGURATION,
@@ -250,6 +263,22 @@ export {
   OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
   validateOpenGridOpenShelfParameters,
 } from './opengrid-open-shelf'
+export {
+  boundsForOpenGridOpenConnectShelf,
+  isOpenGridOpenConnectShelfParameters,
+  openGridOpenConnectShelfAngleRadiansFor,
+  openGridOpenConnectShelfDepthFor,
+  openGridOpenConnectShelfFileName,
+  openGridOpenConnectShelfFrontHeightFor,
+  openGridOpenConnectShelfInstalledBoundsFor,
+  openGridOpenConnectShelfMaximumAngleForRows,
+  openGridOpenConnectShelfSlotOriginsFor,
+  openGridOpenConnectShelfStlFileName,
+  openGridOpenConnectShelfWidthFor,
+  OPENGRID_OPENCONNECT_SHELF_CONFIGURATION,
+  OPENGRID_OPENCONNECT_SHELF_DEFAULT_PARAMETERS,
+  validateOpenGridOpenConnectShelfParameters,
+} from './opengrid-openconnect-shelf'
 export {
   boundsForOpenGridDivider,
   classifyOpenGridDividerShape,
@@ -466,6 +495,13 @@ export type {
   OpenGridOpenShelfValidationIssue,
 } from './opengrid-open-shelf'
 export type {
+  OpenGridOpenConnectShelfParameterKey,
+  OpenGridOpenConnectShelfParameters,
+  OpenGridOpenConnectShelfPoint3D,
+  OpenGridOpenConnectShelfValidation,
+  OpenGridOpenConnectShelfValidationIssue,
+} from './opengrid-openconnect-shelf'
+export type {
   OpenGridDividerAxis,
   OpenGridDividerParameterKey,
   OpenGridDividerParameters,
@@ -564,6 +600,7 @@ export const PROTOTYPE_CONFIGURATION = {
   opengridStackableCylinder: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
   opengridDivider: OPENGRID_DIVIDER_CONFIGURATION,
   opengridOpenShelf: OPENGRID_OPEN_SHELF_CONFIGURATION,
+  opengridOpenConnectShelf: OPENGRID_OPENCONNECT_SHELF_CONFIGURATION,
 } as const
 
 export type DimensionKey = 'width' | 'depth' | 'height'
@@ -582,6 +619,7 @@ export type ModelParameterKey =
   | OpenGridDividerParameterKey
   | PillarParameterKey
   | OpenGridOpenShelfParameterKey
+  | OpenGridOpenConnectShelfParameterKey
 export type ScalarModelParameterKey =
   | DimensionKey
   | GridParameterKey
@@ -604,6 +642,7 @@ export type ModelId =
   | 'opengrid-divider'
   | 'opengrid-pillar'
   | 'opengrid-open-shelf'
+  | 'opengrid-openconnect-shelf'
 
 export type BoxParameters = Record<DimensionKey, number>
 export type ModularGridBaseParameters = Record<GridParameterKey, number>
@@ -657,6 +696,10 @@ export type ModelParameters =
   | {
       modelId: 'opengrid-open-shelf'
       parameters: OpenGridOpenShelfParameters
+    }
+  | {
+      modelId: 'opengrid-openconnect-shelf'
+      parameters: OpenGridOpenConnectShelfParameters
     }
 
 export type ModelParameterValues = ModelParameters['parameters']
@@ -1294,6 +1337,12 @@ export function validateModelParameters(
     return { valid: true, value: { modelId, parameters: validation.value } }
   }
 
+  if (modelId === 'opengrid-openconnect-shelf') {
+    const validation = validateOpenGridOpenConnectShelfParameters(value)
+    if (!validation.valid) return validation
+    return { valid: true, value: { modelId, parameters: validation.value } }
+  }
+
   return {
     valid: false,
     issues: [{ field: 'parameters', messageId: 'validation.invalid' }],
@@ -1542,6 +1591,12 @@ export function isOpenGridOpenShelfModelParameters(
   return isOpenGridOpenShelfParameters(value)
 }
 
+export function isOpenGridOpenConnectShelfModelParameters(
+  value: unknown,
+): value is OpenGridOpenConnectShelfParameters {
+  return isOpenGridOpenConnectShelfParameters(value)
+}
+
 export function isModelParameters(value: unknown): value is ModelParameters {
   if (!value || typeof value !== 'object') return false
   const model = value as { modelId?: unknown; parameters?: unknown }
@@ -1578,6 +1633,8 @@ export function boundsForModel(model: ModelParameters): ModelBounds {
       return boundsForPillar(model.parameters)
     case 'opengrid-open-shelf':
       return boundsForOpenGridOpenShelf(model.parameters)
+    case 'opengrid-openconnect-shelf':
+      return boundsForOpenGridOpenConnectShelf(model.parameters)
   }
 }
 
@@ -1611,6 +1668,8 @@ export function modelFileName(model: ModelParameters): string {
       return pillarFileName(model.parameters)
     case 'opengrid-open-shelf':
       return openGridOpenShelfFileName(model.parameters)
+    case 'opengrid-openconnect-shelf':
+      return openGridOpenConnectShelfFileName(model.parameters)
   }
 }
 
@@ -1644,5 +1703,7 @@ export function modelStlFileName(model: ModelParameters): string {
       return pillarStlFileName(model.parameters)
     case 'opengrid-open-shelf':
       return openGridOpenShelfStlFileName(model.parameters)
+    case 'opengrid-openconnect-shelf':
+      return openGridOpenConnectShelfStlFileName(model.parameters)
   }
 }
