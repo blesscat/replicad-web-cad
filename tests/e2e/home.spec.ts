@@ -495,9 +495,16 @@ test('shared navigation exposes the configured support link contract', async ({
     ),
   ).toBeTruthy()
 
-  for (let index = 0; index < 4; index += 1) {
+  const linkCount = await page.locator('a').count()
+  let supportLinkFocused = false
+  for (let index = 0; index < linkCount + 2; index += 1) {
     await page.keyboard.press('Tab')
+    supportLinkFocused = await supportLink(page).evaluate(
+      (element) => element === document.activeElement,
+    )
+    if (supportLinkFocused) break
   }
+  expect(supportLinkFocused).toBe(true)
   await expect(supportLink(page)).toBeFocused()
   const focusStyle = await supportLink(page).evaluate((element) => {
     const style = getComputedStyle(element)
