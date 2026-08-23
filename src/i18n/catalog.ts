@@ -113,7 +113,7 @@ export const zhHantMessages = {
   'models.model.opengrid.staticParameters':
     '板型（Full／Lite／Heavy／Hybrid）、X/Y 格數、半格方向、倒角、連接孔、螺絲孔模式與螺絲尺寸。',
   'models.model.opengrid.parameterDetails':
-    '板型：Lite 4 mm、Full 6.8 mm、Heavy 13.8 mm（雙面）、Hybrid 13.8 mm（外圍 Heavy／內部 Full）；X/Y 格數各為 1–10 格，選擇半格方向時顯示數量最多 10.5 格（網格間距 28 mm）；倒角可選無、四角或全部；連接孔可開關並選擇側邊；螺絲孔可選無、四角、全部、依行列或自訂，行列間隔為 1–10，另有每隔 0–10 格的選項與中心孔選項（中心孔需要至少 2×2 格）；自訂螺絲尺寸必須符合通孔直徑 > 0、頭部直徑不超過 28 mm 且不小於通孔、內縮 ≥ 0 且不超過板厚、沉頭角度介於 0° 與 180° 之間。',
+    '板型：Lite 4 mm、Full 6.8 mm、Heavy 13.8 mm（雙面）、Hybrid 13.8 mm（外圍 Heavy／內部 Full）；X/Y 格數各為 1–10 格，選擇半格方向時顯示數量最多 10.5 格（網格間距 28 mm）；倒角可選無、四角或全部；連接孔可開關並選擇側邊；螺絲孔可選無、四角、全部或依行列，行列間隔為 1–10，另有中心孔選項（中心孔需要至少 2×2 格）；自訂螺絲尺寸必須符合通孔直徑 > 0、頭部直徑不超過 28 mm 且不小於通孔、內縮 ≥ 0 且不超過板厚、沉頭角度介於 0° 與 180° 之間。',
   'models.model.opengrid.alt': 'OpenGrid Board 底板預覽',
   'models.model.opengrid-snap.name': 'Snap (咔咔)',
   'models.model.opengrid-snap.selection': 'Snap (咔咔)',
@@ -544,7 +544,6 @@ export const zhHantMessages = {
   'panel.opengrid.screwCorners': '四角（官方預設）',
   'panel.opengrid.screwEverywhere': '全部（內部交界）',
   'panel.opengrid.screwByRowColumn': '依行列',
-  'panel.opengrid.custom': '自訂',
   'panel.opengrid.everyRows': '每隔幾行一個孔',
   'panel.opengrid.everyColumns': '每隔幾列一個孔',
   'panel.opengrid.dimensions': '尺寸：{width} × {depth} × {thickness} mm',
@@ -574,14 +573,6 @@ export const zhHantMessages = {
   'panel.opengrid.headInset': '頭部內縮（mm）',
   'panel.opengrid.countersinkAngle': '沉頭角度（°）',
   'panel.opengrid.centerScrew': '正中心螺絲孔',
-  'panel.opengrid.everyGridHole': '每隔幾格一個孔（0=關閉）',
-  'panel.opengrid.everyGridHoleRestore': 'OpenGrid 每隔幾格一個螺絲孔',
-  'panel.opengrid.customPositions': '自訂內部交界螺絲孔',
-  'panel.opengrid.selectedHoles': '已選 {count} 孔',
-  'panel.opengrid.customPositionsDescription':
-    '按官方 SCAD 的左至右、上至下順序選取；只有內部格線交界可選。',
-  'panel.opengrid.noIntersections': '目前沒有內部交界格點。',
-  'panel.opengrid.intersection': '交界 {row} × {column}',
   'panel.printPlan.title': '列印分片計算',
   'panel.printPlan.description':
     '輸入目標與列印機可用尺寸，推薦 OpenGrid 分片方案。',
@@ -735,7 +726,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'models.model.opengrid.staticParameters':
     'Board profile (Full/Lite/Heavy/Hybrid), X/Y cell counts, half-cell directions, chamfers, connector holes, screw-hole mode, and screw dimensions.',
   'models.model.opengrid.parameterDetails':
-    'Profile: Lite 4 mm, Full 6.8 mm, Heavy 13.8 mm (double-sided), Hybrid 13.8 mm (Heavy perimeter / Full inside); X/Y counts are each 1–10 cells, with up to 10.5 displayed cells when a half-cell direction is selected (28 mm grid pitch); chamfers can be none, corners, or everywhere; connector holes can be enabled or disabled with side selection; screw-hole modes are none, corners, everywhere, by row and column, or custom, with row/column intervals of 1–10 plus an every-N-cell setting from 0–10 and a center-hole option (the center hole requires at least a 2×2 grid); custom screw dimensions require a through-hole diameter > 0, a head diameter no larger than 28 mm and no smaller than the through-hole, an inset from 0 up to the board thickness, and a countersink angle strictly between 0° and 180°.',
+    'Profile: Lite 4 mm, Full 6.8 mm, Heavy 13.8 mm (double-sided), Hybrid 13.8 mm (Heavy perimeter / Full inside); X/Y counts are each 1–10 cells, with up to 10.5 displayed cells when a half-cell direction is selected (28 mm grid pitch); chamfers can be none, corners, or everywhere; connector holes can be enabled or disabled with side selection; screw-hole modes are none, corners, everywhere, or by row and column, with row/column intervals of 1–10 plus a center-hole option (the center hole requires at least a 2×2 grid); custom screw dimensions require a through-hole diameter > 0, a head diameter no larger than 28 mm and no smaller than the through-hole, an inset from 0 up to the board thickness, and a countersink angle strictly between 0° and 180°.',
   'models.model.opengrid.alt': 'OpenGrid board preview',
   'models.model.opengrid-snap.name': 'OpenGrid Snap',
   'models.model.opengrid-snap.selection': 'Snap',
@@ -1190,7 +1181,6 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'panel.opengrid.screwCorners': 'Corners (official default)',
   'panel.opengrid.screwEverywhere': 'Everywhere (internal intersections)',
   'panel.opengrid.screwByRowColumn': 'By row and column',
-  'panel.opengrid.custom': 'Custom',
   'panel.opengrid.everyRows': 'One hole every N rows',
   'panel.opengrid.everyColumns': 'One hole every N columns',
   'panel.opengrid.dimensions': 'Dimensions: {width} × {depth} × {thickness} mm',
@@ -1220,14 +1210,6 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'panel.opengrid.headInset': 'Head inset (mm)',
   'panel.opengrid.countersinkAngle': 'Countersink angle (°)',
   'panel.opengrid.centerScrew': 'Center screw hole',
-  'panel.opengrid.everyGridHole': 'One hole every N cells (0=off)',
-  'panel.opengrid.everyGridHoleRestore': 'OpenGrid screw-hole interval',
-  'panel.opengrid.customPositions': 'Custom internal intersection screw holes',
-  'panel.opengrid.selectedHoles': '{count} holes selected',
-  'panel.opengrid.customPositionsDescription':
-    'Select from left to right and top to bottom following the official SCAD order; only internal grid intersections are available.',
-  'panel.opengrid.noIntersections': 'There are no internal grid intersections.',
-  'panel.opengrid.intersection': 'Intersection {row} × {column}',
   'panel.printPlan.title': 'Print-piece calculator',
   'panel.printPlan.description':
     'Enter the target and available printer dimensions to get a recommended OpenGrid piece plan.',

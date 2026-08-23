@@ -107,34 +107,62 @@ test('OpenGrid restores context-free field values to official defaults', async (
   await expect(screwMode).toHaveValue('corners')
 })
 
-test('OpenGrid renders screw mode before screw size and keeps interval controls grouped', async ({
+test('OpenGrid exposes supported screw placement controls in their intended order', async ({
   page,
 }) => {
   await page.goto('/cad/opengrid')
-  await expect(page.getByTestId('opengrid-panel')).toBeVisible()
+  const panel = page.getByTestId('opengrid-panel')
+  await expect(panel).toBeVisible()
 
-  const labels = await page
-    .getByTestId('opengrid-panel')
-    .locator('select')
-    .evaluateAll((selects) =>
-      selects.map((select) => select.getAttribute('aria-label')),
+  const screwMode = page.getByRole('combobox', {
+    name: 'OpenGrid 螺絲孔模式',
+  })
+  expect(
+    await screwMode
+      .locator('option')
+      .evaluateAll((options) =>
+        options.map((option) => (option as HTMLOptionElement).value),
+      ),
+  ).toEqual(['corners', 'everywhere', 'by-row-column', 'none'])
+  await expect(
+    page.getByRole('spinbutton', {
+      name: 'OpenGrid 每隔幾格一個螺絲孔',
+    }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByText('每隔幾格一個孔（0=關閉）', { exact: true }),
+  ).toHaveCount(0)
+
+  const controlLabels = await panel
+    .locator('select, input')
+    .evaluateAll((controls) =>
+      controls.map((control) => control.getAttribute('aria-label')),
     )
-  expect(labels.indexOf('OpenGrid 螺絲孔模式')).toBeLessThan(
-    labels.indexOf('OpenGrid 螺絲尺寸來源'),
-  )
+  const centerIndex = controlLabels.indexOf('正中心螺絲孔')
+  const screwSourceIndex = controlLabels.indexOf('OpenGrid 螺絲尺寸來源')
+  expect(centerIndex).toBeGreaterThanOrEqual(0)
+  expect(screwSourceIndex).toBeGreaterThanOrEqual(0)
+  expect(centerIndex).toBeLessThan(screwSourceIndex)
 
-  await page
-    .getByRole('combobox', { name: 'OpenGrid 螺絲孔模式' })
-    .selectOption('by-row-column')
-  await expect(
-    page.getByRole('spinbutton', { name: 'OpenGrid 每幾行螺絲孔' }),
-  ).toBeVisible()
-  await expect(
-    page.getByRole('spinbutton', { name: 'OpenGrid 每幾列螺絲孔' }),
-  ).toBeVisible()
+  const everyRows = page.getByRole('spinbutton', {
+    name: '每隔幾行一個孔',
+  })
+  const everyColumns = page.getByRole('spinbutton', {
+    name: '每隔幾列一個孔',
+  })
+  await expect(everyRows).toHaveCount(0)
+  await expect(everyColumns).toHaveCount(0)
+
+  await screwMode.selectOption('by-row-column')
+  await expect(everyRows).toBeVisible()
+  await expect(everyColumns).toBeVisible()
+
+  await screwMode.selectOption('corners')
+  await expect(everyRows).toHaveCount(0)
+  await expect(everyColumns).toHaveCount(0)
 })
 
-test('OpenGrid CAD route exposes typed controls and the custom matrix', async ({
+test('OpenGrid CAD route exposes typed controls and screw dimension presets', async ({
   page,
 }) => {
   await page.goto('/cad/opengrid')
@@ -208,30 +236,28 @@ test('OpenGrid CAD route exposes typed controls and the custom matrix', async ({
   )
   const advancedSettings = page.getByRole('checkbox', { name: '進階設定' })
   const screwDiameter = page.getByRole('spinbutton', {
-    name: 'OpenGrid 螺絲通孔直徑',
+    name: '通孔直徑（mm）',
   })
   await expect(
     screwSource.locator('option[value="official-default"]'),
   ).toHaveText(/官方 SCAD 預設/)
   await expect(advancedSettings).toHaveCount(0)
   await expect(screwDiameter).toHaveCount(0)
-  await expect(
-    page.getByRole('checkbox', { name: 'OpenGrid 是否沉頭' }),
-  ).toHaveCount(0)
+  await expect(page.getByRole('checkbox', { name: '使用沉頭孔' })).toHaveCount(
+    0,
+  )
   await expect(woodScrewDescription).toHaveCount(0)
   await screwSource.selectOption('custom')
   await expect(woodScrewDescription).toHaveCount(0)
   await expect(advancedSettings).toBeVisible()
   await expect(advancedSettings).toBeChecked()
   await expect(screwDiameter).toBeVisible()
-  await expect(
-    page.getByRole('checkbox', { name: 'OpenGrid 是否沉頭' }),
-  ).toBeVisible()
+  await expect(page.getByRole('checkbox', { name: '使用沉頭孔' })).toBeVisible()
   for (const label of [
-    'OpenGrid 螺絲通孔直徑',
-    'OpenGrid 螺絲頭直徑',
-    'OpenGrid 螺絲頭內縮',
-    'OpenGrid 螺絲沉頭角度',
+    '通孔直徑（mm）',
+    '頭部直徑（mm）',
+    '頭部內縮（mm）',
+    '沉頭角度（°）',
   ]) {
     await expect(
       page.getByRole('button', { name: `復原${label}` }),
@@ -240,10 +266,10 @@ test('OpenGrid CAD route exposes typed controls and the custom matrix', async ({
   await screwSource.selectOption('m5')
   await expect(woodScrewDescription).toBeVisible()
   await expect(
-    page.getByRole('spinbutton', { name: 'OpenGrid 螺絲通孔直徑' }),
+    page.getByRole('spinbutton', { name: '通孔直徑（mm）' }),
   ).toHaveValue(String(OPENGRID_CONFIGURATION.screwPresets.m5.diameter))
   await expect(
-    page.getByRole('spinbutton', { name: 'OpenGrid 螺絲頭直徑' }),
+    page.getByRole('spinbutton', { name: '頭部直徑（mm）' }),
   ).toHaveValue(String(OPENGRID_CONFIGURATION.screwPresets.m5.headDiameter))
   await screwSource.selectOption('official-default')
   await expect(screwSource).toHaveValue('official-default')
@@ -251,23 +277,12 @@ test('OpenGrid CAD route exposes typed controls and the custom matrix', async ({
   await expect(advancedSettings).toHaveCount(0)
   await expect(screwDiameter).toHaveCount(0)
   const centerScrew = page.getByRole('checkbox', {
-    name: 'OpenGrid 正中心螺絲孔',
+    name: '正中心螺絲孔',
   })
   await expect(centerScrew).toBeEnabled()
   await centerScrew.check()
   await expect(centerScrew).toBeChecked()
-  const screwEvery = page.getByRole('spinbutton', {
-    name: 'OpenGrid 每隔幾格一個螺絲孔',
-  })
-  await screwEvery.fill('2')
-  await expect(screwEvery).toHaveValue('2')
-  await page
-    .getByRole('combobox', { name: 'OpenGrid 螺絲孔模式' })
-    .selectOption('custom')
-  await expect(page.getByTestId('opengrid-custom-matrix')).toBeVisible()
-  await expect(
-    page.getByRole('button', { name: '內部交界第 1 行第 1 列' }),
-  ).toBeVisible()
+  await expect(page.getByTestId('opengrid-custom-matrix')).toHaveCount(0)
 })
 
 test('OpenGrid enables the center screw on odd grids using the official corner configuration', async ({
@@ -278,7 +293,7 @@ test('OpenGrid enables the center screw on odd grids using the official corner c
   const columns = page.getByRole('slider', { name: 'X' })
   const rows = page.getByRole('slider', { name: 'Y' })
   const centerScrew = page.getByRole('checkbox', {
-    name: 'OpenGrid 正中心螺絲孔',
+    name: '正中心螺絲孔',
   })
 
   await columns.press('ArrowRight')
@@ -352,11 +367,11 @@ test('OpenGrid changed settings can be restored independently', async ({
     .getByRole('combobox', { name: 'OpenGrid 螺絲孔模式' })
     .selectOption('by-row-column')
   const everyRows = page.getByRole('spinbutton', {
-    name: 'OpenGrid 每幾行螺絲孔',
+    name: '每隔幾行一個孔',
   })
   await everyRows.fill('2')
   const restoreEveryRows = page.getByRole('button', {
-    name: '復原OpenGrid 每幾行螺絲孔',
+    name: '復原每隔幾行一個孔',
   })
   await restoreEveryRows.click()
   await expect(everyRows).toHaveValue(
@@ -364,26 +379,12 @@ test('OpenGrid changed settings can be restored independently', async ({
   )
 
   const centerScrew = page.getByRole('checkbox', {
-    name: 'OpenGrid 正中心螺絲孔',
+    name: '正中心螺絲孔',
   })
   await centerScrew.check()
   await expect(
-    page.getByRole('button', { name: '復原OpenGrid 正中心螺絲孔' }),
+    page.getByRole('button', { name: '復原正中心螺絲孔' }),
   ).toHaveCount(0)
-
-  await page
-    .getByRole('combobox', { name: 'OpenGrid 螺絲孔模式' })
-    .selectOption('custom')
-  const customPosition = page.getByRole('button', {
-    name: '內部交界第 1 行第 1 列',
-  })
-  await customPosition.click()
-  const restoreCustomPositions = page.getByRole('button', {
-    name: '復原OpenGrid 自訂內部交界螺絲孔',
-  })
-  await restoreCustomPositions.click()
-  await expect(customPosition).toHaveAttribute('aria-pressed', 'false')
-  await expect(restoreCustomPositions).toHaveCount(0)
 })
 
 test('OpenGrid restores all settings including boolean defaults', async ({
@@ -398,7 +399,7 @@ test('OpenGrid restores all settings including boolean defaults', async ({
     .getByRole('textbox', { name: '目標 X（mm）' })
   const topSide = page.getByRole('checkbox', { name: '上', exact: true })
   const centerScrew = page.getByRole('checkbox', {
-    name: 'OpenGrid 正中心螺絲孔',
+    name: '正中心螺絲孔',
   })
 
   await variant.selectOption('Full')
@@ -461,15 +462,10 @@ test('OpenGrid workspace edits typed parameters and keeps export tied to the com
   await expect(screwMode).toHaveValue('corners')
   await screwMode.selectOption('everywhere')
   await expect(screwMode).toHaveValue('everywhere')
-  await screwMode.selectOption('custom')
-  await expect(page.getByTestId('opengrid-custom-matrix')).toBeVisible()
-
-  const northEast = page.getByRole('button', {
-    name: '內部交界第 1 行第 1 列',
-  })
-  await northEast.click()
-  await expect(northEast).toHaveAttribute('aria-pressed', 'true')
-  await expect(page.getByText('已選 1 孔')).toBeVisible()
+  await screwMode.selectOption('by-row-column')
+  await expect(screwMode).toHaveValue('by-row-column')
+  await page.getByRole('spinbutton', { name: '每隔幾行一個孔' }).fill('1')
+  await page.getByRole('spinbutton', { name: '每隔幾列一個孔' }).fill('2')
 
   await page
     .getByRole('combobox', { name: 'OpenGrid 連接孔' })
@@ -487,7 +483,7 @@ test('OpenGrid workspace edits typed parameters and keeps export tied to the com
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const stepDownload = await stepDownloadPromise
   expect(stepDownload.suggestedFilename()).toMatch(
-    /^opengrid-lite-3x2-xnone-ynone-custom-custom-corners-enabled-[0-9a-f]{8}\.step$/,
+    /^opengrid-lite-3x2-xnone-ynone-custom-by-row-column-corners-enabled\.step$/,
   )
   const stepStream = await stepDownload.createReadStream()
   expect(stepStream).not.toBeNull()
@@ -499,7 +495,7 @@ test('OpenGrid workspace edits typed parameters and keeps export tied to the com
   await page.getByRole('button', { name: '下載 STL' }).click()
   const stlDownload = await stlDownloadPromise
   expect(stlDownload.suggestedFilename()).toMatch(
-    /^opengrid-lite-3x2-xnone-ynone-custom-custom-corners-enabled-[0-9a-f]{8}\.stl$/,
+    /^opengrid-lite-3x2-xnone-ynone-custom-by-row-column-corners-enabled\.stl$/,
   )
   expect(await readBinaryStlByteLength(stlDownload)).toBeGreaterThan(84)
 })

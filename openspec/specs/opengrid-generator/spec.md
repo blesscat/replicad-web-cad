@@ -75,10 +75,8 @@ parameters MUST include:
 - screwKind official-default or custom;
 - generic screw diameter, head diameter, head inset, countersunk toggle, and
   countersunk angle;
-- screwMode none, corners, everywhere, by-row-column, or custom;
-- screwCenter, screwEvery, row interval, and column interval; and
-- sorted custom positions on the internal rows-minus-one by
-  columns-minus-one intersection lattice.
+- screwMode none, corners, everywhere, or by-row-column; and
+- screwCenter plus row and column intervals.
 
 The standard pitch MUST be 28 mm. Without half-cell directions, the nominal board width and depth MUST be columns times 28 mm and rows times 28 mm. Each selected half-cell direction MUST add exactly 14 mm on its nominal axis while keeping the board centered and within the 500 mm workspace limit. When `fitToTarget=false`, the target dimensions MUST NOT affect the generated board envelope. When `fitToTarget=true`, each positive target dimension MUST be at least its corresponding nominal dimension. The target remainder MUST be no more than 28 mm per axis. When both opposite `targetFrameSides` are enabled, the remainder MUST be split equally; when only one is enabled, that side MUST receive the full remainder; when neither is enabled, the physical envelope MUST remain nominal on that axis. The physical target envelope MUST remain within the 500 mm workspace limit. Hybrid MUST use the same normalized field shape as the other OpenGrid variants and MUST NOT add a variant-specific persistence or Worker field.
 
@@ -91,7 +89,10 @@ targetFrameSides MUST be enabled.
 The normalized snapshot MUST use generic dimensions and MUST NOT retain the
 former 16 mm opening, four-slot, small/large connector, or M3/M4/M5-only
 schema. Named m3 through m7 UI presets MAY exist only as helpers that write
-the generic dimensions.
+the generic dimensions. Legacy snapshots MAY contain `screwEvery`,
+`customScrewPositions`, or `screwMode=custom` only at the normalization
+boundary; normalization MUST remove the retired fields and MUST map the retired
+mode to `none` before producing a current snapshot.
 
 #### Scenario: Official defaults
 
@@ -110,9 +111,7 @@ the generic dimensions.
 
 #### Scenario: Invalid or legacy snapshot
 
-- **WHEN** a snapshot has an unsupported enum, invalid target type or range, invalid dimension, out-of-range
-  grid, duplicate or out-of-range intersection, old schema field, or invalid
-  half-cell value
+- **WHEN** a current snapshot has an unsupported enum, invalid target type or range, invalid dimension, out-of-range grid, unexpected field, or invalid half-cell value
 - **THEN** validation MUST reject it before native work
 - **AND** the previous accepted preview MUST remain stale
 - **AND** incompatible persisted data MUST fall back to the component default
@@ -120,6 +119,13 @@ the generic dimensions.
   targetFrameShape, or targetFrameSides
 - **THEN** persistence hydration MUST add zero, zero, false, none, and all four
   enabled directions respectively before validation
+
+#### Scenario: Retired screw placement fields migrate safely
+
+- **WHEN** persistence hydration receives a legacy snapshot containing `screwEvery`, `customScrewPositions`, or `screwMode=custom`
+- **THEN** normalization MUST remove `screwEvery` and `customScrewPositions`
+- **AND** normalization MUST map `screwMode=custom` to `screwMode=none`
+- **AND** the resulting current snapshot MUST pass the same strict validation used by current persisted data
 
 ### Requirement: Official tile profile and variants
 
@@ -261,8 +267,7 @@ MUST behave as follows:
 - none adds no screws;
 - corners selects the de-duplicated outer lattice positions;
 - everywhere selects every eligible lattice position;
-- by-row-column applies the requested intervals; and
-- custom uses exactly the validated custom positions.
+- by-row-column applies the requested row and column intervals.
 
 The `screwCenter` modifier MUST add one de-duplicated internal lattice position
 when both grid axes contain at least two cells. For each even cell-count axis,
@@ -272,17 +277,16 @@ upper-left bias: negative X for columns and positive Y for rows in the
 centered board coordinate system. A one-cell axis MUST keep the center
 modifier invalid because no internal intersection exists on that axis.
 
-Center and interval modifiers MUST add de-duplicated lattice positions.
-Custom positions MUST be sorted and de-duplicated by normalization rather than
-silently moved into cells.
+The center option MUST add a de-duplicated lattice position. Row and column
+intervals MUST affect only the by-row-column mode.
 
 #### Scenario: Generic screw placement
 
-- **WHEN** a user selects official-default, custom dimensions, or a custom
-  internal-intersection matrix
+- **WHEN** a user selects official-default or custom screw dimensions and a
+  supported screw-placement mode
 - **THEN** the normalized snapshot MUST contain generic screw dimensions and
-  validated lattice positions
-- **AND** generated cutters MUST use those dimensions and positions
+  validated placement settings
+- **AND** generated cutters MUST use those dimensions and settings
 
 #### Scenario: Center screw on an even-by-even board
 
@@ -498,7 +502,7 @@ normalized snapshot, while model.invalidate MUST remain parameter-free.
 
 The opengrid panel MUST expose variant, rows, columns, half-cell directions,
 chamfer mode and corners, connector enable and sides, screw mode, generic
-screw dimensions, intervals, and the internal-intersection custom matrix.
+screw dimensions, a center-hole option, and conditional row/column intervals.
 It MUST display derived width, depth, and thickness in millimetres.
 
 #### Scenario: Latest-wins OpenGrid generation
@@ -533,17 +537,17 @@ binary STL lifecycle.
 - **GIVEN** the Worker receives model.generate with modelId=opengrid
 - **WHEN** the parameters contain a valid normalized OpenGrid snapshot
 - **THEN** the Worker MUST validate the variant, grid, half-cell, chamfer,
-  connector, screw, and custom-position fields together
+  connector, screw-dimension, and supported screw-placement fields together
 - **AND** a mismatched or invalid snapshot MUST be rejected with a diagnostic
   validation error
 
 ### Requirement: OpenGrid board controls
 
-The /cad/opengrid workspace MUST expose Full/Lite/Heavy/Hybrid variant, rows, columns, X/Y half-cell directions, target X/Y dimensions, a persisted physical-target-frame checkbox, chamfer mode and corner flags, connector enable and side flags, generic screw dimensions, screw mode, center/interval modifiers, and an internal-intersection custom screw matrix. It MUST display the derived nominal or target width, depth, and maximum board thickness in millimetres. The target-frame control MUST explain that it adds a centered outer border and does not add grid hosts. The Hybrid description MUST identify its Heavy outer perimeter and standard Full interior rather than presenting it as a uniform 13.8 mm plate. The accessible screw-mode control MUST be rendered before the screw-size-source control, and any conditional row/column interval controls MUST remain associated with the screw-mode control.
+The /cad/opengrid workspace MUST expose Full/Lite/Heavy/Hybrid variant, rows, columns, X/Y half-cell directions, target X/Y dimensions, a persisted physical-target-frame checkbox, chamfer mode and corner flags, connector enable and side flags, generic screw dimensions, screw mode, a center-hole option, and conditional row/column intervals. It MUST display the derived nominal or target width, depth, and maximum board thickness in millimetres. The target-frame control MUST explain that it adds a centered outer border and does not add grid hosts. The Hybrid description MUST identify its Heavy outer perimeter and standard Full interior rather than presenting it as a uniform 13.8 mm plate. The accessible screw-mode control and center-hole option MUST be rendered before the screw-size-source control, and any conditional row/column interval controls MUST remain associated with the screw-mode control.
 
 #### Scenario: Configure current OpenGrid controls
 
-- **WHEN** a user changes variant, grid, half-cell, target, chamfer, connector, screw, or custom-intersection values
+- **WHEN** a user changes variant, grid, half-cell, target, chamfer, connector, screw-dimension, or supported screw-placement values
 - **THEN** the pending typed snapshot MUST contain those normalized fields
 - **AND** selecting Hybrid MUST preserve the existing rows, columns, half-cell, target, feature, and persistence fields
 - **AND** derived dimensions MUST use the nominal half-cell envelope unless target fitting is enabled
@@ -556,6 +560,14 @@ The /cad/opengrid workspace MUST expose Full/Lite/Heavy/Hybrid variant, rows, co
 - **WHEN** a user views the `/cad/opengrid` parameter panel
 - **THEN** the accessible `OpenGrid 螺絲孔模式` select MUST appear before the accessible `OpenGrid 螺絲尺寸來源` select
 - **AND** selecting `by-row-column` MUST show its row and column interval controls as part of the screw-mode section
+- **AND** the accessible `正中心螺絲孔` option MUST appear before the accessible `OpenGrid 螺絲尺寸來源` select
+
+#### Scenario: Retired screw placement controls are absent
+
+- **WHEN** a user views or operates the `/cad/opengrid` parameter panel
+- **THEN** the panel MUST NOT expose a global every-N-cells screw control
+- **AND** the screw-mode selector MUST NOT offer a custom-placement mode or custom-position matrix
+- **AND** the custom screw-size source MUST remain available
 
 #### Scenario: Hybrid control remains compatible with existing accessories
 

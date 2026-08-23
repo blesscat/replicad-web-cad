@@ -22,7 +22,6 @@ import { createBooleanOperationReporter } from '../../src/cad-kernel/boolean-pro
 import {
   boundsForOpenGrid,
   cellCenterForOpenGrid,
-  deterministicOpenGridCustomScrewPositions,
   normalizeOpenGridParameters,
   OPENGRID_CONFIGURATION,
   OPENGRID_PREVIEW_CONFIGURATION,
@@ -60,7 +59,6 @@ function parameters(
     connectorSides: {
       ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
     },
-    customScrewPositions: [],
     ...overrides,
   })
 }
@@ -1065,15 +1063,16 @@ describe('OpenGrid official-profile product builder', () => {
     }
   }, 60_000)
 
-  it('uses internal intersections for everywhere and custom screw modes', async () => {
+  it('uses internal intersections for row-and-column screw mode', async () => {
     const input = parameters({
       variant: 'Full',
       rows: 5,
       columns: 5,
       chamfers: 'none',
       connectorHoles: 'none',
-      screwMode: 'custom',
-      customScrewPositions: deterministicOpenGridCustomScrewPositions(5, 5),
+      screwMode: 'by-row-column',
+      screwEveryRows: 2,
+      screwEveryColumns: 2,
     })
     const { shape, quality } = await buildAndInspect(input)
     try {

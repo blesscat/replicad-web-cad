@@ -135,7 +135,6 @@ function parameters(
     chamfers: 'none',
     connectorHoles: 'none',
     screwMode: 'none',
-    customScrewPositions: [],
     connectorSides: {
       ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
     },

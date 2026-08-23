@@ -86,7 +86,6 @@ function opengridParameters(
     connectorSides: {
       ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
     },
-    customScrewPositions: [],
     ...overrides,
   }
 }
@@ -527,8 +526,9 @@ describe('CAD model generation debounce', () => {
       rows: 5,
       columns: 7,
       screwKind: 'custom',
-      screwMode: 'custom',
-      customScrewPositions: [{ row: 2, column: 3 }],
+      screwMode: 'by-row-column',
+      screwEveryRows: 2,
+      screwEveryColumns: 3,
       connectorHoles: 'enabled',
     })
     handlers.handleOpenGridParametersChange(input)
@@ -850,7 +850,6 @@ describe('CAD model generation debounce', () => {
       columns: 10,
       screwKind: 'custom',
       screwMode: 'everywhere',
-      customScrewPositions: [],
       connectorHoles: 'enabled',
     })
     handlers.handleOpenGridParametersChange(input)

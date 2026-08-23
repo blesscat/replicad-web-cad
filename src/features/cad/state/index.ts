@@ -65,10 +65,7 @@ function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
     }
   }
   if (modelId === 'opengrid') {
-    return {
-      ...OPENGRID_CONFIGURATION.defaultParameters,
-      customScrewPositions: [],
-    }
+    return { ...OPENGRID_CONFIGURATION.defaultParameters }
   }
   if (modelId === 'opengrid-stackable-box') {
     return { ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS }

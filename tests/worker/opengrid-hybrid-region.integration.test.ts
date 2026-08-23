@@ -46,7 +46,6 @@ function parameters(
     connectorSides: {
       ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
     },
-    customScrewPositions: [],
     ...overrides,
   })
 }

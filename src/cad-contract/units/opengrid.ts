@@ -17,7 +17,7 @@ export type OpenGridTargetFrameShape = 'none' | 'chamfer' | 'fillet'
 export type OpenGridScrewKind = 'official-default' | 'custom'
 export type OpenGridScrewPreset = 'm3' | 'm4' | 'm5' | 'm6' | 'm7'
 export type OpenGridScrewMode =
-  'none' | 'corners' | 'everywhere' | 'by-row-column' | 'custom'
+  'none' | 'corners' | 'everywhere' | 'by-row-column'
 export type OpenGridConnectorHoles = 'none' | 'enabled'
 export type OpenGridConnectorSide = 'top' | 'right' | 'bottom' | 'left'
 
@@ -39,7 +39,6 @@ export type OpenGridParameterKey =
   | 'screwKind'
   | 'screwMode'
   | 'screwCenter'
-  | 'screwEvery'
   | 'screwEveryRows'
   | 'screwEveryColumns'
   | 'screwDiameter'
@@ -47,7 +46,6 @@ export type OpenGridParameterKey =
   | 'screwHeadInset'
   | 'screwHeadIsCountersunk'
   | 'screwHeadCountersunkDegree'
-  | 'customScrewPositions'
 
 export type OpenGridScrewPosition = {
   /** Zero-based internal seam row, counted from the top of the board. */
@@ -95,7 +93,6 @@ export type OpenGridParameters = {
   screwKind: OpenGridScrewKind
   screwMode: OpenGridScrewMode
   screwCenter: boolean
-  screwEvery: number
   screwEveryRows: number
   screwEveryColumns: number
   screwDiameter: number
@@ -103,7 +100,6 @@ export type OpenGridParameters = {
   screwHeadInset: number
   screwHeadIsCountersunk: boolean
   screwHeadCountersunkDegree: number
-  customScrewPositions: OpenGridScrewPosition[]
 }
 
 export type OpenGridScrewDimensions = {
@@ -256,7 +252,6 @@ export const OPENGRID_CONFIGURATION = {
     screwKind: 'official-default' as OpenGridScrewKind,
     screwMode: 'corners' as OpenGridScrewMode,
     screwCenter: false,
-    screwEvery: 0,
     screwEveryRows: 1,
     screwEveryColumns: 2,
     screwDiameter: DEFAULT_SCREW_DIMENSIONS.diameter,
@@ -264,7 +259,6 @@ export const OPENGRID_CONFIGURATION = {
     screwHeadInset: DEFAULT_SCREW_DIMENSIONS.headInset,
     screwHeadIsCountersunk: DEFAULT_SCREW_DIMENSIONS.headIsCountersunk,
     screwHeadCountersunkDegree: DEFAULT_SCREW_DIMENSIONS.headCountersunkDegree,
-    customScrewPositions: [] as OpenGridScrewPosition[],
   },
 } as const
 
@@ -299,7 +293,6 @@ const OPEN_GRID_PARAMETER_KEYS: readonly OpenGridParameterKey[] = [
   'screwKind',
   'screwMode',
   'screwCenter',
-  'screwEvery',
   'screwEveryRows',
   'screwEveryColumns',
   'screwDiameter',
@@ -307,7 +300,6 @@ const OPEN_GRID_PARAMETER_KEYS: readonly OpenGridParameterKey[] = [
   'screwHeadInset',
   'screwHeadIsCountersunk',
   'screwHeadCountersunkDegree',
-  'customScrewPositions',
 ]
 
 export type OpenGridValidationIssue = {
@@ -367,8 +359,7 @@ function isOpenGridScrewMode(value: unknown): value is OpenGridScrewMode {
     value === 'none' ||
     value === 'corners' ||
     value === 'everywhere' ||
-    value === 'by-row-column' ||
-    value === 'custom'
+    value === 'by-row-column'
   )
 }
 
@@ -400,24 +391,6 @@ function comparePositions(
 ): number {
   if (first.row !== second.row) return first.row - second.row
   return first.column - second.column
-}
-
-function validatePosition(
-  value: unknown,
-  rows: number,
-  columns: number,
-): value is OpenGridScrewPosition {
-  if (!isRecord(value) || !hasExactKeys(value, ['row', 'column'])) {
-    return false
-  }
-  return (
-    Number.isSafeInteger(value.row) &&
-    (value.row as number) >= 0 &&
-    (value.row as number) < Math.max(rows - 1, 0) &&
-    Number.isSafeInteger(value.column) &&
-    (value.column as number) >= 0 &&
-    (value.column as number) < Math.max(columns - 1, 0)
-  )
 }
 
 function areEqualScrewDimensions(
@@ -553,17 +526,6 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
   if (typeof value.screwCenter !== 'boolean') {
     issues.push({
       field: 'screwCenter',
-      messageId: 'validation.invalid',
-    })
-  }
-
-  if (
-    !Number.isSafeInteger(value.screwEvery) ||
-    (value.screwEvery as number) < 0 ||
-    (value.screwEvery as number) > OPENGRID_CONFIGURATION.maxGridCount
-  ) {
-    issues.push({
-      field: 'screwEvery',
       messageId: 'validation.invalid',
     })
   }
@@ -738,53 +700,6 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
     }
   }
 
-  const customPositions = value.customScrewPositions
-  const positions: OpenGridScrewPosition[] = []
-  if (!Array.isArray(customPositions)) {
-    issues.push({
-      field: 'customScrewPositions',
-      messageId: 'validation.invalid',
-    })
-  } else if (rowsAreValid && columnsAreValid) {
-    const seen = new Set<string>()
-    for (const position of customPositions) {
-      if (
-        !validatePosition(
-          position,
-          value.rows as number,
-          value.columns as number,
-        )
-      ) {
-        issues.push({
-          field: 'customScrewPositions',
-          messageId: 'validation.invalid',
-        })
-        continue
-      }
-      const normalizedPosition = {
-        row: position.row,
-        column: position.column,
-      }
-      const key = positionKey(normalizedPosition)
-      if (seen.has(key)) {
-        issues.push({
-          field: 'customScrewPositions',
-          messageId: 'validation.invalid',
-        })
-        continue
-      }
-      seen.add(key)
-      positions.push(normalizedPosition)
-    }
-  }
-
-  if (value.screwMode !== 'custom' && positions.length > 0) {
-    issues.push({
-      field: 'customScrewPositions',
-      messageId: 'validation.invalid',
-    })
-  }
-
   if (issues.length > 0) return { valid: false, issues }
 
   return {
@@ -809,7 +724,6 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
       screwKind: value.screwKind as OpenGridScrewKind,
       screwMode: value.screwMode as OpenGridScrewMode,
       screwCenter: value.screwCenter as boolean,
-      screwEvery: value.screwEvery as number,
       screwEveryRows: value.screwEveryRows as number,
       screwEveryColumns: value.screwEveryColumns as number,
       screwDiameter: value.screwDiameter as number,
@@ -817,7 +731,6 @@ export function validateOpenGridParameters(value: unknown): OpenGridValidation {
       screwHeadInset: value.screwHeadInset as number,
       screwHeadIsCountersunk: value.screwHeadIsCountersunk as boolean,
       screwHeadCountersunkDegree: value.screwHeadCountersunkDegree as number,
-      customScrewPositions: positions.sort(comparePositions),
     },
   }
 }
@@ -835,6 +748,9 @@ export function normalizeOpenGridParameters(
 function normalizeLegacyOpenGridParameters(value: unknown): unknown {
   if (!isRecord(value)) return value
   const normalized = { ...value }
+  delete normalized.screwEvery
+  delete normalized.customScrewPositions
+  if (normalized.screwMode === 'custom') normalized.screwMode = 'none'
   if (!Object.prototype.hasOwnProperty.call(normalized, 'targetWidth')) {
     normalized.targetWidth = 0
   }
@@ -1018,31 +934,6 @@ export function screwCenterForOpenGrid(
   ]
 }
 
-export function deterministicOpenGridCustomScrewPositions(
-  rows: number,
-  columns: number,
-): OpenGridScrewPosition[] {
-  if (
-    !Number.isSafeInteger(rows) ||
-    !Number.isSafeInteger(columns) ||
-    rows < 1 ||
-    columns < 1 ||
-    rows > OPENGRID_CONFIGURATION.maxGridCount ||
-    columns > OPENGRID_CONFIGURATION.maxGridCount
-  ) {
-    throw new Error('OPENGRID_INVALID_GRID')
-  }
-  const positions: OpenGridScrewPosition[] = []
-  for (let row = 0; row < rows - 1; row += 1) {
-    for (let column = 0; column < columns - 1; column += 1) {
-      if ((row * 3 + column * 5) % 4 === 0) {
-        positions.push({ row, column })
-      }
-    }
-  }
-  return positions
-}
-
 function allInternalScrewPositions(
   parameters: Pick<OpenGridParameters, 'rows' | 'columns'>,
 ): OpenGridScrewPosition[] {
@@ -1120,24 +1011,10 @@ function positionsByRowAndColumn(
   return rows.flatMap((row) => columns.map((column) => ({ row, column })))
 }
 
-function positionsByUniformInterval(
-  parameters: Pick<OpenGridParameters, 'rows' | 'columns' | 'screwEvery'>,
-): OpenGridScrewPosition[] {
-  return positionsByRowAndColumn({
-    rows: parameters.rows,
-    columns: parameters.columns,
-    screwEveryRows: parameters.screwEvery,
-    screwEveryColumns: parameters.screwEvery,
-  })
-}
-
 function baseScrewPositionsFor(
   parameters: OpenGridParameters,
 ): OpenGridScrewPosition[] {
   if (parameters.screwMode === 'none') return []
-  if (parameters.screwMode === 'custom') {
-    return parameters.customScrewPositions.map((position) => ({ ...position }))
-  }
   if (parameters.screwMode === 'everywhere') {
     return allInternalScrewPositions(parameters)
   }
@@ -1170,12 +1047,6 @@ export function openGridScrewPositionsFor(
   if (parameters.screwCenter) {
     const center = centeredScrewPosition(parameters)
     if (center) addUniquePosition(positions, seen, center)
-  }
-
-  if (parameters.screwEvery > 0) {
-    for (const position of positionsByUniformInterval(parameters)) {
-      addUniquePosition(positions, seen, position)
-    }
   }
 
   return positions.sort(comparePositions)
@@ -1224,12 +1095,6 @@ export function openGridScrewCentersFor(
     const center = centeredScrewPosition(parameters)
     if (center) addCenter(screwCenterForOpenGrid(parameters, center))
   }
-  if (parameters.screwEvery > 0) {
-    for (const position of positionsByUniformInterval(parameters)) {
-      addCenter(screwCenterForOpenGrid(parameters, position))
-    }
-  }
-
   addHalfCellBoundaryScrewCenters(parameters, centers, addCenter)
   return centers
 }
@@ -1292,7 +1157,6 @@ function addHalfCellBoundaryScrewCenters(
   addCenter: (center: OpenGridPoint2D) => void,
 ): void {
   if (
-    parameters.screwMode === 'custom' ||
     centers.length === 0 ||
     ((parameters.halfCellX ?? 'none') === 'none' &&
       (parameters.halfCellY ?? 'none') === 'none')
@@ -1443,23 +1307,10 @@ function fnv1a(value: string): string {
   return hash.toString(16).padStart(8, '0')
 }
 
-export function openGridCustomPositionFingerprint(
-  parameters: Pick<OpenGridParameters, 'screwMode' | 'customScrewPositions'>,
-): string {
-  if (parameters.screwMode !== 'custom') return 'none'
-  return fnv1a(parameters.customScrewPositions.map(positionKey).join('|'))
-}
-
 function openGridScrewPatternFingerprint(
   parameters: OpenGridParameters,
 ): string {
-  const customFingerprint = openGridCustomPositionFingerprint(parameters)
-  if (!parameters.screwCenter && parameters.screwEvery === 0) {
-    return customFingerprint
-  }
-  return fnv1a(
-    `${customFingerprint}|center=${parameters.screwCenter}|every=${parameters.screwEvery}`,
-  )
+  return fnv1a(`center=${parameters.screwCenter}`)
 }
 
 function openGridTargetFrameFingerprint(
@@ -1476,10 +1327,7 @@ function buildOpenGridFileName(
   parameters: OpenGridParameters,
   extension: '.step' | '.stl',
 ): string {
-  const hasScrewPatternModifiers =
-    parameters.screwMode === 'custom' ||
-    parameters.screwCenter ||
-    parameters.screwEvery > 0
+  const hasScrewPatternModifiers = parameters.screwCenter
   const fingerprint = hasScrewPatternModifiers
     ? `-${openGridScrewPatternFingerprint(parameters)}`
     : ''

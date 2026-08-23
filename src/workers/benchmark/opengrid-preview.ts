@@ -35,7 +35,6 @@ function benchmarkParameters(
     targetFrameSides: {
       ...OPENGRID_CONFIGURATION.defaultParameters.targetFrameSides,
     },
-    customScrewPositions: [],
     ...overrides,
   })
 }

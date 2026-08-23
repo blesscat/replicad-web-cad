@@ -122,7 +122,6 @@ describe('CAD dimension annotation geometry', () => {
       rows: 2,
       columns: 3,
       screwMode: 'none',
-      customScrewPositions: [],
       connectorHoles: 'none',
       chamferCorners: {
         ...OPENGRID_CONFIGURATION.defaultParameters.chamferCorners,

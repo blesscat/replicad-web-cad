@@ -3,7 +3,6 @@ import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import { exportStlBytes, exportStepBytes } from '../../cad-kernel/export'
 import {
   buildOpenGridBenchmarkShape,
-  deterministicCustomScrewPositions,
   expectedOpenGridBounds,
   normalizeOpenGridBenchmarkRequest,
   OPENGRID_BENCHMARK_CONFIGURATION,
@@ -62,7 +61,7 @@ const FIXTURE_SCALES: readonly FixtureScale[] = [
     id: '5x5',
     rows: 5,
     columns: 5,
-    screwMode: 'custom',
+    screwMode: 'by-row-column',
     connectorHoles: 'enabled',
   },
   {
@@ -73,10 +72,10 @@ const FIXTURE_SCALES: readonly FixtureScale[] = [
     connectorHoles: 'enabled',
   },
   {
-    id: 'max-grid-custom',
+    id: 'max-grid-row-column',
     rows: OPENGRID_BENCHMARK_CONFIGURATION.maxGridCount,
     columns: OPENGRID_BENCHMARK_CONFIGURATION.maxGridCount,
-    screwMode: 'custom',
+    screwMode: 'by-row-column',
     connectorHoles: 'enabled',
   },
 ]
@@ -94,10 +93,6 @@ function createFixture(
   variant: OpenGridVariant,
   scale: FixtureScale,
 ): OpenGridBenchmarkFixture {
-  const customScrewPositions =
-    scale.screwMode === 'custom'
-      ? deterministicCustomScrewPositions(scale.rows, scale.columns)
-      : []
   const request = normalizeOpenGridBenchmarkRequest({
     ...OPENGRID_CONFIGURATION.defaultParameters,
     variant,
@@ -109,7 +104,7 @@ function createFixture(
       top: true,
       right: scale.id !== '2x2',
       bottom: true,
-      left: scale.id === 'max-grid-custom',
+      left: scale.id === 'max-grid-row-column',
     },
     screwKind: scale.id === '5x5' ? 'custom' : 'official-default',
     screwMode: scale.screwMode,
@@ -118,7 +113,6 @@ function createFixture(
     screwHeadInset: scale.id === '5x5' ? 1.2 : 1,
     screwHeadIsCountersunk: scale.id !== '5x5',
     screwHeadCountersunkDegree: 90,
-    customScrewPositions,
     previewConfig: { ...OPENGRID_BENCHMARK_PREVIEW_CONFIG },
   })
   return {
@@ -953,7 +947,11 @@ function renderPhaseSummary(summary: OpenGridBenchmarkPhaseSummary): string {
 
 function renderFixtureLine(fixture: OpenGridBenchmarkFixture): string {
   const { request } = fixture
-  return `| ${fixture.id} | ${fixture.variant} | ${request.rows}×${request.columns} | ${request.screwMode} | ${request.connectorHoles} | ${request.customScrewPositions.length} |`
+  const interval =
+    request.screwMode === 'by-row-column'
+      ? `${request.screwEveryRows}×${request.screwEveryColumns}`
+      : 'n/a'
+  return `| ${fixture.id} | ${fixture.variant} | ${request.rows}×${request.columns} | ${request.screwMode} | ${request.connectorHoles} | ${interval} |`
 }
 
 export function renderOpenGridBenchmarkMarkdown(
@@ -969,7 +967,7 @@ export function renderOpenGridBenchmarkMarkdown(
     '',
     '## Fixtures',
     '',
-    '| Fixture | Variant | Grid | Screw mode | Connector | Custom intersections |',
+    '| Fixture | Variant | Grid | Screw mode | Connector | Row × column interval |',
     '| --- | --- | ---: | --- | --- | ---: |',
     ...report.fixtures.map(renderFixtureLine),
     '',

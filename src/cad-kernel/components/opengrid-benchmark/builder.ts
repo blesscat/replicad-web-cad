@@ -1,7 +1,6 @@
 import { type Shape3D } from 'replicad'
 import {
   boundsForOpenGrid,
-  deterministicOpenGridCustomScrewPositions,
   normalizeOpenGridParameters,
   openGridScrewPositionsFor,
   type BoxBounds,
@@ -129,13 +128,6 @@ export function expectedOpenGridBounds(
   request: Pick<OpenGridBenchmarkRequest, 'variant' | 'rows' | 'columns'>,
 ): BoxBounds {
   return boundsForOpenGrid(request)
-}
-
-export function deterministicCustomScrewPositions(
-  rows: number,
-  columns: number,
-): OpenGridScrewPosition[] {
-  return deterministicOpenGridCustomScrewPositions(rows, columns)
 }
 
 export function screwPositionsForRequest(

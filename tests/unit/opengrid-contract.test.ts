@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   boundsForOpenGrid,
-  deterministicOpenGridCustomScrewPositions,
   isOpenGridGenerationSupported,
   openGridConnectorLocationsFor,
   openGridFileName,
@@ -38,7 +37,6 @@ function parameters(
     targetFrameSides: {
       ...OPENGRID_CONFIGURATION.defaultParameters.targetFrameSides,
     },
-    customScrewPositions: [],
     ...overrides,
   }
 }
@@ -76,6 +74,47 @@ describe('OpenGrid contract', () => {
     delete legacy.targetFrameSides
 
     expect(normalizeOpenGridParameters(legacy)).toEqual(parameters())
+  })
+
+  it('retires legacy uniform intervals and custom screw placement', () => {
+    const legacy = {
+      ...parameters(),
+      screwMode: 'custom',
+      screwEvery: 2,
+      customScrewPositions: [{ row: 0, column: 0 }],
+    }
+
+    const normalized = normalizeOpenGridParameters(legacy)
+
+    expect(normalized.screwMode).toBe('none')
+    expect(normalized).not.toHaveProperty('screwEvery')
+    expect(normalized).not.toHaveProperty('customScrewPositions')
+  })
+
+  it('rejects retired screw placement fields at the Worker command boundary', () => {
+    const retiredParameterVariants = [
+      { screwEvery: 2 },
+      { customScrewPositions: [{ row: 0, column: 0 }] },
+      { screwMode: 'custom' },
+    ]
+
+    for (const retiredParameters of retiredParameterVariants) {
+      expect(
+        isWorkerCommand({
+          version: PROTOCOL_VERSION,
+          kind: 'model.generate',
+          requestId: 'legacy-opengrid-generate',
+          operationId: 'legacy-opengrid-operation',
+          generation: 1,
+          modelId: 'opengrid',
+          parameters: {
+            ...parameters(),
+            ...retiredParameters,
+          },
+          previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
+        }),
+      ).toBe(false)
+    }
   })
 
   it('adds a 14 mm extension for each selected half-cell axis', () => {
@@ -498,22 +537,7 @@ describe('OpenGrid contract', () => {
     ])
   })
 
-  it('keeps custom screw positions explicit when half-cell boundaries exist', () => {
-    const centers = openGridScrewCentersFor(
-      parameters({
-        rows: 2,
-        columns: 2,
-        halfCellX: 'right',
-        halfCellY: 'top',
-        screwMode: 'custom',
-        customScrewPositions: [{ row: 0, column: 0 }],
-      }),
-    )
-
-    expect(centers).toEqual([[-7, -7]])
-  })
-
-  it('adds an optional center screw and a centered interval pattern', () => {
+  it('adds an optional center screw and validates its available lattice', () => {
     expect(
       openGridScrewPositionsFor(
         parameters({
@@ -521,36 +545,6 @@ describe('OpenGrid contract', () => {
           columns: 2,
           screwMode: 'none',
           screwCenter: true,
-          screwEvery: 0,
-        }),
-      ),
-    ).toEqual([{ row: 0, column: 0 }])
-
-    expect(
-      openGridScrewPositionsFor(
-        parameters({
-          rows: 5,
-          columns: 5,
-          screwMode: 'none',
-          screwCenter: false,
-          screwEvery: 2,
-        }),
-      ),
-    ).toEqual([
-      { row: 0, column: 0 },
-      { row: 0, column: 2 },
-      { row: 2, column: 0 },
-      { row: 2, column: 2 },
-    ])
-
-    expect(
-      openGridScrewPositionsFor(
-        parameters({
-          rows: 2,
-          columns: 2,
-          screwMode: 'corners',
-          screwCenter: true,
-          screwEvery: 1,
         }),
       ),
     ).toEqual([{ row: 0, column: 0 }])
@@ -573,9 +567,6 @@ describe('OpenGrid contract', () => {
         },
       ],
     })
-    expect(
-      validateOpenGridParameters(parameters({ screwEvery: -1 })).valid,
-    ).toBe(false)
   })
 
   it('selects the nearest upper-left internal intersection for odd grids', () => {
@@ -622,43 +613,7 @@ describe('OpenGrid contract', () => {
     expect(openGridScrewCentersFor(halfCellInput)).toContainEqual([-21, 7])
   })
 
-  it('normalizes custom intersection positions and rejects duplicates or old fields', () => {
-    const validation = validateOpenGridParameters(
-      parameters({
-        rows: 3,
-        columns: 4,
-        screwKind: 'custom',
-        screwMode: 'custom',
-        customScrewPositions: [
-          { row: 1, column: 2 },
-          { row: 0, column: 0 },
-        ],
-      }),
-    )
-    expect(validation.valid).toBe(true)
-    if (validation.valid) {
-      expect(validation.value.customScrewPositions).toEqual([
-        { row: 0, column: 0 },
-        { row: 1, column: 2 },
-      ])
-      expect(openGridScrewPositionsFor(validation.value)).toEqual(
-        validation.value.customScrewPositions,
-      )
-    }
-    expect(
-      validateOpenGridParameters(
-        parameters({
-          rows: 3,
-          columns: 4,
-          screwKind: 'custom',
-          screwMode: 'custom',
-          customScrewPositions: [
-            { row: 0, column: 0 },
-            { row: 0, column: 0 },
-          ],
-        }),
-      ).valid,
-    ).toBe(false)
+  it('rejects legacy screw-kind fields', () => {
     expect(
       validateOpenGridParameters({
         ...parameters(),
@@ -757,9 +712,7 @@ describe('OpenGrid contract', () => {
     }
   })
 
-  it('keeps the official deterministic custom fixture and removes the old block rule', () => {
-    expect(deterministicOpenGridCustomScrewPositions(5, 5)).toHaveLength(4)
-    expect(deterministicOpenGridCustomScrewPositions(10, 10)).toHaveLength(21)
+  it('supports the maximum legal screw lattice', () => {
     const legal = parameters({
       rows: 10,
       columns: 10,
@@ -772,19 +725,19 @@ describe('OpenGrid contract', () => {
   })
 
   it('uses deterministic official filenames and separates invalidate from generate payloads', () => {
-    const custom = parameters({
+    const configured = parameters({
       variant: 'Full',
       rows: 5,
       columns: 5,
       screwKind: 'custom',
-      screwMode: 'custom',
-      customScrewPositions: deterministicOpenGridCustomScrewPositions(5, 5),
+      screwMode: 'by-row-column',
+      screwCenter: true,
     })
-    expect(openGridFileName(custom)).toMatch(
-      /^opengrid-full-5x5-xnone-ynone-custom-custom-corners-enabled-[0-9a-f]{8}\.step$/,
+    expect(openGridFileName(configured)).toMatch(
+      /^opengrid-full-5x5-xnone-ynone-custom-by-row-column-corners-enabled-[0-9a-f]{8}\.step$/,
     )
-    expect(openGridStlFileName(custom)).toMatch(
-      /^opengrid-full-5x5-xnone-ynone-custom-custom-corners-enabled-[0-9a-f]{8}\.stl$/,
+    expect(openGridStlFileName(configured)).toMatch(
+      /^opengrid-full-5x5-xnone-ynone-custom-by-row-column-corners-enabled-[0-9a-f]{8}\.stl$/,
     )
 
     expect(

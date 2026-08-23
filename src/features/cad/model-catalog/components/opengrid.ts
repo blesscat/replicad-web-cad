@@ -2,6 +2,7 @@ import type { ModelParameterValues } from '../../../../cad-contract/units'
 import {
   boundsForOpenGrid,
   isOpenGridParameters,
+  normalizeOpenGridParameters,
   openGridFileName,
   openGridStlFileName,
   OPENGRID_CONFIGURATION,
@@ -10,14 +11,22 @@ import {
 import type { ModelDefinition } from '../types'
 
 function validateOpenGridDefinitionParameters(value: unknown) {
-  const validation = validateOpenGridParameters(value)
-  if (!validation.valid) return validation
-  return {
-    valid: true as const,
-    value: {
-      modelId: 'opengrid' as const,
-      parameters: validation.value,
-    },
+  try {
+    const parameters = normalizeOpenGridParameters(value)
+    return {
+      valid: true as const,
+      value: {
+        modelId: 'opengrid' as const,
+        parameters,
+      },
+    }
+  } catch {
+    const validation = validateOpenGridParameters(value)
+    if (!validation.valid) return validation
+    return {
+      valid: false as const,
+      issues: [{ field: 'parameters', messageId: 'validation.invalid' }],
+    }
   }
 }
 
@@ -55,10 +64,7 @@ export const opengridDefinition: ModelDefinition = {
     summaryKey: 'models.model.opengrid.staticParameters',
     detailsKey: 'models.model.opengrid.parameterDetails',
   },
-  defaultParameters: {
-    ...OPENGRID_CONFIGURATION.defaultParameters,
-    customScrewPositions: [],
-  },
+  defaultParameters: { ...OPENGRID_CONFIGURATION.defaultParameters },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {
     src: '/model-previews/opengrid.png',

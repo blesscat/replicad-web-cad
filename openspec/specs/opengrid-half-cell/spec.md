@@ -85,7 +85,7 @@ A half-cell OpenGrid board MUST use the existing official OpenGrid profile for e
 
 ### Requirement: Half-cell boundary feature placement
 
-OpenGrid generated feature coordinates MUST be derived from the final nominal grid envelope after its selected half-cell extensions are included. Connector locations MUST use the nominal grid outer edge for a selected outer side and MUST include newly eligible half-cell boundary seams on the other selected sides. Generated screw modes MUST include the screw centers introduced by the selected half-cell boundaries. Explicit `custom` screw positions MUST remain unchanged and MUST NOT receive implicit boundary positions. Existing explicit `screwCenter` and `screwEvery` modifiers remain effective when selected; they are not implicit half-cell positions.
+OpenGrid generated feature coordinates MUST be derived from the final nominal grid envelope after its selected half-cell extensions are included. Connector locations MUST use the nominal grid outer edge for a selected outer side and MUST include newly eligible half-cell boundary seams on the other selected sides. Generated screw modes MUST include the screw centers introduced by the selected half-cell boundaries. The explicit `screwCenter` option remains effective when selected; it is not an implicit half-cell position.
 
 When `fitToTarget=true`, the physical target frame MUST be treated as a non-host outer border. It MUST NOT move, duplicate, or add connector and screw locations, and it MUST NOT alter the nominal grid seam coordinate system. All connector and screw cutters MUST still be applied at the final nominal grid level after the complete-cell and half-cell geometry has been fused. Screw cutters MUST be the final OpenGrid feature operation so a hole that crosses a complete-cell / half-cell interface is calculated against the complete resulting solid; the completed feature-cut nominal geometry MUST then be fused with the frame, leaving the frame free of grid features.
 
@@ -98,16 +98,16 @@ When `fitToTarget=true`, the physical target frame MUST be treated as a non-host
 
 #### Scenario: Half-cell generated screw centers
 
-- **WHEN** a non-custom screw mode is enabled on a board with a selected half-cell axis
+- **WHEN** a screw mode is enabled on a board with a selected half-cell axis
 - **THEN** screw centers on the new half-cell boundary MUST be included in the effective generated centers
 - **AND** the cutters MUST remove those holes from the final half-cell geometry
 - **AND** enabling a target frame MUST NOT add screw centers on the physical frame
 
 #### Scenario: Custom screw positions remain explicit
 
-- **WHEN** `screwMode=custom` is selected with a half-cell axis
-- **THEN** the user-provided custom screw positions and any explicitly selected screw modifiers MAY be generated
-- **AND** no implicit half-cell boundary screw centers MAY be added
+- **WHEN** a legacy snapshot contains `screwMode=custom` or explicit custom screw positions together with a half-cell axis
+- **THEN** normalization MUST map the retired mode to `none` and remove the retired positions before geometry generation
+- **AND** no custom or implicit half-cell boundary screw centers MAY be generated from those retired values
 
 ### Requirement: Snap host pitch compatibility
 

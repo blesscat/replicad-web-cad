@@ -6,7 +6,6 @@ import { exportStlBytes, exportStepBytes } from '../../src/cad-kernel/export'
 import { setOC } from 'replicad'
 import { writeFileSync } from 'node:fs'
 import {
-  deterministicOpenGridCustomScrewPositions,
   normalizeOpenGridParameters,
   openGridFileName,
   openGridStlFileName,
@@ -67,8 +66,9 @@ const releaseFixtures: readonly ReleaseFixture[] = [
     columns: 5,
     overrides: {
       screwKind: 'custom',
-      screwMode: 'custom',
-      customScrewPositions: deterministicOpenGridCustomScrewPositions(5, 5),
+      screwMode: 'by-row-column',
+      screwEveryRows: 2,
+      screwEveryColumns: 2,
       connectorHoles: 'none',
     },
   },
@@ -83,16 +83,14 @@ const releaseFixtures: readonly ReleaseFixture[] = [
     },
   },
   {
-    id: 'max-grid-custom',
+    id: 'max-grid-row-column',
     rows: OPENGRID_CONFIGURATION.maxGridCount,
     columns: OPENGRID_CONFIGURATION.maxGridCount,
     overrides: {
       screwKind: 'custom',
-      screwMode: 'custom',
-      customScrewPositions: deterministicOpenGridCustomScrewPositions(
-        OPENGRID_CONFIGURATION.maxGridCount,
-        OPENGRID_CONFIGURATION.maxGridCount,
-      ),
+      screwMode: 'by-row-column',
+      screwEveryRows: 3,
+      screwEveryColumns: 2,
       connectorHoles: 'enabled',
     },
   },
@@ -147,7 +145,6 @@ function parametersFor(
     connectorSides: {
       ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
     },
-    customScrewPositions: [],
     ...fixture.overrides,
   })
 }

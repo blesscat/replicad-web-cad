@@ -67,7 +67,6 @@ function opengridParameters(
     targetFrameSides: {
       ...OPENGRID_CONFIGURATION.defaultParameters.targetFrameSides,
     },
-    customScrewPositions: [],
     ...overrides,
   }
 }
@@ -488,7 +487,7 @@ describe('component parameter store', () => {
     store.dispose()
   })
 
-  it('hydrates legacy OpenGrid snapshots with half-cell and target defaults', () => {
+  it('hydrates legacy OpenGrid snapshots and retires removed screw placement fields', () => {
     const legacy = { ...opengridParameters() } as Record<string, unknown>
     delete legacy.halfCellX
     delete legacy.halfCellY
@@ -497,11 +496,15 @@ describe('component parameter store', () => {
     delete legacy.fitToTarget
     delete legacy.targetFrameShape
     delete legacy.targetFrameSides
+    legacy.screwMode = 'custom'
+    legacy.screwEvery = 2
+    legacy.customScrewPositions = [{ row: 0, column: 0 }]
 
     const storage = createMemoryStorage(createPayload({ opengrid: legacy }))
     const store = createComponentParameterStore({ storage })
 
-    expect(store.get('opengrid')).toMatchObject({
+    const restored = store.get('opengrid')
+    expect(restored).toMatchObject({
       halfCellX: 'none',
       halfCellY: 'none',
       targetWidth: 0,
@@ -514,7 +517,10 @@ describe('component parameter store', () => {
         bottom: true,
         left: true,
       },
+      screwMode: 'none',
     })
+    expect(restored).not.toHaveProperty('screwEvery')
+    expect(restored).not.toHaveProperty('customScrewPositions')
     store.dispose()
   })
 
@@ -529,8 +535,9 @@ describe('component parameter store', () => {
           rows: 5,
           columns: 7,
           screwKind: 'custom',
-          screwMode: 'custom',
-          customScrewPositions: [{ row: 2, column: 4 }],
+          screwMode: 'by-row-column',
+          screwEveryRows: 2,
+          screwEveryColumns: 3,
           connectorHoles: 'enabled',
         }),
         'opengrid-stackable-box': {
@@ -565,8 +572,9 @@ describe('component parameter store', () => {
         rows: 5,
         columns: 7,
         screwKind: 'custom',
-        screwMode: 'custom',
-        customScrewPositions: [{ row: 2, column: 4 }],
+        screwMode: 'by-row-column',
+        screwEveryRows: 2,
+        screwEveryColumns: 3,
         connectorHoles: 'enabled',
       }),
     )
@@ -832,11 +840,7 @@ describe('component parameter store', () => {
           rows: 2,
           columns: 2,
           screwKind: 'custom',
-          screwMode: 'custom',
-          customScrewPositions: [
-            { row: 0, column: 0 },
-            { row: 0, column: 0 },
-          ],
+          screwMode: 'invalid',
           connectorHoles: 'none',
         },
         'opengrid-stackable-box': { x: 0.25, y: 1, height: 10 },
@@ -1116,31 +1120,44 @@ describe('component parameter store', () => {
     store.dispose()
   })
 
-  it('deep-clones OpenGrid custom positions at read and write boundaries', () => {
+  it('deep-clones nested OpenGrid settings at read and write boundaries', () => {
     const storage = createMemoryStorage()
     const store = createComponentParameterStore({ storage })
     const parameters = opengridParameters({
       variant: 'Lite',
       rows: 3,
       columns: 3,
-      screwKind: 'custom',
-      screwMode: 'custom',
-      customScrewPositions: [{ row: 0, column: 0 }],
+      chamferCorners: {
+        topLeft: false,
+        topRight: true,
+        bottomLeft: true,
+        bottomRight: true,
+      },
       connectorHoles: 'enabled',
     })
     expect(store.set('opengrid', parameters)).toBe(true)
-    parameters.customScrewPositions[0].row = 2
+    parameters.chamferCorners.topLeft = true
     const firstRead = store.get('opengrid')
     expect(firstRead).toEqual({
       ...parameters,
-      customScrewPositions: [{ row: 0, column: 0 }],
+      chamferCorners: {
+        topLeft: false,
+        topRight: true,
+        bottomLeft: true,
+        bottomRight: true,
+      },
     })
-    if ('customScrewPositions' in firstRead) {
-      firstRead.customScrewPositions[0].column = 2
+    if ('chamferCorners' in firstRead) {
+      firstRead.chamferCorners.topRight = false
     }
     expect(store.get('opengrid')).toEqual({
       ...parameters,
-      customScrewPositions: [{ row: 0, column: 0 }],
+      chamferCorners: {
+        topLeft: false,
+        topRight: true,
+        bottomLeft: true,
+        bottomRight: true,
+      },
     })
     store.dispose()
   })

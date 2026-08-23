@@ -21,7 +21,6 @@ function opengridParameters(
     connectorSides: {
       ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
     },
-    customScrewPositions: [],
     ...overrides,
   }
 }

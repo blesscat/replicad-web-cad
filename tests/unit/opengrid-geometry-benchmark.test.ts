@@ -12,7 +12,6 @@ import {
   type OpenGridBenchmarkQuality,
 } from '../../src/workers/benchmark/opengrid-geometry'
 import {
-  deterministicCustomScrewPositions,
   expectedOpenGridBounds,
   OPENGRID_BENCHMARK_CONFIGURATION,
   screwPositionsForRequest,
@@ -78,11 +77,11 @@ describe('OpenGrid geometry benchmark contract', () => {
         fixtures
           .filter((fixture) => fixture.variant === variant)
           .map((fixture) => fixture.scaleId),
-      ).toEqual(['1x1', '2x2', '5x5', '10x10', 'max-grid-custom'])
+      ).toEqual(['1x1', '2x2', '5x5', '10x10', 'max-grid-row-column'])
     }
 
     const largest = fixtures.find(
-      (fixture) => fixture.scaleId === 'max-grid-custom',
+      (fixture) => fixture.scaleId === 'max-grid-row-column',
     )
     expect(largest).toBeDefined()
     expect(largest!.request.rows).toBe(
@@ -93,22 +92,23 @@ describe('OpenGrid geometry benchmark contract', () => {
     )
   })
 
-  it('keeps official screw lattices deterministic for none, corners, everywhere, and custom loads', () => {
+  it('keeps supported screw lattices deterministic across benchmark loads', () => {
     const fixtures = createOpenGridBenchmarkFixtures()
     const none = fixtures.find((fixture) => fixture.scaleId === '1x1')!
     const corners = fixtures.find((fixture) => fixture.scaleId === '2x2')!
     const all = fixtures.find((fixture) => fixture.scaleId === '10x10')!
-    const custom = fixtures.find((fixture) => fixture.scaleId === '5x5')!
+    const byRowAndColumn = fixtures.find(
+      (fixture) => fixture.scaleId === '5x5',
+    )!
 
     expect(screwPositionsForRequest(none.request)).toHaveLength(0)
     expect(screwPositionsForRequest(corners.request)).toEqual([
       { row: 0, column: 0 },
     ])
     expect(screwPositionsForRequest(all.request)).toHaveLength(81)
-    expect(screwPositionsForRequest(custom.request)).toEqual(
-      deterministicCustomScrewPositions(5, 5),
-    )
-    expect(custom.request.connectorHoles).toBe('enabled')
+    expect(screwPositionsForRequest(byRowAndColumn.request)).toHaveLength(8)
+    expect(byRowAndColumn.request.screwMode).toBe('by-row-column')
+    expect(byRowAndColumn.request.connectorHoles).toBe('enabled')
     expect(none.request.connectorHoles).toBe('enabled')
     expect(all.request.connectorHoles).toBe('enabled')
   })
