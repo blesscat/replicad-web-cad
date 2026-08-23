@@ -171,7 +171,7 @@ describe('HSW kernel model registration', () => {
         x: 0.5,
         y: 1,
         height: 20,
-        cornerSeatMode: 'hole',
+        cornerSeatMode: 'detachable-corner-seat',
         fullBottomHoleGrid: false,
         basePlateMode: false,
       },
@@ -184,15 +184,19 @@ describe('HSW kernel model registration', () => {
     expect(shape).toMatchObject({ model: 'opengrid-stackable-box' })
     expect(unavailableSnapReferenceLoader).not.toHaveBeenCalled()
     expect(mocks.buildOpenGridStackableBox).toHaveBeenCalledWith(
-      {
+      expect.objectContaining({
         x: 0.5,
         y: 1,
         height: 20,
-        cornerSeatMode: 'hole',
+        cornerSeatMode: 'detachable-corner-seat',
         fullBottomHoleGrid: false,
         basePlateMode: false,
-      },
-      { isGenerationCurrent: undefined },
+      }),
+      expect.objectContaining({
+        isGenerationCurrent: undefined,
+        detachableCornerSeatReference: expect.anything(),
+        detachableCornerSeatHolderReference: expect.anything(),
+      }),
     )
     expect(mocks.buildOpenGridBRep).not.toHaveBeenCalled()
   })
@@ -236,21 +240,25 @@ describe('HSW kernel model registration', () => {
         height: 30,
         thinBottomMode: false,
         bottomPlateMode: false,
-        bottomSeatMode: 'hole',
+        bottomSeatMode: 'detachable-corner-seat',
       },
       context,
     )
 
     expect(shape).toMatchObject({ model: 'opengrid-stackable-cylinder' })
     expect(mocks.buildOpenGridStackableCylinder).toHaveBeenCalledWith(
-      {
+      expect.objectContaining({
         diameter: 56,
         height: 30,
         thinBottomMode: false,
         bottomPlateMode: false,
-        bottomSeatMode: 'hole',
-      },
-      { isGenerationCurrent: undefined },
+        bottomSeatMode: 'detachable-corner-seat',
+      }),
+      expect.objectContaining({
+        isGenerationCurrent: undefined,
+        detachableCornerSeatReference: expect.anything(),
+        detachableCornerSeatHolderReference: expect.anything(),
+      }),
     )
     expect(mocks.buildOpenGridStackableBox).not.toHaveBeenCalled()
     expect(mocks.buildOpenGridBRep).not.toHaveBeenCalled()

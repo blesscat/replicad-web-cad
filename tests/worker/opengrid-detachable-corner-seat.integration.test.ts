@@ -4,7 +4,16 @@ import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { measureVolume, setOC, type Shape3D } from 'replicad'
-import { OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION } from '../../src/cad-contract/units'
+import {
+  OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
+  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+  OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+  openGridStackableBoxSocketCentersFor,
+  openGridStackableCylinderHoleCentersFor,
+} from '../../src/cad-contract/units'
+import { buildOpenGridStackableBox } from '../../src/cad-kernel/components/opengrid-stackable-box/builder'
+import { buildOpenGridStackableCylinder } from '../../src/cad-kernel/components/opengrid-stackable-cylinder/builder'
+import { inspectOpenGridDetachableCornerSeatConsumers } from '../../src/cad-kernel/components/opengrid-locating-assembly/consumer'
 import {
   buildOpenGridDetachableCornerSeatIndicatorCutter,
   buildOpenGridDetachableCornerSeatHolderFromReference,
@@ -120,6 +129,118 @@ afterAll(() => {
 })
 
 describe('OpenGrid detachable corner-seat canonical references', () => {
+  it('builds locking sockets for the Stackable Box and Cylinder consumers', () => {
+    const boxParameters = {
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+      x: 1,
+      y: 1,
+      height: 20,
+      cornerSeatMode: 'detachable-corner-seat' as const,
+      fullBottomHoleGrid: false,
+    }
+    const cylinderParameters = {
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+      diameter: 60,
+      height: 20,
+      bottomSeatMode: 'detachable-corner-seat' as const,
+    }
+    const box = buildOpenGridStackableBox(boxParameters, {
+      detachableCornerSeatReference: maleReference,
+      detachableCornerSeatHolderReference: holderReference,
+    })
+    const cylinder = buildOpenGridStackableCylinder(cylinderParameters, {
+      detachableCornerSeatReference: maleReference,
+      detachableCornerSeatHolderReference: holderReference,
+    })
+    try {
+      const boxRecords = inspectOpenGridDetachableCornerSeatConsumers(
+        box,
+        openGridStackableBoxSocketCentersFor(boxParameters),
+        {
+          detachableCornerSeatReference: maleReference,
+          detachableCornerSeatHolderReference: holderReference,
+        },
+      )
+      const cylinderRecords = inspectOpenGridDetachableCornerSeatConsumers(
+        cylinder,
+        openGridStackableCylinderHoleCentersFor(cylinderParameters),
+        {
+          detachableCornerSeatReference: maleReference,
+          detachableCornerSeatHolderReference: holderReference,
+        },
+      )
+
+      expect(boxRecords).toHaveLength(4)
+      expect(cylinderRecords).toHaveLength(5)
+      expect(
+        [...boxRecords, ...cylinderRecords].every(
+          (record) =>
+            record.socketVoidResidualVolume <=
+              OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.intersectionVolumeTolerance &&
+            record.indicatorResidualVolume <=
+              OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.intersectionVolumeTolerance &&
+            record.maleCollisionVolume <=
+              OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.intersectionVolumeTolerance &&
+            record.roofVolume > 0.001,
+        ),
+      ).toBe(true)
+    } finally {
+      deleteShape(box)
+      deleteShape(cylinder)
+    }
+  }, 120_000)
+
+  it('requires both fixed references before a locking consumer can build', () => {
+    const boxParameters = {
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+      x: 1,
+      y: 1,
+      height: 20,
+      cornerSeatMode: 'detachable-corner-seat' as const,
+    }
+    const cylinderParameters = {
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+      diameter: 60,
+      height: 20,
+      bottomSeatMode: 'detachable-corner-seat' as const,
+    }
+
+    expect(() => buildOpenGridStackableBox(boxParameters)).toThrow(
+      'HOLDER_REFERENCE_MISSING',
+    )
+    expect(() => buildOpenGridStackableCylinder(cylinderParameters)).toThrow(
+      'HOLDER_REFERENCE_MISSING',
+    )
+    expect(() =>
+      buildOpenGridStackableBox(boxParameters, {
+        detachableCornerSeatHolderReference: holderReference,
+      }),
+    ).toThrow('MALE_REFERENCE_MISSING')
+    expect(() =>
+      buildOpenGridStackableCylinder(cylinderParameters, {
+        detachableCornerSeatHolderReference: holderReference,
+      }),
+    ).toThrow('MALE_REFERENCE_MISSING')
+  })
+
+  it('stops before consumer geometry when the generation is stale', () => {
+    const boxParameters = {
+      ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+      x: 1,
+      y: 1,
+      height: 20,
+      cornerSeatMode: 'detachable-corner-seat' as const,
+    }
+
+    expect(() =>
+      buildOpenGridStackableBox(boxParameters, {
+        detachableCornerSeatReference: maleReference,
+        detachableCornerSeatHolderReference: holderReference,
+        isGenerationCurrent: () => false,
+      }),
+    ).toThrow('STALE_GENERATION')
+  })
+
   it('builds the shared 2 mm triangular cutter at the requested recess depth', () => {
     const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
     const cutter = buildOpenGridDetachableCornerSeatIndicatorCutter()

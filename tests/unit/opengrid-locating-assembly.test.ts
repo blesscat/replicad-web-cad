@@ -7,11 +7,20 @@ import {
   PILLAR_CONFIGURATION,
   OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
+  OPENGRID_LOCATING_SEAT_MODES,
 } from '../../src/cad-contract/units'
 import { openGridSnapProfileFor } from '../../src/cad-kernel/components/opengrid-snap/profile'
 import { placeOpenGridDetachableCornerSeatSocketShape } from '../../src/cad-kernel/components/opengrid-locating-assembly/reference'
 
 describe('OpenGrid locating and assembly interface contract', () => {
+  it('publishes the canonical locating seat modes', () => {
+    expect(OPENGRID_LOCATING_SEAT_MODES).toEqual([
+      'none',
+      'detachable-corner-seat',
+      'integrated',
+    ])
+  })
+
   it('publishes the confirmed dimensions and derived openings', () => {
     const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
 

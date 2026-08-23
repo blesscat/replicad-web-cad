@@ -4,6 +4,8 @@ import type { BooleanOperationReporter } from '../../boolean-progress'
 export type Bounds = [[number, number, number], [number, number, number]]
 
 export type OpenGridStackableBoxBuildContext = {
+  detachableCornerSeatReference?: Shape3D
+  detachableCornerSeatHolderReference?: Shape3D
   isGenerationCurrent?: () => boolean
   booleanOperations?: BooleanOperationReporter
 }

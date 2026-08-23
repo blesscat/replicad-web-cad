@@ -40,12 +40,29 @@ const DETACHABLE_HOLDER_HOST_OVERLAP = 0.01
 
 export const OPENGRID_LOCATING_SEAT_MODES = [
   'none',
-  'hole',
+  'detachable-corner-seat',
   'integrated',
 ] as const
 
+export const OPENGRID_LEGACY_LOCATING_SEAT_MODE = 'hole' as const
+
 export type OpenGridLocatingSeatMode =
   (typeof OPENGRID_LOCATING_SEAT_MODES)[number]
+
+export function normalizeOpenGridLocatingSeatMode(
+  value: unknown,
+): OpenGridLocatingSeatMode | undefined {
+  if (value === OPENGRID_LEGACY_LOCATING_SEAT_MODE) {
+    return 'detachable-corner-seat'
+  }
+  if (
+    typeof value === 'string' &&
+    (OPENGRID_LOCATING_SEAT_MODES as readonly string[]).includes(value)
+  ) {
+    return value as OpenGridLocatingSeatMode
+  }
+  return undefined
+}
 
 export const OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION = {
   nominalDiameter: NOMINAL_DIAMETER,

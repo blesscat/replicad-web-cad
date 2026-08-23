@@ -39,7 +39,7 @@
   }
 
   type BoxMode = 'default' | 'thin-shell'
-  type BoxSeatMode = 'none' | 'hole' | 'integrated'
+  type BoxSeatMode = 'none' | 'detachable-corner-seat' | 'integrated'
 
   const seatModeOptions: ReadonlyArray<{
     value: BoxSeatMode
@@ -52,9 +52,9 @@
       descriptionKey: 'panel.seat.noneDescription',
     },
     {
-      value: 'hole',
-      labelKey: 'panel.seat.hole',
-      descriptionKey: 'panel.seat.holeDescription',
+      value: 'detachable-corner-seat',
+      labelKey: 'panel.seat.detachableCornerSeat',
+      descriptionKey: 'panel.seat.detachableCornerSeatDescription',
     },
     {
       value: 'integrated',
@@ -66,7 +66,7 @@
   function seatModeForRawParameters(): BoxSeatMode {
     const value = rawParameters.cornerSeatMode
     if (value === 'none' || value === 'integrated') return value
-    return 'hole'
+    return 'detachable-corner-seat'
   }
 
   function handleSeatModeChange(event: Event): void {

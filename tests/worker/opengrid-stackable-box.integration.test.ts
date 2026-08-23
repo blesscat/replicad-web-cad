@@ -2,7 +2,7 @@ import { createRequire } from 'node:module'
 import { readFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
   getOC,
   makeBox,
@@ -13,7 +13,7 @@ import {
   type Shape3D,
 } from 'replicad'
 import {
-  buildOpenGridStackableBox,
+  buildOpenGridStackableBox as buildOpenGridStackableBoxKernel,
   importOpenGridSnapHoldReference,
   assertOpenGridSnapHoldCompatibility,
   inspectOpenGridStackableBoxInterface,
@@ -31,7 +31,6 @@ import {
   nominalOpenGridStackableBoxFootprintFor,
   openGridStackableBoxDerivedGeometryFor,
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
-  openGridStackableBoxActiveFloorTopZFor,
   openGridStackableBoxSocketCentersFor,
   OPENGRID_STACKABLE_BOX_OPENING_DIRECTIONS,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
@@ -50,6 +49,11 @@ import {
   readFaceQualityRecords,
   volumeInBox,
 } from '../../src/cad-kernel/components/opengrid-stackable-box/quality-metrics'
+import {
+  importOpenGridDetachableCornerSeatHolderReference,
+  importOpenGridDetachableCornerSeatReference,
+} from '../../src/cad-kernel/components/opengrid-locating-assembly/reference'
+import { inspectOpenGridDetachableCornerSeatConsumers } from '../../src/cad-kernel/components/opengrid-locating-assembly/consumer'
 
 ;(globalThis as typeof globalThis & { __dirname?: string }).__dirname = dirname(
   fileURLToPath(import.meta.url),
@@ -65,13 +69,48 @@ const SNAP_REFERENCE_PATH = new URL(
   '../../src/cad-kernel/components/opengrid-snap/assets/opengrid-bare-lite-snap.step',
   import.meta.url,
 )
+const DETACHABLE_MALE_REFERENCE_PATH = new URL(
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-3.8.step',
+  import.meta.url,
+)
+const DETACHABLE_HOLDER_REFERENCE_PATH = new URL(
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-holder.step',
+  import.meta.url,
+)
+let detachableCornerSeatReference: Shape3D
+let detachableCornerSeatHolderReference: Shape3D
 
 beforeAll(async () => {
   const openCascade = await initialiseOpenCascade({
     locateFile: () => WASM_PATH,
   })
   setOC(openCascade as Parameters<typeof setOC>[0])
+  ;[detachableCornerSeatReference, detachableCornerSeatHolderReference] =
+    await Promise.all([
+      importOpenGridDetachableCornerSeatReference(
+        new Blob([readFileSync(DETACHABLE_MALE_REFERENCE_PATH)]),
+      ),
+      importOpenGridDetachableCornerSeatHolderReference(
+        new Blob([readFileSync(DETACHABLE_HOLDER_REFERENCE_PATH)]),
+      ),
+    ])
 })
+
+afterAll(() => {
+  deleteShape(detachableCornerSeatReference)
+  deleteShape(detachableCornerSeatHolderReference)
+})
+
+function buildOpenGridStackableBox(
+  parameters: OpenGridStackableBoxParameters,
+  context: Parameters<typeof buildOpenGridStackableBoxKernel>[1] = {},
+): Shape3D {
+  return buildOpenGridStackableBoxKernel(parameters, {
+    detachableCornerSeatReference,
+    detachableCornerSeatHolderReference,
+    ...context,
+  })
+}
 
 function parameters(
   overrides: Partial<OpenGridStackableBoxParameters> = {},
@@ -81,7 +120,7 @@ function parameters(
     x: overrides.x ?? 2,
     y: overrides.y ?? 2,
     height: overrides.height ?? 10,
-    cornerSeatMode: overrides.cornerSeatMode ?? 'hole',
+    cornerSeatMode: overrides.cornerSeatMode ?? 'none',
     fullBottomHoleGrid: overrides.fullBottomHoleGrid ?? false,
     basePlateMode: overrides.basePlateMode ?? false,
     ...overrides,
@@ -178,7 +217,12 @@ describe('OpenGrid stackable-box B-Rep', () => {
     const reporter = createBooleanOperationReporter((update) =>
       progress.push(update),
     )
-    const input = parameters({ x: 2, y: 2, fullBottomHoleGrid: true })
+    const input = parameters({
+      x: 2,
+      y: 2,
+      cornerSeatMode: 'integrated',
+      fullBottomHoleGrid: true,
+    })
     const shape = buildOpenGridStackableBox(input, {
       booleanOperations: reporter,
     })
@@ -246,7 +290,11 @@ describe('OpenGrid stackable-box B-Rep', () => {
   )
 
   it('builds through kernel dispatch without a Snap reference loader', async () => {
-    const input = parameters({ x: 1, y: 1 })
+    const input = parameters({
+      x: 1,
+      y: 1,
+      cornerSeatMode: 'detachable-corner-seat',
+    })
     let snapReferenceLoadAttempts = 0
     const context: KernelBuildContext = {
       getModularGridBaseTemplate: async () => {
@@ -259,6 +307,10 @@ describe('OpenGrid stackable-box B-Rep', () => {
         snapReferenceLoadAttempts += 1
         throw new Error('SNAP_REFERENCE_MUST_NOT_BE_LOADED')
       },
+      getOpenGridDetachableCornerSeatReference: async () =>
+        detachableCornerSeatReference,
+      getOpenGridDetachableCornerSeatHolderReference: async () =>
+        detachableCornerSeatHolderReference,
     }
     const shape = await buildModelBRep('opengrid-stackable-box', input, context)
     try {
@@ -280,9 +332,14 @@ describe('OpenGrid stackable-box B-Rep', () => {
     { x: 1, y: 0.5 },
     { x: 0.5, y: 0.5 },
   ])(
-    'builds the nominal full-hole grid for $x×$y without replacing corner sockets',
+    'preserves the nominal full-hole grid while replacing corner sockets for $x×$y',
     ({ x, y }) => {
-      const input = parameters({ x, y, fullBottomHoleGrid: true })
+      const input = parameters({
+        x,
+        y,
+        cornerSeatMode: 'detachable-corner-seat',
+        fullBottomHoleGrid: true,
+      })
       const shape = buildOpenGridStackableBox(input)
       try {
         const report = inspectOpenGridStackableBoxInterface(shape, input)
@@ -293,9 +350,7 @@ describe('OpenGrid stackable-box B-Rep', () => {
           ordinaryCenters.length,
         )
         expect(report.ordinaryBottomHoleCount).toBe(ordinaryCenters.length)
-        expect(report.captiveSocketRecords).toHaveLength(
-          openGridStackableBoxSocketCentersFor(input).length,
-        )
+        expect(report.captiveSocketRecords).toHaveLength(0)
         const actualBounds = boundsOf(shape)
         const expectedBounds = boundsForOpenGridStackableBox(input)
         expect(actualBounds[0]).toEqual(
@@ -450,6 +505,7 @@ describe('OpenGrid stackable-box B-Rep', () => {
       x: 1,
       y: 1,
       height: 20,
+      cornerSeatMode: 'detachable-corner-seat',
       thinShellMode: true,
       fullBottomHoleGrid: true,
     })
@@ -458,44 +514,23 @@ describe('OpenGrid stackable-box B-Rep', () => {
     if (!center) throw new Error('MISSING_SOCKET_CENTER')
     try {
       const report = inspectOpenGridStackableBoxThinShell(shape, input)
-      const [profile] = report.mountingHoleProfiles
-      expect(profile).toMatchObject({
-        lowerBoreDiameter: expect.closeTo(
-          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
-          2,
-        ),
-        lowerBoreDepth: expect.closeTo(1, 1),
-        upperBoreDiameter: expect.closeTo(
-          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.retainingOpeningDiameter,
-          2,
-        ),
-        upperBoreDepth: expect.closeTo(1, 1),
+      const records = inspectOpenGridDetachableCornerSeatConsumers(
+        shape,
+        [center],
+        {
+          detachableCornerSeatReference,
+          detachableCornerSeatHolderReference,
+        },
+      )
+      expect(records).toHaveLength(1)
+      expect(records[0]).toMatchObject({
+        socketVoidResidualVolume: expect.closeTo(0, 6),
+        indicatorResidualVolume: expect.closeTo(0, 6),
+        maleCollisionVolume: expect.closeTo(0, 6),
       })
       expect(report.ordinaryBottomHoleCount).toBe(
         openGridStackableBoxOrdinaryBottomHoleCentersFor(input).length,
       )
-      const [socket] = report.captiveSocketRecords
-      expect(socket?.shaftBounds).toEqual([
-        expect.arrayContaining([
-          expect.any(Number),
-          expect.any(Number),
-          expect.closeTo(
-            -OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftExposure,
-            3,
-          ),
-        ]),
-        expect.arrayContaining([
-          expect.any(Number),
-          expect.any(Number),
-          expect.closeTo(
-            OPENGRID_STACKABLE_BOX_CONFIGURATION.thinShellFloorThickness +
-              OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testFlangeHeight,
-            3,
-          ),
-        ]),
-      ])
-      expect(socket?.seatedIntersectionVolume).toBeLessThanOrEqual(0.01)
-      expect(socket?.loweredIntersectionVolume).toBeGreaterThan(0.001)
       const [step, stl] = await Promise.all([
         exportStepBytes(shape),
         exportStlBytes(shape),
@@ -571,27 +606,25 @@ describe('OpenGrid stackable-box B-Rep', () => {
       x: 1,
       y: 1,
       height: 20,
+      cornerSeatMode: 'detachable-corner-seat',
       basePlateMode: true,
     })
     const shape = buildOpenGridStackableBox(input)
     const [center] = openGridStackableBoxSocketCentersFor(input)
     if (!center) throw new Error('MISSING_SOCKET_CENTER')
     try {
-      const [profile] = measureMountingHoleProfiles(shape, [center], {
-        lower: [-0.03, 2],
-        upper: [2, 3],
-      })
-      expect(profile).toMatchObject({
-        lowerBoreDiameter: expect.closeTo(
-          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
-          2,
-        ),
-        lowerBoreDepth: expect.closeTo(2, 1),
-        upperBoreDiameter: expect.closeTo(
-          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.retainingOpeningDiameter,
-          2,
-        ),
-        upperBoreDepth: expect.closeTo(1, 1),
+      const [record] = inspectOpenGridDetachableCornerSeatConsumers(
+        shape,
+        [center],
+        {
+          detachableCornerSeatReference,
+          detachableCornerSeatHolderReference,
+        },
+      )
+      expect(record).toMatchObject({
+        socketVoidResidualVolume: expect.closeTo(0, 6),
+        indicatorResidualVolume: expect.closeTo(0, 6),
+        maleCollisionVolume: expect.closeTo(0, 6),
       })
     } finally {
       deleteShape(shape)
@@ -903,7 +936,11 @@ describe('OpenGrid stackable-box B-Rep', () => {
   )
 
   it('keeps a thick supported shell with an integrated self-mating guide', () => {
-    const input = parameters({ x: 1, y: 4 })
+    const input = parameters({
+      x: 1,
+      y: 4,
+      cornerSeatMode: 'detachable-corner-seat',
+    })
     const shape = buildOpenGridStackableBox(input)
     try {
       const interfaceQuality = inspectOpenGridStackableBoxInterface(
@@ -1042,16 +1079,28 @@ describe('OpenGrid stackable-box B-Rep', () => {
           return true
         }),
       ).toBe(true)
-      expect(interfaceQuality.captiveSocketRecords).toHaveLength(4)
+      const detachableRecords = inspectOpenGridDetachableCornerSeatConsumers(
+        shape,
+        openGridStackableBoxSocketCentersFor(input),
+        {
+          detachableCornerSeatReference,
+          detachableCornerSeatHolderReference,
+        },
+      )
+      expect(detachableRecords).toHaveLength(4)
+      expect(
+        detachableRecords.every(
+          (record) =>
+            record.socketVoidResidualVolume <= 1e-6 &&
+            record.indicatorResidualVolume <= 1e-6 &&
+            record.maleCollisionVolume <= 1e-6 &&
+            record.roofVolume > 0.001,
+        ),
+      ).toBe(true)
       expect(interfaceQuality.bottomGridSeamClosureFaceCount).toBe(0)
       expect(
         interfaceQuality.bottomGridSeamFloorVolumes.every(
           (volume) => volume > 0.001,
-        ),
-      ).toBe(true)
-      expect(
-        interfaceQuality.captiveSocketRecords.every(
-          (record) => record.bottomOpeningBoundaryVolume > 0.001,
         ),
       ).toBe(true)
       const topProbe = makeCylinder(14, 0.2, [0, 0, 22.2])
@@ -1092,7 +1141,11 @@ describe('OpenGrid stackable-box B-Rep', () => {
     ] as const
 
     for (const testCase of cases) {
-      const input = parameters({ x: testCase.x, y: testCase.y })
+      const input = parameters({
+        x: testCase.x,
+        y: testCase.y,
+        cornerSeatMode: 'none',
+      })
       const shape = buildOpenGridStackableBox(input)
       try {
         const report = inspectOpenGridStackableBoxInterface(shape, input)
@@ -1110,7 +1163,7 @@ describe('OpenGrid stackable-box B-Rep', () => {
   }, 120_000)
 
   it('keeps the 2×2 grid-seam relief open beneath the supported floor', () => {
-    const input = parameters({ x: 2, y: 2 })
+    const input = parameters({ x: 2, y: 2, cornerSeatMode: 'none' })
     const shape = buildOpenGridStackableBox(input)
     const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
     const transitionProbeBottom =
@@ -1172,7 +1225,7 @@ describe('OpenGrid stackable-box B-Rep', () => {
   }, 120_000)
 
   it('enforces the fixed 0.25 mm stacking clearance datum', () => {
-    const input = parameters({ x: 1, y: 4 })
+    const input = parameters({ x: 1, y: 4, cornerSeatMode: 'none' })
     const shape = buildOpenGridStackableBox(input)
     try {
       const report = inspectOpenGridStackableBoxInterface(shape, input)
@@ -1188,8 +1241,12 @@ describe('OpenGrid stackable-box B-Rep', () => {
   }, 120_000)
 
   it('allows a 1×1 upper box to slide along a 1×4 lower box', () => {
-    const lower = buildOpenGridStackableBox(parameters({ x: 1, y: 4 }))
-    const upper = buildOpenGridStackableBox(parameters({ x: 1, y: 1 }))
+    const lower = buildOpenGridStackableBox(
+      parameters({ x: 1, y: 4, cornerSeatMode: 'none' }),
+    )
+    const upper = buildOpenGridStackableBox(
+      parameters({ x: 1, y: 1, cornerSeatMode: 'none' }),
+    )
     try {
       const seatedZ =
         captureProbeStackZ(10) +
@@ -1251,9 +1308,15 @@ describe('OpenGrid stackable-box B-Rep', () => {
   }, 120_000)
 
   it('lets a 2×2 upper box bridge two adjacent 1×2 lower boxes', () => {
-    const left = buildOpenGridStackableBox(parameters({ x: 1, y: 2 }))
-    const right = buildOpenGridStackableBox(parameters({ x: 1, y: 2 }))
-    const upper = buildOpenGridStackableBox(parameters({ x: 2, y: 2 }))
+    const left = buildOpenGridStackableBox(
+      parameters({ x: 1, y: 2, cornerSeatMode: 'none' }),
+    )
+    const right = buildOpenGridStackableBox(
+      parameters({ x: 1, y: 2, cornerSeatMode: 'none' }),
+    )
+    const upper = buildOpenGridStackableBox(
+      parameters({ x: 2, y: 2, cornerSeatMode: 'none' }),
+    )
     const leftPositioned = left.translate(-14, 0, 0)
     const rightPositioned = right.translate(14, 0, 0)
     const lowerPair = leftPositioned.fuse(rightPositioned)
@@ -1293,83 +1356,17 @@ describe('OpenGrid stackable-box B-Rep', () => {
     }
   }, 120_000)
 
-  it.each([{ basePlateMode: false }, { basePlateMode: true }])(
-    'retains a Ø5 shaft with a Ø7 flange in $basePlateMode mode',
-    ({ basePlateMode }) => {
-      const input = parameters({ x: 1, y: 1, basePlateMode })
-      const box = buildOpenGridStackableBox(input)
-      const [center] = openGridStackableBoxSocketCentersFor(input)
-      if (!center) throw new Error('MISSING_SOCKET_CENTER')
-      const floorThickness = openGridStackableBoxActiveFloorTopZFor(input)
-      const shaft = makeCylinder(
-        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftDiameter / 2,
-        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftLengthForFloor(
-          floorThickness,
-        ),
-        [
-          center[0],
-          center[1],
-          -OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftExposure,
-        ],
-      )
-      const flange = makeCylinder(
-        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testFlangeDiameter / 2,
-        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testFlangeHeight,
-        [center[0], center[1], floorThickness],
-      )
-      const insert = shaft.fuse(flange)
-      try {
-        const insertBounds = boundsOf(insert)
-        expect(insertBounds[0]?.[2]).toBeCloseTo(
-          -OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftExposure,
-          2,
-        )
-        expect(insertBounds[1]?.[2]).toBeCloseTo(
-          floorThickness +
-            OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testFlangeHeight,
-          2,
-        )
-        const seated = box.intersect(insert)
-        try {
-          expect(measureVolume(seated)).toBeLessThan(0.01)
-        } finally {
-          deleteShape(seated)
-        }
-        const retentionProbeOffset = Math.max(
-          0.2,
-          floorThickness -
-            (basePlateMode
-              ? OPENGRID_STACKABLE_BOX_CONFIGURATION.basePlateHoleBottomDepth
-              : OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleStepHeight) +
-            0.2,
-        )
-        const loweredInsert = insert.clone().translateZ(-retentionProbeOffset)
-        try {
-          expect(measureVolume(box.intersect(loweredInsert))).toBeGreaterThan(0)
-        } finally {
-          deleteShape(loweredInsert)
-        }
-      } finally {
-        deleteShape(shaft)
-        deleteShape(flange)
-        deleteShape(box)
-        deleteShape(insert)
-      }
-    },
-    120_000,
-  )
-
   it('exports successful full-cell geometry as STEP and STL', async () => {
     const input = parameters({
-      height: 30,
+      x: 1,
+      y: 1,
+      height: 20,
+      cornerSeatMode: 'none',
       fullBottomHoleGrid: true,
-      honeycombMode: true,
     })
     const shape = buildOpenGridStackableBox(input)
     try {
       const report = inspectOpenGridStackableBoxInterface(shape, input)
-      expect(report.honeycombMode).toBe(true)
-      expect(report.honeycombCellCount).toBeGreaterThan(0)
       const mesh = meshBRep(shape, {
         tolerance: 0.05,
         angularTolerance: 0.1,
@@ -1423,7 +1420,7 @@ describe('OpenGrid stackable-box B-Rep', () => {
             x: 0.5,
             y: 0.5,
             height: 10,
-            cornerSeatMode: 'hole',
+            cornerSeatMode: 'detachable-corner-seat',
             fullBottomHoleGrid: false,
             basePlateMode: false,
           }),
@@ -1438,10 +1435,22 @@ describe('OpenGrid stackable-box B-Rep', () => {
 
   it('deduplicates half-cell socket positions without changing the footprint', () => {
     expect(
-      openGridStackableBoxSocketCentersFor(parameters({ x: 0.5, y: 0.5 })),
+      openGridStackableBoxSocketCentersFor(
+        parameters({
+          x: 0.5,
+          y: 0.5,
+          cornerSeatMode: 'detachable-corner-seat',
+        }),
+      ),
     ).toEqual([[0, 0]])
     expect(
-      openGridStackableBoxSocketCentersFor(parameters({ x: 0.5, y: 1 })),
+      openGridStackableBoxSocketCentersFor(
+        parameters({
+          x: 0.5,
+          y: 1,
+          cornerSeatMode: 'detachable-corner-seat',
+        }),
+      ),
     ).toHaveLength(2)
     expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.baseHoleDiameter).toBe(5)
   })

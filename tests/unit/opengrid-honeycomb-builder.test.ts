@@ -672,10 +672,12 @@ describe('OpenGrid honeycomb material-saving builders', () => {
   it('removes material at default floor-cell centers while keeping hole keep-outs', () => {
     const boxParameters = {
       ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+      cornerSeatMode: 'none' as const,
       honeycombMode: true,
     }
     const cylinderParameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+      bottomSeatMode: 'none' as const,
       honeycombMode: true,
     }
     const box = remember(buildOpenGridStackableBox(boxParameters))
@@ -721,6 +723,7 @@ describe('OpenGrid honeycomb material-saving builders', () => {
   it('materializes bottom openings in every usable default cylinder quadrant', () => {
     const parameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+      bottomSeatMode: 'integrated' as const,
       honeycombMode: true,
     }
     const cutters =
@@ -772,6 +775,7 @@ describe('OpenGrid honeycomb material-saving builders', () => {
   it('clips cylinder-bottom boundary cells inside the protected flat-floor frame', () => {
     const parameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+      bottomSeatMode: 'none' as const,
       honeycombMode: true,
     }
     const cutters =
@@ -838,6 +842,7 @@ describe('OpenGrid honeycomb material-saving builders', () => {
   it('materializes unobstructed cylinder side rows across the periodic seam', () => {
     const parameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+      bottomSeatMode: 'none' as const,
       honeycombMode: true,
     }
     const cutters =
@@ -930,22 +935,28 @@ describe('OpenGrid honeycomb material-saving builders', () => {
     const box = remember(
       buildOpenGridStackableBox({
         ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+        cornerSeatMode: 'none',
         honeycombMode: true,
       }),
     )
     const boxBaseline = remember(
-      buildOpenGridStackableBox(OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS),
+      buildOpenGridStackableBox({
+        ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+        cornerSeatMode: 'none',
+      }),
     )
     const cylinder = remember(
       buildOpenGridStackableCylinder({
         ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+        bottomSeatMode: 'none',
         honeycombMode: true,
       }),
     )
     const cylinderBaseline = remember(
-      buildOpenGridStackableCylinder(
-        OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      ),
+      buildOpenGridStackableCylinder({
+        ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+        bottomSeatMode: 'none',
+      }),
     )
 
     expect(measureVolume(box)).toBeLessThan(measureVolume(boxBaseline))
@@ -966,6 +977,7 @@ describe('OpenGrid honeycomb material-saving builders', () => {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       diameter: 100,
       height: 60,
+      bottomSeatMode: 'none' as const,
       honeycombMode: true,
     }
     const smallBox = {
@@ -979,6 +991,7 @@ describe('OpenGrid honeycomb material-saving builders', () => {
       ...cylinder,
       diameter: 20,
       height: 10,
+      bottomSeatMode: 'none' as const,
     }
 
     const boxCellCount = openGridStackableBoxHoneycombCellCountFor(box)
@@ -992,7 +1005,12 @@ describe('OpenGrid honeycomb material-saving builders', () => {
       0,
     )
 
-    const smallBoxShape = remember(buildOpenGridStackableBox(smallBox))
+    const smallBoxShape = remember(
+      buildOpenGridStackableBox({
+        ...smallBox,
+        cornerSeatMode: 'none',
+      }),
+    )
     const smallCylinderShape = remember(
       buildOpenGridStackableCylinder(smallCylinder),
     )

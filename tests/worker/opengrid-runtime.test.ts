@@ -114,7 +114,7 @@ function stackableBoxGenerateCommand(
       x: 0.5,
       y: 1.5,
       height: 20,
-      cornerSeatMode: 'hole',
+      cornerSeatMode: 'detachable-corner-seat',
       fullBottomHoleGrid: false,
       basePlateMode: false,
     },
@@ -506,7 +506,7 @@ describe('OpenGrid Worker runtime', () => {
           x: 0.5,
           y: 1.5,
           height: 20,
-          cornerSeatMode: 'hole',
+          cornerSeatMode: 'detachable-corner-seat',
           fullBottomHoleGrid: true,
           basePlateMode: false,
         },
@@ -520,7 +520,7 @@ describe('OpenGrid Worker runtime', () => {
         x: 0.5,
         y: 1.5,
         height: 20,
-        cornerSeatMode: 'hole',
+        cornerSeatMode: 'detachable-corner-seat',
         fullBottomHoleGrid: true,
         basePlateMode: false,
       },
@@ -560,7 +560,7 @@ describe('OpenGrid Worker runtime', () => {
       x: 0.5,
       y: 1.5,
       height: 20,
-      cornerSeatMode: 'hole',
+      cornerSeatMode: 'detachable-corner-seat',
       fullBottomHoleGrid: true,
       basePlateMode: false,
     })
@@ -687,13 +687,15 @@ describe('OpenGrid Worker runtime', () => {
     expect(events).toContainEqual(
       expect.objectContaining({
         kind: 'export.ready',
-        fileName: 'opengrid-stackable-box-3x3-h60-seats-hole-honeycomb.step',
+        fileName:
+          'opengrid-stackable-box-3x3-h60-seats-detachable-corner-seat-honeycomb.step',
       }),
     )
     expect(events).toContainEqual(
       expect.objectContaining({
         kind: 'export.ready',
-        fileName: 'opengrid-stackable-box-3x3-h60-seats-hole-honeycomb.stl',
+        fileName:
+          'opengrid-stackable-box-3x3-h60-seats-detachable-corner-seat-honeycomb.stl',
       }),
     )
   })
@@ -933,7 +935,7 @@ describe('OpenGrid Worker runtime', () => {
           x: 0.25,
           y: 1.5,
           height: 20,
-          cornerSeatMode: 'hole',
+          cornerSeatMode: 'detachable-corner-seat',
           fullBottomHoleGrid: false,
           basePlateMode: false,
         },
@@ -986,7 +988,7 @@ describe('OpenGrid Worker runtime', () => {
           x: 1,
           y: 1,
           height: 20,
-          cornerSeatMode: 'hole',
+          cornerSeatMode: 'detachable-corner-seat',
           fullBottomHoleGrid: false,
           basePlateMode: false,
         },

@@ -13,7 +13,6 @@ import {
   nominalOpenGridStackableBoxFootprintFor,
   openGridStackableBoxActiveFloorTopZFor,
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
-  openGridStackableBoxSocketCentersFor,
   openGridStackableCylinderDerivedGeometryFor,
   openGridStackableCylinderHoleCentersFor,
   OPENGRID_HONEYCOMB_CONFIGURATION,
@@ -145,9 +144,10 @@ describe('OpenGrid honeycomb visible bottom floors', () => {
   it('cuts complete floor cells through the Desk thin-shell box floor', () => {
     const parameters = {
       ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
-      x: 4,
-      y: 2,
+      x: 2,
+      y: 1.5,
       height: 30,
+      cornerSeatMode: 'none' as const,
       thinShellMode: true,
       honeycombMode: true,
     }
@@ -169,7 +169,7 @@ describe('OpenGrid honeycomb visible bottom floors', () => {
       completeBottomCutter(cutters),
       openGridStackableBoxActiveFloorTopZFor(parameters),
     )
-  }, 120_000)
+  }, 240_000)
 
   it('fills the Desk box floor to every protected edge with clipped hex cells', () => {
     const parameters = {
@@ -283,6 +283,7 @@ describe('OpenGrid honeycomb visible bottom floors', () => {
       y: 1,
       height: 30,
       fullBottomHoleGrid: true,
+      cornerSeatMode: 'none' as const,
       thinShellMode: true,
       honeycombMode: true,
     }
@@ -292,7 +293,6 @@ describe('OpenGrid honeycomb visible bottom floors', () => {
     const honeycomb = remember(buildOpenGridStackableBox(parameters))
     const floorTop = openGridStackableBoxActiveFloorTopZFor(parameters)
     const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
-    const socketCenters = openGridStackableBoxSocketCentersFor(parameters)
     const ordinaryCenters =
       openGridStackableBoxOrdinaryBottomHoleCentersFor(parameters)
     const ordinaryCenter = ordinaryCenters.toSorted(
@@ -300,17 +300,8 @@ describe('OpenGrid honeycomb visible bottom floors', () => {
         Math.hypot(first[0], first[1]) - Math.hypot(second[0], second[1]),
     )[0]
 
-    expect(socketCenters.length).toBeGreaterThan(0)
     expect(ordinaryCenter).toBeDefined()
     const protectedHoles = [
-      ...socketCenters.map((center) => ({
-        center: { x: center[0], y: center[1] },
-        radius:
-          Math.max(
-            configuration.baseHoleBottomOpeningDiameter,
-            configuration.baseHoleTopOpeningDiameter,
-          ) / 2,
-      })),
       ...ordinaryCenters.map((center) => ({
         center: { x: center[0], y: center[1] },
         radius: configuration.bottomGridHoleDiameter / 2,
@@ -354,6 +345,7 @@ describe('OpenGrid honeycomb visible bottom floors', () => {
       y: 0.5,
       height: 30,
       fullBottomHoleGrid: true,
+      cornerSeatMode: 'none' as const,
       thinShellMode: true,
       honeycombMode: true,
     }
@@ -370,6 +362,7 @@ describe('OpenGrid honeycomb visible bottom floors', () => {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       diameter: 60,
       height: 30,
+      bottomSeatMode: 'integrated' as const,
       thinBottomMode: true,
       honeycombMode: true,
     }

@@ -1,7 +1,9 @@
 ## Purpose
 
 This capability defines the independently validated OpenGrid stackable-cylinder component, including its typed parameters, printable circular stacking geometry, safe hole layout, lifecycle quality gates, and deterministic exports.
+
 ## Requirements
+
 ### Requirement: OpenGrid stackable-cylinder identity and parameters
 
 The system MUST expose the independently validated
@@ -11,40 +13,56 @@ and route `/cad/opengrid-stackable-cylinder`. Its display name MUST remain
 `Round Box (圓盒)`. The normalized snapshot MUST contain integer `diameter` and
 `height`, boolean `thinBottomMode` and `bottomPlateMode`, enum
 `bottomSeatMode`, and the existing twelve typed opening fields.
-`bottomSeatMode` MUST be exactly `none`, `hole`, or `integrated`, with visible
-labels `無角座`, `角座孔`, and `內建角座` respectively. The numeric ranges,
-opening semantics, profile flags, 1 mm controls, and the mutual exclusion of
-`thinBottomMode` and `bottomPlateMode` MUST remain unchanged.
+`bottomSeatMode` MUST be exactly `none`, `detachable-corner-seat`, or
+`integrated`, with visible labels `無角座`, `鎖定角座`, and `內建角座` respectively.
+The numeric ranges, opening semantics, profile flags, 1 mm controls, and the
+mutual exclusion of `thinBottomMode` and `bottomPlateMode` MUST remain
+unchanged.
 
 The default snapshot MUST remain `diameter=60`, `height=20`,
-`thinBottomMode=false`, `bottomPlateMode=false`, and `bottomSeatMode='hole'`,
-with zero-depth openings, bottom length 1, and angle 90. A legacy
-`bottomHolesEnabled=false/true` value MUST migrate to
-`bottomSeatMode='none'/'hole'`; a missing legacy value MUST migrate to
-`'hole'`. A canonical enum value MUST take precedence over a stale boolean,
-and unsupported enum values MUST be rejected. Existing model identity, route,
-profile, opening, and height contracts MUST remain unchanged.
+`thinBottomMode=false`, `bottomPlateMode=false`, and
+`bottomSeatMode='detachable-corner-seat'`, with zero-depth openings, bottom
+length 1, and angle 90. A legacy `bottomHolesEnabled=false/true` value MUST
+migrate to `bottomSeatMode='none'/'detachable-corner-seat'`; a missing legacy
+value MUST migrate to `'detachable-corner-seat'`. A canonical enum value MUST
+take precedence over a stale boolean, and unsupported enum values MUST be
+rejected. An older persisted `bottomSeatMode='hole'` value MUST be accepted as
+a compatibility alias and normalized to `detachable-corner-seat`. Existing
+model identity, route, profile, opening, and height contracts MUST remain
+unchanged.
 
 #### Scenario: Valid cylinder defaults
 
 - **WHEN** the cylinder route initializes without valid persisted parameters
-- **THEN** the panel MUST select `角座孔`
-- **AND** the normalized snapshot MUST use `bottomSeatMode='hole'`
+- **THEN** the panel MUST select `鎖定角座`
+- **AND** the normalized snapshot MUST use
+  `bottomSeatMode='detachable-corner-seat'`
 - **AND** the existing default shell and opening geometry MUST remain unchanged
 
 #### Scenario: Cylinder seat radio group
 
 - **WHEN** a user selects a locating-seat option
-- **THEN** exactly one of `無角座`, `角座孔`, or `內建角座` MUST be selected
+- **THEN** exactly one of `無角座`, `鎖定角座`, or `內建角座` MUST be selected
 - **AND** the Worker snapshot MUST contain the corresponding enum value
 - **AND** no `bottomHolesEnabled` field MUST be sent in the canonical snapshot
 
 #### Scenario: Legacy cylinder migration
 
 - **WHEN** persistence contains `bottomHolesEnabled=false` or `true`
-- **THEN** hydration MUST produce `bottomSeatMode='none'` or `'hole'`
-- **AND** the old no-hole or stepped-hole geometry MUST be preserved
+- **THEN** hydration MUST produce `bottomSeatMode='none'` or
+  `'detachable-corner-seat'`
+- **AND** the old no-hole or stepped-hole geometry MUST be preserved through
+  the corresponding compatibility mode
 - **AND** a successful update MUST rewrite only the canonical enum field
+
+#### Scenario: Legacy hole mode migration
+
+- **WHEN** persistence contains the former canonical value
+  `bottomSeatMode='hole'`
+- **THEN** hydration MUST normalize it to
+  `bottomSeatMode='detachable-corner-seat'`
+- **AND** a generated cylinder MUST use the locking socket geometry rather
+  than the retired stepped-hole geometry
 
 #### Scenario: Invalid cylinder seat mode
 
@@ -88,79 +106,116 @@ The default and thin modes MUST retain the common printable lower foot bevel and
 
 ### Requirement: Stepped center mounting hole
 
-When `bottomSeatMode='hole'`, every valid cylinder MUST contain the existing
-center floor hole at `(0, 0)` with the profile-specific Ø5/Ø7.05 planar stepped
-sections: 4+1 mm in default mode, 1+1 mm in thin-bottom mode, and 2+1 mm in
-bottom-plate mode. The transition MUST remain a planar shoulder. When
-`bottomSeatMode='none'`, the center and all outer bottom-hole candidates MUST
+When `bottomSeatMode='detachable-corner-seat'`, every valid cylinder MUST
+contain the shared female detachable corner-seat socket at `(0, 0)` with its
+tested retaining geometry and a lock indicator. The socket and indicator MUST
+respect the profile-specific floor thickness and remain compatible with the
+separately printed `opengrid-pillar` male reference. When
+`bottomSeatMode='none'`, the center and all outer bottom-seat candidates MUST
 remain solid. When `bottomSeatMode='integrated'`, the center MUST instead carry
 one fused solid Ø5 mm cylinder exactly 3 mm high from Z=-3 mm through Z=0;
-there MUST be no stepped center hole at that position.
+there MUST be no detachable socket or stepped center hole at that position.
+
+#### Scenario: Cylinder locking center seat
+
+- **WHEN** a valid cylinder uses `bottomSeatMode='detachable-corner-seat'`
+- **THEN** the center MUST contain one female locking socket at X=0 and Y=0
+- **AND** the socket MUST include its retaining cavity and visible lock
+  indicator without penetrating the protected shell or floor geometry
+- **AND** the socket MUST pass the shared male/female fit probe
 
 #### Scenario: Cylinder hole mode preserves the center socket
 
-- **WHEN** a valid cylinder uses `bottomSeatMode='hole'`
-- **THEN** the center hole MUST retain the selected profile's existing Ø5 mm
-  lower and Ø7.05 mm upper sections
-- **AND** its center MUST remain at X=0 and Y=0
+- **WHEN** a persisted cylinder uses the former `bottomSeatMode='hole'` alias
+- **THEN** validation MUST normalize it to
+  `bottomSeatMode='detachable-corner-seat'`
+- **AND** the center MUST contain the shared female locking socket and
+  indicator rather than the retired stepped-hole sections
 
 #### Scenario: Cylinder no-seat mode is solid
 
 - **WHEN** a valid cylinder uses `bottomSeatMode='none'`
-- **THEN** the bottom MUST remain solid at the center and all outer-hole
+- **THEN** the bottom MUST remain solid at the center and all outer-seat
   candidates
-- **AND** no stepped-hole cylindrical faces or integrated seats may be present
+- **AND** no stepped-hole cylindrical faces, detachable sockets, indicators,
+  or integrated seats may be present
 
 #### Scenario: Cylinder integrated center seat
 
 - **WHEN** a valid cylinder uses `bottomSeatMode='integrated'`
 - **THEN** the center MUST contain a fused Ø5 mm round seat spanning Z=-3 mm to
   Z=0
-- **AND** the center MUST not contain the hole-mode stepped cut
+- **AND** the center MUST not contain a detachable socket or stepped cut
 - **AND** the result MUST remain one valid solid
 
 ### Requirement: Four outer cardinal holes from the 14 mm grid
 
-When `bottomSeatMode='hole'`, the builder MUST retain the existing safe outer
-cardinal calculation and emit only the outermost four positions
-`(±14n,0)` and `(0,±14n)` when the calculated index `n` is at least one. The
-profile-specific outer clearance and thin-floor/ramp rules MUST remain
-unchanged. When `bottomSeatMode='none'`, no outer hole may be emitted. When
-`bottomSeatMode='integrated'`, the same calculated safe positions MUST receive
-fused Ø5 mm × 3 mm seats from Z=-3 mm to Z=0 instead of holes. No diagonal,
-intermediate, or additional positions are permitted in any mode.
+When `bottomSeatMode='detachable-corner-seat'`, the builder MUST retain the
+existing safe outer cardinal calculation and emit only the outermost four
+positions `(±14n,0)` and `(0,±14n)` when the calculated index `n` is at least
+one. Each selected position MUST receive one shared female detachable socket
+and its lock indicator. The profile-specific outer clearance and
+thin-floor/ramp rules MUST remain unchanged. When `bottomSeatMode='none'`, no
+outer seat may be emitted. When `bottomSeatMode='integrated'`, the same
+calculated safe positions MUST receive fused Ø5 mm × 3 mm seats from Z=-3 mm
+to Z=0 instead of locking sockets. No diagonal, intermediate, or additional
+positions are permitted in any mode.
+
+#### Scenario: Locking mode uses the safe cardinal group
+
+- **WHEN** a valid cylinder uses `bottomSeatMode='detachable-corner-seat'`
+  and its diameter fits the first safe outer layer
+- **THEN** it MUST contain exactly the center socket and the four existing
+  cardinal sockets at the calculated 14 mm layer
+- **AND** every socket MUST have one corresponding lock indicator
+- **AND** no diagonal or intermediate socket may be present
 
 #### Scenario: Hole mode uses the safe cardinal group
 
-- **WHEN** a valid cylinder uses `bottomSeatMode='hole'` and its diameter fits
-  the first safe outer layer
-- **THEN** it MUST contain exactly the center hole and the four existing
-  cardinal holes at the calculated 14 mm layer
-- **AND** no diagonal or intermediate hole may be present
+- **WHEN** a persisted cylinder uses the former `bottomSeatMode='hole'` alias
+  and its diameter fits the first safe outer layer
+- **THEN** the alias MUST normalize to
+  `bottomSeatMode='detachable-corner-seat'`
+- **AND** the center and four safe cardinal positions MUST receive the shared
+  female sockets and corresponding indicators
+
+#### Scenario: No-seat mode omits all cardinal seats
+
+- **WHEN** a valid cylinder uses `bottomSeatMode='none'`
+- **THEN** it MUST contain no center or outer bottom seats
+- **AND** no hole-layout failure may be raised solely because seats are absent
 
 #### Scenario: No-seat mode omits all cardinal holes
 
 - **WHEN** a valid cylinder uses `bottomSeatMode='none'`
-- **THEN** it MUST contain no center or outer bottom holes
-- **AND** no hole-layout failure may be raised solely because holes are absent
+- **THEN** it MUST contain no center or outer bottom seat, hole, socket, or
+  indicator
+- **AND** no hole-layout failure may be raised solely because seats are absent
 
 #### Scenario: Integrated mode mirrors the safe positions
 
 - **WHEN** a valid cylinder uses `bottomSeatMode='integrated'`
-- **THEN** every position that would be a safe outer hole in `hole` mode MUST
+- **THEN** every position that would be a safe outer seat in locking mode MUST
   contain one Ø5 mm × 3 mm outward seat
-- **AND** the safe outer index and radial positions MUST be identical to hole
-  mode for the same diameter and profile
+- **AND** the safe outer index and radial positions MUST be identical to
+  locking mode for the same diameter and profile
 
 ### Requirement: Outer-edge hole clearance
 
 The existing outer-edge and thin-bottom ramp clearance calculation MUST apply
-to the position set selected by `bottomSeatMode`. Hole mode MUST validate the
-Ø7.05 mm hole profile as before. Integrated mode MUST validate the Ø5 mm seat
-radius and its fused footprint against the same safe radial positions; its
-3 mm downward extension MUST NOT alter the selected outer index. None mode
-MUST perform no hole-clearance calculation and MUST not create a false failure
-for the solid bottom.
+to the position set selected by `bottomSeatMode`. Locking mode MUST validate the
+full female socket and lock-indicator envelope at each selected position.
+Integrated mode MUST validate the Ø5 mm seat radius and its fused footprint
+against the same safe radial positions; its 3 mm downward extension MUST NOT
+alter the selected outer index. None mode MUST perform no seat-clearance
+calculation and MUST not create a false failure for the solid bottom.
+
+#### Scenario: Safe locking socket placement
+
+- **WHEN** a locking outer position is selected
+- **THEN** the female socket and its indicator MUST remain within the existing
+  safe outer and, for thin-bottom mode, flat-floor/ramp clearances
+- **AND** the socket MUST be cut without changing the cylinder diameter
 
 #### Scenario: Safe integrated seat placement
 
@@ -172,9 +227,10 @@ for the solid bottom.
 #### Scenario: Unsafe layer is skipped in both active modes
 
 - **WHEN** the next 14 mm layer would violate the applicable radial clearance
-- **THEN** neither a hole nor an integrated seat may be generated at that layer
-- **AND** the preceding safe layer or center-only/center-seat layout MUST remain
-  unchanged
+- **THEN** neither a locking socket nor an integrated seat may be generated at
+  that layer
+- **AND** the preceding safe layer or center-only/center-seat layout MUST
+  remain unchanged
 
 ### Requirement: Same-diameter stacking interface
 
@@ -206,10 +262,11 @@ The top outer rim MUST remain square at the nominal outer radius with no added s
 
 The builder MUST reject any result that is empty, not a single valid solid,
 outside its bounds, or invalid for its selected profile, opening, floor, wall,
-stacking, and clearance contract. In `hole` mode it MUST validate the existing
-stepped hole records and compatibility fixture. In `none` mode it MUST require
-zero bottom-hole records and zero integrated-seat records. In `integrated` mode
-it MUST require the expected center-plus-safe-cardinal seat records, validate
+stacking, and clearance contract. In locking mode it MUST validate the
+expected female socket records, lock-indicator records, and male/female fit
+probes at the center and every safe cardinal position. In none mode it MUST
+require zero bottom-seat, socket, and indicator records. In integrated mode it
+MUST require the expected center-plus-safe-cardinal seat records, validate
 their Ø5 mm diameter and 3 mm Z span from -3 to 0, and retain the existing
 shell/opening/stacking checks. The contract bounds MUST use min Z=-3 mm only in
 integrated mode; max Z and XY bounds MUST remain unchanged. Valid results MUST
@@ -223,10 +280,18 @@ remain eligible for preview, STEP export, and binary STL export.
 - **AND** the reported bounds MUST match the selected mode
 - **AND** STEP and STL export MUST be enabled for that revision
 
+#### Scenario: Locking geometry failure does not replace the model
+
+- **WHEN** a socket cut, indicator cut, male/female fit probe, seat dimension,
+  bounds, shell, opening, or stacking quality probe fails
+- **THEN** the candidate MUST be rejected with a diagnosable error
+- **AND** the last valid committed revision MUST remain visible
+- **AND** export MUST remain disabled for the failed snapshot
+
 #### Scenario: Invalid integrated geometry does not replace the model
 
-- **WHEN** a seat fuse, seat dimension, bounds, shell, opening, or stacking
-  quality probe fails
+- **WHEN** an integrated seat fuse, seat dimension, bounds, shell, opening, or
+  stacking quality probe fails
 - **THEN** the candidate MUST be rejected with a diagnosable error
 - **AND** the last valid committed revision MUST remain visible
 - **AND** export MUST remain disabled for the failed snapshot
@@ -235,18 +300,26 @@ remain eligible for preview, STEP export, and binary STL export.
 
 The catalog MUST provide deterministic STEP and STL filenames generated from
 typed normalized parameters. Every filename MUST include exactly one seat
-suffix: `-seats-none`, `-seats-hole`, or `-seats-integrated`, in addition to
-the existing diameter, height, profile, and opening fingerprint identity. The
-suffix MUST be present even for the default mode. Filenames MUST NOT depend on
-raw input formatting and MUST distinguish all three bottom geometries and all
-opening settings.
+suffix: `-seats-none`, `-seats-detachable-corner-seat`, or
+`-seats-integrated`, in addition to the existing diameter, height, profile,
+and opening fingerprint identity. The suffix MUST be present even for the
+default mode. Filenames MUST NOT depend on raw input formatting and MUST
+distinguish all three bottom geometries and all opening settings.
 
 #### Scenario: Cylinder filenames distinguish seat modes
 
 - **WHEN** three cylinders have identical diameter, height, profile, and
   opening values but use the three different seat modes
 - **THEN** their STEP and STL filenames MUST be distinct
-- **AND** each filename MUST contain its corresponding deterministic seat suffix
+- **AND** each filename MUST contain its corresponding deterministic seat
+  suffix
+
+#### Scenario: Locking cylinder export metadata
+
+- **WHEN** a locking-seat cylinder is exported
+- **THEN** both filenames MUST contain `-seats-detachable-corner-seat`
+- **AND** the exported geometry MUST contain the selected female sockets and
+  lock indicators
 
 #### Scenario: Integrated cylinder export metadata
 
@@ -256,7 +329,7 @@ opening settings.
 
 ### Requirement: Bottom-plate profile
 
-When `bottomPlateMode=true`, the builder MUST use a 3 mm floor with the default-style vertical inner wall and original 0.6 mm floor fillet, without an internal ramp; it MUST retain the 2+1 mm stepped hole sections, default-style outer-hole layout, top guide, and same-diameter mating clearance. The bottom-plate profile MUST remove the lower foot geometry below the former Z=2.6 cut line: its outside bottom MUST be a flat circular mating face at radius `R-2.2` on Z=0, and its outer boundary MUST transition directly at 45 degrees to radius `R` before continuing as the straight wall. The bottom-plate mode MUST NOT generate the thin-mode foot bevel or vertical landing, MUST remain one valid B-Rep solid, and MUST remain stackable with another bottom-plate cylinder of the same outer diameter. `thinBottomMode` and `bottomPlateMode` MUST remain mutually exclusive.
+When `bottomPlateMode=true`, the builder MUST use a 3 mm floor with the default-style vertical inner wall and original 0.6 mm floor fillet, without an internal ramp; it MUST retain the selected bottom-seat layout, default-style safe outer-seat positions, top guide, and same-diameter mating clearance. The bottom-plate profile MUST remove the lower foot geometry below the former Z=2.6 cut line: its outside bottom MUST be a flat circular mating face at radius `R-2.2` on Z=0, and its outer boundary MUST transition directly at 45 degrees to radius `R` before continuing as the straight wall. The bottom-plate mode MUST NOT generate the thin-mode foot bevel or vertical landing, MUST remain one valid B-Rep solid, and MUST remain stackable with another bottom-plate cylinder of the same outer diameter. `thinBottomMode` and `bottomPlateMode` MUST remain mutually exclusive.
 
 #### Scenario: Bottom-plate removes the lower foot
 
@@ -271,7 +344,8 @@ When `bottomPlateMode=true`, the builder MUST use a 3 mm floor with the default-
 - **WHEN** a valid cylinder is generated with `bottomPlateMode=true`
 - **THEN** its internal central floor MUST be exactly 3 mm above the outside bottom surface
 - **AND** its internal wall MUST remain vertical with the original 0.6 mm floor fillet and no internal 45-degree ramp
-- **AND** its stepped hole sections MUST remain 2+1 mm, while its outer-hole count MUST match default mode at the same diameter
+- **AND** its selected bottom-seat geometry and safe outer-seat count MUST
+  match the default mode at the same diameter
 - **AND** selecting bottom-plate mode MUST NOT change the existing thin-bottom profile when `thinBottomMode=true` is selected separately
 
 ### Requirement: Four independently configurable top-open side openings
@@ -323,7 +397,7 @@ Each enabled opening MUST be generated from a symmetric local U/V-shaped notch p
 
 ### Requirement: Side-opening safety and existing cylinder preservation
 
-Every enabled opening MUST remain compatible with the active default, thin, or bottom-plate floor profile. Its lowest boundary MUST NOT remove the center floor, stepped-hole bearing floor, bottom protrusion, or lower printable transition. The derived opening width MUST leave valid material between neighboring cardinal openings and MUST preserve the nominal 2 mm wall outside the cut boundaries. The opening feature MUST NOT change the existing 14 mm hole calculation, hole enable switch, or same-diameter-only stacking promise.
+Every enabled opening MUST remain compatible with the active default, thin, or bottom-plate floor profile. Its lowest boundary MUST NOT remove the center floor, bottom-seat bearing floor, bottom protrusion, or lower printable transition. The derived opening width MUST leave valid material between neighboring cardinal openings and MUST preserve the nominal 2 mm wall outside the cut boundaries. The opening feature MUST NOT change the existing 14 mm safe-seat calculation, canonical seat mode, or same-diameter-only stacking promise.
 
 #### Scenario: Opening depth respects the active floor mode
 
@@ -434,11 +508,13 @@ The stackable-cylinder quality gate MUST inspect honeycomb-mode candidates separ
 The CAD workspace MUST bind `/cad/opengrid-stackable-cylinder` exclusively to
 `modelId=opengrid-stackable-cylinder`. The catalog entry MUST expose the
 existing typed diameter, height, profile, and opening controls plus exactly one
-visible locating-seat radio group with `無角座`, `角座孔`, and `內建角座`.
+visible locating-seat radio group with `無角座`, `鎖定角座`, and `內建角座`.
 The visible panel MUST NOT expose `bottomPlateMode` as a selectable profile,
-and MUST NOT expose individual center or outer-hole toggles. The Worker MUST
+and MUST NOT expose individual center or outer-seat toggles. The Worker MUST
 validate the canonical enum and route this model ID to the independent cylinder
-builder without falling through to another model.
+builder without falling through to another model. Locking mode MUST provide
+the detachable male and holder references required by the builder and MUST
+reject generation when those references are unavailable.
 
 #### Scenario: Cylinder route initializes
 
@@ -446,15 +522,16 @@ builder without falling through to another model.
 - **THEN** the workspace MUST initialize with
   `modelId=opengrid-stackable-cylinder`
 - **AND** the first valid generation MUST use valid saved parameters or the
-  defaults, including `bottomSeatMode='hole'` when no seat value exists
+  defaults, including `bottomSeatMode='detachable-corner-seat'` when no seat
+  value exists
 
 #### Scenario: Cylinder seat controls
 
 - **WHEN** a user views the cylinder parameter panel
-- **THEN** it MUST show exactly `無角座`, `角座孔`, and `內建角座` as mutually
+- **THEN** it MUST show exactly `無角座`, `鎖定角座`, and `內建角座` as mutually
   exclusive radio choices
 - **AND** the existing selected profile descriptions MUST remain unchanged
-- **AND** it MUST not show rectangular X/Y, box full-grid, or individual-hole
+- **AND** it MUST not show rectangular X/Y, box full-grid, or individual-seat
   controls
 
 #### Scenario: Cylinder Worker dispatch is component-specific
@@ -464,6 +541,7 @@ builder without falling through to another model.
   builder
 - **AND** a mismatched or unsupported seat value MUST be rejected with a
   diagnosable validation error
+- **AND** a locking request MUST receive both detachable reference loaders
 
 ### Requirement: Cylinder workspace lifecycle and export gates
 

@@ -44,6 +44,7 @@ describe('OpenGrid box honeycomb interfaces', () => {
     const input = {
       ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
       height: 30,
+      cornerSeatMode: 'none' as const,
       fullBottomHoleGrid: true,
       openingPlusXDepth: 6,
       openingPlusXBottomLength: 8,

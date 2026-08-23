@@ -12,6 +12,7 @@ import {
   boundsForOpenGridStackableCylinder,
   openGridStackableCylinderDerivedGeometryFor,
   openGridStackableCylinderHoleCentersFor,
+  OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_HONEYCOMB_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_CONFIGURATION,
@@ -35,10 +36,17 @@ import {
   makeOpenGridStackableCylinderSideHoneycombCutters,
   openGridStackableCylinderHoneycombCellCountFor,
 } from '../../lattice/opengrid-honeycomb'
+import {
+  assertOpenGridDetachableCornerSeatConsumers,
+  cutOpenGridDetachableCornerSeatConsumers,
+  type OpenGridDetachableCornerSeatConsumerContext,
+} from '../opengrid-locating-assembly/consumer'
 
 const HONEYCOMB_CUT_BATCH_SIZE = 128
 
 export type OpenGridStackableCylinderBuildContext = {
+  detachableCornerSeatReference?: Shape3D
+  detachableCornerSeatHolderReference?: Shape3D
   isGenerationCurrent?: () => boolean
   booleanOperations?: BooleanOperationReporter
 }
@@ -187,51 +195,6 @@ function makeAnnularRing(
   }
 }
 
-function compatibilityFixturePasses(
-  shape: Shape3D,
-  floorThickness: number,
-  bottomHoleSectionDepth: number,
-): boolean {
-  const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
-  const shaft = makeCylinder(
-    configuration.testShaftDiameter / 2,
-    configuration.testShaftLengthForFloor(floorThickness),
-    [0, 0, -configuration.testShaftExposure],
-  )
-  const flange = makeCylinder(
-    configuration.testFlangeDiameter / 2,
-    configuration.testFlangeHeight,
-    [0, 0, floorThickness],
-  )
-  const fixture = shaft.fuse(flange)
-  deleteShape(shaft)
-  deleteShape(flange)
-
-  let seatedIntersection: Shape3D | null = null
-  let loweredFixture: Shape3D | null = null
-  let loweredIntersection: Shape3D | null = null
-  try {
-    seatedIntersection = shape.intersect(fixture)
-    const retentionProbeOffset = Math.max(
-      0.2,
-      floorThickness - bottomHoleSectionDepth + 0.2,
-    )
-    loweredFixture = fixture.clone().translateZ(-retentionProbeOffset)
-    loweredIntersection = shape.intersect(loweredFixture)
-    return (
-      measureVolume(seatedIntersection) <= 0.01 &&
-      measureVolume(loweredIntersection) > 0.01
-    )
-  } catch {
-    return false
-  } finally {
-    deleteShape(seatedIntersection)
-    deleteShape(loweredIntersection)
-    deleteShape(loweredFixture)
-    deleteShape(fixture)
-  }
-}
-
 function makeCylinderShell(
   parameters: OpenGridStackableCylinderParameters,
 ): Shape3D {
@@ -308,69 +271,6 @@ function makeCylinderShell(
   }
 }
 
-function cutSteppedHole(
-  shape: Shape3D,
-  parameters: OpenGridStackableCylinderParameters,
-  center: OpenGridStackableCylinderPoint2D,
-  reporter: BooleanOperationReporter | undefined,
-): Shape3D {
-  const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
-  const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
-  const lower = makeCylinder(
-    configuration.bottomHoleDiameter / 2,
-    derived.bottomHoleSectionDepth + 0.02,
-    [center[0], center[1], -0.01],
-  )
-  let lowerCut: Shape3D | null = null
-  const cutScope = reporter?.createScope(2)
-  try {
-    lowerCut = measureBooleanInScope(cutScope, 'cut', () => shape.cut(lower))
-  } finally {
-    deleteShape(lower)
-  }
-
-  let upper: Shape3D | null = null
-  try {
-    upper = makeCylinder(
-      configuration.innerHoleDiameter / 2,
-      configuration.innerHoleSectionDepth + 0.02,
-      [center[0], center[1], derived.bottomHoleSectionDepth],
-    )
-    if (!lowerCut) throw new Error('OPENGRID_STACKABLE_CYLINDER_HOLE_INVALID')
-    const activeLowerCut = lowerCut
-    const activeUpper = upper
-    const steppedCut = measureBooleanInScope(cutScope, 'cut', () =>
-      activeLowerCut.cut(activeUpper),
-    )
-    deleteShape(lowerCut)
-    lowerCut = null
-    return steppedCut
-  } finally {
-    deleteShape(lowerCut)
-    deleteShape(upper)
-  }
-}
-
-function addBottomHoles(
-  shape: Shape3D,
-  parameters: OpenGridStackableCylinderParameters,
-  context: OpenGridStackableCylinderBuildContext,
-): Shape3D {
-  let current = shape
-  for (const center of openGridStackableCylinderHoleCentersFor(parameters)) {
-    assertGenerationCurrent(context)
-    const cut = cutSteppedHole(
-      current,
-      parameters,
-      center,
-      context.booleanOperations,
-    )
-    deleteShape(current)
-    current = cut
-  }
-  return current
-}
-
 function addIntegratedSeats(
   shape: Shape3D,
   parameters: OpenGridStackableCylinderParameters,
@@ -423,7 +323,12 @@ function addBottomLocatingFeatures(
   if (parameters.bottomSeatMode === 'integrated') {
     return addIntegratedSeats(shape, parameters, context)
   }
-  return addBottomHoles(shape, parameters, context)
+  return cutOpenGridDetachableCornerSeatConsumers(
+    shape,
+    openGridStackableCylinderHoleCentersFor(parameters),
+    context,
+    'OPENGRID_STACKABLE_CYLINDER_DETACHABLE_CORNER_SEAT',
+  )
 }
 
 function quarterTurnsForOpening(
@@ -890,7 +795,7 @@ function readHoleQuality(
   records: CylindricalFaceRecord[],
 ): OpenGridStackableCylinderHoleQuality[] {
   const centers =
-    parameters.bottomSeatMode === 'hole'
+    parameters.bottomSeatMode === 'detachable-corner-seat'
       ? openGridStackableCylinderHoleCentersFor(parameters)
       : []
   return centers.map((center) => ({
@@ -1176,10 +1081,7 @@ export function inspectOpenGridStackableCylinderInterface(
   const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
   const expected = expectedInterfaceProbes(parameters)
   const actualBounds = readBounds(shape)
-  const holeCenters =
-    parameters.bottomSeatMode === 'hole'
-      ? openGridStackableCylinderHoleCentersFor(parameters)
-      : []
+  const holeCenters: OpenGridStackableCylinderPoint2D[] = []
   const floorHoleRecords = readFloorHoleRecords(
     shape,
     derived.floorThickness,
@@ -1666,9 +1568,28 @@ export function inspectOpenGridStackableCylinderInterface(
   }
 }
 
+function locatingSeatRadiusFor(
+  parameters: OpenGridStackableCylinderParameters,
+  largestHoleRadius: number,
+): number {
+  if (parameters.bottomSeatMode === 'integrated') {
+    return OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatDiameter / 2
+  }
+  if (parameters.bottomSeatMode === 'detachable-corner-seat') {
+    const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+    return (
+      configuration.female.outerDiameter / 2 +
+      configuration.indicator.socketBoundaryClearance +
+      configuration.indicator.radialLength
+    )
+  }
+  return largestHoleRadius
+}
+
 function assertQuality(
   shape: Shape3D,
   parameters: OpenGridStackableCylinderParameters,
+  context: OpenGridDetachableCornerSeatConsumerContext = {},
 ): OpenGridStackableCylinderInterfaceQualityReport {
   parameters = normalizeParameters(parameters)
   const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
@@ -1713,45 +1634,22 @@ function assertQuality(
   }
   const expectedLocatingCenters =
     openGridStackableCylinderHoleCentersFor(parameters)
-  const expectedHoleCenters =
-    parameters.bottomSeatMode === 'hole' ? expectedLocatingCenters : []
+  const expectedHoleCenters: OpenGridStackableCylinderPoint2D[] = []
   const expectedHoleSectionCount = expectedHoleCenters.length * 2
   if (report.holeRecordCount !== expectedHoleSectionCount) {
     failures.push('hole-layout')
   }
-  if (parameters.bottomSeatMode === 'hole') {
-    for (const hole of report.holes) {
-      if (hole.sections.length !== 2) {
-        failures.push('stepped-holes')
-        continue
-      }
-      const [lower, upper] = hole.sections
-      if (
-        !lower ||
-        !upper ||
-        !closeEnough(lower.diameter, configuration.bottomHoleDiameter) ||
-        !closeEnough(lower.minZ, 0) ||
-        !closeEnough(lower.maxZ, derived.bottomHoleSectionDepth) ||
-        !closeEnough(upper.diameter, configuration.innerHoleDiameter) ||
-        !closeEnough(upper.minZ, derived.bottomHoleSectionDepth) ||
-        !closeEnough(
-          upper.maxZ,
-          derived.bottomHoleSectionDepth + configuration.innerHoleSectionDepth,
-        )
-      ) {
-        failures.push('stepped-hole-profile')
-      }
+  if (parameters.bottomSeatMode === 'detachable-corner-seat') {
+    try {
+      assertOpenGridDetachableCornerSeatConsumers(
+        shape,
+        expectedLocatingCenters,
+        context,
+        'OPENGRID_STACKABLE_CYLINDER_DETACHABLE_CORNER_SEAT_QUALITY_INVALID',
+      )
+    } catch {
+      failures.push('detachable-corner-seat')
     }
-  }
-  if (
-    parameters.bottomSeatMode === 'hole' &&
-    !compatibilityFixturePasses(
-      shape,
-      derived.floorThickness,
-      derived.bottomHoleSectionDepth,
-    )
-  ) {
-    failures.push('compatibility-fixture')
   }
   const expectedIntegratedSeatCount =
     parameters.bottomSeatMode === 'integrated'
@@ -1781,10 +1679,10 @@ function assertQuality(
       configuration.bottomHoleDiameter,
       configuration.innerHoleDiameter,
     ) / 2
-  const locatingSeatRadius =
-    parameters.bottomSeatMode === 'integrated'
-      ? OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatDiameter / 2
-      : largestHoleRadius
+  const locatingSeatRadius = locatingSeatRadiusFor(
+    parameters,
+    largestHoleRadius,
+  )
   for (const center of expectedLocatingCenters.slice(1)) {
     const centerRadius = Math.hypot(center[0], center[1])
     const clearance = derived.radius - centerRadius - locatingSeatRadius
@@ -1917,8 +1815,9 @@ function assertQuality(
 export function assertOpenGridStackableCylinderQuality(
   shape: Shape3D,
   parameters: OpenGridStackableCylinderParameters,
+  context: OpenGridDetachableCornerSeatConsumerContext = {},
 ): OpenGridStackableCylinderInterfaceQualityReport {
-  return assertQuality(shape, parameters)
+  return assertQuality(shape, parameters, context)
 }
 
 export function buildOpenGridStackableCylinder(
@@ -1955,7 +1854,7 @@ export function buildOpenGridStackableCylinder(
       throwStageError('OPENGRID_STACKABLE_CYLINDER_HONEYCOMB_INVALID', error)
     }
     assertGenerationCurrent(context)
-    assertQuality(shape, normalizedParameters)
+    assertQuality(shape, normalizedParameters, context)
     return shape
   } catch (error) {
     deleteShape(shape)

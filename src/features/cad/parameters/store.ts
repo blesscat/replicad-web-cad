@@ -4,9 +4,11 @@ import {
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+  normalizeOpenGridLocatingSeatMode,
   normalizePillarParameters,
   type ModelId,
   type ModelParameterValues,
+  type OpenGridLocatingSeatMode,
 } from '../../../cad-contract/units'
 import { normalizeOpenGridSnapParameters } from '../../../cad-contract/units'
 import { getModelDefinition, modelDefinitions } from '../model-catalog'
@@ -58,22 +60,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function canonicalCylinderSeatModeFor(
   value: Record<string, unknown>,
-): 'none' | 'hole' | 'integrated' {
+): OpenGridLocatingSeatMode {
   if (Object.prototype.hasOwnProperty.call(value, 'bottomSeatMode')) {
-    return value.bottomSeatMode as 'none' | 'hole' | 'integrated'
+    return (
+      normalizeOpenGridLocatingSeatMode(value.bottomSeatMode) ??
+      OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS.bottomSeatMode
+    )
   }
   if (value.bottomHolesEnabled === false) return 'none'
-  return 'hole'
+  return 'detachable-corner-seat'
 }
 
 function canonicalBoxSeatModeFor(
   value: Record<string, unknown>,
-): 'none' | 'hole' | 'integrated' {
+): OpenGridLocatingSeatMode {
   if (Object.prototype.hasOwnProperty.call(value, 'cornerSeatMode')) {
-    return value.cornerSeatMode as 'none' | 'hole' | 'integrated'
+    return (
+      normalizeOpenGridLocatingSeatMode(value.cornerSeatMode) ??
+      OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS.cornerSeatMode
+    )
   }
   if (value.cornerBottomHoles === false) return 'none'
-  return 'hole'
+  return 'detachable-corner-seat'
 }
 
 function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {

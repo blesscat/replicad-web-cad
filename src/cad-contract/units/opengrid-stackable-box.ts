@@ -1,7 +1,7 @@
 import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
 import {
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
-  OPENGRID_LOCATING_SEAT_MODES,
+  normalizeOpenGridLocatingSeatMode,
   type OpenGridLocatingSeatMode,
 } from './opengrid-locating-assembly'
 
@@ -128,7 +128,7 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
   defaultX: 2,
   defaultY: 2,
   defaultHeight: 20,
-  defaultCornerSeatMode: 'hole' as OpenGridLocatingSeatMode,
+  defaultCornerSeatMode: 'detachable-corner-seat' as OpenGridLocatingSeatMode,
   defaultFullBottomHoleGrid: false,
   defaultBasePlateMode: false,
   defaultThinShellMode: false,
@@ -321,15 +321,6 @@ function hasOnlySupportedParameterKeys(
   )
 }
 
-function isOpenGridLocatingSeatMode(
-  value: unknown,
-): value is OpenGridLocatingSeatMode {
-  return (
-    typeof value === 'string' &&
-    (OPENGRID_LOCATING_SEAT_MODES as readonly string[]).includes(value)
-  )
-}
-
 function defaultOpeningValues(): Pick<
   OpenGridStackableBoxParameters,
   OpenGridStackableBoxOpeningParameterKey
@@ -429,7 +420,7 @@ function validateCornerSeatMode(
   value: unknown,
   issues: OpenGridStackableBoxValidationIssue[],
 ): void {
-  if (!isOpenGridLocatingSeatMode(value)) {
+  if (normalizeOpenGridLocatingSeatMode(value) === undefined) {
     issues.push({
       field: 'cornerSeatMode',
       messageId: 'validation.invalid',
@@ -489,7 +480,7 @@ function legacyCornerSeatModeFor(
   value: Record<string, unknown>,
 ): OpenGridLocatingSeatMode {
   if (value.cornerBottomHoles === false) return 'none'
-  return 'hole'
+  return 'detachable-corner-seat'
 }
 
 export function openGridStackableBoxProfileFor(
@@ -881,7 +872,9 @@ export function validateOpenGridStackableBoxParameters(
     y: value.y as number,
     height: value.height as number,
     cornerSeatMode: hasCurrentShape
-      ? (value.cornerSeatMode as OpenGridLocatingSeatMode)
+      ? (normalizeOpenGridLocatingSeatMode(
+          value.cornerSeatMode,
+        ) as OpenGridLocatingSeatMode)
       : legacyCornerSeatModeFor(value),
     fullBottomHoleGrid: value.fullBottomHoleGrid as boolean,
     basePlateMode: value.basePlateMode as boolean,

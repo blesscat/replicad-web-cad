@@ -59,9 +59,11 @@ export function buildOpenGridStackableBox(
   let shape = makeBoxShell(normalizedParameters, context.booleanOperations)
   assertGenerationCurrent(context)
   shape = applyStackingProfile(shape, normalizedParameters, context)
+  const deferDetachableCornerSeats =
+    normalizedParameters.cornerSeatMode === 'detachable-corner-seat'
   if (
     normalizedParameters.basePlateMode &&
-    normalizedParameters.cornerSeatMode === 'integrated'
+    normalizedParameters.cornerSeatMode !== 'detachable-corner-seat'
   ) {
     shape = applyBasePlateMode(
       shape,
@@ -70,7 +72,9 @@ export function buildOpenGridStackableBox(
     )
     shape = addMountingSockets(shape, normalizedParameters, context)
   } else {
-    shape = addMountingSockets(shape, normalizedParameters, context)
+    if (!deferDetachableCornerSeats) {
+      shape = addMountingSockets(shape, normalizedParameters, context)
+    }
     shape = applyBasePlateMode(
       shape,
       normalizedParameters,
@@ -79,9 +83,17 @@ export function buildOpenGridStackableBox(
   }
   shape = addSideOpenings(shape, normalizedParameters, context)
   shape = applyHoneycombMode(shape, normalizedParameters, context)
-  assertGenerationCurrent(context)
-  assertOpenGridStackableBoxGeometry(shape, normalizedParameters)
-  return shape
+  if (deferDetachableCornerSeats) {
+    shape = addMountingSockets(shape, normalizedParameters, context)
+  }
+  try {
+    assertGenerationCurrent(context)
+    assertOpenGridStackableBoxGeometry(shape, normalizedParameters, context)
+    return shape
+  } catch (error) {
+    deleteShape(shape)
+    throw error
+  }
 }
 
 function applyHoneycombMode(

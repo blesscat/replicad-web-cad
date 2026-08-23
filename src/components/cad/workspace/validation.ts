@@ -16,6 +16,7 @@ import {
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+  normalizeOpenGridLocatingSeatMode,
   type OpenGridOpenShelfParameters,
   PILLAR_CONFIGURATION,
   validateModelParameters,
@@ -157,7 +158,7 @@ function legacyParameterDefault(
   key: ModelParameterKey,
 ): string | undefined {
   if (modelId === 'opengrid-stackable-box' && key === 'cornerSeatMode') {
-    return 'hole'
+    return 'detachable-corner-seat'
   }
   if (modelId === 'opengrid-stackable-box' && key === 'thinShellMode') {
     return 'false'
@@ -173,7 +174,7 @@ function legacyParameterDefault(
   if (modelId !== 'opengrid-stackable-cylinder') return undefined
   if (key === 'thinBottomMode') return 'false'
   if (key === 'bottomPlateMode') return 'false'
-  if (key === 'bottomSeatMode') return 'hole'
+  if (key === 'bottomSeatMode') return 'detachable-corner-seat'
   const defaultValue = (
     OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS as Record<string, unknown>
   )[key]
@@ -240,11 +241,12 @@ function parseSeatModeRawParameter(
 ):
   | { valid: true; value: (typeof OPENGRID_LOCATING_SEAT_MODES)[number] }
   | { valid: false; messageId: string; field: ModelParameterKey } {
-  const value = rawValue ?? 'hole'
-  if ((OPENGRID_LOCATING_SEAT_MODES as readonly string[]).includes(value)) {
+  const value = rawValue ?? 'detachable-corner-seat'
+  const normalizedValue = normalizeOpenGridLocatingSeatMode(value)
+  if (normalizedValue !== undefined) {
     return {
       valid: true,
-      value: value as (typeof OPENGRID_LOCATING_SEAT_MODES)[number],
+      value: normalizedValue,
     }
   }
   return {
@@ -478,6 +480,10 @@ export function rawFromParameters(
   if (Object.keys(parameters).length === 0) return {}
 
   if ('diameter' in parameters && 'height' in parameters) {
+    const bottomSeatMode =
+      normalizeOpenGridLocatingSeatMode(
+        'bottomSeatMode' in parameters ? parameters.bottomSeatMode : undefined,
+      ) ?? OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS.bottomSeatMode
     const raw: RawParameters = {
       diameter: String(parameters.diameter),
       height: String(parameters.height),
@@ -487,9 +493,7 @@ export function rawFromParameters(
       bottomPlateMode: String(
         'bottomPlateMode' in parameters ? parameters.bottomPlateMode : false,
       ),
-      bottomSeatMode: String(
-        'bottomSeatMode' in parameters ? parameters.bottomSeatMode : 'hole',
-      ),
+      bottomSeatMode: String(bottomSeatMode),
       honeycombMode: String(
         'honeycombMode' in parameters ? parameters.honeycombMode : false,
       ),
@@ -582,11 +586,14 @@ export function rawFromParameters(
           number
         >
       >
+    const cornerSeatMode =
+      normalizeOpenGridLocatingSeatMode(stackableParameters.cornerSeatMode) ??
+      OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS.cornerSeatMode
     const rawParameters: RawParameters = {
       x: String(stackableParameters.x),
       y: String(stackableParameters.y),
       height: String(stackableParameters.height),
-      cornerSeatMode: String(stackableParameters.cornerSeatMode),
+      cornerSeatMode: String(cornerSeatMode),
       fullBottomHoleGrid: String(stackableParameters.fullBottomHoleGrid),
       basePlateMode: String(stackableParameters.basePlateMode),
       thinShellMode: String(stackableParameters.thinShellMode ?? false),

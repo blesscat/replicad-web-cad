@@ -12,6 +12,8 @@ import {
   isOpenGridOrganizerBoxParameters,
   isOpenGridStackableBoxParameters,
   isOpenGridStackableCylinderParameters,
+  validateOpenGridStackableBoxParameters,
+  validateOpenGridStackableCylinderParameters,
   isOpenGridSnapParameters,
   isOpenGridSnapRemoverParameters,
   isPillarParameters,
@@ -252,7 +254,33 @@ async function buildOpenGridStackableBoxModel(
   if (!isOpenGridStackableBoxParameters(parameters)) {
     throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-stackable-box')
   }
-  return buildOpenGridStackableBox(parameters, {
+  const validation = validateOpenGridStackableBoxParameters(parameters)
+  if (!validation.valid) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-stackable-box')
+  }
+  let detachableCornerSeatReference: Shape3D | undefined
+  let detachableCornerSeatHolderReference: Shape3D | undefined
+  if (validation.value.cornerSeatMode === 'detachable-corner-seat') {
+    if (!context.getOpenGridDetachableCornerSeatReference) {
+      throw new Error('MODEL_ASSET_CONTEXT_MISSING:detachable-corner-seat')
+    }
+    if (!context.getOpenGridDetachableCornerSeatHolderReference) {
+      throw new Error(
+        'MODEL_ASSET_CONTEXT_MISSING:detachable-corner-seat-holder',
+      )
+    }
+    ;[detachableCornerSeatReference, detachableCornerSeatHolderReference] =
+      await Promise.all([
+        context.getOpenGridDetachableCornerSeatReference(),
+        context.getOpenGridDetachableCornerSeatHolderReference(),
+      ])
+    if (context.isGenerationCurrent && !context.isGenerationCurrent()) {
+      throw new Error('STALE_GENERATION')
+    }
+  }
+  return buildOpenGridStackableBox(validation.value, {
+    detachableCornerSeatReference,
+    detachableCornerSeatHolderReference,
     isGenerationCurrent: context.isGenerationCurrent,
     booleanOperations: context.booleanOperations,
   })
@@ -308,14 +336,40 @@ async function buildOpenGridOpenShelfModel(
   })
 }
 
-function buildOpenGridStackableCylinderModel(
+async function buildOpenGridStackableCylinderModel(
   parameters: ModelParameterValues,
   context: KernelBuildContext,
-): Shape3D {
+): Promise<Shape3D> {
   if (!isOpenGridStackableCylinderParameters(parameters)) {
     throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-stackable-cylinder')
   }
-  return buildOpenGridStackableCylinder(parameters, {
+  const validation = validateOpenGridStackableCylinderParameters(parameters)
+  if (!validation.valid) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-stackable-cylinder')
+  }
+  let detachableCornerSeatReference: Shape3D | undefined
+  let detachableCornerSeatHolderReference: Shape3D | undefined
+  if (validation.value.bottomSeatMode === 'detachable-corner-seat') {
+    if (!context.getOpenGridDetachableCornerSeatReference) {
+      throw new Error('MODEL_ASSET_CONTEXT_MISSING:detachable-corner-seat')
+    }
+    if (!context.getOpenGridDetachableCornerSeatHolderReference) {
+      throw new Error(
+        'MODEL_ASSET_CONTEXT_MISSING:detachable-corner-seat-holder',
+      )
+    }
+    ;[detachableCornerSeatReference, detachableCornerSeatHolderReference] =
+      await Promise.all([
+        context.getOpenGridDetachableCornerSeatReference(),
+        context.getOpenGridDetachableCornerSeatHolderReference(),
+      ])
+    if (context.isGenerationCurrent && !context.isGenerationCurrent()) {
+      throw new Error('STALE_GENERATION')
+    }
+  }
+  return buildOpenGridStackableCylinder(validation.value, {
+    detachableCornerSeatReference,
+    detachableCornerSeatHolderReference,
     isGenerationCurrent: context.isGenerationCurrent,
     booleanOperations: context.booleanOperations,
   })

@@ -33,6 +33,7 @@ import {
   deleteShape,
   type OpenGridStackableBoxBuildContext,
 } from './shared'
+import { cutOpenGridDetachableCornerSeatConsumers } from '../opengrid-locating-assembly/consumer'
 
 type RoundedRectangleSection = {
   width: number
@@ -972,79 +973,6 @@ function addIntegratedStackingProfile(
   return current
 }
 
-function makeStandardMountingHoleCutter(
-  scope: BooleanOperationScope | undefined,
-): Shape3D {
-  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
-  const bottomSection = makeCylinder(
-    configuration.baseHoleBottomOpeningDiameter / 2,
-    configuration.baseHoleStepHeight + 0.02,
-    [0, 0, -0.01],
-  )
-  const upperSection = makeCylinder(
-    configuration.baseHoleTopOpeningDiameter / 2,
-    configuration.bottomAssemblyHeight -
-      configuration.baseHoleStepHeight +
-      0.02,
-    [0, 0, configuration.baseHoleStepHeight],
-  )
-  const cutter = measureBooleanInScope(scope, 'fuse', () =>
-    bottomSection.fuse(upperSection),
-  )
-  deleteShape(bottomSection)
-  deleteShape(upperSection)
-  return cutter
-}
-
-function makeBasePlateMountingHoleCutter(
-  scope: BooleanOperationScope | undefined,
-): Shape3D {
-  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
-  const lowerSection = makeCylinder(
-    configuration.baseHoleBottomOpeningDiameter / 2,
-    configuration.basePlateHoleBottomDepth + 0.02,
-    [0, 0, configuration.basePlateCutoffHeight - 0.01],
-  )
-  const upperSection = makeCylinder(
-    configuration.baseHoleTopOpeningDiameter / 2,
-    configuration.basePlateHoleTopDepth + 0.02,
-    [
-      0,
-      0,
-      configuration.basePlateCutoffHeight +
-        configuration.basePlateHoleBottomDepth,
-    ],
-  )
-  const cutter = measureBooleanInScope(scope, 'fuse', () =>
-    lowerSection.fuse(upperSection),
-  )
-  deleteShape(lowerSection)
-  deleteShape(upperSection)
-  return cutter
-}
-
-function makeThinShellMountingHoleCutter(
-  scope: BooleanOperationScope | undefined,
-): Shape3D {
-  const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
-  const lowerSection = makeCylinder(
-    configuration.baseHoleBottomOpeningDiameter / 2,
-    configuration.thinShellBottomHoleStepHeight + 0.02,
-    [0, 0, -0.01],
-  )
-  const upperSection = makeCylinder(
-    configuration.baseHoleTopOpeningDiameter / 2,
-    configuration.thinShellBottomHoleTopDepth + 0.02,
-    [0, 0, configuration.thinShellBottomHoleStepHeight],
-  )
-  const cutter = measureBooleanInScope(scope, 'fuse', () =>
-    lowerSection.fuse(upperSection),
-  )
-  deleteShape(lowerSection)
-  deleteShape(upperSection)
-  return cutter
-}
-
 function activeBottomThicknessFor(
   parameters: OpenGridStackableBoxParameters,
 ): number {
@@ -1052,19 +980,6 @@ function activeBottomThicknessFor(
   if (parameters.thinShellMode) return configuration.thinShellFloorThickness
   if (parameters.basePlateMode) return configuration.basePlateThickness
   return configuration.bottomAssemblyHeight
-}
-
-function makeMountingHoleCutter(
-  parameters: OpenGridStackableBoxParameters,
-  scope: BooleanOperationScope | undefined,
-): Shape3D {
-  if (parameters.thinShellMode) {
-    return makeThinShellMountingHoleCutter(scope)
-  }
-  if (parameters.basePlateMode) {
-    return makeBasePlateMountingHoleCutter(scope)
-  }
-  return makeStandardMountingHoleCutter(scope)
 }
 
 function makeOrdinaryBottomHoleCutter(
@@ -1108,25 +1023,19 @@ export function addMountingSockets(
   context: OpenGridStackableBoxBuildContext,
 ): Shape3D {
   const centers = openGridStackableBoxSocketCentersFor(parameters)
-  const fuseScope =
-    centers.length > 0
-      ? context.booleanOperations?.createScope(centers.length)
-      : undefined
   const integratedSeats =
     parameters.cornerSeatMode === 'integrated'
       ? centers.map(([x, y]) => translateShape(makeIntegratedSeat(), x, y, 0))
       : []
-  const socketCutters =
-    parameters.cornerSeatMode === 'hole'
-      ? centers.map(([x, y]) =>
-          translateShape(
-            makeMountingHoleCutter(parameters, fuseScope),
-            x,
-            y,
-            0,
-          ),
-        )
-      : []
+  if (parameters.cornerSeatMode === 'detachable-corner-seat') {
+    shape = cutOpenGridDetachableCornerSeatConsumers(
+      shape,
+      centers,
+      context,
+      'OPENGRID_STACKABLE_BOX_DETACHABLE_CORNER_SEAT',
+    )
+  }
+  const socketCutters: Shape3D[] = []
   const ordinaryCenters =
     openGridStackableBoxOrdinaryBottomHoleCentersFor(parameters)
   const operationTotal =

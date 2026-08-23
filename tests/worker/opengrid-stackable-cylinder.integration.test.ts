@@ -1,7 +1,8 @@
 import { createRequire } from 'node:module'
+import { readFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
   makeBox,
   makeCylinder,
@@ -10,7 +11,7 @@ import {
   type Shape3D,
 } from 'replicad'
 import {
-  buildOpenGridStackableCylinder,
+  buildOpenGridStackableCylinder as buildOpenGridStackableCylinderKernel,
   inspectOpenGridStackableCylinderInterface,
 } from '../../src/cad-kernel/components/opengrid-stackable-cylinder/builder'
 import {
@@ -24,6 +25,11 @@ import {
 } from '../../src/cad-contract/units'
 import { exportStlBytes, exportStepBytes } from '../../src/cad-kernel/export'
 import { meshBRep } from '../../src/cad-kernel/mesh'
+import {
+  importOpenGridDetachableCornerSeatHolderReference,
+  importOpenGridDetachableCornerSeatReference,
+} from '../../src/cad-kernel/components/opengrid-locating-assembly/reference'
+import { inspectOpenGridDetachableCornerSeatConsumers } from '../../src/cad-kernel/components/opengrid-locating-assembly/consumer'
 
 ;(globalThis as typeof globalThis & { __dirname?: string }).__dirname = dirname(
   fileURLToPath(import.meta.url),
@@ -35,13 +41,48 @@ const initialiseOpenCascade = require('replicad-opencascadejs')
   .default as (options: { locateFile: () => string }) => Promise<unknown>
 const WASM_PATH =
   require.resolve('replicad-opencascadejs/src/replicad_single.wasm')
+const DETACHABLE_MALE_REFERENCE_PATH = new URL(
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-3.8.step',
+  import.meta.url,
+)
+const DETACHABLE_HOLDER_REFERENCE_PATH = new URL(
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-holder.step',
+  import.meta.url,
+)
+let detachableCornerSeatReference: Shape3D
+let detachableCornerSeatHolderReference: Shape3D
 
 beforeAll(async () => {
   const openCascade = await initialiseOpenCascade({
     locateFile: () => WASM_PATH,
   })
   setOC(openCascade as Parameters<typeof setOC>[0])
+  ;[detachableCornerSeatReference, detachableCornerSeatHolderReference] =
+    await Promise.all([
+      importOpenGridDetachableCornerSeatReference(
+        new Blob([readFileSync(DETACHABLE_MALE_REFERENCE_PATH)]),
+      ),
+      importOpenGridDetachableCornerSeatHolderReference(
+        new Blob([readFileSync(DETACHABLE_HOLDER_REFERENCE_PATH)]),
+      ),
+    ])
 })
+
+afterAll(() => {
+  deleteShape(detachableCornerSeatReference)
+  deleteShape(detachableCornerSeatHolderReference)
+})
+
+function buildOpenGridStackableCylinder(
+  parameters: OpenGridStackableCylinderParameters,
+  context: Parameters<typeof buildOpenGridStackableCylinderKernel>[1] = {},
+): Shape3D {
+  return buildOpenGridStackableCylinderKernel(parameters, {
+    detachableCornerSeatReference,
+    detachableCornerSeatHolderReference,
+    ...context,
+  })
+}
 
 function parameters(
   overrides: Partial<OpenGridStackableCylinderParameters> = {},
@@ -86,98 +127,11 @@ function boundsOf(shape: Shape3D): number[][] {
   }
 }
 
-function makeCompatibilityFixture(floorThickness: number): Shape3D {
-  const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
-  const shaft = makeCylinder(
-    configuration.testShaftDiameter / 2,
-    configuration.testShaftLengthForFloor(floorThickness),
-    [0, 0, -configuration.testShaftExposure],
-  )
-  const flange = makeCylinder(
-    configuration.testFlangeDiameter / 2,
-    configuration.testFlangeHeight,
-    [0, 0, floorThickness],
-  )
-  const fixture = shaft.fuse(flange)
-  deleteShape(shaft)
-  deleteShape(flange)
-  return fixture
-}
-
 describe('OpenGrid stackable-cylinder B-Rep', () => {
-  it.each([
-    {
-      name: 'default',
-      floorThickness: 5,
-      thinBottomMode: false,
-      bottomPlateMode: false,
-    },
-    {
-      name: 'thin',
-      floorThickness: 3,
-      thinBottomMode: true,
-      bottomPlateMode: false,
-    },
-    {
-      name: 'bottom-plate',
-      floorThickness: 3,
-      thinBottomMode: false,
-      bottomPlateMode: true,
-    },
-  ])(
-    'accepts the Ø5 shaft and Ø7 flange fixture in $name mode',
-    ({ floorThickness, thinBottomMode, bottomPlateMode }) => {
-      const input = parameters({ thinBottomMode, bottomPlateMode })
-      const shape = buildOpenGridStackableCylinder(input)
-      const fixture = makeCompatibilityFixture(floorThickness)
-      try {
-        const lowerSectionDepth =
-          openGridStackableCylinderDerivedGeometryFor(
-            input,
-          ).bottomHoleSectionDepth
-        const fixtureBounds = boundsOf(fixture)
-        const fixtureMinZ = fixtureBounds[0]?.[2]
-        if (fixtureMinZ === undefined) throw new Error('MISSING_FIXTURE_BOUNDS')
-        expect(fixtureMinZ).toBeCloseTo(
-          -OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftExposure,
-          2,
-        )
-        expect(floorThickness - fixtureMinZ).toBeCloseTo(
-          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftLengthForFloor(
-            floorThickness,
-          ),
-          2,
-        )
-        expect(fixtureBounds[1]?.[2]).toBeCloseTo(
-          floorThickness +
-            OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testFlangeHeight,
-          2,
-        )
-        expect(measureVolume(shape.intersect(fixture))).toBeLessThan(0.01)
-        const retentionProbeOffset = Math.max(
-          0.2,
-          floorThickness - lowerSectionDepth + 0.2,
-        )
-        const loweredFixture = fixture.clone().translateZ(-retentionProbeOffset)
-        try {
-          expect(
-            measureVolume(shape.intersect(loweredFixture)),
-          ).toBeGreaterThan(0.01)
-        } finally {
-          deleteShape(loweredFixture)
-        }
-      } finally {
-        deleteShape(fixture)
-        deleteShape(shape)
-      }
-    },
-    120_000,
-  )
-
   it.each([
     { diameter: 20, expectedOuterHoleCount: 0 },
     { diameter: 39, expectedOuterHoleCount: 0 },
-    { diameter: 40, expectedOuterHoleCount: 4 },
+    { diameter: 40, expectedOuterHoleCount: 0 },
     { diameter: 47, expectedOuterHoleCount: 4 },
     { diameter: 48, expectedOuterHoleCount: 4 },
     { diameter: 56, expectedOuterHoleCount: 4 },
@@ -219,7 +173,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
   it('builds the clipped bottom-plate mode with the default-style interior', () => {
     const input = parameters({
       bottomPlateMode: true,
-      bottomSeatMode: 'hole',
+      bottomSeatMode: 'detachable-corner-seat',
     })
     const derived = openGridStackableCylinderDerivedGeometryFor(input)
     const shape = buildOpenGridStackableCylinder(input)
@@ -301,49 +255,38 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
     {
       name: 'default',
       overrides: {},
-      lowerSectionDepth: 4,
-      floorThickness: 5,
     },
     {
       name: 'thin',
       overrides: { thinBottomMode: true },
-      lowerSectionDepth: 1,
-      floorThickness: 2,
     },
     {
       name: 'bottom-plate',
       overrides: { bottomPlateMode: true },
-      lowerSectionDepth: 2,
-      floorThickness: 3,
     },
   ])(
-    'keeps the center hole as two planar stepped cylindrical sections in $name mode',
-    ({ overrides, lowerSectionDepth, floorThickness }) => {
-      const input = parameters({ diameter: 56, ...overrides })
+    'keeps the center locking seat valid in $name mode',
+    ({ overrides }) => {
+      const input = parameters({
+        diameter: 56,
+        ...overrides,
+      })
       const shape = buildOpenGridStackableCylinder(input)
       try {
-        const report = inspectOpenGridStackableCylinderInterface(shape, input)
-        const centerHole = report.holes.find(
-          (hole) => hole.center[0] === 0 && hole.center[1] === 0,
+        const [record] = inspectOpenGridDetachableCornerSeatConsumers(
+          shape,
+          [[0, 0]],
+          {
+            detachableCornerSeatReference,
+            detachableCornerSeatHolderReference,
+          },
         )
-        expect(centerHole?.sections).toEqual([
-          expect.objectContaining({
-            diameter: expect.closeTo(
-              OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.shaftOpeningDiameter,
-              2,
-            ),
-          }),
-          expect.objectContaining({
-            diameter: expect.closeTo(
-              OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.retainingOpeningDiameter,
-              2,
-            ),
-          }),
-        ])
-        expect(centerHole?.sections[0]?.minZ).toBeCloseTo(0, 2)
-        expect(centerHole?.sections[0]?.maxZ).toBeCloseTo(lowerSectionDepth, 1)
-        expect(centerHole?.sections[1]?.minZ).toBeCloseTo(lowerSectionDepth, 1)
-        expect(centerHole?.sections[1]?.maxZ).toBeCloseTo(floorThickness, 2)
+        expect(record).toMatchObject({
+          socketVoidResidualVolume: expect.closeTo(0, 6),
+          indicatorResidualVolume: expect.closeTo(0, 6),
+          maleCollisionVolume: expect.closeTo(0, 6),
+        })
+        expect(record?.roofVolume).toBeGreaterThan(0.001)
       } finally {
         deleteShape(shape)
       }
@@ -358,7 +301,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
       const report = inspectOpenGridStackableCylinderInterface(shape, input)
       expect(report.profile).toBe('default')
       expect(report.thinBottomMode).toBe(false)
-      expect(report.bottomSeatMode).toBe('hole')
+      expect(report.bottomSeatMode).toBe('detachable-corner-seat')
       expect(report.centralFloorBelowVolume).toBeGreaterThan(0.0001)
       expect(report.centralFloorAboveVolume).toBeLessThan(0.0001)
       expect(report.innerRampFaceCount).toBe(0)
@@ -522,7 +465,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
   it.each([
     { diameter: 47, expectedHoleCount: 1 },
     { diameter: 48, expectedHoleCount: 1 },
-    { diameter: 49, expectedHoleCount: 5 },
+    { diameter: 49, expectedHoleCount: 1 },
   ])(
     'builds the thin profile at the $diameter mm outer-hole threshold',
     ({ diameter, expectedHoleCount }) => {
@@ -728,7 +671,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
         const report = inspectOpenGridStackableCylinderInterface(shape, input)
         expect(report.brepValid).toBe(true)
         expect(report.solidCount).toBe(1)
-        expect(report.bottomSeatMode).toBe('hole')
+        expect(report.bottomSeatMode).toBe('detachable-corner-seat')
         expect(report.volume).toBeGreaterThan(0)
       } finally {
         deleteShape(shape)
