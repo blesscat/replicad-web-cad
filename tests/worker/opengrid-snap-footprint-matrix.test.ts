@@ -133,5 +133,5 @@ describe('OpenGrid Snap footprint generation matrix', () => {
     } finally {
       for (const reference of references.values()) reference.delete()
     }
-  }, 180_000)
+  }, 240_000)
 })

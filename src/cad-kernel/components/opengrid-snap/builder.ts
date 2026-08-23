@@ -388,10 +388,29 @@ function makeCenterRemoverCutter(
       topZ,
     ],
   )
-  const cutter = measureBooleanInScope(scope, 'fuse', () => lower.fuse(upper))
-  if (cutter !== lower) deleteShape(lower)
-  deleteShape(upper)
-  return cutter
+  let cutter: Shape3D | null = null
+  let centerPassage: Shape3D | null = null
+  try {
+    const steppedCutter = measureBooleanInScope(scope, 'fuse', () =>
+      lower.fuse(upper),
+    )
+    cutter = steppedCutter
+    if (steppedCutter !== lower) deleteShape(lower)
+    deleteShape(upper)
+
+    centerPassage = makeCylinder(definition.locatingHoleRadius, topZ - baseZ, [
+      0,
+      0,
+      baseZ,
+    ])
+    const completeCutter = fuseCutter(steppedCutter, centerPassage, scope)
+    cutter = completeCutter
+    centerPassage = null
+    return completeCutter
+  } catch (error) {
+    deleteDistinctShapes([cutter, centerPassage, lower, upper])
+    throw error
+  }
 }
 
 function makeLocatingHolesCutter(
@@ -550,7 +569,7 @@ function applyBodyFeatures(
   const cutTotal = Number(appliesLocatingHoles) + Number(appliesCenterRemover)
   const cutScope = cutTotal > 0 ? reporter?.createScope(cutTotal) : undefined
   const centerRemoverFuseScope = appliesCenterRemover
-    ? reporter?.createScope(1)
+    ? reporter?.createScope(2)
     : undefined
 
   if (appliesLocatingHoles) {
