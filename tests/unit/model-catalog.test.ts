@@ -27,7 +27,6 @@ function opengridParameters(
     connectorSides: {
       ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
     },
-    customScrewPositions: [],
     ...overrides,
   }
 }
@@ -349,8 +348,9 @@ describe('CAD component catalog', () => {
       rows: 2,
       columns: 3,
       screwKind: 'custom' as const,
-      screwMode: 'custom' as const,
-      customScrewPositions: [{ row: 0, column: 1 }],
+      screwMode: 'by-row-column' as const,
+      screwEveryRows: 2,
+      screwEveryColumns: 1,
       connectorHoles: 'enabled' as const,
     })
     expect(opengrid?.validateParameters(parameters)).toEqual({
@@ -362,10 +362,10 @@ describe('CAD component catalog', () => {
       max: [42, 28, 4],
     })
     expect(opengrid?.exportFileName(parameters)).toMatch(
-      /^opengrid-lite-3x2-xnone-ynone-custom-custom-corners-enabled-[0-9a-f]{8}\.step$/,
+      /^opengrid-lite-3x2-xnone-ynone-custom-by-row-column-corners-enabled\.step$/,
     )
     expect(opengrid?.stlFileName(parameters)).toMatch(
-      /^opengrid-lite-3x2-xnone-ynone-custom-custom-corners-enabled-[0-9a-f]{8}\.stl$/,
+      /^opengrid-lite-3x2-xnone-ynone-custom-by-row-column-corners-enabled\.stl$/,
     )
     expect(
       getModelDefinition('modular-grid-base')?.validateParameters(parameters),

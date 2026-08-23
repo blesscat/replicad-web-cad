@@ -62,15 +62,12 @@ export function systemContextForModel(
 export function cloneModelParameters(
   parameters: ModelParameterValues,
 ): ModelParameterValues {
-  if ('customScrewPositions' in parameters && 'chamferCorners' in parameters) {
+  if ('chamferCorners' in parameters && 'targetFrameSides' in parameters) {
     return {
       ...parameters,
       chamferCorners: { ...parameters.chamferCorners },
       connectorSides: { ...parameters.connectorSides },
       targetFrameSides: { ...parameters.targetFrameSides },
-      customScrewPositions: parameters.customScrewPositions.map((position) => ({
-        ...position,
-      })),
     }
   }
   return { ...parameters }
@@ -104,7 +101,6 @@ export function getSystemPreset(
   if (modelId === 'opengrid') {
     const boardParameters: OpenGridParameters = {
       ...OPENGRID_CONFIGURATION.defaultParameters,
-      customScrewPositions: [],
     }
     if (context === 'desk') {
       boardParameters.rows = 4

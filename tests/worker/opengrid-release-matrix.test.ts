@@ -7,7 +7,6 @@ import { buildOpenGridBRep } from '../../src/cad-kernel/components/opengrid/buil
 import { inspectOpenGridShapeQuality } from '../../src/cad-kernel/components/opengrid/quality'
 import { meshBRep } from '../../src/cad-kernel/mesh'
 import {
-  deterministicOpenGridCustomScrewPositions,
   normalizeOpenGridParameters,
   OPENGRID_CONFIGURATION,
   type OpenGridParameters,
@@ -50,7 +49,6 @@ function parameters(
     connectorSides: {
       ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
     },
-    customScrewPositions: [],
     ...overrides,
   })
 }
@@ -76,8 +74,9 @@ const fixtures = [
     rows: 5,
     columns: 5,
     screwKind: 'custom' as const,
-    screwMode: 'custom' as const,
-    customScrewPositions: deterministicOpenGridCustomScrewPositions(5, 5),
+    screwMode: 'by-row-column' as const,
+    screwEveryRows: 2,
+    screwEveryColumns: 2,
     connectorHoles: 'none' as const,
   },
   {
@@ -89,15 +88,13 @@ const fixtures = [
     connectorHoles: 'enabled' as const,
   },
   {
-    id: 'max-grid-custom',
+    id: 'max-grid-row-column',
     rows: OPENGRID_CONFIGURATION.maxGridCount,
     columns: OPENGRID_CONFIGURATION.maxGridCount,
     screwKind: 'custom' as const,
-    screwMode: 'custom' as const,
-    customScrewPositions: deterministicOpenGridCustomScrewPositions(
-      OPENGRID_CONFIGURATION.maxGridCount,
-      OPENGRID_CONFIGURATION.maxGridCount,
-    ),
+    screwMode: 'by-row-column' as const,
+    screwEveryRows: 3,
+    screwEveryColumns: 2,
     connectorHoles: 'enabled' as const,
   },
 ] as const

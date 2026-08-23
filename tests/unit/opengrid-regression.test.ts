@@ -35,7 +35,6 @@ function officialParameters(): OpenGridParameters {
     connectorSides: {
       ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
     },
-    customScrewPositions: [],
   }
 }
 

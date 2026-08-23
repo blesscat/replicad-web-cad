@@ -68,11 +68,9 @@ describe('OpenGrid system entry context', () => {
       columns: 4,
       chamfers: 'none',
       screwMode: 'none',
-      customScrewPositions: [],
     })
     expect(getSystemPreset('opengrid', 'wall')).toEqual({
       ...OPENGRID_CONFIGURATION.defaultParameters,
-      customScrewPositions: [],
     })
   })
 

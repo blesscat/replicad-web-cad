@@ -28,7 +28,6 @@
   import GridDimensionCalculator from '../GridDimensionCalculator.svelte'
   import OpenGridPrintPlanCalculator from './OpenGridPrintPlanCalculator.svelte'
   import ParameterField from '../ParameterField.svelte'
-  import RestoreButton from '../RestoreButton.svelte'
   import Slider from '../Slider.svelte'
   import type { OpenGridComponentPanelProps } from '../types'
   import { translate } from '../../../../i18n'
@@ -49,10 +48,6 @@
   let thickness = $derived(
     OPENGRID_CONFIGURATION.variants[parameters.variant]?.thickness ?? 0,
   )
-  let latticeRows = $derived(Math.max(parameters.rows - 1, 0))
-  let latticeColumns = $derived(Math.max(parameters.columns - 1, 0))
-  let selectedCount = $derived(parameters.customScrewPositions.length)
-
   type ScrewPresetOption = 'official-default' | OpenGridScrewPreset | 'custom'
 
   const screwPresetKeys: readonly OpenGridScrewPreset[] = [
@@ -100,7 +95,6 @@
       targetFrameSides: {
         ...OPENGRID_CONFIGURATION.defaultParameters.targetFrameSides,
       },
-      customScrewPositions: [],
     }
   }
 
@@ -185,10 +179,7 @@
   }
 
   function restoreScrewMode(): void {
-    updateParameters({
-      screwMode: effectiveDefaults.screwMode,
-      customScrewPositions: effectiveDefaults.customScrewPositions,
-    })
+    updateParameters({ screwMode: effectiveDefaults.screwMode })
   }
 
   function restoreScrewConfiguration(): void {
@@ -244,10 +235,6 @@
     applyScrewDimensions('custom', OPENGRID_CONFIGURATION.screwPresets[preset])
   }
 
-  function clonePositions(): OpenGridParameters['customScrewPositions'] {
-    return parameters.customScrewPositions.map((position) => ({ ...position }))
-  }
-
   function centerScrewAvailable(rows: number, columns: number): boolean {
     return rows >= 2 && columns >= 2
   }
@@ -299,17 +286,12 @@
     changes: Pick<OpenGridParameters, 'rows' | 'columns'>,
     target?: Pick<OpenGridParameters, 'targetWidth' | 'targetDepth'>,
   ): void {
-    const positions = clonePositions().filter(
-      (position) =>
-        position.row < changes.rows && position.column < changes.columns,
-    )
     updateParameters({
       ...changes,
       ...target,
       screwCenter: centerScrewAvailable(changes.rows, changes.columns)
         ? parameters.screwCenter
         : false,
-      customScrewPositions: positions,
     })
   }
 
@@ -329,9 +311,6 @@
         ...parameters.targetFrameSides,
         ...(changes.targetFrameSides ?? {}),
       },
-      customScrewPositions: (
-        changes.customScrewPositions ?? clonePositions()
-      ).map((position) => ({ ...position })),
     }
     onParametersChange(next)
   }
@@ -340,7 +319,6 @@
     field:
       | 'rows'
       | 'columns'
-      | 'screwEvery'
       | 'screwEveryRows'
       | 'screwEveryColumns'
       | 'screwDiameter'
@@ -357,7 +335,6 @@
     field:
       | 'rows'
       | 'columns'
-      | 'screwEvery'
       | 'screwEveryRows'
       | 'screwEveryColumns'
       | 'screwDiameter'
@@ -467,11 +444,7 @@
       return
     }
     if (field === 'screwMode') {
-      const screwMode = value as OpenGridParameters['screwMode']
-      updateParameters({
-        screwMode,
-        customScrewPositions: screwMode === 'custom' ? clonePositions() : [],
-      })
+      updateParameters({ screwMode: value as OpenGridParameters['screwMode'] })
       return
     }
     updateParameters({
@@ -516,25 +489,6 @@
   function updateAdvancedScrewSettings(event: Event): void {
     if (!(event.currentTarget instanceof HTMLInputElement)) return
     showAdvancedScrewSettings = event.currentTarget.checked
-  }
-
-  function hasPosition(row: number, column: number): boolean {
-    return parameters.customScrewPositions.some(
-      (position) => position.row === row && position.column === column,
-    )
-  }
-
-  function togglePosition(row: number, column: number): void {
-    const positions = clonePositions()
-    const index = positions.findIndex(
-      (position) => position.row === row && position.column === column,
-    )
-    if (index >= 0) {
-      positions.splice(index, 1)
-    } else {
-      positions.push({ row, column })
-    }
-    updateParameters({ customScrewPositions: positions })
   }
 
   function fieldError(field: keyof OpenGridParameters | 'parameters') {
@@ -949,9 +903,6 @@
       <option value="by-row-column"
         >{translate(locale, 'panel.opengrid.screwByRowColumn')}</option
       >
-      <option value="custom"
-        >{translate(locale, 'panel.opengrid.custom')}</option
-      >
       <option value="none">{translate(locale, 'panel.opengrid.none')}</option>
     </select>
   </ParameterField>
@@ -996,6 +947,19 @@
       </ParameterField>
     </div>
   {/if}
+
+  <div class="grid gap-1 text-sm">
+    <label class="flex min-w-0 grow items-center gap-2">
+      <input
+        type="checkbox"
+        aria-label={translate(locale, 'panel.opengrid.centerScrew')}
+        checked={parameters.screwCenter}
+        disabled={!centerScrewAvailable(parameters.rows, parameters.columns)}
+        onchange={updateScrewCenter}
+      />
+      {translate(locale, 'panel.opengrid.centerScrew')}
+    </label>
+  </div>
 
   <ParameterField
     {locale}
@@ -1125,99 +1089,7 @@
     {/if}
   {/if}
 
-  <div class="grid gap-3">
-    <div class="grid gap-1 text-sm">
-      <label class="flex min-w-0 grow items-center gap-2">
-        <input
-          type="checkbox"
-          aria-label={translate(locale, 'panel.opengrid.centerScrew')}
-          checked={parameters.screwCenter}
-          disabled={!centerScrewAvailable(parameters.rows, parameters.columns)}
-          onchange={updateScrewCenter}
-        />
-        {translate(locale, 'panel.opengrid.centerScrew')}
-      </label>
-    </div>
-    <ParameterField
-      {locale}
-      label={translate(locale, 'panel.opengrid.everyGridHole')}
-      changed={parameterChanged('screwEvery')}
-      restoreLabel={translate(locale, 'panel.opengrid.everyGridHoleRestore')}
-      onRestore={() => restoreParameter('screwEvery')}
-    >
-      <input
-        class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-        aria-label={translate(locale, 'panel.opengrid.everyGridHoleRestore')}
-        type="number"
-        min="0"
-        max={OPENGRID_CONFIGURATION.maxGridCount}
-        step="1"
-        value={parameters.screwEvery}
-        oninput={(event) => updateNumber('screwEvery', event)}
-      />
-    </ParameterField>
-  </div>
-  {#if parameters.screwMode === 'custom'}
-    <div class="grid gap-2" data-testid="opengrid-custom-matrix">
-      <div class="relative flex items-center justify-between gap-2">
-        <span class="min-w-0 font-[650]">
-          {translate(locale, 'panel.opengrid.customPositions')}
-        </span>
-        <div class="flex shrink-0 items-center gap-1">
-          <RestoreButton
-            {locale}
-            label={translate(locale, 'panel.opengrid.customPositions')}
-            visible={parameterChanged('customScrewPositions')}
-            onRestore={() => restoreParameter('customScrewPositions')}
-          />
-          <span class="text-sm text-muted" aria-live="polite"
-            >{translate(locale, 'panel.opengrid.selectedHoles', {
-              count: selectedCount,
-            })}</span
-          >
-        </div>
-      </div>
-      <p class="m-0 text-sm text-muted">
-        {translate(locale, 'panel.opengrid.customPositionsDescription')}
-      </p>
-      {#if latticeRows === 0 || latticeColumns === 0}
-        <p class="m-0 text-sm text-muted">
-          {translate(locale, 'panel.opengrid.noIntersections')}
-        </p>
-      {:else}
-        <div class="grid max-h-96 gap-2 overflow-auto pr-1">
-          {#each Array.from({ length: latticeRows }) as _, row}
-            {#each Array.from({ length: latticeColumns }) as _, column}
-              <button
-                class="rounded-lg border border-border-card px-2 py-2 text-left text-xs"
-                class:border-primary={hasPosition(row, column)}
-                class:bg-primary={hasPosition(row, column)}
-                class:text-white={hasPosition(row, column)}
-                type="button"
-                aria-pressed={hasPosition(row, column)}
-                aria-label={translate(locale, 'panel.opengrid.intersection', {
-                  row: row + 1,
-                  column: column + 1,
-                })}
-                onclick={() => togglePosition(row, column)}
-              >
-                {translate(locale, 'panel.opengrid.intersection', {
-                  row: row + 1,
-                  column: column + 1,
-                })}
-              </button>
-            {/each}
-          {/each}
-        </div>
-      {/if}
-      {#if fieldError('customScrewPositions')}<span
-          class="text-sm text-error"
-          role="alert">{fieldErrorMessage('customScrewPositions')}</span
-        >{/if}
-    </div>
-  {/if}
-
-  {#each ['variant', 'chamfers', 'connectorHoles', 'screwKind', 'screwMode', 'screwCenter', 'screwEvery', 'screwDiameter', 'screwHeadDiameter', 'screwHeadInset', 'screwHeadCountersunkDegree'] as field}
+  {#each ['variant', 'chamfers', 'connectorHoles', 'screwKind', 'screwMode', 'screwCenter', 'screwDiameter', 'screwHeadDiameter', 'screwHeadInset', 'screwHeadCountersunkDegree'] as field}
     {#if fieldError(field as keyof OpenGridParameters)}<span
         class="text-sm text-error"
         role="alert"

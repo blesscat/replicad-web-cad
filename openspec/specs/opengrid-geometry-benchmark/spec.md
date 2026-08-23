@@ -24,7 +24,7 @@ The benchmark MUST compare the same normalized OpenGrid request through three in
 
 ### Requirement: Representative OpenGrid fixture coverage
 
-The benchmark MUST cover the three supported board variants `Full`, `Lite`, and `Heavy`, using the OpenGrid 28 mm grid and the variant-specific board thicknesses. Required scale fixtures MUST include `1×1`, `2×2`, `5×5`, `10×10`, and the largest legal rectangular fixture that remains within the current 500 mm workspace dimension limit. Feature-load fixtures MUST cover no screw holes, standard corner screw holes, all eligible screw holes, and a deterministic custom hole pattern; connector-hole behavior MUST be exercised in at least one small and one large fixture.
+The benchmark MUST cover the three supported board variants `Full`, `Lite`, and `Heavy`, using the OpenGrid 28 mm grid and the variant-specific board thicknesses. Required scale fixtures MUST include `1×1`, `2×2`, `5×5`, `10×10`, and the largest legal rectangular fixture that remains within the current 500 mm workspace dimension limit. Feature-load fixtures MUST cover no screw holes, standard corner screw holes, all eligible screw holes, and a deterministic by-row-column interval pattern; connector-hole behavior MUST be exercised in at least one small and one large fixture.
 
 #### Scenario: Variant and scale coverage is present
 
@@ -36,9 +36,9 @@ The benchmark MUST cover the three supported board variants `Full`, `Lite`, and 
 #### Scenario: Screw and connector load is represented
 
 - **WHEN** feature-load fixtures are executed
-- **THEN** the report MUST distinguish no-hole, corner-hole, all-hole, and custom-hole configurations
+- **THEN** the report MUST distinguish no-hole, corner-hole, all-hole, and by-row-column interval configurations
 - **AND** it MUST identify the connector-hole configuration used by each fixture
-- **AND** a custom pattern MUST be deterministic and reproducible from the report metadata
+- **AND** the interval pattern MUST be deterministic and reproducible from the report metadata
 
 ### Requirement: Controlled cold and warm measurement protocol
 
@@ -85,7 +85,7 @@ The benchmark MUST produce a structured report and a human-readable handoff reco
 - **WHEN** the benchmark change is completed
 - **THEN** a future `add-opengrid-generator` change MUST be able to select its geometry strategy by reading the committed handoff record
 - **AND** the handoff MUST include enough context to avoid rerunning the strategy discussion
-- **AND** the future change MUST inherit the Full/Lite/Heavy, rows/columns, screw specification, screw-position matrix, connector-hole, UI, Worker, cancellation, preview, and export scope from the benchmark proposal
+- **AND** the future change MUST inherit the Full/Lite/Heavy, rows/columns, screw specification, supported screw-placement modes, connector-hole, UI, Worker, cancellation, preview, and export scope from the benchmark proposal
 
 #### Scenario: No single strategy works for every variant
 

@@ -71,7 +71,6 @@ function opengridParameters(
     connectorSides: {
       ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
     },
-    customScrewPositions: [],
     ...overrides,
   }
 }
@@ -203,6 +202,9 @@ describe('OpenGrid Worker runtime', () => {
           columns: 10,
           halfCellX: 'none',
           halfCellY: 'none',
+          targetWidth: 0,
+          targetDepth: 0,
+          fitToTarget: false,
           targetFrameShape: 'none',
           targetFrameSides: {
             top: true,
@@ -213,8 +215,6 @@ describe('OpenGrid Worker runtime', () => {
           screwKind: 'custom',
           screwMode: 'everywhere',
           screwCenter: false,
-          screwEvery: 0,
-          customScrewPositions: [],
           connectorHoles: 'enabled',
           chamfers: 'none',
           chamferCorners: {
@@ -263,6 +263,9 @@ describe('OpenGrid Worker runtime', () => {
           columns: 2,
           halfCellX: 'right',
           halfCellY: 'top',
+          targetWidth: 0,
+          targetDepth: 0,
+          fitToTarget: false,
           targetFrameShape: 'none',
           targetFrameSides: {
             top: true,
@@ -271,10 +274,8 @@ describe('OpenGrid Worker runtime', () => {
             left: true,
           },
           screwKind: 'custom',
-          screwMode: 'custom',
+          screwMode: 'by-row-column',
           screwCenter: false,
-          screwEvery: 0,
-          customScrewPositions: [{ row: 0, column: 0 }],
           connectorHoles: 'enabled',
           chamfers: 'corners',
           chamferCorners: {
@@ -304,7 +305,9 @@ describe('OpenGrid Worker runtime', () => {
       'opengrid',
       expect.objectContaining({
         variant: 'Heavy',
-        customScrewPositions: [{ row: 0, column: 0 }],
+        screwMode: 'by-row-column',
+        screwEveryRows: 1,
+        screwEveryColumns: 2,
       }),
       expect.any(Object),
     )

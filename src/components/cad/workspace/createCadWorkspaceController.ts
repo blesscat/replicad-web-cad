@@ -55,9 +55,6 @@ function cloneOpenGridParameters(
     chamferCorners: { ...parameters.chamferCorners },
     connectorSides: { ...parameters.connectorSides },
     targetFrameSides: { ...parameters.targetFrameSides },
-    customScrewPositions: parameters.customScrewPositions.map((position) => ({
-      ...position,
-    })),
   }
 }
 

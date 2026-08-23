@@ -195,14 +195,12 @@ export {
   OPENGRID_CONNECTOR_SIDES,
   boundsForOpenGrid,
   cellCenterForOpenGrid,
-  deterministicOpenGridCustomScrewPositions,
   isOpenGridGenerationSupported,
   isOpenGridLayeredVariant,
   isOpenGridParameters,
   normalizeOpenGridParameters,
   openGridBoardConfiguration,
   openGridConnectorLocationsFor,
-  openGridCustomPositionFingerprint,
   openGridFileName,
   openGridNominalBoardConfiguration,
   openGridPhysicalBoundsFor,
@@ -1124,21 +1122,11 @@ export function validateModelParameters(
   }
 
   if (modelId === 'opengrid') {
-    try {
-      return {
-        valid: true,
-        value: {
-          modelId,
-          parameters: normalizeOpenGridParameters(value),
-        },
-      }
-    } catch {
-      const validation = validateOpenGridParameters(value)
-      if (!validation.valid) return validation
-      return {
-        valid: true,
-        value: { modelId: 'opengrid', parameters: validation.value },
-      }
+    const validation = validateOpenGridParameters(value)
+    if (!validation.valid) return validation
+    return {
+      valid: true,
+      value: { modelId: 'opengrid', parameters: validation.value },
     }
   }
 

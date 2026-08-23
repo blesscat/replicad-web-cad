@@ -1243,7 +1243,6 @@ async function buildOpenGridPrototypeShape(
     chamfers: 'none',
     connectorHoles: 'none',
     screwMode: 'none',
-    customScrewPositions: [],
   }
   const startedAt = performance.now()
 
