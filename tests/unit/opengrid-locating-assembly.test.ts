@@ -207,10 +207,10 @@ describe('OpenGrid locating and assembly interface contract', () => {
       0, 90, 270, 0, 180,
     ])
     expect(indicators.map(({ rotationDegrees }) => rotationDegrees)).toEqual([
-      180, 0, 180, 90, 270,
+      90, 0, 180, 90, 270,
     ])
     expect(indicators.map(({ center }) => center)).toEqual([
-      [offset, 0],
+      [0, -offset],
       [pitch - offset, 0],
       [-pitch + offset, 0],
       [0, pitch - offset],
