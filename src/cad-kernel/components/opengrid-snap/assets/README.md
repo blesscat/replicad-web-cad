@@ -22,8 +22,9 @@ The supplied `openConnect_Snap_Directional_Lite(1).stl`,
 `openConnect_Snap_Directional_Standard(1).stl`, and
 `openConnect_Snap_Symmetric_Standard.stl` are placement/topology references
 only and are not loaded by the runtime. Full-footprint builds compose the STEP
-head directly on the selected Snap top only when `openConnect=true` (the Wall
-system preset enables it; the Desk preset does not). Before that composition,
+head directly on the selected Snap top only when `openConnect=true`. The Wall
+system exposes this state as a checkbox; the Desk system keeps it disabled.
+Before that composition,
 the builder cuts an approximate 5 mm-wide negative-Y underside notch from the
 Snap assembly. The notch follows the supplied Directional Full STEP's stepped,
 multi-segment profile rather than a single rectangular cut; the STL references

@@ -49,7 +49,7 @@ describe('OpenGrid system entry context', () => {
       footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
-      openConnect: true,
+      openConnect: false,
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,

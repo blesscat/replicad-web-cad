@@ -33,7 +33,7 @@ describe('OpenGrid Snap contract', () => {
       footprint,
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
-      openConnect: footprint === 'full',
+      openConnect: false,
       magnetHoleShape: 'none' as const,
       magnetHoleLength: 0,
       magnetHoleWidth: 0,
@@ -120,14 +120,14 @@ describe('OpenGrid Snap contract', () => {
     ).toMatchObject({ valid: false })
   })
 
-  it('preserves explicit OpenConnect state while normalizing legacy snapshots', async () => {
+  it('normalizes legacy snapshots with OpenConnect disabled', async () => {
     const { normalizeOpenGridSnapParameters } =
       await import('../../src/cad-contract/units')
     const legacy = parameters()
     delete (legacy as Partial<typeof legacy>).openConnect
 
     expect(normalizeOpenGridSnapParameters(legacy)).toMatchObject({
-      openConnect: true,
+      openConnect: false,
     })
 
     expect(
@@ -387,7 +387,7 @@ describe('OpenGrid Snap contract', () => {
       profile: 'Standard',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
-      openConnect: true,
+      openConnect: false,
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,

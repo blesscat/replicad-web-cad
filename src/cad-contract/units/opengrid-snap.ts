@@ -119,7 +119,7 @@ export const OPENGRID_SNAP_CONFIGURATION = {
     footprint: 'full' as OpenGridSnapFootprint,
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
-    openConnect: true,
+    openConnect: false,
     magnetHoleShape: 'none' as OpenGridSnapMagnetHoleShape,
     magnetHoleLength: 0,
     magnetHoleWidth: 0,
@@ -510,7 +510,7 @@ export function normalizeOpenGridSnapParameters(value: unknown): unknown {
     normalized.centerRemoverHole = false
   }
   if (!Object.prototype.hasOwnProperty.call(normalized, 'openConnect')) {
-    normalized.openConnect = true
+    normalized.openConnect = false
   }
   if (!Object.prototype.hasOwnProperty.call(normalized, 'magnetHoleShape')) {
     normalized.magnetHoleShape = 'none'

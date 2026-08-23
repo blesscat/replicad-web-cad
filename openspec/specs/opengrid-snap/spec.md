@@ -17,8 +17,8 @@ parameter snapshot MUST contain exactly `variant`, `profile`, `offset`,
 persistence and request compatibility. After normalization, it MUST preserve
 the explicit boolean for a full-footprint snapshot and MUST be `false` for
 `half` or `quarter`. Incoming full-footprint snapshots that omit
-`openConnect` MUST use the default `true`; an explicit `false` MUST remain
-false. The selected profile and variant
+`openConnect` MUST use the default `false`; an explicit `true` MUST remain
+true. The selected profile and variant
 MUST be used without substituting a Directional profile for a Standard
 profile. `magnetHoleShape` MUST be `none`, `square`, or `round`. When the shape
 is `none`, all four magnet dimensions MUST be zero and the magnet feature MUST
@@ -41,7 +41,7 @@ own `halfCellX` and `halfCellY` contract. The existing `opengrid-snap` modelId,
 buildKey, and route MUST remain unchanged. A zero-offset, full-footprint
 Standard snapshot with all features disabled MUST use the repository-owned
 Bare Standard reference or its equivalent programmatic baseline. When
-`openConnect=true`, it MUST include the fixed OpenConnect composition; when
+`openConnect=true`, it MUST include the selected OpenConnect composition; when
 `openConnect=false`, it MUST remain a Snap-only result.
 
 #### Scenario: Valid full-footprint Standard snapshot
@@ -66,7 +66,8 @@ Bare Standard reference or its equivalent programmatic baseline. When
 #### Scenario: Valid OpenConnect profile and variant matrix
 
 - **WHEN** a complete full-footprint snapshot selects any of `Standard Lite`,
-  `Standard Full`, `Directional Lite`, or `Directional Full`
+  `Standard Full`, `Directional Lite`, or `Directional Full` with
+  `openConnect=true`
 - **THEN** validation and generation MUST accept the selected profile and
   variant
 - **AND** generation MUST include OpenConnect geometry for that exact profile
@@ -86,22 +87,22 @@ Bare Standard reference or its equivalent programmatic baseline. When
 #### Scenario: Valid square magnet snapshot
 
 - **WHEN** a full-footprint snapshot selects `magnetHoleShape=square` with
-  positive length, width, and thickness, zero diameter, and both existing
-  hole flags `false`
+  positive length, width, and thickness, zero diameter, both existing hole
+  flags `false`, and `openConnect=true`
 - **THEN** validation MUST accept it when the dimensions fit the selected
   profile's printable body and retaining structure
 - **AND** generation MUST apply one centered square magnet feature while
-  retaining the fixed OpenConnect composition
+  retaining the selected OpenConnect composition
 
 #### Scenario: Valid round magnet snapshot
 
 - **WHEN** a full-footprint snapshot selects `magnetHoleShape=round` with
-  positive diameter and thickness, zero length and width, and both existing
-  hole flags `false`
+  positive diameter and thickness, zero length and width, both existing hole
+  flags `false`, and `openConnect=true`
 - **THEN** validation MUST accept it when the dimensions fit the selected
   profile's printable body and retaining structure
 - **AND** generation MUST apply one centered round magnet feature while
-  retaining the fixed OpenConnect composition
+  retaining the selected OpenConnect composition
 
 #### Scenario: Valid canonical half-footprint snapshot
 
@@ -124,11 +125,11 @@ Bare Standard reference or its equivalent programmatic baseline. When
   `snap-quarter.step` asset without an OpenConnect head
 - **AND** the fixed result MUST fit both 14 mm host axes
 
-#### Scenario: Legacy Snap snapshots default OpenConnect on when absent
+#### Scenario: Legacy Snap snapshots default OpenConnect off when absent
 
 - **WHEN** a persisted or imported full-footprint Snap snapshot predates the
   `openConnect` field
-- **THEN** normalization MUST add the field with `openConnect=true`
+- **THEN** normalization MUST add the field with `openConnect=false`
 - **AND** the normalized snapshot MUST remain compatible with the existing
   generation and export contract
 
@@ -177,8 +178,8 @@ and Full heads MUST start directly at the selected Snap top.
 
 #### Scenario: Wall offset adjusts Snap before OpenConnect composition
 
-- **WHEN** a valid full-footprint Snap uses `offset=0` or a positive valid
-  offset
+- **WHEN** a valid full-footprint Snap uses `openConnect=true` and
+  `offset=0` or a positive valid offset
 - **THEN** the selected Snap assembly MUST use its normal full-footprint XY
   transform and retain its selected profile and variant Z bounds
 - **AND** the OpenConnect head MUST retain its original XY dimensions
@@ -189,8 +190,8 @@ and Full heads MUST start directly at the selected Snap top.
 
 #### Scenario: Snap-only cutters do not resize the OpenConnect head
 
-- **WHEN** a valid full-footprint snapshot also enables a Snap-local optional
-  cutter applicable to the active system scope
+- **WHEN** a valid full-footprint snapshot uses `openConnect=true` and also
+  enables a Snap-local optional cutter applicable to the active system scope
 - **THEN** the cutter MUST apply to the Snap geometry according to the existing
   feature contract
 - **AND** the OpenConnect head placement MUST remain fixed relative to the
@@ -216,7 +217,7 @@ generation.
 - **THEN** it MAY be committed
 - **AND** the viewport, STEP export, and STL export MUST refer to the same
   committed revision
-- **AND** its filenames MUST identify the fixed OpenConnect composition
+- **AND** its filenames MUST identify the OpenConnect composition
 
 #### Scenario: Invalid OpenConnect candidate remains stale
 

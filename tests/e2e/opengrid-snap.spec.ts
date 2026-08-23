@@ -50,10 +50,12 @@ test('Desk and Wall Snap entries use isolated presets and context resets', async
   ).toHaveCount(0)
   await expect(cornerHoles).toHaveCount(0)
   await expect(centerRemover).toHaveCount(0)
-  const openConnect = page.getByText('OpenConnect（固定包含）', { exact: true })
+  const openConnect = page.getByRole('checkbox', { name: 'OpenConnect' })
   await expect(openConnect).toBeVisible()
+  await expect(openConnect).not.toBeChecked()
   await expect(offset).toHaveValue('0')
   await expect(offset).toBeEnabled()
+  await openConnect.check()
   await deskSystem.check()
   await expect(deskSystem).toBeChecked()
   await expect(openConnect).toHaveCount(0)
@@ -63,7 +65,7 @@ test('Desk and Wall Snap entries use isolated presets and context resets', async
   await expect(offset).toHaveValue('0.3')
 
   await wallSystem.check()
-  await expect(openConnect).toBeVisible()
+  await expect(openConnect).toBeChecked()
 
   await page.goto('/cad/opengrid-snap?system=wall')
   const wallVariant = page.getByRole('combobox', {
@@ -84,8 +86,8 @@ test('Desk and Wall Snap entries use isolated presets and context resets', async
     page.getByRole('combobox', { name: 'OpenGrid Snap 格型' }),
   ).toHaveCount(0)
   await expect(
-    page.getByText('OpenConnect（固定包含）', { exact: true }),
-  ).toBeVisible()
+    page.getByRole('checkbox', { name: 'OpenConnect' }),
+  ).toBeChecked()
   await expect(wallMagnetShape).toBeVisible()
   await expect(wallOffset).toHaveValue('0')
   await expect(
@@ -383,7 +385,7 @@ test('OpenGrid Snap generates the complete assembly and exports the committed re
   })
   await expect(page.getByLabel('寬度 X 25.6 mm')).toBeVisible()
   await expect(page.getByLabel('深度 Y 25.6 mm')).toBeVisible()
-  await expect(page.getByLabel('高度 Z 9.4 mm')).toBeVisible()
+  await expect(page.getByLabel('高度 Z 6.8 mm')).toBeVisible()
 
   const offset = page.getByRole('slider', { name: '外框總增量（X/Y）' })
   await offset.press('ArrowRight')
@@ -395,20 +397,20 @@ test('OpenGrid Snap generates the complete assembly and exports the committed re
   })
   await expect(page.getByLabel('寬度 X 25.8 mm')).toBeVisible()
   await expect(page.getByLabel('深度 Y 25.8 mm')).toBeVisible()
-  await expect(page.getByLabel('高度 Z 9.4 mm')).toBeVisible()
+  await expect(page.getByLabel('高度 Z 6.8 mm')).toBeVisible()
 
   const stepDownloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const stepDownload = await stepDownloadPromise
   expect(stepDownload.suggestedFilename()).toBe(
-    'opengrid-snap-standard-full-offset0.2-full-corners0-center0-openconnect.step',
+    'opengrid-snap-standard-full-offset0.2-full-corners0-center0.step',
   )
 
   const stlDownloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: '下載 STL' }).click()
   const stlDownload = await stlDownloadPromise
   expect(stlDownload.suggestedFilename()).toBe(
-    'opengrid-snap-standard-full-offset0.2-full-corners0-center0-openconnect.stl',
+    'opengrid-snap-standard-full-offset0.2-full-corners0-center0.stl',
   )
   await expect
     .poll(() => readBinaryStlByteLength(stlDownload))
@@ -426,7 +428,7 @@ test('OpenGrid Snap generates the complete assembly and exports the committed re
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const directionalStepDownload = await directionalStepDownloadPromise
   expect(directionalStepDownload.suggestedFilename()).toBe(
-    'opengrid-snap-directional-full-offset0.2-full-corners1-center1-openconnect.step',
+    'opengrid-snap-directional-full-offset0.2-full-corners1-center1.step',
   )
 })
 
@@ -464,7 +466,7 @@ test('OpenGrid Snap commits the user-reported Directional Lite offset build', as
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const stepDownload = await stepDownloadPromise
   expect(stepDownload.suggestedFilename()).toBe(
-    'opengrid-snap-directional-lite-offset0.35-full-corners1-center1-openconnect.step',
+    'opengrid-snap-directional-lite-offset0.35-full-corners1-center1.step',
   )
 })
 
@@ -476,12 +478,14 @@ test('OpenGrid Snap Wall OpenConnect keeps source geometry through export', asyn
   skipHeadlessFirefoxWithoutWebGL(browserName)
   await page.goto('/cad/opengrid-snap?system=wall')
 
-  const openConnect = page.getByText('OpenConnect（固定包含）', { exact: true })
+  const openConnect = page.getByRole('checkbox', { name: 'OpenConnect' })
   const offset = page.getByRole('slider', { name: '外框總增量（X/Y）' })
   const stepButton = page.getByRole('button', { name: '下載 STEP' })
   await expect(openConnect).toBeVisible()
+  await expect(openConnect).not.toBeChecked()
   await expect(offset).toHaveValue('0')
 
+  await openConnect.check()
   await expect(stepButton).toBeEnabled({ timeout: 90_000 })
   const zeroOffsetDownloadPromise = page.waitForEvent('download')
   await stepButton.click()
