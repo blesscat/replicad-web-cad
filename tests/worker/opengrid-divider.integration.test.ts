@@ -168,6 +168,14 @@ function horizontalSectionBoundsAt(shape: Shape3D, z: number): number[][] {
   }
 }
 
+function pegProbeZ(): number {
+  return (
+    -OPENGRID_DIVIDER_CONFIGURATION.pegLength +
+    OPENGRID_DIVIDER_CONFIGURATION.pegBottomChamfer +
+    0.01
+  )
+}
+
 describe('OpenGrid divider CAD kernel integration', () => {
   it.each([
     { left: 1, right: 1, up: 0, down: 0, height: 20, wallThickness: 2 },
@@ -212,7 +220,7 @@ describe('OpenGrid divider CAD kernel integration', () => {
           const probe = makeCylinder(
             OPENGRID_DIVIDER_CONFIGURATION.pegDiameter / 2 - 0.1,
             0.2,
-            [rawX - centerX, rawY - centerY, -3.05],
+            [rawX - centerX, rawY - centerY, pegProbeZ()],
           )
           try {
             expect(measureVolume(shape.intersect(probe))).toBeGreaterThan(0)
@@ -231,6 +239,7 @@ describe('OpenGrid divider CAD kernel integration', () => {
         expect(quality.topFilletFaceCount).toBeGreaterThan(0)
         expect(quality.transitionFaceCount).toBeGreaterThan(0)
         expect(quality.transitionFilletFaceCount).toBeGreaterThan(0)
+        expect(quality.bottomPegChamferCount).toBe(quality.expectedPegCount)
         expect((await exportStepBytes(shape)).byteLength).toBeGreaterThan(0)
         expect(
           (
@@ -538,7 +547,7 @@ describe('OpenGrid divider CAD kernel integration', () => {
     }
   }, 180_000)
 
-  it('keeps nominal peg diameter, exposed length, and chamfered wall profile', async () => {
+  it('keeps nominal peg diameter, shared 3.8 mm length, and chamfered profile', async () => {
     const parameters = {
       left: 1.5,
       right: 2.5,
@@ -560,8 +569,14 @@ describe('OpenGrid divider CAD kernel integration', () => {
       expect(
         probeVolumeAt(shape, [rightPeg[0] + 2.65, rightPeg[1]], -0.5),
       ).toBeLessThan(1e-8)
-      expect(probeVolumeAt(shape, rightPeg, -2.98)).toBeGreaterThan(0)
-      expect(probeVolumeAt(shape, rightPeg, -3.04)).toBeLessThan(1e-8)
+      expect(probeVolumeAt(shape, rightPeg, pegProbeZ())).toBeGreaterThan(0)
+      expect(
+        probeVolumeAt(
+          shape,
+          rightPeg,
+          -OPENGRID_DIVIDER_CONFIGURATION.pegLength - 0.04,
+        ),
+      ).toBeLessThan(1e-8)
 
       expect(probeVolumeAt(shape, [27.5, 0.9], 10, 0.05)).toBeGreaterThan(0)
       expect(probeVolumeAt(shape, [27.5, 1.1], 10, 0.05)).toBeLessThan(1e-8)
@@ -584,7 +599,7 @@ describe('OpenGrid divider CAD kernel integration', () => {
     }
     const shape = await buildOpenGridDivider(parameters)
     try {
-      expect(probeVolumeAt(shape, [0, 0], -2.98)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, [0, 0], pegProbeZ())).toBeGreaterThan(0)
       expect(
         probeVolumeAt(
           shape,

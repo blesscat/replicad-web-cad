@@ -61,6 +61,12 @@ describe('OpenGrid locating and assembly interface contract', () => {
     expect(OPENGRID_DIVIDER_CONFIGURATION.pegDiameter).toBe(
       configuration.nominalDiameter,
     )
+    expect(OPENGRID_DIVIDER_CONFIGURATION.pegLength).toBe(
+      configuration.integratedSeatHeight,
+    )
+    expect(OPENGRID_DIVIDER_CONFIGURATION.pegBottomChamfer).toBe(
+      configuration.integratedSeatBottomChamfer,
+    )
     expect(PILLAR_CONFIGURATION.bodyDiameter).toBe(
       configuration.testShaftDiameter,
     )

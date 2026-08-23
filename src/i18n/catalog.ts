@@ -129,7 +129,7 @@ export const zhHantMessages = {
   'models.model.opengrid-divider.name': 'divider (分隔牆)',
   'models.model.opengrid-divider.selection': 'divider (分隔牆)',
   'models.model.opengrid-divider.description':
-    '可調整方向臂、牆高與牆厚的 OpenGrid 分隔牆。',
+    '可調整方向臂、牆高與牆厚的 OpenGrid 分隔牆；底部定位柱為 Ø5 mm × 3.8 mm，底部採 0.2 mm 導角。',
   'models.model.opengrid-divider.alt': 'OpenGrid divider 預覽',
   'models.model.opengrid-organizer-box.name':
     'OpenGrid Organizer Box (收納方盒)',
@@ -756,7 +756,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'models.model.opengrid-divider.name': 'OpenGrid Divider',
   'models.model.opengrid-divider.selection': 'Divider',
   'models.model.opengrid-divider.description':
-    'An OpenGrid divider with adjustable arms, wall height, and wall thickness.',
+    'An OpenGrid divider with adjustable arms, wall height, and wall thickness; its locating pegs are Ø5 mm × 3.8 mm with a 0.2 mm bottom chamfer.',
   'models.model.opengrid-divider.alt': 'OpenGrid divider preview',
   'models.model.opengrid-organizer-box.name': 'OpenGrid Organizer Box',
   'models.model.opengrid-organizer-box.selection': 'Organizer Box',

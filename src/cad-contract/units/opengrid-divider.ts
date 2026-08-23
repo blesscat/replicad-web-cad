@@ -79,7 +79,9 @@ export const OPENGRID_DIVIDER_CONFIGURATION = {
   geometrySafetyMargin: DIVIDER_GEOMETRY_SAFETY_MARGIN,
   bottomSupportHeight: DIVIDER_BOTTOM_SUPPORT_HEIGHT,
   pegDiameter: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter,
-  pegLength: 3,
+  pegLength: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatHeight,
+  pegBottomChamfer:
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatBottomChamfer,
   pegCenterSpacing: OPENGRID_GRID_CONFIGURATION.fullPitch,
   sideFilletRadius: 2.5,
   topFilletRadius: 1,

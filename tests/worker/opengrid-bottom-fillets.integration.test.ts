@@ -126,7 +126,7 @@ function hasLocatingPegFillet(
 }
 
 describe('OpenGrid bottom edge finishing', () => {
-  it('rounds the divider base and every locating peg at 0.5 mm', async () => {
+  it('rounds the divider base and chamfers every locating peg', async () => {
     const parameters: OpenGridDividerParameters = {
       ...OPENGRID_DIVIDER_CONFIGURATION.defaultParameters,
     }
@@ -141,7 +141,7 @@ describe('OpenGrid bottom edge finishing', () => {
           surfaceTypes: ['CYLINDRE'],
         }),
       ).toBe(true)
-      expect(hasLocatingPegFillet(records, -3)).toBe(true)
+      expect(hasIntegratedSeatChamfer(records)).toBe(true)
     } finally {
       deleteShape(shape)
     }
