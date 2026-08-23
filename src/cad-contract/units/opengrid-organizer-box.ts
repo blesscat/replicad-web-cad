@@ -2,6 +2,8 @@ import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
 import {
   OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
+  openGridDetachableCornerSeatIndicatorPlacementFor,
+  openGridDetachableCornerSeatSocketRotationFor,
 } from './opengrid-locating-assembly'
 import {
   openGridStackableBoxSocketCentersFor,
@@ -632,79 +634,43 @@ export function openGridOrganizerBoxDetachableSocketPosesFor(
     layout.gridCountY,
   )
   const centers = openGridStackableBoxSocketCentersFor(interfaceParameters)
+  const upperLeft = detachableSocketCenterFor(centers, -1, 1)
+  const upperRight = detachableSocketCenterFor(centers, 1, 1)
+  const lowerRight = detachableSocketCenterFor(centers, 1, -1)
+  const lowerLeft = detachableSocketCenterFor(centers, -1, -1)
   return [
     {
       corner: 'upper-left',
-      center: detachableSocketCenterFor(centers, -1, 1),
-      rotationDegrees: 0,
+      center: upperLeft,
+      rotationDegrees: openGridDetachableCornerSeatSocketRotationFor(upperLeft),
     },
     {
       corner: 'upper-right',
-      center: detachableSocketCenterFor(centers, 1, 1),
-      rotationDegrees: 90,
+      center: upperRight,
+      rotationDegrees:
+        openGridDetachableCornerSeatSocketRotationFor(upperRight),
     },
     {
       corner: 'lower-right',
-      center: detachableSocketCenterFor(centers, 1, -1),
-      rotationDegrees: 180,
+      center: lowerRight,
+      rotationDegrees:
+        openGridDetachableCornerSeatSocketRotationFor(lowerRight),
     },
     {
       corner: 'lower-left',
-      center: detachableSocketCenterFor(centers, -1, -1),
-      rotationDegrees: 270,
+      center: lowerLeft,
+      rotationDegrees: openGridDetachableCornerSeatSocketRotationFor(lowerLeft),
     },
   ]
-}
-
-function detachableIndicatorRotationFor(
-  socketRotation: OpenGridOrganizerBoxDetachableSocketPose['rotationDegrees'],
-  directionOffset: 0 | 180 = 180,
-): OpenGridOrganizerBoxDetachableIndicatorPlacement['rotationDegrees'] {
-  const lockRotation =
-    OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.lockRotationDegrees
-  const indicatorRotation =
-    (socketRotation + lockRotation + directionOffset) % 360
-  if (indicatorRotation === 0) return 0
-  if (indicatorRotation === 90) return 90
-  if (indicatorRotation === 180) return 180
-  if (indicatorRotation === 270) return 270
-  throw new Error('OPENGRID_ORGANIZER_BOX_INDICATOR_ROTATION_INVALID')
-}
-
-function detachableIndicatorApexDirectionFor(
-  rotationDegrees: OpenGridOrganizerBoxDetachableSocketPose['rotationDegrees'],
-): OpenGridOrganizerBoxPoint2D {
-  if (rotationDegrees === 0) return [1, 0]
-  if (rotationDegrees === 90) return [0, 1]
-  if (rotationDegrees === 180) return [-1, 0]
-  return [0, -1]
 }
 
 export function openGridOrganizerBoxDetachableIndicatorPlacementFor(
   pose: OpenGridOrganizerBoxDetachableSocketPose,
 ): OpenGridOrganizerBoxDetachableIndicatorPlacement {
-  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
-  const offsetFromSocket =
-    configuration.female.outerDiameter / 2 +
-    configuration.indicator.socketBoundaryClearance +
-    configuration.indicator.radialLength / 2
-  const lockRotation = ((pose.rotationDegrees +
-    configuration.indicator.lockRotationDegrees) %
-    360) as OpenGridOrganizerBoxDetachableSocketPose['rotationDegrees']
-  const apexDirection = detachableIndicatorApexDirectionFor(lockRotation)
-  const referenceArrowSign =
-    pose.corner === 'upper-left' || pose.corner === 'lower-right' ? -1 : 1
-  const directionOffset = referenceArrowSign === -1 ? 0 : 180
-  return {
-    center: [
-      pose.center[0] + referenceArrowSign * apexDirection[0] * offsetFromSocket,
-      pose.center[1] + referenceArrowSign * apexDirection[1] * offsetFromSocket,
-    ],
-    rotationDegrees: detachableIndicatorRotationFor(
-      pose.rotationDegrees,
-      directionOffset,
-    ),
-  }
+  return openGridDetachableCornerSeatIndicatorPlacementFor(
+    pose.center,
+    pose.rotationDegrees,
+  )
 }
 
 export function validateOpenGridOrganizerBoxParameters(

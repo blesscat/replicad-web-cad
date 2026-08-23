@@ -8,8 +8,15 @@ import {
   OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_LOCATING_SEAT_MODES,
+  OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+  openGridOrganizerBoxDetachableIndicatorPlacementFor,
+  openGridOrganizerBoxDetachableSocketPosesFor,
 } from '../../src/cad-contract/units'
 import { openGridSnapProfileFor } from '../../src/cad-kernel/components/opengrid-snap/profile'
+import {
+  openGridDetachableCornerSeatConsumerPlacementsFor,
+  openGridDetachableCornerSeatIndicatorPlacementFor,
+} from '../../src/cad-kernel/components/opengrid-locating-assembly/consumer'
 import { placeOpenGridDetachableCornerSeatSocketShape } from '../../src/cad-kernel/components/opengrid-locating-assembly/reference'
 
 describe('OpenGrid locating and assembly interface contract', () => {
@@ -145,6 +152,33 @@ describe('OpenGrid locating and assembly interface contract', () => {
       configuration.male.nominalVolume -
         configuration.indicator.nominalRemovedVolume,
       8,
+    )
+  })
+
+  it('matches Organizer Box corner directions and lock indicators', () => {
+    const organizerParameters = {
+      ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+      holeCountX: 1,
+      holeCountY: 1,
+      bottomInterfaceMode: 'detachable-corner-seat' as const,
+    }
+    const organizerPoses =
+      openGridOrganizerBoxDetachableSocketPosesFor(organizerParameters)
+    const consumerPlacements =
+      openGridDetachableCornerSeatConsumerPlacementsFor(
+        organizerPoses.map(({ center }) => center),
+      )
+
+    expect(consumerPlacements).toEqual(
+      organizerPoses.map(({ center, rotationDegrees }) => ({
+        center,
+        rotationDegrees,
+      })),
+    )
+    expect(
+      consumerPlacements.map(openGridDetachableCornerSeatIndicatorPlacementFor),
+    ).toEqual(
+      organizerPoses.map(openGridOrganizerBoxDetachableIndicatorPlacementFor),
     )
   })
 

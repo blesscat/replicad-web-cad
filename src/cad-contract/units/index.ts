@@ -335,6 +335,8 @@ export {
   OPENGRID_LEGACY_LOCATING_SEAT_MODE,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_LOCATING_SEAT_MODES,
+  openGridDetachableCornerSeatIndicatorPlacementFor,
+  openGridDetachableCornerSeatSocketRotationFor,
   normalizeOpenGridLocatingSeatMode,
 } from './opengrid-locating-assembly'
 export type { HalfCellDirection, HalfCellX, HalfCellY } from './half-cell'
@@ -389,7 +391,12 @@ export type {
   OpenGridStackableCylinderValidation,
   OpenGridStackableCylinderValidationIssue,
 } from './opengrid-stackable-cylinder'
-export type { OpenGridLocatingSeatMode } from './opengrid-locating-assembly'
+export type {
+  OpenGridDetachableCornerSeatIndicatorPlacement,
+  OpenGridDetachableCornerSeatPoint2D,
+  OpenGridDetachableCornerSeatRotation,
+  OpenGridLocatingSeatMode,
+} from './opengrid-locating-assembly'
 export type {
   OpenGridBoardConfiguration,
   OpenGridChamferMode,

@@ -1,6 +1,8 @@
 import { makeBox, makeCompound, measureVolume, type Shape3D } from 'replicad'
 import {
   OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
+  openGridDetachableCornerSeatIndicatorPlacementFor as canonicalIndicatorPlacementFor,
+  openGridDetachableCornerSeatSocketRotationFor,
   type OpenGridStackableBoxPoint2D,
 } from '../../../cad-contract/units'
 import {
@@ -52,21 +54,10 @@ function assertGenerationCurrent(
   }
 }
 
-function directionForRotation(
-  rotationDegrees: OpenGridDetachableCornerSeatSocketPlacement['rotationDegrees'],
-): [number, number] {
-  if (rotationDegrees === 0) return [1, 0]
-  if (rotationDegrees === 90) return [0, 1]
-  if (rotationDegrees === 180) return [-1, 0]
-  return [0, -1]
-}
-
 function rotationForCenter(
   center: OpenGridStackableBoxPoint2D,
 ): OpenGridDetachableCornerSeatSocketPlacement['rotationDegrees'] {
-  const [x, y] = center
-  if (Math.abs(x) >= Math.abs(y)) return x < 0 ? 180 : 0
-  return y < 0 ? 270 : 90
+  return openGridDetachableCornerSeatSocketRotationFor(center)
 }
 
 export function openGridDetachableCornerSeatConsumerPlacementsFor(
@@ -81,19 +72,10 @@ export function openGridDetachableCornerSeatConsumerPlacementsFor(
 export function openGridDetachableCornerSeatIndicatorPlacementFor(
   placement: OpenGridDetachableCornerSeatConsumerPlacement,
 ): OpenGridDetachableCornerSeatIndicatorPlacement {
-  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
-  const direction = directionForRotation(placement.rotationDegrees)
-  const offsetFromSocket =
-    configuration.female.outerDiameter / 2 +
-    configuration.indicator.socketBoundaryClearance +
-    configuration.indicator.radialLength / 2
-  return {
-    center: [
-      placement.center[0] + direction[0] * offsetFromSocket,
-      placement.center[1] + direction[1] * offsetFromSocket,
-    ],
-    rotationDegrees: placement.rotationDegrees,
-  }
+  return canonicalIndicatorPlacementFor(
+    placement.center,
+    placement.rotationDegrees,
+  )
 }
 
 function placedIndicatorFor(
