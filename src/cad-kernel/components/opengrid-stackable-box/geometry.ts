@@ -28,6 +28,7 @@ import {
   type BooleanOperationReporter,
 } from '../../boolean-progress'
 import { filletEdgesAtZ } from '../../bottom-edge-fillet'
+import { makeOpenGridIntegratedSeat } from '../opengrid-locating-assembly/integrated'
 import {
   assertGenerationCurrent,
   deleteShape,
@@ -994,18 +995,19 @@ function makeOrdinaryBottomHoleCutter(
   )
 }
 
-function makeIntegratedSeat(): Shape3D {
-  const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
-  const seat = makeCylinder(
-    configuration.integratedSeatDiameter / 2,
-    configuration.integratedSeatHeight,
-    [0, 0, configuration.integratedSeatMinZ],
-  )
-  return filletEdgesAtZ(
-    seat,
-    configuration.integratedSeatMinZ,
-    configuration.bottomEdgeFilletRadius,
-  )
+function makeIntegratedSeatTools(
+  centers: readonly (readonly [number, number])[],
+): Shape3D[] {
+  const seats: Shape3D[] = []
+  try {
+    for (const [x, y] of centers) {
+      seats.push(makeOpenGridIntegratedSeat([x, y]))
+    }
+    return seats
+  } catch (error) {
+    seats.forEach(deleteShape)
+    throw error
+  }
 }
 
 function translateShape(
@@ -1025,7 +1027,7 @@ export function addMountingSockets(
   const centers = openGridStackableBoxSocketCentersFor(parameters)
   const integratedSeats =
     parameters.cornerSeatMode === 'integrated'
-      ? centers.map(([x, y]) => translateShape(makeIntegratedSeat(), x, y, 0))
+      ? makeIntegratedSeatTools(centers)
       : []
   if (parameters.cornerSeatMode === 'detachable-corner-seat') {
     shape = cutOpenGridDetachableCornerSeatConsumers(
@@ -1047,7 +1049,12 @@ export function addMountingSockets(
       ? context.booleanOperations?.createScope(operationTotal)
       : undefined
   assertGenerationCurrent(context)
-  let current = fuseWithToolBatch(shape, integratedSeats, operationScope)
+  let current: Shape3D
+  try {
+    current = fuseWithToolBatch(shape, integratedSeats, operationScope)
+  } finally {
+    integratedSeats.forEach(deleteShape)
+  }
   current = cutWithToolBatch(current, socketCutters, operationScope)
 
   const ordinaryCutters = ordinaryCenters.map(([x, y]) =>

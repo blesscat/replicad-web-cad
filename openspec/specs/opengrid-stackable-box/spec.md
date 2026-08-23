@@ -175,9 +175,10 @@ corner position. The socket MUST use the shared 7 mm outer envelope and 1.75
 mm depth, and MUST be compatible with the separately printable shared
 detachable male seat. For `cornerSeatMode='integrated'`, it MUST fuse one solid
 round seat at each of those same positions; every seat MUST be Ø5 mm in
-diameter, exactly 3 mm high, and span Z=-3 mm through Z=0 so that it grows
-outward from the existing box bottom. An integrated seat MUST NOT be a stepped
-hole or a captive-flange opening.
+diameter, exactly 3.8 mm high, and span Z=-3.8 mm through Z=0 so that it grows
+outward from the existing box bottom, with a 0.2 mm chamfer on its bottom
+perimeter. An integrated seat MUST NOT be a stepped hole or a captive-flange
+opening.
 
 The normal, base-plate, and thin-shell profiles MUST preserve their existing
 floor and stacking geometry while the detachable socket and indicator are cut
@@ -223,7 +224,9 @@ grid MAY use every nominal grid position.
 - **WHEN** a valid normal, base-plate, or thin-shell box uses
   `cornerSeatMode='integrated'`
 - **THEN** each existing special corner position MUST contain one fused Ø5 mm
-  cylinder with a 3 mm axial span from Z=-3 mm to Z=0
+  seat with a total axial span from Z=-3.8 mm to Z=0
+- **AND** the lowest 0.2 mm of that span MUST be the seat's bottom perimeter
+  chamfer
 - **AND** the generated shape MUST remain one valid solid
 - **AND** the seat MUST extend below the box bottom without changing the upper
   shell, opening, or stacking interface
@@ -287,7 +290,8 @@ ordinary holes.
 
 - **WHEN** `fullBottomHoleGrid=true` and `cornerSeatMode='integrated'`
 - **THEN** ordinary holes MUST be present at all non-special grid positions
-- **AND** each special position MUST retain a solid Ø5 mm × 3 mm outward seat
+- **AND** each special position MUST retain a solid Ø5 mm seat spanning
+  Z=-3.8 mm to Z=0 with a 0.2 mm bottom chamfer
 - **AND** no ordinary cutter may remove material from that seat
 
 #### Scenario: Exterior clearance does not move the grid
@@ -304,8 +308,9 @@ watertight, a single solid, previewable, and exportable in every supported
 profile. In `detachable-corner-seat` mode it MUST validate every female socket,
 lock indicator, and male/female fit probe. In `none` mode it MUST contain no
 special locating geometry. In `integrated` mode it MUST validate every special
-seat as fused Ø5 mm geometry with a 3 mm Z span below the bottom plane, while
-ordinary full-grid holes and all existing shell/interface checks remain valid.
+seat as fused Ø5 mm geometry with a total 3.8 mm Z span from -3.8 to 0 and a
+0.2 mm bottom perimeter chamfer, while ordinary full-grid holes and all existing
+shell/interface checks remain valid.
 
 #### Scenario: Valid locking full-grid result
 
@@ -321,7 +326,8 @@ ordinary full-grid holes and all existing shell/interface checks remain valid.
 
 - **WHEN** an integrated-seat full-grid snapshot completes generation
 - **THEN** the candidate MUST contain the requested ordinary holes and every
-  active Ø5 mm × 3 mm seat
+  active Ø5 mm seat spanning Z=-3.8 mm to Z=0
+- **AND** every seat MUST retain its 0.2 mm bottom chamfer
 - **AND** it MUST be a valid single solid eligible for preview, STEP export,
   and STL export
 
@@ -493,7 +499,7 @@ existing behavior.
 
 - **WHEN** an integrated-seat box is exported
 - **THEN** both STEP and STL filenames MUST contain `-seats-integrated`
-- **AND** the downloaded geometry MUST include the outward Ø5 mm × 3 mm seats
+- **AND** the downloaded geometry MUST include the outward Ø5 mm × 3.8 mm seats
 
 ### Requirement: Honeycomb material-saving box mode
 

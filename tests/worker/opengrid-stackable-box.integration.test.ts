@@ -1473,7 +1473,10 @@ describe('OpenGrid stackable-box B-Rep', () => {
       )
       expect(report.captiveSocketRecords).toHaveLength(0)
       expect(report.ordinaryBottomHoleCount).toBe(ordinaryCenters.length)
-      expect(boundsOf(shape)[0]?.[2]).toBeCloseTo(-3, 2)
+      expect(boundsOf(shape)[0]?.[2]).toBeCloseTo(
+        OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ,
+        2,
+      )
     } finally {
       deleteShape(shape)
     }

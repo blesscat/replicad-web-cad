@@ -259,7 +259,7 @@ describe('OpenGrid divider contract', () => {
 
     expect(openGridDividerPlanDimensionsFor(parameters)).toMatchObject({
       wallHeight: 20,
-      totalHeight: 23,
+      totalHeight: 23.8,
     })
     expect(openGridDividerPlanDimensionsFor(parameters).width).toBeCloseTo(
       107.45,
@@ -303,7 +303,7 @@ describe('OpenGrid divider contract', () => {
     ).toEqual([[0, 0]])
   })
 
-  it('returns centered bounds including the three millimetre peg extension', () => {
+  it('returns centered bounds including the shared 3.8 mm peg extension', () => {
     const bounds = boundsForOpenGridDivider({
       left: 1,
       right: 1,
@@ -314,7 +314,7 @@ describe('OpenGrid divider contract', () => {
     })
 
     expect(bounds).toEqual({
-      min: [-25.725, -2.5, -3],
+      min: [-25.725, -2.5, -3.8],
       max: [25.725, 2.5, 20],
     })
   })

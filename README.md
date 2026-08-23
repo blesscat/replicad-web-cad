@@ -97,9 +97,11 @@ pages/
 - `modular-grid-base` 參數：`rows`、`columns` 格數 slider，範圍為 1–20 格；每格為 20 × 20 mm，高度固定 5 mm，最大寬/深為 400 mm。預切除 `cell-template.step` 會複製、平移、融合後，只對整體外側四角套用 R2.5 mm 圓角。
 - `hsw-cell` 參數：`rows`、`columns` 格數 slider，範圍為 1–20 格；使用固定約 27.25 × 23.60 × 8 mm 的平頂六角 canonical `hsw-cell.step`，columns 沿 X 方向交錯排列成蜂巢，整體不套用額外圓角。路由為 `/cad/hsw-cell`，輸出檔名為 `hsw-cell-{columns}x{rows}.step` 與 `hsw-cell-{columns}x{rows}.stl`。
 - `hexagonal-column` 參數：`height` 文字輸入=1–500 mm、slider=1–200 mm、`count`、`gap` 與 `orientation`，路由為 `/cad/hexagonal-column`；它保持獨立 component contract，列平面 footprint 安全上限維持 500 mm。
-- OpenGrid stackable-box 與 stackable-cylinder 都以 `hole`（`角座孔`）為預設，並提供 `none`（`無角座`）、`hole`、`integrated`（`內建角座`）三種互斥座模式。`integrated` 會在既有定位位置融合 Ø5 mm × 3 mm、由 Z=-3 mm 延伸至 Z=0 的實體圓座；兩者的 STEP/STL 檔名都包含唯一的 `-seats-none`、`-seats-hole` 或 `-seats-integrated` 後綴。
-- `opengrid-organizer-box` 沿用 OpenGrid 方盒外觀，頂部為實體盲孔，可選圓形或固定方向的 3–6 邊正多邊形；多邊形直徑定義為內切圓直徑。X/Y 孔數、孔外圍對外圍間距、孔深與底部加厚（預設 2 mm）會共同決定盒體尺寸；孔距可連動或分開設定。底部介面以 radio 三選一：`四角固定座`、`鎖定角座` 或 `堆疊結構`，三者不會同時建立。`四角固定座` 會直接融合方盒內建的四個 Ø5 mm × 3 mm 實體腳座（Z=-3 mm 至 Z=0 mm）；`鎖定角座` 則把 Ø7 × 1.75 mm、有擋片的 female socket 直接形成為盒體的一部分，不會輸出另一個 holder。由盒底觀看，左上、右上、右下、左下 socket 固定採 0°、90°、180°、270° 的 B 方向。
-- `鎖定角座` 由 `opengrid-pillar` 的 `{ mode: 'detachable-corner-seat' }` 另行輸出，預設顯示在第一個模式。幾何固定為 5.3 mm 高：定位段高 3.8 mm，底面 Ø4.6 並以 0.2 mm 倒角恢復 Ø5，頂部保留 0.15 mm 耐磨平面；此模式不接受長度或 XY 增量。`物件定位用` 模式的初始總長為 10 mm，上下端都使用 0.2 mm 導角，XY 增量只改變直徑，不移動中心。這項介面目前只在 Organizer Box 試作；四角都必須能手壓到底、提起盒體時不脫落、刻意手拉時仍可拆下，三項實體列印驗收全部通過後才可導入其他模型。
+- OpenGrid stackable-box 與 stackable-cylinder 都以 `detachable-corner-seat`（`鎖定角座`）為預設，並提供 `none`（`無角座`）、`detachable-corner-seat`（`鎖定角座`）、`integrated`（`內建角座`）三種互斥座模式；舊的 `hole` 值會正規化為 `detachable-corner-seat`。`integrated` 會在既有定位位置融合 Ø5 mm × 3.8 mm、由 Z=-3.8 mm 延伸至 Z=0 的實體圓座，底部採 0.2 mm 導角；兩者的 STEP/STL 檔名都包含唯一的 `-seats-none`、`-seats-detachable-corner-seat` 或 `-seats-integrated` 後綴。
+- OpenGrid Open Shelf 固定使用四個 OpenGrid 角落定位柱，沿用同一個 Ø5 mm × 3.8 mm 內建座契約與 0.2 mm 底部導角，柱體仍直接融合到底板且不提供座模式選擇。
+- OpenGrid Divider 的底部定位柱也沿用同一個 Ø5 mm × 3.8 mm 內建座契約與 0.2 mm 底部導角；分隔牆本體的其他底部支撐圓角維持原設定。
+- `opengrid-organizer-box` 沿用 OpenGrid 方盒外觀，頂部為實體盲孔，可選圓形或固定方向的 3–6 邊正多邊形；多邊形直徑定義為內切圓直徑。X/Y 孔數、孔外圍對外圍間距、孔深與底部加厚（預設 2 mm）會共同決定盒體尺寸；孔距可連動或分開設定。底部介面以 radio 三選一：`四角固定座`、`鎖定角座` 或 `堆疊結構`，三者不會同時建立。`四角固定座` 會直接融合方盒內建的四個 Ø5 mm × 3.8 mm 實體腳座（Z=-3.8 mm 至 Z=0 mm），底部採 0.2 mm 導角；`鎖定角座` 則把 Ø7 × 1.75 mm、有擋片的 female socket 直接形成為盒體的一部分，不會輸出另一個 holder。由盒底觀看，左上、右上、右下、左下 socket 固定採 0°、90°、180°、270° 的 B 方向。
+- `鎖定角座` 由 `opengrid-pillar` 的 `{ mode: 'detachable-corner-seat' }` 另行輸出，預設顯示在第一個模式。幾何固定為 5.3 mm 高：定位段高 3.8 mm，底面 Ø4.6 並以 0.2 mm 倒角恢復 Ø5，頂部保留 0.15 mm 耐磨平面；此模式不接受長度或 XY 增量。這項介面目前只在 Organizer Box 試作；四角都必須能手壓到底、提起盒體時不脫落、刻意手拉時仍可拆下，三項實體列印驗收全部通過後才可導入其他模型。
 - 預覽：由 Worker 產生的 B-Rep mesh。
 - 匯出：由 Worker 目前 committed B-Rep 產生 STEP 或 binary STL。
 - 不包含模型匯入、3MF/G-code、儲存、帳號、後端、多人協作或自動啟動 Bambu Studio。

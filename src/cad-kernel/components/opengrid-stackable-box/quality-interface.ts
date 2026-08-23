@@ -68,13 +68,39 @@ function isIntegratedSeatRecordFor(
     closeEnough(diameterX, diameterY, 0.08) &&
     zSpan >=
       configuration.integratedSeatHeight -
-        configuration.bottomEdgeFilletRadius -
+        configuration.integratedSeatBottomChamfer -
         0.1 &&
     record.min[2] <=
       configuration.integratedSeatMinZ +
-        configuration.bottomEdgeFilletRadius +
+        configuration.integratedSeatBottomChamfer +
         0.03 &&
     record.max[2] >= 0 - 0.03
+  )
+}
+
+function isIntegratedSeatChamferRecordFor(
+  record: ReturnType<typeof readFaceQualityRecords>[number],
+  center: readonly [number, number],
+): boolean {
+  const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
+  const planSpan = Math.max(
+    record.max[0] - record.min[0],
+    record.max[1] - record.min[1],
+  )
+  const centerX = (record.min[0] + record.max[0]) / 2
+  const centerY = (record.min[1] + record.max[1]) / 2
+  const zSpan = record.max[2] - record.min[2]
+  return (
+    record.surfaceType === 'CONE' &&
+    closeEnough(centerX, center[0], 0.08) &&
+    closeEnough(centerY, center[1], 0.08) &&
+    closeEnough(planSpan, configuration.integratedSeatDiameter, 0.2) &&
+    zSpan >= configuration.integratedSeatBottomChamfer * 0.7 &&
+    record.min[2] <= configuration.integratedSeatMinZ + 0.03 &&
+    record.max[2] <=
+      configuration.integratedSeatMinZ +
+        configuration.integratedSeatBottomChamfer +
+        0.05
   )
 }
 
@@ -85,9 +111,15 @@ export function integratedSeatRecordCountFor(
   if (parameters.cornerSeatMode !== 'integrated') return 0
 
   const records = readFaceQualityRecords(shape)
-  return openGridStackableBoxSocketCentersFor(parameters).filter((center) =>
-    records.some((record) => isIntegratedSeatRecordFor(record, center)),
-  ).length
+  return openGridStackableBoxSocketCentersFor(parameters).filter((center) => {
+    const hasShaft = records.some((record) =>
+      isIntegratedSeatRecordFor(record, center),
+    )
+    const hasChamfer = records.some((record) =>
+      isIntegratedSeatChamferRecordFor(record, center),
+    )
+    return hasShaft && hasChamfer
+  }).length
 }
 
 function thicknessesFromVolumes(

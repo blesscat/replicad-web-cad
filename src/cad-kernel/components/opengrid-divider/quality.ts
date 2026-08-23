@@ -27,6 +27,7 @@ export type OpenGridDividerQualityReport = {
   volume: number | null
   solidCount: number | null
   bottomPegFaceCount: number
+  bottomPegChamferCount: number
   expectedPegCount: number
   locatedPegCount: number
   topFilletFaceCount: number
@@ -220,7 +221,13 @@ function locatedPegCountFor(
     const probe = makeCylinder(
       OPENGRID_DIVIDER_CONFIGURATION.pegDiameter / 2 - 0.1,
       0.2,
-      [rawX - centerX, rawY - centerY, -3.05],
+      [
+        rawX - centerX,
+        rawY - centerY,
+        -OPENGRID_DIVIDER_CONFIGURATION.pegLength +
+          OPENGRID_DIVIDER_CONFIGURATION.pegBottomChamfer +
+          0.01,
+      ],
     )
     let intersection: Shape3D | null = null
     try {
@@ -232,6 +239,43 @@ function locatedPegCountFor(
     }
   }
   return located
+}
+
+function integratedPegChamferCountFor(
+  shape: Shape3D,
+  parameters: OpenGridDividerParameters,
+): number {
+  const configuration = OPENGRID_DIVIDER_CONFIGURATION
+  const [centerX, centerY] = rawPlanCenter(parameters)
+  let count = 0
+  for (const [rawX, rawY] of openGridDividerPegCentersFor(parameters)) {
+    const targetX = rawX - centerX
+    const targetY = rawY - centerY
+    let matched = false
+    for (const face of shape.faces) {
+      const boundingBox = face.boundingBox
+      try {
+        if (face.surface.surfaceType !== 'CONE') continue
+        const [[minX, minY, minZ], [maxX, maxY, maxZ]] =
+          boundingBox.bounds as number[][]
+        const planSpan = Math.max(maxX - minX, maxY - minY)
+        matched =
+          Math.abs((minX + maxX) / 2 - targetX) <= 0.08 &&
+          Math.abs((minY + maxY) / 2 - targetY) <= 0.08 &&
+          Math.abs(planSpan - configuration.pegDiameter) <= 0.2 &&
+          maxZ - minZ >= configuration.pegBottomChamfer * 0.7 &&
+          minZ <= -configuration.pegLength + 0.03 &&
+          maxZ <=
+            -configuration.pegLength + configuration.pegBottomChamfer + 0.05
+      } finally {
+        boundingBox.delete()
+        face.delete()
+      }
+      if (matched) break
+    }
+    if (matched) count += 1
+  }
+  return count
 }
 
 function isCloseTo(value: number, expected: number, tolerance = 0.05): boolean {
@@ -312,10 +356,10 @@ export function inspectOpenGridDividerShapeQuality(
   const bottomPegFaceCount = faceCountInZBand(
     shape,
     (surfaceType, minZ, maxZ) =>
-      (surfaceType === 'CYLINDRE' || surfaceType === 'TORUS') &&
+      (surfaceType === 'CYLINDRE' || surfaceType === 'CONE') &&
       minZ <=
         -OPENGRID_DIVIDER_CONFIGURATION.pegLength +
-          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius +
+          OPENGRID_DIVIDER_CONFIGURATION.pegBottomChamfer +
           0.05 &&
       maxZ <= 0.1,
   )
@@ -323,6 +367,17 @@ export function inspectOpenGridDividerShapeQuality(
   // the integration fixture probes every expected center instead of treating
   // this diagnostic face count as an exact peg count.
   const expectedPegCount = openGridDividerPegCentersFor(parameters).length
+  let bottomPegChamferCount = 0
+  try {
+    bottomPegChamferCount = integratedPegChamferCountFor(shape, parameters)
+    if (bottomPegChamferCount !== expectedPegCount) {
+      failures.push('peg:bottom-chamfer-missing')
+    }
+  } catch (error) {
+    failures.push(
+      `peg-chamfer:${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
   let locatedPegCount = 0
   try {
     locatedPegCount = locatedPegCountFor(shape, parameters)
@@ -444,6 +499,7 @@ export function inspectOpenGridDividerShapeQuality(
     volume,
     solidCount,
     bottomPegFaceCount,
+    bottomPegChamferCount,
     expectedPegCount,
     locatedPegCount,
     topFilletFaceCount,

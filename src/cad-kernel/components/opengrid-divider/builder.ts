@@ -1,4 +1,4 @@
-import { getOC, makeCylinder, Sketcher, Solid, type Shape3D } from 'replicad'
+import { getOC, Sketcher, Solid, type Shape3D } from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   OPENGRID_DIVIDER_CONFIGURATION,
@@ -11,7 +11,7 @@ import {
   validateOpenGridDividerParameters,
   type OpenGridDividerParameters,
 } from '../../../cad-contract/units'
-import { filletEdgesAtZ } from '../../bottom-edge-fillet'
+import { makeOpenGridIntegratedSeat } from '../opengrid-locating-assembly/integrated'
 import {
   measureBooleanInScope,
   type BooleanOperationScope,
@@ -599,17 +599,7 @@ function translateToCenteredEnvelope(
 
 function makePeg(center: [number, number]): Shape3D {
   const overlapIntoWall = 0.02
-  const peg = makeCylinder(
-    OPENGRID_DIVIDER_CONFIGURATION.pegDiameter / 2,
-    OPENGRID_DIVIDER_CONFIGURATION.pegLength + overlapIntoWall,
-    [center[0], center[1], -OPENGRID_DIVIDER_CONFIGURATION.pegLength],
-  )
-  const rounded = filletEdgesAtZ(
-    peg,
-    -OPENGRID_DIVIDER_CONFIGURATION.pegLength,
-    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
-  )
-  return rounded
+  return makeOpenGridIntegratedSeat(center, overlapIntoWall)
 }
 
 export async function buildOpenGridDivider(

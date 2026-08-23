@@ -31,6 +31,7 @@ import {
   type BooleanOperationReporter,
 } from '../../boolean-progress'
 import { filletEdgesAtZ } from '../../bottom-edge-fillet'
+import { makeOpenGridIntegratedSeat } from '../opengrid-locating-assembly/integrated'
 import {
   makeOpenGridStackableCylinderBottomHoneycombCutters,
   makeOpenGridStackableCylinderSideHoneycombCutters,
@@ -276,7 +277,6 @@ function addIntegratedSeats(
   parameters: OpenGridStackableCylinderParameters,
   context: OpenGridStackableCylinderBuildContext,
 ): Shape3D {
-  const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
   const centers = openGridStackableCylinderHoleCentersFor(parameters)
   const fuseScope =
     centers.length > 0
@@ -284,34 +284,25 @@ function addIntegratedSeats(
       : undefined
   let current = shape
 
-  for (const [x, y] of centers) {
-    assertGenerationCurrent(context)
-    const seat = makeCylinder(
-      configuration.integratedSeatDiameter / 2,
-      configuration.integratedSeatHeight,
-      [x, y, configuration.integratedSeatMinZ],
-    )
-    let roundedSeat: Shape3D | null = null
-    try {
-      roundedSeat = filletEdgesAtZ(
-        seat,
-        configuration.integratedSeatMinZ,
-        configuration.bottomEdgeFilletRadius,
-      )
-      if (!roundedSeat) throw new Error('OPENGRID_INTEGRATED_SEAT_EMPTY')
-      const activeRoundedSeat = roundedSeat
-      const fused = measureBooleanInScope(fuseScope, 'fuse', () =>
-        current.fuse(activeRoundedSeat, { optimisation: 'commonFace' }),
-      )
-      deleteShape(current)
-      current = fused
-    } finally {
-      deleteShape(roundedSeat)
-      deleteShape(seat)
+  try {
+    for (const [x, y] of centers) {
+      assertGenerationCurrent(context)
+      const seat = makeOpenGridIntegratedSeat([x, y])
+      try {
+        const fused = measureBooleanInScope(fuseScope, 'fuse', () =>
+          current.fuse(seat, { optimisation: 'commonFace' }),
+        )
+        deleteShape(current)
+        current = fused
+      } finally {
+        deleteShape(seat)
+      }
     }
+    return current
+  } catch (error) {
+    deleteShape(current)
+    throw error
   }
-
-  return current
 }
 
 function addBottomLocatingFeatures(
@@ -850,7 +841,7 @@ function readIntegratedSeatRecords(
       closeEnough(record.diameter, configuration.integratedSeatDiameter, 0.2) &&
       record.minZ <=
         configuration.integratedSeatMinZ +
-          configuration.bottomEdgeFilletRadius +
+          configuration.integratedSeatBottomChamfer +
           0.1 &&
       record.maxZ >= -0.1,
   )
@@ -862,6 +853,54 @@ function readIntegratedSeatRecords(
           closeEnough(record.center[1], center[1], 0.08),
       )
       .map((record) => ({ ...record, center })),
+  )
+}
+
+type ConicalFaceRecord = {
+  center: [number, number]
+  planSpan: number
+  minZ: number
+  maxZ: number
+}
+
+function readConicalFaceRecords(shape: Shape3D): ConicalFaceRecord[] {
+  const records: ConicalFaceRecord[] = []
+  for (const face of shape.faces) {
+    const boundingBox = face.boundingBox
+    try {
+      if (face.surface.surfaceType !== 'CONE') continue
+      const [min, max] = boundingBox.bounds as Bounds
+      records.push({
+        center: [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2],
+        planSpan: Math.max(max[0] - min[0], max[1] - min[1]),
+        minZ: min[2],
+        maxZ: max[2],
+      })
+    } finally {
+      boundingBox.delete()
+      face.delete()
+    }
+  }
+  return records
+}
+
+function hasIntegratedSeatChamferAt(
+  records: readonly ConicalFaceRecord[],
+  center: readonly [number, number],
+): boolean {
+  const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
+  return records.some(
+    (record) =>
+      closeEnough(record.center[0], center[0], 0.08) &&
+      closeEnough(record.center[1], center[1], 0.08) &&
+      closeEnough(record.planSpan, configuration.integratedSeatDiameter, 0.2) &&
+      record.maxZ - record.minZ >=
+        configuration.integratedSeatBottomChamfer * 0.7 &&
+      record.minZ <= configuration.integratedSeatMinZ + 0.03 &&
+      record.maxZ <=
+        configuration.integratedSeatMinZ +
+          configuration.integratedSeatBottomChamfer +
+          0.05,
   )
 }
 
@@ -1658,6 +1697,16 @@ function assertQuality(
   if (report.integratedSeatRecordCount !== expectedIntegratedSeatCount) {
     failures.push('integrated-seat-layout')
   }
+  if (parameters.bottomSeatMode === 'integrated') {
+    const chamferRecords = readConicalFaceRecords(shape)
+    if (
+      expectedLocatingCenters.some(
+        (center) => !hasIntegratedSeatChamferAt(chamferRecords, center),
+      )
+    ) {
+      failures.push('integrated-seat-chamfer')
+    }
+  }
   for (const seat of report.integratedSeats) {
     if (
       !closeEnough(
@@ -1667,7 +1716,7 @@ function assertQuality(
       !closeEnough(
         seat.minZ,
         OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ +
-          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
+          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatBottomChamfer,
       ) ||
       !closeEnough(seat.maxZ, 0)
     ) {

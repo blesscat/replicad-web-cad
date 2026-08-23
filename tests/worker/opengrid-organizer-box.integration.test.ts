@@ -92,6 +92,42 @@ function probeVolume(
   }
 }
 
+function hasIntegratedSeatChamferAt(
+  shape: Shape3D,
+  center: readonly [number, number],
+): boolean {
+  const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
+  let found = false
+  for (const face of shape.faces) {
+    const boundingBox = face.boundingBox
+    try {
+      if (found) continue
+      if (face.surface.surfaceType !== 'CONE') continue
+      const [minimum, maximum] = boundingBox.bounds
+      const faceCenterX = (minimum[0] + maximum[0]) / 2
+      const faceCenterY = (minimum[1] + maximum[1]) / 2
+      const planSpan = Math.max(
+        maximum[0] - minimum[0],
+        maximum[1] - minimum[1],
+      )
+      const matchesSeatChamfer =
+        Math.abs(faceCenterX - center[0]) <= 0.08 &&
+        Math.abs(faceCenterY - center[1]) <= 0.08 &&
+        planSpan <= configuration.integratedSeatDiameter + 0.2 &&
+        minimum[2] <= configuration.integratedSeatMinZ + 0.05 &&
+        maximum[2] <=
+          configuration.integratedSeatMinZ +
+            configuration.integratedSeatBottomChamfer +
+            0.1
+      if (matchesSeatChamfer) found = true
+    } finally {
+      boundingBox.delete()
+      face.delete()
+    }
+  }
+  return found
+}
+
 function horizontalFaceZValuesAt(
   shape: Shape3D,
   point: [number, number],
@@ -576,6 +612,7 @@ describe('OpenGrid organizer-box B-Rep', () => {
         openGridStackableBoxSocketCentersFor(interfaceParameters)
       expect(footCenters).toHaveLength(4)
       for (const [x, y] of footCenters) {
+        expect(hasIntegratedSeatChamferAt(shape, [x, y])).toBe(true)
         expect(
           probeVolume(shape, [
             [x - 0.2, y - 0.2, footZ - 0.05],

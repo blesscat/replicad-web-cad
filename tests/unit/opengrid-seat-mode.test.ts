@@ -7,6 +7,7 @@ import {
   openGridStackableBoxStlFileName,
   openGridStackableCylinderHoleCentersFor,
   openGridStackableCylinderStlFileName,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   validateOpenGridStackableBoxParameters,
   validateOpenGridStackableCylinderParameters,
 } from '../../src/cad-contract/units'
@@ -80,7 +81,7 @@ describe('OpenGrid locating seat modes', () => {
       boundsForOpenGridStackableBox(
         boxParameters({ cornerSeatMode: 'integrated' }) as never,
       ).min[2],
-    ).toBe(-3)
+    ).toBe(OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ)
   })
 
   it('keeps Grid Box ordinary holes independent from integrated seats', () => {
@@ -127,7 +128,9 @@ describe('OpenGrid locating seat modes', () => {
       [0, 14],
       [0, -14],
     ])
-    expect(boundsForOpenGridStackableCylinder(integrated).min[2]).toBe(-3)
+    expect(boundsForOpenGridStackableCylinder(integrated).min[2]).toBe(
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ,
+    )
   })
 
   it('migrates legacy booleans and prefers an explicit current mode', () => {

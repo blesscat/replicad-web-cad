@@ -5,6 +5,7 @@ import {
   openGridOpenShelfFrontToRearElevationFor,
   openGridOpenShelfDepthFor,
   openGridOpenShelfFootprintFor,
+  openGridOpenShelfPegCentersFor,
   openGridOpenShelfTopOuterRearZFor,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_OPEN_SHELF_CONFIGURATION,
@@ -77,6 +78,29 @@ function faceBoundsFor(shape: Shape3D): FaceBounds[] {
 
 function span(face: FaceBounds, axis: 0 | 1 | 2): number {
   return face.max[axis] - face.min[axis]
+}
+
+function hasPegChamferAt(
+  faces: readonly FaceBounds[],
+  center: readonly [number, number],
+): boolean {
+  const configuration = OPENGRID_OPEN_SHELF_CONFIGURATION
+  const locating = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
+  return faces.some((face) => {
+    const planSpan = Math.max(span(face, 0), span(face, 1))
+    const faceCenterX = (face.min[0] + face.max[0]) / 2
+    const faceCenterY = (face.min[1] + face.max[1]) / 2
+    return (
+      face.surfaceType === 'CONE' &&
+      Math.abs(faceCenterX - center[0]) <= 0.08 &&
+      Math.abs(faceCenterY - center[1]) <= 0.08 &&
+      closeEnough(planSpan, configuration.pegDiameter, 0.2) &&
+      span(face, 2) >= locating.integratedSeatBottomChamfer * 0.7 &&
+      face.min[2] <= -configuration.pegHeight + 0.05 &&
+      face.max[2] <=
+        -configuration.pegHeight + locating.integratedSeatBottomChamfer + 0.1
+    )
+  })
 }
 
 function inspectGeometryInterfaces(
@@ -157,11 +181,18 @@ function inspectGeometryInterfaces(
       face.surfaceType === 'CYLINDRE' &&
       face.min[2] <=
         -configuration.pegHeight +
-          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius +
+          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatBottomChamfer +
           0.1 &&
       face.max[2] >= -0.2,
   )
   if (pegFaces.length !== 4) failures.push('peg-count')
+  const pegCenters = openGridOpenShelfPegCentersFor(parameters)
+  if (
+    pegCenters.filter((center) => hasPegChamferAt(faces, center)).length !==
+    pegCenters.length
+  ) {
+    failures.push('peg-chamfer')
+  }
   for (const [index, face] of pegFaces.entries()) {
     const diameter = Math.max(span(face, 0), span(face, 1))
     if (!closeEnough(diameter, configuration.pegDiameter, 0.25)) {

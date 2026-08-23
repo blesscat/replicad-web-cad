@@ -44,6 +44,12 @@ describe('OpenGrid locating and assembly interface contract', () => {
     expect(configuration.retainingOpeningDiameter).toBe(7.05)
     expect(configuration.assemblyOpeningDiameter).toBe(5.05)
     expect(configuration.testFlangeHeight).toBe(0.8)
+    expect(configuration.integratedSeatDiameter).toBe(
+      configuration.nominalDiameter,
+    )
+    expect(configuration.integratedSeatHeight).toBe(3.8)
+    expect(configuration.integratedSeatMinZ).toBe(-3.8)
+    expect(configuration.integratedSeatBottomChamfer).toBe(0.2)
   })
 
   it('routes nominal locating consumers through the shared diameter', () => {
@@ -54,6 +60,12 @@ describe('OpenGrid locating and assembly interface contract', () => {
     )
     expect(OPENGRID_DIVIDER_CONFIGURATION.pegDiameter).toBe(
       configuration.nominalDiameter,
+    )
+    expect(OPENGRID_DIVIDER_CONFIGURATION.pegLength).toBe(
+      configuration.integratedSeatHeight,
+    )
+    expect(OPENGRID_DIVIDER_CONFIGURATION.pegBottomChamfer).toBe(
+      configuration.integratedSeatBottomChamfer,
     )
     expect(PILLAR_CONFIGURATION.bodyDiameter).toBe(
       configuration.testShaftDiameter,

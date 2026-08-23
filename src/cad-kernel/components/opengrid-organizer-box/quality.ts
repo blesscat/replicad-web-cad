@@ -124,6 +124,34 @@ function faceRecordsFor(shape: Shape3D): FaceRecord[] {
   })
 }
 
+function hasIntegratedSeatChamferRecordFor(
+  records: readonly FaceRecord[],
+  center: readonly [number, number],
+): boolean {
+  const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
+  return records.some((record) => {
+    const planSpan = Math.max(
+      record.max[0] - record.min[0],
+      record.max[1] - record.min[1],
+    )
+    const recordCenterX = (record.min[0] + record.max[0]) / 2
+    const recordCenterY = (record.min[1] + record.max[1]) / 2
+    const zSpan = record.max[2] - record.min[2]
+    return (
+      record.surfaceType === 'CONE' &&
+      Math.abs(recordCenterX - center[0]) <= 0.08 &&
+      Math.abs(recordCenterY - center[1]) <= 0.08 &&
+      Math.abs(planSpan - configuration.integratedSeatDiameter) <= 0.2 &&
+      zSpan >= configuration.integratedSeatBottomChamfer * 0.7 &&
+      record.min[2] <= configuration.integratedSeatMinZ + 0.03 &&
+      record.max[2] <=
+        configuration.integratedSeatMinZ +
+          configuration.integratedSeatBottomChamfer +
+          0.05
+    )
+  })
+}
+
 function polygonSideCount(
   shape: OpenGridOrganizerBoxParameters['holeShape'],
 ): number {
@@ -322,6 +350,13 @@ function assertInterfaceExclusivity(
   if (socketCenters.length !== 4) {
     throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:seat-count')
   }
+  const faceRecords = faceRecordsFor(shape)
+  const hasAllBuiltInSeatChamfers = socketCenters.every((center) =>
+    hasIntegratedSeatChamferRecordFor(faceRecords, center),
+  )
+  const hasAnyBuiltInSeatChamfer = socketCenters.some((center) =>
+    hasIntegratedSeatChamferRecordFor(faceRecords, center),
+  )
 
   const footProbeCenterZ =
     OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ +
@@ -336,12 +371,15 @@ function assertInterfaceExclusivity(
     ),
   )
   const hasAllBuiltInFeet = footVolumes.every((volume) => volume > 0.001)
-  if (parameters.bottomInterfaceMode === 'corner-seat' && !hasAllBuiltInFeet) {
+  if (
+    parameters.bottomInterfaceMode === 'corner-seat' &&
+    (!hasAllBuiltInFeet || !hasAllBuiltInSeatChamfers)
+  ) {
     throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:built-in-feet')
   }
   if (
     parameters.bottomInterfaceMode !== 'corner-seat' &&
-    footVolumes.some((volume) => volume > 0.001)
+    (footVolumes.some((volume) => volume > 0.001) || hasAnyBuiltInSeatChamfer)
   ) {
     throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:combined-interface')
   }

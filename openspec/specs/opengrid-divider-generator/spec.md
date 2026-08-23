@@ -130,13 +130,13 @@ station, and the result MUST remain one connected solid.
 
 ### Requirement: 依長度自動配置底部定位柱
 
-The generator MUST automatically add cylindrical locating pegs with nominal diameter 5 mm and downward length 3 mm. It MUST place one peg at the central junction, then consider positions every 28 mm (two 14 mm official half-grids) along each active arm and emit only positions strictly inside that arm. This MUST keep the maximum initial empty run to two half-grid intervals, avoid dense placement, emit repeated coordinates only once, and fuse every peg to the wall so the result remains one connected solid.
+The generator MUST automatically add shared OpenGrid locating pegs with nominal diameter 5 mm, a total downward span of 3.8 mm from Z=0 to Z=-3.8, and a 0.2 mm bottom perimeter chamfer. It MUST place one peg at the central junction, then consider positions every 28 mm (two 14 mm official half-grids) along each active arm and emit only positions strictly inside that arm. This MUST keep the maximum initial empty run to two half-grid intervals, avoid dense placement, emit repeated coordinates only once, and fuse every peg to the wall so the result remains one connected solid.
 
 #### Scenario: 短分隔牆定位柱
 
 - **WHEN** `left=1`, `right=1`, `up=1`, and `down=1` form a 3×3 cross
 - **THEN** the generator MUST create exactly the central peg and no arm peg
-- **AND** each peg MUST be 5 mm in diameter and extend 3 mm below the wall base
+- **AND** each peg MUST be 5 mm in diameter, extend 3.8 mm below the wall base, and have a 0.2 mm bottom perimeter chamfer
 
 #### Scenario: 長臂自動增加支撐
 
@@ -152,7 +152,7 @@ The generator MUST automatically add cylindrical locating pegs with nominal diam
 
 ### Requirement: 頂部圓角
 
-The generator MUST round the upper wall perimeter with a nominal 1 mm fillet. The fillet MUST apply to the wall top edges only; the bottom wall edge and locating-peg edges MUST remain sharp. Inputs that cannot accommodate the required fillet MUST fail validation or generation with a diagnosable error rather than producing a partial shape.
+The generator MUST round the upper wall perimeter with a nominal 1 mm fillet. The fillet MUST apply to the wall top edges only; the bottom wall edge MUST remain sharp while each locating peg MUST use the shared 0.2 mm bottom perimeter chamfer. Inputs that cannot accommodate the required fillet or peg chamfer MUST fail validation or generation with a diagnosable error rather than producing a partial shape.
 
 #### Scenario: 頂部圓角存在
 
@@ -168,7 +168,7 @@ The generator MUST round the upper wall perimeter with a nominal 1 mm fillet. Th
 
 ### Requirement: 側邊圓角
 
-The generator MUST round the vertical side edges of the divider with the existing nominal 2.5 mm profile where the local 5 mm base supports it. On thinner upper walls, the side-rounding radius MUST be limited to a geometrically stable value no greater than half of the local wall thickness. The side rounding MUST coexist with the separate 1 mm upper-perimeter fillet and the 45-degree base chamfer. The bottom wall edge and locating-peg edges MUST remain sharp.
+The generator MUST round the vertical side edges of the divider with the existing nominal 2.5 mm profile where the local 5 mm base supports it. On thinner upper walls, the side-rounding radius MUST be limited to a geometrically stable value no greater than half of the local wall thickness. The side rounding MUST coexist with the separate 1 mm upper-perimeter fillet, the 45-degree base chamfer, and the shared locating-peg chamfers. The bottom wall edge MUST remain sharp.
 
 #### Scenario: 薄牆側邊圓角穩定
 
@@ -181,7 +181,7 @@ The generator MUST round the vertical side edges of the divider with the existin
 
 - **WHEN** a valid divider with an active arm is generated
 - **THEN** the side rounding MUST coexist with the separate 1 mm upper-perimeter rounding and the base chamfer
-- **AND** the bottom wall edge and locating-peg edges MUST remain sharp
+- **AND** the bottom wall edge MUST remain sharp while each locating peg retains its 0.2 mm bottom perimeter chamfer
 
 ### Requirement: 45 度過渡斜邊端部圓角
 
@@ -207,7 +207,7 @@ When the selected upper wall is thinner than the 5 mm base support, the generato
 
 ### Requirement: 預覽、bounds 與匯出
 
-The committed divider MUST expose finite bounds, a non-empty mesh, and a single B-Rep solid. The wall base MUST be at `Z=0` and the complete bounds MUST include the peg bottom at `Z=-3` and the actual shortened 5 mm base support envelope. STEP and binary STL exports MUST be generated from the committed divider B-Rep and MUST be non-empty. Export filenames MUST identify the selected wall thickness and MUST retain the existing identity format for the normalized parameter fields.
+The committed divider MUST expose finite bounds, a non-empty mesh, and a single B-Rep solid. The wall base MUST be at `Z=0` and the complete bounds MUST include the peg bottom at `Z=-3.8` and the actual shortened 5 mm base support envelope. STEP and binary STL exports MUST be generated from the committed divider B-Rep and MUST be non-empty. Export filenames MUST identify the selected wall thickness and MUST retain the existing identity format for the normalized parameter fields.
 
 #### Scenario: 可預覽的分隔牆
 

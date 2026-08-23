@@ -19,6 +19,7 @@ import {
   openGridOpenShelfPegCentersFor,
   openGridOpenShelfShelfLowerSurfaceZFor,
   openGridOpenShelfTopOuterRearZFor,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_OPEN_SHELF_CONFIGURATION,
   OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
   type OpenGridOpenShelfParameters,
@@ -114,6 +115,45 @@ function expectBoundsClose(
   expect(actual[1]?.[0]).toBeCloseTo(expected.max[0], 2)
   expect(actual[1]?.[1]).toBeCloseTo(expected.max[1], 2)
   expect(actual[1]?.[2]).toBeCloseTo(expected.max[2], 2)
+}
+
+function countPegChamferFaces(shape: Shape3D): number {
+  const centers = openGridOpenShelfPegCentersFor(
+    OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
+  )
+  let count = 0
+  for (const face of shape.faces) {
+    const boundingBox = face.boundingBox
+    try {
+      if (face.surface.surfaceType !== 'CONE') continue
+      const [min, max] = boundingBox.bounds as number[][]
+      const centerX = ((min[0] ?? 0) + (max[0] ?? 0)) / 2
+      const centerY = ((min[1] ?? 0) + (max[1] ?? 0)) / 2
+      const radialSpan = Math.max(
+        (max[0] ?? 0) - (min[0] ?? 0),
+        (max[1] ?? 0) - (min[1] ?? 0),
+      )
+      const isPegCenter = centers.some(
+        ([x, y]) =>
+          Math.abs(centerX - x) <= 0.08 && Math.abs(centerY - y) <= 0.08,
+      )
+      if (
+        isPegCenter &&
+        radialSpan <= OPENGRID_OPEN_SHELF_CONFIGURATION.pegDiameter + 0.2 &&
+        (min[2] ?? 0) <= -OPENGRID_OPEN_SHELF_CONFIGURATION.pegHeight + 0.05 &&
+        (max[2] ?? 0) <=
+          -OPENGRID_OPEN_SHELF_CONFIGURATION.pegHeight +
+            OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatBottomChamfer +
+            0.1
+      ) {
+        count += 1
+      }
+    } finally {
+      boundingBox.delete()
+      face.delete()
+    }
+  }
+  return count
 }
 
 describe('OpenGrid open-shelf CAD kernel integration', () => {
@@ -418,6 +458,7 @@ describe('OpenGrid open-shelf CAD kernel integration', () => {
       )
       expect(topSideFilletFaces).toHaveLength(2)
       expectBoundsClose(boundsOf(shape), boundsForOpenGridOpenShelf(parameters))
+      expect(countPegChamferFaces(shape)).toBe(4)
       const quality = inspectOpenGridOpenShelfShapeQuality(
         shape,
         parameters,
@@ -502,7 +543,7 @@ describe('OpenGrid open-shelf CAD kernel integration', () => {
     }
   }, 180_000)
 
-  it('keeps multi-cell shelves at the rear and uses plain peg shafts', async () => {
+  it('keeps multi-cell shelves at the rear and uses chamfered peg shafts', async () => {
     const parameters: OpenGridOpenShelfParameters = {
       ...OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
       height: 80,
