@@ -453,6 +453,26 @@ function centerRemoverLedgeProbe(
   }
 }
 
+function centerRemoverPassageBoundaryProbe(
+  definition: ReturnType<typeof openGridSnapProfileFor>,
+  center: [number, number],
+  bounds: ModelBounds,
+): Probe {
+  const radius = definition.locatingHoleRadius
+  return {
+    min: [
+      center[0] + radius + 0.05,
+      center[1] - 0.5,
+      definition.centerRemoverStepZ + 0.1,
+    ],
+    max: [
+      center[0] + radius + 0.3,
+      center[1] + 0.5,
+      Math.min(definition.centerRemoverStepZ + 0.6, bounds.max[2] - 0.1),
+    ],
+  }
+}
+
 function magnetHolePlanHalfExtents(
   parameters: OpenGridSnapParameters,
 ): [number, number] {
@@ -911,13 +931,36 @@ function inspectOptionalFeatureProbes(
         central,
         centerRemoverLedgeProbe(definition, center, bounds),
       )
-      probeVolumes.push(lowerProbeVolume, upperProbeVolume, ledgeProbeVolume)
+      const passageProbeVolume = volumeInCylinderAtZ(
+        central,
+        center,
+        definition.locatingHoleRadius - 0.1,
+        bounds.min[2] - 0.2,
+        bounds.max[2] + 0.2,
+      )
+      const passageBoundaryProbeVolume = volumeInBoxProbe(
+        central,
+        centerRemoverPassageBoundaryProbe(definition, center, bounds),
+      )
+      probeVolumes.push(
+        lowerProbeVolume,
+        upperProbeVolume,
+        ledgeProbeVolume,
+        passageProbeVolume,
+        passageBoundaryProbeVolume,
+      )
       if (
         lowerProbeVolume > QUALITY_TOLERANCE ||
         upperProbeVolume > QUALITY_TOLERANCE ||
         ledgeProbeVolume <= QUALITY_TOLERANCE
       ) {
         failures.push('features:center-remover-missing')
+      }
+      if (
+        passageProbeVolume > QUALITY_TOLERANCE ||
+        passageBoundaryProbeVolume <= QUALITY_TOLERANCE
+      ) {
+        failures.push('features:center-remover-passage-invalid')
       }
     } else {
       const center: [number, number] = [0, 0]

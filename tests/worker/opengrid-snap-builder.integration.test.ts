@@ -26,6 +26,7 @@ import {
 } from '../../src/cad-kernel/components/opengrid-snap/builder'
 import { openGridSnapOpenConnectHeadBounds } from '../../src/cad-kernel/components/opengrid-snap/openconnect'
 import { openGridSnapProfileFor } from '../../src/cad-kernel/components/opengrid-snap/profile'
+import { buildPillar } from '../../src/cad-kernel/components/opengrid-pillar/builder'
 import {
   assertOpenGridSnapOpenConnectShapeQuality,
   inspectOpenGridSnapShapeQuality,
@@ -331,6 +332,31 @@ function volumeInCylinder(
   } finally {
     if (intersection && intersection !== shape) intersection.delete()
     probe.delete()
+  }
+}
+
+function centerRemoverPassageVolume(
+  definition: ReturnType<typeof openGridSnapProfileFor>,
+): number {
+  const radius = definition.locatingHoleRadius
+  const halfWidth = definition.centerRemoverUpperHalfWidth
+  const stripArea =
+    2 *
+    (halfWidth * Math.sqrt(radius ** 2 - halfWidth ** 2) +
+      radius ** 2 * Math.asin(halfWidth / radius))
+  const passageSegmentArea = Math.PI * radius ** 2 - stripArea
+  return (
+    passageSegmentArea *
+    (definition.expectedBounds.max[2] - definition.centerRemoverStepZ)
+  )
+}
+
+function intersectionVolume(first: Shape3D, second: Shape3D): number {
+  const intersection = first.intersect(second)
+  try {
+    return measureVolume(intersection)
+  } finally {
+    if (intersection !== first && intersection !== second) intersection.delete()
   }
 }
 
@@ -1224,8 +1250,12 @@ describe('OpenGrid Snap reference builder', () => {
           volumes[0]! - volumes[1]!,
           2,
         )
+        const definition = openGridSnapProfileFor('Standard', variant)
+        const existingCenterRemoverReduction =
+          variant === 'Full' ? 371.2 : 169.6
         expect(volumes[0]! - volumes[2]!).toBeCloseTo(
-          variant === 'Full' ? 371.2 : 169.6,
+          existingCenterRemoverReduction +
+            centerRemoverPassageVolume(definition),
           2,
         )
         expect(volumes[4]! - volumes[6]!).toBeCloseTo(
@@ -1291,6 +1321,12 @@ describe('OpenGrid Snap reference builder', () => {
           expect(
             hasPlanarFaceWithBounds(centerBody, [
               [2, -4, stepZ],
+              [2, -1.5, topZ],
+            ]),
+          ).toBe(true)
+          expect(
+            hasPlanarFaceWithBounds(centerBody, [
+              [2, 1.5, stepZ],
               [2, 4, topZ],
             ]),
           ).toBe(true)
@@ -1345,6 +1381,74 @@ describe('OpenGrid Snap reference builder', () => {
         reference.delete()
       }
     },
+  )
+
+  it.each([
+    ['Standard', 'Full'],
+    ['Standard', 'Lite'],
+    ['Directional', 'Full'],
+    ['Directional', 'Lite'],
+  ] as const)(
+    'passes a fixed nominal positioning pillar through the center remover for %s %s',
+    async (profile, variant) => {
+      const reference = await importOpenGridSnapReference(
+        assetBlob(variant, profile),
+        variant,
+        profile,
+      )
+      const pillar = await buildPillar({
+        mode: 'positioning',
+        length: 10,
+        offset: 0,
+      })
+      const passageVolumes: number[] = []
+      const pillarCollisionVolumes: number[] = []
+      try {
+        for (const offset of [0, 0.4]) {
+          const generated = await buildOpenGridSnap(
+            snapParameters(variant, offset, 'full', {
+              profile,
+              centerRemoverHole: true,
+            }),
+            { getOpenGridSnapReference: async () => reference },
+          )
+          const body = centralSolid(generated)
+          try {
+            const bounds = shapeBounds(body)
+            const definition = openGridSnapProfileFor(profile, variant)
+            passageVolumes.push(
+              volumeInCylinder(
+                body,
+                2.4,
+                bounds[0]![2]! - 0.1,
+                bounds[1]![2]! + 0.1,
+              ),
+            )
+            pillarCollisionVolumes.push(intersectionVolume(body, pillar))
+
+            const upperLedgeVolume = volumeInBox(
+              body,
+              [2.55, -0.1, definition.centerRemoverStepZ + 0.1],
+              [2.75, 0.1, bounds[1]![2]! - 0.1],
+            )
+            expect(upperLedgeVolume).toBeGreaterThan(0.05)
+          } finally {
+            body.delete()
+            generated.delete()
+          }
+        }
+
+        expect(passageVolumes[0]).toBeLessThan(0.05)
+        expect(passageVolumes[1]).toBeLessThan(0.05)
+        expect(passageVolumes[1]).toBeCloseTo(passageVolumes[0]!, 3)
+        expect(pillarCollisionVolumes[0]).toBeLessThan(0.05)
+        expect(pillarCollisionVolumes[1]).toBeLessThan(0.05)
+      } finally {
+        pillar.delete()
+        reference.delete()
+      }
+    },
+    180_000,
   )
 
   it.each(['Full', 'Lite'] as const)(
