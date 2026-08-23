@@ -795,10 +795,14 @@ function openConnectAnchorFor(
     parameters.variant,
   )
   if (parameters.offset === 0) {
-    return openGridSnapOpenConnectAnchorForXYTransform()
+    return openGridSnapOpenConnectAnchorForXYTransform(
+      undefined,
+      parameters.variant,
+    )
   }
   return openGridSnapOpenConnectAnchorForXYTransform(
     xyScaleTransformFor(reference, targetBounds, definition),
+    parameters.variant,
   )
 }
 

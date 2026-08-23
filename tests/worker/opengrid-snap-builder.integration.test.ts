@@ -446,22 +446,29 @@ describe('OpenGrid Snap reference builder', () => {
         expect(countSolids(generated)).toBe(
           openGridSnapProfileFor(profile, variant).expectedSolidCount + 1,
         )
-        const headBounds = openGridSnapOpenConnectHeadBounds()
-        expect(
-          solidDescriptors(generated).some(({ bounds }) =>
-            bounds.every((point, pointIndex) =>
-              point.every(
-                (coordinate, coordinateIndex) =>
-                  Math.abs(
-                    coordinate -
-                      [headBounds.min, headBounds.max][pointIndex]![
-                        coordinateIndex
-                      ]!,
-                  ) <= 0.05,
-              ),
+        const liteHeadBounds = openGridSnapOpenConnectHeadBounds('Lite')
+        const headBounds = openGridSnapOpenConnectHeadBounds(variant)
+        const liteDefinition = openGridSnapProfileFor(profile, 'Lite')
+        const selectedDefinition = openGridSnapProfileFor(profile, variant)
+        const expectedHeadBaseZ =
+          liteHeadBounds.min[2] +
+          (selectedDefinition.expectedBounds.max[2] -
+            liteDefinition.expectedBounds.max[2])
+        const headDescriptor = solidDescriptors(generated).find(({ bounds }) =>
+          bounds.every((point, pointIndex) =>
+            point.every(
+              (coordinate, coordinateIndex) =>
+                Math.abs(
+                  coordinate -
+                    [headBounds.min, headBounds.max][pointIndex]![
+                      coordinateIndex
+                    ]!,
+                ) <= 0.05,
             ),
           ),
-        ).toBe(true)
+        )
+        expect(headDescriptor).toBeDefined()
+        expect(headDescriptor?.bounds[0]?.[2]).toBeCloseTo(expectedHeadBaseZ, 2)
         const quality = assertOpenGridSnapOpenConnectShapeQuality(
           generated,
           snapParameters(variant, 0.2, 'full', { profile, openConnect: true }),

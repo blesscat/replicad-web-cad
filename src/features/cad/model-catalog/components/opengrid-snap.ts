@@ -127,7 +127,7 @@ function boundsForOpenGridSnapDefinition(parameters: ModelParameterValues) {
   }
   const snapBounds = boundsForOpenGridSnap(parameters)
   return parameters.openConnect
-    ? openGridSnapOpenConnectCompositeBounds(snapBounds)
+    ? openGridSnapOpenConnectCompositeBounds(snapBounds, parameters.variant)
     : snapBounds
 }
 

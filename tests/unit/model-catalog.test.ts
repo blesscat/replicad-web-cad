@@ -484,6 +484,25 @@ describe('CAD component catalog', () => {
       max: [12.9, 12.9, 6.6],
     })
     expect(
+      snap?.boundsForParameters({
+        variant: 'Full',
+        profile: 'Standard',
+        offset: 0.2,
+        footprint: 'full',
+        fourCornerLocatingHoles: false,
+        centerRemoverHole: false,
+        openConnect: true,
+        magnetHoleShape: 'none',
+        magnetHoleLength: 0,
+        magnetHoleWidth: 0,
+        magnetHoleDiameter: 0,
+        magnetHoleThickness: 0,
+      }),
+    ).toEqual({
+      min: [-12.9, -12.9, 0],
+      max: [12.9, 12.9, 10],
+    })
+    expect(
       snap?.exportFileName({
         variant: 'Full',
         profile: 'Standard',

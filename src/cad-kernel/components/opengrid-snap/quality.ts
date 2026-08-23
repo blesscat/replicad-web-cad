@@ -1106,6 +1106,7 @@ function openConnectExpectedBounds(
 ): ModelBounds {
   return openGridSnapOpenConnectCompositeBounds(
     boundsForOpenGridSnap(parameters),
+    parameters.variant,
   )
 }
 
@@ -1128,6 +1129,7 @@ export function inspectOpenGridSnapOpenConnectShapeQuality(
     const expectedHeadBounds = openGridSnapOpenConnectHeadBoundsForAnchor(
       openGridSnapOpenConnectAnchorForXYTransform(
         xyEnvelopeTransformFor(parameters, readBounds(reference)),
+        parameters.variant,
       ),
     )
     if (!boundsMatch(extracted.headBounds, expectedHeadBounds, 0.45)) {
