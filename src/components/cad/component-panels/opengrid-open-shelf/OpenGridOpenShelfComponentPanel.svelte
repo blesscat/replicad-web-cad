@@ -120,7 +120,7 @@
     <span>{translate(locale, 'panel.openShelf.honeycomb')}</span>
   </label>
   {#if rawParameters.honeycombMode === 'true'}
-    <HoneycombRenderWarning />
+    <HoneycombRenderWarning {locale} />
   {/if}
   <fieldset class="m-0 grid gap-3 border-0 p-0">
     {#each opengridOpenShelfDefinition.parameterSchema as field (field.key)}
