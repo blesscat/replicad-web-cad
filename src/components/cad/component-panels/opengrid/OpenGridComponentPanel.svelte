@@ -557,19 +557,33 @@
     restoreLabel={translate(locale, 'panel.opengrid.fitToTargetRestore')}
     onRestore={() => restoreParameter('fitToTarget')}
   >
-    <label class="flex min-w-0 items-start gap-2 text-sm">
-      <input
-        type="checkbox"
-        aria-describedby={fieldError('fitToTarget')
-          ? 'opengrid-fit-to-target-error'
-          : undefined}
-        aria-invalid={Boolean(fieldError('fitToTarget'))}
-        aria-label={translate(locale, 'panel.opengrid.fitToTarget')}
-        checked={parameters.fitToTarget}
-        onchange={updateFitToTarget}
-      />
-      <span>{translate(locale, 'panel.opengrid.fitToTargetDescription')}</span>
-    </label>
+    <div class="grid gap-1">
+      <label class="flex min-w-0 items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          aria-describedby={fieldError('fitToTarget')
+            ? 'opengrid-fit-to-target-description opengrid-fit-to-target-error'
+            : 'opengrid-fit-to-target-description'}
+          aria-invalid={Boolean(fieldError('fitToTarget'))}
+          aria-label={translate(locale, 'panel.opengrid.fitToTargetAria')}
+          checked={parameters.fitToTarget}
+          onchange={updateFitToTarget}
+        />
+        <span>{translate(locale, 'panel.opengrid.fitToTargetCheckbox')}</span>
+        <span
+          class="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary"
+        >
+          {translate(locale, 'panel.opengrid.fitToTargetBeta')}
+        </span>
+      </label>
+      <p
+        id="opengrid-fit-to-target-description"
+        class="m-0 pl-6 text-sm text-muted"
+        data-testid="opengrid-fit-to-target-description"
+      >
+        {translate(locale, 'panel.opengrid.fitToTargetDescription')}
+      </p>
+    </div>
   </ParameterField>
 
   {#if parameters.fitToTarget}

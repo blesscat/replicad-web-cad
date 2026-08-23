@@ -441,10 +441,13 @@ export const zhHantMessages = {
   'panel.opengrid.halfYRestore': 'OpenGrid Y 半格方向',
   'panel.opengrid.targetDimensionDescription':
     '輸入單一底板目標長寬；會依目前半格設定取不超過目標的最大格數。',
-  'panel.opengrid.fitToTarget': '用實體邊框補足目標尺寸 Beta',
+  'panel.opengrid.fitToTarget': '用實體邊框補足目標尺寸',
+  'panel.opengrid.fitToTargetCheckbox': '啟用',
+  'panel.opengrid.fitToTargetBeta': 'Beta',
+  'panel.opengrid.fitToTargetAria': '啟用用實體邊框補足目標尺寸 Beta',
   'panel.opengrid.fitToTargetRestore': 'OpenGrid 實體邊框補足目標尺寸',
   'panel.opengrid.fitToTargetDescription':
-    '啟用後以實體外框填滿剩餘距離；可選擇外框角型與四個延伸方向，不新增格點或介面。',
+    '以實體外框填補目標尺寸的剩餘距離；啟用後會改用目標尺寸、外框角型與延伸方向設定，並暫時隱藏列印分片與格點倒角。不會新增格點或介面。',
   'panel.opengrid.targetFrameShape': '外框角型',
   'panel.opengrid.targetFrameShapeRestore': 'OpenGrid 外框角型',
   'panel.opengrid.targetFrameShapeChamfer': '倒角',
@@ -1004,10 +1007,14 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'panel.opengrid.halfYRestore': 'OpenGrid Y half-cell direction',
   'panel.opengrid.targetDimensionDescription':
     'Enter the target size for one board; the largest grid that fits the current half-cell settings will be selected.',
-  'panel.opengrid.fitToTarget': 'Fill target size with physical frame (Beta)',
+  'panel.opengrid.fitToTarget': 'Fill target size with physical frame',
+  'panel.opengrid.fitToTargetCheckbox': 'Enable',
+  'panel.opengrid.fitToTargetBeta': 'Beta',
+  'panel.opengrid.fitToTargetAria':
+    'Enable physical frame target fitting (Beta)',
   'panel.opengrid.fitToTargetRestore': 'OpenGrid physical target-frame fitting',
   'panel.opengrid.fitToTargetDescription':
-    'Fills the remainder with a solid frame; choose its corner shape and four independent extension sides without adding grid hosts or interfaces.',
+    'Fills the remainder to the target size with a physical frame; this switches to target-size, frame-corner, and extension-side controls and temporarily hides print planning and grid chamfer settings. It does not add grid hosts or interfaces.',
   'panel.opengrid.targetFrameShape': 'Outer frame corner shape',
   'panel.opengrid.targetFrameShapeRestore': 'OpenGrid outer frame corner shape',
   'panel.opengrid.targetFrameShapeChamfer': 'Chamfer',

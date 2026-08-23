@@ -243,7 +243,13 @@ test('OpenGrid beta target-frame controls are ordered and independently configur
     'aria-label',
     /用實體邊框補足目標尺寸/,
   )
-  await expect(panel.getByText(/用實體邊框補足目標尺寸 Beta/)).toBeVisible()
+  await expect(
+    panel.getByText('用實體邊框補足目標尺寸', { exact: true }),
+  ).toBeVisible()
+  await expect(panel.getByText('啟用 Beta', { exact: true })).toBeVisible()
+  await expect(
+    panel.getByTestId('opengrid-fit-to-target-description'),
+  ).toContainText('以實體外框填補目標尺寸的剩餘距離')
   await expect(page.getByTestId('grid-dimension-calculator')).toBeVisible()
   await expect(
     page.getByRole('combobox', { name: 'OpenGrid 倒角模式' }),
