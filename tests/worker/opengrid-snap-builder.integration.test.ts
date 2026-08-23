@@ -17,12 +17,17 @@ import { initialiseCadKernel } from '../../src/cad-kernel/initialise'
 import {
   buildOpenGridSnap,
   importOpenGridSnapFixedFootprint,
+  importOpenGridSnapOpenConnectHead,
   importOpenGridSnapReference,
   inspectOpenGridSnapReference,
   openGridSnapPreFootprintBoundsFor,
+  OPENGRID_SNAP_OPEN_CONNECT_HEAD_URL,
   OPENGRID_SNAP_REFERENCE_URLS,
 } from '../../src/cad-kernel/components/opengrid-snap/builder'
+import { openGridSnapOpenConnectHeadBounds } from '../../src/cad-kernel/components/opengrid-snap/openconnect'
+import { openGridSnapProfileFor } from '../../src/cad-kernel/components/opengrid-snap/profile'
 import {
+  assertOpenGridSnapOpenConnectShapeQuality,
   inspectOpenGridSnapShapeQuality,
   OPENGRID_SNAP_GENERATED_ENVELOPE_TOLERANCE,
 } from '../../src/cad-kernel/components/opengrid-snap/quality'
@@ -351,6 +356,12 @@ function fixedAssetBlob(footprint: 'half' | 'quarter'): Blob {
   ])
 }
 
+function openConnectHeadBlob(): Blob {
+  return new Blob([
+    readFileSync(fileURLToPath(OPENGRID_SNAP_OPEN_CONNECT_HEAD_URL)),
+  ])
+}
+
 function snapParameters(
   variant: 'Full' | 'Lite',
   offset: number,
@@ -359,6 +370,7 @@ function snapParameters(
     profile: 'Standard' | 'Directional'
     fourCornerLocatingHoles: boolean
     centerRemoverHole: boolean
+    openConnect: boolean
     magnetHoleShape: 'none' | 'square' | 'round'
     magnetHoleLength: number
     magnetHoleWidth: number
@@ -373,6 +385,7 @@ function snapParameters(
     footprint,
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
+    openConnect: false,
     magnetHoleShape: 'none' as const,
     magnetHoleLength: 0,
     magnetHoleWidth: 0,
@@ -390,6 +403,79 @@ describe('OpenGrid Snap reference builder', () => {
   afterAll(() => {
     // OpenCascade is process-global in these integration tests.
   })
+
+  it('imports the repository OpenConnect head at its original dimensions', async () => {
+    const head = await importOpenGridSnapOpenConnectHead(openConnectHeadBlob())
+
+    try {
+      expectBoundsNear(shapeBounds(head), [
+        [-8.5, -1.7, 0],
+        [8.5, 8.9, 2.6],
+      ])
+      expect(countSolids(head)).toBe(1)
+    } finally {
+      head.delete()
+    }
+  })
+
+  it.each([
+    ['Standard', 'Lite'],
+    ['Standard', 'Full'],
+    ['Directional', 'Lite'],
+    ['Directional', 'Full'],
+  ] as const)(
+    'composes OpenConnect after XY adjustment for %s %s',
+    async (profile, variant) => {
+      const reference = await importOpenGridSnapReference(
+        assetBlob(variant, profile),
+        variant,
+        profile,
+      )
+      const head = await importOpenGridSnapOpenConnectHead(
+        openConnectHeadBlob(),
+      )
+      const generated = await buildOpenGridSnap(
+        snapParameters(variant, 0.2, 'full', { profile, openConnect: true }),
+        {
+          getOpenGridSnapReference: async () => reference,
+          getOpenGridSnapOpenConnectHead: async () => head,
+        },
+      )
+
+      try {
+        expect(countSolids(generated)).toBe(
+          openGridSnapProfileFor(profile, variant).expectedSolidCount + 1,
+        )
+        const headBounds = openGridSnapOpenConnectHeadBounds()
+        expect(
+          solidDescriptors(generated).some(({ bounds }) =>
+            bounds.every((point, pointIndex) =>
+              point.every(
+                (coordinate, coordinateIndex) =>
+                  Math.abs(
+                    coordinate -
+                      [headBounds.min, headBounds.max][pointIndex]![
+                        coordinateIndex
+                      ]!,
+                  ) <= 0.05,
+              ),
+            ),
+          ),
+        ).toBe(true)
+        const quality = assertOpenGridSnapOpenConnectShapeQuality(
+          generated,
+          snapParameters(variant, 0.2, 'full', { profile, openConnect: true }),
+          meshBRep(generated, { tolerance: 0.05, angularTolerance: 0.1 }),
+          reference,
+        )
+        expect(quality.passed).toBe(true)
+      } finally {
+        generated.delete()
+        head.delete()
+        reference.delete()
+      }
+    },
+  )
 
   it('shows known scope totals while leaving footprint-dependent work indeterminate', async () => {
     const reference = await importOpenGridSnapReference(

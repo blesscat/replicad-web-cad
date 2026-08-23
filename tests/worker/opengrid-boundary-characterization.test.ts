@@ -300,6 +300,7 @@ describe('official OpenGrid edge fixture', () => {
           footprint,
           fourCornerLocatingHoles: false,
           centerRemoverHole: false,
+          openConnect: false,
           magnetHoleShape: 'none',
           magnetHoleLength: 0,
           magnetHoleWidth: 0,

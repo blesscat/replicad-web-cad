@@ -13,6 +13,7 @@ import {
   PILLAR_CONFIGURATION,
   type OpenGridParameters,
 } from '../../src/cad-contract/units'
+import { getSystemPreset } from '../../src/features/cad/system-entry-context'
 
 type MemoryStorage = {
   data: Map<string, string>
@@ -131,6 +132,7 @@ describe('component parameter store', () => {
         footprint: 'full',
         fourCornerLocatingHoles: true,
         centerRemoverHole: true,
+        openConnect: false,
         magnetHoleShape: 'none',
         magnetHoleLength: 0,
         magnetHoleWidth: 0,
@@ -146,6 +148,7 @@ describe('component parameter store', () => {
         footprint: 'full',
         fourCornerLocatingHoles: false,
         centerRemoverHole: false,
+        openConnect: false,
         magnetHoleShape: 'none',
         magnetHoleLength: 0,
         magnetHoleWidth: 0,
@@ -180,6 +183,81 @@ describe('component parameter store', () => {
     wallStore.dispose()
   })
 
+  it('switches the active Snap scope without mixing Desk and Wall values', () => {
+    const storage = createMemoryStorage()
+    const store = createComponentParameterStore({ storage })
+    const deskParameters = {
+      ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
+      variant: 'Lite' as const,
+      offset: 0.2,
+      fourCornerLocatingHoles: true,
+      centerRemoverHole: true,
+    }
+    const wallParameters = {
+      ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
+      variant: 'Full' as const,
+      offset: 0,
+      openConnect: true,
+    }
+
+    store.setSystemContext('desk')
+    expect(store.set('opengrid-snap', deskParameters)).toBe(true)
+    store.setSystemContext('wall')
+    expect(store.get('opengrid-snap')).toEqual(
+      getSystemPreset('opengrid-snap', 'wall'),
+    )
+    expect(store.set('opengrid-snap', wallParameters)).toBe(true)
+
+    store.setSystemContext('desk')
+    expect(store.get('opengrid-snap')).toEqual(deskParameters)
+    store.setSystemContext('wall')
+    expect(store.get('opengrid-snap')).toEqual(wallParameters)
+    store.dispose()
+  })
+
+  it('keeps the Wall Snap scope on Full without rejecting stored values', () => {
+    const wallParameters = {
+      ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
+      variant: 'Lite' as const,
+      offset: 0.2,
+      footprint: 'half' as const,
+    }
+    const storage = createMemoryStorage(
+      createPayload(
+        {
+          wall: { 'opengrid-snap': wallParameters },
+        },
+        2,
+      ),
+    )
+    const store = createComponentParameterStore({
+      storage,
+      systemContext: 'wall',
+    })
+
+    expect(store.get('opengrid-snap')).toMatchObject({
+      variant: 'Lite',
+      offset: 0.2,
+      footprint: 'full',
+      fourCornerLocatingHoles: false,
+      centerRemoverHole: false,
+    })
+    expect(
+      store.set('opengrid-snap', {
+        ...wallParameters,
+        footprint: 'quarter',
+        fourCornerLocatingHoles: true,
+        centerRemoverHole: true,
+      }),
+    ).toBe(true)
+    expect(store.get('opengrid-snap')).toMatchObject({
+      footprint: 'full',
+      fourCornerLocatingHoles: false,
+      centerRemoverHole: false,
+    })
+    store.dispose()
+  })
+
   it('does not use an unscoped legacy value for a system route', () => {
     const storage = createMemoryStorage(
       createPayload({
@@ -205,6 +283,7 @@ describe('component parameter store', () => {
       footprint: 'full',
       fourCornerLocatingHoles: true,
       centerRemoverHole: true,
+      openConnect: false,
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,
@@ -466,6 +545,7 @@ describe('component parameter store', () => {
       footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      openConnect: false,
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,
@@ -755,6 +835,7 @@ describe('component parameter store', () => {
         footprint: 'half',
         fourCornerLocatingHoles: true,
         centerRemoverHole: false,
+        openConnect: false,
         magnetHoleShape: 'none',
         magnetHoleLength: 0,
         magnetHoleWidth: 0,
@@ -770,6 +851,7 @@ describe('component parameter store', () => {
       footprint: 'half',
       fourCornerLocatingHoles: true,
       centerRemoverHole: false,
+      openConnect: false,
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,
@@ -861,6 +943,7 @@ describe('component parameter store', () => {
       footprint: 'half',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      openConnect: false,
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,
@@ -880,6 +963,7 @@ describe('component parameter store', () => {
       footprint: 'half',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      openConnect: false,
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,

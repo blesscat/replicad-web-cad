@@ -54,6 +54,7 @@ function getCadFallbackElement(): HTMLElement | null {
 
 export type CadWorkerRuntime = {
   handleInputChange: (key: ModelParameterKey, value: string) => void
+  handleParametersScopeChange: (parameters: CadState['input']) => void
   handleOpenGridParametersChange: (parameters: OpenGridParameters) => void
   handleOpenGridDimensionCalculationInvalid: () => void
   handleExport: (format?: ExportFormat) => void
@@ -317,6 +318,7 @@ export function createCadWorkerRuntime(
 
   return {
     handleInputChange: generation.handleInputChange,
+    handleParametersScopeChange: generation.handleParametersScopeChange,
     handleOpenGridParametersChange: generation.handleOpenGridParametersChange,
     handleOpenGridDimensionCalculationInvalid:
       generation.handleOpenGridDimensionCalculationInvalid,

@@ -85,6 +85,13 @@
     controller?.onInputChange(key, value)
   }
 
+  function handleSystemContextChange(
+    nextContext: OpenGridSystemContext | undefined,
+  ): void {
+    systemContext = nextContext
+    controller?.onSystemContextChange(nextContext)
+  }
+
   function handleOpenGridParametersChange(
     parameters: OpenGridParameters,
   ): void {
@@ -129,6 +136,7 @@
       fieldErrors={snapshot.fieldErrors}
       canExport={snapshot.canExport}
       onInputChange={handleInputChange}
+      onSystemContextChange={handleSystemContextChange}
       onOpenGridParametersChange={handleOpenGridParametersChange}
       onOpenGridDimensionCalculationInvalid={handleOpenGridDimensionCalculationInvalid}
       onExport={handleExport}

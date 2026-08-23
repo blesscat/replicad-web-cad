@@ -75,6 +75,7 @@ export function cadErrorCodeFor(
     message.includes('HEXAGONAL_COLUMN_ASSET') ||
     message.includes('MODEL_ASSET_CONTEXT_MISSING') ||
     message.includes('OPENGRID_SNAP_ASSET') ||
+    message.includes('OPENGRID_SNAP_OPEN_CONNECT_HEAD') ||
     message.includes('OPENGRID_SNAP_REMOVER_ASSET')
   ) {
     return 'MODEL_ASSET_INVALID'

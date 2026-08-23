@@ -34,6 +34,11 @@ import {
   type BooleanOperationScope,
   type BooleanOperationReporter,
 } from '../../boolean-progress'
+import {
+  OPENGRID_SNAP_OPEN_CONNECT_HEAD_SOURCE_BOUNDS,
+  openGridSnapOpenConnectAnchorForXYTransform,
+  type OpenGridSnapOpenConnectAnchor,
+} from './openconnect'
 
 export const OPENGRID_SNAP_REFERENCE_URLS: Readonly<
   Record<OpenGridSnapProfile, Record<OpenGridSnapVariant, URL>>
@@ -60,6 +65,11 @@ export const OPENGRID_SNAP_FIXED_FOOTPRINT_URLS: Readonly<
   quarter: '/downloads/snap-quarter.step',
 }
 
+export const OPENGRID_SNAP_OPEN_CONNECT_HEAD_URL = new URL(
+  './assets/openconnect-head.step',
+  import.meta.url,
+)
+
 const ASSET_TOLERANCE = 0.05
 
 type PointTuple = [number, number, number]
@@ -73,6 +83,7 @@ export type OpenGridSnapBuildContext = {
   getOpenGridSnapFixedFootprint?: (
     footprint: OpenGridSnapFixedFootprint,
   ) => Promise<Shape3D>
+  getOpenGridSnapOpenConnectHead?: () => Promise<Shape3D>
   yieldToEventLoop?: () => Promise<void>
   isGenerationCurrent?: () => boolean
   booleanOperations?: BooleanOperationReporter
@@ -209,6 +220,16 @@ function assertFixedFootprintGeometry(shape: Shape3D): void {
   }
   if (countSolids(shape) === 0) {
     throw new Error('OPENGRID_SNAP_FIXED_ASSET_EMPTY')
+  }
+}
+
+function assertOpenConnectHeadGeometry(shape: Shape3D): void {
+  const bounds = readBounds(shape)
+  if (!boundsMatch(bounds, OPENGRID_SNAP_OPEN_CONNECT_HEAD_SOURCE_BOUNDS)) {
+    throw new Error('OPENGRID_SNAP_OPEN_CONNECT_HEAD_INVALID_BOUNDS')
+  }
+  if (countSolids(shape) !== 1) {
+    throw new Error('OPENGRID_SNAP_OPEN_CONNECT_HEAD_INVALID_SOLID_COUNT')
   }
 }
 
@@ -764,6 +785,23 @@ function buildFeatureAssembly(
   )
 }
 
+function openConnectAnchorFor(
+  reference: Shape3D,
+  parameters: OpenGridSnapParameters,
+  targetBounds: ModelBounds,
+): OpenGridSnapOpenConnectAnchor {
+  const definition = openGridSnapProfileFor(
+    parameters.profile,
+    parameters.variant,
+  )
+  if (parameters.offset === 0) {
+    return openGridSnapOpenConnectAnchorForXYTransform()
+  }
+  return openGridSnapOpenConnectAnchorForXYTransform(
+    xyScaleTransformFor(reference, targetBounds, definition),
+  )
+}
+
 export function openGridSnapPreFootprintBoundsFor(
   parameters: OpenGridSnapParameters,
 ): ModelBounds {
@@ -1004,6 +1042,67 @@ export async function loadOpenGridSnapFixedFootprint(
   return importOpenGridSnapFixedFootprint(await response.blob())
 }
 
+export async function importOpenGridSnapOpenConnectHead(
+  blob: Blob,
+): Promise<Shape3D> {
+  let source: string
+  try {
+    source = await blob.text()
+  } catch {
+    throw new Error('OPENGRID_SNAP_OPEN_CONNECT_HEAD_INVALID')
+  }
+  assertMillimetreStepUnits(source)
+
+  let imported: Shape3D
+  try {
+    imported = (await importSTEP(blob)).asShape3D()
+  } catch {
+    throw new Error('OPENGRID_SNAP_OPEN_CONNECT_HEAD_INVALID')
+  }
+
+  try {
+    assertOpenConnectHeadGeometry(imported)
+    return imported
+  } catch (error) {
+    deleteShape(imported)
+    throw error
+  }
+}
+
+export async function loadOpenGridSnapOpenConnectHead(
+  fetcher: typeof fetch = fetch,
+): Promise<Shape3D> {
+  const response = await fetcher(OPENGRID_SNAP_OPEN_CONNECT_HEAD_URL)
+  if (!response.ok)
+    throw new Error('OPENGRID_SNAP_OPEN_CONNECT_HEAD_LOAD_FAILED')
+  return importOpenGridSnapOpenConnectHead(await response.blob())
+}
+
+function placeOpenConnectHead(
+  source: Shape3D,
+  anchor: OpenGridSnapOpenConnectAnchor,
+): Shape3D {
+  const [x, y, z] = anchor
+  const placed = source.translate(x, y, z)
+  if (placed !== source) deleteShape(source)
+  return placed
+}
+
+function composeOpenConnectAssembly(
+  assembly: Shape3D,
+  head: Shape3D,
+  anchor: OpenGridSnapOpenConnectAnchor,
+): Shape3D {
+  const placedHead = placeOpenConnectHead(cloneImportedAssembly(head), anchor)
+  try {
+    return makeCompound([assembly, placedHead]).asShape3D()
+  } catch (error) {
+    deleteShape(assembly)
+    deleteShape(placedHead)
+    throw error
+  }
+}
+
 export function inspectOpenGridSnapReference(
   shape: Shape3D,
   variant: OpenGridSnapVariant,
@@ -1042,14 +1141,28 @@ export async function buildOpenGridSnap(
   )
   assertGenerationCurrent(context)
 
+  const targetBounds = openGridSnapPreFootprintBoundsFor(parameters)
   const assembly = buildFeatureAssembly(
     reference,
     parameters,
-    openGridSnapPreFootprintBoundsFor(parameters),
+    targetBounds,
     context.booleanOperations,
   )
 
-  if (parameters.footprint === 'full') return assembly
+  if (parameters.footprint === 'full') {
+    if (!parameters.openConnect) return assembly
+    if (!context.getOpenGridSnapOpenConnectHead) {
+      deleteShape(assembly)
+      throw new Error('OPENGRID_SNAP_OPEN_CONNECT_HEAD_MISSING')
+    }
+    const head = await context.getOpenGridSnapOpenConnectHead()
+    assertGenerationCurrent(context)
+    return composeOpenConnectAssembly(
+      assembly,
+      head,
+      openConnectAnchorFor(reference, parameters, targetBounds),
+    )
+  }
 
   try {
     const clipped = await clipAssemblyToFootprint(assembly, parameters, context)

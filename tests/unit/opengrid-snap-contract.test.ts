@@ -17,6 +17,7 @@ describe('OpenGrid Snap contract', () => {
       footprint: 'full' | 'half' | 'quarter'
       fourCornerLocatingHoles: boolean
       centerRemoverHole: boolean
+      openConnect: boolean
       magnetHoleShape: 'none' | 'square' | 'round'
       magnetHoleLength: number
       magnetHoleWidth: number
@@ -31,6 +32,7 @@ describe('OpenGrid Snap contract', () => {
       footprint: 'full' as const,
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      openConnect: false,
       magnetHoleShape: 'none' as const,
       magnetHoleLength: 0,
       magnetHoleWidth: 0,
@@ -90,6 +92,42 @@ describe('OpenGrid Snap contract', () => {
     expect(
       validateOpenGridSnapParameters({ ...full, halfCellX: 'left' }),
     ).toMatchObject({ valid: false })
+  })
+
+  it('accepts OpenConnect for every profile and variant combination', () => {
+    for (const profile of ['Standard', 'Directional'] as const) {
+      for (const variant of ['Lite', 'Full'] as const) {
+        const input = parameters({ profile, variant, openConnect: true })
+        expect(validateOpenGridSnapParameters(input)).toEqual({
+          valid: true,
+          value: input,
+        })
+      }
+    }
+  })
+
+  it('rejects OpenConnect for fixed partial footprints', () => {
+    expect(
+      validateOpenGridSnapParameters(
+        parameters({ footprint: 'half', openConnect: true }),
+      ),
+    ).toMatchObject({ valid: false })
+    expect(
+      validateOpenGridSnapParameters(
+        parameters({ footprint: 'quarter', openConnect: true }),
+      ),
+    ).toMatchObject({ valid: false })
+  })
+
+  it('normalizes legacy snapshots with OpenConnect disabled', async () => {
+    const { normalizeOpenGridSnapParameters } =
+      await import('../../src/cad-contract/units')
+    const legacy = parameters()
+    delete (legacy as Partial<typeof legacy>).openConnect
+
+    expect(normalizeOpenGridSnapParameters(legacy)).toMatchObject({
+      openConnect: false,
+    })
   })
 
   it('treats offset as a centered total envelope delta', () => {
@@ -199,6 +237,13 @@ describe('OpenGrid Snap contract', () => {
       '-magnet-square-l6-w4-t2.step',
     )
     expect(openGridSnapStlFileName(round)).toContain('-magnet-round-d8-t2.stl')
+  })
+
+  it('distinguishes OpenConnect-enabled Full exports', () => {
+    const input = parameters({ openConnect: true })
+
+    expect(openGridSnapFileName(input)).toContain('-openconnect')
+    expect(openGridSnapStlFileName(input)).toContain('-openconnect')
   })
 
   it('uses fixed STEP filenames for half and quarter downloads', () => {
@@ -323,6 +368,7 @@ describe('OpenGrid Snap contract', () => {
       profile: 'Standard',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      openConnect: false,
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,

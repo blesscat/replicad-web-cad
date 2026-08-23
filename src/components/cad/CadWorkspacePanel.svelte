@@ -30,6 +30,7 @@
     >
     canExport: boolean
     onInputChange: (key: ModelParameterKey, value: string) => void
+    onSystemContextChange: (context: OpenGridSystemContext | undefined) => void
     onOpenGridParametersChange: (parameters: OpenGridParameters) => void
     onOpenGridDimensionCalculationInvalid: () => void
     onExport: (format: ExportFormat) => void
@@ -48,6 +49,7 @@
     fieldErrors,
     canExport,
     onInputChange,
+    onSystemContextChange,
     onOpenGridParametersChange,
     onOpenGridDimensionCalculationInvalid,
     onExport,
@@ -80,6 +82,7 @@
         {rawParameters}
         {fieldErrors}
         {onInputChange}
+        {onSystemContextChange}
         {onOpenGridParametersChange}
         {onOpenGridDimensionCalculationInvalid}
       />

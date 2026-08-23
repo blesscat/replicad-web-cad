@@ -54,6 +54,7 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
       footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      openConnect: false,
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,
@@ -193,6 +194,41 @@ describe('CAD model generation debounce', () => {
       depth: 30,
       height: 40,
     })
+  })
+
+  it('applies a scoped parameter snapshot through the normal invalidation flow', () => {
+    const { client, context } = createRuntimeContext('opengrid-snap')
+    const handlers = createModelGenerationHandlers(context)
+    const parameters = {
+      ...defaultInputForModel('opengrid-snap'),
+      variant: 'Lite' as const,
+      offset: 0.25,
+      fourCornerLocatingHoles: true,
+      centerRemoverHole: true,
+    }
+
+    handlers.handleParametersScopeChange(parameters)
+
+    expect(context.setRawParameters).toHaveBeenCalledWith(
+      rawFromParameters(parameters),
+    )
+    expect(context.setPersistedParameters).toHaveBeenCalledWith(
+      'opengrid-snap',
+      parameters,
+    )
+    expect(context.dispatch).toHaveBeenCalledWith({
+      type: 'input-valid',
+      modelId: 'opengrid-snap',
+      input: parameters,
+      generation: 1,
+    })
+    expect(client.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'model.invalidate',
+        generation: 1,
+        reason: 'superseded',
+      }),
+    )
   })
 
   it('debounces pillar mode changes and persists the typed mode', () => {
@@ -834,6 +870,7 @@ describe('CAD model generation debounce', () => {
           footprint: 'full',
           fourCornerLocatingHoles: false,
           centerRemoverHole: false,
+          openConnect: false,
           magnetHoleShape: 'none',
           magnetHoleLength: 0,
           magnetHoleWidth: 0,

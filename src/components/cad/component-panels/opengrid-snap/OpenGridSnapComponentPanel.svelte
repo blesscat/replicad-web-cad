@@ -10,6 +10,7 @@
     opengridSnapDefinition,
     unitLabelFor,
   } from '../../../../features/cad/model-catalog'
+  import type { OpenGridSystemContext } from '../../../../features/cad/system-entry-context'
   import { translate, type Locale } from '../../../../i18n'
   import { formatValidationIssue } from '../../../../i18n/diagnostics'
   import type { RawParameters } from '../../workspace/types'
@@ -24,10 +25,19 @@
       Record<ModelParameterKey | 'parameters', ValidationIssue>
     >
     onInputChange: (key: ModelParameterKey, value: string) => void
+    systemContext?: OpenGridSystemContext
+    onSystemContextChange: (context: OpenGridSystemContext | undefined) => void
   }
 
-  let { locale, parameters, rawParameters, fieldErrors, onInputChange }: Props =
-    $props()
+  let {
+    locale,
+    parameters,
+    rawParameters,
+    fieldErrors,
+    onInputChange,
+    systemContext,
+    onSystemContextChange,
+  }: Props = $props()
 
   const offsetField = opengridSnapDefinition.parameterSchema[0]!
   const magnetLengthField = opengridSnapDefinition.parameterSchema.find(
@@ -62,8 +72,13 @@
   let rawOffset = $derived(rawParameters.offset ?? String(parameters.offset))
   let rawProfile = $derived(rawParameters.profile ?? parameters.profile)
   let rawFootprint = $derived(rawParameters.footprint ?? parameters.footprint)
-  let offsetIsAdjustable = $derived(rawFootprint === 'full')
-  let fixedFootprintFeaturesAreDisabled = $derived(rawFootprint !== 'full')
+  let isWallSystem = $derived(systemContext === 'wall')
+  let showDeskSystemControls = $derived(!isWallSystem)
+  let offsetIsAdjustable = $derived(isWallSystem || rawFootprint === 'full')
+  let fixedFootprintFeaturesAreDisabled = $derived(
+    isWallSystem || rawFootprint !== 'full',
+  )
+  let magnetFeaturesAreDisabled = $derived(rawFootprint !== 'full')
   let displayedOffset = $derived(
     offsetIsAdjustable ? rawOffset : String(offsetField.defaultValue),
   )
@@ -90,9 +105,12 @@
     rawParameters.magnetHoleThickness ?? String(parameters.magnetHoleThickness),
   )
   let magnetHoleIsActive = $derived(rawMagnetHoleShape !== 'none')
-  let magnetControlsAreDisabled = $derived(fixedFootprintFeaturesAreDisabled)
+  let magnetControlsAreDisabled = $derived(magnetFeaturesAreDisabled)
   let magnetDimensionControlsAreDisabled = $derived(
     magnetControlsAreDisabled || !magnetHoleIsActive,
+  )
+  let rawOpenConnect = $derived(
+    rawParameters.openConnect ?? String(parameters.openConnect),
   )
 
   function initializeMagnetDimension(
@@ -160,6 +178,7 @@
 
   function updateFootprint(event: Event): void {
     if (!(event.currentTarget instanceof HTMLSelectElement)) return
+    if (isWallSystem) return
     const footprint = event.currentTarget.value as OpenGridSnapFootprint
     onInputChange('footprint', footprint)
     if (footprint !== 'full') {
@@ -186,6 +205,37 @@
 </script>
 
 <fieldset class="m-0 grid gap-3 border-0 p-0" data-testid="opengrid-snap-panel">
+  <div
+    class="grid gap-2"
+    role="radiogroup"
+    aria-label={translate(locale, 'panel.snap.systemAria')}
+    data-testid="opengrid-snap-system"
+  >
+    <span class="text-sm font-medium text-ink">
+      {translate(locale, 'panel.snap.system')}
+    </span>
+    <label class="flex items-center gap-2 text-sm text-ink">
+      <input
+        type="radio"
+        name="opengrid-snap-system"
+        value="desk"
+        checked={systemContext === 'desk'}
+        onchange={() => onSystemContextChange('desk')}
+      />
+      {translate(locale, 'panel.snap.systemDesk')}
+    </label>
+    <label class="flex items-center gap-2 text-sm text-ink">
+      <input
+        type="radio"
+        name="opengrid-snap-system"
+        value="wall"
+        checked={systemContext === 'wall'}
+        onchange={() => onSystemContextChange('wall')}
+      />
+      {translate(locale, 'panel.snap.systemWall')}
+    </label>
+  </div>
+
   <ParameterField
     {locale}
     label={translate(locale, 'panel.snap.variant')}
@@ -268,39 +318,76 @@
     {/if}
   </ParameterField>
 
-  <ParameterField
-    {locale}
-    label={translate(locale, 'panel.snap.footprint')}
-    error={fieldError('footprint')}
-    errorId="opengrid-snap-footprint-error"
-    onRestore={() => onInputChange('footprint', 'full')}
-  >
-    <select
-      class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-      aria-label={translate(locale, 'panel.snap.footprintAria')}
-      aria-describedby={fieldError('footprint')
-        ? 'opengrid-snap-footprint-error'
-        : undefined}
-      aria-invalid={Boolean(fieldError('footprint'))}
-      value={rawFootprint}
-      onchange={updateFootprint}
+  {#if showDeskSystemControls}
+    <ParameterField
+      {locale}
+      label={translate(locale, 'panel.snap.footprint')}
+      error={fieldError('footprint')}
+      errorId="opengrid-snap-footprint-error"
+      onRestore={() => onInputChange('footprint', 'full')}
     >
-      <option value="full"
-        >{translate(locale, 'panel.snap.footprintFull')}</option
+      <select
+        class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+        aria-label={translate(locale, 'panel.snap.footprintAria')}
+        aria-describedby={fieldError('footprint')
+          ? 'opengrid-snap-footprint-error'
+          : undefined}
+        aria-invalid={Boolean(fieldError('footprint'))}
+        value={rawFootprint}
+        onchange={updateFootprint}
       >
-      <option value="half"
-        >{translate(locale, 'panel.snap.footprintHalf')}</option
+        <option value="full"
+          >{translate(locale, 'panel.snap.footprintFull')}</option
+        >
+        <option value="half"
+          >{translate(locale, 'panel.snap.footprintHalf')}</option
+        >
+        <option value="quarter"
+          >{translate(locale, 'panel.snap.footprintQuarter')}</option
+        >
+      </select>
+      {#if rawFootprint === 'quarter'}
+        <p class="m-0 text-sm text-error" role="status">
+          {translate(locale, 'panel.snap.experimental')}
+        </p>
+      {/if}
+    </ParameterField>
+  {:else}
+    <ParameterField {locale} label={translate(locale, 'panel.snap.footprint')}>
+      <p
+        class="m-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
       >
-      <option value="quarter"
-        >{translate(locale, 'panel.snap.footprintQuarter')}</option
-      >
-    </select>
-    {#if rawFootprint === 'quarter'}
-      <p class="m-0 text-sm text-error" role="status">
-        {translate(locale, 'panel.snap.experimental')}
+        {translate(locale, 'panel.snap.footprintFull')}
       </p>
+    </ParameterField>
+  {/if}
+
+  {#if isWallSystem}
+    <label class="flex items-center gap-2 text-sm text-ink">
+      <input
+        type="checkbox"
+        aria-label={translate(locale, 'panel.snap.openConnect')}
+        aria-describedby={fieldError('openConnect')
+          ? 'opengrid-snap-open-connect-error'
+          : undefined}
+        aria-invalid={Boolean(fieldError('openConnect'))}
+        checked={rawOpenConnect === 'true'}
+        onchange={(event) => {
+          if (event.currentTarget instanceof HTMLInputElement) {
+            onInputChange('openConnect', String(event.currentTarget.checked))
+          }
+        }}
+      />
+      {translate(locale, 'panel.snap.openConnect')}
+    </label>
+    {#if fieldError('openConnect')}
+      <span
+        id="opengrid-snap-open-connect-error"
+        class="text-sm text-error"
+        role="alert">{fieldErrorMessage('openConnect')}</span
+      >
     {/if}
-  </ParameterField>
+  {/if}
 
   <ParameterField
     {locale}
@@ -327,7 +414,7 @@
         >{translate(locale, 'panel.snap.magnetRound')}</option
       >
     </select>
-    {#if fixedFootprintFeaturesAreDisabled}
+    {#if magnetControlsAreDisabled}
       <p class="m-0 text-sm text-muted" role="status">
         {translate(locale, 'panel.snap.magnetHoleInvalid')}
       </p>
@@ -410,67 +497,70 @@
     </div>
   {/if}
 
-  <div class="grid grid-cols-2 gap-2">
-    <div class="min-w-0">
-      <label class="flex items-center gap-2 text-sm text-ink">
-        <input
-          type="checkbox"
-          aria-label={translate(locale, 'panel.snap.locatingHoles')}
-          aria-describedby={fieldError('fourCornerLocatingHoles')
-            ? 'opengrid-snap-four-corner-holes-error'
-            : undefined}
-          aria-invalid={Boolean(fieldError('fourCornerLocatingHoles'))}
-          checked={!fixedFootprintFeaturesAreDisabled &&
-            !magnetHoleIsActive &&
-            rawFourCornerLocatingHoles === 'true'}
-          disabled={fixedFootprintFeaturesAreDisabled}
-          onchange={(event) => updateBoolean('fourCornerLocatingHoles', event)}
-        />
-        {translate(locale, 'panel.snap.locatingHoles')}
-      </label>
-      {#if fixedFootprintFeaturesAreDisabled}
-        <p class="m-0 text-sm text-muted" role="status">
-          {translate(locale, 'panel.snap.locatingHolesInvalid')}
-        </p>
-      {/if}
-      {#if fieldError('fourCornerLocatingHoles')}
-        <span
-          id="opengrid-snap-four-corner-holes-error"
-          class="text-sm text-error"
-          role="alert">{fieldErrorMessage('fourCornerLocatingHoles')}</span
-        >
-      {/if}
-    </div>
+  {#if showDeskSystemControls}
+    <div class="grid grid-cols-2 gap-2">
+      <div class="min-w-0">
+        <label class="flex items-center gap-2 text-sm text-ink">
+          <input
+            type="checkbox"
+            aria-label={translate(locale, 'panel.snap.locatingHoles')}
+            aria-describedby={fieldError('fourCornerLocatingHoles')
+              ? 'opengrid-snap-four-corner-holes-error'
+              : undefined}
+            aria-invalid={Boolean(fieldError('fourCornerLocatingHoles'))}
+            checked={!fixedFootprintFeaturesAreDisabled &&
+              !magnetHoleIsActive &&
+              rawFourCornerLocatingHoles === 'true'}
+            disabled={fixedFootprintFeaturesAreDisabled}
+            onchange={(event) =>
+              updateBoolean('fourCornerLocatingHoles', event)}
+          />
+          {translate(locale, 'panel.snap.locatingHoles')}
+        </label>
+        {#if fixedFootprintFeaturesAreDisabled}
+          <p class="m-0 text-sm text-muted" role="status">
+            {translate(locale, 'panel.snap.locatingHolesInvalid')}
+          </p>
+        {/if}
+        {#if fieldError('fourCornerLocatingHoles')}
+          <span
+            id="opengrid-snap-four-corner-holes-error"
+            class="text-sm text-error"
+            role="alert">{fieldErrorMessage('fourCornerLocatingHoles')}</span
+          >
+        {/if}
+      </div>
 
-    <div class="min-w-0">
-      <label class="flex items-center gap-2 text-sm text-ink">
-        <input
-          type="checkbox"
-          aria-label={translate(locale, 'panel.snap.removerHole')}
-          aria-describedby={fieldError('centerRemoverHole')
-            ? 'opengrid-snap-center-remover-hole-error'
-            : undefined}
-          aria-invalid={Boolean(fieldError('centerRemoverHole'))}
-          checked={!fixedFootprintFeaturesAreDisabled &&
-            !magnetHoleIsActive &&
-            rawCenterRemoverHole === 'true'}
-          disabled={fixedFootprintFeaturesAreDisabled}
-          onchange={(event) => updateBoolean('centerRemoverHole', event)}
-        />
-        {translate(locale, 'panel.snap.removerHole')}
-      </label>
-      {#if fixedFootprintFeaturesAreDisabled}
-        <p class="m-0 text-sm text-muted" role="status">
-          {translate(locale, 'panel.snap.removerHoleInvalid')}
-        </p>
-      {/if}
-      {#if fieldError('centerRemoverHole')}
-        <span
-          id="opengrid-snap-center-remover-hole-error"
-          class="text-sm text-error"
-          role="alert">{fieldErrorMessage('centerRemoverHole')}</span
-        >
-      {/if}
+      <div class="min-w-0">
+        <label class="flex items-center gap-2 text-sm text-ink">
+          <input
+            type="checkbox"
+            aria-label={translate(locale, 'panel.snap.removerHole')}
+            aria-describedby={fieldError('centerRemoverHole')
+              ? 'opengrid-snap-center-remover-hole-error'
+              : undefined}
+            aria-invalid={Boolean(fieldError('centerRemoverHole'))}
+            checked={!fixedFootprintFeaturesAreDisabled &&
+              !magnetHoleIsActive &&
+              rawCenterRemoverHole === 'true'}
+            disabled={fixedFootprintFeaturesAreDisabled}
+            onchange={(event) => updateBoolean('centerRemoverHole', event)}
+          />
+          {translate(locale, 'panel.snap.removerHole')}
+        </label>
+        {#if fixedFootprintFeaturesAreDisabled}
+          <p class="m-0 text-sm text-muted" role="status">
+            {translate(locale, 'panel.snap.removerHoleInvalid')}
+          </p>
+        {/if}
+        {#if fieldError('centerRemoverHole')}
+          <span
+            id="opengrid-snap-center-remover-hole-error"
+            class="text-sm text-error"
+            role="alert">{fieldErrorMessage('centerRemoverHole')}</span
+          >
+        {/if}
+      </div>
     </div>
-  </div>
+  {/if}
 </fieldset>

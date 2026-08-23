@@ -84,6 +84,7 @@ function snapPresetFor(context: OpenGridSystemContext): OpenGridSnapParameters {
     footprint: 'full',
     fourCornerLocatingHoles: context === 'desk',
     centerRemoverHole: context === 'desk',
+    openConnect: false,
     magnetHoleShape: 'none',
     magnetHoleLength: 0,
     magnetHoleWidth: 0,

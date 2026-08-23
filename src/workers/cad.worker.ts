@@ -16,6 +16,7 @@ import {
 } from '../cad-kernel/components/opengrid/builder'
 import {
   loadOpenGridSnapFixedFootprint,
+  loadOpenGridSnapOpenConnectHead,
   loadOpenGridSnapReference,
   type OpenGridSnapFixedFootprint,
 } from '../cad-kernel/components/opengrid-snap/builder'
@@ -26,7 +27,10 @@ import {
 } from '../cad-kernel/components/opengrid-locating-assembly/reference'
 import { buildModelBRep, type KernelBuildContext } from '../cad-kernel/model'
 import { assertOpenGridShapeQuality } from '../cad-kernel/components/opengrid/quality'
-import { assertOpenGridSnapShapeQuality } from '../cad-kernel/components/opengrid-snap/quality'
+import {
+  assertOpenGridSnapOpenConnectShapeQuality,
+  assertOpenGridSnapShapeQuality,
+} from '../cad-kernel/components/opengrid-snap/quality'
 import { assertOpenGridDividerShapeQuality } from '../cad-kernel/components/opengrid-divider/quality'
 import { assertPillarShapeQuality } from '../cad-kernel/components/opengrid-pillar/quality'
 import { assertOpenGridOpenShelfShapeQuality } from '../cad-kernel/components/opengrid-open-shelf/quality'
@@ -154,6 +158,9 @@ export class CadWorkerRuntime {
     OpenGridSnapFixedFootprint,
     Promise<import('replicad').Shape3D>
   >()
+  private openGridSnapOpenConnectHeadAsset: Promise<
+    import('replicad').Shape3D
+  > | null = null
   private openGridSnapRemoverAsset: Promise<import('replicad').Shape3D> | null =
     null
   private openGridDetachableCornerSeatReference: Promise<
@@ -251,6 +258,7 @@ export class CadWorkerRuntime {
           this.disposeOpenGridHalfCellPrototypes()
           this.disposeOpenGridSnapReferences()
           this.disposeOpenGridSnapFixedFootprints()
+          this.disposeOpenGridSnapOpenConnectHead()
           this.disposeOpenGridSnapRemoverAsset()
           this.disposeOpenGridDetachableCornerSeatReference()
           this.disposeOpenGridDetachableCornerSeatHolderReference()
@@ -363,6 +371,8 @@ export class CadWorkerRuntime {
           this.getOpenGridSnapReference(variant, profile),
         getOpenGridSnapFixedFootprint: (footprint) =>
           this.getOpenGridSnapFixedFootprint(footprint),
+        getOpenGridSnapOpenConnectHead: () =>
+          this.getOpenGridSnapOpenConnectHead(),
         getOpenGridSnapRemoverAsset: () => this.getOpenGridSnapRemoverAsset(),
         getOpenGridDetachableCornerSeatReference: () =>
           this.getOpenGridDetachableCornerSeatReference(),
@@ -439,7 +449,10 @@ export class CadWorkerRuntime {
         if (!isOpenGridSnapParameters(generationParameters)) {
           throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
         }
-        if (generationParameters.footprint === 'full') {
+        if (
+          generationParameters.footprint === 'full' &&
+          !generationParameters.openConnect
+        ) {
           mesh.bounds = boundsForOpenGridSnap(generationParameters)
         }
       }
@@ -460,14 +473,25 @@ export class CadWorkerRuntime {
             generationParameters.variant,
             generationParameters.profile,
           )
-          timing.measureSync('quality', () =>
-            assertOpenGridSnapShapeQuality(
-              shape,
-              generationParameters,
-              mesh,
-              reference,
-            ),
-          )
+          if (generationParameters.openConnect) {
+            timing.measureSync('quality', () =>
+              assertOpenGridSnapOpenConnectShapeQuality(
+                shape,
+                generationParameters,
+                mesh,
+                reference,
+              ),
+            )
+          } else {
+            timing.measureSync('quality', () =>
+              assertOpenGridSnapShapeQuality(
+                shape,
+                generationParameters,
+                mesh,
+                reference,
+              ),
+            )
+          }
         }
       }
 
@@ -1055,6 +1079,29 @@ export class CadWorkerRuntime {
     return recoverable
   }
 
+  private getOpenGridSnapOpenConnectHead(): Promise<
+    import('replicad').Shape3D
+  > {
+    if (!this.openGridSnapOpenConnectHeadAsset) {
+      const headPromise = loadOpenGridSnapOpenConnectHead()
+        .then((head) => {
+          if (this.disposed) {
+            head.delete()
+            throw new Error('WORKER_TERMINATED')
+          }
+          return head
+        })
+        .catch((error) => {
+          if (this.openGridSnapOpenConnectHeadAsset === headPromise) {
+            this.openGridSnapOpenConnectHeadAsset = null
+          }
+          throw error
+        })
+      this.openGridSnapOpenConnectHeadAsset = headPromise
+    }
+    return this.openGridSnapOpenConnectHeadAsset
+  }
+
   private getOpenGridSnapRemoverAsset(): Promise<import('replicad').Shape3D> {
     if (!this.openGridSnapRemoverAsset) {
       const assetPromise = loadOpenGridSnapRemoverAsset()
@@ -1198,6 +1245,13 @@ export class CadWorkerRuntime {
     for (const fixedFootprint of fixedFootprints) {
       void fixedFootprint.then((shape) => shape.delete()).catch(() => undefined)
     }
+  }
+
+  private disposeOpenGridSnapOpenConnectHead(): void {
+    const headPromise = this.openGridSnapOpenConnectHeadAsset
+    this.openGridSnapOpenConnectHeadAsset = null
+    if (!headPromise) return
+    void headPromise.then((head) => head.delete()).catch(() => undefined)
   }
 
   private disposeOpenGridSnapRemoverAsset(): void {
