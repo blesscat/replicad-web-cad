@@ -49,3 +49,10 @@ their public attribution is maintained on the localized Snap generator page.
 
 The repository-local STEP files above remain subject to the ownership and
 permission review noted above before external publication.
+
+The OpenConnect head and underside interface reference the
+[OpenConnect — OpenGrid's own connector system](https://www.printables.com/model/1559478-openconnect-opengrids-own-connector-system)
+by [mitufy](https://github.com/mitufy), whose source material declares the
+[Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/)
+license. The repository implementation uses that attribution while keeping
+the supplied OpenConnect STEP as a repository-local runtime asset.

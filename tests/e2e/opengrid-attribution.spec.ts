@@ -5,6 +5,10 @@ const SOURCE_CODE_LICENSE_URL =
 const DERIVED_PARTS_LICENSE_URL = 'https://creativecommons.org/licenses/by/4.0/'
 const DAVID_D_PROFILE_URL = 'https://www.printables.com/@DavidD'
 const ANDY_PROFILE_URL = 'https://makerworld.com/en/@BlackjackDuck'
+const OPENCONNECT_AUTHOR_PROFILE_URL = 'https://github.com/mitufy'
+const OPENCONNECT_PROJECT_URL =
+  'https://www.printables.com/model/1559478-openconnect-opengrids-own-connector-system'
+const OPENCONNECT_LICENSE_URL = DERIVED_PARTS_LICENSE_URL
 
 const attributionCases = [
   {
@@ -39,9 +43,14 @@ const attributionCases = [
     creditsText: '上游作者：',
     authors: [{ name: 'David D', url: DAVID_D_PROFILE_URL }],
     unlinkedAuthorText: 'metasyntactic',
+    openConnectAuthors: [
+      { name: 'mitufy', url: OPENCONNECT_AUTHOR_PROFILE_URL },
+      { name: 'OpenConnect project', url: OPENCONNECT_PROJECT_URL },
+    ],
     removedSourceLinkText: '查看固定版本的上游來源',
     sourceCodeLicenseText: '上游程式碼：CC BY-NC-SA 4.0',
     derivedPartsLicenseText: '衍生／產生零件：CC BY 4.0',
+    openConnectLicenseText: 'OpenConnect 原始碼與介面幾何：CC BY 4.0',
     modifiedText: '修改的衍生版本',
   },
   {
@@ -50,9 +59,15 @@ const attributionCases = [
     creditsText: 'Upstream authors:',
     authors: [{ name: 'David D', url: DAVID_D_PROFILE_URL }],
     unlinkedAuthorText: 'metasyntactic',
+    openConnectAuthors: [
+      { name: 'mitufy', url: OPENCONNECT_AUTHOR_PROFILE_URL },
+      { name: 'OpenConnect project', url: OPENCONNECT_PROJECT_URL },
+    ],
     removedSourceLinkText: 'View the pinned upstream source',
     sourceCodeLicenseText: 'Upstream source code: CC BY-NC-SA 4.0',
     derivedPartsLicenseText: 'Derived/generated parts: CC BY 4.0',
+    openConnectLicenseText:
+      'OpenConnect source and interface geometry: CC BY 4.0',
     modifiedText: 'modified derivatives',
   },
 ] as const
@@ -111,6 +126,19 @@ for (const attributionCase of attributionCases) {
         name: attributionCase.derivedPartsLicenseText,
       }),
     ).toHaveAttribute('href', DERIVED_PARTS_LICENSE_URL)
+
+    if ('openConnectAuthors' in attributionCase) {
+      for (const author of attributionCase.openConnectAuthors) {
+        await expect(
+          notice.getByRole('link', { name: author.name }),
+        ).toHaveAttribute('href', author.url)
+      }
+      await expect(
+        notice.getByRole('link', {
+          name: attributionCase.openConnectLicenseText,
+        }),
+      ).toHaveAttribute('href', OPENCONNECT_LICENSE_URL)
+    }
 
     if (attributionCase.modifiedText) {
       await expect(notice).toContainText(attributionCase.modifiedText)

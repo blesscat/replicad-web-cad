@@ -1,9 +1,5 @@
 ---
-import {
-  OPENGRID_DERIVED_PARTS_LICENSE_URL,
-  OPENGRID_SOURCE_CODE_LICENSE_URL,
-  type OpenGridAttribution,
-} from '../../features/cad/attribution/opengrid'
+import type { OpenGridAttribution } from '../../features/cad/attribution/opengrid'
 import CadAttributionAuthor from './CadAttributionAuthor.astro'
 import { translate, type Locale } from '../../i18n'
 
@@ -52,20 +48,17 @@ const t = (key: string, values?: Record<string, string | number | boolean>) =>
     <div>
       <dt class="font-semibold">{t('cad.attribution.licenseLabel')}</dt>
       <dd class="m-0 grid gap-1">
-        <a
-          href={OPENGRID_SOURCE_CODE_LICENSE_URL}
-          target="_blank"
-          rel="license noopener noreferrer"
-        >
-          {t('cad.attribution.sourceCodeLicense')}
-        </a>
-        <a
-          href={OPENGRID_DERIVED_PARTS_LICENSE_URL}
-          target="_blank"
-          rel="license noopener noreferrer"
-        >
-          {t('cad.attribution.derivedPartsLicense')}
-        </a>
+        {
+          attribution.licenses.map((license) => (
+            <a
+              href={license.url}
+              target="_blank"
+              rel="license noopener noreferrer"
+            >
+              {t(license.labelKey)}
+            </a>
+          ))
+        }
       </dd>
     </div>
   </dl>
