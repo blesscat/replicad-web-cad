@@ -1,10 +1,8 @@
 ---
 import SiteLayout from '../../layouts/SiteLayout.astro'
 import {
-  adjustableParameterLabelsFor,
   displayParameterLabel,
   groupModelDefinitions,
-  joinParameterLabels,
   modelSelectionLabelFor,
   parameterPresentationFor,
   parameterStaticSummaryKeysFor,
@@ -88,25 +86,6 @@ function parameterSummary(definition: ModelDefinition): string[] {
       unit: unitLabelFor(locale, field.unit),
     }),
   )
-}
-
-function parameterCapabilitySummaryFor(definition: ModelDefinition): string {
-  const presentation = parameterPresentationFor(definition)
-  if (presentation.kind === 'fixed') {
-    return t('models.fixedParameters')
-  }
-
-  const staticSummary = translatedStaticSummariesFor(definition)[0]
-  if (staticSummary) {
-    return t('models.adjustableSettings', { value: staticSummary })
-  }
-
-  const labels = adjustableParameterLabelsFor(definition, locale)
-  if (labels.length === 0) return t('models.adjustableSettingsMultiple')
-
-  return t('models.adjustableSettings', {
-    value: joinParameterLabels(labels, locale),
-  })
 }
 
 function detailsDialogIdFor(definition: ModelDefinition): string {
@@ -194,12 +173,8 @@ function detailsDialogIdFor(definition: ModelDefinition): string {
                         )
                         const description = modelText(definition, 'description')
                         const previewAlt = modelText(definition, 'alt')
-                        const capabilitySummary =
-                          parameterCapabilitySummaryFor(definition)
                         const parameterDetails = parameterSummary(definition)
                         const dialogId = detailsDialogIdFor(definition)
-                        const presentation =
-                          parameterPresentationFor(definition)
                         const cadPath = localizedCadPathFor(
                           locale,
                           definition.id,
@@ -248,13 +223,6 @@ function detailsDialogIdFor(definition: ModelDefinition): string {
                               {description}
                             </p>
                             <div class="grid gap-2 text-sm leading-normal">
-                              <p
-                                class="m-0 break-words"
-                                data-testid="model-capability-summary"
-                                data-parameter-presentation={presentation.kind}
-                              >
-                                {capabilitySummary}
-                              </p>
                               <button
                                 type="button"
                                 class="inline-flex w-fit items-center rounded-lg border border-border-card bg-page px-3 py-2 font-semibold text-ink shadow-sm hover:bg-viewport focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
@@ -285,9 +253,6 @@ function detailsDialogIdFor(definition: ModelDefinition): string {
                               >
                                 <header class="flex min-w-0 items-start justify-between gap-4">
                                   <div class="min-w-0">
-                                    <p class="m-0 text-sm leading-normal text-muted">
-                                      {capabilitySummary}
-                                    </p>
                                     <h2
                                       class="m-0 break-words text-2xl font-semibold leading-tight"
                                       id={`${dialogId}-title`}

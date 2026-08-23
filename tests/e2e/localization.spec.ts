@@ -29,7 +29,7 @@ test('localized model chooser exposes localized shell and search metadata', asyn
   ).toHaveAttribute('href', '/zh-Hant/models')
 })
 
-test('model chooser exposes capability summaries and stable modal details', async ({
+test('model chooser keeps compact cards and stable modal details', async ({
   page,
 }) => {
   await page.goto('/en/models')
@@ -40,6 +40,7 @@ test('model chooser exposes capability summaries and stable modal details', asyn
   expect(staticResponse.ok()).toBe(true)
   const staticHtml = await staticResponse.text()
   expect(staticHtml).toContain('data-testid="model-details-dialog"')
+  expect(staticHtml).not.toContain('Adjustable settings:')
   expect(staticHtml).toContain('Inner clear height')
   expect(staticHtml).toContain('10.5 displayed cells')
   const staticCadResponse = await page.request.get('/en/cad/opengrid')
@@ -48,24 +49,14 @@ test('model chooser exposes capability summaries and stable modal details', asyn
   const cardCount = await cards.count()
   for (let index = 0; index < cardCount; index += 1) {
     const card = cards.nth(index)
-    await expect(card.getByTestId('model-capability-summary')).toBeVisible()
+    await expect(card.getByTestId('model-capability-summary')).toHaveCount(0)
     await expect(
       card.getByRole('button', { name: 'View full details', exact: true }),
     ).toBeVisible()
   }
 
   const board = page.locator('[data-entry-key="opengrid-desk"]')
-  const boardSummary = board.getByTestId('model-capability-summary')
-  await expect(boardSummary).toContainText('Adjustable settings:')
-  await expect(boardSummary).not.toContainText('Fixed geometry')
-  await expect(boardSummary).not.toContainText(/\(\d+\)/)
-
-  const fixedCard = page.locator(
-    '[data-entry-key="opengrid-snap-remover-desk"]',
-  )
-  await expect(fixedCard.getByTestId('model-capability-summary')).toContainText(
-    'Fixed geometry',
-  )
+  await expect(board).not.toContainText('Adjustable settings:')
 
   const parameterCard = page.locator(
     '[data-entry-key="opengrid-stackable-box-desk"]',
@@ -91,6 +82,7 @@ test('model chooser exposes capability summaries and stable modal details', asyn
   const dialog = parameterCard.getByTestId('model-details-dialog')
   await expect(dialog).toBeVisible()
   await expect(dialog.getByRole('heading', { name: 'Grid Box' })).toBeVisible()
+  await expect(dialog).not.toContainText('Adjustable settings:')
   await expect(dialog).toContainText('Inner clear height')
   await expect(dialog).toContainText('STEP and STL')
 
@@ -160,7 +152,7 @@ test('model chooser details remain readable without narrow-screen overflow', asy
   expect(layout.contentScrolls).toBe(true)
 })
 
-test('traditional Chinese model cards expose the same capability presentation', async ({
+test('traditional Chinese model cards keep the compact presentation', async ({
   page,
 }) => {
   await page.goto('/zh-Hant/models')
@@ -170,21 +162,14 @@ test('traditional Chinese model cards expose the same capability presentation', 
   const cardCount = await cards.count()
   for (let index = 0; index < cardCount; index += 1) {
     const card = cards.nth(index)
-    await expect(card.getByTestId('model-capability-summary')).toBeVisible()
+    await expect(card.getByTestId('model-capability-summary')).toHaveCount(0)
     await expect(
       card.getByRole('button', { name: '查看完整資訊', exact: true }),
     ).toBeVisible()
   }
   await expect(
-    page
-      .locator('[data-entry-key="opengrid-desk"]')
-      .getByTestId('model-capability-summary'),
-  ).toContainText('可調整設定：')
-  await expect(
-    page
-      .locator('[data-entry-key="opengrid-snap-remover-desk"]')
-      .getByTestId('model-capability-summary'),
-  ).toContainText('固定幾何')
+    page.locator('[data-entry-key="opengrid-desk"]'),
+  ).not.toContainText('可調整設定：')
   await expect(
     page
       .locator('[data-entry-key="opengrid-desk"]')
