@@ -9,8 +9,10 @@ import {
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_LOCATING_SEAT_MODES,
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+  OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   openGridOrganizerBoxDetachableIndicatorPlacementFor,
   openGridOrganizerBoxDetachableSocketPosesFor,
+  openGridStackableCylinderHoleCentersFor,
 } from '../../src/cad-contract/units'
 import { openGridSnapProfileFor } from '../../src/cad-kernel/components/opengrid-snap/profile'
 import {
@@ -180,6 +182,40 @@ describe('OpenGrid locating and assembly interface contract', () => {
     ).toEqual(
       organizerPoses.map(openGridOrganizerBoxDetachableIndicatorPlacementFor),
     )
+  })
+
+  it('matches Organizer Box orientation for circular cardinal seats', () => {
+    const cylinderParameters = {
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+      diameter: 60,
+      bottomSeatMode: 'detachable-corner-seat' as const,
+    }
+    const centers = openGridStackableCylinderHoleCentersFor(cylinderParameters)
+    const placements =
+      openGridDetachableCornerSeatConsumerPlacementsFor(centers)
+    const indicators = placements.map(
+      openGridDetachableCornerSeatIndicatorPlacementFor,
+    )
+    const pitch = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.holeGridPitch
+    const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+    const offset =
+      configuration.female.outerDiameter / 2 +
+      configuration.indicator.socketBoundaryClearance +
+      configuration.indicator.radialLength / 2
+
+    expect(placements.map(({ rotationDegrees }) => rotationDegrees)).toEqual([
+      0, 90, 270, 0, 180,
+    ])
+    expect(indicators.map(({ rotationDegrees }) => rotationDegrees)).toEqual([
+      0, 0, 180, 90, 270,
+    ])
+    expect(indicators.map(({ center }) => center)).toEqual([
+      [offset, 0],
+      [pitch - offset, 0],
+      [-pitch + offset, 0],
+      [0, pitch - offset],
+      [0, -pitch + offset],
+    ])
   })
 
   it.each(['translateZ', 'rotate', 'translate'] as const)(

@@ -197,12 +197,11 @@ export function openGridDetachableCornerSeatSocketRotationFor(
   center: OpenGridDetachableCornerSeatPoint2D,
 ): OpenGridDetachableCornerSeatRotation {
   const [x, y] = center
-  if (x < 0 && y > 0) return 0
-  if (x > 0 && y > 0) return 90
-  if (x > 0 && y < 0) return 180
-  if (x < 0 && y < 0) return 270
-  if (Math.abs(x) >= Math.abs(y)) return x < 0 ? 180 : 0
-  return y < 0 ? 270 : 90
+  if (x <= 0 && y > 0) return 0
+  if (x > 0 && y >= 0) return 90
+  if (x >= 0 && y < 0) return 180
+  if (x < 0 && y <= 0) return 270
+  return 0
 }
 
 export function openGridDetachableCornerSeatIndicatorPlacementFor(
@@ -214,8 +213,8 @@ export function openGridDetachableCornerSeatIndicatorPlacementFor(
     configuration.female.outerDiameter / 2 +
     configuration.indicator.socketBoundaryClearance +
     configuration.indicator.radialLength / 2
-  const isDiagonalCorner = center[0] !== 0 && center[1] !== 0
-  if (!isDiagonalCorner) {
+  const isCenterSeat = center[0] === 0 && center[1] === 0
+  if (isCenterSeat) {
     const direction = detachableCornerSeatApexDirectionFor(socketRotation)
     return {
       center: [
@@ -231,9 +230,7 @@ export function openGridDetachableCornerSeatIndicatorPlacementFor(
     360) as OpenGridDetachableCornerSeatRotation
   const apexDirection = detachableCornerSeatApexDirectionFor(lockRotation)
   const referenceArrowSign =
-    (center[0] < 0 && center[1] > 0) || (center[0] > 0 && center[1] < 0)
-      ? -1
-      : 1
+    socketRotation === 0 || socketRotation === 180 ? -1 : 1
   const directionOffset = referenceArrowSign === -1 ? 0 : 180
   return {
     center: [
