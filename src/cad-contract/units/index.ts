@@ -357,6 +357,9 @@ export type {
   OpenGridSnapVariant,
 } from './opengrid-snap'
 export type {
+  OpenGridGridLayoutParameters,
+  OpenGridMountingParameters,
+  OpenGridSocketLayoutParameters,
   OpenGridStackableBoxParameterKey,
   OpenGridStackableBoxParameters,
   OpenGridStackableBoxDerivedGeometry,

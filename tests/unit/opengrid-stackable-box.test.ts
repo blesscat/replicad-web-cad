@@ -21,6 +21,7 @@ import {
   OPENGRID_GRID_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  type OpenGridSocketLayoutParameters,
   type OpenGridStackableBoxParameters,
   validateModelParameters,
   validateOpenGridStackableBoxParameters,
@@ -127,14 +128,12 @@ describe('OpenGrid stackable-box contract', () => {
     const parametersForSeatMode = (
       cornerSeatMode: 'none' | 'detachable-corner-seat' | 'integrated',
       fullBottomHoleGrid: boolean,
-    ) =>
-      ({
+    ): OpenGridSocketLayoutParameters => ({
         x: 1,
         y: 1,
-        height: 10,
         cornerSeatMode,
         fullBottomHoleGrid,
-      }) as Parameters<typeof openGridStackableBoxSocketCentersFor>[0]
+      })
 
     const cornersOnly = parametersForSeatMode('detachable-corner-seat', false)
     expect(openGridStackableBoxSocketCentersFor(cornersOnly)).toHaveLength(4)

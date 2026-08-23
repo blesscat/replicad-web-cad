@@ -5,10 +5,11 @@ import {
   openGridStackableBoxSocketCentersFor,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
-  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   type ModelBounds,
+  type OpenGridGridLayoutParameters,
   type OpenGridOrganizerBoxDetachableSocketPose,
   type OpenGridOrganizerBoxParameters,
+  type OpenGridSocketLayoutParameters,
 } from '../../../cad-contract/units'
 import { makeBox, measureVolume, type Shape3D } from 'replicad'
 import {
@@ -307,15 +308,11 @@ function assertInterfaceExclusivity(
   parameters: OpenGridOrganizerBoxParameters,
 ): void {
   const layout = openGridOrganizerBoxLayoutFor(parameters)
-  const interfaceParameters = {
-    ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+  const interfaceParameters: OpenGridSocketLayoutParameters = {
     x: layout.gridCountX,
     y: layout.gridCountY,
     cornerSeatMode: 'integrated' as const,
     fullBottomHoleGrid: false,
-    basePlateMode: false,
-    thinShellMode: false,
-    honeycombMode: false,
   }
   const socketCenters =
     openGridStackableBoxSocketCentersFor(interfaceParameters)
@@ -346,9 +343,9 @@ function assertInterfaceExclusivity(
     throw new Error('OPENGRID_ORGANIZER_BOX_QUALITY_INVALID:combined-interface')
   }
 
-  const stackingParameters = {
-    ...interfaceParameters,
-    cornerSeatMode: 'none' as const,
+  const stackingParameters: OpenGridGridLayoutParameters = {
+    x: layout.gridCountX,
+    y: layout.gridCountY,
   }
   const seams = bottomGridSeamsFor(stackingParameters)
   const seamVolumes = seams.map((seam) =>

@@ -18,6 +18,9 @@ import {
   openGridStackableBoxSocketCentersFor,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
+  type OpenGridGridLayoutParameters,
+  type OpenGridMountingParameters,
+  type OpenGridStackableBoxPoint2D,
   type OpenGridStackableBoxOpeningDirection,
   type OpenGridStackableBoxDerivedOpening,
   type OpenGridStackableBoxParameters,
@@ -819,7 +822,7 @@ export type OpenGridStackableBoxBottomGridSeam = {
 }
 
 export function bottomGridSeamsFor(
-  parameters: OpenGridStackableBoxParameters,
+  parameters: OpenGridGridLayoutParameters,
 ): OpenGridStackableBoxBottomGridSeam[] {
   const [width, depth] = nominalOpenGridStackableBoxFootprintFor(parameters)
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
@@ -842,7 +845,7 @@ export function bottomGridSeamsFor(
 
 function makeBottomGridSeamCutter(
   seam: OpenGridStackableBoxBottomGridSeam,
-  parameters: OpenGridStackableBoxParameters,
+  parameters: OpenGridGridLayoutParameters,
 ): Shape3D {
   const [width, footprintDepth] =
     nominalOpenGridStackableBoxFootprintFor(parameters)
@@ -887,7 +890,7 @@ function makeBottomGridSeamCutter(
 }
 
 function makeBottomGridSeamTools(
-  parameters: OpenGridStackableBoxParameters,
+  parameters: OpenGridGridLayoutParameters,
   context: OpenGridStackableBoxBuildContext,
   axis: OpenGridStackableBoxBottomGridSeam['axis'],
 ): Shape3D[] {
@@ -953,7 +956,7 @@ function fuseWithToolBatch(
 
 function addIntegratedStackingProfile(
   shape: Shape3D,
-  parameters: OpenGridStackableBoxParameters,
+  parameters: OpenGridGridLayoutParameters,
   context: OpenGridStackableBoxBuildContext,
 ): Shape3D {
   let current = shape
@@ -974,7 +977,7 @@ function addIntegratedStackingProfile(
 }
 
 function activeBottomThicknessFor(
-  parameters: OpenGridStackableBoxParameters,
+  parameters: OpenGridMountingParameters,
 ): number {
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
   if (parameters.thinShellMode) return configuration.thinShellFloorThickness
@@ -983,7 +986,7 @@ function activeBottomThicknessFor(
 }
 
 function makeOrdinaryBottomHoleCutter(
-  parameters: OpenGridStackableBoxParameters,
+  parameters: OpenGridMountingParameters,
 ): Shape3D {
   const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
   const depth = activeBottomThicknessFor(parameters)
@@ -1017,16 +1020,40 @@ function translateShape(
   return shape.translate(x, y, z)
 }
 
+export function addIntegratedMountingSeats(
+  shape: Shape3D,
+  centers: readonly OpenGridStackableBoxPoint2D[],
+  context: OpenGridStackableBoxBuildContext,
+  operationScope?: BooleanOperationScope,
+): Shape3D {
+  let integratedSeats: Shape3D[] = []
+  let handedOffToFuse = false
+  try {
+    for (const [x, y] of centers) {
+      integratedSeats.push(
+        translateShape(makeIntegratedSeat(), x, y, 0),
+      )
+    }
+    const effectiveScope =
+      operationScope ??
+      (integratedSeats.length > 0
+        ? context.booleanOperations?.createScope(1)
+        : undefined)
+    assertGenerationCurrent(context)
+    const fused = fuseWithToolBatch(shape, integratedSeats, effectiveScope)
+    handedOffToFuse = true
+    return fused
+  } finally {
+    if (!handedOffToFuse) integratedSeats.forEach(deleteShape)
+  }
+}
+
 export function addMountingSockets(
   shape: Shape3D,
-  parameters: OpenGridStackableBoxParameters,
+  parameters: OpenGridMountingParameters,
   context: OpenGridStackableBoxBuildContext,
 ): Shape3D {
   const centers = openGridStackableBoxSocketCentersFor(parameters)
-  const integratedSeats =
-    parameters.cornerSeatMode === 'integrated'
-      ? centers.map(([x, y]) => translateShape(makeIntegratedSeat(), x, y, 0))
-      : []
   if (parameters.cornerSeatMode === 'detachable-corner-seat') {
     shape = cutOpenGridDetachableCornerSeatConsumers(
       shape,
@@ -1039,7 +1066,9 @@ export function addMountingSockets(
   const ordinaryCenters =
     openGridStackableBoxOrdinaryBottomHoleCentersFor(parameters)
   const operationTotal =
-    Number(integratedSeats.length > 0) +
+    Number(
+      parameters.cornerSeatMode === 'integrated' && centers.length > 0,
+    ) +
     Number(socketCutters.length > 0) +
     Number(ordinaryCenters.length > 0)
   const operationScope =
@@ -1047,7 +1076,15 @@ export function addMountingSockets(
       ? context.booleanOperations?.createScope(operationTotal)
       : undefined
   assertGenerationCurrent(context)
-  let current = fuseWithToolBatch(shape, integratedSeats, operationScope)
+  let current = shape
+  if (parameters.cornerSeatMode === 'integrated') {
+    current = addIntegratedMountingSeats(
+      current,
+      centers,
+      context,
+      operationScope,
+    )
+  }
   current = cutWithToolBatch(current, socketCutters, operationScope)
 
   const ordinaryCutters = ordinaryCenters.map(([x, y]) =>
@@ -1061,9 +1098,8 @@ export function addMountingSockets(
 
 export function applyStackingProfile(
   shape: Shape3D,
-  parameters: OpenGridStackableBoxParameters,
+  parameters: OpenGridGridLayoutParameters,
   context: OpenGridStackableBoxBuildContext,
 ): Shape3D {
-  if (parameters.thinShellMode) return shape
   return addIntegratedStackingProfile(shape, parameters, context)
 }

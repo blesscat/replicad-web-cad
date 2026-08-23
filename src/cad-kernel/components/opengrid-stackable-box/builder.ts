@@ -58,7 +58,9 @@ export function buildOpenGridStackableBox(
 
   let shape = makeBoxShell(normalizedParameters, context.booleanOperations)
   assertGenerationCurrent(context)
-  shape = applyStackingProfile(shape, normalizedParameters, context)
+  if (!normalizedParameters.thinShellMode) {
+    shape = applyStackingProfile(shape, normalizedParameters, context)
+  }
   const deferDetachableCornerSeats =
     normalizedParameters.cornerSeatMode === 'detachable-corner-seat'
   if (

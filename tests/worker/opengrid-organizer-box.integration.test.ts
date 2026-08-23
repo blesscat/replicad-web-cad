@@ -18,8 +18,8 @@ import {
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
-  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   openGridOrganizerBoxLayoutFor,
+  type OpenGridSocketLayoutParameters,
   type OpenGridOrganizerBoxParameters,
 } from '../../src/cad-contract/units'
 import {
@@ -28,6 +28,8 @@ import {
 } from '../../src/cad-kernel/model'
 import { buildOpenGridOrganizerBox } from '../../src/cad-kernel/components/opengrid-organizer-box/builder'
 import { assertOpenGridOrganizerBoxGeometry } from '../../src/cad-kernel/components/opengrid-organizer-box/quality'
+import { createBooleanOperationReporter } from '../../src/cad-kernel/boolean-progress'
+import { addIntegratedMountingSeats } from '../../src/cad-kernel/components/opengrid-stackable-box/geometry'
 import {
   buildOpenGridDetachableCornerSeatFromReference,
   buildOpenGridDetachableCornerSeatSocketVoid,
@@ -224,6 +226,43 @@ function markerVerticesRelativeTo(
 }
 
 describe('OpenGrid organizer-box B-Rep', () => {
+  it('reports integrated seats as one boolean batch operation', () => {
+    const progress: Array<{
+      kind: string
+      state: string
+      completed?: number
+      total?: number
+    }> = []
+    const reporter = createBooleanOperationReporter((update) =>
+      progress.push(update),
+    )
+    const source = makeBox([-20, -20, 0], [20, 20, 10])
+    let result: Shape3D | null = null
+    try {
+      result = addIntegratedMountingSeats(
+        source,
+        [
+          [-5, -5],
+          [-5, 5],
+          [5, -5],
+          [5, 5],
+        ],
+        { booleanOperations: reporter },
+      )
+      expect(
+        progress.some(
+          (update) =>
+            update.kind === 'fuse' &&
+            update.state === 'completed' &&
+            update.completed === 1 &&
+            update.total === 1,
+        ),
+      ).toBe(true)
+    } finally {
+      deleteShape(result ?? source)
+    }
+  })
+
   it('places each female marker on its locked reference-arrow side', async () => {
     const input = parameters({
       holeCountX: 1,
@@ -559,15 +598,11 @@ describe('OpenGrid organizer-box B-Rep', () => {
         ]),
       ).toBeGreaterThan(0)
 
-      const interfaceParameters = {
-        ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+      const interfaceParameters: OpenGridSocketLayoutParameters = {
         x: layout.gridCountX,
         y: layout.gridCountY,
         cornerSeatMode: 'integrated' as const,
         fullBottomHoleGrid: false,
-        basePlateMode: false,
-        thinShellMode: false,
-        honeycombMode: false,
       }
       const footZ =
         OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ +

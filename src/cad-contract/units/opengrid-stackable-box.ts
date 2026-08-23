@@ -76,6 +76,20 @@ export type OpenGridStackableBoxParameters = {
   honeycombMode: boolean
 } & Record<OpenGridStackableBoxOpeningParameterKey, number>
 
+export type OpenGridGridLayoutParameters = Pick<
+  OpenGridStackableBoxParameters,
+  'x' | 'y'
+>
+
+export type OpenGridSocketLayoutParameters = OpenGridGridLayoutParameters &
+  Pick<
+    OpenGridStackableBoxParameters,
+    'cornerSeatMode' | 'fullBottomHoleGrid'
+  >
+
+export type OpenGridMountingParameters = OpenGridSocketLayoutParameters &
+  Pick<OpenGridStackableBoxParameters, 'basePlateMode' | 'thinShellMode'>
+
 export type OpenGridStackableBoxProfile = 'normal' | 'base-plate' | 'thin-shell'
 
 export type OpenGridStackableBoxDerivedOpening = {
@@ -492,7 +506,7 @@ export function openGridStackableBoxProfileFor(
 }
 
 export function nominalOpenGridStackableBoxFootprintFor(
-  parameters: OpenGridStackableBoxParameters,
+  parameters: OpenGridGridLayoutParameters,
 ): [number, number] {
   return [
     parameters.x * OPENGRID_STACKABLE_BOX_CONFIGURATION.gridPitch -
@@ -967,7 +981,7 @@ export function nominalOpenGridStackableBoxBottomGridAxisPositionsFor(
 }
 
 export function nominalOpenGridStackableBoxBottomGridCentersFor(
-  parameters: OpenGridStackableBoxParameters,
+  parameters: OpenGridGridLayoutParameters,
 ): OpenGridStackableBoxPoint2D[] {
   const xPositions = nominalOpenGridStackableBoxBottomGridAxisPositionsFor(
     parameters.x,
@@ -985,7 +999,7 @@ export function nominalOpenGridStackableBoxBottomGridCentersFor(
 }
 
 export function openGridStackableBoxOrdinaryBottomHoleCentersFor(
-  parameters: OpenGridStackableBoxParameters,
+  parameters: OpenGridSocketLayoutParameters,
 ): OpenGridStackableBoxPoint2D[] {
   if (!parameters.fullBottomHoleGrid) return []
 
@@ -1008,7 +1022,7 @@ export function openGridStackableBoxOrdinaryBottomHoleCentersFor(
 }
 
 export function openGridStackableBoxSocketCentersFor(
-  parameters: OpenGridStackableBoxParameters,
+  parameters: OpenGridSocketLayoutParameters,
 ): OpenGridStackableBoxPoint2D[] {
   if (parameters.cornerSeatMode === 'none') return []
 

@@ -12,13 +12,14 @@ import {
   openGridOrganizerBoxDetachableIndicatorPlacementFor,
   openGridOrganizerBoxDetachableSocketPosesFor,
   openGridOrganizerBoxPolygonPointsFor,
+  openGridStackableBoxSocketCentersFor,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
-  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   type OpenGridOrganizerBoxParameters,
-  type OpenGridStackableBoxParameters,
+  type OpenGridGridLayoutParameters,
+  type OpenGridSocketLayoutParameters,
 } from '../../../cad-contract/units'
 import {
-  addMountingSockets,
+  addIntegratedMountingSeats,
   applyStackingProfile,
 } from '../opengrid-stackable-box/geometry'
 import {
@@ -171,28 +172,6 @@ function outerEnvelopeFor(parameters: OpenGridOrganizerBoxParameters): Shape3D {
       ? stackingOuterEnvelopeSections(width, depth, layout.bodyHeight)
       : cornerSeatOuterEnvelopeSections(width, depth, layout.bodyHeight)
   return loftRoundedSections(sections)
-}
-
-function stackableAdapterFor(
-  parameters: OpenGridOrganizerBoxParameters,
-): OpenGridStackableBoxParameters {
-  const layout = openGridOrganizerBoxLayoutFor(parameters)
-  return {
-    ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
-    x: layout.gridCountX,
-    y: layout.gridCountY,
-    height: Math.max(
-      OPENGRID_STACKABLE_BOX_CONFIGURATION.minHeight,
-      layout.bodyHeight -
-        OPENGRID_STACKABLE_BOX_CONFIGURATION.bottomAssemblyHeight,
-    ),
-    cornerSeatMode:
-      parameters.bottomInterfaceMode === 'corner-seat' ? 'integrated' : 'none',
-    fullBottomHoleGrid: false,
-    basePlateMode: false,
-    thinShellMode: false,
-    honeycombMode: false,
-  }
 }
 
 function polygonCavityCutter(
@@ -352,11 +331,23 @@ export function buildOpenGridOrganizerBox(
 
   let shape = outerEnvelopeFor(parameters)
   try {
-    const adapter = stackableAdapterFor(parameters)
+    const grid: OpenGridGridLayoutParameters = {
+      x: layout.gridCountX,
+      y: layout.gridCountY,
+    }
     if (parameters.bottomInterfaceMode === 'stackable') {
-      shape = applyStackingProfile(shape, adapter, context)
+      shape = applyStackingProfile(shape, grid, context)
     } else if (parameters.bottomInterfaceMode === 'corner-seat') {
-      shape = addMountingSockets(shape, adapter, context)
+      const socketLayout: OpenGridSocketLayoutParameters = {
+        ...grid,
+        cornerSeatMode: 'integrated',
+        fullBottomHoleGrid: false,
+      }
+      shape = addIntegratedMountingSeats(
+        shape,
+        openGridStackableBoxSocketCentersFor(socketLayout),
+        context,
+      )
     } else {
       shape = cutDetachableCornerSeatSockets(shape, parameters, context)
     }

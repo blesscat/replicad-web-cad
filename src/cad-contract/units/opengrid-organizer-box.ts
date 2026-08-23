@@ -8,8 +8,7 @@ import {
 import {
   openGridStackableBoxSocketCentersFor,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
-  OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
-  type OpenGridStackableBoxParameters,
+  type OpenGridSocketLayoutParameters,
 } from './opengrid-stackable-box'
 
 export type OpenGridOrganizerBoxShape =
@@ -328,19 +327,15 @@ function centersForAxis(count: number, pitch: number): number[] {
   return Array.from({ length: count }, (_, index) => first + index * pitch)
 }
 
-function stackableInterfaceParametersFor(
+function organizerSocketLayoutFor(
   gridCountX: number,
   gridCountY: number,
-): OpenGridStackableBoxParameters {
+): OpenGridSocketLayoutParameters {
   return {
-    ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
     x: gridCountX,
     y: gridCountY,
     cornerSeatMode: 'integrated',
     fullBottomHoleGrid: false,
-    basePlateMode: false,
-    thinShellMode: false,
-    honeycombMode: false,
   }
 }
 
@@ -365,7 +360,7 @@ function interfaceFeatureBoundsFor(
   const footprintDepth = footprintForGridCount(gridCountY)
 
   if (mode === 'corner-seat') {
-    const interfaceParameters = stackableInterfaceParametersFor(
+    const interfaceParameters = organizerSocketLayoutFor(
       gridCountX,
       gridCountY,
     )
@@ -386,7 +381,7 @@ function interfaceFeatureBoundsFor(
   }
 
   if (mode === 'detachable-corner-seat') {
-    const interfaceParameters = stackableInterfaceParametersFor(
+    const interfaceParameters = organizerSocketLayoutFor(
       gridCountX,
       gridCountY,
     )
@@ -629,7 +624,7 @@ export function openGridOrganizerBoxDetachableSocketPosesFor(
 ): OpenGridOrganizerBoxDetachableSocketPose[] {
   if (parameters.bottomInterfaceMode !== 'detachable-corner-seat') return []
   const layout = openGridOrganizerBoxLayoutFor(parameters)
-  const interfaceParameters = stackableInterfaceParametersFor(
+  const interfaceParameters = organizerSocketLayoutFor(
     layout.gridCountX,
     layout.gridCountY,
   )

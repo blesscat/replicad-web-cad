@@ -301,8 +301,12 @@ function matingClearanceFixtureFor(height: number): MatingClearanceFixture {
   let lower = makeBoxShell(lowerParameters)
   let upper = makeBoxShell(upperParameters)
   try {
-    lower = applyStackingProfile(lower, lowerParameters, {})
-    upper = applyStackingProfile(upper, upperParameters, {})
+    if (!lowerParameters.thinShellMode) {
+      lower = applyStackingProfile(lower, lowerParameters, {})
+    }
+    if (!upperParameters.thinShellMode) {
+      upper = applyStackingProfile(upper, upperParameters, {})
+    }
     cachedMatingClearanceFixture = { height, lower, upper }
     return cachedMatingClearanceFixture
   } catch (error) {
