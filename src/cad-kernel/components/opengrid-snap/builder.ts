@@ -36,6 +36,9 @@ import {
 } from '../../boolean-progress'
 import {
   OPENGRID_SNAP_OPEN_CONNECT_HEAD_SOURCE_BOUNDS,
+  OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_AXIS,
+  OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_DEGREES,
+  OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_ORIGIN,
   openGridSnapOpenConnectAnchorForXYTransform,
   type OpenGridSnapOpenConnectAnchor,
 } from './openconnect'
@@ -1086,10 +1089,39 @@ function placeOpenConnectHead(
   source: Shape3D,
   anchor: OpenGridSnapOpenConnectAnchor,
 ): Shape3D {
-  const [x, y, z] = anchor
-  const placed = source.translate(x, y, z)
-  if (placed !== source) deleteShape(source)
-  return placed
+  let placed: Shape3D | null = source
+  try {
+    const rotated = placed.rotate(
+      OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_DEGREES,
+      [...OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_ORIGIN] as [
+        number,
+        number,
+        number,
+      ],
+      [...OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_AXIS] as [
+        number,
+        number,
+        number,
+      ],
+    )
+    if (rotated !== placed) {
+      deleteShape(placed)
+      placed = rotated
+    }
+
+    const translated = placed.translate(anchor[0], anchor[1], anchor[2])
+    if (translated !== placed) {
+      deleteShape(placed)
+      placed = translated
+    }
+
+    const result = placed
+    placed = null
+    return result
+  } catch (error) {
+    deleteShape(placed)
+    throw error
+  }
 }
 
 function composeOpenConnectAssembly(

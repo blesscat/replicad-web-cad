@@ -418,6 +418,38 @@ describe('OpenGrid Snap reference builder', () => {
     }
   })
 
+  it('turns the OpenConnect head to match the supplied placement reference', async () => {
+    const reference = await importOpenGridSnapReference(
+      assetBlob('Lite', 'Directional'),
+      'Lite',
+      'Directional',
+    )
+    const head = await importOpenGridSnapOpenConnectHead(openConnectHeadBlob())
+    const generated = await buildOpenGridSnap(
+      snapParameters('Lite', 0, 'full', {
+        profile: 'Directional',
+        openConnect: true,
+      }),
+      {
+        getOpenGridSnapReference: async () => reference,
+        getOpenGridSnapOpenConnectHead: async () => head,
+      },
+    )
+
+    try {
+      const referenceOnlySideProbe = volumeInBox(
+        generated,
+        [-8, -1, 3.5],
+        [-7, 0, 3.8],
+      )
+      expect(referenceOnlySideProbe).toBeLessThan(0.1)
+    } finally {
+      generated.delete()
+      head.delete()
+      reference.delete()
+    }
+  })
+
   it.each([
     ['Standard', 'Lite'],
     ['Standard', 'Full'],
@@ -446,14 +478,9 @@ describe('OpenGrid Snap reference builder', () => {
         expect(countSolids(generated)).toBe(
           openGridSnapProfileFor(profile, variant).expectedSolidCount + 1,
         )
-        const liteHeadBounds = openGridSnapOpenConnectHeadBounds('Lite')
-        const headBounds = openGridSnapOpenConnectHeadBounds(variant)
-        const liteDefinition = openGridSnapProfileFor(profile, 'Lite')
         const selectedDefinition = openGridSnapProfileFor(profile, variant)
-        const expectedHeadBaseZ =
-          liteHeadBounds.min[2] +
-          (selectedDefinition.expectedBounds.max[2] -
-            liteDefinition.expectedBounds.max[2])
+        const headBounds = openGridSnapOpenConnectHeadBounds(variant)
+        const expectedHeadBaseZ = selectedDefinition.expectedBounds.max[2]
         const headDescriptor = solidDescriptors(generated).find(({ bounds }) =>
           bounds.every((point, pointIndex) =>
             point.every(

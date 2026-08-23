@@ -13,7 +13,26 @@ export const OPENGRID_SNAP_OPEN_CONNECT_HEAD_TRANSLATION: readonly [
   number,
   number,
   number,
-] = [0, 0, 4]
+] = [0, 0, OPENGRID_SNAP_CONFIGURATION.variantHeights.Lite]
+
+// The supplied STEP is authored opposite to the assembled placement reference.
+export const OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_DEGREES = 180
+export const OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_ORIGIN: readonly [
+  number,
+  number,
+  number,
+] = [
+  0,
+  0,
+  (OPENGRID_SNAP_OPEN_CONNECT_HEAD_SOURCE_BOUNDS.min[2] +
+    OPENGRID_SNAP_OPEN_CONNECT_HEAD_SOURCE_BOUNDS.max[2]) /
+    2,
+]
+export const OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_AXIS: readonly [
+  number,
+  number,
+  number,
+] = [0, 1, 0]
 
 export function openGridSnapOpenConnectHeadBaseZFor(
   variant: OpenGridSnapVariant,
