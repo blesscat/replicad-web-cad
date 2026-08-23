@@ -36,10 +36,10 @@ their 7 mm female envelope as a 7.05 mm stepped-hole retaining opening.
 - **WHEN** the system builds Snap locating holes, Divider locating pegs, an
   OpenGrid Pillar, or a Stackable Box nominal base-hole compatibility record
 - **THEN** Snap MUST use a 2.5 mm locating-hole radius
-- **AND** Divider pegDiameter, Pillar bodyDiameter, Pillar
-  positioningBodyDiameter, and Stackable Box baseHoleDiameter MUST remain
-  5 mm
-- **AND** standard and thin-shell Pillar lengths MUST remain 9 mm and 6 mm
+- **AND** Divider pegDiameter, Pillar positioningBodyDiameter, and Stackable
+  Box baseHoleDiameter MUST remain 5 mm
+- **AND** the fixed locking corner-seat body MUST continue to use the shared
+  5 mm locating interface
 
 #### Scenario: Assembly openings use the shared increment
 
@@ -93,9 +93,10 @@ The system MUST define the Box and Cylinder compatibility test insert as a
 Ø7 mm × 0.8 mm flange fused to a Ø5 mm shaft for any remaining stepped-hole
 compatibility validation. The shaft length MUST equal the active floor or
 base-plate thickness plus 1 mm of exterior allowance. The fixture MUST remain
-a quality and integration artifact, MUST NOT become a user-configurable model
-parameter, MUST NOT alter the existing Pillar mode geometries, and MUST NOT be
-used as the acceptance fixture for a detachable locking socket.
+a quality and integration artifact, MUST be used for quality and integration
+validation, MUST NOT become a user-configurable model parameter, MUST NOT
+alter the positioning pillar or fixed locking corner-seat geometry, and MUST
+NOT be used as the acceptance fixture for a detachable locking socket.
 
 #### Scenario: Thin-shell floor fixture
 
@@ -126,8 +127,10 @@ used as the acceptance fixture for a detachable locking socket.
 #### Scenario: Fixture preserves Pillar mode dimensions
 
 - **WHEN** the OpenGrid Pillar model is generated
-- **THEN** standard and thin-shell Pillar lengths MUST remain 9 mm and 6 mm
-- **AND** Pillar bodyDiameter and positioning body MUST remain nominally Ø5 mm
+- **THEN** the positioning body MUST remain nominally Ø5 mm before its shared
+  XY increment
+- **AND** the fixed locking corner seat MUST continue to use the shared male
+  reference geometry
 - **AND** the compatibility fixture MUST remain a separate Box/Cylinder
   quality artifact
 

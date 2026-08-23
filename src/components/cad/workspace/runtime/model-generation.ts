@@ -137,12 +137,20 @@ export function createModelGenerationHandlers(
   }
 
   const handleInputChange = (key: ModelParameterKey, value: string) => {
-    const next = { ...context.refs.rawParameters.current, [key]: value }
+    const modelId = context.refs.state.current.modelId
+    let next = { ...context.refs.rawParameters.current, [key]: value }
+    if (
+      modelId === 'opengrid-pillar' &&
+      key === 'mode' &&
+      value === 'detachable-corner-seat'
+    ) {
+      const { length: _length, offset: _offset, ...lockingParameters } = next
+      next = lockingParameters
+    }
     context.refs.rawParameters.current = next
     context.setRawParameters(next)
     const generation = context.refs.latestGeneration.current + 1
     context.refs.latestGeneration.current = generation
-    const modelId = context.refs.state.current.modelId
     const parsed = parseRawParameters(next, modelId)
     if (!parsed.valid) {
       context.clearProgress()

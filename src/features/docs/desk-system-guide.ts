@@ -47,9 +47,14 @@ export function deskQuickStartEntries(
       throw new Error(`DESK_QUICK_START_MODEL_MISSING:${component.modelId}`)
     }
 
+    let labelKey = definition.selectionLabel ?? definition.displayName
+    if (component.role === 'locating-post') {
+      labelKey = 'panel.pillar.detachableCornerSeat'
+    }
+
     return {
       ...component,
-      labelKey: definition.selectionLabel ?? definition.displayName,
+      labelKey,
       descriptionKey: definition.selectionDescription,
       previewAltKey: definition.previewImage?.alt ?? definition.displayName,
       previewPath: `/model-previews/${component.modelId}-desk.png`,

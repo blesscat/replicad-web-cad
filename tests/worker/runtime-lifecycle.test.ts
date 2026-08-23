@@ -85,7 +85,7 @@ function pillarGenerateCommand(generation = 1) {
     kind: 'model.generate' as const,
     generation,
     modelId: 'opengrid-pillar' as const,
-    parameters: { mode: 'standard', offset: 0 },
+    parameters: { mode: 'detachable-corner-seat' as const },
     previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
   }
 }
@@ -476,12 +476,12 @@ describe('CAD Worker candidate terminal lifecycle', () => {
     expect(candidate).toMatchObject({
       modelId: 'opengrid-pillar',
       generation: 1,
-      parameters: { mode: 'standard', offset: 0 },
+      parameters: { mode: 'detachable-corner-seat' },
       workerEpoch: 'epoch-pillar',
     })
     expect(assertPillarShapeQuality).toHaveBeenCalledWith(
       expect.anything(),
-      { mode: 'standard', offset: 0 },
+      { mode: 'detachable-corner-seat' },
       expect.objectContaining({ triangleCount: 1 }),
     )
 
@@ -499,7 +499,7 @@ describe('CAD Worker candidate terminal lifecycle', () => {
     expect(ready).toMatchObject({
       kind: 'model.ready',
       modelId: 'opengrid-pillar',
-      parameters: { mode: 'standard', offset: 0 },
+      parameters: { mode: 'detachable-corner-seat' },
     })
     expect(ready).not.toHaveProperty('mesh')
     expect(serializeMesh).toHaveBeenCalledTimes(1)

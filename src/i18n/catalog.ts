@@ -51,7 +51,7 @@ export const zhHantMessages = {
     '每個要放盒子的格位，都先準備一個對應的 Snap。',
   'home.desk.step.locating.title': '選擇一種定位方式',
   'home.desk.step.locating.description':
-    '使用獨立 Locating Post，或選擇盒子的內建角座，二選一。',
+    '使用獨立鎖定角座，或選擇盒子的內建角座，二選一。',
   'home.desk.step.container.title': 'Grid Box／Round Box',
   'home.desk.step.container.description': '把完成的容器放入已準備好的格位。',
   'home.desk.docsCta': '閱讀完整快速入門 →',
@@ -124,8 +124,8 @@ export const zhHantMessages = {
   'models.model.opengrid-pillar.name': 'Locating Post (定位柱)',
   'models.model.opengrid-pillar.selection': 'Locating Post (定位柱)',
   'models.model.opengrid-pillar.description':
-    '提供堆疊、薄殼與物件定位用途的 OpenGrid 支柱。',
-  'models.model.opengrid-pillar.alt': 'OpenGrid Locating Post 預覽',
+    '提供鎖定角座與物件定位用支柱的 OpenGrid 元件。',
+  'models.model.opengrid-pillar.alt': 'OpenGrid 鎖定角座與定位柱預覽',
   'models.model.opengrid-divider.name': 'divider (分隔牆)',
   'models.model.opengrid-divider.selection': 'divider (分隔牆)',
   'models.model.opengrid-divider.description':
@@ -174,26 +174,26 @@ export const zhHantMessages = {
     '每一個要放盒子的格位，都要先準備對應的 Snap，讓容器可以和 Board 的位置連接。',
   'docs.deskQuickStart.step.locating.title': '3. 選擇一種定位方式',
   'docs.deskQuickStart.step.locating.body':
-    '每個盒位只需要一種定位方式：使用獨立 Locating Post，或選擇盒子內建的「內建角座」。',
+    '每個盒位只需要一種定位方式：使用獨立「鎖定角座」，或選擇盒子內建的「內建角座」。',
   'docs.deskQuickStart.step.container.title': '4. 放入容器',
   'docs.deskQuickStart.step.container.body':
     '先以 Grid Box 作為第一個範例；Round Box 也使用同一套 Board、Snap 與定位流程。',
   'docs.deskQuickStart.locatingHeading': '定位方式二選一',
-  'docs.deskQuickStart.locating.separate.title': '獨立 Locating Post',
+  'docs.deskQuickStart.locating.separate.title': '獨立鎖定角座',
   'docs.deskQuickStart.locating.separate.body':
-    '盒子使用一般角座孔，另外列印並安裝 Locating Post。',
+    '盒子使用鎖定角座插槽，另外列印並安裝鎖定角座。',
   'docs.deskQuickStart.locating.builtin.title': '盒子內建角座',
   'docs.deskQuickStart.locating.builtin.body':
     '在盒子設定中選擇「內建角座」，定位座會成為盒子本體的一部分。',
   'docs.deskQuickStart.locating.builtin.noPost':
-    '選擇內建角座後，不需要另加 Locating Post。',
+    '選擇內建角座後，不需要另加鎖定角座。',
   'docs.deskQuickStart.checklistHeading': '最小列印清單',
   'docs.deskQuickStart.checklistIntro':
-    '先準備下列項目；定位方式請在獨立 Locating Post 與內建角座之間擇一，容器可選 Grid Box、Organizer Box (收納方盒) 或 Round Box。',
+    '先準備下列項目；定位方式請在獨立鎖定角座與內建角座之間擇一，容器可選 Grid Box、Organizer Box (收納方盒) 或 Round Box。',
   'docs.deskQuickStart.checklist.board': 'Board：Desk System 的基礎底板。',
   'docs.deskQuickStart.checklist.snap': 'Snap：每個要放盒子的格位各需要一個。',
   'docs.deskQuickStart.checklist.locating':
-    '定位方式：獨立 Locating Post 或盒子內建角座，二選一。',
+    '定位方式：獨立鎖定角座或盒子內建角座，二選一。',
   'docs.deskQuickStart.checklist.gridBox':
     'Grid Box：第一個建議使用的容器範例。',
   'docs.deskQuickStart.checklist.organizerBox':
@@ -202,7 +202,7 @@ export const zhHantMessages = {
     'Round Box：使用相同組裝流程的圓盒選項。',
   'docs.deskQuickStart.exampleHeading': '第一個範例：Grid Box',
   'docs.deskQuickStart.exampleGridBox':
-    'Grid Box 是第一個範例：先放入已準備好 Snap 與定位方式的格位；盒子的定位座選項會決定是否需要額外的 Locating Post。',
+    'Grid Box 是第一個範例：先放入已準備好 Snap 與定位方式的格位；盒子的定位座選項會決定是否需要額外的鎖定角座。',
   'docs.deskQuickStart.exampleRoundBox':
     'Round Box 是第二個容器選項，使用相同的 Board → Snap → 定位方式流程。',
   'docs.deskQuickStart.visual.flow.caption':
@@ -214,9 +214,10 @@ export const zhHantMessages = {
   'docs.deskQuickStart.visual.placement.alt':
     '俯視示意圖：Board 網格上的每個盒位先放置對應的 Snap。',
   'docs.deskQuickStart.visual.locating.caption':
-    '獨立 Locating Post 與盒子內建角座的比較。',
+    '獨立鎖定角座與盒子內建角座的比較。',
   'docs.deskQuickStart.visual.locating.alt':
-    '比較圖：獨立 Locating Post 需要額外定位柱；內建角座不需要額外 Locating Post。',
+    '比較圖：獨立鎖定角座需要額外零件；內建角座不需要額外鎖定角座。',
+  'docs.deskQuickStart.previewHeading': 'Desk System 元件預覽',
   'docs.deskQuickStart.scopeNote':
     '這一版先說明系統組裝與元件關係；切片器與詳細列印設定會放在後續參考文件。',
   'docs.title': 'Prototype 文件',
@@ -477,13 +478,10 @@ export const zhHantMessages = {
   'panel.organizerBox.interface.stackableDescription':
     '使用 OpenGrid 方盒的堆疊底部結構，不建立四角內建實體腳座。',
   'panel.pillar.version': '支柱版本',
-  'panel.pillar.stacking': '堆疊版',
-  'panel.pillar.thinShell': '薄殼版',
   'panel.pillar.positioning': '物件定位用',
-  'panel.pillar.detachableCornerSeat': '可拆式角座',
+  'panel.pillar.detachableCornerSeat': '鎖定角座',
   'panel.pillar.detachableCornerSeatDescription':
-    '固定 4.5 mm 角座：保留 0.2 mm 導入倒角與 0.15 mm 耐磨頂面。',
-  'panel.pillar.fixedLength': '固定總長 {length} mm',
+    '搭配各元件的鎖定角座插槽使用，壓入後旋轉即可完成定位與鎖定。',
   'panel.snap.variant': 'Snap 型號',
   'panel.snap.variantAria': 'OpenGrid Snap 型號',
   'panel.snap.system': '系統',
@@ -674,7 +672,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'Prepare one matching Snap for every box position.',
   'home.desk.step.locating.title': 'Choose one locating method',
   'home.desk.step.locating.description':
-    'Use a separate Locating Post or choose the box built-in seat—pick one.',
+    'Use a separate locking corner seat or choose the box built-in seat—pick one.',
   'home.desk.step.container.title': 'Grid Box/Round Box',
   'home.desk.step.container.description':
     'Place the finished container into the prepared position.',
@@ -751,8 +749,9 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'models.model.opengrid-pillar.name': 'OpenGrid Locating Post',
   'models.model.opengrid-pillar.selection': 'Locating Post',
   'models.model.opengrid-pillar.description':
-    'OpenGrid posts for stacking, thin-shell, and object-positioning use cases.',
-  'models.model.opengrid-pillar.alt': 'OpenGrid locating post preview',
+    'A fixed locking corner seat and an adjustable object-positioning post for OpenGrid components.',
+  'models.model.opengrid-pillar.alt':
+    'OpenGrid locking corner seat and locating post preview',
   'models.model.opengrid-divider.name': 'OpenGrid Divider',
   'models.model.opengrid-divider.selection': 'Divider',
   'models.model.opengrid-divider.description':
@@ -801,27 +800,28 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'Every grid position that will hold a box needs its matching Snap before the container is installed.',
   'docs.deskQuickStart.step.locating.title': '3. Choose one locating method',
   'docs.deskQuickStart.step.locating.body':
-    'Each box position uses one locating method: a separate Locating Post or the box’s built-in `內建角座` option.',
+    'Each box position uses one locating method: a separate locking corner seat or the box’s exact `內建角座` option.',
   'docs.deskQuickStart.step.container.title': '4. Add the container',
   'docs.deskQuickStart.step.container.body':
     'Start with Grid Box as the first example; Organizer Box and Round Box follow the same Board, Snap, and locating workflow.',
   'docs.deskQuickStart.locatingHeading': 'Choose one locating method',
-  'docs.deskQuickStart.locating.separate.title': 'Locating Post (separate)',
+  'docs.deskQuickStart.locating.separate.title':
+    'Locking corner seat (separate)',
   'docs.deskQuickStart.locating.separate.body':
-    'Use a regular seat hole in the box, then print and install a separate Locating Post.',
+    'Use a locking corner-seat socket in the box, then print and install a separate locking corner seat.',
   'docs.deskQuickStart.locating.builtin.title': 'Built-in seat (`內建角座`)',
   'docs.deskQuickStart.locating.builtin.body':
     'Choose the `內建角座` option so the locating seat is part of the box itself.',
   'docs.deskQuickStart.locating.builtin.noPost':
-    'With the built-in seat selected, do not add a separate Locating Post.',
+    'With the built-in seat selected, do not add a separate locking corner seat.',
   'docs.deskQuickStart.checklistHeading': 'Minimum print checklist',
   'docs.deskQuickStart.checklistIntro':
-    'Prepare the items below; choose either a separate Locating Post or the built-in seat, then choose a container: Grid Box, Organizer Box, or Round Box.',
+    'Prepare the items below; choose either a separate locking corner seat or the built-in seat, then choose a container: Grid Box, Organizer Box, or Round Box.',
   'docs.deskQuickStart.checklist.board': 'Board: the Desk System base board.',
   'docs.deskQuickStart.checklist.snap':
     'Snap: one for each box position you plan to use.',
   'docs.deskQuickStart.checklist.locating':
-    'Locating method: separate Locating Post or built-in seat, choose one.',
+    'Locating method: separate locking corner seat or built-in seat, choose one.',
   'docs.deskQuickStart.checklist.gridBox':
     'Grid Box: the recommended first container example.',
   'docs.deskQuickStart.checklist.organizerBox':
@@ -830,7 +830,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'Round Box: a secondary container using the same workflow.',
   'docs.deskQuickStart.exampleHeading': 'First example: Grid Box',
   'docs.deskQuickStart.exampleGridBox':
-    'Grid Box is the first example: place it in a position with its Snap and one locating method prepared. The box seat choice determines whether an extra Locating Post is needed.',
+    'Grid Box is the first example: place it in a position with its Snap and one locating method prepared. The box seat choice determines whether an extra locking corner seat is needed.',
   'docs.deskQuickStart.exampleRoundBox':
     'Round Box is a secondary container option that uses the same Board → Snap → locating method workflow.',
   'docs.deskQuickStart.visual.flow.caption':
@@ -842,9 +842,10 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'docs.deskQuickStart.visual.placement.alt':
     'Top view showing a matching Snap placed at each box position on the Board grid.',
   'docs.deskQuickStart.visual.locating.caption':
-    'Separate Locating Post versus the box built-in seat.',
+    'Separate locking corner seat versus the box built-in seat.',
   'docs.deskQuickStart.visual.locating.alt':
-    'Comparison: a separate Locating Post is an additional part; the built-in seat needs no extra Locating Post.',
+    'Comparison: a separate locking corner seat is an additional part; the built-in seat needs no extra locking corner seat.',
+  'docs.deskQuickStart.previewHeading': 'Desk System component previews',
   'docs.deskQuickStart.scopeNote':
     'Version 1 explains system assembly and component relationships; slicer and detailed print settings belong in a later reference.',
   'docs.title': 'Prototype documentation',
@@ -1124,13 +1125,10 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'panel.organizerBox.interface.stackableDescription':
     'Use the OpenGrid box stacking bottom structure without four-corner built-in feet.',
   'panel.pillar.version': 'Post version',
-  'panel.pillar.stacking': 'Stacking',
-  'panel.pillar.thinShell': 'Thin shell',
   'panel.pillar.positioning': 'Object positioning',
-  'panel.pillar.detachableCornerSeat': 'Detachable corner seat',
+  'panel.pillar.detachableCornerSeat': 'Locking corner seat',
   'panel.pillar.detachableCornerSeatDescription':
-    'Fixed 4.5 mm seat with a 0.2 mm insertion lead-in and 0.15 mm wear surface.',
-  'panel.pillar.fixedLength': 'Fixed total length {length} mm',
+    "Use with a component's locking corner-seat socket; press in, then rotate to locate and lock it.",
   'panel.snap.variant': 'Snap variant',
   'panel.snap.variantAria': 'OpenGrid Snap variant',
   'panel.snap.system': 'System',

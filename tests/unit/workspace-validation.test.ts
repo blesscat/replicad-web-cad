@@ -481,16 +481,14 @@ describe('CAD workspace validation helpers', () => {
     })
   })
 
-  it('round-trips the typed pillar mode radio value', () => {
+  it('round-trips the locking corner-seat mode radio value', () => {
     const parameters: PillarParameters = {
-      mode: 'thin-shell',
-      offset: 0.15,
+      mode: 'detachable-corner-seat',
     }
     const raw = rawFromParameters(parameters)
 
     expect(raw).toEqual({
-      mode: 'thin-shell',
-      offset: '0.15',
+      mode: 'detachable-corner-seat',
     })
     expect(parseRawParameters(raw, 'opengrid-pillar')).toEqual({
       valid: true,
@@ -540,13 +538,17 @@ describe('CAD workspace validation helpers', () => {
         { mode: 'detachable-corner-seat', offset: '0.5' },
         'opengrid-pillar',
       ),
-    ).toEqual({ valid: true, value: parameters })
+    ).toEqual({
+      valid: false,
+      messageId: 'validation.invalid',
+      field: 'offset',
+    })
   })
 
   it('rejects pillar offsets that are outside the range or step', () => {
     expect(
       parseRawParameters(
-        { mode: 'standard', offset: '0.03' },
+        { mode: 'positioning', length: '10', offset: '0.03' },
         'opengrid-pillar',
       ),
     ).toEqual({
@@ -556,7 +558,7 @@ describe('CAD workspace validation helpers', () => {
     })
     expect(
       parseRawParameters(
-        { mode: 'standard', offset: '0.55' },
+        { mode: 'positioning', length: '10', offset: '0.55' },
         'opengrid-pillar',
       ),
     ).toEqual({

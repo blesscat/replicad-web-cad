@@ -10,17 +10,11 @@ import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForPillar,
   pillarBodyDiameterForParameters,
-  pillarFlangeDiameterForParameters,
-  pillarLengthForParameters,
   PILLAR_CONFIGURATION,
   validatePillarParameters,
   type PillarParameters,
 } from '../../../cad-contract/units'
-import {
-  measureBooleanInScope,
-  type BooleanOperationScope,
-  type BooleanOperationReporter,
-} from '../../boolean-progress'
+import type { BooleanOperationReporter } from '../../boolean-progress'
 import { buildOpenGridDetachableCornerSeatFromReference } from '../opengrid-locating-assembly/reference'
 
 const GEOMETRY_TOLERANCE = 0.02
@@ -147,32 +141,6 @@ function asSingleSolid(shape: Shape3D): Solid {
   return solids[0]
 }
 
-function fusePartsAsSingleSolid(
-  first: Shape3D,
-  second: Shape3D,
-  scope: BooleanOperationScope | undefined,
-): Solid {
-  let fused: Shape3D | null = null
-  let solid: Solid | null = null
-  try {
-    fused = measureBooleanInScope(scope, 'fuse', () => first.fuse(second))
-    if (!isShape3D(fused)) throw new Error('PILLAR_FUSE_RESULT_NOT_3D')
-    solid = asSingleSolid(fused)
-    return solid
-  } catch (error) {
-    if (error instanceof Error && error.message.startsWith('PILLAR_')) {
-      throw error
-    }
-    throw new Error('PILLAR_FUSE_FAILED', { cause: error })
-  } finally {
-    deleteUniqueShapes(
-      [first, second, fused].filter(
-        (shape): shape is Shape3D => shape !== null && shape !== solid,
-      ),
-    )
-  }
-}
-
 function readBounds(shape: Shape3D): number[][] {
   const boundingBox = shape.boundingBox
   try {
@@ -207,24 +175,6 @@ function assertFiniteShape(shape: Shape3D, parameters: PillarParameters): void {
   }
 }
 
-function buildFixedPillar(
-  parameters: PillarParameters,
-  scope: BooleanOperationScope | undefined,
-): Solid {
-  const totalLength = pillarLengthForParameters(parameters)
-  const flange = makeCylinder(
-    pillarFlangeDiameterForParameters(parameters) / 2,
-    PILLAR_CONFIGURATION.baseHeight,
-    [0, 0, 0],
-  )
-  const body = makeCylinder(
-    pillarBodyDiameterForParameters(parameters) / 2,
-    totalLength - PILLAR_CONFIGURATION.baseHeight,
-    [0, 0, PILLAR_CONFIGURATION.baseHeight],
-  )
-  return fusePartsAsSingleSolid(flange, body, scope)
-}
-
 function buildPositioningPillar(
   parameters: Extract<PillarParameters, { mode: 'positioning' }>,
 ): Shape3D {
@@ -257,10 +207,6 @@ export async function buildPillar(
 
   let shape: Shape3D | null = null
   let finalSolid: Solid | null = null
-  const fuseScope =
-    parameters.mode === 'standard' || parameters.mode === 'thin-shell'
-      ? context.booleanOperations?.createScope(1)
-      : undefined
   try {
     if (parameters.mode === 'detachable-corner-seat') {
       if (!context.detachableCornerSeatReference) {
@@ -271,22 +217,13 @@ export async function buildPillar(
       )
     } else if (parameters.mode === 'positioning') {
       shape = buildPositioningPillar(parameters)
-    } else {
-      shape = buildFixedPillar(parameters, fuseScope)
     }
 
     assertGenerationCurrent(context)
     await yieldAtSafeBoundary(context)
 
-    if (parameters.mode === 'standard' || parameters.mode === 'thin-shell') {
-      shape = chamferAtStations(
-        shape,
-        [pillarLengthForParameters(parameters)],
-        PILLAR_CONFIGURATION.upperChamfer,
-      )
-    }
-
     assertGenerationCurrent(context)
+    if (!shape) throw new Error('PILLAR_SHAPE_MISSING')
     finalSolid = asSingleSolid(shape)
     deleteShape(shape)
     shape = null

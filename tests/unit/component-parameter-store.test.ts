@@ -535,8 +535,7 @@ describe('component parameter store', () => {
       wallThickness: 3,
     })
     expect(store.get('opengrid-pillar')).toEqual({
-      mode: 'thin-shell',
-      offset: 0,
+      mode: 'detachable-corner-seat',
     })
     expect(store.get('opengrid-snap')).toEqual({
       variant: 'Lite',

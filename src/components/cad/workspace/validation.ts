@@ -280,12 +280,7 @@ function parsePillarRawParameters(raw: RawParameters):
       params?: DiagnosticParams
     } {
   const mode = raw.mode
-  if (
-    mode !== 'standard' &&
-    mode !== 'thin-shell' &&
-    mode !== 'positioning' &&
-    mode !== 'detachable-corner-seat'
-  ) {
+  if (mode !== 'positioning' && mode !== 'detachable-corner-seat') {
     return {
       valid: false,
       messageId: 'validation.invalid',
@@ -294,6 +289,14 @@ function parsePillarRawParameters(raw: RawParameters):
   }
 
   if (mode === 'detachable-corner-seat') {
+    const extraField = Object.keys(raw).find((field) => field !== 'mode')
+    if (extraField) {
+      return {
+        valid: false,
+        messageId: 'validation.invalid',
+        field: pillarModelParameterField(extraField),
+      }
+    }
     const validation = validatePillarParameters({ mode })
     if (!validation.valid) {
       return {
@@ -320,19 +323,6 @@ function parsePillarRawParameters(raw: RawParameters):
       messageId: 'validation.invalid',
       field: 'offset',
     }
-  }
-
-  if (mode !== 'positioning') {
-    const validation = validatePillarParameters({ mode, offset })
-    if (!validation.valid) {
-      const issue = validation.issues[0]
-      return {
-        valid: false,
-        messageId: issue?.messageId ?? 'validation.invalid',
-        field: pillarModelParameterField(issue?.field),
-      }
-    }
-    return { valid: true, value: validation.value }
   }
 
   const rawLength =
@@ -544,10 +534,7 @@ export function rawFromParameters(
         offset: String(parameters.offset),
       }
     }
-    return {
-      mode: parameters.mode,
-      offset: String(parameters.offset),
-    }
+    throw new Error('PILLAR_PARAMETERS_INVALID')
   }
 
   if ('cellX' in parameters && 'cellZ' in parameters && 'angle' in parameters) {

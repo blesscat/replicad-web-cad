@@ -118,7 +118,8 @@ Wall preset MUST be `variant=Full`, `profile=Standard`, `footprint=full`,
 `magnetHoleWidth`, `magnetHoleDiameter`, and `magnetHoleThickness`. The
 magnet controls MUST remain available in both contexts; context selection MUST
 NOT hide or enable them independently. For `opengrid-pillar`, the Desk preset
-MUST be `{ mode: 'thin-shell' }`. For `opengrid-stackable-box`, the Desk
+MUST be exactly `{ mode: 'detachable-corner-seat' }`. For
+`opengrid-stackable-box`, the Desk
 preset MUST be `x=4`, `y=2`, `height=30`, `thinShellMode=true`, and
 `basePlateMode=false`. For `opengrid-stackable-cylinder`, the Desk preset MUST
 be `diameter=60`, `height=30`, `thinBottomMode=true`, and
@@ -144,8 +145,10 @@ the Wall context.
 
 #### Scenario: Desk pillar entry resolves the thin-shell preset
 
-- **WHEN** a user opens `/cad/opengrid-pillar?system=desk` without a valid Desk/Pillar saved snapshot
-- **THEN** the workspace MUST initialize `opengrid-pillar` with `{ mode: 'thin-shell' }`
+- **WHEN** a user opens `/cad/opengrid-pillar?system=desk` without a valid
+  Desk/Pillar saved snapshot
+- **THEN** the workspace MUST initialize `opengrid-pillar` with
+  `{ mode: 'detachable-corner-seat' }`
 - **AND** the Worker request MUST continue to use `modelId=opengrid-pillar`
 
 #### Scenario: Desk board entry resolves the no-feature preset

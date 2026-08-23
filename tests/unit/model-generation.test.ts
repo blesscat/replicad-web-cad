@@ -33,7 +33,7 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
     return { height: 8, count: 1, gap: 1, orientation: 'lying' }
   }
   if (modelId === 'opengrid-pillar') {
-    return { mode: 'standard', offset: 0 }
+    return { mode: 'detachable-corner-seat' }
   }
   if (modelId === 'opengrid') {
     return opengridParameters()
@@ -235,14 +235,14 @@ describe('CAD model generation debounce', () => {
     const { client, send, context } = createRuntimeContext('opengrid-pillar')
     const handlers = createModelGenerationHandlers(context)
 
-    handlers.handleInputChange('mode', 'thin-shell')
+    handlers.handleInputChange('mode', 'positioning')
     vi.advanceTimersByTime(500)
 
     expect(send).toHaveBeenLastCalledWith(
       expect.objectContaining({
         kind: 'model.generate',
         modelId: 'opengrid-pillar',
-        parameters: { mode: 'thin-shell', offset: 0 },
+        parameters: { mode: 'positioning', length: 10, offset: 0 },
       }),
     )
     expect(client.send).toHaveBeenCalledWith(
@@ -251,9 +251,38 @@ describe('CAD model generation debounce', () => {
     expect(context.setPersistedParameters).toHaveBeenLastCalledWith(
       'opengrid-pillar',
       {
-        mode: 'thin-shell',
+        mode: 'positioning',
+        length: 10,
         offset: 0,
       },
+    )
+  })
+
+  it('clears positioning fields when switching back to the locking corner seat', () => {
+    const { client, send, context } = createRuntimeContext('opengrid-pillar', {
+      mode: 'positioning',
+      length: 25,
+      offset: 0.25,
+    })
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('mode', 'detachable-corner-seat')
+    vi.advanceTimersByTime(500)
+
+    expect(context.setRawParameters).toHaveBeenCalledWith({
+      mode: 'detachable-corner-seat',
+    })
+    expect(send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.generate',
+        parameters: { mode: 'detachable-corner-seat' },
+      }),
+    )
+    expect(client.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'model.invalidate',
+        reason: 'superseded',
+      }),
     )
   })
 
@@ -293,7 +322,14 @@ describe('CAD model generation debounce', () => {
   ] as const)(
     'invalidates a pillar %s without generating a snapshot',
     (_label, field, value) => {
-      const { client, send, context } = createRuntimeContext('opengrid-pillar')
+      const { client, send, context } = createRuntimeContext(
+        'opengrid-pillar',
+        {
+          mode: 'positioning',
+          length: 10,
+          offset: 0,
+        },
+      )
       const handlers = createModelGenerationHandlers(context)
 
       handlers.handleInputChange(field, value)

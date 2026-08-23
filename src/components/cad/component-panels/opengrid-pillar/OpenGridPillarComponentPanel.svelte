@@ -13,23 +13,13 @@
 
   const PILLAR_MODE_OPTIONS = [
     {
-      value: 'standard',
-      labelKey: 'panel.pillar.stacking',
-      length: PILLAR_CONFIGURATION.standardLength,
-    },
-    {
-      value: 'thin-shell',
-      labelKey: 'panel.pillar.thinShell',
-      length: PILLAR_CONFIGURATION.thinShellLength,
+      value: 'detachable-corner-seat',
+      labelKey: 'panel.pillar.detachableCornerSeat',
+      descriptionKey: 'panel.pillar.detachableCornerSeatDescription',
     },
     {
       value: 'positioning',
       labelKey: 'panel.pillar.positioning',
-    },
-    {
-      value: 'detachable-corner-seat',
-      labelKey: 'panel.pillar.detachableCornerSeat',
-      descriptionKey: 'panel.pillar.detachableCornerSeatDescription',
     },
   ] as const
 
@@ -71,13 +61,7 @@
         />
         <span class="grid gap-1">
           <span class="font-[650]">{translate(locale, option.labelKey)}</span>
-          {#if 'length' in option}
-            <span class="text-sm text-muted">
-              {translate(locale, 'panel.pillar.fixedLength', {
-                length: option.length,
-              })}
-            </span>
-          {:else if 'descriptionKey' in option}
+          {#if 'descriptionKey' in option}
             <span class="text-sm text-muted">
               {translate(locale, option.descriptionKey)}
             </span>
@@ -111,7 +95,7 @@
     </ParameterField>
   {/if}
 
-  {#if rawParameters.mode !== 'detachable-corner-seat'}
+  {#if rawParameters.mode === 'positioning'}
     {#each OFFSET_FIELDS as field (field.key)}
       {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
       <ParameterField
