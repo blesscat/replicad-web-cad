@@ -29,8 +29,15 @@ vi.mock('../../src/cad-kernel/export', () => ({
   exportStlBytes: mocks.exportStlBytes,
 }))
 
-import { OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS } from '../../src/cad-contract/units'
+import {
+  boundsForOpenGridOpenShelf,
+  OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
+} from '../../src/cad-contract/units'
 import { CadWorkerRuntime } from '../../src/workers/cad.worker'
+
+const OPEN_SHELF_DEFAULT_BOUNDS = boundsForOpenGridOpenShelf(
+  OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
+)
 
 const base = {
   version: 2 as const,
@@ -44,7 +51,7 @@ function configureMocks(): void {
     positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
     normals: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]),
     indices: new Uint32Array([0, 1, 2]),
-    bounds: { min: [-55.925, -41.925, -3], max: [55.925, 41.925, 50] },
+    bounds: OPEN_SHELF_DEFAULT_BOUNDS,
     triangleCount: 1,
   })
   mocks.serializeMesh.mockImplementation((mesh) => ({

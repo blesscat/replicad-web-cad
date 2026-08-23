@@ -19,6 +19,14 @@ being expanded by the assembly increment. The retaining opening MUST equal the
 test flange diameter plus the shared increment. Detachable locking sockets MUST
 use the separate shared detachable-corner-seat contract rather than treating
 their 7 mm female envelope as a 7.05 mm stepped-hole retaining opening.
+opening and test shaft MUST remain the current exact 5 mm interface rather than
+being expanded by the assembly increment. The retaining opening MUST equal the
+test flange diameter plus the shared increment. Detachable locking sockets MUST
+use the separate shared detachable-corner-seat contract rather than treating
+their 7 mm female envelope as a 7.05 mm stepped-hole retaining opening. The same
+shared contract MUST define the integrated corner-seat diameter as exactly 5 mm,
+its total outward length as exactly 3.8 mm from the bottom datum at Z=0 to
+Z=-3.8 mm, and a bottom perimeter chamfer of exactly 0.2 mm within that length.
 
 #### Scenario: Shared dimensions are published once
 
@@ -28,6 +36,9 @@ their 7 mm female envelope as a 7.05 mm stepped-hole retaining opening.
   assemblyOpeningDiameter=5.05, testShaftDiameter=5,
   shaftOpeningDiameter=5, retainingOpeningDiameter=7.05,
   testFlangeDiameter=7, and testFlangeHeight=0.8
+- **AND** it MUST receive an integrated corner-seat diameter of 5 mm, a total
+  outward length of 3.8 mm, a minimum Z of -3.8 mm, and a bottom chamfer of
+  0.2 mm
 - **AND** no consumer MUST define a conflicting copy of these shared
   interface dimensions
 
@@ -164,7 +175,8 @@ exact labels `無角座`, `鎖定角座`, and `內建角座`. The locking descri
 state that the selected positions form retaining-tab sockets for separately
 printed detachable corner seats and expose the visual lock indicators. The
 integrated description MUST communicate that the selected positions receive a
-solid Ø5 mm round seat extending 3 mm outward from the bottom. Existing model
+solid Ø5 mm round seat extending 3.8 mm outward from the bottom, including a
+0.2 mm bottom chamfer. Existing model
 display names and OpenGrid identities MUST remain unchanged.
 
 #### Scenario: Locking seat description is visible
@@ -178,8 +190,8 @@ display names and OpenGrid identities MUST remain unchanged.
 #### Scenario: Integrated seat description is visible
 
 - **WHEN** the user selects `內建角座` in either OpenGrid stackable model
-- **THEN** the panel MUST identify the result as a Ø5 mm, 3 mm-high outward
-  round seat
+- **THEN** the panel MUST identify the result as a Ø5 mm, 3.8 mm-high outward
+  round seat with a 0.2 mm bottom chamfer
 - **AND** the panel MUST continue to show the other two mutually exclusive
   choices
 

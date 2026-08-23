@@ -70,7 +70,7 @@ describe('OpenGrid stackable-box integrated seat profiles', () => {
     { name: 'base-plate', basePlateMode: true, thinShellMode: false },
     { name: 'thin-shell', basePlateMode: false, thinShellMode: true },
   ])(
-    'fuses exact seats and preserves ordinary holes in the $name profile',
+    'fuses exact chamfered seats and preserves ordinary holes in the $name profile',
     ({ basePlateMode, thinShellMode }) => {
       const input = parameters({ basePlateMode, thinShellMode })
       const shape = buildOpenGridStackableBox(input)
@@ -103,12 +103,12 @@ describe('OpenGrid stackable-box integrated seat profiles', () => {
           expect(record!.max[1] - record!.min[1]).toBeCloseTo(5, 1)
           expect(record!.max[2] - record!.min[2]).toBeCloseTo(
             OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatHeight -
-              OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
+              OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatBottomChamfer,
             1,
           )
           expect(record!.min[2]).toBeCloseTo(
             OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ +
-              OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
+              OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatBottomChamfer,
             1,
           )
           expect(record!.max[2]).toBeCloseTo(0, 1)

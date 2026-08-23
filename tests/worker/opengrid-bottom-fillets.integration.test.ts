@@ -100,6 +100,19 @@ function hasBottomFillet(
   })
 }
 
+function hasIntegratedSeatChamfer(records: FaceRecord[]): boolean {
+  const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
+  return hasBottomFillet(records, {
+    minimumPlanSpan: 4.5,
+    minimumZ: configuration.integratedSeatMinZ,
+    maximumZ:
+      configuration.integratedSeatMinZ +
+      configuration.integratedSeatBottomChamfer,
+    minimumZSpan: configuration.integratedSeatBottomChamfer * 0.7,
+    surfaceTypes: ['CONE'],
+  })
+}
+
 function hasLocatingPegFillet(
   records: FaceRecord[],
   minimumZ: number,
@@ -112,7 +125,7 @@ function hasLocatingPegFillet(
   })
 }
 
-describe('OpenGrid bottom edge fillets', () => {
+describe('OpenGrid bottom edge finishing', () => {
   it('rounds the divider base and every locating peg at 0.5 mm', async () => {
     const parameters: OpenGridDividerParameters = {
       ...OPENGRID_DIVIDER_CONFIGURATION.defaultParameters,
@@ -134,7 +147,7 @@ describe('OpenGrid bottom edge fillets', () => {
     }
   }, 180_000)
 
-  it('rounds the stackable box base and integrated locating seats at 0.5 mm', () => {
+  it('keeps the stackable box base fillet and chamfers integrated seats', () => {
     const parameters: OpenGridStackableBoxParameters = {
       ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
       cornerSeatMode: 'integrated',
@@ -151,13 +164,14 @@ describe('OpenGrid bottom edge fillets', () => {
           surfaceTypes: ['TORUS'],
         }),
       ).toBe(true)
-      expect(hasLocatingPegFillet(records, -3)).toBe(true)
+      expect(hasIntegratedSeatChamfer(records)).toBe(true)
+      expect(hasLocatingPegFillet(records, -3.8)).toBe(false)
     } finally {
       deleteShape(shape)
     }
   })
 
-  it('rounds the stackable cylinder base and integrated locating seats at 0.5 mm', () => {
+  it('keeps the stackable cylinder base fillet and chamfers integrated seats', () => {
     const parameters: OpenGridStackableCylinderParameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       bottomSeatMode: 'integrated',
@@ -174,13 +188,14 @@ describe('OpenGrid bottom edge fillets', () => {
           surfaceTypes: ['TORUS'],
         }),
       ).toBe(true)
-      expect(hasLocatingPegFillet(records, -3)).toBe(true)
+      expect(hasIntegratedSeatChamfer(records)).toBe(true)
+      expect(hasLocatingPegFillet(records, -3.8)).toBe(false)
     } finally {
       deleteShape(shape)
     }
   })
 
-  it('rounds the open-shelf base and every locating peg at 0.5 mm', async () => {
+  it('keeps the open-shelf base fillet and chamfers every locating peg', async () => {
     const parameters: OpenGridOpenShelfParameters = {
       ...OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
     }
@@ -195,7 +210,8 @@ describe('OpenGrid bottom edge fillets', () => {
           surfaceTypes: ['CYLINDRE', 'TORUS'],
         }),
       ).toBe(true)
-      expect(hasLocatingPegFillet(records, -3)).toBe(true)
+      expect(hasIntegratedSeatChamfer(records)).toBe(true)
+      expect(hasLocatingPegFillet(records, -3.8)).toBe(false)
     } finally {
       deleteShape(shape)
     }

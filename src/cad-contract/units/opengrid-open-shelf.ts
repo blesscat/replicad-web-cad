@@ -1,4 +1,5 @@
 import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
+import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from './opengrid-locating-assembly'
 
 export type OpenGridOpenShelfParameterKey =
   'x' | 'y' | 'height' | 'cellX' | 'cellZ' | 'angle' | 'honeycombMode'
@@ -72,8 +73,8 @@ export const OPENGRID_OPEN_SHELF_CONFIGURATION = {
   outerCornerRadius: 3.75,
   topOuterEdgeRadius: 0.6,
   backboardThickness: 1.2,
-  pegDiameter: 5,
-  pegHeight: 3,
+  pegDiameter: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatDiameter,
+  pegHeight: OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatHeight,
   pegInset: 7,
   pegOverlap: 0.02,
   minimumClearCellHeight: 0.5,

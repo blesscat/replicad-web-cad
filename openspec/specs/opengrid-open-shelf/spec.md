@@ -91,35 +91,52 @@ The generated component MUST be centered on X/Y with front at `-Y` and rear at `
 - **WHEN** a valid component is generated with `height=H`
 - **THEN** the highest outer front surface of the top panel MUST be Z=`H` within the CAD tolerance
 - **AND** increasing the angle MUST lower the rear top and reduce rear clear cell height
-- **AND** the requested H MUST include board thicknesses but MUST exclude the 3 mm peg extension below the base
+- **AND** the requested H MUST include board thicknesses but MUST exclude the 3.8 mm peg extension below the base
 
 ### Requirement: Open Shelf has the specified integrated locating pegs
 
-The component MUST include exactly four nominal corner locating pegs integrated with the bottom board. Each peg MUST be a plain cylinder with nominal diameter 5 mm and 3 mm exposed height below the bottom board. Peg centers MUST use the existing OpenGrid stackable-box corner placement semantics: nominal X/Y extent is `count * 28 mm` and each corner center is inset 7 mm from that nominal extent. The generated pegs MUST use the Open Shelf 5 mm interface dimension and MUST NOT include a 7.05 mm retaining shoulder, flange, or separate 7.05 mm positioning feature.
+The component MUST include exactly four nominal corner locating pegs integrated
+with the bottom board. Each peg MUST use the shared OpenGrid integrated
+corner-seat geometry: a nominal diameter of 5 mm, a total exposed height of
+3.8 mm below the bottom board, and a 0.2 mm bottom perimeter chamfer within
+that height. Peg centers MUST use the existing OpenGrid stackable-box corner
+placement semantics: nominal X/Y extent is `count * 28 mm` and each corner
+center is inset 7 mm from that nominal extent. The generated pegs MUST use the
+Open Shelf 5 mm interface dimension and MUST NOT include a 7.05 mm retaining
+shoulder, flange, or separate 7.05 mm positioning feature.
 
 #### Scenario: Default peg placement matches the OpenGrid interface
 
 - **WHEN** the default component is generated
 - **THEN** four downward cylindrical pegs MUST be present
-- **AND** their nominal centers MUST be at the four combinations of `±(4*28/2-7)` and `±(3*28/2-7)` mm
-- **AND** the exposed peg length MUST be 3 mm
+- **AND** their nominal centers MUST be at the four combinations of
+  `±(4*28/2-7)` and `±(3*28/2-7)` mm
+- **AND** the exposed peg length MUST be 3.8 mm
+- **AND** each peg MUST have a 0.2 mm bottom perimeter chamfer
 
 #### Scenario: Pegs are plain 5 mm cylinders
 
 - **WHEN** the generated shape is inspected at any valid size
 - **THEN** the peg shaft diameter MUST be 5 mm nominal
+- **AND** its bottom edge MUST have the shared 0.2 mm chamfer
 - **AND** no 7.05 mm retaining shoulder or flange MUST be present
 - **AND** the peg geometry MUST be fused to the bottom board as one printable solid
 
 ### Requirement: Open Shelf bounds and exports are deterministic
 
-The component MUST report centered X/Y bounds from the OpenGrid footprint formula, a minimum Z bound of -3 mm for the exposed pegs, and a maximum Z bound equal to the requested total height. Its STEP and binary STL file names MUST include the stable component id and all six typed parameter values in deterministic order. The generated result MUST be a non-empty single solid suitable for the existing preview, STEP, and STL lifecycle.
+The component MUST report centered X/Y bounds from the OpenGrid footprint formula,
+a minimum Z bound of -3.8 mm for the exposed pegs, and a maximum Z bound equal
+to the requested total height. Its STEP and binary STL file names MUST include
+the stable component id and all six typed parameter values in deterministic
+order. The generated result MUST be a non-empty single solid suitable for the
+existing preview, STEP, and STL lifecycle.
 
 #### Scenario: Default bounds include only the peg extension below the base
 
 - **WHEN** the default component is generated
-- **THEN** its X/Y bounds MUST be approximately `[-55.925, 55.925]` and `[-41.925, 41.925]`
-- **AND** its Z bounds MUST be approximately `[-3, 50]`
+- **THEN** its X/Y bounds MUST be approximately `[-55.925, 55.925]` and
+  `[-41.925, 41.925]`
+- **AND** its Z bounds MUST be approximately `[-3.8, 50]`
 
 #### Scenario: Equivalent parameters produce stable export names
 

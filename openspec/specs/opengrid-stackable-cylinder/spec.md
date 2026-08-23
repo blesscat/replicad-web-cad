@@ -113,8 +113,9 @@ respect the profile-specific floor thickness and remain compatible with the
 separately printed `opengrid-pillar` male reference. When
 `bottomSeatMode='none'`, the center and all outer bottom-seat candidates MUST
 remain solid. When `bottomSeatMode='integrated'`, the center MUST instead carry
-one fused solid Ø5 mm cylinder exactly 3 mm high from Z=-3 mm through Z=0;
-there MUST be no detachable socket or stepped center hole at that position.
+one fused solid Ø5 mm cylinder with a total outward span of exactly 3.8 mm from
+Z=-3.8 mm through Z=0 and a 0.2 mm bottom perimeter chamfer; there MUST be no
+detachable socket or stepped center hole at that position.
 
 #### Scenario: Cylinder locking center seat
 
@@ -143,9 +144,10 @@ there MUST be no detachable socket or stepped center hole at that position.
 #### Scenario: Cylinder integrated center seat
 
 - **WHEN** a valid cylinder uses `bottomSeatMode='integrated'`
-- **THEN** the center MUST contain a fused Ø5 mm round seat spanning Z=-3 mm to
-  Z=0
-- **AND** the center MUST not contain a detachable socket or stepped cut
+- **THEN** the center MUST contain a fused Ø5 mm round seat spanning Z=-3.8 mm
+  to Z=0
+- **AND** the lowest 0.2 mm of the seat MUST be its bottom perimeter chamfer
+- **AND** the center MUST not contain the hole-mode stepped cut
 - **AND** the result MUST remain one valid solid
 
 ### Requirement: Four outer cardinal holes from the 14 mm grid
@@ -157,9 +159,9 @@ one. Each selected position MUST receive one shared female detachable socket
 and its lock indicator. The profile-specific outer clearance and
 thin-floor/ramp rules MUST remain unchanged. When `bottomSeatMode='none'`, no
 outer seat may be emitted. When `bottomSeatMode='integrated'`, the same
-calculated safe positions MUST receive fused Ø5 mm × 3 mm seats from Z=-3 mm
-to Z=0 instead of locking sockets. No diagonal, intermediate, or additional
-positions are permitted in any mode.
+calculated safe positions MUST receive fused Ø5 mm × 3.8 mm seats from Z=-3.8 mm
+to Z=0 instead of locking sockets, with a 0.2 mm bottom perimeter chamfer. No
+diagonal, intermediate, or additional positions are permitted in any mode.
 
 #### Scenario: Locking mode uses the safe cardinal group
 
@@ -196,7 +198,8 @@ positions are permitted in any mode.
 
 - **WHEN** a valid cylinder uses `bottomSeatMode='integrated'`
 - **THEN** every position that would be a safe outer seat in locking mode MUST
-  contain one Ø5 mm × 3 mm outward seat
+  contain one Ø5 mm × 3.8 mm outward seat spanning Z=-3.8 mm to Z=0
+- **AND** every seat MUST have a 0.2 mm bottom perimeter chamfer
 - **AND** the safe outer index and radial positions MUST be identical to
   locking mode for the same diameter and profile
 
@@ -206,8 +209,9 @@ The existing outer-edge and thin-bottom ramp clearance calculation MUST apply
 to the position set selected by `bottomSeatMode`. Locking mode MUST validate the
 full female socket and lock-indicator envelope at each selected position.
 Integrated mode MUST validate the Ø5 mm seat radius and its fused footprint
-against the same safe radial positions; its 3 mm downward extension MUST NOT
-alter the selected outer index. None mode MUST perform no seat-clearance
+against the same safe radial positions; its 3.8 mm downward extension and 0.2 mm
+bottom chamfer MUST NOT alter the selected outer index. None mode MUST perform no
+seat-clearance
 calculation and MUST not create a false failure for the solid bottom.
 
 #### Scenario: Safe locking socket placement
@@ -267,10 +271,11 @@ expected female socket records, lock-indicator records, and male/female fit
 probes at the center and every safe cardinal position. In none mode it MUST
 require zero bottom-seat, socket, and indicator records. In integrated mode it
 MUST require the expected center-plus-safe-cardinal seat records, validate
-their Ø5 mm diameter and 3 mm Z span from -3 to 0, and retain the existing
-shell/opening/stacking checks. The contract bounds MUST use min Z=-3 mm only in
-integrated mode; max Z and XY bounds MUST remain unchanged. Valid results MUST
-remain eligible for preview, STEP export, and binary STL export.
+their Ø5 mm diameter, total 3.8 mm Z span from -3.8 to 0, and 0.2 mm bottom
+chamfer, and retain the existing shell/opening/stacking checks. The contract
+bounds MUST use min Z=-3.8 mm only in integrated mode; max Z and XY bounds MUST
+remain unchanged. Valid results MUST remain eligible for preview, STEP export,
+and binary STL export.
 
 #### Scenario: All three seat modes are exportable
 
@@ -325,7 +330,7 @@ distinguish all three bottom geometries and all opening settings.
 
 - **WHEN** an integrated-seat cylinder is exported
 - **THEN** both filenames MUST contain `-seats-integrated`
-- **AND** the exported geometry MUST contain the selected Ø5 mm × 3 mm seats
+- **AND** the exported geometry MUST contain the selected Ø5 mm × 3.8 mm seats
 
 ### Requirement: Bottom-plate profile
 

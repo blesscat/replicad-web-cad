@@ -2,7 +2,6 @@ import {
   getOC,
   makeBox,
   makeCompound,
-  makeCylinder,
   sketchRoundedRectangle,
   Sketcher,
   Solid,
@@ -35,6 +34,7 @@ import {
   makeOpenGridOpenShelfPlateHoneycombCutters,
   makeOpenGridOpenShelfWallHoneycombCutters,
 } from '../../lattice/opengrid-honeycomb'
+import { makeOpenGridIntegratedSeat } from '../opengrid-locating-assembly/integrated'
 
 const HONEYCOMB_CUT_BATCH_SIZE = 128
 
@@ -384,16 +384,7 @@ function makeBackboard(
 
 function makePeg(center: Point2D): Shape3D {
   const configuration = OPENGRID_OPEN_SHELF_CONFIGURATION
-  const peg = makeCylinder(
-    configuration.pegDiameter / 2,
-    configuration.pegHeight + configuration.pegOverlap,
-    [center[0], center[1], -configuration.pegHeight],
-  )
-  return filletEdgesAtZ(
-    peg,
-    -configuration.pegHeight,
-    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.bottomEdgeFilletRadius,
-  )
+  return makeOpenGridIntegratedSeat(center, configuration.pegOverlap)
 }
 
 function makeBottomBase(width: number, yFront: number, yRear: number): Shape3D {

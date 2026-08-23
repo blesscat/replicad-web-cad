@@ -357,7 +357,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
       bottomPlateMode: true,
     },
   ])(
-    'builds integrated Ø5 by 3 mm seats in the $profile profile as one valid solid',
+    'builds integrated Ø5 by 3.8 mm chamfered seats in the $profile profile as one valid solid',
     ({ thinBottomMode, bottomPlateMode }) => {
       const input = parameters({
         thinBottomMode,
@@ -369,11 +369,22 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
         const report = inspectOpenGridStackableCylinderInterface(shape, input)
         const expectedCenters = openGridStackableCylinderHoleCentersFor(input)
         expect(report.bottomSeatMode).toBe('integrated')
-        expect(report.bounds.min[2]).toBeCloseTo(-3, 2)
+        expect(report.bounds.min[2]).toBeCloseTo(
+          OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ,
+          2,
+        )
         expect(report.holeRecordCount).toBe(0)
         expect(report.holes).toEqual([])
         expect(report.integratedSeatRecordCount).toBe(expectedCenters.length)
         expect(report.integratedSeats).toHaveLength(expectedCenters.length)
+        for (const seat of report.integratedSeats) {
+          expect(seat.minZ).toBeCloseTo(
+            OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ +
+              OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatBottomChamfer,
+            1,
+          )
+          expect(seat.maxZ).toBeCloseTo(0, 1)
+        }
         expect(report.solidCount).toBe(1)
         expect(report.brepValid).toBe(true)
       } finally {

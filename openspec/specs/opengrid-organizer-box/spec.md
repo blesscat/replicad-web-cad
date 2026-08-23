@@ -176,22 +176,25 @@ options: `四角固定座`, `鎖定角座`, and `堆疊結構`. The normalized
 `bottomInterfaceMode` MUST contain exactly one corresponding value.
 
 In `corner-seat` mode, the result MUST preserve the existing Grid Box fixed
-four-corner locating-seat positions and use the existing `integrated` built-in
-foot geometry, including the existing de-duplication behavior for small
-footprints. It MUST fuse four downward solid feet from Z=-3 mm to Z=0 mm, MUST
-NOT generate insertable socket holes, and MUST NOT generate the full box-to-box
+four-corner locating-seat positions and use the shared OpenGrid `integrated`
+built-in foot geometry, including the existing de-duplication behavior for
+small footprints. It MUST fuse four downward solid feet with a total span from
+Z=-3.8 mm to Z=0 and a 0.2 mm bottom perimeter chamfer on each foot, MUST NOT
+generate insertable socket holes, and MUST NOT generate the full box-to-box
 stacking guide. In `detachable-corner-seat` mode, the result MUST form the
 shared keyed female socket geometry directly in the box body, MUST NOT fuse a
 male seat or separate holder, and MUST NOT generate the full stacking guide. In
 `stackable` mode, the result MUST preserve the existing normal box-to-box
-bottom stacking geometry and MUST NOT generate either kind of four-corner
-seat. The three interface modes MUST NOT be combined.
+bottom stacking geometry and MUST NOT generate either kind of four-corner seat.
+The three interface modes MUST NOT be combined.
 
 #### Scenario: Four-corner interface selection
 
 - **WHEN** the user selects `四角固定座`
 - **THEN** exactly that radio option MUST be selected
 - **AND** the generated result MUST contain four downward built-in locating feet
+- **AND** each fixed foot MUST span Z=-3.8 mm to Z=0 and have a 0.2 mm bottom
+  perimeter chamfer
 - **AND** the generated result MUST NOT require a separate foot inserted from below
 - **AND** both the detachable sockets and full stacking guide MUST be absent
 

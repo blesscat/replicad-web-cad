@@ -12,6 +12,7 @@ import {
   openGridOpenShelfShelfLowerSurfaceZFor,
   OPENGRID_OPEN_SHELF_CONFIGURATION,
   OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS,
+  OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   validateModelParameters,
   validateOpenGridOpenShelfParameters,
   type OpenGridOpenShelfParameters,
@@ -32,7 +33,7 @@ describe('OpenGrid open-shelf contract', () => {
       value,
     })
     expect(boundsForOpenGridOpenShelf(value)).toEqual({
-      min: [-55.925, -41.925, -3],
+      min: [-55.925, -41.925, -3.8],
       max: [55.925, 41.925, 50],
     })
     expect(
@@ -41,6 +42,12 @@ describe('OpenGrid open-shelf contract', () => {
   })
 
   it('uses four plain locating peg centers from the OpenGrid corner offset', () => {
+    expect(OPENGRID_OPEN_SHELF_CONFIGURATION.pegDiameter).toBe(
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatDiameter,
+    )
+    expect(OPENGRID_OPEN_SHELF_CONFIGURATION.pegHeight).toBe(
+      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatHeight,
+    )
     expect(openGridOpenShelfPegCentersFor(parameters())).toEqual([
       [-49, -35],
       [-49, 35],
