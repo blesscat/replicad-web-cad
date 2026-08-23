@@ -6,8 +6,10 @@ const mocks = vi.hoisted(() => ({
   meshBRep: vi.fn(),
   serializeMesh: vi.fn(),
   assertOpenGridSnapShapeQuality: vi.fn(),
+  assertOpenGridSnapOpenConnectShapeQuality: vi.fn(),
   loadOpenGridSnapReference: vi.fn(),
   loadOpenGridSnapFixedFootprint: vi.fn(),
+  loadOpenGridSnapOpenConnectHead: vi.fn(),
   exportStepBytes: vi.fn(),
   exportStlBytes: vi.fn(),
 }))
@@ -27,10 +29,13 @@ vi.mock('../../src/cad-kernel/components/opengrid/quality', () => ({
 }))
 vi.mock('../../src/cad-kernel/components/opengrid-snap/quality', () => ({
   assertOpenGridSnapShapeQuality: mocks.assertOpenGridSnapShapeQuality,
+  assertOpenGridSnapOpenConnectShapeQuality:
+    mocks.assertOpenGridSnapOpenConnectShapeQuality,
 }))
 vi.mock('../../src/cad-kernel/components/opengrid-snap/builder', () => ({
   loadOpenGridSnapReference: mocks.loadOpenGridSnapReference,
   loadOpenGridSnapFixedFootprint: mocks.loadOpenGridSnapFixedFootprint,
+  loadOpenGridSnapOpenConnectHead: mocks.loadOpenGridSnapOpenConnectHead,
 }))
 vi.mock('../../src/cad-kernel/export', () => ({
   exportStepBytes: mocks.exportStepBytes,
@@ -60,6 +65,7 @@ function snapParameters(
       | 'profile'
       | 'fourCornerLocatingHoles'
       | 'centerRemoverHole'
+      | 'openConnect'
       | 'magnetHoleShape'
       | 'magnetHoleLength'
       | 'magnetHoleWidth'
@@ -75,6 +81,7 @@ function snapParameters(
     footprint,
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
+    openConnect: false,
     magnetHoleShape: 'none',
     magnetHoleLength: 0,
     magnetHoleWidth: 0,
@@ -131,6 +138,9 @@ function configureMocks() {
     delete: vi.fn(),
   }))
   mocks.loadOpenGridSnapFixedFootprint.mockImplementation(async () => ({
+    delete: vi.fn(),
+  }))
+  mocks.loadOpenGridSnapOpenConnectHead.mockImplementation(async () => ({
     delete: vi.fn(),
   }))
   mocks.exportStepBytes.mockResolvedValue(new Uint8Array([1, 2, 3]).buffer)
@@ -236,6 +246,53 @@ describe('OpenGrid Snap Worker runtime', () => {
         expect.objectContaining({ kind: 'model.candidate-ready' }),
       ]),
     )
+  })
+
+  it('loads and quality-gates the OpenConnect head without scaling it', async () => {
+    const head = { delete: vi.fn() }
+    mocks.loadOpenGridSnapOpenConnectHead.mockResolvedValue(head)
+    mocks.buildModelBRep.mockImplementation(
+      async (
+        _modelId: string,
+        parameters: OpenGridSnapParameters,
+        context: {
+          getOpenGridSnapOpenConnectHead?: () => Promise<unknown>
+        },
+      ) => {
+        if (parameters.openConnect) {
+          await context.getOpenGridSnapOpenConnectHead?.()
+        }
+        return { delete: vi.fn() }
+      },
+    )
+
+    const runtime = new CadWorkerRuntime(
+      'epoch-snap-openconnect',
+      () => undefined,
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(
+      generateCommand(
+        snapParameters('Full', 0.2, 'full', {
+          profile: 'Directional',
+          openConnect: true,
+        }),
+      ),
+    )
+
+    expect(mocks.loadOpenGridSnapOpenConnectHead).toHaveBeenCalledOnce()
+    expect(
+      mocks.assertOpenGridSnapOpenConnectShapeQuality,
+    ).toHaveBeenCalledOnce()
+    expect(mocks.assertOpenGridSnapShapeQuality).not.toHaveBeenCalled()
+
+    await runtime.handle({
+      ...base,
+      requestId: 'snap-openconnect-dispose-request',
+      operationId: 'snap-openconnect-dispose-operation',
+      kind: 'worker.dispose' as const,
+    })
+    expect(head.delete).toHaveBeenCalledOnce()
   })
 
   it('removes a failed reference promise so the next generation can retry', async () => {

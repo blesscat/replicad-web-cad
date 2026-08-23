@@ -21,6 +21,7 @@ export type OpenGridSnapParameterKey =
   | 'footprint'
   | 'fourCornerLocatingHoles'
   | 'centerRemoverHole'
+  | 'openConnect'
   | 'magnetHoleShape'
   | 'magnetHoleLength'
   | 'magnetHoleWidth'
@@ -35,6 +36,7 @@ export type OpenGridSnapParameters = {
   footprint: OpenGridSnapFootprint
   fourCornerLocatingHoles: boolean
   centerRemoverHole: boolean
+  openConnect: boolean
   magnetHoleShape: OpenGridSnapMagnetHoleShape
   magnetHoleLength: number
   magnetHoleWidth: number
@@ -117,6 +119,7 @@ export const OPENGRID_SNAP_CONFIGURATION = {
     footprint: 'full' as OpenGridSnapFootprint,
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
+    openConnect: false,
     magnetHoleShape: 'none' as OpenGridSnapMagnetHoleShape,
     magnetHoleLength: 0,
     magnetHoleWidth: 0,
@@ -132,6 +135,7 @@ const PARAMETER_KEYS: readonly OpenGridSnapParameterKey[] = [
   'footprint',
   'fourCornerLocatingHoles',
   'centerRemoverHole',
+  'openConnect',
   'magnetHoleShape',
   'magnetHoleLength',
   'magnetHoleWidth',
@@ -264,6 +268,22 @@ export function validateOpenGridSnapParameters(
   if (typeof value.centerRemoverHole !== 'boolean') {
     issues.push({
       field: 'centerRemoverHole',
+      messageId: 'validation.invalid',
+    })
+  }
+  if (typeof value.openConnect !== 'boolean') {
+    issues.push({
+      field: 'openConnect',
+      messageId: 'validation.invalid',
+    })
+  }
+  if (
+    value.openConnect === true &&
+    isOpenGridSnapFootprint(value.footprint) &&
+    value.footprint !== 'full'
+  ) {
+    issues.push({
+      field: 'openConnect',
       messageId: 'validation.invalid',
     })
   }
@@ -464,6 +484,7 @@ export function validateOpenGridSnapParameters(
       footprint: value.footprint as OpenGridSnapFootprint,
       fourCornerLocatingHoles: value.fourCornerLocatingHoles as boolean,
       centerRemoverHole: value.centerRemoverHole as boolean,
+      openConnect: value.openConnect as boolean,
       magnetHoleShape: value.magnetHoleShape as OpenGridSnapMagnetHoleShape,
       magnetHoleLength: value.magnetHoleLength as number,
       magnetHoleWidth: value.magnetHoleWidth as number,
@@ -487,6 +508,9 @@ export function normalizeOpenGridSnapParameters(value: unknown): unknown {
   }
   if (!Object.prototype.hasOwnProperty.call(normalized, 'centerRemoverHole')) {
     normalized.centerRemoverHole = false
+  }
+  if (!Object.prototype.hasOwnProperty.call(normalized, 'openConnect')) {
+    normalized.openConnect = false
   }
   if (!Object.prototype.hasOwnProperty.call(normalized, 'magnetHoleShape')) {
     normalized.magnetHoleShape = 'none'
@@ -613,13 +637,19 @@ export function openGridSnapFileName(
 ): string {
   if (parameters.footprint === 'half') return 'Half.step'
   if (parameters.footprint === 'quarter') return 'Quarter.step'
-  return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-${parameters.footprint}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}${openGridSnapMagnetFileNameSuffix(parameters)}.step`
+  return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-${parameters.footprint}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}${openGridSnapOpenConnectFileNameSuffix(parameters)}${openGridSnapMagnetFileNameSuffix(parameters)}.step`
 }
 
 export function openGridSnapStlFileName(
   parameters: OpenGridSnapParameters,
 ): string {
-  return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-${parameters.footprint}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}${openGridSnapMagnetFileNameSuffix(parameters)}.stl`
+  return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-${parameters.footprint}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}${openGridSnapOpenConnectFileNameSuffix(parameters)}${openGridSnapMagnetFileNameSuffix(parameters)}.stl`
+}
+
+function openGridSnapOpenConnectFileNameSuffix(
+  parameters: OpenGridSnapParameters,
+): string {
+  return parameters.openConnect ? '-openconnect' : ''
 }
 
 function openGridSnapMagnetFileNameSuffix(

@@ -33,6 +33,7 @@ export type CadWorkspaceControllerSnapshot = {
 export type CadWorkspaceController = {
   getSnapshot: () => CadWorkspaceControllerSnapshot
   onInputChange: (key: ModelParameterKey, value: string) => void
+  onSystemContextChange: (context: OpenGridSystemContext | undefined) => void
   onOpenGridParametersChange: (parameters: OpenGridParameters) => void
   onOpenGridDimensionCalculationInvalid: () => void
   onRestoreDefaults: () => void
@@ -86,7 +87,7 @@ export function createCadWorkspaceController(
 ): CadWorkspaceController {
   const definition = getModelDefinition(modelId)
   if (!definition) throw new Error(`UNKNOWN_MODEL_ID:${modelId}`)
-  const systemContext = options.systemContext
+  let systemContext = options.systemContext
 
   const initialParameters = options.parameterStore.get(modelId)
   let state = initialCadState(modelId, initialParameters)
@@ -141,12 +142,24 @@ export function createCadWorkspaceController(
     }
   }
 
+  const onSystemContextChange = (
+    nextContext: OpenGridSystemContext | undefined,
+  ): void => {
+    if (systemContext === nextContext) return
+    systemContext = nextContext
+    options.parameterStore.setSystemContext(nextContext)
+    runtime.handleParametersScopeChange(
+      cloneModelParameters(options.parameterStore.get(modelId)),
+    )
+  }
+
   emit()
 
   return {
     getSnapshot: () =>
       createSnapshot(state, rawParameters, fieldErrors, progress),
     onInputChange: runtime.handleInputChange,
+    onSystemContextChange,
     onOpenGridParametersChange: runtime.handleOpenGridParametersChange,
     onOpenGridDimensionCalculationInvalid:
       runtime.handleOpenGridDimensionCalculationInvalid,

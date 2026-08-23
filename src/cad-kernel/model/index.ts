@@ -67,6 +67,7 @@ export type KernelBuildContext = {
   getOpenGridSnapFixedFootprint?: (
     footprint: OpenGridSnapFixedFootprint,
   ) => Promise<Shape3D>
+  getOpenGridSnapOpenConnectHead?: () => Promise<Shape3D>
   getOpenGridSnapRemoverAsset?: () => Promise<Shape3D>
   getOpenGridDetachableCornerSeatReference?: () => Promise<Shape3D>
   getOpenGridDetachableCornerSeatHolderReference?: () => Promise<Shape3D>
@@ -226,6 +227,7 @@ async function buildOpenGridSnapModel(
   return buildOpenGridSnap(parameters, {
     getOpenGridSnapReference: context.getOpenGridSnapReference,
     getOpenGridSnapFixedFootprint: context.getOpenGridSnapFixedFootprint,
+    getOpenGridSnapOpenConnectHead: context.getOpenGridSnapOpenConnectHead,
     yieldToEventLoop: context.yieldToEventLoop,
     isGenerationCurrent: context.isGenerationCurrent,
     booleanOperations: context.booleanOperations,

@@ -25,6 +25,7 @@
     parameters: ModelParameterValues
     systemContext?: OpenGridSystemContext
     onOpenGridParametersChange: (parameters: OpenGridParameters) => void
+    onSystemContextChange: (context: OpenGridSystemContext | undefined) => void
     onOpenGridDimensionCalculationInvalid: () => void
   }
 
@@ -36,6 +37,7 @@
     rawParameters,
     fieldErrors,
     onInputChange,
+    onSystemContextChange,
     onOpenGridParametersChange,
     onOpenGridDimensionCalculationInvalid,
   }: Props = $props()
@@ -112,9 +114,11 @@
   <OpenGridSnapComponentPanel
     {locale}
     parameters={parameters as OpenGridSnapParameters}
+    {systemContext}
     {rawParameters}
     {fieldErrors}
     {onInputChange}
+    {onSystemContextChange}
   />
 {:else if modelId === 'opengrid-open-shelf'}
   <OpenGridOpenShelfComponentPanel

@@ -5,6 +5,7 @@ import {
   OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   normalizeOpenGridLocatingSeatMode,
+  isOpenGridSnapParameters,
   normalizePillarParameters,
   type ModelId,
   type ModelParameterValues,
@@ -46,6 +47,8 @@ export type ComponentParameterStore = {
   subscribe: (subscriber: Subscriber<ComponentParameterEntries>) => () => void
   get: (modelId: ModelId) => ModelParameterValues
   set: (modelId: ModelId, parameters: ModelParameterValues) => boolean
+  getSystemContext: () => OpenGridSystemContext | undefined
+  setSystemContext: (context: OpenGridSystemContext | undefined) => void
   dispose: () => void
 }
 
@@ -261,6 +264,36 @@ function validatedEntries(
   return entries
 }
 
+function normalizeSystemScopedEntries(
+  scope: StorageScope,
+  entries: ComponentParameterEntries,
+): ComponentParameterEntries {
+  if (scope !== 'wall') return entries
+  const snap = entries['opengrid-snap']
+  if (!snap || !isOpenGridSnapParameters(snap)) return entries
+  return {
+    ...entries,
+    'opengrid-snap': {
+      ...snap,
+      footprint: 'full',
+      fourCornerLocatingHoles: false,
+      centerRemoverHole: false,
+    },
+  }
+}
+
+function parametersForSystemScope(
+  scope: OpenGridSystemContext | undefined,
+  modelId: ModelId,
+  parameters: ModelParameterValues,
+): ModelParameterValues {
+  if (scope !== 'wall' || modelId !== 'opengrid-snap') return parameters
+  return (
+    normalizeSystemScopedEntries(scope, { [modelId]: parameters })[modelId] ??
+    parameters
+  )
+}
+
 function hydrateBuckets(
   storage: ComponentParameterStorage | null,
 ): ParameterBuckets {
@@ -281,10 +314,14 @@ function hydrateBuckets(
   const values = payload.values as Partial<
     Record<StorageScope, Record<string, unknown>>
   >
+  const wallEntries = normalizeSystemScopedEntries(
+    'wall',
+    validatedEntries(values.wall),
+  )
   return {
     legacy: validatedEntries(values.legacy),
     desk: validatedEntries(values.desk),
-    wall: validatedEntries(values.wall),
+    wall: wallEntries,
   }
 }
 
@@ -350,9 +387,10 @@ export function createComponentParameterStore(
 ): ComponentParameterStore {
   const storage =
     options.storage === undefined ? getBrowserStorage() : options.storage
-  const systemContext = options.systemContext
+  let activeContext = options.systemContext
+  const buckets = hydrateBuckets(storage)
   const state = writable<ComponentParameterEntries>(
-    hydrateBuckets(storage)[scopeKey(systemContext)],
+    buckets[scopeKey(activeContext)],
   )
   let skipInitialPersistence = true
   let disposed = false
@@ -362,7 +400,8 @@ export function createComponentParameterStore(
       skipInitialPersistence = false
       return
     }
-    persistEntries(storage, entries, systemContext)
+    buckets[scopeKey(activeContext)] = entries
+    persistEntries(storage, entries, activeContext)
   })
 
   const get = (modelId: ModelId): ModelParameterValues => {
@@ -370,8 +409,8 @@ export function createComponentParameterStore(
     const parameters = getStoreValue(state)[modelId]
     if (parameters) return cloneModelParameters(parameters)
 
-    const systemPreset = systemContext
-      ? getSystemPreset(modelId, systemContext)
+    const systemPreset = activeContext
+      ? getSystemPreset(modelId, activeContext)
       : undefined
     return cloneModelParameters(systemPreset ?? definition.defaultParameters)
   }
@@ -381,11 +420,28 @@ export function createComponentParameterStore(
     const validation = definition.validateParameters(parameters)
     if (!validation.valid) return false
 
+    const scopedParameters = parametersForSystemScope(
+      activeContext,
+      modelId,
+      validation.value.parameters,
+    )
     state.update((entries) => ({
       ...entries,
-      [modelId]: cloneModelParameters(validation.value.parameters),
+      [modelId]: cloneModelParameters(scopedParameters),
     }))
     return true
+  }
+
+  const getSystemContext = (): OpenGridSystemContext | undefined =>
+    activeContext
+
+  const setSystemContext = (
+    nextContext: OpenGridSystemContext | undefined,
+  ): void => {
+    if (activeContext === nextContext) return
+    activeContext = nextContext
+    skipInitialPersistence = true
+    state.set(buckets[scopeKey(activeContext)])
   }
 
   const dispose = () => {
@@ -398,6 +454,8 @@ export function createComponentParameterStore(
     subscribe: state.subscribe,
     get,
     set,
+    getSystemContext,
+    setSystemContext,
     dispose,
   }
 }

@@ -28,6 +28,11 @@ describe('CAD Worker error mapping', () => {
       'MODEL_ASSET_INVALID',
     ],
     [
+      'OPENGRID_SNAP_OPEN_CONNECT_HEAD_LOAD_FAILED',
+      'model.generate',
+      'MODEL_ASSET_INVALID',
+    ],
+    [
       'OPENGRID_DETACHABLE_CORNER_SEAT_REFERENCE_LOAD_FAILED',
       'model.generate',
       'MODEL_ASSET_INVALID',

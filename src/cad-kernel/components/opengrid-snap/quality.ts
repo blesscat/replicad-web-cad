@@ -1,6 +1,8 @@
 import {
+  deserializeShape,
   getOC,
   makeBox,
+  makeCompound,
   makeCylinder,
   measureVolume,
   Solid,
@@ -19,6 +21,12 @@ import {
   openGridSnapLocatingHoleCentersFor,
   openGridSnapProfileFor,
 } from './profile'
+import {
+  OPENGRID_SNAP_OPEN_CONNECT_HEAD_SOURCE_BOUNDS,
+  openGridSnapOpenConnectAnchorForXYTransform,
+  openGridSnapOpenConnectCompositeBounds,
+  openGridSnapOpenConnectHeadBoundsForAnchor,
+} from './openconnect'
 import type { MeshSnapshot } from '../../../cad-contract/messages'
 import type { MeshData } from '../../mesh'
 import { OPENGRID_SNAP_BOUNDARY_PROFILE } from './boundary'
@@ -991,6 +999,236 @@ function isBRepValid(shape: Shape3D): boolean {
   } finally {
     analyzer.delete()
   }
+}
+
+function solidBoundsFor(shape: Shape3D): ModelBounds[] {
+  const oc = getOC()
+  const explorer = new oc.TopExp_Explorer_2(
+    shape.wrapped,
+    oc.TopAbs_ShapeEnum.TopAbs_SOLID as unknown as TopAbs_ShapeEnum,
+    oc.TopAbs_ShapeEnum.TopAbs_SHAPE as unknown as TopAbs_ShapeEnum,
+  )
+  const bounds: ModelBounds[] = []
+  try {
+    while (explorer.More()) {
+      const solid = new Solid(oc.TopoDS.Solid_1(explorer.Current()))
+      try {
+        bounds.push(readBounds(solid))
+      } finally {
+        solid.delete()
+      }
+      explorer.Next()
+    }
+    return bounds
+  } finally {
+    explorer.delete()
+  }
+}
+
+function isOpenConnectHeadSolid(bounds: ModelBounds): boolean {
+  const sourceSpan = [
+    OPENGRID_SNAP_OPEN_CONNECT_HEAD_SOURCE_BOUNDS.max[0] -
+      OPENGRID_SNAP_OPEN_CONNECT_HEAD_SOURCE_BOUNDS.min[0],
+    OPENGRID_SNAP_OPEN_CONNECT_HEAD_SOURCE_BOUNDS.max[1] -
+      OPENGRID_SNAP_OPEN_CONNECT_HEAD_SOURCE_BOUNDS.min[1],
+    OPENGRID_SNAP_OPEN_CONNECT_HEAD_SOURCE_BOUNDS.max[2] -
+      OPENGRID_SNAP_OPEN_CONNECT_HEAD_SOURCE_BOUNDS.min[2],
+  ]
+  const actualSpan = [
+    bounds.max[0] - bounds.min[0],
+    bounds.max[1] - bounds.min[1],
+    bounds.max[2] - bounds.min[2],
+  ]
+  return actualSpan.every((span, index) => isClose(span, sourceSpan[index]!))
+}
+
+function baseAssemblyWithoutOpenConnectHead(shape: Shape3D): {
+  base: Shape3D
+  headBounds: ModelBounds
+} {
+  const oc = getOC()
+  const explorer = new oc.TopExp_Explorer_2(
+    shape.wrapped,
+    oc.TopAbs_ShapeEnum.TopAbs_SOLID as unknown as TopAbs_ShapeEnum,
+    oc.TopAbs_ShapeEnum.TopAbs_SHAPE as unknown as TopAbs_ShapeEnum,
+  )
+  const solids: Solid[] = []
+  let headBounds: ModelBounds | null = null
+  try {
+    while (explorer.More()) {
+      const solid = new Solid(oc.TopoDS.Solid_1(explorer.Current()))
+      const bounds = readBounds(solid)
+      if (isOpenConnectHeadSolid(bounds)) {
+        if (headBounds) {
+          deleteShape(solid)
+          throw new Error('OPENGRID_SNAP_OPEN_CONNECT_HEAD_DUPLICATE')
+        }
+        headBounds = bounds
+        deleteShape(solid)
+      } else {
+        solids.push(solid)
+      }
+      explorer.Next()
+    }
+  } catch (error) {
+    for (const solid of solids) deleteShape(solid)
+    throw error
+  } finally {
+    explorer.delete()
+  }
+
+  if (!headBounds || solids.length === 0) {
+    for (const solid of solids) deleteShape(solid)
+    throw new Error('OPENGRID_SNAP_OPEN_CONNECT_HEAD_MISSING')
+  }
+
+  const clonedSolids: Shape3D[] = []
+  try {
+    for (const solid of solids) {
+      clonedSolids.push(deserializeShape(solid.serialize()).asShape3D())
+    }
+    const base =
+      clonedSolids.length === 1
+        ? clonedSolids[0]
+        : makeCompound(clonedSolids).asShape3D()
+    if (!base) throw new Error('OPENGRID_SNAP_BASE_ASSEMBLY_MISSING')
+    return { base, headBounds }
+  } catch (error) {
+    for (const cloned of clonedSolids) deleteShape(cloned)
+    throw error
+  } finally {
+    for (const solid of solids) deleteShape(solid)
+  }
+}
+
+function openConnectExpectedBounds(
+  parameters: OpenGridSnapParameters,
+): ModelBounds {
+  return openGridSnapOpenConnectCompositeBounds(
+    boundsForOpenGridSnap(parameters),
+    parameters.variant,
+  )
+}
+
+export function inspectOpenGridSnapOpenConnectShapeQuality(
+  shape: Shape3D,
+  parameters: OpenGridSnapParameters,
+  mesh: MeshData | MeshSnapshot,
+  reference: Shape3D,
+): OpenGridSnapQualityReport {
+  const failures: string[] = []
+  const expectedBounds = openConnectExpectedBounds(parameters)
+  let bounds: ModelBounds | null = null
+  let solidCount: number | null = null
+  let baseReport: OpenGridSnapQualityReport | null = null
+  let baseAssembly: Shape3D | null = null
+
+  try {
+    const extracted = baseAssemblyWithoutOpenConnectHead(shape)
+    baseAssembly = extracted.base
+    const expectedHeadBounds = openGridSnapOpenConnectHeadBoundsForAnchor(
+      openGridSnapOpenConnectAnchorForXYTransform(
+        xyEnvelopeTransformFor(parameters, readBounds(reference)),
+        parameters.variant,
+      ),
+    )
+    if (!boundsMatch(extracted.headBounds, expectedHeadBounds, 0.45)) {
+      failures.push('openconnect:interface-placement')
+    }
+    baseReport = inspectOpenGridSnapShapeQuality(
+      baseAssembly,
+      { ...parameters, openConnect: false },
+      mesh,
+      reference,
+    )
+    failures.push(...baseReport.failures.map((failure) => `base:${failure}`))
+  } catch (error) {
+    failures.push(
+      `base:${error instanceof Error ? error.message : String(error)}`,
+    )
+  } finally {
+    deleteShape(baseAssembly)
+  }
+
+  try {
+    bounds = readAssemblyBounds(shape)
+    if (
+      !boundsMatch(
+        bounds,
+        expectedBounds,
+        OPENGRID_SNAP_GENERATED_ENVELOPE_TOLERANCE,
+      )
+    ) {
+      failures.push('openconnect:expected-envelope')
+    }
+  } catch (error) {
+    failures.push(
+      `openconnect:bounds:${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+
+  try {
+    solidCount = countSolids(shape)
+    const expectedSolidCount =
+      openGridSnapProfileFor(parameters.profile, parameters.variant)
+        .expectedSolidCount + 1
+    if (solidCount !== expectedSolidCount) {
+      failures.push('openconnect:expected-solid-count')
+    }
+    if (!solidBoundsFor(shape).some(isOpenConnectHeadSolid)) {
+      failures.push('openconnect:head-placement')
+    }
+  } catch (error) {
+    failures.push(
+      `openconnect:topology:${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+
+  try {
+    if (!isBRepValid(shape)) failures.push('openconnect:brep-invalid')
+  } catch (error) {
+    failures.push(
+      `openconnect:brep:${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+
+  if (mesh.triangleCount <= 0 || !meshIsFinite(mesh)) {
+    failures.push('mesh:empty-or-non-finite')
+  }
+
+  return {
+    passed: failures.length === 0,
+    failures,
+    bounds,
+    expectedBounds,
+    solidCount,
+    centralBounds: baseReport?.centralBounds ?? null,
+    centralVolume: baseReport?.centralVolume ?? null,
+    internalProbeVolumes: baseReport?.internalProbeVolumes ?? [],
+    optionalFeatureProbeVolumes: baseReport?.optionalFeatureProbeVolumes ?? [],
+    magnetHoleProbeVolumes: baseReport?.magnetHoleProbeVolumes ?? [],
+    meshTriangleCount: mesh.triangleCount,
+  }
+}
+
+export function assertOpenGridSnapOpenConnectShapeQuality(
+  shape: Shape3D,
+  parameters: OpenGridSnapParameters,
+  mesh: MeshData | MeshSnapshot,
+  reference: Shape3D,
+): OpenGridSnapQualityReport {
+  const report = inspectOpenGridSnapOpenConnectShapeQuality(
+    shape,
+    parameters,
+    mesh,
+    reference,
+  )
+  if (!report.passed) {
+    throw new Error(
+      `OPENGRID_SNAP_QUALITY_INVALID:${report.failures.join(';')}`,
+    )
+  }
+  return report
 }
 
 type XYEnvelopeTransform = {

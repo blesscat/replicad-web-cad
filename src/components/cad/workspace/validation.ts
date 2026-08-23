@@ -124,6 +124,7 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
       'footprint',
       'fourCornerLocatingHoles',
       'centerRemoverHole',
+      'openConnect',
       'magnetHoleShape',
       'magnetHoleLength',
       'magnetHoleWidth',
@@ -635,6 +636,7 @@ export function rawFromParameters(
       footprint: snapParameters.footprint,
       fourCornerLocatingHoles: String(snapParameters.fourCornerLocatingHoles),
       centerRemoverHole: String(snapParameters.centerRemoverHole),
+      openConnect: String(snapParameters.openConnect),
       magnetHoleShape: snapParameters.magnetHoleShape ?? 'none',
       magnetHoleLength: String(snapParameters.magnetHoleLength ?? 0),
       magnetHoleWidth: String(snapParameters.magnetHoleWidth ?? 0),
@@ -756,6 +758,9 @@ export function parseRawParameters(
     )
     if (!centerRemoverHole.valid) return centerRemoverHole
 
+    const openConnect = parseBooleanRawParameter(raw.openConnect, 'openConnect')
+    if (!openConnect.valid) return openConnect
+
     const magnetHoleShape = raw.magnetHoleShape ?? 'none'
     if (!isOpenGridSnapMagnetHoleShape(magnetHoleShape)) {
       return {
@@ -793,6 +798,7 @@ export function parseRawParameters(
       footprint,
       fourCornerLocatingHoles: fourCornerLocatingHoles.value,
       centerRemoverHole: centerRemoverHole.value,
+      openConnect: openConnect.value,
       magnetHoleShape,
       magnetHoleLength: magnetHoleLength.value,
       magnetHoleWidth: magnetHoleWidth.value,

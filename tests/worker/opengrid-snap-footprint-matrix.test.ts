@@ -78,6 +78,7 @@ describe('OpenGrid Snap footprint generation matrix', () => {
                   offset,
                   footprint,
                   ...features,
+                  openConnect: false,
                   magnetHoleShape: 'none',
                   magnetHoleLength: 0,
                   magnetHoleWidth: 0,

@@ -17,6 +17,7 @@ function parameters(
     footprint: 'full' | 'half' | 'quarter'
     fourCornerLocatingHoles: boolean
     centerRemoverHole: boolean
+    openConnect: boolean
   }> = {},
 ) {
   return {
@@ -26,6 +27,7 @@ function parameters(
     footprint: 'full' as const,
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
+    openConnect: false,
     magnetHoleShape: 'none' as const,
     magnetHoleLength: 0,
     magnetHoleWidth: 0,
@@ -105,6 +107,7 @@ describe('OpenGrid Snap footprint contract', () => {
       footprint: 'full',
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
+      openConnect: false,
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,

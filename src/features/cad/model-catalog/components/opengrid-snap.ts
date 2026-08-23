@@ -7,6 +7,7 @@ import {
   OPENGRID_SNAP_CONFIGURATION,
   validateOpenGridSnapParameters,
 } from '../../../../cad-contract/units'
+import { openGridSnapOpenConnectCompositeBounds } from '../../../../cad-kernel/components/opengrid-snap/openconnect'
 import type {
   FixedStepDownload,
   ModelDefinition,
@@ -124,7 +125,10 @@ function boundsForOpenGridSnapDefinition(parameters: ModelParameterValues) {
   if (!isOpenGridSnapParameters(parameters)) {
     throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
   }
-  return boundsForOpenGridSnap(parameters)
+  const snapBounds = boundsForOpenGridSnap(parameters)
+  return parameters.openConnect
+    ? openGridSnapOpenConnectCompositeBounds(snapBounds, parameters.variant)
+    : snapBounds
 }
 
 export const opengridSnapDefinition: ModelDefinition = {

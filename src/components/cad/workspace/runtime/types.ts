@@ -76,6 +76,7 @@ export type ModelGenerationHandlers = {
     reason: 'invalid-input' | 'superseded',
   ) => void
   handleInputChange: (key: ModelParameterKey, value: string) => void
+  handleParametersScopeChange: (parameters: ModelParameterValues) => void
   handleOpenGridParametersChange: (parameters: OpenGridParameters) => void
   handleOpenGridDimensionCalculationInvalid: () => void
 }

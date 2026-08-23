@@ -6,13 +6,18 @@ import {
   isOpenGridParameters,
   validateOpenGridGenerationSupport,
   validateOpenGridParameters,
+  validateModelParameters,
   type ModelId,
   type ModelParameterKey,
   type ModelParameterValues,
   type OpenGridParameters,
 } from '../../../../cad-contract/units'
 import { newOperationId } from '../../../../features/cad/worker-client'
-import { errorForInput, parseRawParameters } from '../validation'
+import {
+  errorForInput,
+  parseRawParameters,
+  rawFromParameters,
+} from '../validation'
 import type { ModelGenerationHandlers, RuntimeContext } from './types'
 
 function previewConfigForModel(modelId: ModelId) {
@@ -171,6 +176,50 @@ export function createModelGenerationHandlers(
     queueModelGeneration(modelId, parsed.value, generation)
   }
 
+  const handleParametersScopeChange = (
+    parameters: ModelParameterValues,
+  ): void => {
+    const modelId = context.refs.state.current.modelId
+    const generation = context.refs.latestGeneration.current + 1
+    context.refs.latestGeneration.current = generation
+    const validation = validateModelParameters(modelId, parameters)
+    if (!validation.valid) {
+      context.clearProgress()
+      const firstIssue = validation.issues[0] ?? {
+        field: 'parameters' as const,
+        messageId: 'validation.invalid',
+      }
+      context.setFieldErrors({ [firstIssue.field]: firstIssue })
+      context.dispatch({
+        type: 'input-invalid',
+        modelId,
+        input: context.refs.state.current.input,
+        generation,
+        error: errorForInput(firstIssue),
+      })
+      sendInvalidate(generation, 'invalid-input')
+      if (context.refs.debounce.current) {
+        clearTimeout(context.refs.debounce.current)
+        context.refs.debounce.current = null
+      }
+      return
+    }
+
+    const nextParameters = validation.value.parameters
+    context.refs.rawParameters.current = rawFromParameters(nextParameters)
+    context.setRawParameters(context.refs.rawParameters.current)
+    context.setPersistedParameters(modelId, nextParameters)
+    context.setFieldErrors({})
+    context.dispatch({
+      type: 'input-valid',
+      modelId,
+      input: nextParameters,
+      generation,
+    })
+    sendInvalidate(generation, 'superseded')
+    queueModelGeneration(modelId, nextParameters, generation)
+  }
+
   const handleOpenGridParametersChange = (
     parameters: OpenGridParameters,
   ): void => {
@@ -273,6 +322,7 @@ export function createModelGenerationHandlers(
     sendGenerate,
     sendInvalidate,
     handleInputChange,
+    handleParametersScopeChange,
     handleOpenGridParametersChange,
     handleOpenGridDimensionCalculationInvalid,
   }
