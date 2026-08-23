@@ -19,10 +19,17 @@ export const OPENGRID_SNAP_OPEN_CONNECT_NOTCH_HALF_WIDTH = 2.5
 export const OPENGRID_SNAP_OPEN_CONNECT_NOTCH_OUTER_Y = -13.5
 export const OPENGRID_SNAP_OPEN_CONNECT_NOTCH_INNER_Y = -10.605
 
+// The supplied Lite STL includes a 0.6 mm interface layer that this builder
+// intentionally omits. Keep the inferred notch aligned with the lowered head.
+const OPENGRID_SNAP_OPEN_CONNECT_LITE_REFERENCE_LIFT = 0.6
+
 const OPENGRID_SNAP_OPEN_CONNECT_NOTCH_Z_BOUNDS: Readonly<
   Record<OpenGridSnapVariant, readonly [number, number]>
 > = {
-  Lite: [2.605, 3.205],
+  Lite: [
+    2.605 - OPENGRID_SNAP_OPEN_CONNECT_LITE_REFERENCE_LIFT,
+    3.205 - OPENGRID_SNAP_OPEN_CONNECT_LITE_REFERENCE_LIFT,
+  ],
   Full: [4.605, 5.605],
 }
 

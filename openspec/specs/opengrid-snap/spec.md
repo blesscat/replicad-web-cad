@@ -144,8 +144,11 @@ The unchanged head MUST be composed at that position and MUST NOT receive the
 Snap's XY scale transform. Before head composition, every Standard and
 Directional result MUST receive the fixed negative-Y underside notch inferred
 from the supplied STL references. The notch MUST remove material from the Snap
-assembly without increasing its external height. Both Lite and Full heads MUST
-start directly at the selected Snap top.
+assembly without increasing its external height. When reference-only interface
+geometry is omitted, the notch's Z placement MUST retain its inferred position
+relative to the directly mounted head instead of retaining the reference's raw
+absolute Z coordinates. Both Lite and Full heads MUST start directly at the
+selected Snap top.
 
 #### Scenario: OpenConnect uses the supplied STEP size
 
@@ -158,6 +161,8 @@ start directly at the selected Snap top.
 - **AND** both variants MUST place the head directly at the selected Snap top
 - **AND** the selected Snap MUST contain the fixed negative-Y underside notch
   while neighboring support material remains present
+- **AND** the notch MUST retain material immediately above and below its
+  variant-specific Z interval
 - **AND** the STL reference MUST not add duplicate or unrelated production
   geometry
 

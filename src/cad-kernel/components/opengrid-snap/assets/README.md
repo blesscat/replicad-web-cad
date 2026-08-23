@@ -26,7 +26,10 @@ composes the STEP head directly on the selected Snap top. Before composition,
 the builder cuts an approximate 5 mm-wide negative-Y underside notch from the
 Snap assembly. The notch dimensions are inferred from the supplied STL
 references because no matching STEP/CAD source is available; the runtime does
-not add an interface layer or increase the selected Snap height.
+not add an interface layer or increase the selected Snap height. Because the
+Lite placement reference includes a 0.6 mm interface layer, its inferred notch
+is lowered by the same amount to preserve its placement relative to the
+directly mounted OpenConnect head.
 
 ## Upstream attribution and derived downloads
 

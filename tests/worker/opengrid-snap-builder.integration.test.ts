@@ -445,12 +445,12 @@ describe('OpenGrid Snap reference builder', () => {
   })
 
   it.each([
-    ['Standard', 'Lite', 2.605, 3.205],
+    ['Standard', 'Lite', 2.005, 2.605],
     ['Standard', 'Full', 4.605, 5.605],
-    ['Directional', 'Lite', 2.605, 3.205],
+    ['Directional', 'Lite', 2.005, 2.605],
     ['Directional', 'Full', 4.605, 5.605],
   ] as const)(
-    'cuts the fixed OpenConnect underside notch without raising %s %s',
+    'cuts the fixed OpenConnect underside notch at the head-relative Z for %s %s',
     async (profile, variant, notchMinZ, notchMaxZ) => {
       const reference = await importOpenGridSnapReference(
         assetBlob(variant, profile),
@@ -482,6 +482,16 @@ describe('OpenGrid Snap reference builder', () => {
           [3, -11.9, notchMinZ + 0.1],
           [4, -10.8, notchMaxZ - 0.1],
         )
+        const materialBelowNotchProbe = volumeInBox(
+          generated,
+          [-2, -11, notchMinZ - 0.3],
+          [2, -10.8, notchMinZ - 0.1],
+        )
+        const materialAboveNotchProbe = volumeInBox(
+          generated,
+          [-2, -11, notchMaxZ + 0.1],
+          [2, -10.8, notchMaxZ + 0.3],
+        )
         const expectedMaxZ =
           (variant === 'Lite' ? 3.4 : 6.8) +
           (openGridSnapOpenConnectHeadBounds(variant).max[2] -
@@ -489,6 +499,8 @@ describe('OpenGrid Snap reference builder', () => {
 
         expect(notchProbe).toBeLessThan(0.01)
         expect(neighboringMaterialProbe).toBeGreaterThan(0.05)
+        expect(materialBelowNotchProbe).toBeGreaterThan(0.05)
+        expect(materialAboveNotchProbe).toBeGreaterThan(0.05)
         expect(shapeBounds(generated)[1]?.[2]).toBeCloseTo(expectedMaxZ, 2)
         expect(countSolids(generated)).toBe(
           openGridSnapProfileFor(profile, variant).expectedSolidCount + 1,
