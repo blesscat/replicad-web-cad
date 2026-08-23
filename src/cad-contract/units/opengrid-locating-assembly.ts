@@ -176,6 +176,15 @@ function detachableCornerSeatApexDirectionFor(
   return [0, -1]
 }
 
+function detachableCornerSeatOppositeRotationFor(
+  rotationDegrees: OpenGridDetachableCornerSeatRotation,
+): OpenGridDetachableCornerSeatRotation {
+  if (rotationDegrees === 0) return 180
+  if (rotationDegrees === 90) return 270
+  if (rotationDegrees === 180) return 0
+  return 90
+}
+
 function detachableCornerSeatIndicatorRotationFor(
   socketRotation: OpenGridDetachableCornerSeatRotation,
   directionOffset: 0 | 180,
@@ -221,7 +230,7 @@ export function openGridDetachableCornerSeatIndicatorPlacementFor(
         center[0] + direction[0] * offsetFromSocket,
         center[1] + direction[1] * offsetFromSocket,
       ],
-      rotationDegrees: socketRotation,
+      rotationDegrees: detachableCornerSeatOppositeRotationFor(socketRotation),
     }
   }
 
