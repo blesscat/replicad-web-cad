@@ -15,22 +15,38 @@ export const OPENGRID_SNAP_OPEN_CONNECT_HEAD_TRANSLATION: readonly [
   number,
 ] = [0, 0, OPENGRID_SNAP_CONFIGURATION.variantHeights.Lite]
 
-export const OPENGRID_SNAP_OPEN_CONNECT_NOTCH_HALF_WIDTH = 2.5
-export const OPENGRID_SNAP_OPEN_CONNECT_NOTCH_OUTER_Y = -13.5
-export const OPENGRID_SNAP_OPEN_CONNECT_NOTCH_INNER_Y = -10.605
+export type OpenGridSnapOpenConnectNotchSegment = {
+  min: readonly [number, number, number]
+  max: readonly [number, number, number]
+}
 
-// The supplied Lite STL includes a 0.6 mm interface layer that this builder
-// intentionally omits. Keep the inferred notch aligned with the lowered head.
-const OPENGRID_SNAP_OPEN_CONNECT_LITE_REFERENCE_LIFT = 0.6
-
-const OPENGRID_SNAP_OPEN_CONNECT_NOTCH_Z_BOUNDS: Readonly<
-  Record<OpenGridSnapVariant, readonly [number, number]>
+const OPENGRID_SNAP_OPEN_CONNECT_NOTCH_SEGMENTS: Readonly<
+  Record<OpenGridSnapVariant, readonly OpenGridSnapOpenConnectNotchSegment[]>
 > = {
   Lite: [
-    2.605 - OPENGRID_SNAP_OPEN_CONNECT_LITE_REFERENCE_LIFT,
-    3.205 - OPENGRID_SNAP_OPEN_CONNECT_LITE_REFERENCE_LIFT,
+    {
+      min: [-2.5, -12.4, 2.605],
+      max: [2.5, -11.7, OPENGRID_SNAP_CONFIGURATION.variantHeights.Lite],
+    },
+    {
+      min: [-2.5, -11.1, 2.605],
+      max: [2.5, -10.605, OPENGRID_SNAP_CONFIGURATION.variantHeights.Lite],
+    },
   ],
-  Full: [4.605, 5.605],
+  Full: [
+    {
+      min: [-2.5, -12.8, 4.5],
+      max: [2.5, -11.7, 5.6],
+    },
+    {
+      min: [-2.5, -11.1, 4.5],
+      max: [2.5, -10.605, 5.5],
+    },
+    {
+      min: [-2.5, -12.4, 6],
+      max: [2.5, -11.4, OPENGRID_SNAP_CONFIGURATION.variantHeights.Full],
+    },
+  ],
 }
 
 // The supplied STEP is authored opposite to the assembled placement reference.
@@ -118,19 +134,18 @@ export function openGridSnapOpenConnectHeadBoundsForAnchor(
 export function openGridSnapOpenConnectNotchBoundsFor(
   variant: OpenGridSnapVariant,
 ): ModelBounds {
-  const [minZ, maxZ] = OPENGRID_SNAP_OPEN_CONNECT_NOTCH_Z_BOUNDS[variant]
+  const segment = openGridSnapOpenConnectNotchSegmentsFor(variant)[0]
+  if (!segment) throw new Error('OPENGRID_SNAP_OPEN_CONNECT_NOTCH_EMPTY')
   return {
-    min: [
-      -OPENGRID_SNAP_OPEN_CONNECT_NOTCH_HALF_WIDTH,
-      OPENGRID_SNAP_OPEN_CONNECT_NOTCH_OUTER_Y,
-      minZ,
-    ],
-    max: [
-      OPENGRID_SNAP_OPEN_CONNECT_NOTCH_HALF_WIDTH,
-      OPENGRID_SNAP_OPEN_CONNECT_NOTCH_INNER_Y,
-      maxZ,
-    ],
+    min: [segment.min[0], segment.min[1], segment.min[2]],
+    max: [segment.max[0], segment.max[1], segment.max[2]],
   }
+}
+
+export function openGridSnapOpenConnectNotchSegmentsFor(
+  variant: OpenGridSnapVariant,
+): readonly OpenGridSnapOpenConnectNotchSegment[] {
+  return OPENGRID_SNAP_OPEN_CONNECT_NOTCH_SEGMENTS[variant]
 }
 
 export function openGridSnapOpenConnectHeadBounds(

@@ -21,15 +21,17 @@ these assets outside the local repository.
 The supplied `openConnect_Snap_Directional_Lite(1).stl`,
 `openConnect_Snap_Directional_Standard(1).stl`, and
 `openConnect_Snap_Symmetric_Standard.stl` are placement/topology references
-only and are not loaded by the runtime. The full-footprint builder always
-composes the STEP head directly on the selected Snap top. Before composition,
+only and are not loaded by the runtime. Full-footprint builds compose the STEP
+head directly on the selected Snap top only when `openConnect=true` (the Wall
+system preset enables it; the Desk preset does not). Before that composition,
 the builder cuts an approximate 5 mm-wide negative-Y underside notch from the
-Snap assembly. The notch dimensions are inferred from the supplied STL
-references because no matching STEP/CAD source is available; the runtime does
-not add an interface layer or increase the selected Snap height. Because the
-Lite placement reference includes a 0.6 mm interface layer, its inferred notch
-is lowered by the same amount to preserve its placement relative to the
-directly mounted OpenConnect head.
+Snap assembly. The notch follows the supplied Directional Full STEP's stepped,
+multi-segment profile rather than a single rectangular cut; the STL references
+provide the corresponding Lite/profile placement evidence. The runtime does
+not add an interface layer or increase the selected Snap height. The upper
+notch segment(s) reach the selected Snap top while the intermediate support
+step remains; for Lite, the reference STL's interface layer is omitted from
+the runtime geometry.
 
 ## Upstream attribution and derived downloads
 

@@ -530,8 +530,11 @@ export function normalizeOpenGridSnapParameters(value: unknown): unknown {
     normalized.magnetHoleThickness = 0
   }
   if (Object.prototype.hasOwnProperty.call(normalized, 'footprint')) {
-    if (typeof normalized.openConnect === 'boolean') {
-      normalized.openConnect = normalized.footprint === 'full'
+    if (
+      typeof normalized.openConnect === 'boolean' &&
+      normalized.footprint !== 'full'
+    ) {
+      normalized.openConnect = false
     }
     return normalized
   }
@@ -556,9 +559,7 @@ export function normalizeOpenGridSnapParameters(value: unknown): unknown {
     ...withoutLegacyAxes
   } = normalized
   const openConnect =
-    typeof normalized.openConnect === 'boolean'
-      ? legacyFootprint === 'full'
-      : normalized.openConnect
+    legacyFootprint === 'full' ? normalized.openConnect : false
   return {
     ...withoutLegacyAxes,
     footprint: legacyFootprint,
@@ -660,9 +661,7 @@ export function openGridSnapStlFileName(
 function openGridSnapOpenConnectFileNameSuffix(
   parameters: OpenGridSnapParameters,
 ): string {
-  return parameters.footprint === 'full' || parameters.openConnect
-    ? '-openconnect'
-    : ''
+  return parameters.openConnect ? '-openconnect' : ''
 }
 
 function openGridSnapMagnetFileNameSuffix(

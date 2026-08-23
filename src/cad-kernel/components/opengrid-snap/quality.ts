@@ -26,7 +26,7 @@ import {
   openGridSnapOpenConnectAnchorForXYTransform,
   openGridSnapOpenConnectCompositeBounds,
   openGridSnapOpenConnectHeadBoundsForAnchor,
-  openGridSnapOpenConnectNotchBoundsFor,
+  openGridSnapOpenConnectNotchSegmentsFor,
 } from './openconnect'
 import type { MeshSnapshot } from '../../../cad-contract/messages'
 import type { MeshData } from '../../mesh'
@@ -1111,21 +1111,21 @@ function openConnectExpectedBounds(
   )
 }
 
-function openConnectNotchProbeFor(
+function openConnectNotchProbesFor(
   parameters: OpenGridSnapParameters,
   reference: Shape3D,
-): Probe {
-  const notchBounds = openGridSnapOpenConnectNotchBoundsFor(parameters.variant)
-  const sourceProbe: Probe = {
-    min: [notchBounds.min[0] + 0.5, -11.9, notchBounds.min[2] + 0.1],
-    max: [
-      notchBounds.max[0] - 0.5,
-      notchBounds.max[1] - 0.195,
-      notchBounds.max[2] - 0.1,
-    ],
-  }
+): Probe[] {
   const transform = xyEnvelopeTransformFor(parameters, readBounds(reference))
-  return transformProbeXY(sourceProbe, transform)
+  return openGridSnapOpenConnectNotchSegmentsFor(parameters.variant).map(
+    ({ min, max }) =>
+      transformProbeXY(
+        {
+          min: [min[0] + 0.5, min[1] + 0.1, min[2] + 0.1],
+          max: [max[0] - 0.5, max[1] - 0.1, max[2] - 0.1],
+        },
+        transform,
+      ),
+  )
 }
 
 export function inspectOpenGridSnapOpenConnectShapeQuality(
@@ -1169,11 +1169,10 @@ export function inspectOpenGridSnapOpenConnectShapeQuality(
   }
 
   try {
-    const notchVolume = volumeInProbe(
-      shape,
-      openConnectNotchProbeFor(parameters, reference),
+    const notchVolumes = openConnectNotchProbesFor(parameters, reference).map(
+      (probe) => volumeInProbe(shape, probe),
     )
-    if (notchVolume > 0.02) {
+    if (notchVolumes.some((volume) => volume > 0.02)) {
       failures.push('openconnect:underside-notch-missing')
     }
   } catch (error) {

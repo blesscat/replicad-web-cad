@@ -279,7 +279,7 @@ describe('OpenGrid Snap Worker runtime', () => {
       generateCommand(
         snapParameters('Full', 0.2, 'full', {
           profile: 'Directional',
-          openConnect: false,
+          openConnect: true,
         }),
       ),
     )
@@ -297,6 +297,25 @@ describe('OpenGrid Snap Worker runtime', () => {
       kind: 'worker.dispose' as const,
     })
     expect(head.delete).toHaveBeenCalledOnce()
+  })
+
+  it('quality-gates a full Snap without OpenConnect as a plain Snap', async () => {
+    const runtime = new CadWorkerRuntime(
+      'epoch-snap-without-openconnect',
+      () => undefined,
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(
+      generateCommand(
+        snapParameters('Lite', 0, 'full', { openConnect: false }),
+      ),
+    )
+
+    expect(mocks.assertOpenGridSnapShapeQuality).toHaveBeenCalledOnce()
+    expect(
+      mocks.assertOpenGridSnapOpenConnectShapeQuality,
+    ).not.toHaveBeenCalled()
+    expect(mocks.loadOpenGridSnapOpenConnectHead).not.toHaveBeenCalled()
   })
 
   it('removes a failed reference promise so the next generation can retry', async () => {

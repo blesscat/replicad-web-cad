@@ -192,6 +192,7 @@ describe('component parameter store', () => {
       offset: 0.2,
       fourCornerLocatingHoles: true,
       centerRemoverHole: true,
+      openConnect: false,
     }
     const wallParameters = {
       ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
@@ -212,6 +213,31 @@ describe('component parameter store', () => {
     expect(store.get('opengrid-snap')).toEqual(deskParameters)
     store.setSystemContext('wall')
     expect(store.get('opengrid-snap')).toEqual(wallParameters)
+    store.dispose()
+  })
+
+  it('removes OpenConnect from previously saved Desk Snap values', () => {
+    const savedDeskSnap = {
+      ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
+      openConnect: true,
+    }
+    const storage = createMemoryStorage(
+      createPayload(
+        {
+          desk: { 'opengrid-snap': savedDeskSnap },
+        },
+        2,
+      ),
+    )
+    const store = createComponentParameterStore({
+      storage,
+      systemContext: 'desk',
+    })
+
+    expect(store.get('opengrid-snap')).toMatchObject({
+      footprint: 'full',
+      openConnect: false,
+    })
     store.dispose()
   })
 
@@ -284,7 +310,7 @@ describe('component parameter store', () => {
       footprint: 'full',
       fourCornerLocatingHoles: true,
       centerRemoverHole: true,
-      openConnect: true,
+      openConnect: false,
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,

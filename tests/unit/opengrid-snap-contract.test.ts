@@ -120,7 +120,7 @@ describe('OpenGrid Snap contract', () => {
     ).toMatchObject({ valid: false })
   })
 
-  it('normalizes legacy full snapshots with fixed OpenConnect enabled', async () => {
+  it('preserves explicit OpenConnect state while normalizing legacy snapshots', async () => {
     const { normalizeOpenGridSnapParameters } =
       await import('../../src/cad-contract/units')
     const legacy = parameters()
@@ -132,7 +132,7 @@ describe('OpenGrid Snap contract', () => {
 
     expect(
       normalizeOpenGridSnapParameters({ ...legacy, openConnect: false }),
-    ).toMatchObject({ openConnect: true })
+    ).toMatchObject({ openConnect: false })
 
     expect(
       normalizeOpenGridSnapParameters({
@@ -252,11 +252,17 @@ describe('OpenGrid Snap contract', () => {
     expect(openGridSnapStlFileName(round)).toContain('-magnet-round-d8-t2.stl')
   })
 
-  it('distinguishes every Full export as OpenConnect-equipped', () => {
+  it('adds the OpenConnect suffix only to enabled full exports', () => {
     const input = parameters({ openConnect: false })
 
-    expect(openGridSnapFileName(input)).toContain('-openconnect')
-    expect(openGridSnapStlFileName(input)).toContain('-openconnect')
+    expect(openGridSnapFileName(input)).not.toContain('-openconnect')
+    expect(openGridSnapStlFileName(input)).not.toContain('-openconnect')
+    expect(openGridSnapFileName({ ...input, openConnect: true })).toContain(
+      '-openconnect',
+    )
+    expect(openGridSnapStlFileName({ ...input, openConnect: true })).toContain(
+      '-openconnect',
+    )
   })
 
   it('uses fixed STEP filenames for half and quarter downloads', () => {

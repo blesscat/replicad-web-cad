@@ -14,10 +14,11 @@ parameter snapshot MUST contain exactly `variant`, `profile`, `offset`,
 `magnetHoleDiameter`, and `magnetHoleThickness`. `variant` MUST be `Full` or
 `Lite`; `profile` MUST be `Standard` or `Directional`; and `footprint` MUST be
 `full`, `half`, or `quarter`. `openConnect` MUST remain boolean for
-persistence and request compatibility. After normalization, it MUST be `true`
-for every full-footprint snapshot and `false` for `half` or `quarter`.
-Incoming full-footprint snapshots that omit `openConnect` or carry `false`
-MUST be normalized to the fixed-on value. The selected profile and variant
+persistence and request compatibility. After normalization, it MUST preserve
+the explicit boolean for a full-footprint snapshot and MUST be `false` for
+`half` or `quarter`. Incoming full-footprint snapshots that omit
+`openConnect` MUST use the default `true`; an explicit `false` MUST remain
+false. The selected profile and variant
 MUST be used without substituting a Directional profile for a Standard
 profile. `magnetHoleShape` MUST be `none`, `square`, or `round`. When the shape
 is `none`, all four magnet dimensions MUST be zero and the magnet feature MUST
@@ -39,19 +40,28 @@ direction-specific/diagonal fields. The OpenGrid board MAY continue to use its
 own `halfCellX` and `halfCellY` contract. The existing `opengrid-snap` modelId,
 buildKey, and route MUST remain unchanged. A zero-offset, full-footprint
 Standard snapshot with all features disabled MUST use the repository-owned
-Bare Standard reference or its equivalent programmatic baseline and MUST
-include the fixed OpenConnect composition.
+Bare Standard reference or its equivalent programmatic baseline. When
+`openConnect=true`, it MUST include the fixed OpenConnect composition; when
+`openConnect=false`, it MUST remain a Snap-only result.
 
 #### Scenario: Valid full-footprint Standard snapshot
 
 - **WHEN** a persisted or imported full-footprint Standard snapshot has
   `variant=Full`, `offset=0`, all optional body features disabled, and
-  `openConnect` is `false` or absent
-- **THEN** normalization MUST produce a valid snapshot with `openConnect=true`
+  `openConnect=true`
+- **THEN** normalization MUST preserve `openConnect=true`
 - **AND** generation MUST select the Full Bare Standard baseline and include
   the OpenConnect composition
 - **AND** the body MUST remain solid except for fixed geometry already present
   in the source profile
+
+#### Scenario: Valid full-footprint Snap without OpenConnect
+
+- **WHEN** a full-footprint Snap snapshot explicitly sets `openConnect=false`
+- **THEN** normalization and validation MUST preserve the disabled state
+- **AND** generation MUST return the selected Snap assembly without loading or
+  composing the OpenConnect head or underside notch
+- **AND** the result's external height MUST remain the selected Snap height
 
 #### Scenario: Valid OpenConnect profile and variant matrix
 
@@ -114,11 +124,11 @@ include the fixed OpenConnect composition.
   `snap-quarter.step` asset without an OpenConnect head
 - **AND** the fixed result MUST fit both 14 mm host axes
 
-#### Scenario: Legacy Snap snapshots normalize OpenConnect on
+#### Scenario: Legacy Snap snapshots default OpenConnect on when absent
 
 - **WHEN** a persisted or imported full-footprint Snap snapshot predates the
-  `openConnect` field or explicitly stores it as `false`
-- **THEN** normalization MUST add or replace the field with `openConnect=true`
+  `openConnect` field
+- **THEN** normalization MUST add the field with `openConnect=true`
 - **AND** the normalized snapshot MUST remain compatible with the existing
   generation and export contract
 
@@ -133,7 +143,7 @@ include the fixed OpenConnect composition.
 
 ### Requirement: OpenConnect reference geometry and composition
 
-Every valid full-footprint Snap MUST load the repository-owned
+Every valid full-footprint Snap with `openConnect=true` MUST load the repository-owned
 `openConnect_head.step` geometry as the production OpenConnect head. The head's
 source dimensions and Z geometry MUST remain unchanged; the supplied STL
 references MAY serve as placement evidence but MUST NOT be treated as a second
@@ -143,26 +153,25 @@ OpenConnect interface position MUST then be derived from that adjusted Snap.
 The unchanged head MUST be composed at that position and MUST NOT receive the
 Snap's XY scale transform. Before head composition, every Standard and
 Directional result MUST receive the fixed negative-Y underside notch inferred
-from the supplied STL references. The notch MUST remove material from the Snap
-assembly without increasing its external height. When reference-only interface
-geometry is omitted, the notch's Z placement MUST retain its inferred position
-relative to the directly mounted head instead of retaining the reference's raw
-absolute Z coordinates. Both Lite and Full heads MUST start directly at the
-selected Snap top.
+from the supplied STEP reference and supporting STL references. The notch MUST
+be a variant-specific stepped, multi-segment profile rather than a single
+rectangular cut: its lower pockets MUST leave the central step/support profile
+visible, while the top-reaching segment or segments reach the selected Snap
+top. It MUST remove material without increasing the external height. Both Lite
+and Full heads MUST start directly at the selected Snap top.
 
 #### Scenario: OpenConnect uses the supplied STEP size
 
-- **WHEN** a valid full-footprint Snap selects any Standard or Directional
-  profile and either variant
+- **WHEN** a valid full-footprint Snap with `openConnect=true` selects any
+  Standard or Directional profile and either variant
 - **THEN** the generated result MUST contain the selected Snap assembly and
   the OpenConnect head from the repository-owned STEP source
 - **AND** the head's measurable source dimensions MUST match the STEP source
   within the configured CAD tolerance
 - **AND** both variants MUST place the head directly at the selected Snap top
-- **AND** the selected Snap MUST contain the fixed negative-Y underside notch
-  while neighboring support material remains present
-- **AND** the notch MUST retain material immediately above and below its
-  variant-specific Z interval
+- **AND** the selected Snap MUST contain the supplied STEP's stepped
+  negative-Y underside notch through its top while neighboring support material
+  and material below the notch remain present
 - **AND** the STL reference MUST not add duplicate or unrelated production
   geometry
 
@@ -189,20 +198,21 @@ selected Snap top.
 
 ### Requirement: OpenConnect quality and committed export metadata
 
-Before committing a full-footprint OpenConnect candidate, the Worker MUST
-verify that the selected Snap assembly, fixed underside notch, and OpenConnect
-head are present, the head remains within its source geometry tolerance, the
-final interface placement is valid, the combined result has valid B-Rep
-geometry, and the committed mesh is finite and non-empty. Every full-footprint
-STEP and STL filename MUST identify the fixed OpenConnect composition so that
-it cannot be confused with an OpenConnect-free full export. A failed
-OpenConnect quality check MUST discard the candidate and keep STEP/STL export
-disabled for that generation.
+Before committing a full-footprint candidate, the Worker MUST verify that the
+selected Snap assembly, fixed underside notch, and OpenConnect head are
+present when `openConnect=true`, the head remains within its source geometry
+tolerance, the final interface placement is valid, the result has valid B-Rep
+geometry, and the committed mesh is finite and non-empty. Every
+OpenConnect-enabled full-footprint STEP and STL filename MUST identify the
+composition. An OpenConnect-free full-footprint candidate MUST use the plain
+Snap quality path and export without the OpenConnect suffix. A failed quality
+check MUST discard the candidate and keep STEP/STL export disabled for that
+generation.
 
 #### Scenario: Valid OpenConnect candidate becomes exportable
 
-- **WHEN** a full-footprint candidate passes source-geometry, interface,
-  assembly, B-Rep, mesh, and generation checks
+- **WHEN** an OpenConnect-enabled full-footprint candidate passes
+  source-geometry, interface, assembly, B-Rep, mesh, and generation checks
 - **THEN** it MAY be committed
 - **AND** the viewport, STEP export, and STL export MUST refer to the same
   committed revision
@@ -217,6 +227,14 @@ disabled for that generation.
 - **AND** the previous committed preview MAY remain visible but MUST be marked
   stale
 - **AND** STEP/STL export MUST remain disabled for the failed generation
+
+#### Scenario: OpenConnect-free full candidate uses Snap quality
+
+- **WHEN** a full-footprint candidate has `openConnect=false`
+- **THEN** the Worker MUST quality-check the Snap assembly without requiring
+  the OpenConnect head or underside notch
+- **AND** a valid candidate MUST remain exportable with filenames that omit the
+  OpenConnect suffix
 
 ### Requirement: Central magnet pocket geometry
 

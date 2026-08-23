@@ -40,7 +40,7 @@ import {
   OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_DEGREES,
   OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_ORIGIN,
   openGridSnapOpenConnectAnchorForXYTransform,
-  openGridSnapOpenConnectNotchBoundsFor,
+  openGridSnapOpenConnectNotchSegmentsFor,
   type OpenGridSnapOpenConnectAnchor,
 } from './openconnect'
 
@@ -1125,18 +1125,41 @@ function placeOpenConnectHead(
   }
 }
 
-function makeOpenConnectUndersideNotch(
+function makeOpenConnectUndersideNotches(
   variant: OpenGridSnapVariant,
   transform: XYScaleTransform | null,
-): Shape3D {
-  const bounds = openGridSnapOpenConnectNotchBoundsFor(variant)
-  const cutter = makeBox(bounds.min, bounds.max)
-  if (!transform) return cutter
+): Shape3D[] {
+  const cutters = openGridSnapOpenConnectNotchSegmentsFor(variant).map(
+    ({ min, max }) =>
+      makeBox([min[0], min[1], min[2]], [max[0], max[1], max[2]]),
+  )
+  if (!transform) return cutters
 
   try {
-    return transformShapeXY(cutter, transform)
+    return cutters.map((cutter) => transformShapeXY(cutter, transform))
   } finally {
-    deleteShape(cutter)
+    cutters.forEach(deleteShape)
+  }
+}
+
+function cutOpenConnectUndersideNotches(
+  assembly: Shape3D,
+  variant: OpenGridSnapVariant,
+  transform: XYScaleTransform | null,
+  scope: BooleanOperationScope | undefined,
+): Shape3D {
+  const cutters = makeOpenConnectUndersideNotches(variant, transform)
+  let result = assembly
+  try {
+    for (const cutter of cutters) {
+      result = cutShape(result, cutter, scope)
+    }
+    return result
+  } catch (error) {
+    deleteShape(result)
+    throw error
+  } finally {
+    cutters.forEach(deleteShape)
   }
 }
 
@@ -1202,9 +1225,7 @@ export async function buildOpenGridSnap(
   )
 
   if (parameters.footprint === 'full') {
-    if (!parameters.openConnect && !context.getOpenGridSnapOpenConnectHead) {
-      return assembly
-    }
+    if (!parameters.openConnect) return assembly
     if (!context.getOpenGridSnapOpenConnectHead) {
       deleteShape(assembly)
       throw new Error('OPENGRID_SNAP_OPEN_CONNECT_HEAD_MISSING')
@@ -1219,10 +1240,13 @@ export async function buildOpenGridSnap(
       parameters.offset > 0
         ? xyScaleTransformFor(reference, targetBounds, definition)
         : null
-    const notchedAssembly = cutShape(
+    const notchedAssembly = cutOpenConnectUndersideNotches(
       assembly,
-      makeOpenConnectUndersideNotch(parameters.variant, notchTransform),
-      context.booleanOperations?.createScope(1),
+      parameters.variant,
+      notchTransform,
+      context.booleanOperations?.createScope(
+        openGridSnapOpenConnectNotchSegmentsFor(parameters.variant).length,
+      ),
     )
     return composeOpenConnectAssembly(
       notchedAssembly,

@@ -268,9 +268,18 @@ function normalizeSystemScopedEntries(
   scope: StorageScope,
   entries: ComponentParameterEntries,
 ): ComponentParameterEntries {
-  if (scope !== 'wall') return entries
   const snap = entries['opengrid-snap']
   if (!snap || !isOpenGridSnapParameters(snap)) return entries
+  if (scope === 'desk') {
+    return {
+      ...entries,
+      'opengrid-snap': {
+        ...snap,
+        openConnect: false,
+      },
+    }
+  }
+  if (scope !== 'wall') return entries
   return {
     ...entries,
     'opengrid-snap': {
@@ -288,7 +297,7 @@ function parametersForSystemScope(
   modelId: ModelId,
   parameters: ModelParameterValues,
 ): ModelParameterValues {
-  if (scope !== 'wall' || modelId !== 'opengrid-snap') return parameters
+  if (!scope || modelId !== 'opengrid-snap') return parameters
   return (
     normalizeSystemScopedEntries(scope, { [modelId]: parameters })[modelId] ??
     parameters
@@ -315,13 +324,17 @@ function hydrateBuckets(
   const values = payload.values as Partial<
     Record<StorageScope, Record<string, unknown>>
   >
+  const deskEntries = normalizeSystemScopedEntries(
+    'desk',
+    validatedEntries(values.desk),
+  )
   const wallEntries = normalizeSystemScopedEntries(
     'wall',
     validatedEntries(values.wall),
   )
   return {
     legacy: validatedEntries(values.legacy),
-    desk: validatedEntries(values.desk),
+    desk: deskEntries,
     wall: wallEntries,
   }
 }

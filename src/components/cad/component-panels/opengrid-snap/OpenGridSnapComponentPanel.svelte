@@ -177,7 +177,10 @@
     if (isWallSystem) return
     const footprint = event.currentTarget.value as OpenGridSnapFootprint
     onInputChange('footprint', footprint)
-    onInputChange('openConnect', String(footprint === 'full'))
+    onInputChange(
+      'openConnect',
+      String(systemContext !== 'desk' && footprint === 'full'),
+    )
     if (footprint !== 'full') {
       onInputChange('offset', String(offsetField.defaultValue))
       onInputChange('fourCornerLocatingHoles', 'false')

@@ -27,7 +27,10 @@ import {
 } from '../cad-kernel/components/opengrid-locating-assembly/reference'
 import { buildModelBRep, type KernelBuildContext } from '../cad-kernel/model'
 import { assertOpenGridShapeQuality } from '../cad-kernel/components/opengrid/quality'
-import { assertOpenGridSnapOpenConnectShapeQuality } from '../cad-kernel/components/opengrid-snap/quality'
+import {
+  assertOpenGridSnapOpenConnectShapeQuality,
+  assertOpenGridSnapShapeQuality,
+} from '../cad-kernel/components/opengrid-snap/quality'
 import { assertOpenGridDividerShapeQuality } from '../cad-kernel/components/opengrid-divider/quality'
 import { assertPillarShapeQuality } from '../cad-kernel/components/opengrid-pillar/quality'
 import { assertOpenGridOpenShelfShapeQuality } from '../cad-kernel/components/opengrid-open-shelf/quality'
@@ -473,14 +476,23 @@ export class CadWorkerRuntime {
             generationParameters.variant,
             generationParameters.profile,
           )
-          timing.measureSync('quality', () =>
-            assertOpenGridSnapOpenConnectShapeQuality(
+          timing.measureSync('quality', () => {
+            if (generationParameters.openConnect) {
+              assertOpenGridSnapOpenConnectShapeQuality(
+                shape,
+                generationParameters,
+                mesh,
+                reference,
+              )
+              return
+            }
+            assertOpenGridSnapShapeQuality(
               shape,
               generationParameters,
               mesh,
               reference,
-            ),
-          )
+            )
+          })
         }
       }
 

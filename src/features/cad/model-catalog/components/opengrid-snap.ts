@@ -129,7 +129,7 @@ function boundsForOpenGridSnapDefinition(parameters: ModelParameterValues) {
     throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
   }
   const snapBounds = boundsForOpenGridSnap(parameters)
-  return parameters.footprint === 'full'
+  return parameters.footprint === 'full' && parameters.openConnect
     ? openGridSnapOpenConnectCompositeBounds(snapBounds, parameters.variant)
     : snapBounds
 }
