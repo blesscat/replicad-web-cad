@@ -108,6 +108,11 @@ export function getSystemPreset(
       boardParameters.chamfers = 'none'
       boardParameters.screwMode = 'none'
     }
+    if (context === 'wall') {
+      boardParameters.variant = 'Full'
+      boardParameters.rows = 4
+      boardParameters.columns = 4
+    }
     return cloneModelParameters(boardParameters)
   }
   if (context === 'desk' && modelId === 'opengrid-stackable-box') {

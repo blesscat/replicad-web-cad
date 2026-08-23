@@ -235,6 +235,38 @@ describe('component parameter store', () => {
     wallStore.dispose()
   })
 
+  it('uses the Full 4 × 4 Wall board preset without replacing saved values', () => {
+    const storage = createMemoryStorage()
+    const store = createComponentParameterStore({
+      storage,
+      systemContext: 'wall',
+    })
+
+    expect(store.get('opengrid')).toEqual({
+      ...OPENGRID_CONFIGURATION.defaultParameters,
+      variant: 'Full',
+      rows: 4,
+      columns: 4,
+    })
+
+    const savedParameters = opengridParameters({
+      variant: 'Lite',
+      rows: 2,
+      columns: 3,
+      screwMode: 'none',
+    })
+    expect(store.set('opengrid', savedParameters)).toBe(true)
+    expect(store.get('opengrid')).toEqual(savedParameters)
+    store.dispose()
+
+    const restoredStore = createComponentParameterStore({
+      storage,
+      systemContext: 'wall',
+    })
+    expect(restoredStore.get('opengrid')).toEqual(savedParameters)
+    restoredStore.dispose()
+  })
+
   it('switches the active Snap scope without mixing Desk and Wall values', () => {
     const storage = createMemoryStorage()
     const store = createComponentParameterStore({ storage })

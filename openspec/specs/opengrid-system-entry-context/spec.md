@@ -104,11 +104,15 @@ The system MUST recognize exactly two OpenGrid system contexts, `desk` and
 `wall`, from the model-entry link query. The context MUST NOT change the
 existing model id, build key, route slug, Worker request model id, or export
 contract. For `opengrid`, the Wall preset MUST be a validated clone of the
-model definition defaults and the Desk preset MUST override `rows=4`,
-`columns=4`, `chamfers=none`, and `screwMode=none` on that clone. The Desk
-preset MUST retain the model definition defaults for all other OpenGrid
-parameters, including connector controls, screw dimensions, modifiers, and an
-empty custom position list. For `opengrid-snap`, the Desk preset MUST be
+model definition defaults with `variant=Full`, `rows=4`, and `columns=4`.
+The Wall preset MUST retain the model definition defaults for all other
+OpenGrid parameters, including `chamfers=corners`, `screwMode=corners`,
+connector controls, screw dimensions, modifiers, and an empty custom position
+list. The Desk preset MUST override `rows=4`, `columns=4`, `chamfers=none`,
+and `screwMode=none` on that clone. The Desk preset MUST retain the model
+definition defaults for all other OpenGrid parameters, including connector
+controls, screw dimensions, modifiers, and an empty custom position list. For
+`opengrid-snap`, the Desk preset MUST be
 `variant=Lite`, `profile=Standard`, `footprint=full`, `offset=0.25` for the X/Y
 increment, `fourCornerLocatingHoles=true`, and `centerRemoverHole=true`; the
 Wall preset MUST be `variant=Full`, `profile=Standard`, `footprint=full`,
@@ -161,15 +165,23 @@ the Wall context.
 #### Scenario: Wall and context-free board routes retain official defaults
 
 - **WHEN** a user opens `/cad/opengrid?system=wall` or `/cad/opengrid` without a valid saved snapshot
-- **THEN** the workspace MUST retain `chamfers=corners` and `screwMode=corners`
-- **AND** the Wall route MUST retain the existing Wall preset behavior
+- **THEN** the Wall route MUST initialize `opengrid` with `variant=Full`, `rows=4`, and `columns=4`
+- **AND** the Wall route MUST retain `chamfers=corners` and `screwMode=corners`
+- **AND** the context-free route MUST retain `variant=Lite`, `rows=2`, `columns=2`, `chamfers=corners`, and `screwMode=corners`
 - **AND** the context-free route MUST use legacy model-id-scoped persistence and model definition defaults
+- **AND** both routes MUST retain the validated model definition defaults for all unspecified OpenGrid parameters
 
 #### Scenario: Saved Desk board parameters take precedence
 
 - **GIVEN** browser persistence contains a valid saved Desk/OpenGrid snapshot
 - **WHEN** a user opens `/cad/opengrid?system=desk`
 - **THEN** the workspace MUST use the saved Desk snapshot instead of replacing it with the no-feature Desk preset
+
+#### Scenario: Saved Wall board parameters take precedence
+
+- **GIVEN** browser persistence contains a valid saved Wall/OpenGrid snapshot
+- **WHEN** a user opens `/cad/opengrid?system=wall`
+- **THEN** the workspace MUST use the saved Wall snapshot instead of replacing it with the Full 4 × 4 Wall preset
 
 #### Scenario: Unknown context falls back to legacy route behavior
 
