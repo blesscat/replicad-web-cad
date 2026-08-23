@@ -51,11 +51,15 @@ afterEach(() => {
 describe('OpenGrid honeycomb container outputs', () => {
   it('reduces box volume while keeping the original exported envelope', () => {
     const baseline = remember(
-      buildOpenGridStackableBox(OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS),
+      buildOpenGridStackableBox({
+        ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+        cornerSeatMode: 'none',
+      }),
     )
     const honeycomb = remember(
       buildOpenGridStackableBox({
         ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
+        cornerSeatMode: 'none',
         honeycombMode: true,
       }),
     )
@@ -70,13 +74,15 @@ describe('OpenGrid honeycomb container outputs', () => {
 
   it('reduces round-box volume without changing its circular envelope', () => {
     const baseline = remember(
-      buildOpenGridStackableCylinder(
-        OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      ),
+      buildOpenGridStackableCylinder({
+        ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+        bottomSeatMode: 'none',
+      }),
     )
     const honeycomb = remember(
       buildOpenGridStackableCylinder({
         ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+        bottomSeatMode: 'none',
         honeycombMode: true,
       }),
     )

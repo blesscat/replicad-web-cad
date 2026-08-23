@@ -220,7 +220,7 @@ export function inspectOpenGridStackableBoxThinShell(
     sideWallProbeExpectedVolumes,
     configuration.thinShellWallThickness,
   )
-  const socketCenters = openGridStackableBoxSocketCentersFor(parameters)
+  const socketCenters: [number, number][] = []
   const ordinaryCenters =
     openGridStackableBoxOrdinaryBottomHoleCentersFor(parameters)
 

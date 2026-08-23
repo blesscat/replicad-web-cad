@@ -289,7 +289,7 @@ describe('CAD workspace validation helpers', () => {
       x: 0.5,
       y: 1.5,
       height: 25,
-      cornerSeatMode: 'hole',
+      cornerSeatMode: 'detachable-corner-seat',
       fullBottomHoleGrid: true,
       basePlateMode: false,
     }
@@ -299,7 +299,7 @@ describe('CAD workspace validation helpers', () => {
       x: '0.5',
       y: '1.5',
       height: '25',
-      cornerSeatMode: 'hole',
+      cornerSeatMode: 'detachable-corner-seat',
       fullBottomHoleGrid: 'true',
       basePlateMode: 'false',
       honeycombMode: 'false',
@@ -317,6 +317,12 @@ describe('CAD workspace validation helpers', () => {
       openingMinusYBottomLength: '1',
       openingMinusYAngle: '90',
     })
+    expect(
+      rawFromParameters({
+        ...parameters,
+        cornerSeatMode: 'hole' as never,
+      }).cornerSeatMode,
+    ).toBe('detachable-corner-seat')
     expect(parseRawParameters(raw, 'opengrid-stackable-box')).toEqual({
       valid: true,
       value: parameters,
@@ -581,6 +587,12 @@ describe('CAD workspace validation helpers', () => {
       valid: true,
       value: parameters,
     })
+    expect(
+      rawFromParameters({
+        ...parameters,
+        bottomSeatMode: 'hole' as never,
+      }).bottomSeatMode,
+    ).toBe('detachable-corner-seat')
     const legacyParameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       diameter: 56,

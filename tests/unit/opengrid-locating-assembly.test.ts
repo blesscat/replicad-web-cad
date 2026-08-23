@@ -7,11 +7,29 @@ import {
   PILLAR_CONFIGURATION,
   OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
+  OPENGRID_LOCATING_SEAT_MODES,
+  OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+  OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+  openGridOrganizerBoxDetachableIndicatorPlacementFor,
+  openGridOrganizerBoxDetachableSocketPosesFor,
+  openGridStackableCylinderHoleCentersFor,
 } from '../../src/cad-contract/units'
 import { openGridSnapProfileFor } from '../../src/cad-kernel/components/opengrid-snap/profile'
+import {
+  openGridDetachableCornerSeatConsumerPlacementsFor,
+  openGridDetachableCornerSeatIndicatorPlacementFor,
+} from '../../src/cad-kernel/components/opengrid-locating-assembly/consumer'
 import { placeOpenGridDetachableCornerSeatSocketShape } from '../../src/cad-kernel/components/opengrid-locating-assembly/reference'
 
 describe('OpenGrid locating and assembly interface contract', () => {
+  it('publishes the canonical locating seat modes', () => {
+    expect(OPENGRID_LOCATING_SEAT_MODES).toEqual([
+      'none',
+      'detachable-corner-seat',
+      'integrated',
+    ])
+  })
+
   it('publishes the confirmed dimensions and derived openings', () => {
     const configuration = OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION
 
@@ -137,6 +155,67 @@ describe('OpenGrid locating and assembly interface contract', () => {
         configuration.indicator.nominalRemovedVolume,
       8,
     )
+  })
+
+  it('matches Organizer Box corner directions and lock indicators', () => {
+    const organizerParameters = {
+      ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+      holeCountX: 1,
+      holeCountY: 1,
+      bottomInterfaceMode: 'detachable-corner-seat' as const,
+    }
+    const organizerPoses =
+      openGridOrganizerBoxDetachableSocketPosesFor(organizerParameters)
+    const consumerPlacements =
+      openGridDetachableCornerSeatConsumerPlacementsFor(
+        organizerPoses.map(({ center }) => center),
+      )
+
+    expect(consumerPlacements).toEqual(
+      organizerPoses.map(({ center, rotationDegrees }) => ({
+        center,
+        rotationDegrees,
+      })),
+    )
+    expect(
+      consumerPlacements.map(openGridDetachableCornerSeatIndicatorPlacementFor),
+    ).toEqual(
+      organizerPoses.map(openGridOrganizerBoxDetachableIndicatorPlacementFor),
+    )
+  })
+
+  it('matches Organizer Box orientation for circular cardinal seats', () => {
+    const cylinderParameters = {
+      ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+      diameter: 60,
+      bottomSeatMode: 'detachable-corner-seat' as const,
+    }
+    const centers = openGridStackableCylinderHoleCentersFor(cylinderParameters)
+    const placements =
+      openGridDetachableCornerSeatConsumerPlacementsFor(centers)
+    const indicators = placements.map(
+      openGridDetachableCornerSeatIndicatorPlacementFor,
+    )
+    const pitch = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.holeGridPitch
+    const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+    const offset =
+      configuration.female.outerDiameter / 2 +
+      configuration.indicator.socketBoundaryClearance +
+      configuration.indicator.radialLength / 2
+
+    expect(placements.map(({ rotationDegrees }) => rotationDegrees)).toEqual([
+      0, 90, 270, 0, 180,
+    ])
+    expect(indicators.map(({ rotationDegrees }) => rotationDegrees)).toEqual([
+      90, 0, 180, 90, 270,
+    ])
+    expect(indicators.map(({ center }) => center)).toEqual([
+      [0, -offset],
+      [pitch - offset, 0],
+      [-pitch + offset, 0],
+      [0, pitch - offset],
+      [0, -pitch + offset],
+    ])
   })
 
   it.each(['translateZ', 'rotate', 'translate'] as const)(

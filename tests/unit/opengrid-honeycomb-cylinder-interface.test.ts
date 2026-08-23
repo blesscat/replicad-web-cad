@@ -44,6 +44,7 @@ describe('OpenGrid cylinder honeycomb interfaces', () => {
     const input = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       height: 30,
+      bottomSeatMode: 'none' as const,
       openingPlusXDepth: 12,
       openingPlusXBottomLength: 12,
       openingPlusXAngle: 90,

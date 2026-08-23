@@ -92,7 +92,7 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
     .evaluateAll((radios) =>
       radios.map((radio) => radio.getAttribute('aria-label')),
     )
-  expect(seatModeLabels).toEqual(['無角座', '角座孔', '內建角座'])
+  expect(seatModeLabels).toEqual(['無角座', '鎖定角座', '內建角座'])
   await expect(
     modeOptions.locator(
       'xpath=following-sibling::p[@data-testid="opengrid-cylinder-mode-description"]',
@@ -109,7 +109,7 @@ test('OpenGrid stackable-cylinder is listed and exposes 1 mm controls', async ({
   await expect(page.locator('p').filter({ hasText: '底部孔洞：' })).toHaveCount(
     0,
   )
-  await expect(seatMode.getByRole('radio', { name: '角座孔' })).toBeChecked()
+  await expect(seatMode.getByRole('radio', { name: '鎖定角座' })).toBeChecked()
   const openingDisclosure = page.getByTestId(
     'opengrid-cylinder-opening-disclosure',
   )
@@ -263,7 +263,7 @@ test('OpenGrid stackable-cylinder updates and exports deterministic metadata', a
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-stackable-cylinder-d61-h31-seats-hole.step',
+    'opengrid-stackable-cylinder-d61-h31-seats-detachable-corner-seat.step',
   )
 })
 
@@ -331,7 +331,7 @@ test('OpenGrid stackable-cylinder export identity includes enabled opening setti
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-stackable-cylinder-d60-h20-seats-hole-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
+    'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
   )
 })
 
@@ -373,7 +373,7 @@ test('OpenGrid stackable-cylinder persists the honeycomb saving switch and filen
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-stackable-cylinder-d60-h20-seats-hole-honeycomb.step',
+    'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat-honeycomb.step',
   )
   await honeycomb.uncheck()
   await expect(honeycombWarning).toHaveCount(0)

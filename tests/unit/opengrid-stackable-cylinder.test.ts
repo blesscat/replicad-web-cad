@@ -31,6 +31,45 @@ function parameters(
 }
 
 describe('OpenGrid stackable-cylinder contract', () => {
+  it('defaults and migrates to the canonical detachable locking-seat mode', () => {
+    expect(
+      OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultBottomSeatMode,
+    ).toBe('detachable-corner-seat')
+    expect(
+      validateOpenGridStackableCylinderParameters({
+        diameter: 60,
+        height: 20,
+        bottomHolesEnabled: true,
+      }),
+    ).toMatchObject({
+      valid: true,
+      value: { bottomSeatMode: 'detachable-corner-seat' },
+    })
+    expect(
+      validateOpenGridStackableCylinderParameters({
+        diameter: 60,
+        height: 20,
+        bottomSeatMode: 'hole',
+      }),
+    ).toMatchObject({
+      valid: true,
+      value: { bottomSeatMode: 'detachable-corner-seat' },
+    })
+  })
+
+  it('uses the locking mode in normalized cylinder export identity', () => {
+    const locking = parameters({
+      bottomSeatMode: 'detachable-corner-seat' as never,
+    })
+
+    expect(openGridStackableCylinderFileName(locking)).toContain(
+      '-seats-detachable-corner-seat.step',
+    )
+    expect(openGridStackableCylinderStlFileName(locking)).toContain(
+      '-seats-detachable-corner-seat.stl',
+    )
+  })
+
   it('defaults material saving to off and preserves the opt-in boolean', () => {
     expect(OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS.honeycombMode).toBe(
       false,
@@ -52,7 +91,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
     expect(validation.valid).toBe(true)
     if (!validation.valid) return
     expect(validation.value.honeycombMode).toBe(true)
-    expect(validation.value.bottomSeatMode).toBe('hole')
+    expect(validation.value.bottomSeatMode).toBe('detachable-corner-seat')
   })
   it('keeps manual height at 500 mm while limiting the slider to 200 mm', () => {
     expect(OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.heightSliderMax).toBe(200)
@@ -416,10 +455,10 @@ describe('OpenGrid stackable-cylinder contract', () => {
       max: [30, 30, 20],
     })
     expect(openGridStackableCylinderFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-hole.step',
+      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat.step',
     )
     expect(openGridStackableCylinderStlFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-hole.stl',
+      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat.stl',
     )
     const model = {
       modelId: 'opengrid-stackable-cylinder' as const,
@@ -429,10 +468,10 @@ describe('OpenGrid stackable-cylinder contract', () => {
       boundsForOpenGridStackableCylinder(value),
     )
     expect(modelFileName(model)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-hole.step',
+      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat.step',
     )
     expect(modelStlFileName(model)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-hole.stl',
+      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat.stl',
     )
     expect(validateModelParameters(model.modelId, value)).toEqual({
       valid: true,
@@ -450,7 +489,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
     }
 
     expect(openGridStackableCylinderFileName(thin)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-hole-thin.step',
+      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat-thin.step',
     )
     expect(openGridStackableCylinderStlFileName(noSeats)).toBe(
       'opengrid-stackable-cylinder-d60-h20-seats-none.stl',
@@ -463,7 +502,9 @@ describe('OpenGrid stackable-cylinder contract', () => {
     )
     expect(
       openGridStackableCylinderFileName(parameters({ bottomPlateMode: true })),
-    ).toBe('opengrid-stackable-cylinder-d60-h20-seats-hole-bottom-plate.step')
+    ).toBe(
+      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat-bottom-plate.step',
+    )
   })
 
   it('adds a deterministic opening fingerprint only when a side opening is enabled', () => {
@@ -474,10 +515,10 @@ describe('OpenGrid stackable-cylinder contract', () => {
     })
 
     expect(openGridStackableCylinderFileName(input)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-hole-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
+      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
     )
     expect(openGridStackableCylinderStlFileName(input)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-hole-open-8-12-70_0-1-90_0-1-90_0-1-90.stl',
+      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat-open-8-12-70_0-1-90_0-1-90_0-1-90.stl',
     )
   })
 
@@ -485,10 +526,10 @@ describe('OpenGrid stackable-cylinder contract', () => {
     const value = parameters({ honeycombMode: true })
 
     expect(openGridStackableCylinderFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-hole-honeycomb.step',
+      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat-honeycomb.step',
     )
     expect(openGridStackableCylinderStlFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-hole-honeycomb.stl',
+      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat-honeycomb.stl',
     )
   })
 
@@ -528,7 +569,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
 
   it.each([
     [39, 0],
-    [40, 4],
+    [40, 0],
     [47, 4],
     [48, 4],
   ])(
@@ -539,6 +580,19 @@ describe('OpenGrid stackable-cylinder contract', () => {
       ).toHaveLength(expectedOuterHoleCount + 1)
     },
   )
+
+  it('preserves the existing integrated outer layer while locking uses its full envelope', () => {
+    expect(
+      openGridStackableCylinderHoleCentersFor(
+        parameters({ diameter: 40, bottomSeatMode: 'integrated' }),
+      ),
+    ).toHaveLength(5)
+    expect(
+      openGridStackableCylinderHoleCentersFor(
+        parameters({ diameter: 40, bottomSeatMode: 'detachable-corner-seat' }),
+      ),
+    ).toHaveLength(1)
+  })
 
   it('uses the maximum safe 14 mm layer at the largest diameter', () => {
     expect(
@@ -557,7 +611,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
     [40, 0],
     [47, 0],
     [48, 0],
-    [49, 4],
+    [49, 0],
   ])(
     'selects the thin-mode outer layer at diameter %s',
     (diameter, expectedOuterHoleCount) => {

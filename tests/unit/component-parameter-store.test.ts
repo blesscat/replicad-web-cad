@@ -405,7 +405,7 @@ describe('component parameter store', () => {
           x: 0.5,
           y: 1.5,
           height: 25,
-          cornerSeatMode: 'hole',
+          cornerSeatMode: 'detachable-corner-seat',
           fullBottomHoleGrid: true,
           basePlateMode: true,
         },
@@ -443,7 +443,7 @@ describe('component parameter store', () => {
       x: 0.5,
       y: 1.5,
       height: 25,
-      cornerSeatMode: 'hole',
+      cornerSeatMode: 'detachable-corner-seat',
       fullBottomHoleGrid: true,
       basePlateMode: true,
     })
@@ -512,7 +512,7 @@ describe('component parameter store', () => {
       x: 0.5,
       y: 1.5,
       height: 25,
-      cornerSeatMode: 'hole',
+      cornerSeatMode: 'detachable-corner-seat',
       fullBottomHoleGrid: false,
       basePlateMode: false,
     })
@@ -622,7 +622,7 @@ describe('component parameter store', () => {
       height: 45,
       thinBottomMode: false,
       bottomPlateMode: true,
-      bottomSeatMode: 'hole',
+      bottomSeatMode: 'detachable-corner-seat',
     }
 
     expect(

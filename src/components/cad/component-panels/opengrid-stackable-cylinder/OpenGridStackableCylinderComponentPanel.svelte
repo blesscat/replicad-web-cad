@@ -30,7 +30,7 @@
   let bottomPlateMode = $derived(rawParameters.bottomPlateMode === 'true')
 
   type CylinderMode = 'default' | 'thin' | 'bottom-plate'
-  type CylinderSeatMode = 'none' | 'hole' | 'integrated'
+  type CylinderSeatMode = 'none' | 'detachable-corner-seat' | 'integrated'
 
   const seatModeOptions: ReadonlyArray<{
     value: CylinderSeatMode
@@ -43,9 +43,9 @@
       descriptionKey: 'panel.seat.noneDescription',
     },
     {
-      value: 'hole',
-      labelKey: 'panel.seat.hole',
-      descriptionKey: 'panel.seat.holeDescription',
+      value: 'detachable-corner-seat',
+      labelKey: 'panel.seat.detachableCornerSeat',
+      descriptionKey: 'panel.seat.detachableCornerSeatDescription',
     },
     {
       value: 'integrated',
@@ -57,7 +57,7 @@
   function seatModeForRawParameters(): CylinderSeatMode {
     const value = rawParameters.bottomSeatMode
     if (value === 'none' || value === 'integrated') return value
-    return 'hole'
+    return 'detachable-corner-seat'
   }
 
   function seatModeDescription(): string {

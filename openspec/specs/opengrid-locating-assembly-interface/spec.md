@@ -14,9 +14,11 @@ shaft diameter of exactly 5 mm, a lower connection opening of exactly 5 mm, a
 retaining opening of exactly 7.05 mm, a test flange diameter of exactly 7 mm,
 and a test flange height of exactly 0.8 mm. The assembly opening MUST equal
 the nominal locating diameter plus the shared increment. The lower connection
-opening and test shaft MUST remain the current exact 5 mm interface rather
-than being expanded by the assembly increment. The retaining opening MUST
-equal the test flange diameter plus the shared increment.
+opening and test shaft MUST remain the current exact 5 mm interface rather than
+being expanded by the assembly increment. The retaining opening MUST equal the
+test flange diameter plus the shared increment. Detachable locking sockets MUST
+use the separate shared detachable-corner-seat contract rather than treating
+their 7 mm female envelope as a 7.05 mm stepped-hole retaining opening.
 
 #### Scenario: Shared dimensions are published once
 
@@ -46,19 +48,39 @@ equal the test flange diameter plus the shared increment.
 - **AND** the value MUST resolve from the shared Ø5 mm nominal and +0.05 mm
   increment
 
-#### Scenario: Stepped holes use the lower and retaining interface
+#### Scenario: Stepped-hole compatibility uses the lower and retaining interface
 
-- **WHEN** the system builds a Stackable Box special socket or a Stackable
-  Cylinder bottom hole
+- **WHEN** a compatibility fixture is evaluated against a retained stepped
+  socket from the legacy interface contract
 - **THEN** the lower connection opening MUST be Ø5 mm
 - **AND** the upper/interior retaining opening MUST be Ø7.05 mm
 - **AND** each value MUST resolve from the shared lower connection or flange
   dimensions
 
+#### Scenario: Stepped holes use the lower and retaining interface
+
+- **WHEN** a legacy compatibility fixture is evaluated against a retained
+  stepped socket
+- **THEN** the lower connection opening MUST be Ø5 mm
+- **AND** the upper/interior retaining opening MUST be Ø7.05 mm
+- **AND** detachable locking sockets MUST remain governed by their separate
+  female reference contract rather than this stepped-hole fixture
+
+#### Scenario: Detachable socket consumers use the detachable interface
+
+- **WHEN** a Stackable Box or Stackable Cylinder uses
+  `detachable-corner-seat`
+- **THEN** each active position MUST use the shared female outer envelope,
+  keyed passage, retaining tabs, and 1.75 mm socket depth
+- **AND** the socket MUST use the shared detachable male/female fit contract
+  rather than a legacy Ø5-to-Ø7.05 stepped hole
+- **AND** the container MUST remain compatible with the separately generated
+  `opengrid-pillar` detachable male seat
+
 #### Scenario: Shaft and retaining openings use the shared fixture interface
 
-- **WHEN** the system builds a Stackable Box special socket or a Stackable
-  Cylinder bottom hole
+- **WHEN** a Worker quality test evaluates a retained stepped-hole
+  compatibility fixture
 - **THEN** the Ø5 mm test shaft MUST match the Ø5 mm lower connection opening
 - **AND** the Ø7 mm test flange MUST be retained by the Ø7.05 mm shoulder-side
   opening
@@ -68,15 +90,17 @@ equal the test flange diameter plus the shared increment.
 ### Requirement: Floor-thickness-dependent compatibility fixture
 
 The system MUST define the Box and Cylinder compatibility test insert as a
-Ø7 mm × 0.8 mm flange fused to a Ø5 mm shaft. The shaft length MUST equal the
-active floor or base-plate thickness plus 1 mm of exterior allowance. The
-fixture MUST be used for quality and integration validation and MUST NOT
-become a user-configurable model parameter or alter the existing Pillar mode
-geometries.
+Ø7 mm × 0.8 mm flange fused to a Ø5 mm shaft for any remaining stepped-hole
+compatibility validation. The shaft length MUST equal the active floor or
+base-plate thickness plus 1 mm of exterior allowance. The fixture MUST remain
+a quality and integration artifact, MUST NOT become a user-configurable model
+parameter, MUST NOT alter the existing Pillar mode geometries, and MUST NOT be
+used as the acceptance fixture for a detachable locking socket.
 
 #### Scenario: Thin-shell floor fixture
 
-- **WHEN** a Box or Cylinder quality test selects a 2 mm thin-shell floor
+- **WHEN** a Box or Cylinder stepped-hole compatibility test selects a 2 mm
+  thin-shell floor
 - **THEN** the fixture shaft MUST be Ø5 mm × 3 mm
 - **AND** the flange MUST be Ø7 mm × 0.8 mm
 - **AND** the Ø7 mm flange MUST be retained by the Ø7.05 mm shoulder-side
@@ -84,7 +108,8 @@ geometries.
 
 #### Scenario: Base-plate floor fixture
 
-- **WHEN** a Box or Cylinder quality test selects a 3 mm base-plate floor
+- **WHEN** a Box or Cylinder stepped-hole compatibility test selects a 3 mm
+  base-plate floor
 - **THEN** the fixture shaft MUST be Ø5 mm × 4 mm
 - **AND** the flange MUST be Ø7 mm × 0.8 mm
 - **AND** the Ø7 mm flange MUST be retained by the Ø7.05 mm shoulder-side
@@ -92,7 +117,8 @@ geometries.
 
 #### Scenario: Normal floor fixture
 
-- **WHEN** a Box or Cylinder quality test selects a 5 mm normal floor
+- **WHEN** a Box or Cylinder stepped-hole compatibility test selects a 5 mm
+  normal floor
 - **THEN** the fixture shaft MUST be Ø5 mm × 6 mm
 - **AND** the flange MUST be Ø7 mm × 0.8 mm
 - **AND** the fixture MUST preserve the agreed 1 mm exterior allowance
@@ -131,11 +157,20 @@ general quality tolerance.
 
 The system MUST ensure that the OpenGrid stackable-box and stackable-cylinder
 panels and model descriptions describe the three locating-seat choices with the
-exact labels `無角座`,
-`角座孔`, and `內建角座`. The integrated description MUST communicate that the
-selected positions receive a solid Ø5 mm round seat extending 3 mm outward
-from the bottom. Existing model display names and OpenGrid identities MUST
-remain unchanged.
+exact labels `無角座`, `鎖定角座`, and `內建角座`. The locking description MUST
+state that the selected positions form retaining-tab sockets for separately
+printed detachable corner seats and expose the visual lock indicators. The
+integrated description MUST communicate that the selected positions receive a
+solid Ø5 mm round seat extending 3 mm outward from the bottom. Existing model
+display names and OpenGrid identities MUST remain unchanged.
+
+#### Scenario: Locking seat description is visible
+
+- **WHEN** the user selects `鎖定角座` in either OpenGrid stackable model
+- **THEN** the panel MUST identify the result as a retaining socket for the
+  separately printed locking corner seat
+- **AND** the panel MUST continue to show `無角座` and `內建角座` as the other
+  mutually exclusive choices
 
 #### Scenario: Integrated seat description is visible
 
@@ -194,16 +229,17 @@ The derived canonical male reference MUST be a valid non-empty single solid
 with bounds `[-2.5, -2.5, 0]` through `[2.5, 2.5, 5.3]` and nominal volume
 82.4112179657 mm³. The supplied female source reference MUST remain a valid
 non-empty single solid with bounds `[-3.5, -3.5, 3]` through
-`[3.5, 3.5, 4.5]` and nominal volume 38.4253392 mm³. Its effective holder
-material MUST extend to Z=4.75 with nominal volume 43.6604635736 mm³. Bounds
-and volume comparisons MAY use the project's configured B-Rep tolerance.
+`[3.5, 3.5, 4.5]` and volume 38.4253392 mm³. Its effective holder material
+MUST extend to Z=4.75 with nominal volume 43.6604635736 mm³. Bounds and volume
+comparisons MAY use the project's configured B-Rep tolerance.
 
 In the canonical unrotated seated pose, the male and female solids MUST have
 zero positive-volume intersection. The fixed fit MUST be treated as a
-hand-press, retained, hand-removable interface for physical prototype
-validation. Other OpenGrid models MUST NOT adopt this socket until the
-Organizer Box prototype has been confirmed to insert fully, remain attached
-when lifted, and remain intentionally removable by hand.
+hand-press, retained, hand-removable interface. The validated Organizer Box
+prototype MUST have passed full insertion, lift retention, and intentional
+hand removal before Stackable Box and Stackable Cylinder integrations are
+accepted. Once those gates pass, each new consumer MUST independently verify
+the same male/female fit at every generated locating position.
 
 #### Scenario: Canonical references remain valid
 
@@ -227,8 +263,8 @@ when lifted, and remain intentionally removable by hand.
 - **THEN** all four seats MUST be insertable fully by hand
 - **AND** the seats MUST remain attached when the box is lifted
 - **AND** each seat MUST remain removable by an intentional hand pull
-- **AND** failure of any criterion MUST keep other OpenGrid model integrations
-  outside the accepted scope
+- **AND** after these criteria pass, the Stackable Box and Stackable Cylinder
+  integrations MUST be eligible for their own geometry and fit validation
 
 ### Requirement: Detachable corner-seat visual lock indicators
 

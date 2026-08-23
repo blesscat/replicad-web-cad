@@ -33,7 +33,7 @@ function boxParameters(
     x: 2,
     y: 2,
     height: 20,
-    cornerSeatMode: 'hole',
+    cornerSeatMode: 'detachable-corner-seat',
     fullBottomHoleGrid: false,
     basePlateMode: false,
     thinShellMode: false,
@@ -50,7 +50,7 @@ function cylinderParameters(
     height: 20,
     thinBottomMode: false,
     bottomPlateMode: false,
-    bottomSeatMode: 'hole',
+    bottomSeatMode: 'detachable-corner-seat',
     openingPlusXDepth: 0,
     openingPlusXBottomLength: 1,
     openingPlusXAngle: 90,
@@ -69,7 +69,7 @@ function cylinderParameters(
 
 describe('OpenGrid locating seat modes', () => {
   it('accepts the three Grid Box seat modes and gives integrated mode a lower bound', () => {
-    for (const mode of ['none', 'hole', 'integrated']) {
+    for (const mode of ['none', 'detachable-corner-seat', 'integrated']) {
       const validation = validateOpenGridStackableBoxParameters(
         boxParameters({ cornerSeatMode: mode }),
       )
@@ -110,7 +110,7 @@ describe('OpenGrid locating seat modes', () => {
   })
 
   it('accepts the Round Box seat modes and mirrors safe hole positions', () => {
-    for (const mode of ['none', 'hole', 'integrated']) {
+    for (const mode of ['none', 'detachable-corner-seat', 'integrated']) {
       const validation = validateOpenGridStackableCylinderParameters(
         cylinderParameters({ bottomSeatMode: mode }),
       )
@@ -170,6 +170,25 @@ describe('OpenGrid locating seat modes', () => {
     expect(conflictingCylinder).toMatchObject({
       valid: true,
       value: { bottomSeatMode: 'integrated' },
+    })
+
+    expect(
+      validateOpenGridStackableBoxParameters({
+        ...boxLegacyBase,
+        cornerSeatMode: 'hole',
+      }),
+    ).toMatchObject({
+      valid: true,
+      value: { cornerSeatMode: 'detachable-corner-seat' },
+    })
+    expect(
+      validateOpenGridStackableCylinderParameters({
+        ...cylinderLegacyBase,
+        bottomSeatMode: 'hole',
+      }),
+    ).toMatchObject({
+      valid: true,
+      value: { bottomSeatMode: 'detachable-corner-seat' },
     })
   })
 

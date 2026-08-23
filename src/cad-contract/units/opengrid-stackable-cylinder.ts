@@ -1,7 +1,8 @@
 import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
 import {
+  OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
-  OPENGRID_LOCATING_SEAT_MODES,
+  normalizeOpenGridLocatingSeatMode,
   type OpenGridLocatingSeatMode,
 } from './opengrid-locating-assembly'
 
@@ -132,7 +133,7 @@ export const OPENGRID_STACKABLE_CYLINDER_CONFIGURATION = {
   thinTopInnerChamfer: 1.6,
   topInnerChamferLand: 0,
   bottomOuterChamfer: 2,
-  defaultBottomSeatMode: 'hole' as OpenGridLocatingSeatMode,
+  defaultBottomSeatMode: 'detachable-corner-seat' as OpenGridLocatingSeatMode,
   openingDepthMin: 0,
   openingDepthMax: 500,
   openingBottomLengthMin: 1,
@@ -258,15 +259,6 @@ function hasExactKeys(
   )
 }
 
-function isOpenGridLocatingSeatMode(
-  value: unknown,
-): value is OpenGridLocatingSeatMode {
-  return (
-    typeof value === 'string' &&
-    (OPENGRID_LOCATING_SEAT_MODES as readonly string[]).includes(value)
-  )
-}
-
 function validateIntegerField(
   value: unknown,
   field: OpenGridStackableCylinderParameterKey,
@@ -303,7 +295,7 @@ function validateBottomSeatMode(
   value: unknown,
   issues: OpenGridStackableCylinderValidationIssue[],
 ): void {
-  if (!isOpenGridLocatingSeatMode(value)) {
+  if (normalizeOpenGridLocatingSeatMode(value) === undefined) {
     issues.push({
       field: 'bottomSeatMode',
       messageId: 'validation.invalid',
@@ -338,7 +330,7 @@ function legacyBottomSeatModeFor(
   value: Record<string, unknown>,
 ): OpenGridLocatingSeatMode {
   if (value.bottomHolesEnabled === false) return 'none'
-  return 'hole'
+  return 'detachable-corner-seat'
 }
 
 function openingValidationIssuesFor(
@@ -516,7 +508,9 @@ export function validateOpenGridStackableCylinderParameters(
         ? (value.bottomPlateMode as boolean)
         : false,
     bottomSeatMode: hasCurrentSeatMode
-      ? (value.bottomSeatMode as OpenGridLocatingSeatMode)
+      ? (normalizeOpenGridLocatingSeatMode(
+          value.bottomSeatMode,
+        ) as OpenGridLocatingSeatMode)
       : legacyBottomSeatModeFor(value),
     honeycombMode:
       typeof value.honeycombMode === 'boolean'
@@ -885,6 +879,21 @@ export function openGridStackableCylinderOpeningBottomLengthMaximumFor(
   return Math.max(configuration.openingBottomLengthMin, maximum)
 }
 
+function locatingFeatureRadiusFor(
+  parameters: OpenGridStackableCylinderParameters,
+  largestHoleRadius: number,
+): number {
+  if (parameters.bottomSeatMode === 'detachable-corner-seat') {
+    const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+    return (
+      configuration.female.outerDiameter / 2 +
+      configuration.indicator.socketBoundaryClearance +
+      configuration.indicator.radialLength
+    )
+  }
+  return largestHoleRadius
+}
+
 export function openGridStackableCylinderOuterHoleIndexFor(
   parameters: OpenGridStackableCylinderParameters,
 ): number {
@@ -896,12 +905,16 @@ export function openGridStackableCylinderOuterHoleIndexFor(
       configuration.bottomHoleDiameter,
       configuration.innerHoleDiameter,
     ) / 2
+  const locatingFeatureRadius = locatingFeatureRadiusFor(
+    parameters,
+    largestHoleRadius,
+  )
   const outerAvailableRadius =
-    derived.radius - configuration.outerEdgeClearance - largestHoleRadius
+    derived.radius - configuration.outerEdgeClearance - locatingFeatureRadius
   const flatFloorAvailableRadius =
     derived.flatFloorRadius -
     configuration.flatFloorClearance -
-    largestHoleRadius
+    locatingFeatureRadius
   const availableRadius =
     derived.profile === 'thin'
       ? Math.min(outerAvailableRadius, flatFloorAvailableRadius)

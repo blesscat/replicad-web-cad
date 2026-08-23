@@ -337,8 +337,12 @@ export { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
 export { OPENGRID_HONEYCOMB_CONFIGURATION } from './opengrid-honeycomb'
 export {
   OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
+  OPENGRID_LEGACY_LOCATING_SEAT_MODE,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_LOCATING_SEAT_MODES,
+  openGridDetachableCornerSeatIndicatorPlacementFor,
+  openGridDetachableCornerSeatSocketRotationFor,
+  normalizeOpenGridLocatingSeatMode,
 } from './opengrid-locating-assembly'
 export type { HalfCellDirection, HalfCellX, HalfCellY } from './half-cell'
 export type {
@@ -392,7 +396,12 @@ export type {
   OpenGridStackableCylinderValidation,
   OpenGridStackableCylinderValidationIssue,
 } from './opengrid-stackable-cylinder'
-export type { OpenGridLocatingSeatMode } from './opengrid-locating-assembly'
+export type {
+  OpenGridDetachableCornerSeatIndicatorPlacement,
+  OpenGridDetachableCornerSeatPoint2D,
+  OpenGridDetachableCornerSeatRotation,
+  OpenGridLocatingSeatMode,
+} from './opengrid-locating-assembly'
 export type {
   OpenGridBoardConfiguration,
   OpenGridChamferMode,

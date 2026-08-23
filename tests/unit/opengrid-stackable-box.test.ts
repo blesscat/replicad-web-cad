@@ -9,6 +9,7 @@ import {
   nominalOpenGridStackableBoxBottomGridAxisPositionsFor,
   nominalOpenGridStackableBoxBottomGridCentersFor,
   nominalOpenGridStackableBoxFootprintFor,
+  openGridStackableBoxFileName,
   openGridStackableBoxActiveFloorTopZFor,
   openGridStackableBoxActiveUpperInnerRimZFor,
   openGridStackableBoxDerivedGeometryFor,
@@ -16,6 +17,7 @@ import {
   openGridStackableBoxOrdinaryBottomHoleCentersFor,
   openGridStackableBoxSocketCentersFor,
   openGridStackableBoxUpperInnerRimZFor,
+  openGridStackableBoxStlFileName,
   OPENGRID_GRID_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
@@ -31,7 +33,7 @@ function parameters(
     x: 1,
     y: 1,
     height: 10,
-    cornerSeatMode: 'hole',
+    cornerSeatMode: 'detachable-corner-seat',
     fullBottomHoleGrid: false,
     basePlateMode: false,
     thinShellMode: false,
@@ -53,6 +55,51 @@ function parameters(
 }
 
 describe('OpenGrid stackable-box contract', () => {
+  it('defaults to the canonical detachable locking-seat mode', () => {
+    expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.defaultCornerSeatMode).toBe(
+      'detachable-corner-seat',
+    )
+    expect(
+      validateOpenGridStackableBoxParameters({
+        x: 1,
+        y: 1,
+        height: 10,
+        cornerBottomHoles: true,
+        fullBottomHoleGrid: false,
+        basePlateMode: false,
+      }),
+    ).toMatchObject({
+      valid: true,
+      value: { cornerSeatMode: 'detachable-corner-seat' },
+    })
+    expect(
+      validateOpenGridStackableBoxParameters({
+        x: 1,
+        y: 1,
+        height: 10,
+        cornerSeatMode: 'hole',
+        fullBottomHoleGrid: false,
+        basePlateMode: false,
+      }),
+    ).toMatchObject({
+      valid: true,
+      value: { cornerSeatMode: 'detachable-corner-seat' },
+    })
+  })
+
+  it('uses the locking mode in normalized box export identity', () => {
+    const locking = parameters({
+      cornerSeatMode: 'detachable-corner-seat' as never,
+    })
+
+    expect(openGridStackableBoxFileName(locking)).toContain(
+      '-seats-detachable-corner-seat.step',
+    )
+    expect(openGridStackableBoxStlFileName(locking)).toContain(
+      '-seats-detachable-corner-seat.stl',
+    )
+  })
+
   it('keeps manual height at 500 mm while limiting the slider to 200 mm', () => {
     expect(OPENGRID_STACKABLE_BOX_CONFIGURATION.heightSliderMax).toBe(200)
     expect(
@@ -78,7 +125,7 @@ describe('OpenGrid stackable-box contract', () => {
 
   it('controls corner sockets and the full bottom grid independently', () => {
     const parametersForSeatMode = (
-      cornerSeatMode: 'none' | 'hole' | 'integrated',
+      cornerSeatMode: 'none' | 'detachable-corner-seat' | 'integrated',
       fullBottomHoleGrid: boolean,
     ) =>
       ({
@@ -89,7 +136,7 @@ describe('OpenGrid stackable-box contract', () => {
         fullBottomHoleGrid,
       }) as Parameters<typeof openGridStackableBoxSocketCentersFor>[0]
 
-    const cornersOnly = parametersForSeatMode('hole', false)
+    const cornersOnly = parametersForSeatMode('detachable-corner-seat', false)
     expect(openGridStackableBoxSocketCentersFor(cornersOnly)).toHaveLength(4)
     expect(
       openGridStackableBoxOrdinaryBottomHoleCentersFor(cornersOnly),
@@ -233,7 +280,7 @@ describe('OpenGrid stackable-box contract', () => {
         x: 1,
         y: 1,
         height: 10,
-        cornerSeatMode: 'hole',
+        cornerSeatMode: 'detachable-corner-seat',
         fullBottomHoleGrid: false,
         rows: 1,
       }),
@@ -404,10 +451,10 @@ describe('OpenGrid stackable-box contract', () => {
     }
 
     expect(modelFileName(closed)).toBe(
-      'opengrid-stackable-box-1x1-h10-seats-hole.step',
+      'opengrid-stackable-box-1x1-h10-seats-detachable-corner-seat.step',
     )
     expect(modelStlFileName(closed)).toBe(
-      'opengrid-stackable-box-1x1-h10-seats-hole.stl',
+      'opengrid-stackable-box-1x1-h10-seats-detachable-corner-seat.stl',
     )
     expect(modelFileName(open)).not.toBe(modelFileName(closed))
     expect(modelStlFileName(open)).not.toBe(modelStlFileName(closed))
@@ -429,10 +476,10 @@ describe('OpenGrid stackable-box contract', () => {
     }
 
     expect(modelFileName(model)).toBe(
-      'opengrid-stackable-box-1x1-h10-seats-hole-honeycomb.step',
+      'opengrid-stackable-box-1x1-h10-seats-detachable-corner-seat-honeycomb.step',
     )
     expect(modelStlFileName(model)).toBe(
-      'opengrid-stackable-box-1x1-h10-seats-hole-honeycomb.stl',
+      'opengrid-stackable-box-1x1-h10-seats-detachable-corner-seat-honeycomb.stl',
     )
   })
 
@@ -449,10 +496,10 @@ describe('OpenGrid stackable-box contract', () => {
     }
 
     expect(modelFileName(model)).toBe(
-      'opengrid-stackable-box-1x1-h10-seats-hole-honeycomb-open-8-12-70-0-1-90-0-1-90-0-1-90-thin-shell.step',
+      'opengrid-stackable-box-1x1-h10-seats-detachable-corner-seat-honeycomb-open-8-12-70-0-1-90-0-1-90-0-1-90-thin-shell.step',
     )
     expect(modelStlFileName(model)).toBe(
-      'opengrid-stackable-box-1x1-h10-seats-hole-honeycomb-open-8-12-70-0-1-90-0-1-90-0-1-90-thin-shell.stl',
+      'opengrid-stackable-box-1x1-h10-seats-detachable-corner-seat-honeycomb-open-8-12-70-0-1-90-0-1-90-0-1-90-thin-shell.stl',
     )
   })
 
@@ -584,10 +631,10 @@ describe('OpenGrid stackable-box contract', () => {
     }
 
     expect(modelFileName(model)).toBe(
-      'opengrid-stackable-box-1.5x2-h30-seats-hole.step',
+      'opengrid-stackable-box-1.5x2-h30-seats-detachable-corner-seat.step',
     )
     expect(modelStlFileName(model)).toBe(
-      'opengrid-stackable-box-1.5x2-h30-seats-hole.stl',
+      'opengrid-stackable-box-1.5x2-h30-seats-detachable-corner-seat.stl',
     )
 
     const basePlateModel = {
@@ -600,10 +647,10 @@ describe('OpenGrid stackable-box contract', () => {
       }),
     }
     expect(modelFileName(basePlateModel)).toBe(
-      'opengrid-stackable-box-1.5x2-h30-seats-hole-base-plate.step',
+      'opengrid-stackable-box-1.5x2-h30-seats-detachable-corner-seat-base-plate.step',
     )
     expect(modelStlFileName(basePlateModel)).toBe(
-      'opengrid-stackable-box-1.5x2-h30-seats-hole-base-plate.stl',
+      'opengrid-stackable-box-1.5x2-h30-seats-detachable-corner-seat-base-plate.stl',
     )
 
     const thinShellModel = {
@@ -616,10 +663,10 @@ describe('OpenGrid stackable-box contract', () => {
       }),
     }
     expect(modelFileName(thinShellModel)).toBe(
-      'opengrid-stackable-box-1.5x2-h30-seats-hole-thin-shell.step',
+      'opengrid-stackable-box-1.5x2-h30-seats-detachable-corner-seat-thin-shell.step',
     )
     expect(modelStlFileName(thinShellModel)).toBe(
-      'opengrid-stackable-box-1.5x2-h30-seats-hole-thin-shell.stl',
+      'opengrid-stackable-box-1.5x2-h30-seats-detachable-corner-seat-thin-shell.stl',
     )
   })
 })

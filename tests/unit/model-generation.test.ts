@@ -482,7 +482,7 @@ describe('CAD model generation debounce', () => {
         x: 0.5,
         y: 1,
         height: 10,
-        cornerSeatMode: 'hole',
+        cornerSeatMode: 'detachable-corner-seat',
         fullBottomHoleGrid: false,
         basePlateMode: false,
       },
@@ -501,7 +501,7 @@ describe('CAD model generation debounce', () => {
           x: 1.5,
           y: 1,
           height: 10,
-          cornerSeatMode: 'hole',
+          cornerSeatMode: 'detachable-corner-seat',
           fullBottomHoleGrid: false,
           basePlateMode: false,
         },
@@ -600,7 +600,7 @@ describe('CAD model generation debounce', () => {
         height: 30,
         thinBottomMode: false,
         bottomPlateMode: false,
-        bottomSeatMode: 'hole',
+        bottomSeatMode: 'detachable-corner-seat',
       },
     )
     const handlers = createModelGenerationHandlers(context)

@@ -109,7 +109,7 @@ function floorProbeCenter(
   parameters: OpenGridStackableBoxParameters,
 ): [number, number] | null {
   const socketCenters =
-    parameters.cornerSeatMode === 'hole'
+    parameters.cornerSeatMode !== 'none'
       ? openGridStackableBoxSocketCentersFor(parameters)
       : []
   const ordinaryHoleCenters =
@@ -766,10 +766,7 @@ export function inspectOpenGridStackableBoxInterface(
       (total, faceCount) => total + faceCount,
       0,
     )
-  const socketCenters =
-    parameters.cornerSeatMode === 'hole'
-      ? openGridStackableBoxSocketCentersFor(parameters)
-      : []
+  const socketCenters: [number, number][] = []
   const mountingHoleStepVolumes = measureMountingHoleStepVolumes(
     shape,
     socketCenters,

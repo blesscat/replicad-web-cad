@@ -1,7 +1,9 @@
 ## Purpose
 
 提供一個以 OpenGrid 28 mm 格線為尺寸基準、可固定到底座並能與相同盒體互相堆疊的開口盒模型，讓盒子不需要區分上盒與下盒也能重複使用。
+
 ## Requirements
+
 ### Requirement: Thin-shell profile
 
 The existing `opengrid-stackable-box` model MUST expose a `thinShellMode` boolean profile flag. `thinShellMode` MUST default to `false`, MUST be mutually exclusive with `basePlateMode`, and MUST preserve the existing model ID, route, X/Y footprint contract, clear-height semantics, four-direction opening fields, corner-hole switch, full bottom-hole grid switch, preview lifecycle, and export workflow. When `thinShellMode=true`, the profile MUST be explicitly non-stackable and MUST NOT claim compatibility with the normal box-to-box sliding interface.
@@ -43,62 +45,71 @@ with stable `modelId=opengrid-stackable-box`. Its normalized parameters MUST
 include `x`, `y`, `height`, the enum `cornerSeatMode`, the boolean
 `fullBottomHoleGrid`, the boolean `basePlateMode`, the boolean `thinShellMode`,
 and the existing three typed opening fields for each of `+X`, `-X`, `+Y`, and
-`-Y`. `cornerSeatMode` MUST be exactly one of `none`, `hole`, or `integrated`.
-The user-facing labels MUST be `無角座`, `角座孔`, and `內建角座` respectively.
-`x` and `y` MUST be multiples of 0.5 in the inclusive range 0.5–10 grids, the
-derived footprint MUST remain within the current 500 mm workspace limit, the
-OpenGrid pitch MUST remain 28 mm, and the generated footprint MUST retain the
-total 0.15 mm per-axis clearance.
+`-Y`. `cornerSeatMode` MUST be exactly one of `none`,
+`detachable-corner-seat`, or `integrated`. The user-facing labels MUST be
+`無角座`, `鎖定角座`, and `內建角座` respectively. `x` and `y` MUST be
+multiples of 0.5 in the inclusive range 0.5–10 grids, the derived footprint
+MUST remain within the current 500 mm workspace limit, the OpenGrid pitch MUST
+remain 28 mm, and the generated footprint MUST retain the total 0.15 mm
+per-axis clearance.
 
 The `height` control MUST remain a safe integer in the inclusive range 10–500
 mm and MUST represent clear internal box height. Existing normal, base-plate,
 and thin-shell height semantics MUST remain unchanged. The default snapshot
-MUST be `x=2`, `y=2`, `height=20`, `cornerSeatMode='hole'`,
-`fullBottomHoleGrid=false`, `basePlateMode=false`, and `thinShellMode=false`.
-`basePlateMode` and `thinShellMode` MUST NOT both be true.
+MUST be `x=2`, `y=2`, `height=20`,
+`cornerSeatMode='detachable-corner-seat'`, `fullBottomHoleGrid=false`,
+`basePlateMode=false`, and `thinShellMode=false`. `basePlateMode` and
+`thinShellMode` MUST NOT both be true.
 
 The four opening triples MUST retain their current names, ranges, defaults, and
-geometry semantics. The stackable-box panel MUST expose the existing thin-shell
-and stackable profile choices and MUST additionally expose exactly one visible
-radio group for the locating seat with the three labels above. The normalized
-`basePlateMode` field MUST remain available for legacy or programmatic
-snapshots, but MUST NOT become a visible profile choice.
+geometry semantics. The stackable-box panel MUST expose the existing
+thin-shell and stackable profile choices and MUST additionally expose exactly
+one visible radio group for the locating seat with the three labels above. The
+normalized `basePlateMode` field MUST remain available for legacy or
+programmatic snapshots, but MUST NOT become a visible profile choice.
 
 When a legacy snapshot contains `cornerBottomHoles`, hydration MUST map
-`false` to `cornerSeatMode='none'` and `true` to `cornerSeatMode='hole'`;
-missing legacy values MUST map to `'hole'`. A canonical enum value MUST take
+`false` to `cornerSeatMode='none'` and `true` to
+`cornerSeatMode='detachable-corner-seat'`; missing legacy values MUST map to
+`'detachable-corner-seat'`. A persisted `cornerSeatMode='hole'` MUST be
+accepted only as a legacy alias and normalized to
+`'detachable-corner-seat'`. A canonical current enum value MUST take
 precedence over a stale legacy boolean, and canonical validation MUST reject
-other enum values.
+unsupported values after legacy alias migration.
 
 #### Scenario: Valid seat mode defaults
 
 - **WHEN** the stackable-box route initializes without valid saved parameters
-- **THEN** the model MUST use `cornerSeatMode='hole'`
-- **AND** the panel MUST select `角座孔`
+- **THEN** the model MUST use
+  `cornerSeatMode='detachable-corner-seat'`
+- **AND** the panel MUST select `鎖定角座`
 - **AND** the existing OpenGrid footprint, height, profile, and opening defaults
   MUST remain unchanged
 
 #### Scenario: Seat mode selection is mutually exclusive
 
 - **WHEN** a user selects one locating-seat radio option
-- **THEN** exactly one of `無角座`, `角座孔`, or `內建角座` MUST be selected
+- **THEN** exactly one of `無角座`, `鎖定角座`, or `內建角座` MUST be selected
 - **AND** the normalized snapshot MUST contain the corresponding enum value
 - **AND** no `cornerBottomHoles` field MUST be sent in the canonical Worker
   snapshot
 
 #### Scenario: Legacy corner-hole migration
 
-- **WHEN** a persisted snapshot contains `cornerBottomHoles=false` or `true`
-- **THEN** hydration MUST produce `cornerSeatMode='none'` or `'hole'`
-- **AND** the resulting geometry MUST match the old unchecked or checked
-  behavior
+- **WHEN** a persisted snapshot contains `cornerBottomHoles=false` or `true`,
+  or contains the old canonical value `cornerSeatMode='hole'`
+- **THEN** hydration MUST produce `cornerSeatMode='none'` for `false` and
+  `cornerSeatMode='detachable-corner-seat'` for `true` or the old enum value
+- **AND** the resulting geometry MUST use the new locking-seat interface for
+  the migrated active mode
 - **AND** persistence MUST converge to the canonical enum field after a valid
   update
 
 #### Scenario: Invalid seat mode is rejected
 
 - **WHEN** `cornerSeatMode` is missing from a canonical current snapshot or has
-  any value other than `none`, `hole`, or `integrated`
+  any value other than `none`, `detachable-corner-seat`, or `integrated` after
+  legacy migration
 - **THEN** validation MUST return a field-specific error
 - **AND** the invalid snapshot MUST NOT replace the last valid revision
 
@@ -158,39 +169,54 @@ Base-plate and thin-shell modes MUST be treated as non-stackable profiles. They 
 The box MUST retain its existing fixed bottom profiles: the 5 mm normal bottom
 assembly, the clipped 3 mm base-plate body, and the 2 mm thin-shell floor. For
 `cornerSeatMode='none'`, it MUST generate no special corner locating geometry.
-For `cornerSeatMode='hole'`, it MUST preserve the existing nominal Ø5 mm
-base-facing bore followed by the mode-specific Ø7.05 mm retaining seat at the
-existing de-duplicated corner positions. For `cornerSeatMode='integrated'`, it
-MUST fuse one solid round seat at each of those same positions; every seat MUST
-be Ø5 mm in diameter, exactly 3 mm high, and span Z=-3 mm through Z=0 so that
-it grows outward from the existing box bottom. An integrated seat MUST NOT be a
-stepped hole or a captive-flange opening.
+For `cornerSeatMode='detachable-corner-seat'`, it MUST form the shared female
+retaining-tab socket and bottom lock indicator at every existing de-duplicated
+corner position. The socket MUST use the shared 7 mm outer envelope and 1.75
+mm depth, and MUST be compatible with the separately printable shared
+detachable male seat. For `cornerSeatMode='integrated'`, it MUST fuse one solid
+round seat at each of those same positions; every seat MUST be Ø5 mm in
+diameter, exactly 3 mm high, and span Z=-3 mm through Z=0 so that it grows
+outward from the existing box bottom. An integrated seat MUST NOT be a stepped
+hole or a captive-flange opening.
 
-The existing normal, base-plate, and thin-shell hole profiles MUST remain
-unchanged in `hole` mode. The four nominal corner positions MUST continue to
+The normal, base-plate, and thin-shell profiles MUST preserve their existing
+floor and stacking geometry while the detachable socket and indicator are cut
+from the bottom interface. The four nominal corner positions MUST continue to
 be geometrically de-duplicated when a half-cell footprint would overlap them.
-The runtime MUST continue to derive positions from the declared OpenGrid
-contract and MUST NOT load a Snap STEP reference during normal generation.
+The runtime MUST derive positions from the declared OpenGrid contract and MUST
+load the shared detachable references only when the locking-seat mode needs
+them.
 
 When `fullBottomHoleGrid=true`, ordinary holes MUST remain independent from the
 seat mode. Ordinary-hole cutters MUST exclude every active special position in
-both `hole` and `integrated` modes; at a coincident position the special hole
-or integrated seat MUST win. In `none` mode, the ordinary grid MAY use every
-nominal grid position.
+both `detachable-corner-seat` and `integrated` modes; at a coincident position
+the special socket or integrated seat MUST win. In `none` mode, the ordinary
+grid MAY use every nominal grid position.
 
 #### Scenario: No locating seat
 
 - **WHEN** a valid box uses `cornerSeatMode='none'`
-- **THEN** no special corner hole or external round seat MUST be generated
+- **THEN** no special corner socket, indicator, hole, or external round seat
+  MUST be generated
 - **AND** the ordinary full-bottom-hole grid MUST remain available when enabled
+
+#### Scenario: Locking corner seats
+
+- **WHEN** a valid normal, base-plate, or thin-shell box uses
+  `cornerSeatMode='detachable-corner-seat'`
+- **THEN** every existing de-duplicated special corner position MUST contain
+  one shared female retaining-tab socket and its visual lock indicator
+- **AND** the socket MUST accept the shared detachable male seat in the
+  insertion and locked poses without positive-volume collision
+- **AND** the locking socket MUST not add a male seat to the container solid
 
 #### Scenario: Existing locating holes
 
-- **WHEN** a valid box uses `cornerSeatMode='hole'`
-- **THEN** every existing special corner position MUST contain its mode-specific
-  Ø5-to-Ø7.05 two-stage retaining socket
-- **AND** the socket MUST retain the existing captive Ø5 mm shaft/Ø7 mm flange
-  compatibility behavior
+- **WHEN** a persisted snapshot uses the former `cornerSeatMode='hole'`
+- **THEN** validation MUST normalize it to
+  `cornerSeatMode='detachable-corner-seat'`
+- **AND** every active special position MUST contain the shared female locking
+  socket and visual indicator rather than the retired stepped-hole geometry
 
 #### Scenario: Integrated locating seats
 
@@ -208,14 +234,14 @@ nominal grid position.
   special corner position
 - **THEN** the generated result MUST contain exactly one special interface at
   that point
-- **AND** the ordinary-hole operation MUST NOT cut through an integrated seat or
-  replace a stepped socket with a plain hole
+- **AND** the ordinary-hole operation MUST NOT cut through a locking socket or
+  integrated seat or replace either with a plain hole
 
 #### Scenario: Half-cell positions remain valid
 
 - **WHEN** a half-cell footprint would place two nominal special positions too
   close to coexist
-- **THEN** the positions MUST be emitted as one valid special hole or seat
+- **THEN** the positions MUST be emitted as one valid special socket or seat
 - **AND** the footprint MUST remain unchanged
 
 ### Requirement: Optional nominal OpenGrid bottom hole grid
@@ -224,9 +250,10 @@ The stackable-box model MUST expose `fullBottomHoleGrid` independently from
 `cornerSeatMode`. When enabled, it MUST generate one ordinary straight
 Ø5.05 mm through-hole at every centered 14 mm OpenGrid grid intersection based
 on the un-cleared nominal footprint. Ordinary holes MUST pass through the
-active bottom thickness and MUST NOT contain the Ø7.05 mm retaining seat,
-flange capture, or integrated-seat geometry. Active special positions MUST be
-removed from the ordinary-hole set when `cornerSeatMode` is `hole` or
+active bottom thickness and MUST NOT contain the detachable socket,
+detachable lock indicator, Ø7.05 mm retaining seat, flange capture, or
+integrated-seat geometry. Active special positions MUST be removed from the
+ordinary-hole set when `cornerSeatMode` is `detachable-corner-seat` or
 `integrated`; when the seat mode is `none`, all nominal positions remain
 ordinary holes.
 
@@ -235,14 +262,26 @@ ordinary holes.
 - **WHEN** `fullBottomHoleGrid=true` and `cornerSeatMode='none'`
 - **THEN** every nominal centered 14 mm position MUST contain one ordinary
   Ø5.05 mm through-hole
-- **AND** no special retaining socket or integrated seat MUST be generated
+- **AND** no special retaining socket, lock indicator, or integrated seat MUST
+  be generated
+
+#### Scenario: Full grid with locking seats
+
+- **WHEN** `fullBottomHoleGrid=true` and
+  `cornerSeatMode='detachable-corner-seat'`
+- **THEN** ordinary holes MUST be present at all non-special grid positions
+- **AND** special positions MUST retain their complete female locking sockets
+  and indicators
+- **AND** adjacent ordinary grid centers MUST remain 14 mm apart
 
 #### Scenario: Full grid with locating holes
 
-- **WHEN** `fullBottomHoleGrid=true` and `cornerSeatMode='hole'`
-- **THEN** ordinary holes MUST be present at all non-special grid positions
-- **AND** special positions MUST retain their existing two-stage socket profile
-- **AND** adjacent ordinary grid centers MUST remain 14 mm apart
+- **WHEN** `fullBottomHoleGrid=true` and the former `cornerSeatMode='hole'`
+  alias is supplied
+- **THEN** the alias MUST normalize to
+  `cornerSeatMode='detachable-corner-seat'`
+- **AND** ordinary holes MUST remain at all non-special grid positions while
+  special positions retain their female locking sockets and indicators
 
 #### Scenario: Full grid with integrated seats
 
@@ -262,11 +301,21 @@ ordinary holes.
 The stackable-box builder MUST validate the selected `cornerSeatMode` and
 `fullBottomHoleGrid` as part of the accepted snapshot. A valid result MUST be
 watertight, a single solid, previewable, and exportable in every supported
-profile. In `hole` mode it MUST retain the mode-specific stepped sockets and
-their captive-fixture checks. In `none` mode it MUST contain no special
-locating geometry. In `integrated` mode it MUST validate every special seat as
-fused Ø5 mm geometry with a 3 mm Z span below the bottom plane, while ordinary
-full-grid holes and all existing shell/interface checks remain valid.
+profile. In `detachable-corner-seat` mode it MUST validate every female socket,
+lock indicator, and male/female fit probe. In `none` mode it MUST contain no
+special locating geometry. In `integrated` mode it MUST validate every special
+seat as fused Ø5 mm geometry with a 3 mm Z span below the bottom plane, while
+ordinary full-grid holes and all existing shell/interface checks remain valid.
+
+#### Scenario: Valid locking full-grid result
+
+- **WHEN** a locking-seat full-grid snapshot completes generation
+- **THEN** the candidate MUST contain the requested ordinary holes and every
+  active female locking socket with its indicator
+- **AND** the shared detachable male seat MUST fit every socket in its
+  insertion and locked poses without positive-volume collision
+- **AND** it MUST be a valid single solid eligible for preview, STEP export,
+  and STL export
 
 #### Scenario: Valid integrated full-grid result
 
@@ -278,8 +327,8 @@ full-grid holes and all existing shell/interface checks remain valid.
 
 #### Scenario: Invalid seat geometry does not commit
 
-- **WHEN** seat fusion, bounds, hole separation, shell integrity, or ordinary
-  grid validation fails
+- **WHEN** socket cutting, indicator placement, male/female fit, seat fusion,
+  bounds, hole separation, shell integrity, or ordinary grid validation fails
 - **THEN** the candidate MUST be rejected with a diagnosable model error
 - **AND** the failed candidate MUST NOT replace the last valid revision
 - **AND** export MUST remain disabled for that revision
@@ -289,10 +338,11 @@ full-grid holes and all existing shell/interface checks remain valid.
 The stackable-box builder MUST continue to validate the existing normal,
 base-plate, and thin-shell shell, opening, and box-to-box interface contracts.
 The selected seat mode MUST be included in that validation: `none` has no
-special locating geometry, `hole` has the existing retaining sockets, and
-`integrated` has fused outward seats. For `integrated`, the contract bounds
-MUST report a minimum Z of -3 mm while preserving the existing maximum Z and
-XY bounds; `none` and `hole` MUST retain the existing minimum Z of 0. All
+special locating geometry, `detachable-corner-seat` has shared female locking
+sockets and indicators, and `integrated` has fused outward seats. For
+`integrated`, the contract bounds MUST report a minimum Z of -3 mm while
+preserving the existing maximum Z and XY bounds; `none` and
+`detachable-corner-seat` MUST retain the existing minimum Z of 0. All
 successful results MUST remain previewable and exportable.
 
 #### Scenario: Successful box generation in each seat mode
@@ -300,7 +350,7 @@ successful results MUST remain previewable and exportable.
 - **WHEN** a valid normal, base-plate, or thin-shell snapshot uses any of the
   three seat modes
 - **THEN** the workspace MUST commit a non-empty single solid with the
-  selected shell and opening geometry
+  selected shell, opening, and locating-seat geometry
 - **AND** the reported bounds MUST match the selected seat mode within the
   existing tolerance
 - **AND** STEP and STL export MUST be available for the committed revision
@@ -417,10 +467,11 @@ Every enabled opening MUST remain compatible with the normal, base-plate, and th
 The catalog MUST provide deterministic STEP and STL filenames generated from
 typed normalized parameters. In addition to the existing X/Y, height, profile,
 and opening identities, every stackable-box filename MUST include exactly one
-seat suffix: `-seats-none`, `-seats-hole`, or `-seats-integrated`. The suffix
-MUST be emitted even for the default mode so exports with different geometry
-cannot overwrite one another. Filenames MUST NOT depend on raw input
-formatting, and opening fingerprints MUST retain their existing behavior.
+seat suffix: `-seats-none`, `-seats-detachable-corner-seat`, or
+`-seats-integrated`. The suffix MUST be emitted even for the default mode so
+exports with different geometry cannot overwrite one another. Filenames MUST
+NOT depend on raw input formatting, and opening fingerprints MUST retain their
+existing behavior.
 
 #### Scenario: Box filenames distinguish seat geometry
 
@@ -429,6 +480,14 @@ formatting, and opening fingerprints MUST retain their existing behavior.
 - **THEN** their STEP and STL filenames MUST differ by the deterministic seat
   suffix
 - **AND** each filename MUST identify the typed normalized mode
+
+#### Scenario: Locking box export metadata
+
+- **WHEN** a detachable-locking-seat box is exported
+- **THEN** both STEP and STL filenames MUST contain
+  `-seats-detachable-corner-seat`
+- **AND** the downloaded geometry MUST include the female locking sockets and
+  bottom lock indicators
 
 #### Scenario: Integrated box export metadata
 
@@ -523,25 +582,27 @@ The stackable-box quality gate MUST inspect honeycomb-mode candidates separately
 The CAD workspace MUST bind `/cad/opengrid-stackable-box` exclusively to
 `modelId=opengrid-stackable-box`. The catalog entry MUST expose the existing
 OpenGrid X/Y, height, profile, opening, and full-grid controls plus exactly one
-visible locating-seat radio group with `無角座`, `角座孔`, and `內建角座`. The
+visible locating-seat radio group with `無角座`, `鎖定角座`, and `內建角座`. The
 panel MUST keep the existing thin-shell/stackable profile choices, MUST NOT
 expose `basePlateMode` as a selectable profile, and MUST preserve the existing
 latest-wins, preview, commit, STEP, and STL lifecycle. The Worker MUST validate
-the canonical enum parameter and route this model ID to the independent
-stackable-box builder.
+the canonical enum parameter, load the shared detachable references only for
+the locking mode, and route this model ID to the independent stackable-box
+builder.
 
 #### Scenario: Stackable-box route initializes
 
 - **WHEN** a user opens `/cad/opengrid-stackable-box`
 - **THEN** the workspace MUST initialize with the stable stackable-box model ID
 - **AND** the first valid generation MUST use valid saved parameters or the
-  model defaults, including `cornerSeatMode='hole'` when no seat value exists
+  model defaults, including `cornerSeatMode='detachable-corner-seat'` when no
+  seat value exists
 
 #### Scenario: Stackable-box seat controls
 
 - **WHEN** a user views the stackable-box parameter panel
 - **THEN** it MUST show exactly the three mutually exclusive seat labels
-  `無角座`, `角座孔`, and `內建角座`
+  `無角座`, `鎖定角座`, and `內建角座`
 - **AND** the selected value MUST be reflected in the typed snapshot
 - **AND** the existing full-bottom-hole grid control MUST remain independent
 
@@ -551,8 +612,8 @@ stackable-box builder.
   `modelId=opengrid-stackable-box`
 - **THEN** the Worker MUST validate the stackable-box parameter shape
 - **AND** it MUST use the stackable-box builder boundary
-- **AND** mismatched parameters MUST be rejected rather than resolved through
-  another model
+- **AND** mismatched parameters or missing locking references MUST be rejected
+  rather than resolved through another model
 
 #### Scenario: Stackable-box exports retain lifecycle gates
 

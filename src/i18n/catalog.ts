@@ -436,8 +436,9 @@ export const zhHantMessages = {
   'panel.seat.mode': '角座模式',
   'panel.seat.none': '無角座',
   'panel.seat.noneDescription': '不建立底部角座。',
-  'panel.seat.hole': '角座孔',
-  'panel.seat.holeDescription': '保留中心與安全外圈角座孔。',
+  'panel.seat.detachableCornerSeat': '鎖定角座',
+  'panel.seat.detachableCornerSeatDescription':
+    '在定位點建立可插入分離式鎖定角座的卡榫插槽，並顯示鎖定指示。',
   'panel.seat.integrated': '內建角座',
   'panel.seat.integratedDescription': '建立向下凸出的 Ø5 × 3 mm 內建角座。',
   'panel.boxMode': '盒體模式',
@@ -1071,8 +1072,9 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'panel.seat.mode': 'Seat mode',
   'panel.seat.none': 'No seats',
   'panel.seat.noneDescription': 'Do not create corner locating structures.',
-  'panel.seat.hole': 'Seat holes',
-  'panel.seat.holeDescription': 'Keep the existing Ø5 mm seat holes.',
+  'panel.seat.detachableCornerSeat': 'Locking corner seats',
+  'panel.seat.detachableCornerSeatDescription':
+    'Create retaining-tab sockets and visual lock indicators for separately printed corner seats.',
   'panel.seat.integrated': 'Integrated seats',
   'panel.seat.integratedDescription':
     'Create downward Ø5 × 3 mm integrated seats.',

@@ -40,12 +40,36 @@ const DETACHABLE_HOLDER_HOST_OVERLAP = 0.01
 
 export const OPENGRID_LOCATING_SEAT_MODES = [
   'none',
-  'hole',
+  'detachable-corner-seat',
   'integrated',
 ] as const
 
+export const OPENGRID_LEGACY_LOCATING_SEAT_MODE = 'hole' as const
+
 export type OpenGridLocatingSeatMode =
   (typeof OPENGRID_LOCATING_SEAT_MODES)[number]
+
+export type OpenGridDetachableCornerSeatRotation = 0 | 90 | 180 | 270
+export type OpenGridDetachableCornerSeatPoint2D = [number, number]
+export type OpenGridDetachableCornerSeatIndicatorPlacement = {
+  center: OpenGridDetachableCornerSeatPoint2D
+  rotationDegrees: OpenGridDetachableCornerSeatRotation
+}
+
+export function normalizeOpenGridLocatingSeatMode(
+  value: unknown,
+): OpenGridLocatingSeatMode | undefined {
+  if (value === OPENGRID_LEGACY_LOCATING_SEAT_MODE) {
+    return 'detachable-corner-seat'
+  }
+  if (
+    typeof value === 'string' &&
+    (OPENGRID_LOCATING_SEAT_MODES as readonly string[]).includes(value)
+  ) {
+    return value as OpenGridLocatingSeatMode
+  }
+  return undefined
+}
 
 export const OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION = {
   nominalDiameter: NOMINAL_DIAMETER,
@@ -142,3 +166,79 @@ export const OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION = {
     nominalRemovedVolume: DETACHABLE_LOCK_INDICATOR_NOMINAL_REMOVED_VOLUME,
   },
 } as const
+
+function detachableCornerSeatApexDirectionFor(
+  rotationDegrees: OpenGridDetachableCornerSeatRotation,
+): OpenGridDetachableCornerSeatPoint2D {
+  if (rotationDegrees === 0) return [1, 0]
+  if (rotationDegrees === 90) return [0, 1]
+  if (rotationDegrees === 180) return [-1, 0]
+  return [0, -1]
+}
+
+function detachableCornerSeatIndicatorRotationFor(
+  socketRotation: OpenGridDetachableCornerSeatRotation,
+  directionOffset: 0 | 180,
+): OpenGridDetachableCornerSeatRotation {
+  const indicatorRotation =
+    (socketRotation +
+      OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator
+        .lockRotationDegrees +
+      directionOffset) %
+    360
+  if (indicatorRotation === 0) return 0
+  if (indicatorRotation === 90) return 90
+  if (indicatorRotation === 180) return 180
+  if (indicatorRotation === 270) return 270
+  throw new Error('OPENGRID_DETACHABLE_CORNER_SEAT_ROTATION_INVALID')
+}
+
+export function openGridDetachableCornerSeatSocketRotationFor(
+  center: OpenGridDetachableCornerSeatPoint2D,
+): OpenGridDetachableCornerSeatRotation {
+  const [x, y] = center
+  if (x <= 0 && y > 0) return 0
+  if (x > 0 && y >= 0) return 90
+  if (x >= 0 && y < 0) return 180
+  if (x < 0 && y <= 0) return 270
+  return 0
+}
+
+export function openGridDetachableCornerSeatIndicatorPlacementFor(
+  center: OpenGridDetachableCornerSeatPoint2D,
+  socketRotation: OpenGridDetachableCornerSeatRotation,
+): OpenGridDetachableCornerSeatIndicatorPlacement {
+  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+  const offsetFromSocket =
+    configuration.female.outerDiameter / 2 +
+    configuration.indicator.socketBoundaryClearance +
+    configuration.indicator.radialLength / 2
+  const lockRotation = ((socketRotation +
+    configuration.indicator.lockRotationDegrees) %
+    360) as OpenGridDetachableCornerSeatRotation
+  const apexDirection = detachableCornerSeatApexDirectionFor(lockRotation)
+  const isCenterSeat = center[0] === 0 && center[1] === 0
+  if (isCenterSeat) {
+    return {
+      center: [
+        center[0] - apexDirection[0] * offsetFromSocket,
+        center[1] - apexDirection[1] * offsetFromSocket,
+      ],
+      rotationDegrees: lockRotation,
+    }
+  }
+
+  const referenceArrowSign =
+    socketRotation === 0 || socketRotation === 180 ? -1 : 1
+  const directionOffset = referenceArrowSign === -1 ? 0 : 180
+  return {
+    center: [
+      center[0] + referenceArrowSign * apexDirection[0] * offsetFromSocket,
+      center[1] + referenceArrowSign * apexDirection[1] * offsetFromSocket,
+    ],
+    rotationDegrees: detachableCornerSeatIndicatorRotationFor(
+      socketRotation,
+      directionOffset,
+    ),
+  }
+}

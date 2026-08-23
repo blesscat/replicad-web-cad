@@ -643,7 +643,7 @@ describe('CAD component catalog', () => {
         x: 0.5,
         y: 1,
         height: 20,
-        cornerSeatMode: 'hole',
+        cornerSeatMode: 'detachable-corner-seat',
         fullBottomHoleGrid: false,
         basePlateMode: false,
       }),
@@ -656,7 +656,7 @@ describe('CAD component catalog', () => {
           x: 0.5,
           y: 1,
           height: 20,
-          cornerSeatMode: 'hole',
+          cornerSeatMode: 'detachable-corner-seat',
           fullBottomHoleGrid: false,
           basePlateMode: false,
         },
@@ -668,22 +668,22 @@ describe('CAD component catalog', () => {
         x: 1.5,
         y: 2,
         height: 30,
-        cornerSeatMode: 'hole',
+        cornerSeatMode: 'detachable-corner-seat',
         fullBottomHoleGrid: false,
         basePlateMode: false,
       }),
-    ).toBe('opengrid-stackable-box-1.5x2-h30-seats-hole.step')
+    ).toBe('opengrid-stackable-box-1.5x2-h30-seats-detachable-corner-seat.step')
     expect(
       definition?.stlFileName({
         ...OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
         x: 1.5,
         y: 2,
         height: 30,
-        cornerSeatMode: 'hole',
+        cornerSeatMode: 'detachable-corner-seat',
         fullBottomHoleGrid: false,
         basePlateMode: false,
       }),
-    ).toBe('opengrid-stackable-box-1.5x2-h30-seats-hole.stl')
+    ).toBe('opengrid-stackable-box-1.5x2-h30-seats-detachable-corner-seat.stl')
   })
 
   it('exposes the independent OpenGrid divider definition and route', () => {
@@ -888,7 +888,9 @@ describe('CAD component catalog', () => {
       definition?.exportFileName(
         OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       ),
-    ).toBe('opengrid-stackable-cylinder-d60-h20-seats-hole.step')
+    ).toBe(
+      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat.step',
+    )
     expect(
       definition?.stlFileName({
         ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
@@ -901,6 +903,8 @@ describe('CAD component catalog', () => {
         ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
         bottomPlateMode: true,
       }),
-    ).toBe('opengrid-stackable-cylinder-d60-h20-seats-hole-bottom-plate.step')
+    ).toBe(
+      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat-bottom-plate.step',
+    )
   })
 })

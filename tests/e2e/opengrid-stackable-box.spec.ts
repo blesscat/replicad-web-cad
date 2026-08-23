@@ -79,9 +79,11 @@ test('OpenGrid stackable-box is listed and exposes the half-cell controls', asyn
     .evaluateAll((radios) =>
       radios.map((radio) => radio.getAttribute('aria-label')),
     )
-  expect(seatModeLabels).toEqual(['無角座', '角座孔', '內建角座'])
-  const cornerHoleMode = seatMode.getByRole('radio', { name: '角座孔' })
-  await expect(cornerHoleMode).toBeChecked()
+  expect(seatModeLabels).toEqual(['無角座', '鎖定角座', '內建角座'])
+  const detachableCornerSeatMode = seatMode.getByRole('radio', {
+    name: '鎖定角座',
+  })
+  await expect(detachableCornerSeatMode).toBeChecked()
   const fullGrid = page.getByRole('checkbox', { name: '底部全孔模式' })
   await expect(fullGrid).toBeVisible()
   await expect(fullGrid).not.toBeChecked()
@@ -207,7 +209,7 @@ test('OpenGrid stackable-box keeps half-cell dimensions in export metadata', asy
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-stackable-box-1.5x1.5-h20-seats-hole.step',
+    'opengrid-stackable-box-1.5x1.5-h20-seats-detachable-corner-seat.step',
   )
 
   await page.getByRole('radio', { name: '薄殼模式' }).check()
@@ -216,7 +218,7 @@ test('OpenGrid stackable-box keeps half-cell dimensions in export metadata', asy
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const thinDownload = await thinDownloadPromise
   expect(thinDownload.suggestedFilename()).toBe(
-    'opengrid-stackable-box-1.5x1.5-h20-seats-hole-thin-shell.step',
+    'opengrid-stackable-box-1.5x1.5-h20-seats-detachable-corner-seat-thin-shell.step',
   )
 })
 
@@ -277,7 +279,7 @@ test('OpenGrid stackable-box persists the honeycomb saving switch and filename',
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-stackable-box-2x2-h20-seats-hole-honeycomb.step',
+    'opengrid-stackable-box-2x2-h20-seats-detachable-corner-seat-honeycomb.step',
   )
   await honeycomb.uncheck()
   await expect(honeycombWarning).toHaveCount(0)
