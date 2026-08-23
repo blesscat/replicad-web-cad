@@ -3,7 +3,10 @@ import {
   OPENGRID_PREVIEW_CONFIGURATION,
   boundsForOpenGrid,
   openGridFileName,
+  openGridNominalBoardConfiguration,
+  openGridPhysicalBoundsFor,
   openGridStlFileName,
+  normalizeOpenGridParameters,
   validateOpenGridParameters,
   isOpenGridParameters,
 } from './opengrid'
@@ -201,6 +204,8 @@ export {
   openGridConnectorLocationsFor,
   openGridCustomPositionFingerprint,
   openGridFileName,
+  openGridNominalBoardConfiguration,
+  openGridPhysicalBoundsFor,
   openGridScrewCentersFor,
   openGridScrewLatticeDimensions,
   openGridScrewPositionsFor,
@@ -395,6 +400,7 @@ export type {
   OpenGridConnectorLocation,
   OpenGridConnectorSide,
   OpenGridDirection3D,
+  OpenGridFrameSideFlags,
   OpenGridGenerationSupportValidation,
   OpenGridPoint2D,
   OpenGridScrewDimensions,
@@ -403,6 +409,7 @@ export type {
   OpenGridScrewPreset,
   OpenGridScrewPosition,
   OpenGridSideFlags,
+  OpenGridTargetFrameShape,
   OpenGridVariant,
   OpenGridValidation,
   OpenGridValidationIssue,
@@ -1107,9 +1114,22 @@ export function validateModelParameters(
   }
 
   if (modelId === 'opengrid') {
-    const validation = validateOpenGridParameters(value)
-    if (!validation.valid) return validation
-    return { valid: true, value: { modelId, parameters: validation.value } }
+    try {
+      return {
+        valid: true,
+        value: {
+          modelId,
+          parameters: normalizeOpenGridParameters(value),
+        },
+      }
+    } catch {
+      const validation = validateOpenGridParameters(value)
+      if (!validation.valid) return validation
+      return {
+        valid: true,
+        value: { modelId: 'opengrid', parameters: validation.value },
+      }
+    }
   }
 
   if (modelId === 'opengrid-stackable-box') {

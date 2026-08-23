@@ -12,6 +12,7 @@ import {
   HALF_CELL_CONFIGURATION,
   OPENGRID_CONFIGURATION,
   isOpenGridLayeredVariant,
+  openGridNominalBoardConfiguration,
   type ModelBounds,
   type OpenGridParameters,
 } from '../../../cad-contract/units'
@@ -140,12 +141,20 @@ function volumeInProbe(
   }
 }
 
+function nominalBoundsForOpenGrid(parameters: OpenGridParameters): ModelBounds {
+  const nominal = openGridNominalBoardConfiguration(parameters)
+  return {
+    min: [-nominal.width / 2, -nominal.depth / 2, 0],
+    max: [nominal.width / 2, nominal.depth / 2, nominal.height],
+  }
+}
+
 function inspectOfficialProfile(
   shape: Shape3D,
   parameters: OpenGridParameters,
   failures: string[],
 ): void {
-  const board = boundsForOpenGrid(parameters)
+  const board = nominalBoundsForOpenGrid(parameters)
   const [firstCellX, firstCellY] = cellCenterForOpenGrid(parameters, 0, 0)
   const isLayered = isOpenGridLayeredVariant(parameters.variant)
   const layerThickness = isLayered
@@ -212,7 +221,7 @@ function inspectHalfCellBoundary(
   if (parameters.halfCellX === 'none' && parameters.halfCellY === 'none') {
     return
   }
-  const board = boundsForOpenGrid(parameters)
+  const board = nominalBoundsForOpenGrid(parameters)
   const isLayered = isOpenGridLayeredVariant(parameters.variant)
   const layerThickness = isLayered
     ? OPENGRID_CONFIGURATION.variants.Full.thickness
@@ -467,6 +476,120 @@ function inspectHybridTransition(
   }
 }
 
+function inspectTargetFrame(
+  shape: Shape3D,
+  parameters: OpenGridParameters,
+  failures: string[],
+): void {
+  if (!parameters.fitToTarget) return
+
+  const nominal = nominalBoundsForOpenGrid(parameters)
+  const target = boundsForOpenGrid(parameters)
+  const probeHalf = 0.5
+  const zHalf = Math.min(0.2, (target.max[2] - target.min[2]) / 8)
+  const zCenter = (target.max[2] + target.min[2]) / 2
+  const frameProbeRemainder = 0.2
+  const sides = parameters.targetFrameSides
+
+  if (!sides.left && target.min[0] < nominal.min[0] - frameProbeRemainder) {
+    failures.push('target-frame:unexpected-left-strip')
+  }
+  if (!sides.right && target.max[0] > nominal.max[0] + frameProbeRemainder) {
+    failures.push('target-frame:unexpected-right-strip')
+  }
+  if (!sides.bottom && target.min[1] < nominal.min[1] - frameProbeRemainder) {
+    failures.push('target-frame:unexpected-bottom-strip')
+  }
+  if (!sides.top && target.max[1] > nominal.max[1] + frameProbeRemainder) {
+    failures.push('target-frame:unexpected-top-strip')
+  }
+
+  if (sides.left && target.min[0] < nominal.min[0] - frameProbeRemainder) {
+    const volume = volumeInProbe(
+      shape,
+      [target.min[0] + 0.1, -probeHalf, zCenter - zHalf],
+      [nominal.min[0] - 0.05, probeHalf, zCenter + zHalf],
+    )
+    if (volume <= 0.01) failures.push('target-frame:left-strip-missing')
+  }
+  if (sides.right && target.max[0] > nominal.max[0] + frameProbeRemainder) {
+    const volume = volumeInProbe(
+      shape,
+      [nominal.max[0] + 0.05, -probeHalf, zCenter - zHalf],
+      [target.max[0] - 0.1, probeHalf, zCenter + zHalf],
+    )
+    if (volume <= 0.01) failures.push('target-frame:right-strip-missing')
+  }
+  if (sides.bottom && target.min[1] < nominal.min[1] - frameProbeRemainder) {
+    const volume = volumeInProbe(
+      shape,
+      [-probeHalf, target.min[1] + 0.1, zCenter - zHalf],
+      [probeHalf, nominal.min[1] - 0.05, zCenter + zHalf],
+    )
+    if (volume <= 0.01) failures.push('target-frame:bottom-strip-missing')
+  }
+  if (sides.top && target.max[1] > nominal.max[1] + frameProbeRemainder) {
+    const volume = volumeInProbe(
+      shape,
+      [-probeHalf, nominal.max[1] + 0.05, zCenter - zHalf],
+      [probeHalf, target.max[1] - 0.1, zCenter + zHalf],
+    )
+    if (volume <= 0.01) failures.push('target-frame:top-strip-missing')
+  }
+
+  if (parameters.targetFrameShape === 'none') return
+  const cornerKeys = new Set<string>()
+  const corners: Array<[number, number]> = []
+  const addCorner = (x: number, y: number): void => {
+    const key = `${x}:${y}`
+    if (cornerKeys.has(key)) return
+    cornerKeys.add(key)
+    corners.push([x, y])
+  }
+  const leftExtended =
+    sides.left && target.min[0] < nominal.min[0] - frameProbeRemainder
+  const rightExtended =
+    sides.right && target.max[0] > nominal.max[0] + frameProbeRemainder
+  const bottomExtended =
+    sides.bottom && target.min[1] < nominal.min[1] - frameProbeRemainder
+  const topExtended =
+    sides.top && target.max[1] > nominal.max[1] + frameProbeRemainder
+  if (leftExtended) {
+    addCorner(target.min[0], target.min[1])
+    addCorner(target.min[0], target.max[1])
+  }
+  if (rightExtended) {
+    addCorner(target.max[0], target.min[1])
+    addCorner(target.max[0], target.max[1])
+  }
+  if (bottomExtended) {
+    addCorner(target.min[0], target.min[1])
+    addCorner(target.max[0], target.min[1])
+  }
+  if (topExtended) {
+    addCorner(target.min[0], target.max[1])
+    addCorner(target.max[0], target.max[1])
+  }
+
+  const cornerProbeSize = 0.15
+  for (const [x, y] of corners) {
+    const minX = x < 0 ? x - 0.01 : x - cornerProbeSize
+    const maxX = x < 0 ? x + cornerProbeSize : x + 0.01
+    const minY = y < 0 ? y - 0.01 : y - cornerProbeSize
+    const maxY = y < 0 ? y + cornerProbeSize : y + 0.01
+    const volume = volumeInProbe(
+      shape,
+      [minX, minY, zCenter - zHalf],
+      [maxX, maxY, zCenter + zHalf],
+    )
+    if (volume > 0.005) {
+      failures.push(
+        `target-frame:${parameters.targetFrameShape}-corner-not-treated@${x}:${y}`,
+      )
+    }
+  }
+}
+
 function inspectCellOpenings(
   shape: Shape3D,
   parameters: OpenGridParameters,
@@ -610,6 +733,7 @@ export function inspectOpenGridShapeQuality(
   inspectHybridProfile(shape, parameters, failures)
   inspectHybridTransition(shape, parameters, failures)
   inspectHalfCellBoundary(shape, parameters, failures)
+  inspectTargetFrame(shape, parameters, failures)
   if (mesh.triangleCount <= 0 || !meshIsFinite(mesh)) {
     failures.push('mesh:empty-or-non-finite')
   }

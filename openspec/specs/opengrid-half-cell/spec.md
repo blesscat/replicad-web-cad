@@ -34,7 +34,9 @@ OpenGrid board normalized snapshots MUST continue to use typed axis fields: `hal
 
 ### Requirement: OpenGrid half-cell dimensions and orientation
 
-The OpenGrid board MUST retain a 28 mm full-cell pitch and add exactly 14 mm on each axis whose half-cell field is not `none`. Its derived dimensions MUST be `columns × 28 + 14` for a selected X half-cell and `rows × 28 + 14` for a selected Y half-cell. The final board MUST remain centered on X/Y with minimum Z=0. `left` MUST occupy the negative-X outer side, `right` the positive-X outer side, `top` the positive-Y outer side, and `bottom` the negative-Y outer side.
+The OpenGrid board MUST retain a 28 mm full-cell pitch and add exactly 14 mm on each axis whose half-cell field is not `none`. Its nominal grid dimensions MUST be `columns × 28 + 14` for a selected X half-cell and `rows × 28 + 14` for a selected Y half-cell. The nominal grid MUST remain centered on X/Y with minimum Z=0. `left` MUST occupy the negative-X outer side, `right` the positive-X outer side, `top` the positive-Y outer side, and `bottom` the negative-Y outer side.
+
+When `fitToTarget=true`, `targetWidth` and `targetDepth` MUST define the requested physical outer envelope in millimetres. Each positive target axis MUST be at least its nominal grid dimension, and its remainder MUST be no more than 28 mm. When both opposite `targetFrameSides` are enabled, the remainder MUST be divided equally between those sides; when only one is enabled, that side MUST receive the full remainder; when neither is enabled, that axis MUST remain at its nominal dimension even if a larger target was entered. The resulting envelope MUST remain centered on the nominal grid where both sides are enabled and MUST keep minimum Z=0. The target frame MUST NOT change the 28 mm pitch, half-cell direction, or nominal grid-host centers.
 
 #### Scenario: X-axis half-cell size
 
@@ -57,6 +59,13 @@ The OpenGrid board MUST retain a 28 mm full-cell pitch and add exactly 14 mm on 
 - **AND** the final X/Y bounds MUST be symmetric around the world origin within the existing bounds tolerance
 - **AND** the board base MUST remain at Z=0
 
+#### Scenario: Centered target envelope
+
+- **WHEN** a board has nominal dimensions 98 by 56 mm, `fitToTarget=true`, `targetWidth=100`, and `targetDepth=58`
+- **THEN** its physical envelope MUST be 100 by 58 mm
+- **AND** the nominal grid MUST remain centered inside it
+- **AND** the physical frame MUST add 1 mm on each X side and 1 mm on each Y side
+
 ### Requirement: Full-cell profile remains the base for half-cell geometry
 
 A half-cell OpenGrid board MUST use the existing official OpenGrid profile for every full-cell region and MUST preserve the full-cell pitch, capture/interface profile, optional feature coordinate system, and selected variant thickness. The half-cell extension MUST be produced as an explicit boundary/interface geometry operation; the implementation MUST NOT scale the complete board to achieve a target dimension.
@@ -76,32 +85,23 @@ A half-cell OpenGrid board MUST use the existing official OpenGrid profile for e
 
 ### Requirement: Half-cell boundary feature placement
 
-OpenGrid generated feature coordinates MUST be derived from the final centered
-board envelope after its selected half-cell extensions are included. Connector
-locations MUST use the final outer edge for a selected outer side and MUST
-include newly eligible half-cell boundary seams on the other selected sides.
-Generated screw modes MUST include the screw centers introduced by the selected
-half-cell boundaries. Explicit `custom` screw positions MUST remain unchanged
-and MUST NOT receive implicit boundary positions. Existing explicit
-`screwCenter` and `screwEvery` modifiers remain effective when selected; they
-are not implicit half-cell positions.
+OpenGrid generated feature coordinates MUST be derived from the final nominal grid envelope after its selected half-cell extensions are included. Connector locations MUST use the nominal grid outer edge for a selected outer side and MUST include newly eligible half-cell boundary seams on the other selected sides. Generated screw modes MUST include the screw centers introduced by the selected half-cell boundaries. Explicit `custom` screw positions MUST remain unchanged and MUST NOT receive implicit boundary positions. Existing explicit `screwCenter` and `screwEvery` modifiers remain effective when selected; they are not implicit half-cell positions.
 
-All connector and screw cutters MUST be applied at the final board level after
-the complete-cell and half-cell geometry has been fused. Screw cutters MUST be
-the final OpenGrid feature operation so a hole that crosses a complete-cell /
-half-cell interface is calculated against the complete resulting solid.
+When `fitToTarget=true`, the physical target frame MUST be treated as a non-host outer border. It MUST NOT move, duplicate, or add connector and screw locations, and it MUST NOT alter the nominal grid seam coordinate system. All connector and screw cutters MUST still be applied at the final nominal grid level after the complete-cell and half-cell geometry has been fused. Screw cutters MUST be the final OpenGrid feature operation so a hole that crosses a complete-cell / half-cell interface is calculated against the complete resulting solid; the completed feature-cut nominal geometry MUST then be fused with the frame, leaving the frame free of grid features.
 
 #### Scenario: Half-cell outer connectors
 
 - **WHEN** a board selects one or two half-cell axes and connector holes are enabled
 - **THEN** connector holes on the selected outer sides MUST be located on the final board boundary
 - **AND** connector seams created by the half-cell boundary MUST be included in the generated locations
+- **AND** enabling a target frame MUST NOT move those connector holes to the physical frame edge
 
 #### Scenario: Half-cell generated screw centers
 
 - **WHEN** a non-custom screw mode is enabled on a board with a selected half-cell axis
 - **THEN** screw centers on the new half-cell boundary MUST be included in the effective generated centers
 - **AND** the cutters MUST remove those holes from the final half-cell geometry
+- **AND** enabling a target frame MUST NOT add screw centers on the physical frame
 
 #### Scenario: Custom screw positions remain explicit
 
@@ -137,7 +137,28 @@ The shared half-cell geometry contract MUST define the Snap host pitch as 28 mm 
 
 ### Requirement: OpenGrid half-cell workspace controls
 
-The `/cad/opengrid` workspace MUST expose the existing OpenGrid board controls together with an X half-cell direction control containing `none`／`left`／`right` and a Y half-cell direction control containing `none`／`top`／`bottom`. The grid-count controls MUST be ordered X before Y. With no half-cell on an axis, its slider MUST use whole-cell values; when that axis has a selected half-cell direction, its displayed total count MUST use `0.5` increments (`1.5`, `2.5`, ...), retain at least one complete cell, and extend the maximum by `0.5`. The normalized snapshot MAY continue to store the complete-cell count as an integer plus the typed direction field. The panel MUST display derived width, depth, and thickness using the selected directions. It MUST NOT expose an `allowHalfCell` checkbox, a separate single/dual mode, or independent diagonal controls.
+The `/cad/opengrid` workspace MUST expose the existing OpenGrid board controls together with an X half-cell direction control containing `none`／`left`／`right` and a Y half-cell direction control containing `none`／`top`／`bottom`. The grid-count controls MUST be ordered X before Y. With no half-cell on an axis, its slider MUST use whole-cell values; when that axis has a selected half-cell direction, its displayed total count MUST use `0.5` increments (`1.5`, `2.5`, ...), retain at least one complete cell, and extend the maximum by `0.5`. The normalized snapshot MAY continue to store the complete-cell count as an integer plus the typed direction field. The panel MUST display nominal derived width, depth, and thickness using the selected directions.
+
+The persisted OpenGrid snapshot MUST include `targetFrameShape` with values
+`none`, `chamfer`, or `fillet`, and `targetFrameSides` with independent boolean
+`top`, `right`, `bottom`, and `left` fields. Existing snapshots missing these
+fields MUST receive the square-frame default and all four enabled directions.
+The checkbox controlling `fitToTarget` MUST be the first control in the
+OpenGrid panel and MUST include a visible Beta label. When the checkbox is
+disabled, the target-frame calculator and target-frame-only controls MUST be
+hidden, while print planning and nominal board chamfer controls remain
+available. When the checkbox is enabled, the target-size grid calculator,
+`targetFrameShape` control labelled `外框角型`, and four independent frame-side
+controls MUST be visible; print planning and nominal board chamfer controls MUST
+be hidden, while connector and screw controls MUST remain available. The
+target-frame calculator MUST retain target X/Y dimensions and the panel MUST
+display the actual physical envelope: target dimensions on axes with a
+selected frame side and nominal dimensions on axes with no selected frame side.
+If the checkbox is enabled before a positive target is calculated, the panel
+MUST allow the pending mode to remain at nominal dimensions until the
+calculator is applied. When the checkbox is disabled, target values MUST NOT
+change the generated envelope. The panel MUST NOT expose an `allowHalfCell`
+checkbox, a separate single/dual mode, or independent diagonal controls.
 
 #### Scenario: Select an X half-cell
 
@@ -161,6 +182,54 @@ The `/cad/opengrid` workspace MUST expose the existing OpenGrid board controls t
 - **AND** the generated screw centers MUST be `[-35,-42]`, `[-35,42]`, `[21,-42]`, and `[21,42]`
 - **AND** the middle full-cell seam at `x=-7 mm` MUST NOT receive screws
 
+#### Scenario: Target frame checkbox
+
+- **WHEN** a user views the `/cad/opengrid` parameter panel
+- **THEN** the physical target-frame checkbox MUST be the first OpenGrid
+  control and MUST include the Beta label
+- **AND** the target-size calculator, outer-frame corner shape, and frame-side
+  controls MUST be hidden until the checkbox is enabled
+- **AND** print planning and nominal board chamfer controls MUST be visible
+  only while the checkbox is disabled
+
+#### Scenario: Enable target frame controls
+
+- **WHEN** a user enables `fitToTarget`
+- **THEN** the panel MUST show the target-size grid calculator
+- **AND** the panel MUST show `外框角型` with `無`, `倒角`, and `圓角`
+- **AND** the panel MUST show independent top, right, bottom, and left frame
+  direction controls
+- **AND** the panel MUST hide print planning and nominal board chamfer
+  controls
+- **AND** connector and screw controls MUST remain available
+
+#### Scenario: Target frame checkbox with no calculated target
+
+- **WHEN** a user enables `fitToTarget` before a positive target dimension has
+  been calculated
+- **THEN** the target calculator MUST be shown without blocking the checkbox
+- **AND** the generated envelope MUST remain nominal until target dimensions
+  are applied
+- **AND** applying valid target dimensions MUST persist them with
+  `fitToTarget=true`
+
+#### Scenario: Directional target-frame remainder
+
+- **WHEN** a target-fitted board has a target larger than nominal on an axis
+- **THEN** selecting both opposite frame directions MUST split the remainder
+  equally
+- **AND** selecting only one direction MUST place the full remainder on that
+  side
+- **AND** selecting neither direction MUST leave that axis at its nominal
+  dimension
+
+#### Scenario: Connector remains on a side without a frame
+
+- **WHEN** connector holes are enabled and a connector side is selected while
+  its corresponding target-frame direction is disabled
+- **THEN** the connector holes MUST remain visible on that nominal board side
+- **AND** no connector holes MUST be added to the physical frame
+
 #### Scenario: Select a Y half-cell
 
 - **WHEN** a user chooses `halfCellY=top` and leaves `halfCellX=none`
@@ -178,6 +247,13 @@ The `/cad/opengrid` workspace MUST expose the existing OpenGrid board controls t
 #### Scenario: OpenGrid invalid direction
 
 - **WHEN** a programmatic or persisted OpenGrid value contains an invalid direction or `allowHalfCell`
+- **THEN** the panel MUST show a field-specific validation error
+- **AND** it MUST send `model.invalidate` rather than `model.generate`
+- **AND** the previous accepted preview MAY remain visible but MUST be marked stale
+
+#### Scenario: OpenGrid invalid target
+
+- **WHEN** a programmatic or persisted OpenGrid value contains an invalid target dimension or a target smaller than its nominal envelope
 - **THEN** the panel MUST show a field-specific validation error
 - **AND** it MUST send `model.invalidate` rather than `model.generate`
 - **AND** the previous accepted preview MAY remain visible but MUST be marked stale

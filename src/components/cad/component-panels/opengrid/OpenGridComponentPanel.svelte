@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { calculateOpenGridPrintPlan } from '../../../../features/cad/grid-dimensions'
+  import {
+    calculateOpenGridCounts,
+    calculateOpenGridPrintPlan,
+    type GridDimensionInput,
+  } from '../../../../features/cad/grid-dimensions'
   import {
     OPENGRID_CONFIGURATION,
     isOpenGridParameters,
@@ -8,17 +12,20 @@
     type HalfCellX,
     type HalfCellY,
     type OpenGridCornerFlags,
+    type OpenGridFrameSideFlags,
     type OpenGridParameterKey,
     type OpenGridParameters,
     type OpenGridSideFlags,
     type OpenGridScrewDimensions,
     type OpenGridScrewPreset,
+    type OpenGridTargetFrameShape,
   } from '../../../../cad-contract/units'
   import {
     cloneModelParameters,
     getSystemPreset,
     type OpenGridSystemContext,
   } from '../../../../features/cad/system-entry-context'
+  import GridDimensionCalculator from '../GridDimensionCalculator.svelte'
   import OpenGridPrintPlanCalculator from './OpenGridPrintPlanCalculator.svelte'
   import ParameterField from '../ParameterField.svelte'
   import RestoreButton from '../RestoreButton.svelte'
@@ -89,6 +96,9 @@
       },
       connectorSides: {
         ...OPENGRID_CONFIGURATION.defaultParameters.connectorSides,
+      },
+      targetFrameSides: {
+        ...OPENGRID_CONFIGURATION.defaultParameters.targetFrameSides,
       },
       customScrewPositions: [],
     }
@@ -287,6 +297,7 @@
 
   function updateGridCounts(
     changes: Pick<OpenGridParameters, 'rows' | 'columns'>,
+    target?: Pick<OpenGridParameters, 'targetWidth' | 'targetDepth'>,
   ): void {
     const positions = clonePositions().filter(
       (position) =>
@@ -294,6 +305,7 @@
     )
     updateParameters({
       ...changes,
+      ...target,
       screwCenter: centerScrewAvailable(changes.rows, changes.columns)
         ? parameters.screwCenter
         : false,
@@ -312,6 +324,10 @@
       connectorSides: {
         ...parameters.connectorSides,
         ...(changes.connectorSides ?? {}),
+      },
+      targetFrameSides: {
+        ...parameters.targetFrameSides,
+        ...(changes.targetFrameSides ?? {}),
       },
       customScrewPositions: (
         changes.customScrewPositions ?? clonePositions()
@@ -368,10 +384,33 @@
     rows: number
     columns: number
   }): void {
-    // Planning changes only the primary piece dimensions. Keep screw settings
-    // and custom positions intact; manual slider edits retain their existing
-    // position-cleanup behavior through updateGridCounts.
-    updateParameters(changes)
+    // The plan's primary piece dimensions replace the single-board target.
+    // Disable target fitting so the saved target does not invalidate or
+    // prevent generation of the selected primary piece.
+    updateParameters({ ...changes, fitToTarget: false })
+  }
+
+  function calculateGridDimensions(input: GridDimensionInput) {
+    return calculateOpenGridCounts({
+      ...input,
+      halfCellX: parameters.halfCellX,
+      halfCellY: parameters.halfCellY,
+    })
+  }
+
+  function handleDimensionCalculation(
+    changes: { rows: number; columns: number },
+    target?: { x: number; y: number },
+  ): void {
+    updateGridCounts(
+      changes,
+      target ? { targetWidth: target.x, targetDepth: target.y } : undefined,
+    )
+  }
+
+  function updateFitToTarget(event: Event): void {
+    if (!(event.currentTarget instanceof HTMLInputElement)) return
+    updateParameters({ fitToTarget: event.currentTarget.checked })
   }
 
   function updateHalfCellX(event: Event): void {
@@ -386,7 +425,12 @@
 
   function updateSelect(
     field:
-      'variant' | 'chamfers' | 'screwKind' | 'screwMode' | 'connectorHoles',
+      | 'variant'
+      | 'chamfers'
+      | 'targetFrameShape'
+      | 'screwKind'
+      | 'screwMode'
+      | 'connectorHoles',
     event: Event,
   ): void {
     if (!(event.currentTarget instanceof HTMLSelectElement)) return
@@ -397,6 +441,12 @@
     }
     if (field === 'chamfers') {
       updateParameters({ chamfers: value as OpenGridParameters['chamfers'] })
+      return
+    }
+    if (field === 'targetFrameShape') {
+      updateParameters({
+        targetFrameShape: value as OpenGridTargetFrameShape,
+      })
       return
     }
     if (field === 'screwKind') {
@@ -440,6 +490,16 @@
     if (!(event.currentTarget instanceof HTMLInputElement)) return
     updateParameters({
       connectorSides: { [field]: event.currentTarget.checked },
+    })
+  }
+
+  function updateFrameSide(
+    field: keyof OpenGridFrameSideFlags,
+    event: Event,
+  ): void {
+    if (!(event.currentTarget instanceof HTMLInputElement)) return
+    updateParameters({
+      targetFrameSides: { [field]: event.currentTarget.checked },
     })
   }
 
@@ -490,6 +550,130 @@
 <fieldset class="m-0 grid gap-3 border-0 p-0" data-testid="opengrid-panel">
   <ParameterField
     {locale}
+    label={translate(locale, 'panel.opengrid.fitToTarget')}
+    changed={parameterChanged('fitToTarget')}
+    error={fieldError('fitToTarget')}
+    errorId="opengrid-fit-to-target-error"
+    restoreLabel={translate(locale, 'panel.opengrid.fitToTargetRestore')}
+    onRestore={() => restoreParameter('fitToTarget')}
+  >
+    <div class="grid gap-1">
+      <label class="flex min-w-0 items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          aria-describedby={fieldError('fitToTarget')
+            ? 'opengrid-fit-to-target-description opengrid-fit-to-target-error'
+            : 'opengrid-fit-to-target-description'}
+          aria-invalid={Boolean(fieldError('fitToTarget'))}
+          aria-label={translate(locale, 'panel.opengrid.fitToTargetAria')}
+          checked={parameters.fitToTarget}
+          onchange={updateFitToTarget}
+        />
+        <span>{translate(locale, 'panel.opengrid.fitToTargetCheckbox')}</span>
+        <span
+          class="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary"
+        >
+          {translate(locale, 'panel.opengrid.fitToTargetBeta')}
+        </span>
+      </label>
+      <p
+        id="opengrid-fit-to-target-description"
+        class="m-0 pl-6 text-sm text-muted"
+        data-testid="opengrid-fit-to-target-description"
+      >
+        {translate(locale, 'panel.opengrid.fitToTargetDescription')}
+      </p>
+    </div>
+  </ParameterField>
+
+  {#if parameters.fitToTarget}
+    <GridDimensionCalculator
+      {locale}
+      calculate={calculateGridDimensions}
+      onApply={handleDimensionCalculation}
+      onInvalid={onDimensionCalculationInvalid}
+      testId="opengrid-target-dimension-calculator"
+      initialTargetX={parameters.targetWidth > 0
+        ? String(parameters.targetWidth)
+        : ''}
+      initialTargetY={parameters.targetDepth > 0
+        ? String(parameters.targetDepth)
+        : ''}
+      description={translate(
+        locale,
+        'panel.opengrid.targetDimensionDescription',
+      )}
+    />
+
+    <ParameterField
+      {locale}
+      label={translate(locale, 'panel.opengrid.targetFrameShape')}
+      changed={parameterChanged('targetFrameShape')}
+      error={fieldError('targetFrameShape')}
+      errorId="opengrid-target-frame-shape-error"
+      restoreLabel={translate(locale, 'panel.opengrid.targetFrameShapeRestore')}
+      onRestore={() => restoreParameter('targetFrameShape')}
+    >
+      <select
+        class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+        aria-label={translate(locale, 'panel.opengrid.targetFrameShapeRestore')}
+        aria-describedby={fieldError('targetFrameShape')
+          ? 'opengrid-target-frame-shape-error'
+          : undefined}
+        aria-invalid={Boolean(fieldError('targetFrameShape'))}
+        value={parameters.targetFrameShape}
+        onchange={(event) => updateSelect('targetFrameShape', event)}
+      >
+        <option value="none">{translate(locale, 'panel.opengrid.none')}</option>
+        <option value="chamfer"
+          >{translate(locale, 'panel.opengrid.targetFrameShapeChamfer')}</option
+        >
+        <option value="fillet"
+          >{translate(locale, 'panel.opengrid.targetFrameShapeFillet')}</option
+        >
+      </select>
+    </ParameterField>
+
+    <ParameterField
+      {locale}
+      label={translate(locale, 'panel.opengrid.targetFrameSides')}
+      changed={parameterChanged('targetFrameSides')}
+      error={fieldError('targetFrameSides')}
+      errorId="opengrid-target-frame-sides-error"
+      restoreLabel={translate(locale, 'panel.opengrid.targetFrameSidesRestore')}
+      onRestore={() => restoreParameter('targetFrameSides')}
+    >
+      <div
+        class="grid grid-cols-1 gap-2 rounded-lg border border-border-card p-2 text-sm sm:grid-cols-2"
+        data-testid="opengrid-target-frame-sides"
+      >
+        {#each [['top', 'panel.opengrid.top'], ['right', 'panel.opengrid.right'], ['bottom', 'panel.opengrid.bottom'], ['left', 'panel.opengrid.left']] as item}
+          {@const side = item[0] as keyof OpenGridFrameSideFlags}
+          <label class="flex min-w-0 items-center gap-2">
+            <input
+              type="checkbox"
+              aria-label={`${translate(locale, 'panel.opengrid.targetFrameSides')} ${translate(locale, item[1])}`}
+              checked={parameters.targetFrameSides[side]}
+              onchange={(event) => updateFrameSide(side, event)}
+            />
+            {translate(locale, item[1])}
+          </label>
+        {/each}
+      </div>
+    </ParameterField>
+  {/if}
+
+  {#if !parameters.fitToTarget}
+    <OpenGridPrintPlanCalculator
+      {locale}
+      calculate={calculateOpenGridPrintPlan}
+      onApply={handlePrintPlanCalculation}
+      onInvalid={onDimensionCalculationInvalid}
+    />
+  {/if}
+
+  <ParameterField
+    {locale}
     label={translate(locale, 'panel.opengrid.profile')}
     changed={parameterChanged('variant')}
     error={fieldError('variant')}
@@ -521,13 +705,6 @@
       >
     </select>
   </ParameterField>
-
-  <OpenGridPrintPlanCalculator
-    {locale}
-    calculate={calculateOpenGridPrintPlan}
-    onApply={handlePrintPlanCalculation}
-    onInvalid={onDimensionCalculationInvalid}
-  />
 
   <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
     <ParameterField
@@ -647,50 +824,52 @@
     </p>
   {/if}
 
-  <ParameterField
-    {locale}
-    label={translate(locale, 'panel.opengrid.chamfer')}
-    changed={parameterChanged('chamfers')}
-    restoreLabel={translate(locale, 'panel.opengrid.chamferRestore')}
-    onRestore={() => restoreParameter('chamfers')}
-  >
-    <select
-      class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
-      aria-label={translate(locale, 'panel.opengrid.chamferRestore')}
-      value={parameters.chamfers}
-      onchange={(event) => updateSelect('chamfers', event)}
+  {#if !parameters.fitToTarget}
+    <ParameterField
+      {locale}
+      label={translate(locale, 'panel.opengrid.chamfer')}
+      changed={parameterChanged('chamfers')}
+      restoreLabel={translate(locale, 'panel.opengrid.chamferRestore')}
+      onRestore={() => restoreParameter('chamfers')}
     >
-      <option value="corners"
-        >{translate(locale, 'panel.opengrid.chamferCorners')}</option
+      <select
+        class="w-full min-w-0 rounded-lg border border-border-field bg-panel px-[0.65rem] py-[0.55rem] text-base text-ink"
+        aria-label={translate(locale, 'panel.opengrid.chamferRestore')}
+        value={parameters.chamfers}
+        onchange={(event) => updateSelect('chamfers', event)}
       >
-      <option value="everywhere"
-        >{translate(locale, 'panel.opengrid.chamferEverywhere')}</option
-      >
-      <option value="none">{translate(locale, 'panel.opengrid.none')}</option>
-    </select>
-  </ParameterField>
+        <option value="corners"
+          >{translate(locale, 'panel.opengrid.chamferCorners')}</option
+        >
+        <option value="everywhere"
+          >{translate(locale, 'panel.opengrid.chamferEverywhere')}</option
+        >
+        <option value="none">{translate(locale, 'panel.opengrid.none')}</option>
+      </select>
+    </ParameterField>
 
-  {#if parameters.chamfers !== 'none'}
-    <div class="grid gap-2 rounded-lg border border-border-card p-2">
-      <span class="font-[650]"
-        >{translate(locale, 'panel.opengrid.outerChamfer')}</span
-      >
-      <div class="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-        {#each [['topLeft', 'panel.opengrid.topLeft'], ['topRight', 'panel.opengrid.topRight'], ['bottomLeft', 'panel.opengrid.bottomLeft'], ['bottomRight', 'panel.opengrid.bottomRight']] as item}
-          {@const corner = item[0] as keyof OpenGridCornerFlags}
-          <div class="relative min-w-0 flex items-center gap-2">
-            <label class="flex min-w-0 grow items-center gap-2">
-              <input
-                type="checkbox"
-                checked={parameters.chamferCorners[corner]}
-                onchange={(event) => updateCorner(corner, event)}
-              />
-              {translate(locale, item[1])}
-            </label>
-          </div>
-        {/each}
+    {#if parameters.chamfers !== 'none'}
+      <div class="grid gap-2 rounded-lg border border-border-card p-2">
+        <span class="font-[650]"
+          >{translate(locale, 'panel.opengrid.outerChamfer')}</span
+        >
+        <div class="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+          {#each [['topLeft', 'panel.opengrid.topLeft'], ['topRight', 'panel.opengrid.topRight'], ['bottomLeft', 'panel.opengrid.bottomLeft'], ['bottomRight', 'panel.opengrid.bottomRight']] as item}
+            {@const corner = item[0] as keyof OpenGridCornerFlags}
+            <div class="relative min-w-0 flex items-center gap-2">
+              <label class="flex min-w-0 grow items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={parameters.chamferCorners[corner]}
+                  onchange={(event) => updateCorner(corner, event)}
+                />
+                {translate(locale, item[1])}
+              </label>
+            </div>
+          {/each}
+        </div>
       </div>
-    </div>
+    {/if}
   {/if}
 
   <ParameterField
