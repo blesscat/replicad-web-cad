@@ -9,28 +9,32 @@ This capability defines the shared, user-visible performance warning for materia
 The CAD workspace MUST show a red, user-visible performance warning when
 `省料模式（六角鏤空）` is enabled in each existing OpenGrid stackable-box,
 stackable-cylinder, and Open Shelf parameter panel. The warning MUST use the
-exact text `注意：省料模式會明顯降低模型渲染速度。建議先使用一般模式確認形狀，下載前再啟用省料模式。`
-and MUST be placed below the saving-mode checkbox. The warning MUST be
-informational only: it MUST NOT prevent mode selection, preview generation,
-parameter persistence, or STEP/STL downloads.
+active interface locale's localized warning copy. The current Traditional
+Chinese copy MUST be `省料模式會明顯降低模型渲染速度。建議先使用一般模式確認形狀，下載前再啟用省料模式。`;
+the current English copy MUST be `Material-saving mode can significantly slow
+model rendering. Check the shape in normal mode first, then enable
+material-saving mode before downloading.` The warning MUST be placed below the
+saving-mode checkbox. The warning MUST be informational only: it MUST NOT
+prevent mode selection, preview generation, parameter persistence, or STEP/STL
+downloads.
 
 #### Scenario: Stackable-box honeycomb warning
 
 - **WHEN** a user enables `省料模式（六角鏤空）` in `/cad/opengrid-stackable-box`
-- **THEN** the parameter panel MUST display the exact red warning text below
-  the saving-mode checkbox
+- **THEN** the parameter panel MUST display the active locale's localized red
+  warning text below the saving-mode checkbox
 
 #### Scenario: Stackable-cylinder honeycomb warning
 
 - **WHEN** a user enables `省料模式（六角鏤空）` in `/cad/opengrid-stackable-cylinder`
-- **THEN** the parameter panel MUST display the exact red warning text below
-  the saving-mode checkbox
+- **THEN** the parameter panel MUST display the active locale's localized red
+  warning text below the saving-mode checkbox
 
 #### Scenario: Open Shelf honeycomb warning
 
 - **WHEN** a user enables `省料模式（六角鏤空）` in `/cad/opengrid-open-shelf`
-- **THEN** the parameter panel MUST display the exact red warning text below
-  the saving-mode checkbox
+- **THEN** the parameter panel MUST display the active locale's localized red
+  warning text below the saving-mode checkbox
 
 #### Scenario: Warning follows the saving-mode checkbox
 
