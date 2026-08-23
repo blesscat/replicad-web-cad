@@ -52,7 +52,7 @@ The normalized parameter snapshot MUST contain exactly `{ columns, rows, angle }
 
 ### Requirement: Functional interfaces are flat and mutually perpendicular
 
-In the installed coordinate system, the generated shelf MUST have an OpenGrid Full functional surface with nominal width `columns * 28 mm`, nominal depth `rows * 28 mm`, and standard 6.8 mm Full thickness. That surface MUST be planar and horizontal, with its top at the fixed 28 mm rear-height datum. The OpenConnect interface MUST be a planar 28 mm-high rear face at the back edge. The OpenGrid surface normal and OpenConnect rear-face normal MUST remain exactly perpendicular for every valid angle; changing `angle` MUST affect only the opposite support side and the whole-model print orientation, not this 90° functional relationship.
+In the installed coordinate system, the generated shelf MUST preserve a complete canonical OpenGrid Full functional surface with nominal width `columns * 28 mm`, nominal depth `rows * 28 mm`, and standard 6.8 mm Full thickness. That surface MUST be planar and horizontal, with its top at the fixed 28 mm rear-height datum. The OpenConnect interface MUST be a planar 28 mm-high rear face immediately outside the back edge so neither its plate nor its receptacle cutters remove any part of the OpenGrid interface. The OpenGrid surface normal and OpenConnect rear-face normal MUST remain exactly perpendicular for every valid angle; changing `angle` MUST affect only the opposite support side and the whole-model print orientation, not this 90° functional relationship.
 
 #### Scenario: Generate the default functional envelope
 
@@ -60,6 +60,7 @@ In the installed coordinate system, the generated shelf MUST have an OpenGrid Fu
 - **THEN** its OpenGrid Full interface MUST have a nominal `84 mm × 84 mm` footprint
 - **AND** its rear OpenConnect face MUST be 84 mm wide and 28 mm high
 - **AND** the two functional planes MUST meet at 90°
+- **AND** the complete rear row of the canonical OpenGrid interface MUST remain present
 
 #### Scenario: Change shelf depth without tilting the interface
 
@@ -69,7 +70,7 @@ In the installed coordinate system, the generated shelf MUST have an OpenGrid Fu
 
 ### Requirement: Every column has a native locked OpenConnect receptacle
 
-The rear face MUST contain exactly one upward-oriented OpenConnect receptacle for each OpenGrid column. Every receptacle MUST use the supplied millimetre STEP locked-slot negative at its authored scale and origin, with no scaling, mirroring, or recentering. Slot source origins MUST be separated by the 28 mm OpenGrid pitch, aligned with the corresponding column centers, placed at the 14 mm rear-cell height datum, and transformed so the cutter enters the rear face without changing the authored lock geometry. No unlocked or user-selectable lock distribution MUST be exposed.
+The rear face MUST contain exactly one upward-oriented OpenConnect receptacle for each OpenGrid column. Every receptacle MUST use the supplied millimetre STEP locked-slot negative at its authored scale and origin, with no scaling, mirroring, or recentering. Slot source origins MUST be separated by the 28 mm OpenGrid pitch, aligned with the corresponding column centers, placed at the 14 mm rear-cell height datum on the exterior face of the rear plate, and transformed so the cutter enters that plate without reaching the OpenGrid board. No unlocked or user-selectable lock distribution MUST be exposed.
 
 #### Scenario: Cut all default locking slots
 
@@ -89,26 +90,28 @@ The rear face MUST contain exactly one upward-oriented OpenConnect receptacle fo
 - **THEN** each slot MUST fit within the single 28 mm-high rear interface row
 - **AND** adjacent slot cutters MUST remain distinct and centered on their respective 28 mm columns
 
-### Requirement: The opposite side forms a printable sloped support
+### Requirement: The opposite side forms an open printable rib support
 
-In installed coordinates, the exterior underside MUST be a continuous planar support surface rising from the rear lower datum toward the front by `rows * 28 * tan(angle)` millimetres. The resulting front height, measured between that underside and the OpenGrid top datum, MUST be at least 7 mm. The support shell, rear plate, side gussets, grid-aligned ribs, and OpenGrid Full interface MUST form one connected printable solid without changing the two functional interface planes. The completed model MUST then be rigidly oriented for preview and export so the sloped exterior underside lies on `Z=0` as its build surface.
+In installed coordinates, the lower edges of the two side ribs and every grid-aligned longitudinal rib MUST share a sloped plane rising from the rear lower datum toward the front by `rows * 28 * tan(angle)` millimetres. Every bay between those ribs MUST remain open and no continuous skin or base plate may span the underside. The resulting front height, measured between the common rib plane and the OpenGrid top datum, MUST be at least 7 mm. The rear plate, ribs, and OpenGrid Full interface MUST form one connected printable solid without changing the two functional interface planes. The completed model MUST then be rigidly oriented for preview and export so the coplanar rib feet lie on `Z=0` as its build surface.
 
-#### Scenario: Default underside follows the selected angle
+#### Scenario: Default rib plane follows the selected angle
 
 - **WHEN** the default `rows=3` and `angle=14` shelf is built in installed coordinates
-- **THEN** its underside MUST rise toward the front by approximately `20.94 mm`
+- **THEN** its rib plane MUST rise toward the front by approximately `20.94 mm`
 - **AND** its front height MUST be approximately `7.06 mm`
+- **AND** all three cell bays between the longitudinal ribs MUST remain open
 
 #### Scenario: Export rests on the sloped face
 
 - **WHEN** any valid shelf is committed for preview or export
-- **THEN** the whole solid MUST be rotated by the selected angle about the rear lower X-axis and translated only as needed to place its sloped underside on `Z=0`
+- **THEN** the whole solid MUST be rotated by the selected angle about the rear lower X-axis and translated only as needed to place its coplanar rib feet on `Z=0`
 - **AND** the rigid transform MUST preserve the 90° angle between the OpenGrid and OpenConnect interfaces
 
 #### Scenario: Support geometry remains printable
 
 - **WHEN** the generated B-Rep is validated
 - **THEN** it MUST be a non-empty valid single solid with no detached ribs or rear plate
+- **AND** every cell bay between the longitudinal ribs MUST remain unobstructed near the build plane
 - **AND** its declared build-plane minimum Z MUST be zero within CAD tolerance
 
 ### Requirement: Workspace lifecycle and persistence are independent

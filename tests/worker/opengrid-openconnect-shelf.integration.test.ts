@@ -6,17 +6,25 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { makeBox, measureVolume, setOC, type Shape3D } from 'replicad'
 import {
   boundsForOpenGridOpenConnectShelf,
+  openGridOpenConnectShelfAngleRadiansFor,
+  openGridOpenConnectShelfDepthFor,
   openGridOpenConnectShelfSlotOriginsFor,
+  openGridOpenConnectShelfWidthFor,
+  OPENGRID_OPENCONNECT_SHELF_CONFIGURATION,
   OPENGRID_OPENCONNECT_SHELF_DEFAULT_PARAMETERS,
   type OpenGridOpenConnectShelfParameters,
 } from '../../src/cad-contract/units'
-import { buildOpenGridOpenConnectShelf } from '../../src/cad-kernel/components/opengrid-openconnect-shelf/builder'
+import {
+  buildOpenGridOpenConnectShelf,
+  openGridParametersForOpenConnectShelf,
+} from '../../src/cad-kernel/components/opengrid-openconnect-shelf/builder'
 import { inspectOpenGridOpenConnectShelfShapeQuality } from '../../src/cad-kernel/components/opengrid-openconnect-shelf/quality'
 import {
   importOpenGridOpenConnectShelfLockedSlot,
   openGridOpenConnectShelfLockedSlotAssetUrl,
   placeOpenGridOpenConnectShelfLockedSlot,
 } from '../../src/cad-kernel/components/opengrid-openconnect-shelf/slot'
+import { buildOpenGridBRep } from '../../src/cad-kernel/components/opengrid/builder'
 import { meshBRep } from '../../src/cad-kernel/mesh'
 
 ;(globalThis as typeof globalThis & { __dirname?: string }).__dirname = dirname(
@@ -78,6 +86,23 @@ function rotateForPrint(shape: Shape3D, angle: number): Shape3D {
   const rotated = shape.rotate(angle, [0, 0, 0], [1, 0, 0])
   if (rotated !== shape) deleteShape(shape)
   return rotated
+}
+
+async function buildPrintOrientedFunctionalBoard(
+  parameters: OpenGridOpenConnectShelfParameters,
+): Promise<Shape3D> {
+  const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+  const depth = openGridOpenConnectShelfDepthFor(parameters)
+  const board = await buildOpenGridBRep(
+    openGridParametersForOpenConnectShelf(parameters),
+  )
+  const placed = board.translate(
+    0,
+    -depth / 2,
+    configuration.rearHeight - configuration.fullThickness,
+  )
+  if (placed !== board) deleteShape(board)
+  return rotateForPrint(placed, parameters.angle)
 }
 
 describe('OpenGrid OpenConnect shelf CAD kernel integration', () => {
@@ -154,6 +179,115 @@ describe('OpenGrid OpenConnect shelf CAD kernel integration', () => {
     }
   }, 180_000)
 
+  it('matches the complete canonical OpenGrid board at the rear edge', async () => {
+    const parameters = { ...OPENGRID_OPENCONNECT_SHELF_DEFAULT_PARAMETERS }
+    const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+    const source = await lockedSlotSource()
+    const expectedBoard = await buildPrintOrientedFunctionalBoard(parameters)
+    const shape = await buildOpenGridOpenConnectShelf(parameters, {
+      getLockedSlot: async () => source,
+    })
+    const width = openGridOpenConnectShelfWidthFor(parameters)
+    const depth = openGridOpenConnectShelfDepthFor(parameters)
+    const installedInteriorEnvelope = makeBox(
+      [
+        -width / 2,
+        -depth,
+        configuration.rearHeight - configuration.fullThickness + 0.1,
+      ],
+      [width / 2, -0.1, configuration.rearHeight - 0.1],
+    )
+    const printInteriorEnvelope = rotateForPrint(
+      installedInteriorEnvelope,
+      parameters.angle,
+    )
+    let missingBoard: Shape3D | null = null
+    let shelfInsideInterface: Shape3D | null = null
+    let unexpectedMaterial: Shape3D | null = null
+    try {
+      missingBoard = expectedBoard.cut(shape)
+      expect(measureVolume(missingBoard)).toBeLessThan(0.01)
+
+      shelfInsideInterface = shape.intersect(printInteriorEnvelope)
+      unexpectedMaterial = shelfInsideInterface.cut(expectedBoard)
+      expect(measureVolume(unexpectedMaterial)).toBeLessThan(0.01)
+    } finally {
+      deleteShape(unexpectedMaterial)
+      deleteShape(shelfInsideInterface)
+      deleteShape(missingBoard)
+      printInteriorEnvelope.delete()
+      shape.delete()
+      expectedBoard.delete()
+      source.delete()
+    }
+  }, 180_000)
+
+  it('leaves every underside cell bay open instead of spanning it with a skin', async () => {
+    const parameters = { ...OPENGRID_OPENCONNECT_SHELF_DEFAULT_PARAMETERS }
+    const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+    const source = await lockedSlotSource()
+    const shape = await buildOpenGridOpenConnectShelf(parameters, {
+      getLockedSlot: async () => source,
+    })
+    const depth = openGridOpenConnectShelfDepthFor(parameters)
+    const radians = openGridOpenConnectShelfAngleRadiansFor(parameters.angle)
+    const probeMinY = (-depth * 0.65) / Math.cos(radians)
+    const probeMaxY = (-depth * 0.35) / Math.cos(radians)
+    const bayHalfWidth =
+      configuration.gridPitch / 2 - configuration.supportThickness - 0.5
+    let sealingSkin: Shape3D | null = null
+    let sealedShape: Shape3D | null = null
+    try {
+      for (let column = 0; column < parameters.columns; column += 1) {
+        const centerX =
+          (column - (parameters.columns - 1) / 2) * configuration.gridPitch
+        const probe = makeBox(
+          [centerX - bayHalfWidth, probeMinY, 0.2],
+          [
+            centerX + bayHalfWidth,
+            probeMaxY,
+            configuration.supportThickness - 0.2,
+          ],
+        )
+        let obstruction: Shape3D | null = null
+        try {
+          obstruction = shape.intersect(probe)
+          expect(measureVolume(obstruction)).toBeLessThan(0.01)
+        } finally {
+          deleteShape(obstruction)
+          probe.delete()
+        }
+      }
+
+      const middleColumn = Math.floor(parameters.columns / 2)
+      const middleCenterX =
+        (middleColumn - (parameters.columns - 1) / 2) * configuration.gridPitch
+      sealingSkin = makeBox(
+        [middleCenterX - configuration.gridPitch / 2, probeMinY, 0],
+        [
+          middleCenterX + configuration.gridPitch / 2,
+          probeMaxY,
+          configuration.supportThickness,
+        ],
+      )
+      sealedShape = shape.fuse(sealingSkin)
+      const sealedQuality = inspectOpenGridOpenConnectShelfShapeQuality(
+        sealedShape,
+        parameters,
+        meshBRep(sealedShape, { tolerance: 0.05, angularTolerance: 0.1 }),
+        source,
+      )
+      expect(sealedQuality.validBRep).toBe(true)
+      expect(sealedQuality.solidCount).toBe(1)
+      expect(sealedQuality.failures).toContain(`open-underside-${middleColumn}`)
+    } finally {
+      deleteShape(sealedShape)
+      deleteShape(sealingSkin)
+      shape.delete()
+      source.delete()
+    }
+  }, 180_000)
+
   it('keeps the sloped build surface on Z=0 at the one-cell angle boundary', async () => {
     const parameters: OpenGridOpenConnectShelfParameters = {
       columns: 1,
@@ -192,7 +326,11 @@ describe('OpenGrid OpenConnect shelf CAD kernel integration', () => {
     let printFiller: Shape3D | null = null
     let filled: Shape3D | null = null
     try {
-      installedFiller = makeBox([-12, -3.1, 11], [12, -0.1, 17])
+      const slotOrigin = openGridOpenConnectShelfSlotOriginsFor(parameters)[1]!
+      installedFiller = makeBox(
+        [-12, slotOrigin[1] - 3.1, 11],
+        [12, slotOrigin[1] - 0.1, 17],
+      )
       printFiller = rotateForPrint(installedFiller, parameters.angle)
       installedFiller = null
       filled = shape.fuse(printFiller)

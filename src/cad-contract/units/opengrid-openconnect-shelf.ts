@@ -115,7 +115,7 @@ export function openGridOpenConnectShelfSlotOriginsFor(
   const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
   return Array.from({ length: parameters.columns }, (_, column) => [
     (column - (parameters.columns - 1) / 2) * configuration.gridPitch,
-    0,
+    configuration.rearThickness,
     configuration.rearHeight / 2,
   ])
 }
@@ -130,7 +130,7 @@ export function openGridOpenConnectShelfInstalledBoundsFor(
     min: [-width / 2, -depth, 0] as OpenGridOpenConnectShelfPoint3D,
     max: [
       width / 2,
-      0,
+      configuration.rearThickness,
       configuration.rearHeight,
     ] as OpenGridOpenConnectShelfPoint3D,
   }
@@ -154,8 +154,9 @@ export function boundsForOpenGridOpenConnectShelf(
     ] as OpenGridOpenConnectShelfPoint3D,
     max: [
       width / 2,
-      0,
-      configuration.rearHeight * Math.cos(radians),
+      configuration.rearThickness * Math.cos(radians),
+      configuration.rearHeight * Math.cos(radians) +
+        configuration.rearThickness * Math.sin(radians),
     ] as OpenGridOpenConnectShelfPoint3D,
   }
 }

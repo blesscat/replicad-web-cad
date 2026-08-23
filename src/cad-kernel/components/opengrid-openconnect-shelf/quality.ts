@@ -1,8 +1,9 @@
-import { getOC, measureVolume, type Shape3D } from 'replicad'
+import { getOC, makeBox, measureVolume, type Shape3D } from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForOpenGridOpenConnectShelf,
   openGridOpenConnectShelfAngleRadiansFor,
+  openGridOpenConnectShelfDepthFor,
   openGridOpenConnectShelfFrontHeightFor,
   openGridOpenConnectShelfSlotOriginsFor,
   openGridOpenConnectShelfWidthFor,
@@ -32,6 +33,7 @@ export type OpenGridOpenConnectShelfQualityReport = {
 }
 
 const SLOT_RESIDUAL_VOLUME_TOLERANCE = 0.01
+const UNDERSIDE_OBSTRUCTION_VOLUME_TOLERANCE = 0.01
 
 function deleteShape(shape: { delete?: () => void } | null | undefined): void {
   try {
@@ -148,15 +150,63 @@ function inspectInterfaceFaces(
   }
 
   const width = openGridOpenConnectShelfWidthFor(parameters)
-  const buildSurface = faces.some(
+  const buildFaces = faces.filter(
     (face) =>
       parallel(face.normal, [0, 0, 1]) &&
       face.min[2] <= 0.05 &&
       face.max[2] <= 0.05 &&
-      span(face, 0) >= width * 0.9 &&
       span(face, 1) > 1,
   )
+  const buildSurface =
+    buildFaces.length > 0 &&
+    Math.min(...buildFaces.map((face) => face.min[0])) <= -width * 0.45 &&
+    Math.max(...buildFaces.map((face) => face.max[0])) >= width * 0.45
   if (!buildSurface) failures.push('sloped-build-surface')
+}
+
+function inspectOpenUnderside(
+  shape: Shape3D,
+  parameters: OpenGridOpenConnectShelfParameters,
+  failures: string[],
+): void {
+  const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+  const depth = openGridOpenConnectShelfDepthFor(parameters)
+  const radians = openGridOpenConnectShelfAngleRadiansFor(parameters.angle)
+  const probeMinY = (-depth * 0.65) / Math.cos(radians)
+  const probeMaxY = (-depth * 0.35) / Math.cos(radians)
+  const bayHalfWidth =
+    configuration.gridPitch / 2 - configuration.supportThickness - 0.5
+
+  for (let column = 0; column < parameters.columns; column += 1) {
+    const centerX =
+      (column - (parameters.columns - 1) / 2) * configuration.gridPitch
+    let probe: Shape3D | null = null
+    let obstruction: Shape3D | null = null
+    let obstructionVolume = Number.POSITIVE_INFINITY
+    try {
+      probe = makeBox(
+        [centerX - bayHalfWidth, probeMinY, 0.2],
+        [
+          centerX + bayHalfWidth,
+          probeMaxY,
+          configuration.supportThickness - 0.2,
+        ],
+      )
+      obstruction = shape.intersect(probe)
+      obstructionVolume = measureVolume(obstruction)
+    } catch {
+      obstructionVolume = Number.POSITIVE_INFINITY
+    } finally {
+      deleteShape(obstruction)
+      deleteShape(probe)
+    }
+    if (
+      !Number.isFinite(obstructionVolume) ||
+      obstructionVolume > UNDERSIDE_OBSTRUCTION_VOLUME_TOLERANCE
+    ) {
+      failures.push(`open-underside-${column}`)
+    }
+  }
 }
 
 function inspectLockedSlots(
@@ -241,6 +291,7 @@ export function inspectOpenGridOpenConnectShelfShapeQuality(
     failures.push('minimum-front-height')
   }
   inspectInterfaceFaces(shape, parameters, failures)
+  inspectOpenUnderside(shape, parameters, failures)
   const slotResidualVolumes = inspectLockedSlots(
     shape,
     parameters,

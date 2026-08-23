@@ -84,13 +84,14 @@ describe('OpenGrid OpenConnect locked-slot asset', () => {
     )
     expect(origins).toHaveLength(3)
     expect(origins.map((origin) => origin[0])).toEqual([-28, 0, 28])
+    expect(origins.map((origin) => origin[1])).toEqual([3.2, 3.2, 3.2])
     expect(origins.map((origin) => origin[2])).toEqual([14, 14, 14])
 
     const bounds = openGridOpenConnectShelfSlotBoundsForOrigin(origins[1]!)
     expect(bounds.min[0]).toBeCloseTo(-13)
-    expect(bounds.min[1]).toBeCloseTo(-2.7)
+    expect(bounds.min[1]).toBeCloseTo(0.5)
     expect(bounds.min[2]).toBeCloseTo(0.8)
-    expect(bounds.max).toEqual([8.6, 0, 23])
+    expect(bounds.max).toEqual([8.6, 3.2, 23])
 
     for (const columns of [1, 3, 10]) {
       const columnOrigins = openGridOpenConnectShelfSlotOriginsFor({ columns })

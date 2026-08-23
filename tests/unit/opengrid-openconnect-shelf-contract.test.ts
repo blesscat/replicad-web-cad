@@ -78,16 +78,17 @@ describe('OpenGrid OpenConnect shelf contract', () => {
 
   it('derives the installed envelope and grid-aligned locked-slot origins', () => {
     const value = parameters()
-    const { gridPitch, rearHeight } = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+    const { gridPitch, rearHeight, rearThickness } =
+      OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
 
     expect(openGridOpenConnectShelfInstalledBoundsFor(value)).toEqual({
       min: [-(value.columns * gridPitch) / 2, -value.rows * gridPitch, 0],
-      max: [(value.columns * gridPitch) / 2, 0, rearHeight],
+      max: [(value.columns * gridPitch) / 2, rearThickness, rearHeight],
     })
     expect(openGridOpenConnectShelfSlotOriginsFor(value)).toEqual([
-      [-gridPitch, 0, rearHeight / 2],
-      [0, 0, rearHeight / 2],
-      [gridPitch, 0, rearHeight / 2],
+      [-gridPitch, rearThickness, rearHeight / 2],
+      [0, rearThickness, rearHeight / 2],
+      [gridPitch, rearThickness, rearHeight / 2],
     ])
     expect(openGridOpenConnectShelfFrontHeightFor(value)).toBeCloseTo(
       rearHeight -
@@ -97,7 +98,8 @@ describe('OpenGrid OpenConnect shelf contract', () => {
 
   it('reports tight print-oriented bounds with the sloped underside on Z=0', () => {
     const value = parameters()
-    const { gridPitch, rearHeight } = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+    const { gridPitch, rearHeight, rearThickness } =
+      OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
     const width = value.columns * gridPitch
     const depth = value.rows * gridPitch
     const radians = (value.angle * Math.PI) / 180
@@ -107,11 +109,11 @@ describe('OpenGrid OpenConnect shelf contract', () => {
         -(depth * Math.cos(radians) + rearHeight * Math.sin(radians)),
         0,
       ] as [number, number, number],
-      max: [width / 2, 0, rearHeight * Math.cos(radians)] as [
-        number,
-        number,
-        number,
-      ],
+      max: [
+        width / 2,
+        rearThickness * Math.cos(radians),
+        rearHeight * Math.cos(radians) + rearThickness * Math.sin(radians),
+      ] as [number, number, number],
     }
 
     const bounds = boundsForOpenGridOpenConnectShelf(value)

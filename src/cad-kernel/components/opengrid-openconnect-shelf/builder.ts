@@ -1,11 +1,4 @@
-import {
-  getOC,
-  makeBox,
-  makeCompound,
-  Sketcher,
-  Solid,
-  type Shape3D,
-} from 'replicad'
+import { getOC, makeCompound, Sketcher, Solid, type Shape3D } from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   openGridOpenConnectShelfAngleRadiansFor,
@@ -145,43 +138,21 @@ function makeProfileExtrusion(
   }
 }
 
-function makeSlopedSkin(
-  parameters: OpenGridOpenConnectShelfParameters,
-): Shape3D {
-  const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
-  const width = openGridOpenConnectShelfWidthFor(parameters)
-  const depth = openGridOpenConnectShelfDepthFor(parameters)
-  const frontHeight = openGridOpenConnectShelfFrontHeightFor(parameters)
-  const frontUndersideZ = configuration.rearHeight - frontHeight
-  const verticalThickness =
-    configuration.supportThickness /
-    Math.cos(openGridOpenConnectShelfAngleRadiansFor(parameters.angle))
-  return makeProfileExtrusion(
-    [
-      [-depth, frontUndersideZ],
-      [0, 0],
-      [0, verticalThickness],
-      [-depth, frontUndersideZ + verticalThickness],
-    ],
-    -width / 2,
-    width,
-  )
-}
-
 function makeRearPlate(
   parameters: OpenGridOpenConnectShelfParameters,
 ): Shape3D {
   const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
   const width = openGridOpenConnectShelfWidthFor(parameters)
-  const innerBottomZ =
-    configuration.rearThickness *
+  const overlapBottomZ =
+    FUSION_OVERLAP *
     Math.tan(openGridOpenConnectShelfAngleRadiansFor(parameters.angle))
   return makeProfileExtrusion(
     [
-      [-configuration.rearThickness, innerBottomZ],
+      [-FUSION_OVERLAP, overlapBottomZ],
       [0, 0],
-      [0, configuration.rearHeight],
-      [-configuration.rearThickness, configuration.rearHeight],
+      [configuration.rearThickness, 0],
+      [configuration.rearThickness, configuration.rearHeight],
+      [-FUSION_OVERLAP, configuration.rearHeight],
     ],
     -width / 2,
     width,
@@ -215,10 +186,7 @@ function makeSupportPieces(
 ): Shape3D[] {
   const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
   const width = openGridOpenConnectShelfWidthFor(parameters)
-  const pieces: Shape3D[] = [
-    makeRearPlate(parameters),
-    makeSlopedSkin(parameters),
-  ]
+  const pieces: Shape3D[] = [makeRearPlate(parameters)]
   const ribStarts = [
     -width / 2,
     ...Array.from(
