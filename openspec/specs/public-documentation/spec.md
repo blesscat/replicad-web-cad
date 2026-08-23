@@ -61,23 +61,25 @@ and that screw-hole fastening is optional rather than a prerequisite.
 ### Requirement: The quick start presents mutually exclusive locating strategies
 
 The quick start MUST present exactly two alternative locating strategies for a
-container position: a separate `Locating Post`, or a box with the exact
-`內建角座` option. It MUST explicitly state that choosing `內建角座` means no
-separate `Locating Post` is added, and MUST NOT imply that both strategies are
-required at the same position.
+container position: a separate `鎖定角座`, or a box with the exact `內建角座`
+option. It MUST explicitly state that choosing `內建角座` means no separate
+`鎖定角座` is added, and MUST NOT imply that both strategies are required at
+the same position. The separate locking corner-seat link and copy MUST use
+the same terminology as the OpenGrid pillar panel.
 
 #### Scenario: Separate Locating Post is selected
 
-- **WHEN** a user chooses a container using a regular locating seat hole
-- **THEN** the checklist MUST identify a separate `Locating Post` as the
+- **WHEN** a user chooses a container using a regular locking corner-seat
+  socket
+- **THEN** the checklist MUST identify a separate `鎖定角座` as the
   additional locating part
-- **AND** the page MUST link to the Desk-context Locating Post CAD route
+- **AND** the page MUST link to the Desk-context OpenGrid pillar CAD route
 
 #### Scenario: Built-in seat is selected
 
 - **WHEN** a user chooses the exact `內建角座` container option
 - **THEN** the instructions MUST identify the locating seat as part of the box
-- **AND** the instructions MUST state that no separate `Locating Post` is needed
+- **AND** the instructions MUST state that no separate `鎖定角座` is needed
 
 ### Requirement: The quick start provides a minimum Desk print checklist and CAD links
 

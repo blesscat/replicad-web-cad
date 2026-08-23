@@ -279,16 +279,16 @@ describe('HSW kernel model registration', () => {
     expect(mocks.buildHswCell).not.toHaveBeenCalled()
     expect(mocks.buildModularGridBase).not.toHaveBeenCalled()
   })
-  it('keeps adjustable pillar modes asset-free', async () => {
+  it('keeps the adjustable positioning pillar asset-free', async () => {
     const shape = await buildModelBRep(
       'opengrid-pillar',
-      { mode: 'thin-shell', offset: 0 },
+      { mode: 'positioning', length: 10, offset: 0 },
       context,
     )
 
     expect(shape).toMatchObject({ model: 'opengrid-pillar' })
     expect(mocks.buildPillar).toHaveBeenCalledWith(
-      { mode: 'thin-shell', offset: 0 },
+      { mode: 'positioning', length: 10, offset: 0 },
       expect.objectContaining({
         isGenerationCurrent: undefined,
         yieldToEventLoop: undefined,

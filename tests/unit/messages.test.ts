@@ -364,7 +364,7 @@ describe('Worker contract runtime validation', () => {
       operationId: 'operation-pillar-1',
       generation: 1,
       modelId: 'opengrid-pillar' as const,
-      parameters: { mode: 'standard', offset: 0 },
+      parameters: { mode: 'detachable-corner-seat' },
       previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
     }
 
@@ -384,9 +384,15 @@ describe('Worker contract runtime validation', () => {
     expect(
       isWorkerCommand({
         ...command,
-        parameters: { mode: 'standard', length: 9 },
+        parameters: { mode: 'detachable-corner-seat', length: 10 },
       }),
     ).toBe(false)
+    expect(
+      isWorkerCommand({
+        ...command,
+        parameters: { mode: 'positioning', length: 10, offset: 0 },
+      }),
+    ).toBe(true)
   })
 
   it('accepts a validated STL export command and response', () => {

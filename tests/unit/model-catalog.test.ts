@@ -814,38 +814,18 @@ describe('CAD component catalog', () => {
       'offset',
     ])
     expect(definition?.defaultParameters).toEqual({
-      mode: 'standard',
-      offset: 0,
+      mode: 'detachable-corner-seat',
     })
     expect(
       definition?.validateParameters({
-        mode: 'standard',
-        offset: 0,
+        mode: 'detachable-corner-seat',
       }),
     ).toEqual({
       valid: true,
       value: {
         modelId: 'opengrid-pillar',
-        parameters: { mode: 'standard', offset: 0 },
+        parameters: { mode: 'detachable-corner-seat' },
       },
-    })
-    expect(
-      definition?.boundsForParameters({
-        mode: 'thin-shell',
-        offset: 0,
-      }),
-    ).toEqual({
-      min: [-3.5, -3.5, 0],
-      max: [3.5, 3.5, 6],
-    })
-    expect(
-      definition?.boundsForParameters({
-        mode: 'standard',
-        offset: 0,
-      }),
-    ).toEqual({
-      min: [-3.5, -3.5, 0],
-      max: [3.5, 3.5, 9],
     })
     expect(
       definition?.boundsForParameters({
@@ -863,12 +843,20 @@ describe('CAD component catalog', () => {
       min: [-2.5, -2.5, 0],
       max: [2.5, 2.5, 5.3],
     })
-    expect(definition?.exportFileName({ mode: 'standard', offset: 0 })).toBe(
-      'pillar-9-standard.step',
-    )
-    expect(definition?.stlFileName({ mode: 'thin-shell', offset: 0 })).toBe(
-      'pillar-6-thin-shell.stl',
-    )
+    expect(
+      definition?.exportFileName({
+        mode: 'positioning',
+        length: 10,
+        offset: 0,
+      }),
+    ).toBe('pillar-10-positioning.step')
+    expect(
+      definition?.stlFileName({
+        mode: 'positioning',
+        length: 25,
+        offset: 0.25,
+      }),
+    ).toBe('pillar-25-positioning-xy0.25.stl')
     expect(definition?.exportFileName({ mode: 'detachable-corner-seat' })).toBe(
       'pillar-5.3-detachable-corner-seat.step',
     )

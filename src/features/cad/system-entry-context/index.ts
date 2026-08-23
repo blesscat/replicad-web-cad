@@ -99,7 +99,7 @@ export function getSystemPreset(
 ): ModelParameterValues | undefined {
   if (modelId === 'opengrid-snap') return snapPresetFor(context)
   if (modelId === 'opengrid-pillar' && context === 'desk') {
-    return { mode: 'thin-shell', offset: 0 }
+    return { mode: 'detachable-corner-seat' }
   }
   if (modelId === 'opengrid') {
     const boardParameters: OpenGridParameters = {

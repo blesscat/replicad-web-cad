@@ -7,7 +7,6 @@ import { makeCylinder, measureVolume, setOC, type Shape3D } from 'replicad'
 import {
   boundsForPillar,
   OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
-  PILLAR_CONFIGURATION,
   type PillarParameters,
 } from '../../src/cad-contract/units'
 import { buildPillar } from '../../src/cad-kernel/components/opengrid-pillar/builder'
@@ -126,10 +125,9 @@ describe('OpenGrid pillar CAD kernel integration', () => {
   }, 180_000)
 
   it.each([
-    { mode: 'standard', offset: 0 },
-    { mode: 'thin-shell', offset: 0 },
+    { mode: 'positioning', length: 10, offset: 0 },
   ] as PillarParameters[])(
-    'builds a valid centered fixed-mode pillar for %#',
+    'builds a valid centered positioning pillar for %#',
     async (parameters) => {
       const shape = await buildPillar(parameters)
       try {
@@ -192,8 +190,8 @@ describe('OpenGrid pillar CAD kernel integration', () => {
       expect(actual[1]?.[1]).toBeCloseTo(2.5, 2)
       expect(actual[1]?.[2]).toBeCloseTo(25, 2)
 
-      expect(probeVolumeAt(shape, 1.4, 0.1)).toBeGreaterThan(0)
-      expect(probeVolumeAt(shape, 1.7, 0.1)).toBeLessThan(1e-8)
+      expect(probeVolumeAt(shape, 2.2, 0.1)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, 2.55, 0.1)).toBeLessThan(1e-8)
       expect(probeVolumeAt(shape, 2.4, 1.1)).toBeGreaterThan(0)
       expect(probeVolumeAt(shape, 2.6, 1.1)).toBeLessThan(1e-8)
       expect(probeVolumeAt(shape, 2.4, 24.4)).toBeGreaterThan(0)
@@ -225,9 +223,10 @@ describe('OpenGrid pillar CAD kernel integration', () => {
     }
   }, 180_000)
 
-  it('expands the complete pillar in XY without moving its center or Z base', async () => {
+  it('expands the positioning pillar in XY without moving its center or Z base', async () => {
     const parameters: PillarParameters = {
-      mode: 'standard',
+      mode: 'positioning',
+      length: 25,
       offset: 0.5,
     }
     const shape = await buildPillar(parameters)
@@ -239,9 +238,9 @@ describe('OpenGrid pillar CAD kernel integration', () => {
       expect(actual[0]?.[2]).toBeCloseTo(0, 2)
       expect(actual[1]?.[0]).toBeCloseTo(expected.max[0], 2)
       expect(actual[1]?.[1]).toBeCloseTo(expected.max[1], 2)
-      expect(actual[1]?.[2]).toBeCloseTo(9, 2)
-      expect(probeVolumeAt(shape, 3.7, 0.4)).toBeGreaterThan(0)
-      expect(probeVolumeAt(shape, 3.8, 0.4)).toBeLessThan(1e-8)
+      expect(actual[1]?.[2]).toBeCloseTo(25, 2)
+      expect(probeVolumeAt(shape, 2.7, 0.4)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, 2.8, 0.4)).toBeLessThan(1e-8)
       expect(probeVolumeAt(shape, 2.7, 1)).toBeGreaterThan(0)
       expect(probeVolumeAt(shape, 2.8, 1)).toBeLessThan(1e-8)
       expect(
@@ -260,10 +259,6 @@ describe('OpenGrid pillar CAD kernel integration', () => {
   }, 180_000)
 
   it.each([
-    {
-      mode: 'thin-shell',
-      offset: -0.5,
-    },
     {
       mode: 'positioning',
       length: 25,
@@ -297,61 +292,20 @@ describe('OpenGrid pillar CAD kernel integration', () => {
     180_000,
   )
 
-  it.each([
-    { mode: 'standard', offset: 0 },
-    { mode: 'thin-shell', offset: 0 },
-  ] as PillarParameters[])(
-    'keeps the Ø7 x 0.8 mm flange, sharp shoulder, Ø5 mm body, and upper chamfer for %#',
-    async (parameters) => {
-      const shape = await buildPillar(parameters)
-      const totalLength = boundsForPillar(parameters).max[2]
-      const bodyRadius = PILLAR_CONFIGURATION.bodyDiameter / 2
-      const upperChamferBoundaryRadius =
-        bodyRadius - PILLAR_CONFIGURATION.upperChamfer / 2
-      const upperChamferZ = totalLength - PILLAR_CONFIGURATION.upperChamfer / 2
-      try {
-        expect(probeVolumeAt(shape, 3.4, 0.4)).toBeGreaterThan(0)
-        expect(probeVolumeAt(shape, 3.6, 0.4)).toBeLessThan(1e-8)
-        expect(
-          probeVolumeAt(shape, 3.4, PILLAR_CONFIGURATION.baseHeight - 0.01),
-        ).toBeGreaterThan(0)
-        expect(
-          probeVolumeAt(shape, 3.4, PILLAR_CONFIGURATION.baseHeight + 0.01),
-        ).toBeLessThan(1e-8)
-        expect(
-          probeVolumeAt(
-            shape,
-            bodyRadius - 0.01,
-            PILLAR_CONFIGURATION.baseHeight + 0.05,
-            0.005,
-          ),
-        ).toBeGreaterThan(0)
-        expect(
-          probeVolumeAt(
-            shape,
-            bodyRadius + 0.01,
-            PILLAR_CONFIGURATION.baseHeight + 0.05,
-            0.005,
-          ),
-        ).toBeLessThan(1e-8)
-        expect(
-          probeVolumeAt(
-            shape,
-            upperChamferBoundaryRadius - 0.15,
-            upperChamferZ,
-          ),
-        ).toBeGreaterThan(0)
-        expect(
-          probeVolumeAt(
-            shape,
-            upperChamferBoundaryRadius + 0.15,
-            upperChamferZ,
-          ),
-        ).toBeLessThan(1e-8)
-      } finally {
-        deleteShape(shape)
-      }
-    },
-    180_000,
-  )
+  it('uses a 0.2 mm chamfer at both ends of the positioning pillar', async () => {
+    const parameters: PillarParameters = {
+      mode: 'positioning',
+      length: 25,
+      offset: 0,
+    }
+    const shape = await buildPillar(parameters)
+    try {
+      expect(probeVolumeAt(shape, 2.2, 0.1)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, 2.55, 0.1)).toBeLessThan(1e-8)
+      expect(probeVolumeAt(shape, 2.2, 24.9)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, 2.55, 24.9)).toBeLessThan(1e-8)
+    } finally {
+      deleteShape(shape)
+    }
+  }, 180_000)
 })

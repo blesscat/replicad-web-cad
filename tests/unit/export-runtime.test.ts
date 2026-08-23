@@ -19,7 +19,8 @@ import {
 
 function createContext(
   modelId: 'box' | 'opengrid-pillar' | 'opengrid-snap' = 'box',
-  pillarMode: 'standard' | 'thin-shell' = 'standard',
+  pillarMode:
+    'detachable-corner-seat' | 'positioning' = 'detachable-corner-seat',
   snapOffset = 0.35,
   snapFootprint: 'half' | 'quarter' = 'half',
 ): {
@@ -64,9 +65,16 @@ function createContext(
     }
     bounds = boundsForOpenGridSnap(snapParameters)
   } else if (modelId === 'opengrid-pillar') {
-    parameters = { mode: pillarMode, offset: 0 }
-    rawParameters = { mode: pillarMode, offset: '0' }
-    bounds = boundsForPillar({ mode: pillarMode, offset: 0 })
+    const pillarParameters =
+      pillarMode === 'positioning'
+        ? { mode: 'positioning' as const, length: 10, offset: 0 }
+        : { mode: 'detachable-corner-seat' as const }
+    parameters = pillarParameters
+    rawParameters =
+      pillarMode === 'positioning'
+        ? { mode: pillarMode, length: '10', offset: '0' }
+        : { mode: pillarMode }
+    bounds = boundsForPillar(pillarParameters)
   } else {
     parameters = { width: 20, depth: 30, height: 40 }
     rawParameters = { width: '20', depth: '30', height: '40' }
@@ -151,7 +159,7 @@ describe('CAD export runtime', () => {
     })
   })
 
-  it('uses fixed pillar modes in deterministic STEP and STL metadata', () => {
+  it('uses remaining pillar modes in deterministic STEP and STL metadata', () => {
     const step = createContext('opengrid-pillar')
     const stepHandlers = createExportHandlers(step.context)
     stepHandlers.handleExport('step')
@@ -159,18 +167,21 @@ describe('CAD export runtime', () => {
     expect(step.client.send).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: 'export.step',
-        file: { name: 'pillar-9-standard.step', mime: 'model/step' },
+        file: {
+          name: 'pillar-5.3-detachable-corner-seat.step',
+          mime: 'model/step',
+        },
       }),
     )
 
-    const stl = createContext('opengrid-pillar', 'thin-shell')
+    const stl = createContext('opengrid-pillar', 'positioning')
     const stlHandlers = createExportHandlers(stl.context)
     stlHandlers.handleExport('stl')
 
     expect(stl.client.send).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: 'export.stl',
-        file: { name: 'pillar-6-thin-shell.stl', mime: 'model/stl' },
+        file: { name: 'pillar-10-positioning.stl', mime: 'model/stl' },
       }),
     )
   })
@@ -200,7 +211,7 @@ describe('CAD export runtime', () => {
   it('downloads the fixed Quarter STEP without sending an incremental worker export', () => {
     const { context, client } = createContext(
       'opengrid-snap',
-      'standard',
+      'detachable-corner-seat',
       0.35,
       'quarter',
     )

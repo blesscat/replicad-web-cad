@@ -81,7 +81,7 @@ for (const locale of locales) {
     const diagramAltPatterns = [
       ['desk-system-flow', /Board|流程圖/],
       ['desk-system-board-snap', /Board|俯視/],
-      ['desk-system-locating-options', /Locating Post|比較圖/],
+      ['desk-system-locating-options', /locking corner seat|鎖定角座|比較圖/],
     ] as const
     for (const [asset, altPattern] of diagramAltPatterns) {
       await expect(
@@ -104,7 +104,7 @@ test('Desk quick start remains understandable when SVG assets are unavailable', 
     'Simple placement is enough',
   )
   await expect(page.getByTestId('desk-quick-start')).toContainText(
-    'do not add a separate Locating Post',
+    'do not add a separate locking corner seat',
   )
   await expect(page.getByTestId('desk-quick-start')).toContainText(
     'Grid Box is the first example',

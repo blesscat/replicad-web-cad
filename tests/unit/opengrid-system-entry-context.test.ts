@@ -57,8 +57,7 @@ describe('OpenGrid system entry context', () => {
       magnetHoleThickness: 0,
     })
     expect(getSystemPreset('opengrid-pillar', 'desk')).toEqual({
-      mode: 'thin-shell',
-      offset: 0,
+      mode: 'detachable-corner-seat',
     })
   })
 

@@ -3,8 +3,6 @@ import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForPillar,
   pillarBodyDiameterForParameters,
-  pillarFlangeDiameterForParameters,
-  pillarLengthForParameters,
   OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   PILLAR_CONFIGURATION,
   type ModelBounds,
@@ -136,68 +134,6 @@ function expectMaterial(
   }
 }
 
-function inspectFixedEndProfiles(
-  shape: Shape3D,
-  parameters: PillarParameters,
-  failures: string[],
-): void {
-  const totalLength = pillarLengthForParameters(parameters)
-  const upperStraightZ = totalLength - PILLAR_CONFIGURATION.upperChamfer - 0.1
-  const upperChamferZ = totalLength - PILLAR_CONFIGURATION.upperChamfer / 2
-  const bodyRadius = pillarBodyDiameterForParameters(parameters) / 2
-  const flangeRadius = pillarFlangeDiameterForParameters(parameters) / 2
-  const upperChamferBoundaryRadius =
-    bodyRadius - PILLAR_CONFIGURATION.upperChamfer / 2
-  const upperChamferInsideRadius = upperChamferBoundaryRadius - 0.15
-  const upperChamferOutsideRadius = upperChamferBoundaryRadius + 0.15
-
-  const probe = (label: string, x: number, z: number, expected: boolean) =>
-    expectMaterial(shape, failures, label, x, z, expected)
-
-  probe('base-flange-inside', flangeRadius - 0.1, 0.4, true)
-  probe('base-flange-outside', flangeRadius + 0.1, 0.4, false)
-  probe(
-    'shoulder-below-wide',
-    flangeRadius - 0.1,
-    PILLAR_CONFIGURATION.baseHeight - 0.02,
-    true,
-  )
-  probe(
-    'shoulder-above-wide',
-    flangeRadius - 0.1,
-    PILLAR_CONFIGURATION.baseHeight + 0.02,
-    false,
-  )
-  probe(
-    'shoulder-above-body',
-    bodyRadius - 0.1,
-    PILLAR_CONFIGURATION.baseHeight + 0.02,
-    true,
-  )
-
-  probe(
-    'body-straight-inside',
-    bodyRadius - 0.1,
-    PILLAR_CONFIGURATION.baseHeight + 0.1,
-    true,
-  )
-  probe(
-    'body-straight-outside',
-    bodyRadius + 0.1,
-    PILLAR_CONFIGURATION.baseHeight + 0.1,
-    false,
-  )
-  probe('upper-straight-inside', bodyRadius - 0.1, upperStraightZ, true)
-  probe('upper-straight-outside', bodyRadius + 0.1, upperStraightZ, false)
-  probe('upper-chamfer-inside', upperChamferInsideRadius, upperChamferZ, true)
-  probe(
-    'upper-chamfer-outside',
-    upperChamferOutsideRadius,
-    upperChamferZ,
-    false,
-  )
-}
-
 function inspectPositioningEndProfiles(
   shape: Shape3D,
   parameters: Extract<PillarParameters, { mode: 'positioning' }>,
@@ -315,9 +251,7 @@ function inspectEndProfiles(
   }
   if (parameters.mode === 'positioning') {
     inspectPositioningEndProfiles(shape, parameters, failures)
-    return
   }
-  inspectFixedEndProfiles(shape, parameters, failures)
 }
 
 export function inspectPillarShapeQuality(
