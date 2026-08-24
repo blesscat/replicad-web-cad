@@ -75,6 +75,7 @@ export const OPENGRID_SNAP_OPEN_CONNECT_HEAD_URL = new URL(
 )
 
 const ASSET_TOLERANCE = 0.05
+const OPEN_CONNECT_NOTCH_CUT_EPSILON = 0.01
 
 type PointTuple = [number, number, number]
 type BoundsTuple = [PointTuple, PointTuple]
@@ -1129,9 +1130,15 @@ function makeOpenConnectUndersideNotches(
   variant: OpenGridSnapVariant,
   transform: XYScaleTransform | null,
 ): Shape3D[] {
+  // Lite's Standard assembly needs a tiny overlap to avoid a coplanar sliver;
+  // keep Full's cutter exactly at its existing nominal coordinates.
+  const cutEpsilon = variant === 'Lite' ? OPEN_CONNECT_NOTCH_CUT_EPSILON : 0
   const cutters = openGridSnapOpenConnectNotchSegmentsFor(variant).map(
     ({ min, max }) =>
-      makeBox([min[0], min[1], min[2]], [max[0], max[1], max[2]]),
+      makeBox(
+        [min[0] - cutEpsilon, min[1] - cutEpsilon, min[2] - cutEpsilon],
+        [max[0] + cutEpsilon, max[1] + cutEpsilon, max[2] + cutEpsilon],
+      ),
   )
   if (!transform) return cutters
 

@@ -476,6 +476,18 @@ describe('OpenGrid Snap reference builder', () => {
 
       try {
         const notchSegments = openGridSnapOpenConnectNotchSegmentsFor(variant)
+        if (variant === 'Lite') {
+          expect(notchSegments).toEqual([
+            {
+              min: [-2.5, -12.4, 1.9],
+              max: [2.5, -10.9, 3.4],
+            },
+            {
+              min: [-2.5, -10.9, 2],
+              max: [2.5, -10.4, 2.5],
+            },
+          ])
+        }
         const notchVolumes = notchSegments.map(({ min, max }) => {
           const probeMin: [number, number, number] = [
             min[0] + 0.1,

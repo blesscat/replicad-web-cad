@@ -26,13 +26,14 @@ head directly on the selected Snap top only when `openConnect=true`. The Wall
 system exposes this state as a checkbox; the Desk system keeps it disabled.
 Before that composition,
 the builder cuts an approximate 5 mm-wide negative-Y underside notch from the
-Snap assembly. The notch follows the supplied Directional Full STEP's stepped,
-multi-segment profile rather than a single rectangular cut; the STL references
-provide the corresponding Lite/profile placement evidence. The runtime does
-not add an interface layer or increase the selected Snap height. The upper
-notch segment(s) reach the selected Snap top while the intermediate support
-step remains; for Lite, the reference STL's interface layer is omitted from
-the runtime geometry.
+Snap assembly. The notch follows the supplied Directional Full and Directional
+Lite STEP references' stepped, multi-segment profiles rather than a single
+rectangular cut; the STL references provide additional placement evidence.
+The runtime does not add an interface layer or increase the selected Snap
+height. The upper notch segment(s) reach the selected Snap top while the
+intermediate support step remains; for Lite, the supplied Lite STEP defines a
+top-reaching pocket from `y=-12.4` to `y=-10.9` and a lower pocket from
+`y=-10.9` to `y=-10.4`.
 
 ## Upstream attribution and derived downloads
 

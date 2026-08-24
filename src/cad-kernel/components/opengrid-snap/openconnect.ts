@@ -25,12 +25,12 @@ const OPENGRID_SNAP_OPEN_CONNECT_NOTCH_SEGMENTS: Readonly<
 > = {
   Lite: [
     {
-      min: [-2.5, -12.4, 2.605],
-      max: [2.5, -11.7, OPENGRID_SNAP_CONFIGURATION.variantHeights.Lite],
+      min: [-2.5, -12.4, 1.9],
+      max: [2.5, -10.9, OPENGRID_SNAP_CONFIGURATION.variantHeights.Lite],
     },
     {
-      min: [-2.5, -11.1, 2.605],
-      max: [2.5, -10.605, OPENGRID_SNAP_CONFIGURATION.variantHeights.Lite],
+      min: [-2.5, -10.9, 2],
+      max: [2.5, -10.4, 2.5],
     },
   ],
   Full: [

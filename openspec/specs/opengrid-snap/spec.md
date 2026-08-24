@@ -176,6 +176,18 @@ and Full heads MUST start directly at the selected Snap top.
 - **AND** the STL reference MUST not add duplicate or unrelated production
   geometry
 
+#### Scenario: Lite notch follows the supplied Lite STEP
+
+- **WHEN** a Standard or Directional Lite full-footprint Snap enables
+  OpenConnect
+- **THEN** the underside notch MUST use a 5 mm-wide top-reaching segment from
+  `y=-12.4` to `y=-10.9` and `z=1.9` to the selected Snap top
+- **AND** it MUST use a second 5 mm-wide lower pocket from `y=-10.9` to
+  `y=-10.4` and `z=2.0` to `z=2.5`
+- **AND** both segments MUST remain centered on `x=-2.5` to `x=2.5`
+- **AND** the cut MUST preserve neighboring side material and the support
+  geometry below the notch
+
 #### Scenario: Wall offset adjusts Snap before OpenConnect composition
 
 - **WHEN** a valid full-footprint Snap uses `openConnect=true` and
