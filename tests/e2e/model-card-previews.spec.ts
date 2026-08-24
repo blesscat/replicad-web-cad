@@ -6,6 +6,7 @@ import {
   groupModelDefinitions,
   modelSelectionLabelFor,
 } from '../../src/features/cad/model-catalog'
+import { CAD_VIEWPORT_THEME_FALLBACK } from '../../src/features/cad/viewport/theme'
 import { waitForCadReady } from './helpers'
 
 const PREVIEW_WIDTH = 640
@@ -56,6 +57,41 @@ function readPngDimensions(filePath: string): {
     width: payload.readUInt32BE(16),
     height: payload.readUInt32BE(20),
   }
+}
+
+function rgbaForHexColor(color: string): [number, number, number, number] {
+  const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(color)
+  if (!match) throw new Error(`PREVIEW_COLOR_NOT_HEX:${color}`)
+  return [
+    Number.parseInt(match[1]!, 16),
+    Number.parseInt(match[2]!, 16),
+    Number.parseInt(match[3]!, 16),
+    255,
+  ]
+}
+
+async function sampleCanvasBackground(
+  page: Page,
+  canvas: Locator,
+): Promise<number[]> {
+  const screenshot = await canvas.screenshot()
+  const encoded = screenshot.toString('base64')
+  return page.evaluate(async (encodedScreenshot) => {
+    const response = await fetch(`data:image/png;base64,${encodedScreenshot}`)
+    const bitmap = await createImageBitmap(await response.blob())
+    const output = document.createElement('canvas')
+    output.width = bitmap.width
+    output.height = bitmap.height
+    const context = output.getContext('2d')
+    if (!context) throw new Error('PREVIEW_CANVAS_CONTEXT_UNAVAILABLE')
+
+    context.drawImage(bitmap, 0, 0)
+    const sampleX = Math.floor(bitmap.width * 0.1)
+    const sampleY = Math.floor(bitmap.height * 0.1)
+    const color = Array.from(context.getImageData(sampleX, sampleY, 1, 1).data)
+    bitmap.close()
+    return color
+  }, encoded)
 }
 
 async function resizeScreenshot(
@@ -151,6 +187,9 @@ test('visible model previews are captured from ready generators', async ({
     await page.waitForTimeout(300)
     const canvas = page.getByTestId('cad-viewport').locator('canvas')
     await expect(canvas).toBeVisible()
+    await expect(sampleCanvasBackground(page, canvas)).resolves.toEqual(
+      rgbaForHexColor(CAD_VIEWPORT_THEME_FALLBACK.background),
+    )
 
     const filePath = previewAssetPath(definition)
     if (CAPTURE_MODEL_PREVIEWS) {

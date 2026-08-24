@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { T } from '@threlte/core'
+  import { T, useThrelte } from '@threlte/core'
   import {
     Bounds,
     Gizmo,
     OrbitControls,
     type GizmoOptions,
   } from '@threlte/extras'
+  import { Color } from 'three'
   import type { OrbitControls as OrbitControlsInstance } from 'three/examples/jsm/controls/OrbitControls.js'
   import type {
     MeshSnapshot,
@@ -66,6 +67,11 @@
   }
   let orbitControls = $state<OrbitControlsInstance | undefined>(undefined)
   let viewportGizmo = $state<ViewportGizmoHandle | undefined>(undefined)
+  const { scene } = useThrelte()
+
+  $effect(() => {
+    scene.background = new Color(theme.background)
+  })
 
   $effect(() => {
     const gizmo = viewportGizmo
@@ -82,7 +88,6 @@
   })
 </script>
 
-<T.Color attach="background" args={[theme.background]} />
 <T.HemisphereLight
   args={[
     theme.hemisphereSky,
