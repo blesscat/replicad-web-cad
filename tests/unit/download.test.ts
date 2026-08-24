@@ -198,15 +198,25 @@ function threeMfBytes(
     ],
     [
       '3D/3dmodel.model',
-      `<?xml version="1.0"?><model xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" unit="millimeter"><resources><basematerials id="1"><base name="Snap Body" displaycolor="#657080"/><base name="Snap Text" displaycolor="#F4C542"/></basematerials><object id="1" type="model" name="body" pid="1" pindex="0"><mesh><vertices><vertex x="0" y="0" z="0"/><vertex x="1" y="0" z="0"/><vertex x="0" y="1" z="0"/></vertices><triangles><triangle v1="0" v2="1" v3="2"/></triangles></mesh></object><object id="2" type="model" name="text" pid="1" pindex="1"><mesh><vertices><vertex x="0" y="0" z="0"/><vertex x="1" y="0" z="0"/><vertex x="0" y="1" z="0"/></vertices><triangles><triangle v1="0" v2="1" v3="2"/></triangles></mesh></object></resources><build><item objectid="1"/><item objectid="2"/></build></model>`,
+      `<?xml version="1.0"?><model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:BambuStudio="http://schemas.bambulab.com/package/2021" xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06" requiredextensions="p"><metadata name="Application">BambuStudio-02.08.02.61</metadata><metadata name="BambuStudio:3mfVersion">1</metadata><resources><object id="3" p:UUID="00000001-61cb-4c03-9d28-80fed5dfa1dc" type="model"><components><component p:path="/3D/Objects/object_1.model" objectid="1" p:UUID="00010000-b206-40ff-9872-83e8017abed1" transform="1 0 0 0 1 0 0 0 1 0 0 0"/><component p:path="/3D/Objects/object_1.model" objectid="2" p:UUID="00010001-b206-40ff-9872-83e8017abed1" transform="1 0 0 0 1 0 0 0 1 0 0 0"/></components></object></resources><build p:UUID="2c7c17d8-22b5-4d84-8835-1976022ea369"><item objectid="3" p:UUID="00000003-b1ec-4553-aec9-835e5b724bb4" transform="1 0 0 0 1 0 0 0 1 0 0 0" printable="1"/></build></model>`,
+    ],
+    [
+      '3D/_rels/3dmodel.model.rels',
+      `<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/Objects/object_1.model" Id="rel-1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>`,
+    ],
+    [
+      '3D/Objects/object_1.model',
+      `<?xml version="1.0"?><model xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" unit="millimeter" xml:lang="en-US" xmlns:BambuStudio="http://schemas.bambulab.com/package/2021" xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06" requiredextensions="p"><metadata name="BambuStudio:3mfVersion">1</metadata><resources><basematerials id="1"><base name="Snap Body" displaycolor="#657080"/><base name="Snap Text" displaycolor="#F4C542"/></basematerials><object id="1" p:UUID="00010000-81cb-4c03-9d28-80fed5dfa1dc" type="model" name="body" pid="1" pindex="0"><mesh><vertices><vertex x="0" y="0" z="0"/><vertex x="1" y="0" z="0"/><vertex x="0" y="1" z="0"/></vertices><triangles><triangle v1="0" v2="1" v3="2"/></triangles></mesh></object><object id="2" p:UUID="00010001-81cb-4c03-9d28-80fed5dfa1dc" type="model" name="text" pid="1" pindex="1"><mesh><vertices><vertex x="0" y="0" z="0"/><vertex x="1" y="0" z="0"/><vertex x="0" y="1" z="0"/></vertices><triangles><triangle v1="0" v2="1" v3="2"/></triangles></mesh></object></resources><build/></model>`,
     ],
     [
       'Metadata/model_settings.config',
-      `<?xml version="1.0"?><config><object id="1"><metadata key="name" value="body"/><metadata key="extruder" value="1"/></object><object id="2"><metadata key="name" value="text"/><metadata key="extruder" value="2"/></object><plate><metadata key="plater_id" value="1"/><metadata key="plater_name" value="OpenGrid Snap Lite SNAP"/><metadata key="filament_maps" value="1 2"/><metadata key="filament_volume_maps" value="1 1"/></plate></config>`,
+      `<?xml version="1.0"?><config><object id="3"><metadata key="name" value="opengrid-snap-standard-lite-text-snap"/><metadata key="extruder" value="1"/><metadata face_count="2"/><part id="1" subtype="normal_part" uuid="d61eef14-56af-4be9-bec2-808d851cfa24"><metadata key="name" value="body"/><metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/><metadata key="source_file" value="opengrid-snap-standard-lite-text-snap.3mf"/><metadata key="source_object_id" value="0"/><metadata key="source_volume_id" value="0"/><metadata key="source_offset_x" value="0"/><metadata key="source_offset_y" value="0"/><metadata key="source_offset_z" value="0"/><metadata key="extruder" value="1"/><mesh_stat face_count="1" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0"/></part><part id="2" subtype="normal_part" uuid="81413479-78c8-4c21-b3e4-f05c65c66752"><metadata key="name" value="text"/><metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/><metadata key="source_file" value="opengrid-snap-standard-lite-text-snap.3mf"/><metadata key="source_object_id" value="1"/><metadata key="source_volume_id" value="0"/><metadata key="source_offset_x" value="0"/><metadata key="source_offset_y" value="0"/><metadata key="source_offset_z" value="0"/><metadata key="extruder" value="2"/><mesh_stat face_count="1" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0"/></part></object><plate><metadata key="plater_id" value="1"/><metadata key="plater_name" value="OpenGrid Snap Lite SNAP"/><metadata key="locked" value="false"/><metadata key="filament_map_mode" value="Auto For Flush"/><metadata key="filament_maps" value="1 2"/><metadata key="filament_volume_maps" value="1 1"/><model_instance><metadata key="object_id" value="3"/><metadata key="instance_id" value="0"/><metadata key="identify_id" value="1"/></model_instance></plate><assemble><assemble_item object_id="3" instance_id="0" transform="1 0 0 0 1 0 0 0 1 0 0 0" offset="0 0 0"/><assemble_item object_id="3" volume_id="0" transform="1 0 0 0 1 0 0 0 1 0 0 0"/><assemble_item object_id="3" volume_id="1" transform="1 0 0 0 1 0 0 0 1 0 0"/></assemble></config>`,
     ],
   ] as const
   function transformEntry(name: string, content: string): string {
-    if (name === '3D/3dmodel.model') return modelTransform(content)
+    if (name === '3D/3dmodel.model' || name === '3D/Objects/object_1.model') {
+      return modelTransform(content)
+    }
     if (name === 'Metadata/model_settings.config') {
       return settingsTransform(content)
     }
@@ -310,7 +320,7 @@ describe('3MF response validation', () => {
     ).toBe(false)
     expect(
       validateThreeMfPackage(
-        threeMfBytes((xml) => xml.replace('v3="2"', 'v3="1"')),
+        threeMfBytes((xml) => xml.replace('v1="0"', 'v1="3"')),
       ),
     ).toBe(false)
     expect(
@@ -329,20 +339,15 @@ describe('3MF response validation', () => {
     ).toBe(false)
   })
 
-  it('rejects a composite build item that hides the individual color parts', () => {
-    const compositePackage = threeMfBytes((xml) =>
-      xml
-        .replace(
-          '</resources>',
-          '<object id="3" type="model" name="OpenGrid Snap SNAP"><components><component objectid="1"/><component objectid="2"/></components></object></resources>',
-        )
-        .replace(
-          '<build><item objectid="1"/><item objectid="2"/></build>',
-          '<build><item objectid="3"/></build>',
-        ),
+  it('rejects separate build items instead of the Bambu parent object', () => {
+    const separateItemsPackage = threeMfBytes((xml) =>
+      xml.replace(
+        '<build p:UUID="2c7c17d8-22b5-4d84-8835-1976022ea369"><item objectid="3" p:UUID="00000003-b1ec-4553-aec9-835e5b724bb4" transform="1 0 0 0 1 0 0 0 1 0 0 0" printable="1"/></build>',
+        '<build><item objectid="1"/><item objectid="2"/></build>',
+      ),
     )
 
-    expect(validateThreeMfPackage(compositePackage)).toBe(false)
+    expect(validateThreeMfPackage(separateItemsPackage)).toBe(false)
   })
 
   it('rejects a package that maps both parts to the same filament slot', () => {

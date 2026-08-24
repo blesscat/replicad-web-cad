@@ -32,15 +32,14 @@ error.
 ### Requirement: 3MF package carries distinct parts and material metadata
 
 The generated 3MF package MUST be a valid ZIP-based 3MF package with a model
-part, package relationships, and content types. Its model MUST contain distinct
-body and text objects, two deterministic material entries, and object-level
-material assignments that identify the text as a different material from the
-body. The build MUST reference the body and text objects as two independent
-items, and MUST NOT hide them behind a composite `components` object. The
-package MUST use millimetres and MUST preserve the body/text mesh coordinates
-without a hidden scale or translation. It MUST also contain
-`Metadata/model_settings.config`; that Bambu Studio metadata MUST assign model
-object `1` (body) to extruder/filament slot `1`, model object `2` (text) to
+part, package relationships, content types, and a separate object model. Its
+Bambu-compatible model MUST contain one parent object with distinct body and
+text component mesh objects, two deterministic material entries, and preserved
+body/text coordinates. The parent object MUST be the only build item; the body
+and text parts MUST remain independently addressable through
+`Metadata/model_settings.config`. The package MUST use millimetres without a
+hidden scale or translation. Bambu Studio metadata MUST assign model part `1`
+(body) to extruder/filament slot `1`, model part `2` (text) to
 extruder/filament slot `2`, and declare the plate filament map `1 2`.
 
 #### Scenario: Body and text have separate material assignments
@@ -55,24 +54,25 @@ extruder/filament slot `2`, and declare the plate filament map `1 2`.
 #### Scenario: Body and text remain independently selectable
 
 - **WHEN** a slicer imports a generated 3MF package
-- **THEN** the build MUST expose one item for the body object and one item for
-  the text object
-- **AND** the package MUST NOT use a composite component item that collapses
-  the two color parts into one selectable part
+- **THEN** the build MUST expose one parent item containing independently
+  addressable body and text parts
+- **AND** the package MUST NOT flatten the two color parts into one mesh or
+  emit unrelated body/text build items
 
 #### Scenario: Package structure is importable
 
 - **WHEN** a 3MF response is passed to a ZIP/XML structural validator
-- **THEN** it MUST contain `[Content_Types].xml`, `_rels/.rels`, and
-  `3D/3dmodel.model`, and `Metadata/model_settings.config`
+- **THEN** it MUST contain `[Content_Types].xml`, `_rels/.rels`,
+  `3D/3dmodel.model`, `3D/_rels/3dmodel.model.rels`,
+  `3D/Objects/object_1.model`, and `Metadata/model_settings.config`
 - **AND** the model XML MUST declare millimetre units, finite vertices, and
   valid triangle indices
 
 #### Scenario: Bambu Studio receives distinct default filament assignments
 
 - **WHEN** Bambu Studio imports the generated package
-- **THEN** its model settings MUST map the body object to filament slot `1`
-- **AND** its model settings MUST map the text object to filament slot `2`
+- **THEN** its model settings MUST map body part `1` to filament slot `1`
+- **AND** its model settings MUST map text part `2` to filament slot `2`
 - **AND** the plate metadata MUST contain `filament_maps=1 2`
 
 ### Requirement: 3MF export metadata and response are validated

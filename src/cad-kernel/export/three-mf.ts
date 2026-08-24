@@ -23,6 +23,24 @@ const TEXT_MATERIAL = {
   color: '#F4C542',
 }
 const MODEL_SETTINGS_PATH = 'Metadata/model_settings.config'
+const OBJECT_MODEL_PATH = '3D/Objects/object_1.model'
+const OBJECT_MODEL_RELATIONSHIPS_PATH = '3D/_rels/3dmodel.model.rels'
+const OBJECT_MODEL_TARGET = `/${OBJECT_MODEL_PATH}`
+const BBS_MODEL_NAMESPACE = 'http://schemas.bambulab.com/package/2021'
+const PRODUCTION_NAMESPACE =
+  'http://schemas.microsoft.com/3dmanufacturing/production/2015/06'
+const BBS_APPLICATION = 'BambuStudio-02.08.02.61'
+const IDENTITY_TRANSFORM = '1 0 0 0 1 0 0 0 1 0 0 0'
+const IDENTITY_MATRIX = '1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1'
+const MAIN_OBJECT_UUID = '00000001-61cb-4c03-9d28-80fed5dfa1dc'
+const BODY_OBJECT_UUID = '00010000-81cb-4c03-9d28-80fed5dfa1dc'
+const TEXT_OBJECT_UUID = '00010001-81cb-4c03-9d28-80fed5dfa1dc'
+const BODY_COMPONENT_UUID = '00010000-b206-40ff-9872-83e8017abed1'
+const TEXT_COMPONENT_UUID = '00010001-b206-40ff-9872-83e8017abed1'
+const BODY_PART_UUID = 'd61eef14-56af-4be9-bec2-808d851cfa24'
+const TEXT_PART_UUID = '81413479-78c8-4c21-b3e4-f05c65c66752'
+const BUILD_UUID = '2c7c17d8-22b5-4d84-8835-1976022ea369'
+const BUILD_ITEM_UUID = '00000003-b1ec-4553-aec9-835e5b724bb4'
 
 function finiteNumber(value: number, label: string): number {
   if (!Number.isFinite(value)) throw new Error(`THREEMF_NON_FINITE:${label}`)
@@ -73,15 +91,19 @@ function meshXml(mesh: MeshData): string {
   return `<mesh><vertices>${vertices.join('')}</vertices><triangles>${triangles.join('')}</triangles></mesh>`
 }
 
-function modelXml(parts: readonly { name: string; mesh: MeshData }[]): string {
+function objectModelXml(
+  parts: readonly { name: string; mesh: MeshData }[],
+): string {
   const objects = parts
     .map((part, index) => {
-      return `<object id="${index + 1}" type="model" name="${xmlEscape(part.name)}" pid="1" pindex="${index}">${meshXml(part.mesh)}</object>`
+      const uuid = index === 0 ? BODY_OBJECT_UUID : TEXT_OBJECT_UUID
+      return `<object id="${index + 1}" p:UUID="${uuid}" type="model" name="${xmlEscape(part.name)}" pid="1" pindex="${index}">${meshXml(part.mesh)}</object>`
     })
     .join('')
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<model xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" unit="millimeter" xml:lang="en-US">
+<model xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" unit="millimeter" xml:lang="en-US" xmlns:BambuStudio="${BBS_MODEL_NAMESPACE}" xmlns:p="${PRODUCTION_NAMESPACE}" requiredextensions="p">
+  <metadata name="BambuStudio:3mfVersion">1</metadata>
   <resources>
     <basematerials id="1">
       <base name="${BASE_MATERIAL.name}" displaycolor="${BASE_MATERIAL.color}" />
@@ -89,9 +111,25 @@ function modelXml(parts: readonly { name: string; mesh: MeshData }[]): string {
     </basematerials>
     ${objects}
   </resources>
-  <build>
-    <item objectid="1" />
-    <item objectid="2" />
+  <build />
+</model>`
+}
+
+function modelXml(): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:BambuStudio="${BBS_MODEL_NAMESPACE}" xmlns:p="${PRODUCTION_NAMESPACE}" requiredextensions="p">
+  <metadata name="Application">${BBS_APPLICATION}</metadata>
+  <metadata name="BambuStudio:3mfVersion">1</metadata>
+  <resources>
+    <object id="3" p:UUID="${MAIN_OBJECT_UUID}" type="model">
+      <components>
+        <component p:path="${OBJECT_MODEL_TARGET}" objectid="1" p:UUID="${BODY_COMPONENT_UUID}" transform="${IDENTITY_TRANSFORM}" />
+        <component p:path="${OBJECT_MODEL_TARGET}" objectid="2" p:UUID="${TEXT_COMPONENT_UUID}" transform="${IDENTITY_TRANSFORM}" />
+      </components>
+    </object>
+  </resources>
+  <build p:UUID="${BUILD_UUID}">
+    <item objectid="3" p:UUID="${BUILD_ITEM_UUID}" transform="${IDENTITY_TRANSFORM}" printable="1" />
   </build>
 </model>`
 }
@@ -105,24 +143,68 @@ function contentTypesXml(): string {
 </Types>`
 }
 
-function modelSettingsXml(): string {
+function modelSettingsXml(
+  parts: readonly { name: string; mesh: MeshData }[],
+): string {
+  const bodyFaceCount = parts[0]!.mesh.indices.length / 3
+  const textFaceCount = parts[1]!.mesh.indices.length / 3
   return `<?xml version="1.0" encoding="UTF-8"?>
 <config>
-  <object id="1">
-    <metadata key="name" value="body" />
+  <object id="3">
+    <metadata key="name" value="opengrid-snap-standard-lite-text-snap" />
     <metadata key="extruder" value="1" />
-  </object>
-  <object id="2">
-    <metadata key="name" value="text" />
-    <metadata key="extruder" value="2" />
+    <metadata face_count="${bodyFaceCount + textFaceCount}" />
+    <part id="1" subtype="normal_part" uuid="${BODY_PART_UUID}">
+      <metadata key="name" value="body" />
+      <metadata key="matrix" value="${IDENTITY_MATRIX}" />
+      <metadata key="source_file" value="opengrid-snap-standard-lite-text-snap.3mf" />
+      <metadata key="source_object_id" value="0" />
+      <metadata key="source_volume_id" value="0" />
+      <metadata key="source_offset_x" value="0" />
+      <metadata key="source_offset_y" value="0" />
+      <metadata key="source_offset_z" value="0" />
+      <metadata key="extruder" value="1" />
+      <mesh_stat face_count="${bodyFaceCount}" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0" />
+    </part>
+    <part id="2" subtype="normal_part" uuid="${TEXT_PART_UUID}">
+      <metadata key="name" value="text" />
+      <metadata key="matrix" value="${IDENTITY_MATRIX}" />
+      <metadata key="source_file" value="opengrid-snap-standard-lite-text-snap.3mf" />
+      <metadata key="source_object_id" value="1" />
+      <metadata key="source_volume_id" value="0" />
+      <metadata key="source_offset_x" value="0" />
+      <metadata key="source_offset_y" value="0" />
+      <metadata key="source_offset_z" value="0" />
+      <metadata key="extruder" value="2" />
+      <mesh_stat face_count="${textFaceCount}" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0" />
+    </part>
   </object>
   <plate>
     <metadata key="plater_id" value="1" />
     <metadata key="plater_name" value="OpenGrid Snap Lite SNAP" />
+    <metadata key="locked" value="false" />
+    <metadata key="filament_map_mode" value="Auto For Flush" />
     <metadata key="filament_maps" value="1 2" />
     <metadata key="filament_volume_maps" value="1 1" />
+    <model_instance>
+      <metadata key="object_id" value="3" />
+      <metadata key="instance_id" value="0" />
+      <metadata key="identify_id" value="1" />
+    </model_instance>
   </plate>
+  <assemble>
+    <assemble_item object_id="3" instance_id="0" transform="${IDENTITY_TRANSFORM}" offset="0 0 0" />
+    <assemble_item object_id="3" volume_id="0" transform="${IDENTITY_TRANSFORM}" />
+    <assemble_item object_id="3" volume_id="1" transform="${IDENTITY_TRANSFORM}" />
+  </assemble>
 </config>`
+}
+
+function modelRelationshipsXml(): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Target="${OBJECT_MODEL_TARGET}" Id="rel-1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel" />
+</Relationships>`
 }
 
 function relationshipsXml(): string {
@@ -249,7 +331,8 @@ export async function exportThreeMfBytes(
     name: part.name,
     mesh: meshBRep(part.shape, options),
   }))
-  const model = TEXT_ENCODER.encode(modelXml(meshes))
+  const model = TEXT_ENCODER.encode(modelXml())
+  const objectModel = TEXT_ENCODER.encode(objectModelXml(meshes))
   const entries: ZipEntry[] = [
     {
       name: '[Content_Types].xml',
@@ -261,8 +344,13 @@ export async function exportThreeMfBytes(
     },
     { name: '3D/3dmodel.model', bytes: model },
     {
+      name: OBJECT_MODEL_RELATIONSHIPS_PATH,
+      bytes: TEXT_ENCODER.encode(modelRelationshipsXml()),
+    },
+    { name: OBJECT_MODEL_PATH, bytes: objectModel },
+    {
       name: MODEL_SETTINGS_PATH,
-      bytes: TEXT_ENCODER.encode(modelSettingsXml()),
+      bytes: TEXT_ENCODER.encode(modelSettingsXml(meshes)),
     },
   ]
   const bytes = zipStore(entries)

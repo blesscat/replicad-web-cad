@@ -8,11 +8,15 @@ const THREE_MF_RELATIONSHIPS_CONTENT_TYPE =
   'application/vnd.openxmlformats-package.relationships+xml'
 const THREE_MF_MODEL_SETTINGS_CONTENT_TYPE = 'application/xml'
 const THREE_MF_MODEL_SETTINGS_ENTRY = 'Metadata/model_settings.config'
+const THREE_MF_MODEL_RELATIONSHIPS_ENTRY = '3D/_rels/3dmodel.model.rels'
+const THREE_MF_OBJECT_MODEL_ENTRY = '3D/Objects/object_1.model'
 
 const REQUIRED_ENTRIES = [
   '[Content_Types].xml',
   '_rels/.rels',
   '3D/3dmodel.model',
+  THREE_MF_MODEL_RELATIONSHIPS_ENTRY,
+  THREE_MF_OBJECT_MODEL_ENTRY,
   THREE_MF_MODEL_SETTINGS_ENTRY,
 ] as const
 
@@ -216,6 +220,20 @@ function validRelationships(xml: string): boolean {
   )
 }
 
+function validModelRelationships(xml: string): boolean {
+  const root = xml.match(
+    /^<\?xml\b[\s\S]*?\?>\s*<Relationships\b[^>]*>([\s\S]*)<\/Relationships>\s*$/,
+  )
+  if (!root) return false
+  const relationships = root[1]!.match(/<Relationship\b[^>]*\/\s*>/g) ?? []
+  if (relationships.length !== 1) return false
+  const relationship = relationships[0]!
+  return (
+    attribute(relationship, 'Target') === '/3D/Objects/object_1.model' &&
+    attribute(relationship, 'Type') === THREE_MF_RELATIONSHIP_TYPE
+  )
+}
+
 function validMesh(meshXml: string): boolean {
   const mesh = meshXml.match(
     /^\s*<mesh>\s*<vertices>([\s\S]*?)<\/vertices>\s*<triangles>([\s\S]*?)<\/triangles>\s*<\/mesh>\s*$/,
@@ -262,16 +280,16 @@ function validMesh(meshXml: string): boolean {
   return true
 }
 
-function validModel(xml: string): boolean {
+function validObjectModel(xml: string): boolean {
   if (
     !/^<\?xml\b[\s\S]*?\?>\s*<model\b/.test(xml) ||
     (xml.match(/<model\b/g) ?? []).length !== 1 ||
     (xml.match(/<\/model>/g) ?? []).length !== 1 ||
     !/<\/model>\s*$/.test(xml) ||
     xml.includes('<!DOCTYPE') ||
-    !xml.includes(
-      `<model xmlns="${THREE_MF_MODEL_NAMESPACE}" unit="millimeter"`,
-    )
+    !xml.includes(`xmlns="${THREE_MF_MODEL_NAMESPACE}"`) ||
+    !xml.includes('unit="millimeter"') ||
+    !xml.includes('requiredextensions="p"')
   ) {
     return false
   }
@@ -320,64 +338,211 @@ function validModel(xml: string): boolean {
     return false
   }
   if (!validMesh(body.body) || !validMesh(text.body)) return false
-  const buildItems = xml.match(/<item\b[^>]*\/\s*>/g) ?? []
   return (
-    buildItems.length === 2 &&
-    attribute(buildItems[0]!, 'objectid') === '1' &&
-    attribute(buildItems[1]!, 'objectid') === '2'
+    /<build\b[^>]*\/\s*>/.test(xml) &&
+    (xml.match(/<item\b[^>]*\/\s*>/g) ?? []).length === 0
+  )
+}
+
+function validModel(xml: string): boolean {
+  if (
+    !/^<\?xml\b[\s\S]*?\?>\s*<model\b/.test(xml) ||
+    (xml.match(/<model\b/g) ?? []).length !== 1 ||
+    (xml.match(/<\/model>/g) ?? []).length !== 1 ||
+    !/<\/model>\s*$/.test(xml) ||
+    xml.includes('<!DOCTYPE') ||
+    !xml.includes(`xmlns="${THREE_MF_MODEL_NAMESPACE}"`) ||
+    !xml.includes('unit="millimeter"') ||
+    !xml.includes('requiredextensions="p"') ||
+    !xml.includes('<metadata name="Application">BambuStudio-') ||
+    !xml.includes('<metadata name="BambuStudio:3mfVersion">1</metadata>')
+  ) {
+    return false
+  }
+
+  const resources = xml.match(/<resources\b[^>]*>([\s\S]*?)<\/resources>/)
+  const parentObjects = resources?.[1]!.match(
+    /<object\b[^>]*>[\s\S]*?<\/object>/g,
+  )
+  if (!resources || !parentObjects || parentObjects.length !== 1) return false
+  const parent = parentObjects[0]!.match(
+    /<object\b([^>]*)>([\s\S]*?)<\/object>/,
+  )
+  if (!parent || attribute(parent[1]!, 'id') !== '3') return false
+  if (attribute(parent[1]!, 'type') !== 'model') return false
+
+  const components = parent[2]!.match(
+    /<components\b[^>]*>([\s\S]*?)<\/components>/,
+  )
+  if (!components) return false
+  const componentTags = components[1]!.match(/<component\b[^>]*\/\s*>/g) ?? []
+  if (componentTags.length !== 2) return false
+  const componentIds = componentTags.map((tag) => attribute(tag, 'objectid'))
+  if (
+    componentIds[0] !== '1' ||
+    componentIds[1] !== '2' ||
+    componentTags.some(
+      (tag) => attribute(tag, 'path') !== '/3D/Objects/object_1.model',
+    )
+  ) {
+    return false
+  }
+  if (parent[2]!.replace(components[0], '').trim() !== '') return false
+
+  const build = xml.match(/<build\b[^>]*>([\s\S]*?)<\/build>/)
+  if (!build) return false
+  const buildItems = build[1]!.match(/<item\b[^>]*\/\s*>/g) ?? []
+  return (
+    buildItems.length === 1 && attribute(buildItems[0]!, 'objectid') === '3'
   )
 }
 
 function validSettingsMetadata(
-  tag: string,
+  tag: string | undefined,
   key: string,
   value: string,
 ): boolean {
-  return attribute(tag, 'key') === key && attribute(tag, 'value') === value
+  return (
+    tag !== undefined &&
+    attribute(tag, 'key') === key &&
+    attribute(tag, 'value') === value
+  )
 }
 
-function validSettingsObject(
+function validSettingsPart(
   xml: string,
   id: string,
   name: string,
   extruder: string,
 ): boolean {
-  const object = xml.match(/^<object\b([^>]*)>([\s\S]*?)<\/object>\s*$/)
-  if (!object) return false
-  const metadata = object[2]!.match(/<metadata\b[^>]*\/\s*>/g) ?? []
+  const part = xml.match(/^<part\b([^>]*)>([\s\S]*?)<\/part>\s*$/)
+  if (!part) return false
+  const meshStat = part[2]!.match(/<mesh_stat\b[^>]*\/\s*>/)
+  if (!meshStat) return false
+  const metadata = part[2]!.match(/<metadata\b[^>]*\/\s*>/g) ?? []
   if (
-    metadata.length !== 2 ||
-    object[2]!.replace(/<metadata\b[^>]*\/\s*>/g, '').trim() !== ''
+    metadata.length !== 9 ||
+    part[2]!
+      .replace(/<metadata\b[^>]*\/\s*>/g, '')
+      .replace(meshStat[0], '')
+      .trim() !== ''
   ) {
     return false
   }
+  const nameMetadata = metadata.find((tag) => attribute(tag, 'key') === 'name')
+  const extruderMetadata = metadata.find(
+    (tag) => attribute(tag, 'key') === 'extruder',
+  )
   return (
-    attribute(object[1]!, 'id') === id &&
-    validSettingsMetadata(metadata[0]!, 'name', name) &&
-    validSettingsMetadata(metadata[1]!, 'extruder', extruder)
+    attribute(part[1]!, 'id') === id &&
+    attribute(part[1]!, 'subtype') === 'normal_part' &&
+    attribute(part[1]!, 'uuid') !== null &&
+    nameMetadata !== undefined &&
+    validSettingsMetadata(nameMetadata, 'name', name) &&
+    extruderMetadata !== undefined &&
+    validSettingsMetadata(extruderMetadata, 'extruder', extruder) &&
+    attribute(meshStat[0], 'face_count') !== null
+  )
+}
+
+function validSettingsObject(xml: string): boolean {
+  const object = xml.match(/^<object\b([^>]*)>([\s\S]*?)<\/object>\s*$/)
+  if (!object) return false
+  const parts = object[2]!.match(/<part\b[^>]*>[\s\S]*?<\/part>/g) ?? []
+  const remainder = object[2]!
+    .replace(/<part\b[^>]*>[\s\S]*?<\/part>/g, '')
+    .trim()
+  const metadata = remainder.match(/<metadata\b[^>]*\/\s*>/g) ?? []
+  if (
+    metadata.length !== 3 ||
+    parts.length !== 2 ||
+    remainder.replace(/<metadata\b[^>]*\/\s*>/g, '').trim() !== ''
+  ) {
+    return false
+  }
+  const faceCount = metadata.find(
+    (tag) => attribute(tag, 'face_count') !== null,
+  )
+  const nameMetadata = metadata.find((tag) => attribute(tag, 'key') === 'name')
+  const extruderMetadata = metadata.find(
+    (tag) => attribute(tag, 'key') === 'extruder',
+  )
+  return (
+    attribute(object[1]!, 'id') === '3' &&
+    faceCount !== undefined &&
+    nameMetadata !== undefined &&
+    validSettingsMetadata(
+      nameMetadata,
+      'name',
+      'opengrid-snap-standard-lite-text-snap',
+    ) &&
+    extruderMetadata !== undefined &&
+    validSettingsMetadata(extruderMetadata, 'extruder', '1') &&
+    validSettingsPart(parts[0]!, '1', 'body', '1') &&
+    validSettingsPart(parts[1]!, '2', 'text', '2')
   )
 }
 
 function validSettingsPlate(xml: string): boolean {
   const plate = xml.match(/^<plate\b([^>]*)>([\s\S]*?)<\/plate>\s*$/)
   if (!plate) return false
-  const metadata = plate[2]!.match(/<metadata\b[^>]*\/\s*>/g) ?? []
+  const instance = plate[2]!.match(
+    /<model_instance\b[^>]*>([\s\S]*?)<\/model_instance>/,
+  )
+  if (!instance) return false
+  const remainder = plate[2]!.replace(instance[0], '').trim()
+  const metadata = remainder.match(/<metadata\b[^>]*\/\s*>/g) ?? []
   if (
-    metadata.length !== 4 ||
-    plate[2]!.replace(/<metadata\b[^>]*\/\s*>/g, '').trim() !== ''
+    metadata.length !== 6 ||
+    remainder.replace(/<metadata\b[^>]*\/\s*>/g, '').trim() !== ''
   ) {
     return false
   }
+  const instanceMetadata = instance[1]!.match(/<metadata\b[^>]*\/\s*>/g) ?? []
+  if (instanceMetadata.length !== 3) return false
+  const metadataFor = (key: string): string | undefined =>
+    metadata.find((tag) => attribute(tag, 'key') === key)
   return (
     attribute(plate[1]!, 'id') === null &&
-    validSettingsMetadata(metadata[0]!, 'plater_id', '1') &&
+    validSettingsMetadata(metadataFor('plater_id')!, 'plater_id', '1') &&
     validSettingsMetadata(
-      metadata[1]!,
+      metadataFor('plater_name')!,
       'plater_name',
       'OpenGrid Snap Lite SNAP',
     ) &&
-    validSettingsMetadata(metadata[2]!, 'filament_maps', '1 2') &&
-    validSettingsMetadata(metadata[3]!, 'filament_volume_maps', '1 1')
+    validSettingsMetadata(metadataFor('locked')!, 'locked', 'false') &&
+    validSettingsMetadata(
+      metadataFor('filament_map_mode')!,
+      'filament_map_mode',
+      'Auto For Flush',
+    ) &&
+    validSettingsMetadata(
+      metadataFor('filament_maps')!,
+      'filament_maps',
+      '1 2',
+    ) &&
+    validSettingsMetadata(
+      metadataFor('filament_volume_maps')!,
+      'filament_volume_maps',
+      '1 1',
+    ) &&
+    validSettingsMetadata(instanceMetadata[0]!, 'object_id', '3') &&
+    validSettingsMetadata(instanceMetadata[1]!, 'instance_id', '0') &&
+    attribute(instanceMetadata[2]!, 'key') === 'identify_id'
+  )
+}
+
+function validSettingsAssemble(xml: string): boolean {
+  const assemble = xml.match(/^<assemble\b[^>]*>([\s\S]*?)<\/assemble>\s*$/)
+  if (!assemble) return false
+  const items = assemble[1]!.match(/<assemble_item\b[^>]*\/\s*>/g) ?? []
+  if (items.length !== 3) return false
+  return (
+    items.every((item) => attribute(item, 'object_id') === '3') &&
+    attribute(items[0]!, 'instance_id') === '0' &&
+    attribute(items[0]!, 'volume_id') === null &&
+    attribute(items[1]!, 'volume_id') === '0' &&
+    attribute(items[2]!, 'volume_id') === '1'
   )
 }
 
@@ -390,18 +555,23 @@ function validModelSettings(xml: string): boolean {
   const content = root[2]!
   const objects = content.match(/<object\b[^>]*>[\s\S]*?<\/object>/g) ?? []
   const plates = content.match(/<plate\b[^>]*>[\s\S]*?<\/plate>/g) ?? []
-  if (objects.length !== 2 || plates.length !== 1) return false
+  const assembles =
+    content.match(/<assemble\b[^>]*>[\s\S]*?<\/assemble>/g) ?? []
+  if (objects.length !== 1 || plates.length !== 1 || assembles.length !== 1) {
+    return false
+  }
 
   const remainder = content
     .replace(/<object\b[^>]*>[\s\S]*?<\/object>/g, '')
     .replace(/<plate\b[^>]*>[\s\S]*?<\/plate>/g, '')
+    .replace(/<assemble\b[^>]*>[\s\S]*?<\/assemble>/g, '')
     .trim()
   if (remainder !== '') return false
 
   return (
-    validSettingsObject(objects[0]!, '1', 'body', '1') &&
-    validSettingsObject(objects[1]!, '2', 'text', '2') &&
-    validSettingsPlate(plates[0]!)
+    validSettingsObject(objects[0]!) &&
+    validSettingsPlate(plates[0]!) &&
+    validSettingsAssemble(assembles[0]!)
   )
 }
 
@@ -414,15 +584,21 @@ export function isValidThreeMfPackage(bytes: ArrayBuffer): boolean {
   const contentTypes = decodeUtf8(entries.get(REQUIRED_ENTRIES[0]!)!)
   const relationships = decodeUtf8(entries.get(REQUIRED_ENTRIES[1]!)!)
   const model = decodeUtf8(entries.get(REQUIRED_ENTRIES[2]!)!)
-  const modelSettings = decodeUtf8(entries.get(REQUIRED_ENTRIES[3]!)!)
+  const modelRelationships = decodeUtf8(entries.get(REQUIRED_ENTRIES[3]!)!)
+  const objectModel = decodeUtf8(entries.get(REQUIRED_ENTRIES[4]!)!)
+  const modelSettings = decodeUtf8(entries.get(REQUIRED_ENTRIES[5]!)!)
   return (
     contentTypes !== null &&
     relationships !== null &&
     model !== null &&
+    modelRelationships !== null &&
+    objectModel !== null &&
     modelSettings !== null &&
     validContentTypes(contentTypes) &&
     validRelationships(relationships) &&
+    validModelRelationships(modelRelationships) &&
     validModel(model) &&
+    validObjectModel(objectModel) &&
     validModelSettings(modelSettings)
   )
 }
