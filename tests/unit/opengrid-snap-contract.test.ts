@@ -25,11 +25,12 @@ describe('OpenGrid Snap contract', () => {
       magnetHoleThickness: number
     }> = {},
   ) {
+    const footprint = overrides.footprint ?? 'full'
     return {
       variant: 'Full' as const,
       profile: 'Standard' as const,
       offset: 0,
-      footprint: 'full' as const,
+      footprint,
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
       openConnect: false,
@@ -128,6 +129,18 @@ describe('OpenGrid Snap contract', () => {
     expect(normalizeOpenGridSnapParameters(legacy)).toMatchObject({
       openConnect: false,
     })
+
+    expect(
+      normalizeOpenGridSnapParameters({ ...legacy, openConnect: false }),
+    ).toMatchObject({ openConnect: false })
+
+    expect(
+      normalizeOpenGridSnapParameters({
+        ...legacy,
+        footprint: 'half',
+        openConnect: true,
+      }),
+    ).toMatchObject({ openConnect: false })
   })
 
   it('treats offset as a centered total envelope delta', () => {
@@ -239,11 +252,17 @@ describe('OpenGrid Snap contract', () => {
     expect(openGridSnapStlFileName(round)).toContain('-magnet-round-d8-t2.stl')
   })
 
-  it('distinguishes OpenConnect-enabled Full exports', () => {
-    const input = parameters({ openConnect: true })
+  it('adds the OpenConnect suffix only to enabled full exports', () => {
+    const input = parameters({ openConnect: false })
 
-    expect(openGridSnapFileName(input)).toContain('-openconnect')
-    expect(openGridSnapStlFileName(input)).toContain('-openconnect')
+    expect(openGridSnapFileName(input)).not.toContain('-openconnect')
+    expect(openGridSnapStlFileName(input)).not.toContain('-openconnect')
+    expect(openGridSnapFileName({ ...input, openConnect: true })).toContain(
+      '-openconnect',
+    )
+    expect(openGridSnapStlFileName({ ...input, openConnect: true })).toContain(
+      '-openconnect',
+    )
   })
 
   it('uses fixed STEP filenames for half and quarter downloads', () => {

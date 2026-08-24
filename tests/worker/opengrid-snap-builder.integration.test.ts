@@ -15,7 +15,7 @@ import {
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import { initialiseCadKernel } from '../../src/cad-kernel/initialise'
 import {
-  buildOpenGridSnap,
+  buildOpenGridSnap as buildOpenGridSnapImplementation,
   importOpenGridSnapFixedFootprint,
   importOpenGridSnapOpenConnectHead,
   importOpenGridSnapReference,
@@ -24,7 +24,10 @@ import {
   OPENGRID_SNAP_OPEN_CONNECT_HEAD_URL,
   OPENGRID_SNAP_REFERENCE_URLS,
 } from '../../src/cad-kernel/components/opengrid-snap/builder'
-import { openGridSnapOpenConnectHeadBounds } from '../../src/cad-kernel/components/opengrid-snap/openconnect'
+import {
+  openGridSnapOpenConnectHeadBounds,
+  openGridSnapOpenConnectNotchSegmentsFor,
+} from '../../src/cad-kernel/components/opengrid-snap/openconnect'
 import { openGridSnapProfileFor } from '../../src/cad-kernel/components/opengrid-snap/profile'
 import { buildPillar } from '../../src/cad-kernel/components/opengrid-pillar/builder'
 import {
@@ -388,6 +391,32 @@ function openConnectHeadBlob(): Blob {
   ])
 }
 
+type SnapBuildParameters = Parameters<typeof buildOpenGridSnapImplementation>[0]
+type SnapBuildContext = Parameters<typeof buildOpenGridSnapImplementation>[1]
+
+async function buildOpenGridSnap(
+  parameters: SnapBuildParameters,
+  context: SnapBuildContext,
+): Promise<Shape3D> {
+  if (
+    parameters.footprint !== 'full' ||
+    !parameters.openConnect ||
+    context.getOpenGridSnapOpenConnectHead
+  ) {
+    return buildOpenGridSnapImplementation(parameters, context)
+  }
+
+  const head = await importOpenGridSnapOpenConnectHead(openConnectHeadBlob())
+  try {
+    return await buildOpenGridSnapImplementation(parameters, {
+      ...context,
+      getOpenGridSnapOpenConnectHead: async () => head,
+    })
+  } finally {
+    head.delete()
+  }
+}
+
 function snapParameters(
   variant: 'Full' | 'Lite',
   offset: number,
@@ -444,37 +473,137 @@ describe('OpenGrid Snap reference builder', () => {
     }
   })
 
-  it('turns the OpenConnect head to match the supplied placement reference', async () => {
-    const reference = await importOpenGridSnapReference(
-      assetBlob('Lite', 'Directional'),
-      'Lite',
-      'Directional',
-    )
-    const head = await importOpenGridSnapOpenConnectHead(openConnectHeadBlob())
-    const generated = await buildOpenGridSnap(
-      snapParameters('Lite', 0, 'full', {
-        profile: 'Directional',
-        openConnect: true,
-      }),
-      {
-        getOpenGridSnapReference: async () => reference,
-        getOpenGridSnapOpenConnectHead: async () => head,
-      },
-    )
-
-    try {
-      const referenceOnlySideProbe = volumeInBox(
-        generated,
-        [-8, -1, 3.5],
-        [-7, 0, 3.8],
+  it.each([
+    ['Standard', 'Lite'],
+    ['Standard', 'Full'],
+    ['Directional', 'Lite'],
+    ['Directional', 'Full'],
+  ] as const)(
+    'cuts the stepped OpenConnect underside notch for %s %s',
+    async (profile, variant) => {
+      const reference = await importOpenGridSnapReference(
+        assetBlob(variant, profile),
+        variant,
+        profile,
       )
-      expect(referenceOnlySideProbe).toBeLessThan(0.1)
-    } finally {
-      generated.delete()
-      head.delete()
-      reference.delete()
-    }
-  })
+      const head = await importOpenGridSnapOpenConnectHead(
+        openConnectHeadBlob(),
+      )
+      const generated = await buildOpenGridSnap(
+        snapParameters(variant, 0, 'full', {
+          profile,
+          openConnect: true,
+        }),
+        {
+          getOpenGridSnapReference: async () => reference,
+          getOpenGridSnapOpenConnectHead: async () => head,
+        },
+      )
+
+      try {
+        const notchSegments = openGridSnapOpenConnectNotchSegmentsFor(variant)
+        if (variant === 'Lite') {
+          expect(notchSegments).toEqual([
+            {
+              min: [-2.5, -12.4, 1.9],
+              max: [2.5, -10.9, 3.4],
+            },
+            {
+              min: [-2.5, -10.9, 2],
+              max: [2.5, -10.4, 2.5],
+            },
+          ])
+        }
+        const notchVolumes = notchSegments.map(({ min, max }) => {
+          const probeMin: [number, number, number] = [
+            min[0] + 0.1,
+            min[1] + 0.1,
+            min[2] + 0.1,
+          ]
+          const probeMax: [number, number, number] = [
+            max[0] - 0.1,
+            max[1] - 0.1,
+            max[2] - 0.1,
+          ]
+          return volumeInBox(generated, probeMin, probeMax)
+        })
+        const firstSegment = notchSegments[0]!
+        const secondSegment = notchSegments[1]!
+        const neighboringMaterialProbe = volumeInBox(
+          generated,
+          [3, firstSegment.min[1] + 0.1, firstSegment.min[2] + 0.1],
+          [4, firstSegment.max[1] - 0.1, firstSegment.max[2] - 0.1],
+        )
+        const materialBelowNotchProbe = volumeInBox(
+          generated,
+          [-2, secondSegment.min[1] + 0.1, secondSegment.min[2] - 0.3],
+          [2, secondSegment.max[1] - 0.1, secondSegment.min[2] - 0.1],
+        )
+        const centralSupportProbe = volumeInBox(
+          generated,
+          [-2, -11.9, firstSegment.min[2] + 0.1],
+          [2, -10.8, (notchSegments[2]?.min[2] ?? firstSegment.max[2]) - 0.1],
+        )
+        const expectedMaxZ =
+          (variant === 'Lite' ? 3.4 : 6.8) +
+          (openGridSnapOpenConnectHeadBounds(variant).max[2] -
+            openGridSnapOpenConnectHeadBounds(variant).min[2])
+
+        expect(notchVolumes.every((volume) => volume < 0.01)).toBe(true)
+        expect(neighboringMaterialProbe).toBeGreaterThan(0.05)
+        expect(materialBelowNotchProbe).toBeGreaterThan(0.05)
+        expect(centralSupportProbe).toBeGreaterThan(0.05)
+        expect(shapeBounds(generated)[1]?.[2]).toBeCloseTo(expectedMaxZ, 2)
+        expect(countSolids(generated)).toBe(
+          openGridSnapProfileFor(profile, variant).expectedSolidCount + 1,
+        )
+      } finally {
+        generated.delete()
+        head.delete()
+        reference.delete()
+      }
+    },
+  )
+
+  it.each([
+    ['Standard', 'Lite'],
+    ['Standard', 'Full'],
+    ['Directional', 'Lite'],
+    ['Directional', 'Full'],
+  ] as const)(
+    'does not compose OpenConnect when disabled for %s %s',
+    async (profile, variant) => {
+      const reference = await importOpenGridSnapReference(
+        assetBlob(variant, profile),
+        variant,
+        profile,
+      )
+      const head = await importOpenGridSnapOpenConnectHead(
+        openConnectHeadBlob(),
+      )
+      const generated = await buildOpenGridSnap(
+        snapParameters(variant, 0, 'full', { profile, openConnect: false }),
+        {
+          getOpenGridSnapReference: async () => reference,
+          getOpenGridSnapOpenConnectHead: async () => head,
+        },
+      )
+
+      try {
+        expect(countSolids(generated)).toBe(
+          openGridSnapProfileFor(profile, variant).expectedSolidCount,
+        )
+        expect(shapeBounds(generated)[1]?.[2]).toBeCloseTo(
+          variant === 'Lite' ? 3.4 : 6.8,
+          2,
+        )
+      } finally {
+        generated.delete()
+        head.delete()
+        reference.delete()
+      }
+    },
+  )
 
   it.each([
     ['Standard', 'Lite'],
@@ -504,9 +633,8 @@ describe('OpenGrid Snap reference builder', () => {
         expect(countSolids(generated)).toBe(
           openGridSnapProfileFor(profile, variant).expectedSolidCount + 1,
         )
-        const selectedDefinition = openGridSnapProfileFor(profile, variant)
         const headBounds = openGridSnapOpenConnectHeadBounds(variant)
-        const expectedHeadBaseZ = selectedDefinition.expectedBounds.max[2]
+        const expectedHeadBaseZ = headBounds.min[2]
         const headDescriptor = solidDescriptors(generated).find(({ bounds }) =>
           bounds.every((point, pointIndex) =>
             point.every(

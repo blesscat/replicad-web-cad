@@ -112,7 +112,6 @@
   let rawOpenConnect = $derived(
     rawParameters.openConnect ?? String(parameters.openConnect),
   )
-
   function initializeMagnetDimension(
     key: (typeof magnetDimensionKeys)[number],
     rawValue: string,

@@ -63,7 +63,6 @@ import {
 import {
   modelFileName,
   modelStlFileName,
-  boundsForOpenGridSnap,
   isHswCellParameters,
   isOpenGridDividerModelParameters,
   isOpenGridOpenShelfParameters,
@@ -71,6 +70,7 @@ import {
   isOpenGridParameters,
   normalizeOpenGridDividerParameters,
   normalizeOpenGridParameters,
+  normalizeOpenGridSnapParameters,
   PROTOTYPE_CONFIGURATION,
   type ModelParameterValues,
   type OpenGridSnapParameters,
@@ -345,6 +345,15 @@ export class CadWorkerRuntime {
         command.parameters,
       )
     }
+    if (command.modelId === 'opengrid-snap') {
+      const normalizedParameters = normalizeOpenGridSnapParameters(
+        command.parameters,
+      )
+      if (!isOpenGridSnapParameters(normalizedParameters)) {
+        throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
+      }
+      generationParameters = normalizedParameters
+    }
     const hswProgress =
       command.modelId === 'hsw-cell' && isHswCellParameters(command.parameters)
         ? {
@@ -449,12 +458,6 @@ export class CadWorkerRuntime {
         if (!isOpenGridSnapParameters(generationParameters)) {
           throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
         }
-        if (
-          generationParameters.footprint === 'full' &&
-          !generationParameters.openConnect
-        ) {
-          mesh.bounds = boundsForOpenGridSnap(generationParameters)
-        }
       }
       if (command.modelId === 'opengrid') {
         if (!isOpenGridParameters(generationParameters)) {
@@ -473,25 +476,23 @@ export class CadWorkerRuntime {
             generationParameters.variant,
             generationParameters.profile,
           )
-          if (generationParameters.openConnect) {
-            timing.measureSync('quality', () =>
+          timing.measureSync('quality', () => {
+            if (generationParameters.openConnect) {
               assertOpenGridSnapOpenConnectShapeQuality(
                 shape,
                 generationParameters,
                 mesh,
                 reference,
-              ),
+              )
+              return
+            }
+            assertOpenGridSnapShapeQuality(
+              shape,
+              generationParameters,
+              mesh,
+              reference,
             )
-          } else {
-            timing.measureSync('quality', () =>
-              assertOpenGridSnapShapeQuality(
-                shape,
-                generationParameters,
-                mesh,
-                reference,
-              ),
-            )
-          }
+          })
         }
       }
 

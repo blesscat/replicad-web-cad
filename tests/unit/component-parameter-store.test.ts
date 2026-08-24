@@ -276,6 +276,7 @@ describe('component parameter store', () => {
       offset: 0.2,
       fourCornerLocatingHoles: true,
       centerRemoverHole: true,
+      openConnect: false,
     }
     const wallParameters = {
       ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
@@ -299,12 +300,38 @@ describe('component parameter store', () => {
     store.dispose()
   })
 
+  it('removes OpenConnect from previously saved Desk Snap values', () => {
+    const savedDeskSnap = {
+      ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
+      openConnect: true,
+    }
+    const storage = createMemoryStorage(
+      createPayload(
+        {
+          desk: { 'opengrid-snap': savedDeskSnap },
+        },
+        2,
+      ),
+    )
+    const store = createComponentParameterStore({
+      storage,
+      systemContext: 'desk',
+    })
+
+    expect(store.get('opengrid-snap')).toMatchObject({
+      footprint: 'full',
+      openConnect: false,
+    })
+    store.dispose()
+  })
+
   it('keeps the Wall Snap scope on Full without rejecting stored values', () => {
     const wallParameters = {
       ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
       variant: 'Lite' as const,
       offset: 0.2,
       footprint: 'half' as const,
+      openConnect: false,
     }
     const storage = createMemoryStorage(
       createPayload(
@@ -982,6 +1009,7 @@ describe('component parameter store', () => {
         footprint: 'quarter',
         fourCornerLocatingHoles: true,
         centerRemoverHole: false,
+        openConnect: false,
       }),
     ).toBe(true)
     expect(store.get('opengrid')).toMatchObject({

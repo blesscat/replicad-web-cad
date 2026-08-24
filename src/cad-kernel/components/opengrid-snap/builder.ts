@@ -40,6 +40,7 @@ import {
   OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_DEGREES,
   OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_ORIGIN,
   openGridSnapOpenConnectAnchorForXYTransform,
+  openGridSnapOpenConnectNotchSegmentsFor,
   type OpenGridSnapOpenConnectAnchor,
 } from './openconnect'
 
@@ -74,6 +75,7 @@ export const OPENGRID_SNAP_OPEN_CONNECT_HEAD_URL = new URL(
 )
 
 const ASSET_TOLERANCE = 0.05
+const OPEN_CONNECT_NOTCH_CUT_EPSILON = 0.01
 
 type PointTuple = [number, number, number]
 type BoundsTuple = [PointTuple, PointTuple]
@@ -1143,6 +1145,50 @@ function placeOpenConnectHead(
   }
 }
 
+function makeOpenConnectUndersideNotches(
+  variant: OpenGridSnapVariant,
+  transform: XYScaleTransform | null,
+): Shape3D[] {
+  // Lite's Standard assembly needs a tiny overlap to avoid a coplanar sliver;
+  // keep Full's cutter exactly at its existing nominal coordinates.
+  const cutEpsilon = variant === 'Lite' ? OPEN_CONNECT_NOTCH_CUT_EPSILON : 0
+  const cutters = openGridSnapOpenConnectNotchSegmentsFor(variant).map(
+    ({ min, max }) =>
+      makeBox(
+        [min[0] - cutEpsilon, min[1] - cutEpsilon, min[2] - cutEpsilon],
+        [max[0] + cutEpsilon, max[1] + cutEpsilon, max[2] + cutEpsilon],
+      ),
+  )
+  if (!transform) return cutters
+
+  try {
+    return cutters.map((cutter) => transformShapeXY(cutter, transform))
+  } finally {
+    cutters.forEach(deleteShape)
+  }
+}
+
+function cutOpenConnectUndersideNotches(
+  assembly: Shape3D,
+  variant: OpenGridSnapVariant,
+  transform: XYScaleTransform | null,
+  scope: BooleanOperationScope | undefined,
+): Shape3D {
+  const cutters = makeOpenConnectUndersideNotches(variant, transform)
+  let result = assembly
+  try {
+    for (const cutter of cutters) {
+      result = cutShape(result, cutter, scope)
+    }
+    return result
+  } catch (error) {
+    deleteShape(result)
+    throw error
+  } finally {
+    cutters.forEach(deleteShape)
+  }
+}
+
 function composeOpenConnectAssembly(
   assembly: Shape3D,
   head: Shape3D,
@@ -1212,8 +1258,24 @@ export async function buildOpenGridSnap(
     }
     const head = await context.getOpenGridSnapOpenConnectHead()
     assertGenerationCurrent(context)
-    return composeOpenConnectAssembly(
+    const definition = openGridSnapProfileFor(
+      parameters.profile,
+      parameters.variant,
+    )
+    const notchTransform =
+      parameters.offset > 0
+        ? xyScaleTransformFor(reference, targetBounds, definition)
+        : null
+    const notchedAssembly = cutOpenConnectUndersideNotches(
       assembly,
+      parameters.variant,
+      notchTransform,
+      context.booleanOperations?.createScope(
+        openGridSnapOpenConnectNotchSegmentsFor(parameters.variant).length,
+      ),
+    )
+    return composeOpenConnectAssembly(
+      notchedAssembly,
       head,
       openConnectAnchorFor(reference, parameters, targetBounds),
     )

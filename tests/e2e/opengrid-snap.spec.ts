@@ -52,10 +52,10 @@ test('Desk and Wall Snap entries use isolated presets and context resets', async
   await expect(centerRemover).toHaveCount(0)
   const openConnect = page.getByRole('checkbox', { name: 'OpenConnect' })
   await expect(openConnect).toBeVisible()
+  await expect(openConnect).not.toBeChecked()
   await expect(offset).toHaveValue('0')
   await expect(offset).toBeEnabled()
   await openConnect.check()
-
   await deskSystem.check()
   await expect(deskSystem).toBeChecked()
   await expect(openConnect).toHaveCount(0)

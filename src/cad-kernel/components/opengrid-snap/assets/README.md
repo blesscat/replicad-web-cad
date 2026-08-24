@@ -18,8 +18,22 @@ not read the Downloads path. Confirm ownership and permission before publishing
 these assets outside the local repository.
 
 `openconnect-head.step` is the repository-owned OpenConnect interface source.
-The supplied `openConnect_Snap_Directional_Lite(1).stl` is placement reference
-only and is not loaded by the runtime.
+The supplied `openConnect_Snap_Directional_Lite(1).stl`,
+`openConnect_Snap_Directional_Standard(1).stl`, and
+`openConnect_Snap_Symmetric_Standard.stl` are placement/topology references
+only and are not loaded by the runtime. Full-footprint builds compose the STEP
+head directly on the selected Snap top only when `openConnect=true`. The Wall
+system exposes this state as a checkbox; the Desk system keeps it disabled.
+Before that composition,
+the builder cuts an approximate 5 mm-wide negative-Y underside notch from the
+Snap assembly. The notch follows the supplied Directional Full and Directional
+Lite STEP references' stepped, multi-segment profiles rather than a single
+rectangular cut; the STL references provide additional placement evidence.
+The runtime does not add an interface layer or increase the selected Snap
+height. The upper notch segment(s) reach the selected Snap top while the
+intermediate support step remains; for Lite, the supplied Lite STEP defines a
+top-reaching pocket from `y=-12.4` to `y=-10.9` and a lower pocket from
+`y=-10.9` to `y=-10.4`.
 
 ## Upstream attribution and derived downloads
 
@@ -36,3 +50,10 @@ their public attribution is maintained on the localized Snap generator page.
 
 The repository-local STEP files above remain subject to the ownership and
 permission review noted above before external publication.
+
+The OpenConnect head and underside interface reference the
+[OpenConnect — OpenGrid's own connector system](https://www.printables.com/model/1559478-openconnect-opengrids-own-connector-system)
+by [mitufy](https://github.com/mitufy), whose source material declares the
+[Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/)
+license. The repository implementation uses that attribution while keeping
+the supplied OpenConnect STEP as a repository-local runtime asset.

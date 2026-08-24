@@ -5,6 +5,7 @@ import {
   openGridSnapFileName,
   openGridSnapStlFileName,
   OPENGRID_SNAP_CONFIGURATION,
+  normalizeOpenGridSnapParameters,
   validateOpenGridSnapParameters,
 } from '../../../../cad-contract/units'
 import { openGridSnapOpenConnectCompositeBounds } from '../../../../cad-kernel/components/opengrid-snap/openconnect'
@@ -86,7 +87,9 @@ const OPENGRID_SNAP_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
 ]
 
 function validateOpenGridSnapDefinitionParameters(value: unknown) {
-  const validation = validateOpenGridSnapParameters(value)
+  const validation = validateOpenGridSnapParameters(
+    normalizeOpenGridSnapParameters(value),
+  )
   if (!validation.valid) return validation
   return {
     valid: true as const,
@@ -126,7 +129,7 @@ function boundsForOpenGridSnapDefinition(parameters: ModelParameterValues) {
     throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
   }
   const snapBounds = boundsForOpenGridSnap(parameters)
-  return parameters.openConnect
+  return parameters.footprint === 'full' && parameters.openConnect
     ? openGridSnapOpenConnectCompositeBounds(snapBounds, parameters.variant)
     : snapBounds
 }

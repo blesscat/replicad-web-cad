@@ -252,15 +252,19 @@ export const zhHantMessages = {
     '這個 OpenGrid Board 使用下列上游作者與授權資訊。',
   'cad.attribution.opengrid.credits': '上游作者：',
   'cad.attribution.snap.summary':
-    '這個 OpenGrid Snap generator 使用下列上游作者與授權資訊。',
+    '這個 OpenGrid Snap generator 使用下列 OpenGrid 與 OpenConnect 上游作者與授權資訊。',
   'cad.attribution.snap.credits': '上游作者：',
   'cad.attribution.author.designRole': '設計',
   'cad.attribution.author.openScadRole': 'OpenSCAD',
+  'cad.attribution.author.openConnectRole': 'OpenConnect 設計與 OpenSCAD',
+  'cad.attribution.author.openConnectProjectRole': 'OpenConnect 專案',
   'cad.attribution.snap.modified':
-    '`snap-half` 與 `snap-quarter` 是根據原始 Snap 修改的衍生版本，固定下載檔名為 `Half.step` 與 `Quarter.step`。',
+    '`snap-half` 與 `snap-quarter` 是根據原始 Snap 修改的衍生版本，固定下載檔名為 `Half.step` 與 `Quarter.step`；OpenConnect head 與底部介面缺口則根據 mitufy 的 OpenConnect 系統整合，來源授權為 CC BY 4.0。',
   'cad.attribution.licenseLabel': '授權',
   'cad.attribution.sourceCodeLicense': '上游程式碼：CC BY-NC-SA 4.0',
   'cad.attribution.derivedPartsLicense': '衍生／產生零件：CC BY 4.0',
+  'cad.attribution.openConnectLicense':
+    'OpenConnect 原始碼與介面幾何：CC BY 4.0',
   'cad.attribution.note':
     '以上資訊說明上游作者、程式碼與衍生零件的授權，不代表 Shape Shortcut 對上游程式碼或其他模型取得額外權利。',
   'cad.loading': '正在載入 {name} CAD workspace',
@@ -869,15 +873,19 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'This OpenGrid Board uses the following upstream attribution and licensing information.',
   'cad.attribution.opengrid.credits': 'Upstream authors:',
   'cad.attribution.snap.summary':
-    'This OpenGrid Snap generator uses the following upstream attribution and licensing information.',
+    'This OpenGrid Snap generator uses the following OpenGrid and OpenConnect upstream attribution and licensing information.',
   'cad.attribution.snap.credits': 'Upstream authors:',
   'cad.attribution.author.designRole': 'design',
   'cad.attribution.author.openScadRole': 'OpenSCAD',
+  'cad.attribution.author.openConnectRole': 'OpenConnect design and OpenSCAD',
+  'cad.attribution.author.openConnectProjectRole': 'OpenConnect project',
   'cad.attribution.snap.modified':
-    '`snap-half` and `snap-quarter` are modified derivatives of the original Snap design; the fixed download filenames are `Half.step` and `Quarter.step`.',
+    "`snap-half` and `snap-quarter` are modified derivatives of the original Snap design; the fixed download filenames are `Half.step` and `Quarter.step`. The OpenConnect head and underside interface notch are derived from mitufy's OpenConnect system under CC BY 4.0.",
   'cad.attribution.licenseLabel': 'Licenses',
   'cad.attribution.sourceCodeLicense': 'Upstream source code: CC BY-NC-SA 4.0',
   'cad.attribution.derivedPartsLicense': 'Derived/generated parts: CC BY 4.0',
+  'cad.attribution.openConnectLicense':
+    'OpenConnect source and interface geometry: CC BY 4.0',
   'cad.attribution.note':
     'This information documents the upstream authors, code, and derived-part licenses; it does not grant Shape Shortcut additional rights to the upstream code or other models.',
   'cad.loading': 'Loading {name} CAD workspace',
