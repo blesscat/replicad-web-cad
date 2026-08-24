@@ -6,11 +6,14 @@ const THREE_MF_MODEL_CONTENT_TYPE =
   'application/vnd.ms-package.3dmanufacturing-3dmodel+xml'
 const THREE_MF_RELATIONSHIPS_CONTENT_TYPE =
   'application/vnd.openxmlformats-package.relationships+xml'
+const THREE_MF_MODEL_SETTINGS_CONTENT_TYPE = 'application/xml'
+const THREE_MF_MODEL_SETTINGS_ENTRY = 'Metadata/model_settings.config'
 
 const REQUIRED_ENTRIES = [
   '[Content_Types].xml',
   '_rels/.rels',
   '3D/3dmodel.model',
+  THREE_MF_MODEL_SETTINGS_ENTRY,
 ] as const
 
 function hasBytes(raw: Uint8Array, offset: number, length: number): boolean {
@@ -192,6 +195,9 @@ function validContentTypes(xml: string): boolean {
     ) &&
     xml.includes(
       `<Default Extension="model" ContentType="${THREE_MF_MODEL_CONTENT_TYPE}"`,
+    ) &&
+    xml.includes(
+      `<Default Extension="config" ContentType="${THREE_MF_MODEL_SETTINGS_CONTENT_TYPE}"`,
     )
   )
 }
@@ -322,6 +328,83 @@ function validModel(xml: string): boolean {
   )
 }
 
+function validSettingsMetadata(
+  tag: string,
+  key: string,
+  value: string,
+): boolean {
+  return attribute(tag, 'key') === key && attribute(tag, 'value') === value
+}
+
+function validSettingsObject(
+  xml: string,
+  id: string,
+  name: string,
+  extruder: string,
+): boolean {
+  const object = xml.match(/^<object\b([^>]*)>([\s\S]*?)<\/object>\s*$/)
+  if (!object) return false
+  const metadata = object[2]!.match(/<metadata\b[^>]*\/\s*>/g) ?? []
+  if (
+    metadata.length !== 2 ||
+    object[2]!.replace(/<metadata\b[^>]*\/\s*>/g, '').trim() !== ''
+  ) {
+    return false
+  }
+  return (
+    attribute(object[1]!, 'id') === id &&
+    validSettingsMetadata(metadata[0]!, 'name', name) &&
+    validSettingsMetadata(metadata[1]!, 'extruder', extruder)
+  )
+}
+
+function validSettingsPlate(xml: string): boolean {
+  const plate = xml.match(/^<plate\b([^>]*)>([\s\S]*?)<\/plate>\s*$/)
+  if (!plate) return false
+  const metadata = plate[2]!.match(/<metadata\b[^>]*\/\s*>/g) ?? []
+  if (
+    metadata.length !== 4 ||
+    plate[2]!.replace(/<metadata\b[^>]*\/\s*>/g, '').trim() !== ''
+  ) {
+    return false
+  }
+  return (
+    attribute(plate[1]!, 'id') === null &&
+    validSettingsMetadata(metadata[0]!, 'plater_id', '1') &&
+    validSettingsMetadata(
+      metadata[1]!,
+      'plater_name',
+      'OpenGrid Snap Lite SNAP',
+    ) &&
+    validSettingsMetadata(metadata[2]!, 'filament_maps', '1 2') &&
+    validSettingsMetadata(metadata[3]!, 'filament_volume_maps', '1 1')
+  )
+}
+
+function validModelSettings(xml: string): boolean {
+  const root = xml.match(
+    /^<\?xml\b[\s\S]*?\?>\s*<config\b([^>]*)>([\s\S]*?)<\/config>\s*$/,
+  )
+  if (!root || root[1]!.trim() !== '') return false
+
+  const content = root[2]!
+  const objects = content.match(/<object\b[^>]*>[\s\S]*?<\/object>/g) ?? []
+  const plates = content.match(/<plate\b[^>]*>[\s\S]*?<\/plate>/g) ?? []
+  if (objects.length !== 2 || plates.length !== 1) return false
+
+  const remainder = content
+    .replace(/<object\b[^>]*>[\s\S]*?<\/object>/g, '')
+    .replace(/<plate\b[^>]*>[\s\S]*?<\/plate>/g, '')
+    .trim()
+  if (remainder !== '') return false
+
+  return (
+    validSettingsObject(objects[0]!, '1', 'body', '1') &&
+    validSettingsObject(objects[1]!, '2', 'text', '2') &&
+    validSettingsPlate(plates[0]!)
+  )
+}
+
 export function isValidThreeMfPackage(bytes: ArrayBuffer): boolean {
   const entries = parseZip(bytes)
   if (!entries || entries.size !== REQUIRED_ENTRIES.length) return false
@@ -331,12 +414,15 @@ export function isValidThreeMfPackage(bytes: ArrayBuffer): boolean {
   const contentTypes = decodeUtf8(entries.get(REQUIRED_ENTRIES[0]!)!)
   const relationships = decodeUtf8(entries.get(REQUIRED_ENTRIES[1]!)!)
   const model = decodeUtf8(entries.get(REQUIRED_ENTRIES[2]!)!)
+  const modelSettings = decodeUtf8(entries.get(REQUIRED_ENTRIES[3]!)!)
   return (
     contentTypes !== null &&
     relationships !== null &&
     model !== null &&
+    modelSettings !== null &&
     validContentTypes(contentTypes) &&
     validRelationships(relationships) &&
-    validModel(model)
+    validModel(model) &&
+    validModelSettings(modelSettings)
   )
 }

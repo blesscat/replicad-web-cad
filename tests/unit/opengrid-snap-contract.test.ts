@@ -91,7 +91,9 @@ describe('OpenGrid Snap contract', () => {
       value: lite,
     })
     expect(isOpenGridSnapParameters(full)).toBe(true)
-    expect(OPENGRID_SNAP_CONFIGURATION.defaultParameters).toEqual(parameters())
+    expect(OPENGRID_SNAP_CONFIGURATION.defaultParameters).toEqual(
+      parameters({ variant: 'Lite' }),
+    )
     expect(
       validateOpenGridSnapParameters({ ...full, halfCellX: 'left' }),
     ).toMatchObject({ valid: false })
@@ -250,19 +252,19 @@ describe('OpenGrid Snap contract', () => {
   })
 
   it('accepts only the fixed flat SNAP text combination', () => {
-    const text = parameters({ topText: 'SNAP' })
+    const text = parameters({ variant: 'Lite', topText: 'SNAP' })
     expect(validateOpenGridSnapParameters(text)).toEqual({
       valid: true,
       value: text,
     })
     expect(openGridSnapThreeMfFileName(text)).toBe(
-      'opengrid-snap-standard-full-text-snap.3mf',
+      'opengrid-snap-standard-lite-text-snap.3mf',
     )
     expect(openGridSnapFileName(text)).toContain('-text-snap.step')
     expect(openGridSnapStlFileName(text)).toContain('-text-snap.stl')
 
     for (const overrides of [
-      { variant: 'Lite' as const },
+      { variant: 'Full' as const },
       { profile: 'Directional' as const },
       { offset: 0.05 },
       { footprint: 'half' as const },

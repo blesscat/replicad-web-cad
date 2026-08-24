@@ -22,6 +22,7 @@ const TEXT_MATERIAL = {
   name: 'Snap Text',
   color: '#F4C542',
 }
+const MODEL_SETTINGS_PATH = 'Metadata/model_settings.config'
 
 function finiteNumber(value: number, label: string): number {
   if (!Number.isFinite(value)) throw new Error(`THREEMF_NON_FINITE:${label}`)
@@ -100,7 +101,28 @@ function contentTypesXml(): string {
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml" />
   <Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml" />
+  <Default Extension="config" ContentType="application/xml" />
 </Types>`
+}
+
+function modelSettingsXml(): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <object id="1">
+    <metadata key="name" value="body" />
+    <metadata key="extruder" value="1" />
+  </object>
+  <object id="2">
+    <metadata key="name" value="text" />
+    <metadata key="extruder" value="2" />
+  </object>
+  <plate>
+    <metadata key="plater_id" value="1" />
+    <metadata key="plater_name" value="OpenGrid Snap Lite SNAP" />
+    <metadata key="filament_maps" value="1 2" />
+    <metadata key="filament_volume_maps" value="1 1" />
+  </plate>
+</config>`
 }
 
 function relationshipsXml(): string {
@@ -238,6 +260,10 @@ export async function exportThreeMfBytes(
       bytes: TEXT_ENCODER.encode(relationshipsXml()),
     },
     { name: '3D/3dmodel.model', bytes: model },
+    {
+      name: MODEL_SETTINGS_PATH,
+      bytes: TEXT_ENCODER.encode(modelSettingsXml()),
+    },
   ]
   const bytes = zipStore(entries)
   if (bytes.byteLength === 0) throw new Error('THREEMF_EMPTY')

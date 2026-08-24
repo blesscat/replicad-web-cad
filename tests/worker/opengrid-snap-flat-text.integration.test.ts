@@ -17,7 +17,11 @@ import {
   exportThreeMfBytes,
   isThreeMfPackage,
 } from '../../src/cad-kernel/export'
-import { OPENGRID_SNAP_CONFIGURATION } from '../../src/cad-contract/units'
+import {
+  OPENGRID_SNAP_CONFIGURATION,
+  type OpenGridSnapParameters,
+} from '../../src/cad-contract/units'
+import { OPENGRID_SNAP_FLAT_TEXT_CONFIGURATION } from '../../src/cad-kernel/components/opengrid-snap/flat-text'
 
 ;(globalThis as typeof globalThis & { __dirname?: string }).__dirname = dirname(
   fileURLToPath(import.meta.url),
@@ -58,7 +62,7 @@ function countSolids(shape: Shape3D): number {
 
 function snapReferenceBlob(): Blob {
   return new Blob([
-    readFileSync(fileURLToPath(OPENGRID_SNAP_REFERENCE_URLS.Standard.Full)),
+    readFileSync(fileURLToPath(OPENGRID_SNAP_REFERENCE_URLS.Standard.Lite)),
   ])
 }
 
@@ -72,11 +76,12 @@ describe('OpenGrid Snap flat text POC', () => {
   it('keeps SNAP text coplanar while retaining body and text parts', async () => {
     const reference = await importOpenGridSnapReference(
       snapReferenceBlob(),
-      'Full',
+      'Lite',
       'Standard',
     )
-    const parameters = {
+    const parameters: OpenGridSnapParameters = {
       ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
+      variant: 'Lite',
       topText: 'SNAP' as const,
     }
     const generated = await buildOpenGridSnapWithFlatText(parameters, {
@@ -89,12 +94,15 @@ describe('OpenGrid Snap flat text POC', () => {
 
       const bodyBounds = shapeBounds(bodyPart.shape)
       const textBounds = shapeBounds(textPart.shape)
+      const expectedTop = OPENGRID_SNAP_CONFIGURATION.variantHeights.Lite
+      const expectedBottom =
+        expectedTop - OPENGRID_SNAP_FLAT_TEXT_CONFIGURATION.depth
       expect(countSolids(bodyPart.shape)).toBe(9)
       expect(countSolids(textPart.shape)).toBeGreaterThan(0)
-      expect(textBounds[0]?.[2]).toBeCloseTo(6.4, 2)
-      expect(textBounds[1]?.[2]).toBeCloseTo(6.8, 2)
-      expect(bodyBounds[1]?.[2]).toBeCloseTo(6.8, 2)
-      expect(shapeBounds(generated.shape)[1]?.[2]).toBeCloseTo(6.8, 2)
+      expect(textBounds[0]?.[2]).toBeCloseTo(expectedBottom, 2)
+      expect(textBounds[1]?.[2]).toBeCloseTo(expectedTop, 2)
+      expect(bodyBounds[1]?.[2]).toBeCloseTo(expectedTop, 2)
+      expect(shapeBounds(generated.shape)[1]?.[2]).toBeCloseTo(expectedTop, 2)
 
       const baseMesh = meshBRep(bodyPart.shape, {
         tolerance: 0.05,
@@ -131,6 +139,9 @@ describe('OpenGrid Snap flat text POC', () => {
       expect(threeMfText).toContain('<basematerials id="1">')
       expect(threeMfText).toContain('<item objectid="1" />')
       expect(threeMfText).toContain('<item objectid="2" />')
+      expect(threeMfText).toContain('Metadata/model_settings.config')
+      expect(threeMfText).toContain('<metadata key="extruder" value="1" />')
+      expect(threeMfText).toContain('<metadata key="extruder" value="2" />')
       expect(threeMfText).not.toContain('<components>')
     } finally {
       generated.shape.delete()

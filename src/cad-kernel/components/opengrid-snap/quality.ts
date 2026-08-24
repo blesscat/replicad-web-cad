@@ -30,7 +30,11 @@ import {
 import type { MeshSnapshot } from '../../../cad-contract/messages'
 import type { MeshData } from '../../mesh'
 import { OPENGRID_SNAP_BOUNDARY_PROFILE } from './boundary'
-import { isOpenGridSnapFlatTextConfiguration } from './flat-text'
+import {
+  isOpenGridSnapFlatTextConfiguration,
+  openGridSnapFlatTextTopZFor,
+  OPENGRID_SNAP_FLAT_TEXT_CONFIGURATION,
+} from './flat-text'
 
 const QUALITY_TOLERANCE = 0.05
 // Meshing an offset assembly can add a small OCC boundary epsilon to the
@@ -2212,8 +2216,9 @@ export function assertOpenGridSnapFlatTextShapeQuality(
     reference,
   )
   const textBounds = readBounds(textShape)
-  const expectedTop = OPENGRID_SNAP_CONFIGURATION.variantHeights.Full
-  const expectedBottom = expectedTop - 0.4
+  const expectedTop = openGridSnapFlatTextTopZFor(parameters)
+  const expectedBottom =
+    expectedTop - OPENGRID_SNAP_FLAT_TEXT_CONFIGURATION.depth
   const textCoordinates = [...textBounds.min, ...textBounds.max]
   if (
     countSolids(textShape) === 0 ||

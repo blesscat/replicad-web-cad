@@ -174,6 +174,7 @@ describe('STL browser download adapter', () => {
 
 function threeMfBytes(
   modelTransform: (xml: string) => string = (xml) => xml,
+  settingsTransform: (xml: string) => string = (xml) => xml,
 ): ArrayBuffer {
   let crc = (bytes: Uint8Array): number => {
     let value = 0xffffffff
@@ -189,7 +190,7 @@ function threeMfBytes(
   const entries = [
     [
       '[Content_Types].xml',
-      `<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>`,
+      `<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/><Default Extension="config" ContentType="application/xml"/></Types>`,
     ],
     [
       '_rels/.rels',
@@ -199,12 +200,21 @@ function threeMfBytes(
       '3D/3dmodel.model',
       `<?xml version="1.0"?><model xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" unit="millimeter"><resources><basematerials id="1"><base name="Snap Body" displaycolor="#657080"/><base name="Snap Text" displaycolor="#F4C542"/></basematerials><object id="1" type="model" name="body" pid="1" pindex="0"><mesh><vertices><vertex x="0" y="0" z="0"/><vertex x="1" y="0" z="0"/><vertex x="0" y="1" z="0"/></vertices><triangles><triangle v1="0" v2="1" v3="2"/></triangles></mesh></object><object id="2" type="model" name="text" pid="1" pindex="1"><mesh><vertices><vertex x="0" y="0" z="0"/><vertex x="1" y="0" z="0"/><vertex x="0" y="1" z="0"/></vertices><triangles><triangle v1="0" v2="1" v3="2"/></triangles></mesh></object></resources><build><item objectid="1"/><item objectid="2"/></build></model>`,
     ],
+    [
+      'Metadata/model_settings.config',
+      `<?xml version="1.0"?><config><object id="1"><metadata key="name" value="body"/><metadata key="extruder" value="1"/></object><object id="2"><metadata key="name" value="text"/><metadata key="extruder" value="2"/></object><plate><metadata key="plater_id" value="1"/><metadata key="plater_name" value="OpenGrid Snap Lite SNAP"/><metadata key="filament_maps" value="1 2"/><metadata key="filament_volume_maps" value="1 1"/></plate></config>`,
+    ],
   ] as const
+  function transformEntry(name: string, content: string): string {
+    if (name === '3D/3dmodel.model') return modelTransform(content)
+    if (name === 'Metadata/model_settings.config') {
+      return settingsTransform(content)
+    }
+    return content
+  }
   const encodedEntries = entries.map(([name, content]) => {
     const nameBytes = encoder.encode(name)
-    const bytes = encoder.encode(
-      name === '3D/3dmodel.model' ? modelTransform(content) : content,
-    )
+    const bytes = encoder.encode(transformEntry(name, content))
     return { nameBytes, bytes, checksum: crc(bytes) }
   })
   const localSize = encodedEntries.reduce(
@@ -267,7 +277,7 @@ function threeMfResponse(
     format: '3mf',
     bytes: threeMfBytes(),
     mime: 'model/3mf',
-    fileName: 'opengrid-snap-standard-full-text-snap.3mf',
+    fileName: 'opengrid-snap-standard-lite-text-snap.3mf',
     ...overrides,
   } as ExportReadyEvent
 }
@@ -280,7 +290,7 @@ describe('3MF response validation', () => {
         threeMfResponse(),
         'rev-1',
         'epoch-1',
-        'opengrid-snap-standard-full-text-snap.3mf',
+        'opengrid-snap-standard-lite-text-snap.3mf',
       ),
     ).toEqual({ valid: true })
   })
@@ -334,6 +344,14 @@ describe('3MF response validation', () => {
 
     expect(validateThreeMfPackage(compositePackage)).toBe(false)
   })
+
+  it('rejects a package that maps both parts to the same filament slot', () => {
+    const sameSlotPackage = threeMfBytes(undefined, (xml) =>
+      xml.replace('key="extruder" value="2"', 'key="extruder" value="1"'),
+    )
+
+    expect(validateThreeMfPackage(sameSlotPackage)).toBe(false)
+  })
 })
 
 describe('3MF browser download adapter', () => {
@@ -351,7 +369,7 @@ describe('3MF browser download adapter', () => {
 
     expect(anchor).toMatchObject({
       href: 'blob:3mf',
-      download: 'opengrid-snap-standard-full-text-snap.3mf',
+      download: 'opengrid-snap-standard-lite-text-snap.3mf',
     })
     expect(click).toHaveBeenCalledOnce()
     cleanup()

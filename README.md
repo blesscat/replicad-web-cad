@@ -172,11 +172,11 @@ opengrid-organizer-box-{countX}x{countY}-{shape}-sm-{linked|independent}-d{diame
 
 ## Snap flat-text 3MF POC
 
-Snap 的 `頂面文字` 控制目前只提供固定的 `SNAP` 選項。它只接受 `Full`、`Standard`、Full footprint、offset `0`、關閉 OpenConnect、無定位孔／移除孔／磁鐵孔的組合；其他組合會停用控制或自動回到無文字。
+Snap 的 `頂面文字` 控制目前只提供固定的 `SNAP` 選項。它只接受 `Lite`、`Standard`、Full footprint、offset `0`、關閉 OpenConnect、無定位孔／移除孔／磁鐵孔的組合；其他組合會停用控制或自動回到無文字。
 
-這個 POC 不是浮雕，也不是把文字抬高：文字是獨立的第二個 3MF part，從 Z=`6.4 mm` 延伸到與本體相同的頂面 Z=`6.8 mm`，因此列印後是同一平面的雙色嵌件。body 會先保留文字 cavity，3MF 再以兩個 material entry 與兩個獨立 build item 匯出 body 與 text，避免 slicer 把兩者折疊成單一 component，讓兩個 part 可以分別指定耗材顏色。
+這個 POC 不是浮雕，也不是把文字抬高：文字是獨立的第二個 3MF part，從 Z=`3.0 mm` 延伸到與 Lite 本體相同的頂面 Z=`3.4 mm`，因此列印後是同一平面的雙色嵌件。body 會先保留文字 cavity，3MF 再以兩個 material entry、兩個獨立 build item 與 Bambu Studio model settings 匯出 body 與 text，避免 slicer 把兩者折疊成單一 component，並預設 body 使用耗材槽 1、text 使用耗材槽 2。對單噴嘴加 AMS 的印表機，這代表不同耗材槽，不是兩個物理噴嘴。
 
-3MF 檔案名固定為 `opengrid-snap-standard-full-text-snap.3mf`。目前沒有任意文字輸入、font parser、任意顏色選擇、slicer profile、printer preset、G-code 或自動控制 Bambu Studio；這些都不屬於本次驗證範圍。
+3MF 檔案名固定為 `opengrid-snap-standard-lite-text-snap.3mf`。目前沒有任意文字輸入、font parser、任意顏色選擇、slicer profile、printer preset、G-code 或自動控制 Bambu Studio；這些都不屬於本次驗證範圍。
 
 代表性量測（box、2×2 與 5×5 grid）都產生有效 binary STL：box 為 684 B/12 triangles，2×2 為 459,084 B/9,180 triangles，5×5 為 2,697,684 B/53,952 triangles；輸出長度皆符合 `84 + triangleCount × 50`。
 

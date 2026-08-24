@@ -511,7 +511,7 @@ export const zhHantMessages = {
   'panel.snap.topTextNone': '無',
   'panel.snap.topTextSnap': 'SNAP（平面雙色）',
   'panel.snap.topTextHelp':
-    '目前只支援 Full／Standard、Full 格、增量 0、無孔與關閉 OpenConnect。',
+    '目前只支援 Lite／Standard、Full 格、增量 0、無孔與關閉 OpenConnect。',
   'panel.pillar.fixedVersionAria': '支柱版本',
   'panel.opengrid.profile': '板型',
   'panel.opengrid.profileAria': 'OpenGrid 板型',
@@ -1157,7 +1157,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'panel.snap.topTextNone': 'None',
   'panel.snap.topTextSnap': 'SNAP (flat two-color)',
   'panel.snap.topTextHelp':
-    'Currently supported only for Full/Standard, Full footprint, offset 0, no holes, and OpenConnect off.',
+    'Currently supported only for Lite/Standard, Full footprint, offset 0, no holes, and OpenConnect off.',
   'panel.pillar.fixedVersionAria': 'Post version',
   'panel.opengrid.profile': 'Board profile',
   'panel.opengrid.profileAria': 'OpenGrid board profile',

@@ -462,7 +462,7 @@ describe('Worker contract runtime validation', () => {
       modelRevision: 'rev-1',
       workerEpoch: 'epoch-1',
       file: {
-        name: 'opengrid-snap-standard-full-text-snap.3mf',
+        name: 'opengrid-snap-standard-lite-text-snap.3mf',
         mime: 'model/3mf',
       },
     }
@@ -476,7 +476,7 @@ describe('Worker contract runtime validation', () => {
       format: '3mf',
       bytes: new Uint8Array([0x50, 0x4b, 0x03, 0x04]).buffer,
       mime: 'model/3mf',
-      fileName: 'opengrid-snap-standard-full-text-snap.3mf',
+      fileName: 'opengrid-snap-standard-lite-text-snap.3mf',
     }
 
     expect(isWorkerCommand(command)).toBe(true)

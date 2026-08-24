@@ -550,7 +550,7 @@ describe('OpenGrid Snap Worker runtime', () => {
     const runtime = new CadWorkerRuntime('epoch-snap-3mf', (event) =>
       events.push(event),
     )
-    const parameters = snapParameters('Full', 0, 'full', { topText: 'SNAP' })
+    const parameters = snapParameters('Lite', 0, 'full', { topText: 'SNAP' })
     await runtime.handle(initCommand())
     await runtime.handle(generateCommand(parameters))
 
@@ -610,7 +610,7 @@ describe('OpenGrid Snap Worker runtime', () => {
         kind: 'export.ready',
         format: '3mf',
         mime: 'model/3mf',
-        fileName: 'opengrid-snap-standard-full-text-snap.3mf',
+        fileName: 'opengrid-snap-standard-lite-text-snap.3mf',
       }),
     )
   })

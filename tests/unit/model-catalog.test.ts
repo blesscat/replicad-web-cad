@@ -432,7 +432,7 @@ describe('CAD component catalog', () => {
       }),
     ])
     expect(snap?.defaultParameters).toEqual({
-      variant: 'Full',
+      variant: 'Lite',
       profile: 'Standard',
       offset: 0,
       footprint: 'full',

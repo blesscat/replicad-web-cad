@@ -6,7 +6,7 @@
 
 ### Requirement: 3MF is generated from the committed multipart revision
 
-For a committed Full Standard `opengrid-snap` revision with `topText=SNAP`,
+For a committed Lite Standard `opengrid-snap` revision with `topText=SNAP`,
 the system MUST generate 3MF bytes inside the CAD Worker from the pinned body
 and text B-Rep parts. It MUST NOT reconstruct the package from the viewport
 mesh alone or run CAD export on the main thread. The initial POC MUST reject
@@ -16,7 +16,7 @@ error.
 #### Scenario: Successful Snap 3MF export
 
 - **WHEN** the workspace is ready and the user requests 3MF for a committed
-  Full Standard `topText=SNAP` revision
+  Lite Standard `topText=SNAP` revision
 - **THEN** the Worker MUST pin that revision before writing the package
 - **AND** the package MUST be non-empty and contain a body object and a text
   object with their relative placement preserved
@@ -38,7 +38,10 @@ material assignments that identify the text as a different material from the
 body. The build MUST reference the body and text objects as two independent
 items, and MUST NOT hide them behind a composite `components` object. The
 package MUST use millimetres and MUST preserve the body/text mesh coordinates
-without a hidden scale or translation.
+without a hidden scale or translation. It MUST also contain
+`Metadata/model_settings.config`; that Bambu Studio metadata MUST assign model
+object `1` (body) to extruder/filament slot `1`, model object `2` (text) to
+extruder/filament slot `2`, and declare the plate filament map `1 2`.
 
 #### Scenario: Body and text have separate material assignments
 
@@ -61,9 +64,16 @@ without a hidden scale or translation.
 
 - **WHEN** a 3MF response is passed to a ZIP/XML structural validator
 - **THEN** it MUST contain `[Content_Types].xml`, `_rels/.rels`, and
-  `3D/3dmodel.model`
+  `3D/3dmodel.model`, and `Metadata/model_settings.config`
 - **AND** the model XML MUST declare millimetre units, finite vertices, and
   valid triangle indices
+
+#### Scenario: Bambu Studio receives distinct default filament assignments
+
+- **WHEN** Bambu Studio imports the generated package
+- **THEN** its model settings MUST map the body object to filament slot `1`
+- **AND** its model settings MUST map the text object to filament slot `2`
+- **AND** the plate metadata MUST contain `filament_maps=1 2`
 
 ### Requirement: 3MF export metadata and response are validated
 
@@ -101,7 +111,7 @@ their existing lifecycle behavior MUST remain unchanged.
 
 #### Scenario: 3MF is available for the supported POC
 
-- **GIVEN** the current revision is Full Standard `topText=SNAP`, committed,
+- **GIVEN** the current revision is Lite Standard `topText=SNAP`, committed,
   ready, and not stale
 - **WHEN** the user views the export actions
 - **THEN** `下載 3MF` / `Download 3MF` MUST be enabled

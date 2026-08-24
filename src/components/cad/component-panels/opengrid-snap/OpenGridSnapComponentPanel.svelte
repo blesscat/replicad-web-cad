@@ -115,7 +115,7 @@
     rawParameters.openConnect ?? String(parameters.openConnect),
   )
   let flatTextIsSupported = $derived(
-    rawVariant === 'Full' &&
+    rawVariant === 'Lite' &&
       rawProfile === 'Standard' &&
       rawFootprint === 'full' &&
       Number(rawOffset) === 0 &&

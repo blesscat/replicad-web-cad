@@ -36,7 +36,7 @@ function createContext(
 
   if (modelId === 'opengrid-snap') {
     const snapParameters: OpenGridSnapParameters = {
-      variant: snapFlatText ? 'Full' : 'Lite',
+      variant: 'Lite',
       profile: snapFlatText ? 'Standard' : 'Directional',
       offset: snapFlatText ? 0 : snapOffset,
       footprint: snapFlatText ? 'full' : snapFootprint,
@@ -52,7 +52,7 @@ function createContext(
     }
     parameters = snapParameters
     rawParameters = {
-      variant: snapFlatText ? 'Full' : 'Lite',
+      variant: 'Lite',
       profile: snapFlatText ? 'Standard' : 'Directional',
       offset: String(snapFlatText ? 0 : snapOffset),
       footprint: snapFlatText ? 'full' : snapFootprint,
@@ -178,13 +178,13 @@ describe('CAD export runtime', () => {
       modelRevision: 'revision-1',
       workerEpoch: 'epoch-1',
       file: {
-        name: 'opengrid-snap-standard-full-text-snap.3mf',
+        name: 'opengrid-snap-standard-lite-text-snap.3mf',
         mime: 'model/3mf',
       },
     })
     expect(refs.exportRequest.current).toMatchObject({
       format: '3mf',
-      fileName: 'opengrid-snap-standard-full-text-snap.3mf',
+      fileName: 'opengrid-snap-standard-lite-text-snap.3mf',
     })
   })
 

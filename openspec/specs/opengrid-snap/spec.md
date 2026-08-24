@@ -16,8 +16,9 @@ parameter snapshot MUST contain exactly `variant`, `profile`, `offset`,
 `full`, `half`, or `quarter`. `openConnect` MUST be boolean and, when true,
 `footprint` MUST be `full`; the selected profile and variant MUST be used
 without restricting OpenConnect to Directional geometry. `topText` MUST be
-`none` or `SNAP`. When `topText` is `SNAP`, the snapshot MUST use
-`variant=Full`, `profile=Standard`, `offset=0`, `footprint=full`,
+`none` or `SNAP`. The default Snap snapshot MUST use `variant=Lite`. When
+`topText` is `SNAP`, the snapshot MUST use `variant=Lite`, `profile=Standard`,
+`offset=0`, `footprint=full`,
 `openConnect=false`, `fourCornerLocatingHoles=false`,
 `centerRemoverHole=false`, and `magnetHoleShape=none` with all magnet
 dimensions zero. `magnetHoleShape` MUST be `none`, `square`, or `round`. When
@@ -73,13 +74,13 @@ Standard reference or its equivalent programmatic baseline.
 
 #### Scenario: Valid flat SNAP text snapshot
 
-- **WHEN** a complete snapshot has `variant=Full`, `profile=Standard`,
+- **WHEN** a complete snapshot has `variant=Lite`, `profile=Standard`,
   `offset=0`, `footprint=full`, `openConnect=false`, both existing hole flags
   `false`, `magnetHoleShape=none`, all magnet dimensions `0`, and
   `topText=SNAP`
 - **THEN** validation MUST accept it
 - **AND** generation MUST keep the overall Z bounds at approximately `0` to
-  `6.8` mm
+  `3.4` mm
 - **AND** generation MUST represent the body with a shallow top text cavity
   and a separate `SNAP` text part whose top is coplanar with the body top
 
@@ -143,7 +144,7 @@ Standard reference or its equivalent programmatic baseline.
 
 ### Requirement: Flat SNAP text remains a separate printable part
 
-When a valid Full Standard Snap requests `topText=SNAP`, the Worker MUST
+When a valid Lite Standard Snap requests `topText=SNAP`, the Worker MUST
 retain a body part and a text part separately through the committed revision.
 The text part MUST occupy a cavity in the body from the configured inlay floor
 to the original top surface, MUST not extend above that surface, and MUST be
@@ -154,7 +155,7 @@ available to a multipart export without relying on viewport color metadata.
 - **WHEN** a valid `topText=SNAP` candidate is quality-checked
 - **THEN** the body and text part maximum Z values MUST match within the
   documented CAD tolerance
-- **AND** the candidate MUST preserve the original Full Standard outer bounds
+- **AND** the candidate MUST preserve the original Lite Standard outer bounds
 - **AND** the text MUST not be represented only as a display-time triangle
   material or as raised geometry
 

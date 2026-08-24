@@ -116,7 +116,7 @@ export const OPENGRID_SNAP_CONFIGURATION = {
     },
   } satisfies Record<OpenGridSnapProfile, Record<OpenGridSnapVariant, string>>,
   defaultParameters: {
-    variant: 'Full' as OpenGridSnapVariant,
+    variant: 'Lite' as OpenGridSnapVariant,
     profile: 'Standard' as OpenGridSnapProfile,
     offset: 0,
     footprint: 'full' as OpenGridSnapFootprint,
@@ -304,7 +304,7 @@ export function validateOpenGridSnapParameters(
   }
   if (
     value.topText === 'SNAP' &&
-    (value.variant !== 'Full' ||
+    (value.variant !== 'Lite' ||
       value.profile !== 'Standard' ||
       value.offset !== 0 ||
       value.footprint !== 'full' ||
@@ -685,10 +685,10 @@ export function openGridSnapStlFileName(
 export function openGridSnapThreeMfFileName(
   parameters: OpenGridSnapParameters,
 ): string {
-  if (parameters.topText !== 'SNAP') {
+  if (parameters.topText !== 'SNAP' || parameters.variant !== 'Lite') {
     throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap-3mf')
   }
-  return 'opengrid-snap-standard-full-text-snap.3mf'
+  return 'opengrid-snap-standard-lite-text-snap.3mf'
 }
 
 function openGridSnapOpenConnectFileNameSuffix(

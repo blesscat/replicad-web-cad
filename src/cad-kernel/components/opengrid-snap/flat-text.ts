@@ -11,15 +11,20 @@ export const OPENGRID_SNAP_FLAT_TEXT_CONFIGURATION = {
   glyphHeight: 4.2,
   stroke: 0.65,
   letterGap: 0.65,
-  topZ: OPENGRID_SNAP_CONFIGURATION.variantHeights.Full,
 } as const
+
+export function openGridSnapFlatTextTopZFor(
+  parameters: OpenGridSnapParameters,
+): number {
+  return OPENGRID_SNAP_CONFIGURATION.variantHeights[parameters.variant]
+}
 
 export function isOpenGridSnapFlatTextConfiguration(
   parameters: OpenGridSnapParameters,
 ): boolean {
   return (
     parameters.topText === OPENGRID_SNAP_FLAT_TEXT_CONFIGURATION.value &&
-    parameters.variant === 'Full' &&
+    parameters.variant === 'Lite' &&
     parameters.profile === 'Standard' &&
     parameters.offset === 0 &&
     parameters.footprint === 'full' &&
@@ -262,13 +267,12 @@ export function makeOpenGridSnapFlatTextShape(
     glyphHeight: height,
     letterGap,
     depth,
-    topZ,
   } = OPENGRID_SNAP_FLAT_TEXT_CONFIGURATION
   const letters: readonly ['S', 'N', 'A', 'P'] = ['S', 'N', 'A', 'P']
   const totalWidth = letters.length * width + (letters.length - 1) * letterGap
   const startX = -totalWidth / 2
   const startY = -height / 2
-  const baseZ = topZ - depth
+  const baseZ = openGridSnapFlatTextTopZFor(parameters) - depth
   const glyphs: Shape3D[] = []
 
   try {
