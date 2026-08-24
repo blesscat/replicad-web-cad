@@ -129,7 +129,9 @@ describe('OpenGrid Snap flat text POC', () => {
       const threeMfText = new TextDecoder().decode(new Uint8Array(threeMf))
       expect(threeMfText).toContain('3D/3dmodel.model')
       expect(threeMfText).toContain('<basematerials id="1">')
-      expect(threeMfText).toContain('<component objectid="2"')
+      expect(threeMfText).toContain('<item objectid="1" />')
+      expect(threeMfText).toContain('<item objectid="2" />')
+      expect(threeMfText).not.toContain('<components>')
     } finally {
       generated.shape.delete()
       generated.qualityShape.delete()

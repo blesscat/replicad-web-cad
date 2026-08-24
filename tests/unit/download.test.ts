@@ -197,7 +197,7 @@ function threeMfBytes(
     ],
     [
       '3D/3dmodel.model',
-      `<?xml version="1.0"?><model xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" unit="millimeter"><resources><basematerials id="1"><base name="Snap Body" displaycolor="#657080"/><base name="Snap Text" displaycolor="#F4C542"/></basematerials><object id="1" type="model" name="body" pid="1" pindex="0"><mesh><vertices><vertex x="0" y="0" z="0"/><vertex x="1" y="0" z="0"/><vertex x="0" y="1" z="0"/></vertices><triangles><triangle v1="0" v2="1" v3="2"/></triangles></mesh></object><object id="2" type="model" name="text" pid="1" pindex="1"><mesh><vertices><vertex x="0" y="0" z="0"/><vertex x="1" y="0" z="0"/><vertex x="0" y="1" z="0"/></vertices><triangles><triangle v1="0" v2="1" v3="2"/></triangles></mesh></object><object id="3" type="model" name="OpenGrid Snap SNAP"><components><component objectid="1"/><component objectid="2"/></components></object></resources><build><item objectid="3"/></build></model>`,
+      `<?xml version="1.0"?><model xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" unit="millimeter"><resources><basematerials id="1"><base name="Snap Body" displaycolor="#657080"/><base name="Snap Text" displaycolor="#F4C542"/></basematerials><object id="1" type="model" name="body" pid="1" pindex="0"><mesh><vertices><vertex x="0" y="0" z="0"/><vertex x="1" y="0" z="0"/><vertex x="0" y="1" z="0"/></vertices><triangles><triangle v1="0" v2="1" v3="2"/></triangles></mesh></object><object id="2" type="model" name="text" pid="1" pindex="1"><mesh><vertices><vertex x="0" y="0" z="0"/><vertex x="1" y="0" z="0"/><vertex x="0" y="1" z="0"/></vertices><triangles><triangle v1="0" v2="1" v3="2"/></triangles></mesh></object></resources><build><item objectid="1"/><item objectid="2"/></build></model>`,
     ],
   ] as const
   const encodedEntries = entries.map(([name, content]) => {
@@ -317,6 +317,22 @@ describe('3MF response validation', () => {
         'epoch-1',
       ).valid,
     ).toBe(false)
+  })
+
+  it('rejects a composite build item that hides the individual color parts', () => {
+    const compositePackage = threeMfBytes((xml) =>
+      xml
+        .replace(
+          '</resources>',
+          '<object id="3" type="model" name="OpenGrid Snap SNAP"><components><component objectid="1"/><component objectid="2"/></components></object></resources>',
+        )
+        .replace(
+          '<build><item objectid="1"/><item objectid="2"/></build>',
+          '<build><item objectid="3"/></build>',
+        ),
+    )
+
+    expect(validateThreeMfPackage(compositePackage)).toBe(false)
   })
 })
 

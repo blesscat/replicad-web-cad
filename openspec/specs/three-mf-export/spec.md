@@ -35,8 +35,10 @@ The generated 3MF package MUST be a valid ZIP-based 3MF package with a model
 part, package relationships, and content types. Its model MUST contain distinct
 body and text objects, two deterministic material entries, and object-level
 material assignments that identify the text as a different material from the
-body. The package MUST use millimetres and MUST preserve the body/text mesh
-coordinates without a hidden scale or translation.
+body. The build MUST reference the body and text objects as two independent
+items, and MUST NOT hide them behind a composite `components` object. The
+package MUST use millimetres and MUST preserve the body/text mesh coordinates
+without a hidden scale or translation.
 
 #### Scenario: Body and text have separate material assignments
 
@@ -46,6 +48,14 @@ coordinates without a hidden scale or translation.
   display colours
 - **AND** the text object MUST be assigned to the accent material while the
   body object MUST be assigned to the base material
+
+#### Scenario: Body and text remain independently selectable
+
+- **WHEN** a slicer imports a generated 3MF package
+- **THEN** the build MUST expose one item for the body object and one item for
+  the text object
+- **AND** the package MUST NOT use a composite component item that collapses
+  the two color parts into one selectable part
 
 #### Scenario: Package structure is importable
 

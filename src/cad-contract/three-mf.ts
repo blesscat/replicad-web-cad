@@ -288,7 +288,7 @@ function validModel(xml: string): boolean {
   }
 
   const objects = xml.match(/<object\b([^>]*)>([\s\S]*?)<\/object>/g) ?? []
-  if (objects.length !== 3) return false
+  if (objects.length !== 2) return false
   const objectById = new Map<string, { attributes: string; body: string }>()
   for (const object of objects) {
     const match = object.match(/<object\b([^>]*)>([\s\S]*?)<\/object>/)
@@ -300,8 +300,7 @@ function validModel(xml: string): boolean {
 
   const body = objectById.get('1')
   const text = objectById.get('2')
-  const composite = objectById.get('3')
-  if (!body || !text || !composite) return false
+  if (!body || !text) return false
   if (
     attribute(body.attributes, 'type') !== 'model' ||
     attribute(body.attributes, 'name') !== 'body' ||
@@ -310,23 +309,16 @@ function validModel(xml: string): boolean {
     attribute(text.attributes, 'type') !== 'model' ||
     attribute(text.attributes, 'name') !== 'text' ||
     attribute(text.attributes, 'pid') !== '1' ||
-    attribute(text.attributes, 'pindex') !== '1' ||
-    attribute(composite.attributes, 'type') !== 'model' ||
-    attribute(composite.attributes, 'name') !== 'OpenGrid Snap SNAP'
+    attribute(text.attributes, 'pindex') !== '1'
   ) {
     return false
   }
   if (!validMesh(body.body) || !validMesh(text.body)) return false
-  if (
-    !/<components>\s*<component\b[^>]*objectid="1"[^>]*\/\s*>\s*<component\b[^>]*objectid="2"[^>]*\/\s*>\s*<\/components>/.test(
-      composite.body,
-    )
-  ) {
-    return false
-  }
   const buildItems = xml.match(/<item\b[^>]*\/\s*>/g) ?? []
   return (
-    buildItems.length === 1 && attribute(buildItems[0]!, 'objectid') === '3'
+    buildItems.length === 2 &&
+    attribute(buildItems[0]!, 'objectid') === '1' &&
+    attribute(buildItems[1]!, 'objectid') === '2'
   )
 }
 

@@ -87,15 +87,10 @@ function modelXml(parts: readonly { name: string; mesh: MeshData }[]): string {
       <base name="${TEXT_MATERIAL.name}" displaycolor="${TEXT_MATERIAL.color}" />
     </basematerials>
     ${objects}
-    <object id="3" type="model" name="OpenGrid Snap SNAP">
-      <components>
-        <component objectid="1" />
-        <component objectid="2" />
-      </components>
-    </object>
   </resources>
   <build>
-    <item objectid="3" />
+    <item objectid="1" />
+    <item objectid="2" />
   </build>
 </model>`
 }
