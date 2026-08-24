@@ -229,44 +229,54 @@ describe('OpenGrid OpenConnect shelf CAD kernel integration', () => {
     const shape = await buildOpenGridOpenConnectShelf(parameters, {
       getLockedSlot: async () => source,
     })
-    const depth = openGridOpenConnectShelfDepthFor(parameters)
     const radians = openGridOpenConnectShelfAngleRadiansFor(parameters.angle)
-    const probeMinY = (-depth * 0.65) / Math.cos(radians)
-    const probeMaxY = (-depth * 0.35) / Math.cos(radians)
     const bayHalfWidth =
       configuration.gridPitch / 2 - configuration.supportThickness - 0.5
+    const bayHalfDepth = configuration.gridPitch / 4
     let sealingSkin: Shape3D | null = null
     let sealedShape: Shape3D | null = null
     try {
-      for (let column = 0; column < parameters.columns; column += 1) {
-        const centerX =
-          (column - (parameters.columns - 1) / 2) * configuration.gridPitch
-        const probe = makeBox(
-          [centerX - bayHalfWidth, probeMinY, 0.2],
-          [
-            centerX + bayHalfWidth,
-            probeMaxY,
-            configuration.supportThickness - 0.2,
-          ],
-        )
-        let obstruction: Shape3D | null = null
-        try {
-          obstruction = shape.intersect(probe)
-          expect(measureVolume(obstruction)).toBeLessThan(0.01)
-        } finally {
-          deleteShape(obstruction)
-          probe.delete()
+      for (let row = 0; row < parameters.rows; row += 1) {
+        const installedCenterY = -(row + 0.5) * configuration.gridPitch
+        const printCenterY = installedCenterY / Math.cos(radians)
+        for (let column = 0; column < parameters.columns; column += 1) {
+          const centerX =
+            (column - (parameters.columns - 1) / 2) * configuration.gridPitch
+          const probe = makeBox(
+            [centerX - bayHalfWidth, printCenterY - bayHalfDepth, 0.2],
+            [
+              centerX + bayHalfWidth,
+              printCenterY + bayHalfDepth,
+              configuration.supportThickness - 0.2,
+            ],
+          )
+          let obstruction: Shape3D | null = null
+          try {
+            obstruction = shape.intersect(probe)
+            expect(measureVolume(obstruction)).toBeLessThan(0.01)
+          } finally {
+            deleteShape(obstruction)
+            probe.delete()
+          }
         }
       }
 
       const middleColumn = Math.floor(parameters.columns / 2)
+      const middleRow = Math.floor(parameters.rows / 2)
       const middleCenterX =
         (middleColumn - (parameters.columns - 1) / 2) * configuration.gridPitch
+      const middleInstalledCenterY =
+        -(middleRow + 0.5) * configuration.gridPitch
+      const middlePrintCenterY = middleInstalledCenterY / Math.cos(radians)
       sealingSkin = makeBox(
-        [middleCenterX - configuration.gridPitch / 2, probeMinY, 0],
+        [
+          middleCenterX - configuration.gridPitch / 2,
+          middlePrintCenterY - bayHalfDepth,
+          0,
+        ],
         [
           middleCenterX + configuration.gridPitch / 2,
-          probeMaxY,
+          middlePrintCenterY + bayHalfDepth,
           configuration.supportThickness,
         ],
       )
@@ -279,10 +289,51 @@ describe('OpenGrid OpenConnect shelf CAD kernel integration', () => {
       )
       expect(sealedQuality.validBRep).toBe(true)
       expect(sealedQuality.solidCount).toBe(1)
-      expect(sealedQuality.failures).toContain(`open-underside-${middleColumn}`)
+      expect(sealedQuality.failures).toContain('open-underside')
     } finally {
       deleteShape(sealedShape)
       deleteShape(sealingSkin)
+      shape.delete()
+      source.delete()
+    }
+  }, 180_000)
+
+  it('grounds every internal row boundary with an X-direction rib', async () => {
+    const parameters = { ...OPENGRID_OPENCONNECT_SHELF_DEFAULT_PARAMETERS }
+    const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+    const radians = openGridOpenConnectShelfAngleRadiansFor(parameters.angle)
+    const bayHalfWidth =
+      configuration.gridPitch / 2 - configuration.supportThickness - 0.5
+    const source = await lockedSlotSource()
+    const shape = await buildOpenGridOpenConnectShelf(parameters, {
+      getLockedSlot: async () => source,
+    })
+    try {
+      for (
+        let rowBoundary = 1;
+        rowBoundary < parameters.rows;
+        rowBoundary += 1
+      ) {
+        const installedBoundaryY = -rowBoundary * configuration.gridPitch
+        const printBoundaryY = installedBoundaryY / Math.cos(radians)
+        for (let column = 0; column < parameters.columns; column += 1) {
+          const centerX =
+            (column - (parameters.columns - 1) / 2) * configuration.gridPitch
+          const probe = makeBox(
+            [centerX - bayHalfWidth, printBoundaryY - 0.4, 0],
+            [centerX + bayHalfWidth, printBoundaryY + 0.4, 0.5],
+          )
+          let groundedRib: Shape3D | null = null
+          try {
+            groundedRib = shape.intersect(probe)
+            expect(measureVolume(groundedRib)).toBeGreaterThan(1)
+          } finally {
+            deleteShape(groundedRib)
+            probe.delete()
+          }
+        }
+      }
+    } finally {
       shape.delete()
       source.delete()
     }

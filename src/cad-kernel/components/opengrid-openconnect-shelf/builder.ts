@@ -181,13 +181,39 @@ function makeLongitudinalRib(
   )
 }
 
+function makeTransverseRib(
+  parameters: OpenGridOpenConnectShelfParameters,
+  boundaryY: number,
+): Shape3D {
+  const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+  const width = openGridOpenConnectShelfWidthFor(parameters)
+  const halfThickness = configuration.supportThickness / 2
+  const yStart = boundaryY - halfThickness
+  const yEnd = boundaryY + halfThickness
+  const slope = Math.tan(
+    openGridOpenConnectShelfAngleRadiansFor(parameters.angle),
+  )
+  const boardBottom = configuration.rearHeight - configuration.fullThickness
+  const bottomZFor = (y: number): number => -y * slope
+  return makeProfileExtrusion(
+    [
+      [yStart, bottomZFor(yStart)],
+      [yEnd, bottomZFor(yEnd)],
+      [yEnd, boardBottom + FUSION_OVERLAP],
+      [yStart, boardBottom + FUSION_OVERLAP],
+    ],
+    -width / 2,
+    width,
+  )
+}
+
 function makeSupportPieces(
   parameters: OpenGridOpenConnectShelfParameters,
 ): Shape3D[] {
   const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
   const width = openGridOpenConnectShelfWidthFor(parameters)
   const pieces: Shape3D[] = [makeRearPlate(parameters)]
-  const ribStarts = [
+  const longitudinalRibStarts = [
     -width / 2,
     ...Array.from(
       { length: Math.max(0, parameters.columns - 1) },
@@ -198,8 +224,13 @@ function makeSupportPieces(
     ),
     width / 2 - configuration.supportThickness,
   ]
-  for (const xStart of ribStarts) {
+  for (const xStart of longitudinalRibStarts) {
     pieces.push(makeLongitudinalRib(parameters, xStart))
+  }
+  for (let rowBoundary = 1; rowBoundary < parameters.rows; rowBoundary += 1) {
+    pieces.push(
+      makeTransverseRib(parameters, -rowBoundary * configuration.gridPitch),
+    )
   }
   return pieces
 }

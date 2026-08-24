@@ -1,9 +1,14 @@
-import { getOC, makeBox, measureVolume, type Shape3D } from 'replicad'
+import {
+  getOC,
+  makeBox,
+  makeCompound,
+  measureVolume,
+  type Shape3D,
+} from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForOpenGridOpenConnectShelf,
   openGridOpenConnectShelfAngleRadiansFor,
-  openGridOpenConnectShelfDepthFor,
   openGridOpenConnectShelfFrontHeightFor,
   openGridOpenConnectShelfSlotOriginsFor,
   openGridOpenConnectShelfWidthFor,
@@ -34,6 +39,7 @@ export type OpenGridOpenConnectShelfQualityReport = {
 
 const SLOT_RESIDUAL_VOLUME_TOLERANCE = 0.01
 const UNDERSIDE_OBSTRUCTION_VOLUME_TOLERANCE = 0.01
+const GROUND_RIB_MISSING_VOLUME_TOLERANCE = 0.05
 
 function deleteShape(shape: { delete?: () => void } | null | undefined): void {
   try {
@@ -121,6 +127,23 @@ function span(face: PlanarFaceRecord, axis: 0 | 1 | 2): number {
   return face.max[axis] - face.min[axis]
 }
 
+function makeQualityProbeCompound(probes: Shape3D[]): Shape3D {
+  const firstProbe = probes[0]
+  if (!firstProbe) {
+    throw new Error('OPENGRID_OPENCONNECT_SHELF_PROBES_EMPTY')
+  }
+  if (probes.length === 1) return firstProbe
+  return makeCompound(probes).asShape3D()
+}
+
+function deleteQualityProbes(
+  compound: Shape3D | null,
+  probes: Shape3D[],
+): void {
+  if (compound && compound !== probes[0]) deleteShape(compound)
+  probes.forEach(deleteShape)
+}
+
 function inspectInterfaceFaces(
   shape: Shape3D,
   parameters: OpenGridOpenConnectShelfParameters,
@@ -170,42 +193,95 @@ function inspectOpenUnderside(
   failures: string[],
 ): void {
   const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
-  const depth = openGridOpenConnectShelfDepthFor(parameters)
   const radians = openGridOpenConnectShelfAngleRadiansFor(parameters.angle)
-  const probeMinY = (-depth * 0.65) / Math.cos(radians)
-  const probeMaxY = (-depth * 0.35) / Math.cos(radians)
   const bayHalfWidth =
     configuration.gridPitch / 2 - configuration.supportThickness - 0.5
+  const bayHalfDepth = configuration.gridPitch / 4
+  const probes: Shape3D[] = []
+  let compound: Shape3D | null = null
+  let obstruction: Shape3D | null = null
+  let obstructionVolume = Number.POSITIVE_INFINITY
+  try {
+    for (let row = 0; row < parameters.rows; row += 1) {
+      const installedCenterY = -(row + 0.5) * configuration.gridPitch
+      const printCenterY = installedCenterY / Math.cos(radians)
+      for (let column = 0; column < parameters.columns; column += 1) {
+        const centerX =
+          (column - (parameters.columns - 1) / 2) * configuration.gridPitch
+        probes.push(
+          makeBox(
+            [centerX - bayHalfWidth, printCenterY - bayHalfDepth, 0.2],
+            [
+              centerX + bayHalfWidth,
+              printCenterY + bayHalfDepth,
+              configuration.supportThickness - 0.2,
+            ],
+          ),
+        )
+      }
+    }
+    compound = makeQualityProbeCompound(probes)
+    obstruction = shape.intersect(compound)
+    obstructionVolume = measureVolume(obstruction)
+  } catch {
+    obstructionVolume = Number.POSITIVE_INFINITY
+  } finally {
+    deleteShape(obstruction)
+    deleteQualityProbes(compound, probes)
+  }
+  if (
+    !Number.isFinite(obstructionVolume) ||
+    obstructionVolume > UNDERSIDE_OBSTRUCTION_VOLUME_TOLERANCE
+  ) {
+    failures.push('open-underside')
+  }
+}
 
-  for (let column = 0; column < parameters.columns; column += 1) {
-    const centerX =
-      (column - (parameters.columns - 1) / 2) * configuration.gridPitch
-    let probe: Shape3D | null = null
-    let obstruction: Shape3D | null = null
-    let obstructionVolume = Number.POSITIVE_INFINITY
-    try {
-      probe = makeBox(
-        [centerX - bayHalfWidth, probeMinY, 0.2],
-        [
-          centerX + bayHalfWidth,
-          probeMaxY,
-          configuration.supportThickness - 0.2,
-        ],
-      )
-      obstruction = shape.intersect(probe)
-      obstructionVolume = measureVolume(obstruction)
-    } catch {
-      obstructionVolume = Number.POSITIVE_INFINITY
-    } finally {
-      deleteShape(obstruction)
-      deleteShape(probe)
+function inspectGroundedTransverseRibs(
+  shape: Shape3D,
+  parameters: OpenGridOpenConnectShelfParameters,
+  failures: string[],
+): void {
+  if (parameters.rows === 1) return
+
+  const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+  const radians = openGridOpenConnectShelfAngleRadiansFor(parameters.angle)
+  const bayHalfWidth =
+    configuration.gridPitch / 2 - configuration.supportThickness - 0.5
+  const probes: Shape3D[] = []
+  let compound: Shape3D | null = null
+  let covered: Shape3D | null = null
+  let missingVolume = Number.POSITIVE_INFINITY
+  try {
+    for (let rowBoundary = 1; rowBoundary < parameters.rows; rowBoundary += 1) {
+      const installedBoundaryY = -rowBoundary * configuration.gridPitch
+      const printBoundaryY = installedBoundaryY / Math.cos(radians)
+      for (let column = 0; column < parameters.columns; column += 1) {
+        const centerX =
+          (column - (parameters.columns - 1) / 2) * configuration.gridPitch
+        probes.push(
+          makeBox(
+            [centerX - bayHalfWidth, printBoundaryY - 0.4, 0],
+            [centerX + bayHalfWidth, printBoundaryY + 0.4, 0.5],
+          ),
+        )
+      }
     }
-    if (
-      !Number.isFinite(obstructionVolume) ||
-      obstructionVolume > UNDERSIDE_OBSTRUCTION_VOLUME_TOLERANCE
-    ) {
-      failures.push(`open-underside-${column}`)
-    }
+    compound = makeQualityProbeCompound(probes)
+    const expectedVolume = measureVolume(compound)
+    covered = shape.intersect(compound)
+    missingVolume = expectedVolume - measureVolume(covered)
+  } catch {
+    missingVolume = Number.POSITIVE_INFINITY
+  } finally {
+    deleteShape(covered)
+    deleteQualityProbes(compound, probes)
+  }
+  if (
+    !Number.isFinite(missingVolume) ||
+    missingVolume > GROUND_RIB_MISSING_VOLUME_TOLERANCE
+  ) {
+    failures.push('x-ground-ribs')
   }
 }
 
@@ -292,6 +368,7 @@ export function inspectOpenGridOpenConnectShelfShapeQuality(
   }
   inspectInterfaceFaces(shape, parameters, failures)
   inspectOpenUnderside(shape, parameters, failures)
+  inspectGroundedTransverseRibs(shape, parameters, failures)
   const slotResidualVolumes = inspectLockedSlots(
     shape,
     parameters,
