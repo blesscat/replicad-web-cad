@@ -31,7 +31,7 @@ describe('OpenGrid Wall Cover contract', () => {
     })
   })
 
-  it('uses the Snap Lite Standard full-footprint bounds as its placeholder', () => {
+  it('uses the fixed Snap Lite Standard full-footprint cover bounds', () => {
     expect(boundsForOpenGridWallCover({})).toEqual(
       boundsForOpenGridSnap({
         ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,

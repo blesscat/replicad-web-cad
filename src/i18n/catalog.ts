@@ -123,7 +123,7 @@ export const zhHantMessages = {
   'models.model.opengrid-wall-cover.name': 'OpenGrid Wall Cover',
   'models.model.opengrid-wall-cover.selection': 'Wall Cover',
   'models.model.opengrid-wall-cover.description':
-    '先以 Snap Lite 作為 placeholder 的 Wall 專用雙色平面 cover。',
+    '使用指定 Snap cover STEP 的 Wall 專用雙色平面 cover。',
   'models.model.opengrid-wall-cover.alt': 'OpenGrid Wall Cover 預覽',
   'models.model.opengrid-pillar.name': 'Locating Post (定位柱)',
   'models.model.opengrid-pillar.selection': 'Locating Post (定位柱)',
@@ -752,7 +752,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'models.model.opengrid-wall-cover.name': 'OpenGrid Wall Cover',
   'models.model.opengrid-wall-cover.selection': 'Wall Cover',
   'models.model.opengrid-wall-cover.description':
-    'A Wall-only two-color surface cover using Snap Lite as its prototype placeholder.',
+    'A Wall-only two-color surface cover using the supplied Snap cover STEP.',
   'models.model.opengrid-wall-cover.alt': 'OpenGrid Wall Cover preview',
   'models.model.opengrid-pillar.name': 'OpenGrid Locating Post',
   'models.model.opengrid-pillar.selection': 'Locating Post',

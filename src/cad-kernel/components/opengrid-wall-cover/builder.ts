@@ -1,6 +1,7 @@
 import {
   deserializeShape,
   getOC,
+  importSTEP,
   makeCompound,
   measureVolume,
   Solid,
@@ -9,13 +10,9 @@ import {
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   isOpenGridWallCoverParameters,
-  OPENGRID_SNAP_CONFIGURATION,
   type OpenGridWallCoverParameters,
 } from '../../../cad-contract/units'
-import {
-  buildOpenGridSnap,
-  type OpenGridSnapBuildContext,
-} from '../opengrid-snap/builder'
+import type { OpenGridSnapBuildContext } from '../opengrid-snap/builder'
 import { makeOpenGridWallCoverTextShape } from './flat-text'
 import type { BooleanOperationScope } from '../../boolean-progress'
 import { measureBooleanInScope } from '../../boolean-progress'
@@ -25,6 +22,11 @@ export {
   loadOpenGridSnapReference,
   OPENGRID_SNAP_REFERENCE_URLS,
 } from '../opengrid-snap/builder'
+
+export const OPEN_GRID_WALL_COVER_REFERENCE_URL = new URL(
+  './assets/opengrid-snap-cover.step',
+  import.meta.url,
+)
 
 export type OpenGridWallCoverBuildContext = OpenGridSnapBuildContext & {
   getOpenGridWallCoverReference?: () => Promise<Shape3D>
@@ -90,6 +92,60 @@ function extractSolids(shape: Shape3D): Solid[] {
   }
 }
 
+function assertWallCoverReferenceGeometry(shape: Shape3D): void {
+  if (shape.isNull) throw new Error('OPENGRID_WALL_COVER_ASSET_INVALID')
+  const bounds = shape.boundingBox
+  try {
+    const [[minX, minY, minZ], [maxX, maxY, maxZ]] = bounds.bounds
+    if (
+      ![minX, minY, minZ, maxX, maxY, maxZ].every(Number.isFinite) ||
+      maxX <= minX ||
+      maxY <= minY ||
+      maxZ <= minZ
+    ) {
+      throw new Error('OPENGRID_WALL_COVER_ASSET_INVALID')
+    }
+  } finally {
+    bounds.delete()
+  }
+  const solids = extractSolids(shape)
+  try {
+    if (solids.length !== 9) {
+      throw new Error('OPENGRID_WALL_COVER_ASSET_INVALID')
+    }
+  } finally {
+    deleteDistinctShapes(solids)
+  }
+}
+
+export async function importOpenGridWallCoverReference(
+  blob: Blob,
+): Promise<Shape3D> {
+  let imported: Shape3D | null = null
+  try {
+    imported = (await importSTEP(blob)).asShape3D()
+    assertWallCoverReferenceGeometry(imported)
+    return imported
+  } catch (error) {
+    deleteShape(imported)
+    if (
+      error instanceof Error &&
+      error.message === 'OPENGRID_WALL_COVER_ASSET_INVALID'
+    ) {
+      throw error
+    }
+    throw new Error('OPENGRID_WALL_COVER_ASSET_INVALID')
+  }
+}
+
+export async function loadOpenGridWallCoverReference(
+  fetcher: typeof fetch = fetch,
+): Promise<Shape3D> {
+  const response = await fetcher(OPEN_GRID_WALL_COVER_REFERENCE_URL)
+  if (!response.ok) throw new Error('OPENGRID_WALL_COVER_ASSET_LOAD_FAILED')
+  return importOpenGridWallCoverReference(await response.blob())
+}
+
 function centralSolidIndex(solids: readonly Solid[]): number {
   let centralIndex = -1
   let centralVolume = -Infinity
@@ -124,7 +180,7 @@ function cutShape(
   }
 }
 
-async function buildPlaceholderBody(
+async function buildCoverBody(
   context: OpenGridWallCoverBuildContext,
 ): Promise<Shape3D> {
   if (context.getOpenGridWallCoverReference) {
@@ -132,37 +188,14 @@ async function buildPlaceholderBody(
     assertGenerationCurrent(context)
     return cloneShape(reference)
   }
-
-  if (!context.getOpenGridSnapReference) {
-    throw new Error('OPENGRID_WALL_COVER_ASSET_REFERENCE_MISSING')
-  }
-
-  return buildOpenGridSnap(
-    {
-      ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
-      variant: 'Lite',
-      profile: 'Standard',
-      offset: 0,
-      footprint: 'full',
-      fourCornerLocatingHoles: false,
-      centerRemoverHole: false,
-      openConnect: false,
-      topText: 'none',
-      magnetHoleShape: 'none',
-      magnetHoleLength: 0,
-      magnetHoleWidth: 0,
-      magnetHoleDiameter: 0,
-      magnetHoleThickness: 0,
-    },
-    context,
-  )
+  return loadOpenGridWallCoverReference()
 }
 
 export async function buildOpenGridWallCoverWithFlatText(
   context: OpenGridWallCoverBuildContext,
 ): Promise<OpenGridWallCoverMultipartBuild> {
   assertGenerationCurrent(context)
-  const baseAssembly = await buildPlaceholderBody(context)
+  const baseAssembly = await buildCoverBody(context)
   let qualityShape: Shape3D | null = cloneShape(baseAssembly)
   let sourceSolids: Solid[] = []
   let textPart: Shape3D | null = null
@@ -172,7 +205,7 @@ export async function buildOpenGridWallCoverWithFlatText(
   try {
     sourceSolids = extractSolids(baseAssembly)
     if (sourceSolids.length !== 9) {
-      throw new Error('OPENGRID_WALL_COVER_PLACEHOLDER_INVALID')
+      throw new Error('OPENGRID_WALL_COVER_ASSET_INVALID')
     }
     const bodyIndex = centralSolidIndex(sourceSolids)
     const body = sourceSolids[bodyIndex]

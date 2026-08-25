@@ -8,8 +8,8 @@ import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import { initialiseCadKernel } from '../../src/cad-kernel/initialise'
 import {
   buildOpenGridWallCoverWithFlatText,
-  importOpenGridSnapReference,
-  OPENGRID_SNAP_REFERENCE_URLS,
+  importOpenGridWallCoverReference,
+  OPEN_GRID_WALL_COVER_REFERENCE_URL,
 } from '../../src/cad-kernel/components/opengrid-wall-cover/builder'
 import { assertOpenGridWallCoverShapeQuality } from '../../src/cad-kernel/components/opengrid-wall-cover/quality'
 import { meshBRep } from '../../src/cad-kernel/mesh'
@@ -59,9 +59,9 @@ function countSolids(shape: Shape3D): number {
   }
 }
 
-function snapReferenceBlob(): Blob {
+function wallCoverReferenceBlob(): Blob {
   return new Blob([
-    readFileSync(fileURLToPath(OPENGRID_SNAP_REFERENCE_URLS.Standard.Lite)),
+    readFileSync(fileURLToPath(OPEN_GRID_WALL_COVER_REFERENCE_URL)),
   ])
 }
 
@@ -73,13 +73,11 @@ describe('OpenGrid Wall Cover flat text POC', () => {
   afterAll(() => undefined)
 
   it('keeps SNAP text coplanar while retaining body and text parts', async () => {
-    const reference = await importOpenGridSnapReference(
-      snapReferenceBlob(),
-      'Lite',
-      'Standard',
+    const reference = await importOpenGridWallCoverReference(
+      wallCoverReferenceBlob(),
     )
     const generated = await buildOpenGridWallCoverWithFlatText({
-      getOpenGridSnapReference: async () => reference,
+      getOpenGridWallCoverReference: async () => reference,
     })
     try {
       const bodyPart = generated.parts.find((part) => part.name === 'body')

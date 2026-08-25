@@ -33,6 +33,11 @@ describe('CAD Worker error mapping', () => {
       'MODEL_ASSET_INVALID',
     ],
     [
+      'OPENGRID_WALL_COVER_ASSET_LOAD_FAILED',
+      'model.generate',
+      'MODEL_ASSET_INVALID',
+    ],
+    [
       'OPENGRID_DETACHABLE_CORNER_SEAT_REFERENCE_LOAD_FAILED',
       'model.generate',
       'MODEL_ASSET_INVALID',

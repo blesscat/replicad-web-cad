@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   assertOpenGridSnapOpenConnectShapeQuality: vi.fn(),
   assertOpenGridWallCoverShapeQuality: vi.fn(),
   loadOpenGridSnapReference: vi.fn(),
+  loadOpenGridWallCoverReference: vi.fn(),
   loadOpenGridSnapFixedFootprint: vi.fn(),
   loadOpenGridSnapOpenConnectHead: vi.fn(),
   exportStepBytes: vi.fn(),
@@ -45,6 +46,9 @@ vi.mock('../../src/cad-kernel/components/opengrid-snap/builder', () => ({
   loadOpenGridSnapReference: mocks.loadOpenGridSnapReference,
   loadOpenGridSnapFixedFootprint: mocks.loadOpenGridSnapFixedFootprint,
   loadOpenGridSnapOpenConnectHead: mocks.loadOpenGridSnapOpenConnectHead,
+}))
+vi.mock('../../src/cad-kernel/components/opengrid-wall-cover/builder', () => ({
+  loadOpenGridWallCoverReference: mocks.loadOpenGridWallCoverReference,
 }))
 vi.mock('../../src/cad-kernel/export', () => ({
   exportStepBytes: mocks.exportStepBytes,
@@ -171,6 +175,9 @@ function configureMocks() {
     ],
   }))
   mocks.loadOpenGridSnapReference.mockImplementation(async () => ({
+    delete: vi.fn(),
+  }))
+  mocks.loadOpenGridWallCoverReference.mockImplementation(async () => ({
     delete: vi.fn(),
   }))
   mocks.loadOpenGridSnapFixedFootprint.mockImplementation(async () => ({
@@ -637,6 +644,27 @@ describe('OpenGrid Snap Worker runtime', () => {
 
   it('exports the committed Wall Cover revision as multipart 3MF', async () => {
     const events: unknown[] = []
+    const wallCoverReference = { delete: vi.fn() }
+    mocks.loadOpenGridWallCoverReference.mockResolvedValue(wallCoverReference)
+    mocks.buildModelBRepWithParts.mockImplementationOnce(
+      async (
+        _modelId: string,
+        _parameters: unknown,
+        context: {
+          getOpenGridWallCoverReference?: () => Promise<unknown>
+        },
+      ) => {
+        await context.getOpenGridWallCoverReference?.()
+        return {
+          shape: { delete: vi.fn() },
+          qualityShape: { delete: vi.fn() },
+          parts: [
+            { name: 'body', shape: { delete: vi.fn() } },
+            { name: 'text', shape: { delete: vi.fn() } },
+          ],
+        }
+      },
+    )
     const runtime = new CadWorkerRuntime('epoch-wall-cover-3mf', (event) =>
       events.push(event),
     )
@@ -704,6 +732,7 @@ describe('OpenGrid Snap Worker runtime', () => {
     })
 
     expect(mocks.buildModelBRepWithParts).toHaveBeenCalledOnce()
+    expect(mocks.loadOpenGridWallCoverReference).toHaveBeenCalledOnce()
     expect(mocks.exportThreeMfBytes).toHaveBeenCalledOnce()
     expect(
       events.filter(
@@ -722,6 +751,14 @@ describe('OpenGrid Snap Worker runtime', () => {
         fileName: 'opengrid-wall-cover.3mf',
       }),
     )
+
+    await runtime.handle({
+      ...base,
+      requestId: 'wall-cover-3mf-dispose-request',
+      operationId: 'wall-cover-3mf-dispose-operation',
+      kind: 'worker.dispose' as const,
+    })
+    expect(wallCoverReference.delete).toHaveBeenCalledOnce()
   })
 
   it('disposes loaded variant references once', async () => {

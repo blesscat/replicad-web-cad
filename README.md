@@ -41,7 +41,7 @@ Astro site shell（layouts/ + pages/）
          ├─ hsw-cell builder + STEP template
          ├─ hexagonal-column builder + STEP template
          ├─ OpenGrid stackable-box / stackable-cylinder / organizer-box builders
-         ├─ OpenGrid Wall Cover placeholder builder + named body/text parts
+         ├─ OpenGrid Wall Cover supplied STEP builder + named body/text parts
          ├─ preview mesh generation
          └─ STEP / binary STL / Wall Cover 3MF export
 ```
@@ -116,7 +116,7 @@ pages/
 - `opengrid-organizer-box` 沿用 OpenGrid 方盒外觀，頂部為實體盲孔，可選圓形或固定方向的 3–6 邊正多邊形；多邊形直徑定義為內切圓直徑。X/Y 孔數、孔外圍對外圍間距、孔深與底部加厚（預設 1 mm）會共同決定盒體尺寸；孔距可連動或分開設定。面板最上方把介面拆成兩組獨立 radio：`角座模式` 可選 `無角座`、`鎖定角座`、`內建角座`，`盒體模式` 可選 `普通模式` 或 `堆疊模式`，共六種可組合狀態。普通模式維持既有平頂盒體；堆疊模式同時建立方盒標準的底部堆疊結構與頂部階梯滑軌，並顯示 `堆疊淨空（Z）`。Z 直接代表孔洞開口平面到上一層盒底基準面的距離，採 0.5 mm 級距、最小與預設 3.5 mm；標準滑軌的幾何下限為 3.20 mm，因此 3.5 mm 是不改動堆疊剖面的第一個合法輸入。`內建角座` 會融合四個 Ø5 mm × 3.8 mm 實體腳座（Z=-3.8 mm 至 Z=0 mm），底部採 0.2 mm 導角；`鎖定角座` 則把 Ø7 × 1.75 mm、有擋片的 female socket 直接形成為盒體的一部分，不會輸出另一個 holder。由盒底觀看，左上、右上、右下、左下 socket 固定採 0°、90°、180°、270° 的 B 方向。
 - `鎖定角座` 由 `opengrid-pillar` 的 `{ mode: 'detachable-corner-seat' }` 另行輸出，預設顯示在第一個模式。幾何固定為 5.3 mm 高：定位段高 3.8 mm，底面 Ø4.6 並以 0.2 mm 倒角恢復 Ø5，頂部保留 0.15 mm 耐磨平面；此模式不接受長度或 XY 增量。這項介面目前只在 Organizer Box 試作；四角都必須能手壓到底、提起盒體時不脫落、刻意手拉時仍可拆下，三項實體列印驗收全部通過後才可導入其他模型。
 - 預覽：由 Worker 產生的 B-Rep mesh。
-- `opengrid-wall-cover` 是只隸屬於 Wall 的固定元件，暫以 Snap Lite／Standard／full、offset 0 的 placeholder 產生 body 與同平面的 `SNAP` 文字 part；正式 STEP 之後可只替換 cover-specific asset adapter。
+- `opengrid-wall-cover` 是只隸屬於 Wall 的固定元件，使用 component-local 的 `opengrid-snap-cover.step` 產生 body 與同平面的 `SNAP` 文字 part；資產維持 Snap Lite／Standard／full 的名義外框。
 - OpenGrid Snap 維持單色模型，不再提供雙色文字控制或 3MF capability；舊快照中的 `topText=SNAP` 會正規化成 `none`。
 - 匯出：由 Worker 目前 committed B-Rep 產生 STEP 或 binary STL；`opengrid-wall-cover` 另提供固定檔名 `opengrid-wall-cover.3mf`，body 與 text 預設分別使用耗材槽 1、2。
 - 不包含任意模型匯入、任意文字／字型 3MF、slicer profile、G-code、儲存、帳號、後端、多人協作或自動啟動 Bambu Studio。
@@ -175,7 +175,7 @@ opengrid-organizer-box-{countX}x{countY}-{shape}-sm-{linked|independent}-d{diame
 
 ## OpenGrid Wall Cover 雙色 3MF POC
 
-`opengrid-wall-cover` 是 Wall-only、無可調參數的固定元件；目前使用 Snap Lite／Standard／full footprint、offset `0`、關閉 OpenConnect、無定位孔／移除孔／磁鐵孔的 placeholder。一般 `opengrid-snap` 不會啟用這項雙色功能。
+`opengrid-wall-cover` 是 Wall-only、無可調參數的固定元件；目前使用 component-local 的 `opengrid-snap-cover.step`，資產為九個 solid 且維持 Snap Lite／Standard／full footprint、offset `0` 的名義外框。一般 `opengrid-snap` 不會啟用這項雙色功能。
 
 這個 POC 不是浮雕，也不是把文字抬高：文字是獨立的第二個 3MF part，從 Z=`3.0 mm` 延伸到與 Lite 本體相同的頂面 Z=`3.4 mm`，因此列印後是同一平面的雙色嵌件。body 會先保留文字 cavity，3MF 再以兩個 material entry、同一個 parent object 下的兩個 component mesh，以及 Bambu Studio model settings 匯出 body 與 text，避免 slicer 把兩者折疊成單一 mesh，並預設 body 使用耗材槽 1、text 使用耗材槽 2。對單噴嘴加 AMS 的印表機，這代表不同耗材槽，不是兩個物理噴嘴。
 

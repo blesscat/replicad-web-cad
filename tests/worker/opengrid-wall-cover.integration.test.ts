@@ -8,8 +8,9 @@ import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import { initialiseCadKernel } from '../../src/cad-kernel/initialise'
 import {
   buildOpenGridWallCoverWithFlatText,
-  importOpenGridSnapReference,
-  OPENGRID_SNAP_REFERENCE_URLS,
+  importOpenGridWallCoverReference,
+  loadOpenGridWallCoverReference,
+  OPEN_GRID_WALL_COVER_REFERENCE_URL,
 } from '../../src/cad-kernel/components/opengrid-wall-cover/builder'
 import { assertOpenGridWallCoverShapeQuality } from '../../src/cad-kernel/components/opengrid-wall-cover/quality'
 import { meshBRep } from '../../src/cad-kernel/mesh'
@@ -52,23 +53,46 @@ function countSolids(shape: Shape3D): number {
   }
 }
 
-describe('OpenGrid Wall Cover placeholder', () => {
+describe('OpenGrid Wall Cover supplied STEP', () => {
   beforeAll(async () => {
     await initialiseCadKernel(WASM_PATH)
   })
 
   afterAll(() => undefined)
 
-  it('keeps placeholder text coplanar while retaining separate body/text parts', async () => {
-    const reference = await importOpenGridSnapReference(
+  it('loads the supplied cover STEP as a nine-solid Lite reference', async () => {
+    const reference = await loadOpenGridWallCoverReference(
+      async () =>
+        new Response(
+          readFileSync(fileURLToPath(OPEN_GRID_WALL_COVER_REFERENCE_URL)),
+          { status: 200 },
+        ),
+    )
+    try {
+      const bounds = shapeBounds(reference)
+      expect(countSolids(reference)).toBe(9)
+      expect(bounds[0]?.[0]).toBeCloseTo(-12.8, 2)
+      expect(bounds[0]?.[1]).toBeCloseTo(-12.8, 2)
+      expect(bounds[0]?.[2]).toBeCloseTo(0, 2)
+      expect(bounds[1]?.[0]).toBeCloseTo(12.8, 2)
+      expect(bounds[1]?.[1]).toBeCloseTo(12.8, 2)
+      expect(bounds[1]?.[2]).toBeCloseTo(3.4, 2)
+      expect(OPEN_GRID_WALL_COVER_REFERENCE_URL.pathname).toContain(
+        'opengrid-snap-cover.step',
+      )
+    } finally {
+      reference.delete()
+    }
+  })
+
+  it('keeps cover text coplanar while retaining separate body/text parts', async () => {
+    const reference = await importOpenGridWallCoverReference(
       new Blob([
-        readFileSync(fileURLToPath(OPENGRID_SNAP_REFERENCE_URLS.Standard.Lite)),
+        readFileSync(fileURLToPath(OPEN_GRID_WALL_COVER_REFERENCE_URL)),
       ]),
-      'Lite',
-      'Standard',
     )
     const generated = await buildOpenGridWallCoverWithFlatText({
-      getOpenGridSnapReference: async () => reference,
+      getOpenGridWallCoverReference: async () => reference,
     })
     try {
       const bodyPart = generated.parts.find((part) => part.name === 'body')

@@ -1,16 +1,8 @@
 import { getOC, measureVolume, type Shape3D } from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
-import {
-  OPENGRID_SNAP_CONFIGURATION,
-  type ModelBounds,
-  type OpenGridSnapParameters,
-} from '../../../cad-contract/units'
+import type { ModelBounds } from '../../../cad-contract/units'
 import type { MeshSnapshot } from '../../../cad-contract/messages'
 import type { MeshData } from '../../mesh'
-import {
-  assertOpenGridSnapShapeQuality,
-  type OpenGridSnapQualityReport,
-} from '../opengrid-snap/quality'
 import {
   OPENGRID_WALL_COVER_TEXT_CONFIGURATION,
   openGridWallCoverTextTopZ,
@@ -19,21 +11,13 @@ import {
 const QUALITY_TOLERANCE = 0.05
 const BODY_ENVELOPE_TOLERANCE = 0.45
 
-const PLACEHOLDER_PARAMETERS: OpenGridSnapParameters = {
-  ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
-  variant: 'Lite',
-  profile: 'Standard',
-  offset: 0,
-  footprint: 'full',
-  fourCornerLocatingHoles: false,
-  centerRemoverHole: false,
-  openConnect: false,
-  topText: 'none',
-  magnetHoleShape: 'none',
-  magnetHoleLength: 0,
-  magnetHoleWidth: 0,
-  magnetHoleDiameter: 0,
-  magnetHoleThickness: 0,
+export type OpenGridWallCoverQualityReport = {
+  passed: true
+  failures: readonly []
+  bounds: ModelBounds
+  referenceBounds: ModelBounds
+  solidCount: number
+  meshTriangleCount: number
 }
 
 function deleteShape(shape: { delete?: () => void } | null | undefined): void {
@@ -59,6 +43,22 @@ function readBounds(shape: Shape3D): ModelBounds {
 
 function isClose(first: number, second: number): boolean {
   return Math.abs(first - second) <= QUALITY_TOLERANCE
+}
+
+function boundsAreFinite(bounds: ModelBounds): boolean {
+  return [...bounds.min, ...bounds.max].every(Number.isFinite)
+}
+
+function boundsMatch(
+  first: ModelBounds,
+  second: ModelBounds,
+  tolerance = QUALITY_TOLERANCE,
+): boolean {
+  const firstCoordinates = [...first.min, ...first.max]
+  const secondCoordinates = [...second.min, ...second.max]
+  return firstCoordinates.every(
+    (value, index) => Math.abs(value - secondCoordinates[index]!) <= tolerance,
+  )
 }
 
 function countSolids(shape: Shape3D): number {
@@ -145,21 +145,27 @@ export function assertOpenGridWallCoverShapeQuality(
   baseMesh: MeshData | MeshSnapshot,
   textMesh: MeshData | MeshSnapshot,
   reference: Shape3D,
-): OpenGridSnapQualityReport {
+): OpenGridWallCoverQualityReport {
   const baseBounds = readBounds(baseShape)
+  const referenceBounds = readBounds(reference)
   const bodyBounds = readBounds(bodyShape)
   const textBounds = readBounds(textShape)
-  const report = assertOpenGridSnapShapeQuality(
-    baseShape,
-    PLACEHOLDER_PARAMETERS,
-    baseMesh,
-    reference,
-  )
   const expectedTop = openGridWallCoverTextTopZ()
   const expectedBottom =
     expectedTop - OPENGRID_WALL_COVER_TEXT_CONFIGURATION.depth
   const textCoordinates = [...textBounds.min, ...textBounds.max]
   const failures: string[] = []
+  const baseSolidCount = countSolids(baseShape)
+  if (
+    !boundsAreFinite(baseBounds) ||
+    !boundsAreFinite(referenceBounds) ||
+    !boundsMatch(baseBounds, referenceBounds, BODY_ENVELOPE_TOLERANCE)
+  ) {
+    failures.push('reference-envelope')
+  }
+  if (baseSolidCount !== 9 || countSolids(reference) !== 9) {
+    failures.push('reference-solids')
+  }
   if (countSolids(bodyShape) !== 9) failures.push('body-solids')
   if (countSolids(textShape) === 0) failures.push('text-solids')
   if (textCoordinates.some((coordinate) => !Number.isFinite(coordinate))) {
@@ -170,6 +176,8 @@ export function assertOpenGridWallCoverShapeQuality(
   ) {
     failures.push('body-top')
   }
+  if (!meshIsFinite(baseMesh)) failures.push('base-mesh-values')
+  if (baseMesh.triangleCount <= 0) failures.push('base-mesh-triangles')
   if (!isClose(textBounds.min[2], expectedBottom)) failures.push('text-bottom')
   if (!isClose(textBounds.max[2], expectedTop)) failures.push('text-top')
   if (!meshIsFinite(textMesh)) failures.push('text-mesh-values')
@@ -182,5 +190,12 @@ export function assertOpenGridWallCoverShapeQuality(
 
   assertTextDoesNotIntersectBody(bodyShape, textShape)
   assertTextIsContained(baseShape, textShape)
-  return report
+  return {
+    passed: true,
+    failures: [],
+    bounds: baseBounds,
+    referenceBounds,
+    solidCount: baseSolidCount,
+    meshTriangleCount: baseMesh.triangleCount,
+  }
 }

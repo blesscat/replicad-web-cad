@@ -1,12 +1,12 @@
 ## Purpose
 
-提供一個只隸屬於 Wall、可貼合既有表面的獨立 cover 元件，讓本體與平面文字能以不同材料列印，並保留未來以正式 STEP 幾何替換暫用模型的穩定契約。
+提供一個只隸屬於 Wall、可貼合既有表面的獨立 cover 元件，讓本體與平面文字能以不同材料列印，並使用指定的 Snap cover STEP 幾何。
 
 ## Requirements
 
 ### Requirement: OpenGrid Wall Cover model contract
 
-The system MUST register a new independent model with `modelId=opengrid-wall-cover`, `buildKey=opengrid-wall-cover`, route slug `opengrid-wall-cover`, and user-facing display name beginning with `OpenGrid `. The model MUST belong to the Wall system only and MUST NOT be offered as a Desktop model. Its prototype configuration MUST use the Snap Lite Standard full-footprint geometry with offset zero and all optional holes/connectors disabled, while keeping the cover body and its flat text as separate printable parts. The prototype MUST not expose unrelated Snap parameters or an editable arbitrary-text field.
+The system MUST register a new independent model with `modelId=opengrid-wall-cover`, `buildKey=opengrid-wall-cover`, route slug `opengrid-wall-cover`, and user-facing display name beginning with `OpenGrid `. The model MUST belong to the Wall system only and MUST NOT be offered as a Desktop model. Its prototype configuration MUST use the supplied Snap cover STEP geometry within the Snap Lite Standard full-footprint envelope at offset zero, while keeping the cover body and its flat text as separate printable parts. The prototype MUST not expose unrelated Snap parameters or an editable arbitrary-text field.
 
 #### Scenario: Wall catalog exposes the cover
 
@@ -15,11 +15,11 @@ The system MUST register a new independent model with `modelId=opengrid-wall-cov
 - **AND** the model MUST use `opengrid-wall-cover` consistently for its modelId, buildKey, route slug, and component directories
 - **AND** the Desktop catalog MUST NOT list the cover
 
-#### Scenario: Prototype uses Snap Lite without Snap-only features
+#### Scenario: Prototype uses the supplied cover STEP
 
-- **WHEN** a new Wall Cover revision is generated before the replacement STEP is supplied
-- **THEN** generation MUST use the Snap Lite Standard full-footprint placeholder at zero offset
-- **AND** generation MUST leave OpenConnect, magnet holes, locating holes, remover holes, and other optional Snap features disabled
+- **WHEN** a new Wall Cover revision is generated
+- **THEN** generation MUST load `src/cad-kernel/components/opengrid-wall-cover/assets/opengrid-snap-cover.step`
+- **AND** the loaded asset MUST contain the expected nine-solid cover assembly within the nominal Snap Lite full-footprint envelope
 - **AND** the result MUST contain a cover body part and a separate flat text part
 
 ### Requirement: Wall Cover is a surface-level two-part assembly
@@ -31,7 +31,7 @@ The Wall Cover MUST represent the text as a separate printable solid seated in a
 - **WHEN** a valid prototype Wall Cover is quality-checked
 - **THEN** the body and text maximum Z values MUST match within the documented CAD tolerance
 - **AND** the text MUST occupy the surface recess without extending above the cover
-- **AND** the cover MUST preserve the Snap Lite placeholder outer bounds
+- **AND** the cover MUST preserve the nominal Snap Lite outer bounds within the documented CAD tolerance
 
 #### Scenario: Body and text remain independently selectable
 
@@ -58,19 +58,16 @@ When a Wall Cover revision is committed and its body/text parts are available, t
 - **AND** the preview MUST report the generation as stale or failed according to the existing CAD lifecycle
 - **AND** a two-color export action MUST remain unavailable
 
-### Requirement: Wall Cover placeholder supports a future STEP replacement
+### Requirement: Wall Cover uses a component-local STEP asset
 
-The Wall Cover MUST keep its stable modelId, route, parameter contract, preview part contract, and export contract when its placeholder geometry is replaced by the user-provided STEP. The replacement geometry MUST remain scoped to the Wall Cover component and MUST preserve the surface-level, separate-body/text semantics unless a later change explicitly revises them.
+The Wall Cover MUST keep its stable modelId, route, parameter contract, preview
+part contract, and export contract while loading its component-local STEP asset.
+The asset MUST remain scoped to the Wall Cover component and MUST preserve the
+surface-level, separate-body/text semantics.
 
-#### Scenario: Placeholder is replaced without changing the public model
+#### Scenario: Supplied STEP is used without changing the public model
 
-- **WHEN** the official Wall Cover STEP asset is added
-- **THEN** the production geometry source MAY change from the Snap Lite placeholder to that STEP
+- **WHEN** the Wall Cover is generated
+- **THEN** the production geometry source MUST be the component-local supplied STEP
 - **AND** existing Wall Cover snapshots and routes MUST continue to identify the same `opengrid-wall-cover` model
 - **AND** the viewport and export consumers MUST continue receiving the same logical body/text part roles
-
-#### Scenario: Missing replacement asset keeps the prototype usable
-
-- **WHEN** the official STEP asset is not present
-- **THEN** the system MUST continue to use the Snap Lite placeholder for the prototype
-- **AND** it MUST NOT silently substitute the existing `opengrid-snap` model as the Wall catalog entry

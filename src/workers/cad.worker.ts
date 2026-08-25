@@ -27,6 +27,7 @@ import {
   loadOpenGridSnapReference,
   type OpenGridSnapFixedFootprint,
 } from '../cad-kernel/components/opengrid-snap/builder'
+import { loadOpenGridWallCoverReference } from '../cad-kernel/components/opengrid-wall-cover/builder'
 import { loadOpenGridSnapRemoverAsset } from '../cad-kernel/components/opengrid-snap-remover/builder'
 import {
   loadOpenGridDetachableCornerSeatHolderReference,
@@ -220,6 +221,9 @@ export class CadWorkerRuntime {
     string,
     Promise<import('replicad').Shape3D>
   >()
+  private openGridWallCoverReference: Promise<
+    import('replicad').Shape3D
+  > | null = null
   private readonly openGridSnapFixedFootprints = new Map<
     OpenGridSnapFixedFootprint,
     Promise<import('replicad').Shape3D>
@@ -343,6 +347,7 @@ export class CadWorkerRuntime {
           this.disposeOpenGridCanonicalTiles()
           this.disposeOpenGridHalfCellPrototypes()
           this.disposeOpenGridSnapReferences()
+          this.disposeOpenGridWallCoverReference()
           this.disposeOpenGridSnapFixedFootprints()
           this.disposeOpenGridSnapOpenConnectHead()
           this.disposeOpenGridSnapRemoverAsset()
@@ -467,6 +472,8 @@ export class CadWorkerRuntime {
         getOpenGridPrototype: (variant) => this.getOpenGridPrototype(variant),
         getOpenGridSnapReference: (variant, profile) =>
           this.getOpenGridSnapReference(variant, profile),
+        getOpenGridWallCoverReference: () =>
+          this.getOpenGridWallCoverReference(),
         getOpenGridSnapFixedFootprint: (footprint) =>
           this.getOpenGridSnapFixedFootprint(footprint),
         getOpenGridSnapOpenConnectHead: () =>
@@ -628,10 +635,7 @@ export class CadWorkerRuntime {
           { name: 'text', mesh: textMesh },
         ]
         mesh.bounds = boundsForOpenGridWallCover(generationParameters)
-        const reference = await this.getOpenGridSnapReference(
-          'Lite',
-          'Standard',
-        )
+        const reference = await this.getOpenGridWallCoverReference()
         timing.measureSync('quality', () =>
           assertOpenGridWallCoverShapeQuality(
             qualityShape ?? shape,
@@ -1337,6 +1341,27 @@ export class CadWorkerRuntime {
     return recoverable
   }
 
+  private getOpenGridWallCoverReference(): Promise<import('replicad').Shape3D> {
+    if (!this.openGridWallCoverReference) {
+      const referencePromise = loadOpenGridWallCoverReference()
+        .then((reference) => {
+          if (this.disposed) {
+            reference.delete()
+            throw new Error('WORKER_TERMINATED')
+          }
+          return reference
+        })
+        .catch((error) => {
+          if (this.openGridWallCoverReference === referencePromise) {
+            this.openGridWallCoverReference = null
+          }
+          throw error
+        })
+      this.openGridWallCoverReference = referencePromise
+    }
+    return this.openGridWallCoverReference
+  }
+
   private getOpenGridSnapFixedFootprint(
     footprint: OpenGridSnapFixedFootprint,
   ): Promise<import('replicad').Shape3D> {
@@ -1518,6 +1543,15 @@ export class CadWorkerRuntime {
     for (const reference of references) {
       void reference.then((shape) => shape.delete()).catch(() => undefined)
     }
+  }
+
+  private disposeOpenGridWallCoverReference(): void {
+    const referencePromise = this.openGridWallCoverReference
+    this.openGridWallCoverReference = null
+    if (!referencePromise) return
+    void referencePromise
+      .then((reference) => reference.delete())
+      .catch(() => undefined)
   }
 
   private disposeOpenGridSnapFixedFootprints(): void {
