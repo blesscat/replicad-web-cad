@@ -133,7 +133,12 @@ describe('OpenGrid Wall Cover flat text POC', () => {
       expect(threeMfText).toContain('<object id="3"')
       expect(threeMfText).toContain('<component')
       expect(threeMfText).toContain('<item objectid="3"')
+      expect(threeMfText).toContain('Metadata/project_settings.config')
       expect(threeMfText).toContain('Metadata/model_settings.config')
+      expect(threeMfText).toMatch(/"printer_model"\s*:\s*"Bambu Lab A1"/)
+      expect(threeMfText).toMatch(
+        /"filament_colour"\s*:\s*\[\s*"#657080"\s*,\s*"#F4C542"\s*\]/,
+      )
       expect(threeMfText).toContain('Wall Cover Body')
       expect(threeMfText).toContain('Wall Cover Text')
       expect(threeMfText).toContain('opengrid-wall-cover.3mf')

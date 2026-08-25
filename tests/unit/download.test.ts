@@ -175,6 +175,7 @@ describe('STL browser download adapter', () => {
 function threeMfBytes(
   modelTransform: (xml: string) => string = (xml) => xml,
   settingsTransform: (xml: string) => string = (xml) => xml,
+  projectSettingsTransform: (json: string) => string = (json) => json,
 ): ArrayBuffer {
   let crc = (bytes: Uint8Array): number => {
     let value = 0xffffffff
@@ -209,6 +210,10 @@ function threeMfBytes(
       `<?xml version="1.0"?><model xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" unit="millimeter" xml:lang="en-US" xmlns:BambuStudio="http://schemas.bambulab.com/package/2021" xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06" requiredextensions="p"><metadata name="BambuStudio:3mfVersion">1</metadata><resources><basematerials id="1"><base name="Wall Cover Body" displaycolor="#657080"/><base name="Wall Cover Text" displaycolor="#F4C542"/></basematerials><object id="1" p:UUID="00010000-81cb-4c03-9d28-80fed5dfa1dc" type="model" name="body" pid="1" pindex="0"><mesh><vertices><vertex x="0" y="0" z="0"/><vertex x="1" y="0" z="0"/><vertex x="0" y="1" z="0"/></vertices><triangles><triangle v1="0" v2="1" v3="2"/></triangles></mesh></object><object id="2" p:UUID="00010001-81cb-4c03-9d28-80fed5dfa1dc" type="model" name="text" pid="1" pindex="1"><mesh><vertices><vertex x="0" y="0" z="0"/><vertex x="1" y="0" z="0"/><vertex x="0" y="1" z="0"/></vertices><triangles><triangle v1="0" v2="1" v3="2"/></triangles></mesh></object></resources><build/></model>`,
     ],
     [
+      'Metadata/project_settings.config',
+      `{"extruder_type":["Direct Drive"],"filament_colour":["#657080","#F4C542"],"filament_flow_ratio":["1","1"],"filament_map":["1","1"],"filament_settings_id":["Bambu PLA Basic @BBL A1","Bambu PLA Basic @BBL A1"],"filament_type":["PLA","PLA"],"filament_vendor":["Bambu Lab","Bambu Lab"],"filament_volume_map":["0","0"],"from":"project","name":"project_settings","nozzle_diameter":["0.4"],"nozzle_volume_type":["Standard"],"physical_extruder_map":["0"],"print_extruder_id":["1"],"print_extruder_variant":["Direct Drive Standard"],"printer_extruder_id":["1"],"printer_extruder_variant":["Direct Drive Standard"],"printer_model":"Bambu Lab A1","printer_settings_id":"Bambu Lab A1 0.4 nozzle","printer_technology":"FFF","printer_variant":"0.4","single_extruder_multi_material":"1","version":"02.08.02.61"}`,
+    ],
+    [
       'Metadata/model_settings.config',
       `<?xml version="1.0"?><config><object id="3"><metadata key="name" value="opengrid-wall-cover"/><metadata key="extruder" value="1"/><metadata face_count="2"/><part id="1" subtype="normal_part" uuid="d61eef14-56af-4be9-bec2-808d851cfa24"><metadata key="name" value="body"/><metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/><metadata key="source_file" value="opengrid-wall-cover.3mf"/><metadata key="source_object_id" value="0"/><metadata key="source_volume_id" value="0"/><metadata key="source_offset_x" value="0"/><metadata key="source_offset_y" value="0"/><metadata key="source_offset_z" value="0"/><metadata key="extruder" value="1"/><mesh_stat face_count="1" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0"/></part><part id="2" subtype="normal_part" uuid="81413479-78c8-4c21-b3e4-f05c65c66752"><metadata key="name" value="text"/><metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/><metadata key="source_file" value="opengrid-wall-cover.3mf"/><metadata key="source_object_id" value="1"/><metadata key="source_volume_id" value="0"/><metadata key="source_offset_x" value="0"/><metadata key="source_offset_y" value="0"/><metadata key="source_offset_z" value="0"/><metadata key="extruder" value="2"/><mesh_stat face_count="1" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0"/></part></object><plate><metadata key="plater_id" value="1"/><metadata key="plater_name" value="OpenGrid Wall Cover"/><metadata key="locked" value="false"/><metadata key="filament_map_mode" value="Auto For Flush"/><metadata key="filament_maps" value="1 2"/><metadata key="filament_volume_maps" value="1 1"/><model_instance><metadata key="object_id" value="3"/><metadata key="instance_id" value="0"/><metadata key="identify_id" value="1"/></model_instance></plate><assemble><assemble_item object_id="3" instance_id="0" transform="1 0 0 0 1 0 0 0 1 0 0 0" offset="0 0 0"/><assemble_item object_id="3" volume_id="0" transform="1 0 0 0 1 0 0 0 1 0 0 0"/><assemble_item object_id="3" volume_id="1" transform="1 0 0 0 1 0 0 0 1 0 0 0"/></assemble></config>`,
     ],
@@ -219,6 +224,9 @@ function threeMfBytes(
     }
     if (name === 'Metadata/model_settings.config') {
       return settingsTransform(content)
+    }
+    if (name === 'Metadata/project_settings.config') {
+      return projectSettingsTransform(content)
     }
     return content
   }
@@ -376,6 +384,16 @@ describe('3MF response validation', () => {
           xml
             .replace('metadata face_count="2"', 'metadata face_count="3"')
             .replace('mesh_stat face_count="1"', 'mesh_stat face_count="2"'),
+        ),
+      ),
+    ).toBe(false)
+    expect(
+      validateThreeMfPackage(
+        threeMfBytes(undefined, undefined, (json) =>
+          json.replace(
+            '"printer_model":"Bambu Lab A1"',
+            '"printer_model":"Unknown"',
+          ),
         ),
       ),
     ).toBe(false)

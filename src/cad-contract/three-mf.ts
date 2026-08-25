@@ -7,6 +7,7 @@ const THREE_MF_MODEL_CONTENT_TYPE =
 const THREE_MF_RELATIONSHIPS_CONTENT_TYPE =
   'application/vnd.openxmlformats-package.relationships+xml'
 const THREE_MF_MODEL_SETTINGS_CONTENT_TYPE = 'application/xml'
+const THREE_MF_PROJECT_SETTINGS_ENTRY = 'Metadata/project_settings.config'
 const THREE_MF_MODEL_SETTINGS_ENTRY = 'Metadata/model_settings.config'
 const THREE_MF_MODEL_RELATIONSHIPS_ENTRY = '3D/_rels/3dmodel.model.rels'
 const THREE_MF_OBJECT_MODEL_ENTRY = '3D/Objects/object_1.model'
@@ -19,6 +20,7 @@ const REQUIRED_ENTRIES = [
   '3D/3dmodel.model',
   THREE_MF_MODEL_RELATIONSHIPS_ENTRY,
   THREE_MF_OBJECT_MODEL_ENTRY,
+  THREE_MF_PROJECT_SETTINGS_ENTRY,
   THREE_MF_MODEL_SETTINGS_ENTRY,
 ] as const
 
@@ -205,6 +207,37 @@ function validContentTypes(xml: string): boolean {
     xml.includes(
       `<Default Extension="config" ContentType="${THREE_MF_MODEL_SETTINGS_CONTENT_TYPE}"`,
     )
+  )
+}
+
+function validProjectSettings(json: string): boolean {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(json)
+  } catch {
+    return false
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return false
+  }
+
+  const settings = parsed as Record<string, unknown>
+  const stringArray = (value: unknown, expected: readonly string[]): boolean =>
+    Array.isArray(value) &&
+    value.length === expected.length &&
+    value.every((item, index) => item === expected[index])
+
+  return (
+    settings.from === 'project' &&
+    settings.name === 'project_settings' &&
+    settings.version === '02.08.02.61' &&
+    settings.printer_model === 'Bambu Lab A1' &&
+    settings.printer_technology === 'FFF' &&
+    stringArray(settings.nozzle_diameter, ['0.4']) &&
+    stringArray(settings.extruder_type, ['Direct Drive']) &&
+    stringArray(settings.filament_colour, ['#657080', '#F4C542']) &&
+    stringArray(settings.filament_map, ['1', '1']) &&
+    stringArray(settings.filament_volume_map, ['0', '0'])
   )
 }
 
@@ -676,7 +709,8 @@ export function isValidThreeMfPackage(bytes: ArrayBuffer): boolean {
   const model = decodeUtf8(entries.get(REQUIRED_ENTRIES[2]!)!)
   const modelRelationships = decodeUtf8(entries.get(REQUIRED_ENTRIES[3]!)!)
   const objectModel = decodeUtf8(entries.get(REQUIRED_ENTRIES[4]!)!)
-  const modelSettings = decodeUtf8(entries.get(REQUIRED_ENTRIES[5]!)!)
+  const projectSettings = decodeUtf8(entries.get(REQUIRED_ENTRIES[5]!)!)
+  const modelSettings = decodeUtf8(entries.get(REQUIRED_ENTRIES[6]!)!)
   const objectModelIsValid =
     objectModel !== null && validObjectModel(objectModel)
   const objectModelCounts =
@@ -687,6 +721,7 @@ export function isValidThreeMfPackage(bytes: ArrayBuffer): boolean {
     model !== null &&
     modelRelationships !== null &&
     objectModel !== null &&
+    projectSettings !== null &&
     modelSettings !== null &&
     validContentTypes(contentTypes) &&
     validRelationships(relationships) &&
@@ -694,6 +729,7 @@ export function isValidThreeMfPackage(bytes: ArrayBuffer): boolean {
     validModel(model) &&
     objectModelIsValid &&
     objectModelCounts !== null &&
+    validProjectSettings(projectSettings) &&
     validModelSettings(modelSettings, objectModelCounts)
   )
 }

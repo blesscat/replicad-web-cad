@@ -22,6 +22,7 @@ const TEXT_MATERIAL = {
   name: 'Wall Cover Text',
   color: '#F4C542',
 }
+const PROJECT_SETTINGS_PATH = 'Metadata/project_settings.config'
 const MODEL_SETTINGS_PATH = 'Metadata/model_settings.config'
 const OBJECT_MODEL_PATH = '3D/Objects/object_1.model'
 const OBJECT_MODEL_RELATIONSHIPS_PATH = '3D/_rels/3dmodel.model.rels'
@@ -141,6 +142,34 @@ function contentTypesXml(): string {
   <Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml" />
   <Default Extension="config" ContentType="application/xml" />
 </Types>`
+}
+
+function projectSettingsJson(): string {
+  return `{
+  "extruder_type": ["Direct Drive"],
+  "filament_colour": ["${BASE_MATERIAL.color}", "${TEXT_MATERIAL.color}"],
+  "filament_flow_ratio": ["1", "1"],
+  "filament_map": ["1", "1"],
+  "filament_settings_id": ["Bambu PLA Basic @BBL A1", "Bambu PLA Basic @BBL A1"],
+  "filament_type": ["PLA", "PLA"],
+  "filament_vendor": ["Bambu Lab", "Bambu Lab"],
+  "filament_volume_map": ["0", "0"],
+  "from": "project",
+  "name": "project_settings",
+  "nozzle_diameter": ["0.4"],
+  "nozzle_volume_type": ["Standard"],
+  "physical_extruder_map": ["0"],
+  "print_extruder_id": ["1"],
+  "print_extruder_variant": ["Direct Drive Standard"],
+  "printer_extruder_id": ["1"],
+  "printer_extruder_variant": ["Direct Drive Standard"],
+  "printer_model": "Bambu Lab A1",
+  "printer_settings_id": "Bambu Lab A1 0.4 nozzle",
+  "printer_technology": "FFF",
+  "printer_variant": "0.4",
+  "single_extruder_multi_material": "1",
+  "version": "02.08.02.61"
+}`
 }
 
 function modelSettingsXml(
@@ -348,6 +377,10 @@ export async function exportThreeMfBytes(
       bytes: TEXT_ENCODER.encode(modelRelationshipsXml()),
     },
     { name: OBJECT_MODEL_PATH, bytes: objectModel },
+    {
+      name: PROJECT_SETTINGS_PATH,
+      bytes: TEXT_ENCODER.encode(projectSettingsJson()),
+    },
     {
       name: MODEL_SETTINGS_PATH,
       bytes: TEXT_ENCODER.encode(modelSettingsXml(meshes)),

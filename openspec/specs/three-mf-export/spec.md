@@ -39,9 +39,11 @@ and flat-text component mesh objects, two deterministic material entries, and
 preserved body/text coordinates. The parent object MUST be the only build item;
 the body and text parts MUST remain independently addressable through
 `Metadata/model_settings.config`. The package MUST use millimetres without a
-hidden scale or translation. Bambu Studio metadata MUST assign model part `1`
-(body) to extruder/filament slot `1`, model part `2` (text) to
-extruder/filament slot `2`, and declare the plate filament map `1 2`.
+hidden scale or translation. It MUST also carry a valid Bambu project
+configuration in `Metadata/project_settings.config` identifying a supported
+Bambu printer and two project filament slots. Bambu Studio metadata MUST
+assign model part `1` (body) to extruder/filament slot `1`, model part `2`
+(text) to extruder/filament slot `2`, and declare the plate filament map `1 2`.
 
 #### Scenario: Body and text have separate material assignments
 
@@ -65,7 +67,8 @@ extruder/filament slot `2`, and declare the plate filament map `1 2`.
 - **WHEN** a 3MF response is passed to a ZIP/XML structural validator
 - **THEN** it MUST contain `[Content_Types].xml`, `_rels/.rels`,
   `3D/3dmodel.model`, `3D/_rels/3dmodel.model.rels`,
-  `3D/Objects/object_1.model`, and `Metadata/model_settings.config`
+  `3D/Objects/object_1.model`, `Metadata/project_settings.config`, and
+  `Metadata/model_settings.config`
 - **AND** the model XML MUST declare millimetre units, finite vertices, and
   valid triangle indices
 
