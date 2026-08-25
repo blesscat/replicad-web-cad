@@ -196,6 +196,37 @@ describe('CAD model generation debounce', () => {
     })
   })
 
+  it('clamps an OpenConnect shelf angle when a deeper row count lowers its limit', () => {
+    const { send, context } = createRuntimeContext(
+      'opengrid-openconnect-shelf',
+      { columns: 3, rows: 2, angle: 19.5 },
+    )
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('rows', '3')
+
+    expect(context.setRawParameters).toHaveBeenCalledWith({
+      columns: '3',
+      rows: '3',
+      angle: '14',
+    })
+    expect(context.setPersistedParameters).toHaveBeenCalledWith(
+      'opengrid-openconnect-shelf',
+      { columns: 3, rows: 3, angle: 14 },
+    )
+    expect(context.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'input-valid' }),
+    )
+
+    vi.advanceTimersByTime(500)
+    expect(send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.generate',
+        parameters: { columns: 3, rows: 3, angle: 14 },
+      }),
+    )
+  })
+
   it('applies a scoped parameter snapshot through the normal invalidation flow', () => {
     const { client, context } = createRuntimeContext('opengrid-snap')
     const handlers = createModelGenerationHandlers(context)

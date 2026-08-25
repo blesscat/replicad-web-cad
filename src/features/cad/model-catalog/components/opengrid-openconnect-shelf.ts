@@ -44,13 +44,13 @@ const OPENGRID_OPENCONNECT_SHELF_PARAMETER_SCHEMA: ReadonlyArray<ParameterField>
       label: 'parameter.shelfAngle',
       axis: 'Y/Z',
       unit: 'degree',
-      control: 'range-text',
+      control: 'range',
       defaultValue: configuration.defaultAngle,
       min: configuration.minAngle,
       max: openGridOpenConnectShelfMaximumAngleForRows(
         configuration.minGridCount,
       ),
-      step: 1,
+      step: configuration.angleStep,
       sliderMin: configuration.minAngle,
       sliderMax: openGridOpenConnectShelfMaximumAngleForRows(
         configuration.minGridCount,

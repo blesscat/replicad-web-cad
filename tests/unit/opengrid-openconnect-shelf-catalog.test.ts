@@ -5,6 +5,7 @@ import {
   groupModelDefinitions,
   modelIdForCadPath,
 } from '../../src/features/cad/model-catalog'
+import { OPENGRID_OPENCONNECT_SHELF_CONFIGURATION } from '../../src/cad-contract/units'
 import { systemContextForModel } from '../../src/features/cad/system-entry-context'
 import { translate } from '../../src/i18n'
 
@@ -23,6 +24,12 @@ describe('OpenGrid OpenConnect shelf catalog identity', () => {
       'rows',
       'angle',
     ])
+    expect(
+      definition?.parameterSchema.find((field) => field.key === 'angle'),
+    ).toMatchObject({
+      control: 'range',
+      step: OPENGRID_OPENCONNECT_SHELF_CONFIGURATION.angleStep,
+    })
     expect(cadPathForModel('opengrid-openconnect-shelf', 'wall')).toBe(
       '/cad/opengrid-openconnect-shelf?system=wall',
     )

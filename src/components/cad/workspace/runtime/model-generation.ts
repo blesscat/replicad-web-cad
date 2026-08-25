@@ -2,8 +2,10 @@ import { normalizeError } from '../../../../cad-contract/errors'
 import { diagnostic } from '../../../../cad-contract/diagnostics'
 import {
   OPENGRID_PREVIEW_CONFIGURATION,
+  OPENGRID_OPENCONNECT_SHELF_CONFIGURATION,
   PROTOTYPE_CONFIGURATION,
   isOpenGridParameters,
+  openGridOpenConnectShelfMaximumAngleForRows,
   validateOpenGridGenerationSupport,
   validateOpenGridParameters,
   validateModelParameters,
@@ -146,6 +148,22 @@ export function createModelGenerationHandlers(
     ) {
       const { length: _length, offset: _offset, ...lockingParameters } = next
       next = lockingParameters
+    }
+    if (modelId === 'opengrid-openconnect-shelf' && key === 'rows') {
+      const rows = Number(value)
+      const angle = Number(next.angle)
+      const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+      if (
+        Number.isSafeInteger(rows) &&
+        rows >= configuration.minGridCount &&
+        rows <= configuration.maxGridCount &&
+        Number.isFinite(angle)
+      ) {
+        const maximumAngle = openGridOpenConnectShelfMaximumAngleForRows(rows)
+        if (angle > maximumAngle) {
+          next = { ...next, angle: String(maximumAngle) }
+        }
+      }
     }
     context.refs.rawParameters.current = next
     context.setRawParameters(next)

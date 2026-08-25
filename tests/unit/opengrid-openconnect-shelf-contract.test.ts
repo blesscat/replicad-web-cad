@@ -61,6 +61,22 @@ describe('OpenGrid OpenConnect shelf contract', () => {
     })
   })
 
+  it('accepts half-degree angle steps and rejects finer fractions', () => {
+    const value = parameters({ angle: 13.5 })
+
+    expect(OPENGRID_OPENCONNECT_SHELF_CONFIGURATION.angleStep).toBe(0.5)
+    expect(validateOpenGridOpenConnectShelfParameters(value)).toEqual({
+      valid: true,
+      value,
+    })
+    expect(
+      validateOpenGridOpenConnectShelfParameters(parameters({ angle: 13.25 })),
+    ).toMatchObject({
+      valid: false,
+      issues: [expect.objectContaining({ field: 'angle' })],
+    })
+  })
+
   it.each([
     null,
     {},
@@ -68,7 +84,7 @@ describe('OpenGrid OpenConnect shelf contract', () => {
     { columns: 3, rows: 3, angle: 14, extra: true },
     { columns: 1.5, rows: 3, angle: 14 },
     { columns: 3, rows: Number.NaN, angle: 14 },
-    { columns: 3, rows: 3, angle: 14.5 },
+    { columns: 3, rows: 3, angle: 13.25 },
     { columns: 0, rows: 3, angle: 14 },
     { columns: 3, rows: 11, angle: 1 },
     { columns: 3, rows: 3, angle: 0 },
@@ -134,14 +150,14 @@ describe('OpenGrid OpenConnect shelf contract', () => {
   it('uses deterministic model-specific STEP and STL names', () => {
     const model = {
       modelId: 'opengrid-openconnect-shelf' as const,
-      parameters: parameters(),
+      parameters: parameters({ angle: 13.5 }),
     }
 
     expect(modelFileName(model)).toBe(
-      'opengrid-openconnect-shelf-c3-r3-a14.step',
+      'opengrid-openconnect-shelf-c3-r3-a13.5.step',
     )
     expect(modelStlFileName(model)).toBe(
-      'opengrid-openconnect-shelf-c3-r3-a14.stl',
+      'opengrid-openconnect-shelf-c3-r3-a13.5.stl',
     )
   })
 })

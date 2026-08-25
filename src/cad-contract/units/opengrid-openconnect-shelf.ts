@@ -30,6 +30,7 @@ export const OPENGRID_OPENCONNECT_SHELF_CONFIGURATION = {
   minGridCount: 1,
   maxGridCount: 10,
   minAngle: 1,
+  angleStep: 0.5,
   defaultColumns: 3,
   defaultRows: 3,
   defaultAngle: 14,
@@ -70,6 +71,21 @@ function isSafeIntegerInRange(
     Number.isSafeInteger(value) &&
     value >= minimum &&
     value <= maximum
+  )
+}
+
+function isFiniteNumberAtStepInRange(
+  value: unknown,
+  minimum: number,
+  maximum: number,
+  step: number,
+): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isFinite(value) &&
+    value >= minimum &&
+    value <= maximum &&
+    Number.isSafeInteger((value - minimum) / step)
   )
 }
 
@@ -161,7 +177,7 @@ export function boundsForOpenGridOpenConnectShelf(
   }
 }
 
-function invalidIntegerIssue(
+function invalidRangeIssue(
   field: OpenGridOpenConnectShelfParameterKey,
   minimum: number,
   maximum: number,
@@ -197,7 +213,7 @@ export function validateOpenGridOpenConnectShelfParameters(
   )
   if (!columnsValid) {
     issues.push(
-      invalidIntegerIssue(
+      invalidRangeIssue(
         'columns',
         configuration.minGridCount,
         configuration.maxGridCount,
@@ -214,7 +230,7 @@ export function validateOpenGridOpenConnectShelfParameters(
   )
   if (!rowsValid) {
     issues.push(
-      invalidIntegerIssue(
+      invalidRangeIssue(
         'rows',
         configuration.minGridCount,
         configuration.maxGridCount,
@@ -227,10 +243,15 @@ export function validateOpenGridOpenConnectShelfParameters(
     ? openGridOpenConnectShelfMaximumAngleForRows(rows)
     : openGridOpenConnectShelfMaximumAngleForRows(configuration.minGridCount)
   if (
-    !isSafeIntegerInRange(value.angle, configuration.minAngle, maximumAngle)
+    !isFiniteNumberAtStepInRange(
+      value.angle,
+      configuration.minAngle,
+      maximumAngle,
+      configuration.angleStep,
+    )
   ) {
     issues.push(
-      invalidIntegerIssue(
+      invalidRangeIssue(
         'angle',
         configuration.minAngle,
         maximumAngle,

@@ -489,6 +489,41 @@ describe('OpenGrid OpenConnect shelf CAD kernel integration', () => {
     }
   }, 120_000)
 
+  it('builds valid native geometry at a half-degree angle step', async () => {
+    const parameters: OpenGridOpenConnectShelfParameters = {
+      columns: 1,
+      rows: 2,
+      angle: 19.5,
+    }
+    const source = await lockedSlotSource()
+    const shape = await buildOpenGridOpenConnectShelf(parameters, {
+      getLockedSlot: async () => source,
+    })
+    try {
+      expectBoundsClose(
+        boundsOf(shape),
+        boundsForOpenGridOpenConnectShelf(parameters),
+      )
+      expect(
+        inspectOpenGridOpenConnectShelfShapeQuality(
+          shape,
+          parameters,
+          meshBRep(shape, { tolerance: 0.05, angularTolerance: 0.1 }),
+          source,
+        ),
+      ).toMatchObject({
+        passed: true,
+        failures: [],
+        validBRep: true,
+        solidCount: 1,
+        slotCount: 1,
+      })
+    } finally {
+      shape.delete()
+      source.delete()
+    }
+  }, 120_000)
+
   it('rejects a shelf when one expected locked socket is filled back in', async () => {
     const parameters = { ...OPENGRID_OPENCONNECT_SHELF_DEFAULT_PARAMETERS }
     const source = await lockedSlotSource()

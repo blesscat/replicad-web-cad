@@ -63,10 +63,10 @@ describe('OpenGrid OpenConnect shelf workspace integration', () => {
   })
 
   it('round-trips the three exact typed controls', () => {
-    const value = parameters({ columns: 4, rows: 2, angle: 20 })
+    const value = parameters({ columns: 4, rows: 2, angle: 19.5 })
     const raw = rawFromParameters(value)
 
-    expect(raw).toEqual({ columns: '4', rows: '2', angle: '20' })
+    expect(raw).toEqual({ columns: '4', rows: '2', angle: '19.5' })
     expect(parseRawParameters(raw, 'opengrid-openconnect-shelf')).toEqual({
       valid: true,
       value,

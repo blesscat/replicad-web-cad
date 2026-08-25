@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { skipHeadlessFirefoxWithoutWebGL, waitForCadReady } from './helpers'
 
-test('uses a dynamic angle limit and restores valid Wall parameters', async ({
+test('uses a half-degree slider and clamps it to the dynamic angle limit', async ({
   page,
   browserName,
 }) => {
@@ -24,16 +24,24 @@ test('uses a dynamic angle limit and restores valid Wall parameters', async ({
   ).toContainText('水平安裝面')
   await expect(limit).toContainText('目前 3 行深度可用的最大角度為 14°')
   await expect(angleSlider).toHaveAttribute('max', '14')
+  await expect(angleSlider).toHaveAttribute('step', '0.5')
+  await expect(angleInput).toHaveCount(0)
 
-  await angleInput.fill('15')
-  await expect(page.getByRole('button', { name: '下載 STEP' })).toBeDisabled()
   await rows.fill('2')
   await expect(limit).toContainText('目前 2 行深度可用的最大角度為 20°')
   await expect(angleSlider).toHaveAttribute('max', '20')
+  await angleSlider.fill('19.5')
   await waitForCadReady(page)
 
   await page.reload()
   await waitForCadReady(page)
   await expect(rows).toHaveValue('2')
-  await expect(angleInput).toHaveValue('15')
+  await expect(angleSlider).toHaveValue('19.5')
+
+  await rows.fill('3')
+  await expect(limit).toContainText('目前 3 行深度可用的最大角度為 14°')
+  await expect(angleSlider).toHaveAttribute('max', '14')
+  await expect(angleSlider).toHaveValue('14')
+  await waitForCadReady(page)
+  await expect(page.getByRole('button', { name: '下載 STEP' })).toBeEnabled()
 })

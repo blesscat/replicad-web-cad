@@ -24,7 +24,7 @@ The system MUST register an independent model whose modelId, buildKey, route slu
 
 ### Requirement: Shelf parameters are typed and depth-constrained
 
-The normalized parameter snapshot MUST contain exactly `{ columns, rows, angle }`. `columns` and `rows` MUST be safe integers from 1 through 10, and `angle` MUST be a safe integer number of degrees. The defaults MUST be `{ columns: 3, rows: 3, angle: 14 }`. For a selected row count, the maximum valid angle MUST be `floor(atan((28 - 7) / (rows * 28)) * 180 / pi)`, and the valid angle range MUST be from 1 degree through that derived maximum, inclusive. Non-finite, fractional, missing, unknown, or out-of-range values MUST be rejected with a field-specific diagnostic.
+The normalized parameter snapshot MUST contain exactly `{ columns, rows, angle }`. `columns` and `rows` MUST be safe integers from 1 through 10, and `angle` MUST be a finite number of degrees aligned to 0.5-degree steps. The defaults MUST be `{ columns: 3, rows: 3, angle: 14 }`. For a selected row count, the maximum valid angle MUST be `floor(atan((28 - 7) / (rows * 28)) * 180 / pi)`, and the valid angle range MUST be from 1 degree through that derived maximum, inclusive. Non-finite values, fractional grid counts, angles outside the 0.5-degree step, missing or unknown fields, and out-of-range values MUST be rejected with a field-specific diagnostic.
 
 #### Scenario: Accept the default snapshot
 
@@ -46,7 +46,7 @@ The normalized parameter snapshot MUST contain exactly `{ columns, rows, angle }
 
 #### Scenario: Reject malformed or expanded snapshots
 
-- **WHEN** a snapshot has a missing key, an unknown key, a fractional grid count or angle, a non-finite number, or a value outside its valid range
+- **WHEN** a snapshot has a missing key, an unknown key, a fractional grid count, an angle outside the 0.5-degree step, a non-finite number, or a value outside its valid range
 - **THEN** validation MUST fail with a diagnostic identifying the affected field or parameter object
 - **AND** no partially normalized value MUST become exportable or persisted
 
@@ -139,7 +139,7 @@ In installed coordinates, the lower edges of the two side ribs, every grid-align
 
 ### Requirement: Workspace lifecycle and persistence are independent
 
-The CAD workspace MUST expose only `columns`, `rows`, and `angle` controls for `opengrid-openconnect-shelf`, show the current derived maximum angle, and use the existing debounce, latest-wins candidate, commit, mesh, STEP, and STL gates. Valid typed snapshots MUST persist under the `opengrid-openconnect-shelf` key independently of all other models. Missing or malformed persisted data MUST fall back to the new defaults; invalid current input MUST leave the last committed valid model visible as stale and MUST disable new exports.
+The CAD workspace MUST expose only `columns`, `rows`, and `angle` controls for `opengrid-openconnect-shelf`, show the current derived maximum angle, and use the existing debounce, latest-wins candidate, commit, mesh, STEP, and STL gates. The angle control MUST be a slider without a free-text input and MUST advance in 0.5-degree steps. When a row-count change lowers the derived maximum below the current angle, the workspace MUST atomically clamp the angle to the new maximum before validation, persistence, or generation. Valid typed snapshots MUST persist under the `opengrid-openconnect-shelf` key independently of all other models. Missing or malformed persisted data MUST fall back to the new defaults; invalid current input MUST leave the last committed valid model visible as stale and MUST disable new exports.
 
 #### Scenario: Initialize the dedicated route
 
@@ -152,6 +152,13 @@ The CAD workspace MUST expose only `columns`, `rows`, and `angle` controls for `
 - **WHEN** a valid shelf snapshot passes validation
 - **THEN** persistence MUST update only the `opengrid-openconnect-shelf` entry with typed values
 - **AND** entries for `opengrid`, `opengrid-snap`, and every other component MUST remain unchanged
+
+#### Scenario: Clamp the angle when depth lowers its ceiling
+
+- **GIVEN** a two-row shelf has a valid angle of 19.5°
+- **WHEN** the user changes the row count to three
+- **THEN** the angle slider MUST change to the new 14° maximum without exposing a text input or invalid intermediate snapshot
+- **AND** the resulting `{ columns, rows: 3, angle: 14 }` snapshot MUST follow the normal persistence and generation lifecycle
 
 #### Scenario: Retain the last valid revision for invalid input
 

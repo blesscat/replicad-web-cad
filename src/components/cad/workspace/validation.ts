@@ -169,6 +169,9 @@ function usesHalfStepInput(modelId: ModelId, key: ModelParameterKey): boolean {
   if (modelId === 'opengrid-divider') {
     return key === 'left' || key === 'right' || key === 'up' || key === 'down'
   }
+  if (modelId === 'opengrid-openconnect-shelf') {
+    return key === 'angle'
+  }
   return false
 }
 
