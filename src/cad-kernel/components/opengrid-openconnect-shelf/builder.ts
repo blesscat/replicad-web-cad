@@ -212,6 +212,7 @@ function makeSupportPieces(
 ): Shape3D[] {
   const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
   const width = openGridOpenConnectShelfWidthFor(parameters)
+  const depth = openGridOpenConnectShelfDepthFor(parameters)
   const pieces: Shape3D[] = [makeRearPlate(parameters)]
   const longitudinalRibStarts = [
     -width / 2,
@@ -232,6 +233,9 @@ function makeSupportPieces(
       makeTransverseRib(parameters, -rowBoundary * configuration.gridPitch),
     )
   }
+  pieces.push(
+    makeTransverseRib(parameters, -depth + configuration.supportThickness / 2),
+  )
   return pieces
 }
 

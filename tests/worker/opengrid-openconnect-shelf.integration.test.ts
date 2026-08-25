@@ -403,6 +403,64 @@ describe('OpenGrid OpenConnect shelf CAD kernel integration', () => {
     }
   }, 180_000)
 
+  it('closes the low-angle front edge to the build plane across every column', async () => {
+    const parameters: OpenGridOpenConnectShelfParameters = {
+      columns: 3,
+      rows: 3,
+      angle: 1,
+    }
+    const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+    const depth = openGridOpenConnectShelfDepthFor(parameters)
+    const radians = openGridOpenConnectShelfAngleRadiansFor(parameters.angle)
+    const printFrontY = -depth / Math.cos(radians)
+    const bayHalfWidth =
+      configuration.gridPitch / 2 - configuration.supportThickness - 0.5
+    const source = await lockedSlotSource()
+    const shape = await buildOpenGridOpenConnectShelf(parameters, {
+      getLockedSlot: async () => source,
+    })
+    try {
+      for (let column = 0; column < parameters.columns; column += 1) {
+        const centerX =
+          (column - (parameters.columns - 1) / 2) * configuration.gridPitch
+        const probe = makeBox(
+          [centerX - bayHalfWidth, printFrontY + 0.2, 0],
+          [centerX + bayHalfWidth, printFrontY + 0.8, 2],
+        )
+        let groundedFront: Shape3D | null = null
+        try {
+          groundedFront = shape.intersect(probe)
+          expect(measureVolume(groundedFront)).toBeGreaterThan(10)
+        } finally {
+          deleteShape(groundedFront)
+          probe.delete()
+        }
+      }
+
+      const frontOpening = makeBox(
+        [-bayHalfWidth, printFrontY - 0.1, -0.1],
+        [bayHalfWidth, printFrontY + 1, 3],
+      )
+      let openedShape: Shape3D | null = null
+      try {
+        openedShape = shape.cut(frontOpening)
+        const openedQuality = inspectOpenGridOpenConnectShelfShapeQuality(
+          openedShape,
+          parameters,
+          meshBRep(openedShape, { tolerance: 0.05, angularTolerance: 0.1 }),
+          source,
+        )
+        expect(openedQuality.failures).toContain('front-ground')
+      } finally {
+        if (openedShape !== shape) deleteShape(openedShape)
+        frontOpening.delete()
+      }
+    } finally {
+      shape.delete()
+      source.delete()
+    }
+  }, 180_000)
+
   it('keeps the sloped build surface on Z=0 at the one-cell angle boundary', async () => {
     const parameters: OpenGridOpenConnectShelfParameters = {
       columns: 1,

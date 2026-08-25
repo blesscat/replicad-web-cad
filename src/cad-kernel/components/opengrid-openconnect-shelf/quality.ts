@@ -9,6 +9,7 @@ import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForOpenGridOpenConnectShelf,
   openGridOpenConnectShelfAngleRadiansFor,
+  openGridOpenConnectShelfDepthFor,
   openGridOpenConnectShelfFrontHeightFor,
   openGridOpenConnectShelfSlotOriginsFor,
   openGridOpenConnectShelfWidthFor,
@@ -249,8 +250,6 @@ function inspectGroundedTransverseRibs(
   const bayHalfWidth =
     configuration.gridPitch / 2 - configuration.supportThickness - 0.5
   const probes: Shape3D[] = []
-  let compound: Shape3D | null = null
-  let covered: Shape3D | null = null
   let missingVolume = Number.POSITIVE_INFINITY
   try {
     for (let rowBoundary = 1; rowBoundary < parameters.rows; rowBoundary += 1) {
@@ -267,21 +266,68 @@ function inspectGroundedTransverseRibs(
         )
       }
     }
-    compound = makeQualityProbeCompound(probes)
-    const expectedVolume = measureVolume(compound)
-    covered = shape.intersect(compound)
-    missingVolume = expectedVolume - measureVolume(covered)
+    missingVolume = missingGroundContactVolume(shape, probes)
   } catch {
+    probes.forEach(deleteShape)
     missingVolume = Number.POSITIVE_INFINITY
-  } finally {
-    deleteShape(covered)
-    deleteQualityProbes(compound, probes)
   }
   if (
     !Number.isFinite(missingVolume) ||
     missingVolume > GROUND_RIB_MISSING_VOLUME_TOLERANCE
   ) {
     failures.push('x-ground-ribs')
+  }
+}
+
+function missingGroundContactVolume(shape: Shape3D, probes: Shape3D[]): number {
+  let compound: Shape3D | null = null
+  let covered: Shape3D | null = null
+  try {
+    compound = makeQualityProbeCompound(probes)
+    const expectedVolume = measureVolume(compound)
+    covered = shape.intersect(compound)
+    return expectedVolume - measureVolume(covered)
+  } finally {
+    deleteShape(covered)
+    deleteQualityProbes(compound, probes)
+    probes.length = 0
+  }
+}
+
+function inspectGroundedFrontFascia(
+  shape: Shape3D,
+  parameters: OpenGridOpenConnectShelfParameters,
+  failures: string[],
+): void {
+  const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+  const depth = openGridOpenConnectShelfDepthFor(parameters)
+  const radians = openGridOpenConnectShelfAngleRadiansFor(parameters.angle)
+  const printFrontY = -depth / Math.cos(radians)
+  const bayHalfWidth =
+    configuration.gridPitch / 2 - configuration.supportThickness - 0.5
+  const probes: Shape3D[] = []
+  let missingVolume = Number.POSITIVE_INFINITY
+  try {
+    for (let column = 0; column < parameters.columns; column += 1) {
+      const centerX =
+        (column - (parameters.columns - 1) / 2) * configuration.gridPitch
+      probes.push(
+        makeBox(
+          [centerX - bayHalfWidth, printFrontY + 0.2, 0],
+          [centerX + bayHalfWidth, printFrontY + 0.8, 0.5],
+        ),
+      )
+    }
+    missingVolume = missingGroundContactVolume(shape, probes)
+  } catch {
+    probes.forEach(deleteShape)
+    missingVolume = Number.POSITIVE_INFINITY
+  }
+  if (
+    !Number.isFinite(missingVolume) ||
+    missingVolume > GROUND_RIB_MISSING_VOLUME_TOLERANCE
+  ) {
+    failures.push('front-ground')
   }
 }
 
@@ -369,6 +415,7 @@ export function inspectOpenGridOpenConnectShelfShapeQuality(
   inspectInterfaceFaces(shape, parameters, failures)
   inspectOpenUnderside(shape, parameters, failures)
   inspectGroundedTransverseRibs(shape, parameters, failures)
+  inspectGroundedFrontFascia(shape, parameters, failures)
   const slotResidualVolumes = inspectLockedSlots(
     shape,
     parameters,

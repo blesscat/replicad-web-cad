@@ -98,7 +98,7 @@ The rear face MUST contain exactly one upward-oriented OpenConnect receptacle fo
 
 ### Requirement: The opposite side forms an open printable rib support
 
-In installed coordinates, the lower edges of the two side ribs, every grid-aligned longitudinal Y-direction rib, and every internal grid-aligned transverse X-direction rib MUST share a sloped plane rising from the rear lower datum toward the front by `rows * 28 * tan(angle)` millimetres. Each `28 mm × 28 mm` cell bay bounded by those ribs MUST remain open and no continuous skin or base plate may span the underside. The resulting front height, measured between the common rib plane and the OpenGrid top datum, MUST be at least 7 mm. The rear plate, all X/Y ribs, and the OpenGrid Full interface MUST form one connected printable solid without changing the two functional interface planes. The completed model MUST then be rigidly oriented for preview and export so the coplanar rib feet lie on `Z=0` as its build surface.
+In installed coordinates, the lower edges of the two side ribs, every grid-aligned longitudinal Y-direction rib, every internal grid-aligned transverse X-direction rib, and a full-width front fascia MUST share a sloped plane rising from the rear lower datum toward the front by `rows * 28 * tan(angle)` millimetres. The front fascia MUST occupy only the inside of the nominal front boundary and extend continuously from the OpenGrid underside to that common rib plane. Each `28 mm × 28 mm` cell bay behind the front fascia MUST remain open and no continuous skin or base plate may span the underside. The resulting front height, measured between the common rib plane and the OpenGrid top datum, MUST be at least 7 mm. The rear plate, front fascia, all X/Y ribs, and the OpenGrid Full interface MUST form one connected printable solid without changing the two functional interface planes. The completed model MUST then be rigidly oriented for preview and export so the coplanar support feet lie on `Z=0` as its build surface.
 
 #### Scenario: Default rib plane follows the selected angle
 
@@ -106,6 +106,7 @@ In installed coordinates, the lower edges of the two side ribs, every grid-align
 - **THEN** its rib plane MUST rise toward the front by approximately `20.94 mm`
 - **AND** its front height MUST be approximately `7.06 mm`
 - **AND** two internal X-direction ribs MUST cross the full width on the 28 mm row boundaries
+- **AND** the exterior front edge MUST be closed to the common rib plane by a full-width fascia
 - **AND** all nine cell bays between the X/Y ribs MUST remain open
 
 #### Scenario: Ground every internal X-direction grid line
@@ -114,6 +115,13 @@ In installed coordinates, the lower edges of the two side ribs, every grid-align
 - **THEN** exactly `rows - 1` transverse ribs MUST span its width on 28 mm centers
 - **AND** each transverse rib lower edge MUST lie on the same sloped plane as the longitudinal ribs
 - **AND** after print orientation every transverse rib MUST contact `Z=0` across every column
+
+#### Scenario: Close the front opening at lower angles
+
+- **WHEN** a valid angle leaves vertical space between the front OpenGrid underside and the sloped build plane
+- **THEN** the front fascia MUST extend across every column and all the way down to that build plane
+- **AND** no open span may remain between the side ribs at the exterior front edge
+- **AND** the fascia MUST NOT extend beyond the nominal `rows * 28 mm` OpenGrid depth
 
 #### Scenario: Export rests on the sloped face
 
@@ -125,6 +133,7 @@ In installed coordinates, the lower edges of the two side ribs, every grid-align
 
 - **WHEN** the generated B-Rep is validated
 - **THEN** it MUST be a non-empty valid single solid with no detached ribs or rear plate
+- **AND** the full-width front fascia MUST contact the build plane across every column
 - **AND** every cell bay between the X/Y ribs MUST remain unobstructed near the build plane
 - **AND** its declared build-plane minimum Z MUST be zero within CAD tolerance
 
