@@ -25,6 +25,15 @@ import {
   placeOpenGridOpenConnectShelfLockedSlot,
 } from '../../src/cad-kernel/components/opengrid-openconnect-shelf/slot'
 import { buildOpenGridBRep } from '../../src/cad-kernel/components/opengrid/builder'
+import {
+  importOpenGridSnapOpenConnectHead,
+  OPENGRID_SNAP_OPEN_CONNECT_HEAD_URL,
+} from '../../src/cad-kernel/components/opengrid-snap/builder'
+import {
+  OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_AXIS,
+  OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_DEGREES,
+  OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_ORIGIN,
+} from '../../src/cad-kernel/components/opengrid-snap/openconnect'
 import { meshBRep } from '../../src/cad-kernel/mesh'
 
 ;(globalThis as typeof globalThis & { __dirname?: string }).__dirname = dirname(
@@ -82,6 +91,42 @@ async function lockedSlotSource(): Promise<Shape3D> {
   )
 }
 
+async function snapOpenConnectHeadSource(): Promise<Shape3D> {
+  return importOpenGridSnapOpenConnectHead(
+    new Blob([
+      readFileSync(fileURLToPath(OPENGRID_SNAP_OPEN_CONNECT_HEAD_URL)),
+    ]),
+  )
+}
+
+function placeSnapOpenConnectHeadForShelf(
+  source: Shape3D,
+  origin: readonly [number, number, number],
+): Shape3D {
+  let current: Shape3D | null = source.clone()
+  try {
+    const assembled = current.rotate(
+      OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_DEGREES,
+      [...OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_ORIGIN],
+      [...OPENGRID_SNAP_OPEN_CONNECT_HEAD_ROTATION_AXIS],
+    )
+    if (assembled !== current) deleteShape(current)
+    current = assembled
+
+    const vertical = current.rotate(90, [0, 0, 0], [1, 0, 0])
+    if (vertical !== current) deleteShape(current)
+    current = vertical
+
+    const placed = current.translate(origin[0], origin[1], origin[2])
+    if (placed !== current) deleteShape(current)
+    current = placed
+    return current
+  } catch (error) {
+    deleteShape(current)
+    throw error
+  }
+}
+
 function rotateForPrint(shape: Shape3D, angle: number): Shape3D {
   const rotated = shape.rotate(angle, [0, 0, 0], [1, 0, 0])
   if (rotated !== shape) deleteShape(shape)
@@ -125,6 +170,25 @@ describe('OpenGrid OpenConnect shelf CAD kernel integration', () => {
       expect(measureVolume(source)).toBeCloseTo(1010.6805154, 4)
     } finally {
       source.delete()
+    }
+  })
+
+  it('accepts the assembled Snap OpenConnect head in the locked socket direction', async () => {
+    const slotSource = await lockedSlotSource()
+    const headSource = await snapOpenConnectHeadSource()
+    const origin = openGridOpenConnectShelfSlotOriginsFor({ columns: 1 })[0]!
+    const slot = placeOpenGridOpenConnectShelfLockedSlot(slotSource, origin)
+    const head = placeSnapOpenConnectHeadForShelf(headSource, origin)
+    let residualHead: Shape3D | null = null
+    try {
+      residualHead = head.cut(slot)
+      expect(measureVolume(residualHead)).toBeLessThan(0.01)
+    } finally {
+      if (residualHead !== head) deleteShape(residualHead)
+      head.delete()
+      slot.delete()
+      headSource.delete()
+      slotSource.delete()
     }
   })
 

@@ -70,7 +70,7 @@ In the installed coordinate system, the generated shelf MUST preserve a complete
 
 ### Requirement: Every column has a native locked OpenConnect receptacle
 
-The rear face MUST contain exactly one upward-oriented OpenConnect receptacle for each OpenGrid column. Every receptacle MUST use the supplied millimetre STEP locked-slot negative at its authored scale and origin, with no scaling, mirroring, or recentering. Slot source origins MUST be separated by the 28 mm OpenGrid pitch, aligned with the corresponding column centers, placed at the 14 mm rear-cell height datum on the exterior face of the rear plate, and transformed so the cutter enters that plate without reaching the OpenGrid board. No unlocked or user-selectable lock distribution MUST be exposed.
+The rear face MUST contain exactly one upward-oriented OpenConnect receptacle for each OpenGrid column. Every receptacle MUST use the supplied millimetre STEP locked-slot negative at its authored scale and origin, with no scaling, mirroring, or recentering. Its rigid placement MUST match the assembled OpenConnect head direction used by the OpenGrid Snap generator so that the Snap head occupies the locked receptacle without geometric interference. Slot source origins MUST be separated by the 28 mm OpenGrid pitch, aligned with the corresponding column centers, placed at the 14 mm rear-cell height datum on the exterior face of the rear plate, and transformed so the cutter enters that plate without reaching the OpenGrid board. No unlocked or user-selectable lock distribution MUST be exposed.
 
 #### Scenario: Cut all default locking slots
 
@@ -83,6 +83,12 @@ The rear face MUST contain exactly one upward-oriented OpenConnect receptacle fo
 - **WHEN** a receptacle cutter is loaded and placed
 - **THEN** its source-unit dimensions and asymmetric authored origin MUST remain unchanged
 - **AND** only rigid rotation and translation MUST be applied before subtraction
+
+#### Scenario: Accept the assembled OpenConnect Snap head
+
+- **WHEN** the OpenConnect head from a generated OpenGrid Snap is placed at the locked position of a shelf receptacle
+- **THEN** the head MUST be oriented in the same assembly direction as the receptacle
+- **AND** the complete head volume MUST fit within the supplied locked-slot negative within CAD tolerance
 
 #### Scenario: Keep every cutter within one rear row
 

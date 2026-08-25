@@ -12,10 +12,13 @@ unit conversion, scaling, mirroring, healing, or recentering.
 - Authored volume: approximately `1010.6805154 mm³`
 - Topology: one valid STEP solid
 
-Runtime placement preserves the authored origin. The installed transform maps
-source `[x, y, z]` to `[x + columnCenterX, -z, y + 14]`, which is a rigid +90°
-X rotation followed by translation. One copy is cut at every 28 mm column
-center; every copy contains the supplied lock geometry.
+Runtime placement preserves the authored dimensions and first applies the same
+180° Y-axis assembly rotation used by the OpenGrid Snap OpenConnect head. It
+then stands the slot upright with a +90° X rotation. The installed transform
+maps source `[x, y, z]` to
+`[-x + columnCenterX, z - 2.7 + rearThickness, y + 14]`. One copy is cut at
+every 28 mm column center; every copy contains the supplied lock geometry and
+accepts the Snap head in its assembled direction.
 
 ## Upstream attribution
 

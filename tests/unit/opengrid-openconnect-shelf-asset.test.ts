@@ -43,7 +43,7 @@ describe('OpenGrid OpenConnect locked-slot asset', () => {
     })
   })
 
-  it('uses a rigid right-handed +90 degree X transform at the authored origin', () => {
+  it('matches the assembled Snap head direction before standing the slot upright', () => {
     const origin = [28, 0, 14] as const
     const transformedOrigin = transformOpenGridOpenConnectShelfSlotPoint(
       [0, 0, 0],
@@ -62,10 +62,12 @@ describe('OpenGrid OpenConnect locked-slot asset', () => {
       origin,
     )
 
-    expect(transformedOrigin).toEqual([28, 0, 14])
-    expect(transformedX).toEqual([29, 0, 14])
-    expect(transformedY).toEqual([28, 0, 15])
-    expect(transformedZ).toEqual([28, -1, 14])
+    expect(transformedOrigin).toEqual([28, -2.7, 14])
+    expect(transformedX).toEqual([27, -2.7, 14])
+    expect(transformedY).toEqual([28, -2.7, 15])
+    expect(transformedZ[0]).toBe(28)
+    expect(transformedZ[1]).toBeCloseTo(-1.7, 10)
+    expect(transformedZ[2]).toBe(14)
 
     const basisLengths = [transformedX, transformedY, transformedZ].map(
       (point) =>
@@ -88,10 +90,10 @@ describe('OpenGrid OpenConnect locked-slot asset', () => {
     expect(origins.map((origin) => origin[2])).toEqual([14, 14, 14])
 
     const bounds = openGridOpenConnectShelfSlotBoundsForOrigin(origins[1]!)
-    expect(bounds.min[0]).toBeCloseTo(-13)
+    expect(bounds.min[0]).toBeCloseTo(-8.6)
     expect(bounds.min[1]).toBeCloseTo(0.5)
     expect(bounds.min[2]).toBeCloseTo(0.8)
-    expect(bounds.max).toEqual([8.6, 3.2, 23])
+    expect(bounds.max).toEqual([13, 3.2, 23])
 
     for (const columns of [1, 3, 10]) {
       const columnOrigins = openGridOpenConnectShelfSlotOriginsFor({ columns })

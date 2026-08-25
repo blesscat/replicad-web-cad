@@ -8,6 +8,16 @@ export const OPENGRID_OPENCONNECT_SLOT_SOURCE_BOUNDS: ModelBounds = {
   max: [8.6, 9, 2.7],
 }
 
+const OPENGRID_OPENCONNECT_SLOT_ASSEMBLY_ROTATION_DEGREES = 180
+const OPENGRID_OPENCONNECT_SLOT_ASSEMBLY_ROTATION_AXIS: Point3D = [0, 1, 0]
+const OPENGRID_OPENCONNECT_SLOT_ASSEMBLY_ROTATION_ORIGIN: Point3D = [
+  0,
+  0,
+  (OPENGRID_OPENCONNECT_SLOT_SOURCE_BOUNDS.min[2] +
+    OPENGRID_OPENCONNECT_SLOT_SOURCE_BOUNDS.max[2]) /
+    2,
+]
+
 export const openGridOpenConnectShelfLockedSlotAssetUrl = new URL(
   './assets/openconnect-slot-negative-lock.step',
   import.meta.url,
@@ -49,7 +59,13 @@ export function transformOpenGridOpenConnectShelfSlotPoint(
   source: Point3D,
   origin: Point3D,
 ): [number, number, number] {
-  return [source[0] + origin[0], -source[2] + origin[1], source[1] + origin[2]]
+  const assembledZ =
+    2 * OPENGRID_OPENCONNECT_SLOT_ASSEMBLY_ROTATION_ORIGIN[2] - source[2]
+  return [
+    -source[0] + origin[0],
+    -assembledZ + origin[1],
+    source[1] + origin[2],
+  ]
 }
 
 export function openGridOpenConnectShelfSlotBoundsForOrigin(
@@ -119,9 +135,18 @@ export function placeOpenGridOpenConnectShelfLockedSlot(
 ): Shape3D {
   let current: Shape3D | null = source.clone()
   try {
-    const rotated = current.rotate(90, [0, 0, 0], [1, 0, 0])
-    if (rotated !== current) deleteShape(current)
-    current = rotated
+    // Match the assembled OpenConnect head direction used by OpenGrid Snap,
+    // then stand the compatible locked socket upright on the rear plate.
+    const assembled = current.rotate(
+      OPENGRID_OPENCONNECT_SLOT_ASSEMBLY_ROTATION_DEGREES,
+      [...OPENGRID_OPENCONNECT_SLOT_ASSEMBLY_ROTATION_ORIGIN],
+      [...OPENGRID_OPENCONNECT_SLOT_ASSEMBLY_ROTATION_AXIS],
+    )
+    if (assembled !== current) deleteShape(current)
+    current = assembled
+    const upright = current.rotate(90, [0, 0, 0], [1, 0, 0])
+    if (upright !== current) deleteShape(current)
+    current = upright
     const translated = current.translate(origin[0], origin[1], origin[2])
     if (translated !== current) deleteShape(current)
     current = translated
