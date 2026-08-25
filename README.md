@@ -1,6 +1,6 @@
 # shape-shortcut
 
-瀏覽器端 CAD Prototype：使用者調整 CAD component 的參數，以即時 3D 預覽查看結果，並從精確的 B-Rep 下載 STEP 或 STL 檔案。
+瀏覽器端 CAD Prototype：使用者調整 CAD component 的參數，以即時 3D 預覽查看結果，並從精確的 B-Rep 下載 STEP、STL，或受限的 OpenGrid Wall Cover 雙色 3MF 檔案。
 
 > 目前專案仍在 Prototype 的設計與實作階段。本 README 是人類與 AI 了解專案結構的入口；詳細設計以 OpenSpec 的 `design.md` 為準。
 
@@ -41,11 +41,12 @@ Astro site shell（layouts/ + pages/）
          ├─ hsw-cell builder + STEP template
          ├─ hexagonal-column builder + STEP template
          ├─ OpenGrid stackable-box / stackable-cylinder / organizer-box builders
+         ├─ OpenGrid Wall Cover placeholder builder + named body/text parts
          ├─ preview mesh generation
-         └─ STEP / binary STL export
+         └─ STEP / binary STL / Wall Cover 3MF export
 ```
 
-主執行緒只持有參數、UI 狀態、已驗證的 mesh、model revision metadata 與下載 bytes。OpenCascade、replicad、B-Rep 建模、mesh 產生與 STEP/STL writer 全部屬於同一個 CAD Worker，不能在主執行緒執行。
+主執行緒只持有參數、UI 狀態、已驗證的 mesh、model revision metadata 與下載 bytes。OpenCascade、replicad、B-Rep 建模、mesh 產生與 STEP/STL/3MF writer 全部屬於同一個 CAD Worker，不能在主執行緒執行。
 
 ## 建議來源目錄
 
@@ -115,8 +116,10 @@ pages/
 - `opengrid-organizer-box` 沿用 OpenGrid 方盒外觀，頂部為實體盲孔，可選圓形或固定方向的 3–6 邊正多邊形；多邊形直徑定義為內切圓直徑。X/Y 孔數、孔外圍對外圍間距、孔深與底部加厚（預設 1 mm）會共同決定盒體尺寸；孔距可連動或分開設定。面板最上方把介面拆成兩組獨立 radio：`角座模式` 可選 `無角座`、`鎖定角座`、`內建角座`，`盒體模式` 可選 `普通模式` 或 `堆疊模式`，共六種可組合狀態。普通模式維持既有平頂盒體；堆疊模式同時建立方盒標準的底部堆疊結構與頂部階梯滑軌，並顯示 `堆疊淨空（Z）`。Z 直接代表孔洞開口平面到上一層盒底基準面的距離，採 0.5 mm 級距、最小與預設 3.5 mm；標準滑軌的幾何下限為 3.20 mm，因此 3.5 mm 是不改動堆疊剖面的第一個合法輸入。`內建角座` 會融合四個 Ø5 mm × 3.8 mm 實體腳座（Z=-3.8 mm 至 Z=0 mm），底部採 0.2 mm 導角；`鎖定角座` 則把 Ø7 × 1.75 mm、有擋片的 female socket 直接形成為盒體的一部分，不會輸出另一個 holder。由盒底觀看，左上、右上、右下、左下 socket 固定採 0°、90°、180°、270° 的 B 方向。
 - `鎖定角座` 由 `opengrid-pillar` 的 `{ mode: 'detachable-corner-seat' }` 另行輸出，預設顯示在第一個模式。幾何固定為 5.3 mm 高：定位段高 3.8 mm，底面 Ø4.6 並以 0.2 mm 倒角恢復 Ø5，頂部保留 0.15 mm 耐磨平面；此模式不接受長度或 XY 增量。這項介面目前只在 Organizer Box 試作；四角都必須能手壓到底、提起盒體時不脫落、刻意手拉時仍可拆下，三項實體列印驗收全部通過後才可導入其他模型。
 - 預覽：由 Worker 產生的 B-Rep mesh。
-- 匯出：由 Worker 目前 committed B-Rep 產生 STEP 或 binary STL。
-- 不包含模型匯入、3MF/G-code、儲存、帳號、後端、多人協作或自動啟動 Bambu Studio。
+- `opengrid-wall-cover` 是只隸屬於 Wall 的固定元件，暫以 Snap Lite／Standard／full、offset 0 的 placeholder 產生 body 與同平面的 `SNAP` 文字 part；正式 STEP 之後可只替換 cover-specific asset adapter。
+- OpenGrid Snap 維持單色模型，不再提供雙色文字控制或 3MF capability；舊快照中的 `topText=SNAP` 會正規化成 `none`。
+- 匯出：由 Worker 目前 committed B-Rep 產生 STEP 或 binary STL；`opengrid-wall-cover` 另提供固定檔名 `opengrid-wall-cover.3mf`，body 與 text 預設分別使用耗材槽 1、2。
+- 不包含任意模型匯入、任意文字／字型 3MF、slicer profile、G-code、儲存、帳號、後端、多人協作或自動啟動 Bambu Studio。
 
 ## 使用 Prototype
 
@@ -124,7 +127,7 @@ pages/
 
 輸入高度直接控制盒內淨高；5 mm 底部與 7.55 mm 上部堆疊介面固定加在外部高度，外部 footprint、參數快照與匯出檔名維持不變。
 
-建模期間可以保留上一個成功 revision 的預覽，但它會標示為 stale，且 STEP/STL 下載會停用；只有新的 B-Rep candidate 完成 commit 並進入「模型已就緒」後，預覽與匯出才會重新同步。WASM 載入、建模、mesh 與匯出都有狀態提示；Worker 或操作失敗時可修改參數或按「重試」，Worker recovery 最多自動重建一次。
+建模期間可以保留上一個成功 revision 的預覽，但它會標示為 stale，且 STEP/STL/3MF 下載會停用；只有新的 B-Rep candidate 完成 commit 並進入「模型已就緒」後，預覽與匯出才會重新同步。WASM 載入、建模、mesh 與匯出都有狀態提示；Worker 或操作失敗時可修改參數或按「重試」，Worker recovery 最多自動重建一次。
 
 ## STEP template 與格式選擇
 
@@ -168,7 +171,15 @@ pillar-5.3-detachable-corner-seat.stl
 opengrid-organizer-box-{countX}x{countY}-{shape}-sm-{linked|independent}-d{diameter}-sx{spacingX}-sy{spacingY}-h{depth}-b{bottomThickness}-seats-{none|detachable-corner-seat|integrated}-body-{normal|stackable}[-z{stackingClearanceHeight}].stl
 ```
 
-下載完成後，使用者可在 Bambu Studio 透過一般的本機檔案開啟/匯入流程載入 STL。瀏覽器不會直接啟動或控制 Bambu Studio，也不會產生 3MF、G-code 或印表機設定檔。初始 STL tessellation 設定為 `tolerance = 0.001 mm`、`angularTolerance = 0.1`；這些設定與 viewport preview mesh 分開管理。
+下載完成後，使用者可在 Bambu Studio 透過一般的本機檔案開啟/匯入流程載入 STL。瀏覽器不會直接啟動或控制 Bambu Studio，也不會產生 G-code 或印表機設定檔。初始 STL tessellation 設定為 `tolerance = 0.001 mm`、`angularTolerance = 0.1`；這些設定與 viewport preview mesh 分開管理。
+
+## OpenGrid Wall Cover 雙色 3MF POC
+
+`opengrid-wall-cover` 是 Wall-only、無可調參數的固定元件；目前使用 Snap Lite／Standard／full footprint、offset `0`、關閉 OpenConnect、無定位孔／移除孔／磁鐵孔的 placeholder。一般 `opengrid-snap` 不會啟用這項雙色功能。
+
+這個 POC 不是浮雕，也不是把文字抬高：文字是獨立的第二個 3MF part，從 Z=`3.0 mm` 延伸到與 Lite 本體相同的頂面 Z=`3.4 mm`，因此列印後是同一平面的雙色嵌件。body 會先保留文字 cavity，3MF 再以兩個 material entry、同一個 parent object 下的兩個 component mesh，以及 Bambu Studio model settings 匯出 body 與 text，避免 slicer 把兩者折疊成單一 mesh，並預設 body 使用耗材槽 1、text 使用耗材槽 2。對單噴嘴加 AMS 的印表機，這代表不同耗材槽，不是兩個物理噴嘴。
+
+3MF 檔案名固定為 `opengrid-wall-cover.3mf`。目前沒有任意文字輸入、font parser、任意顏色選擇、slicer profile、printer preset、G-code 或自動控制 Bambu Studio；這些都不屬於本次驗證範圍。
 
 代表性量測（box、2×2 與 5×5 grid）都產生有效 binary STL：box 為 684 B/12 triangles，2×2 為 459,084 B/9,180 triangles，5×5 為 2,697,684 B/53,952 triangles；輸出長度皆符合 `84 + triangleCount × 50`。
 
@@ -220,7 +231,7 @@ Prototype 驗收使用的自動化瀏覽器 binary 為 Chromium `151.0.7922.34` 
 
 ## 未來模型 catalog 的擴充
 
-目前 catalog 有 `box`、`modular-grid-base`、`hsw-cell`、`hexagonal-column`、`opengrid`、OpenGrid stackable models 與 `opengrid-organizer-box`。新增 component 時，在 `features/cad/model-catalog/components/` 建立獨立 `ModelDefinition`，在 `components/cad/component-panels/<component>/` 建立專屬調整頁面，再在 Worker-only 的 `cad-kernel/components/<component>/` 放 builder 與資產，最後由 catalog/kernel registry 掛入。UI 只消費 schema，不應把 B-Rep 邏輯放進 `CadWorkspace`。新模型必須另開 OpenSpec change，明確驗收參數單位、bounds、mesh、revision lifetime、STEP/STL filename 與錯誤流程，並維持既有 versioned Worker contract 與主執行緒/CAD Worker 邊界。
+目前 catalog 有 `box`、`modular-grid-base`、`hsw-cell`、`hexagonal-column`、`opengrid`、OpenGrid stackable models、`opengrid-organizer-box` 與 Wall-only `opengrid-wall-cover`。新增 component 時，在 `features/cad/model-catalog/components/` 建立獨立 `ModelDefinition`，在 `components/cad/component-panels/<component>/` 建立專屬調整頁面，再在 Worker-only 的 `cad-kernel/components/<component>/` 放 builder 與資產，最後由 catalog/kernel registry 掛入。UI 只消費 schema，不應把 B-Rep 邏輯放進 `CadWorkspace`。新模型必須另開 OpenSpec change，明確驗收參數單位、bounds、mesh、revision lifetime、STEP/STL filename 與錯誤流程，並維持既有 versioned Worker contract 與主執行緒/CAD Worker 邊界。
 
 ## OpenSpec 文件
 

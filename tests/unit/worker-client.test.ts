@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { validateMeshSnapshot } from '../../src/features/cad/worker-client'
+import {
+  validateMeshSnapshot,
+  validateModelPartMeshes,
+} from '../../src/features/cad/worker-client'
 
 function meshSnapshot() {
   return {
@@ -49,5 +52,22 @@ describe('Worker mesh boundary validation', () => {
         normals: normals.buffer,
       }),
     ).toBe(true)
+  })
+
+  it('accepts a complete body/text pair and rejects incomplete or malformed pairs', () => {
+    const partMeshes = [
+      { name: 'body' as const, mesh: meshSnapshot() },
+      { name: 'text' as const, mesh: meshSnapshot() },
+    ]
+    expect(validateModelPartMeshes(partMeshes, true)).toBe(true)
+    expect(validateModelPartMeshes(partMeshes.slice(0, 1), true)).toBe(false)
+    expect(
+      validateModelPartMeshes(
+        [{ name: 'text', mesh: { ...meshSnapshot(), triangleCount: 2 } }],
+        false,
+      ),
+    ).toBe(false)
+    expect(validateModelPartMeshes(undefined, false)).toBe(true)
+    expect(validateModelPartMeshes(undefined, true)).toBe(false)
   })
 })

@@ -22,6 +22,11 @@ export type MeshSnapshot = {
   triangleCount: number
 }
 
+export type ModelPartMeshSnapshot = {
+  name: 'body' | 'text'
+  mesh: MeshSnapshot
+}
+
 export type AssetMetadata = {
   wasmUrl: string
 }
@@ -85,6 +90,13 @@ export type ExportStlCommand = Envelope<'export.stl'> & {
   file: { name: string; mime: 'model/stl' }
 }
 
+export type ExportThreeMfCommand = Envelope<'export.3mf'> & {
+  operationId: string
+  modelRevision: string
+  workerEpoch: string
+  file: { name: string; mime: 'model/3mf' }
+}
+
 export type WorkerDisposeCommand = Envelope<'worker.dispose'> & {
   operationId: string
 }
@@ -97,6 +109,7 @@ export type WorkerCommand =
   | ModelDiscardCommand
   | ExportStepCommand
   | ExportStlCommand
+  | ExportThreeMfCommand
   | WorkerDisposeCommand
 
 export type WorkerCommandInput =
@@ -114,6 +127,8 @@ export type WorkerCommandInput =
       Partial<Pick<ExportStepCommand, 'version' | 'requestId'>>)
   | (Omit<ExportStlCommand, 'version' | 'requestId'> &
       Partial<Pick<ExportStlCommand, 'version' | 'requestId'>>)
+  | (Omit<ExportThreeMfCommand, 'version' | 'requestId'> &
+      Partial<Pick<ExportThreeMfCommand, 'version' | 'requestId'>>)
   | (Omit<WorkerDisposeCommand, 'version' | 'requestId'> &
       Partial<Pick<WorkerDisposeCommand, 'version' | 'requestId'>>)
 
@@ -162,6 +177,7 @@ export type ModelCandidateReadyEvent = Envelope<'model.candidate-ready'> & {
   modelId: ModelId
   parameters: ModelParameterValues
   mesh: MeshSnapshot
+  partMeshes?: ModelPartMeshSnapshot[]
   previewTiming?: PreviewTiming
 }
 
@@ -173,6 +189,7 @@ export type ModelReadyEvent = Envelope<'model.ready'> & {
   modelId: ModelId
   parameters: ModelParameterValues
   mesh?: MeshSnapshot
+  partMeshes?: ModelPartMeshSnapshot[]
   bounds: BoxBounds
   previewTiming?: PreviewTiming
 }
@@ -224,7 +241,13 @@ export type ExportStlReadyEvent = ExportReadyEventBase & {
   mime: 'model/stl'
 }
 
-export type ExportReadyEvent = ExportStepReadyEvent | ExportStlReadyEvent
+export type ExportThreeMfReadyEvent = ExportReadyEventBase & {
+  format: '3mf'
+  mime: 'model/3mf'
+}
+
+export type ExportReadyEvent =
+  ExportStepReadyEvent | ExportStlReadyEvent | ExportThreeMfReadyEvent
 
 export type WorkerEvent =
   | EngineReadyEvent
@@ -374,6 +397,12 @@ function isExportReadyEvent(value: Record<string, unknown>): boolean {
       value.fileName.endsWith(PROTOTYPE_CONFIGURATION.stlExtension)
     )
   }
+  if (value.format === '3mf') {
+    return (
+      value.mime === PROTOTYPE_CONFIGURATION.threeMfMime &&
+      value.fileName.endsWith(PROTOTYPE_CONFIGURATION.threeMfExtension)
+    )
+  }
   return false
 }
 
@@ -401,6 +430,23 @@ function isMesh(value: unknown): value is MeshSnapshot {
     isNonNegativeInteger(value.triangleCount) &&
     value.triangleCount > 0
   )
+}
+
+function isPartMeshes(value: unknown): value is ModelPartMeshSnapshot[] {
+  if (!Array.isArray(value) || value.length === 0) return false
+  const names = new Set<string>()
+  for (const item of value) {
+    if (
+      !isRecord(item) ||
+      (item.name !== 'body' && item.name !== 'text') ||
+      names.has(item.name) ||
+      !isMesh(item.mesh)
+    ) {
+      return false
+    }
+    names.add(item.name)
+  }
+  return true
 }
 
 function isPreviewTiming(value: unknown): value is PreviewTiming {
@@ -458,6 +504,7 @@ const CAD_ERROR_CODES: readonly CadErrorCode[] = [
   'OPENGRID_QUALITY_INVALID',
   'OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID',
   'OPENGRID_SNAP_QUALITY_INVALID',
+  'OPENGRID_WALL_COVER_QUALITY_INVALID',
   'OPENGRID_DIVIDER_QUALITY_INVALID',
   'MODEL_BUILD_FAILED',
   'MODEL_ASSET_INVALID',
@@ -471,6 +518,8 @@ const CAD_ERROR_CODES: readonly CadErrorCode[] = [
   'STEP_METADATA_INVALID',
   'STL_EXPORT_FAILED',
   'STL_METADATA_INVALID',
+  'THREEMF_EXPORT_FAILED',
+  'THREEMF_METADATA_INVALID',
   'UNKNOWN_ERROR',
 ]
 
@@ -541,6 +590,12 @@ export function isWorkerCommand(value: unknown): value is WorkerCommand {
         PROTOTYPE_CONFIGURATION.stlExtension,
         PROTOTYPE_CONFIGURATION.stlMime,
       )
+    case 'export.3mf':
+      return isExportCommand(
+        value,
+        PROTOTYPE_CONFIGURATION.threeMfExtension,
+        PROTOTYPE_CONFIGURATION.threeMfMime,
+      )
     case 'worker.dispose':
       return true
     default:
@@ -592,6 +647,7 @@ export function isWorkerEvent(value: unknown): value is WorkerEvent {
         isNonEmptyString(value.workerEpoch) &&
         validateModelParameters(value.modelId, value.parameters).valid &&
         isMesh(value.mesh) &&
+        (value.partMeshes === undefined || isPartMeshes(value.partMeshes)) &&
         isOptionalPreviewTiming(value.previewTiming)
       )
     case 'model.ready':
@@ -603,6 +659,7 @@ export function isWorkerEvent(value: unknown): value is WorkerEvent {
         isNonEmptyString(value.workerEpoch) &&
         validateModelParameters(value.modelId, value.parameters).valid &&
         (value.mesh === undefined || isMesh(value.mesh)) &&
+        (value.partMeshes === undefined || isPartMeshes(value.partMeshes)) &&
         isBounds(value.bounds) &&
         isOptionalPreviewTiming(value.previewTiming)
       )
@@ -652,8 +709,22 @@ export function isWorkerEvent(value: unknown): value is WorkerEvent {
 
 export function transferablesForEvent(event: WorkerEvent): Transferable[] {
   if (event.kind === 'model.candidate-ready' || event.kind === 'model.ready') {
-    if (!event.mesh) return []
-    return [event.mesh.positions, event.mesh.normals, event.mesh.indices]
+    const transferables: Transferable[] = []
+    if (event.mesh) {
+      transferables.push(
+        event.mesh.positions,
+        event.mesh.normals,
+        event.mesh.indices,
+      )
+    }
+    for (const part of event.partMeshes ?? []) {
+      transferables.push(
+        part.mesh.positions,
+        part.mesh.normals,
+        part.mesh.indices,
+      )
+    }
+    return transferables
   }
   if (event.kind === 'export.ready') return [event.bytes]
   return []

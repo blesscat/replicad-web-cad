@@ -372,4 +372,89 @@ describe('CAD Worker progress lifecycle', () => {
     })
     expect(refs.operations.current.has('operation-2')).toBe(false)
   })
+
+  it('does not commit a Wall Cover candidate without both named part meshes', () => {
+    const { context, refs } = createContext()
+    const send = vi.fn()
+    refs.client.current = { send } as never
+    refs.operations.current.set('operation-2', {
+      kind: 'model',
+      generation: 2,
+      modelId: 'opengrid-wall-cover',
+      parameters: {},
+      requestId: 'request-2',
+    })
+    const handle = createWorkerEventHandler(context)
+    const mesh: MeshSnapshot = {
+      positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]).buffer,
+      normals: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]).buffer,
+      indices: new Uint32Array([0, 1, 2]).buffer,
+      bounds: { min: [0, 0, 0], max: [1, 1, 0] },
+      triangleCount: 1,
+    }
+
+    handle({
+      version: 2,
+      kind: 'model.candidate-ready',
+      requestId: 'cover-candidate-response',
+      operationId: 'operation-2',
+      generation: 2,
+      candidateId: 'cover-candidate-1',
+      workerEpoch: 'epoch-test',
+      modelId: 'opengrid-wall-cover',
+      parameters: {},
+      mesh,
+    })
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'model.discard',
+        candidateId: 'cover-candidate-1',
+      }),
+    )
+    expect(context.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'recoverable-error' }),
+    )
+  })
+
+  it('discards a candidate whose model metadata does not match the operation', () => {
+    const { context, refs } = createContext()
+    const send = vi.fn()
+    refs.client.current = { send } as never
+    const handle = createWorkerEventHandler(context)
+    const mesh: MeshSnapshot = {
+      positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]).buffer,
+      normals: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]).buffer,
+      indices: new Uint32Array([0, 1, 2]).buffer,
+      bounds: { min: [0, 0, 0], max: [1, 1, 0] },
+      triangleCount: 1,
+    }
+
+    handle({
+      version: 2,
+      kind: 'model.candidate-ready',
+      requestId: 'mismatched-candidate-response',
+      operationId: 'operation-2',
+      generation: 2,
+      candidateId: 'mismatched-candidate-1',
+      workerEpoch: 'epoch-test',
+      modelId: 'opengrid-wall-cover',
+      parameters: {},
+      mesh,
+      partMeshes: [
+        { name: 'body', mesh },
+        { name: 'text', mesh },
+      ],
+    })
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'model.discard',
+        candidateId: 'mismatched-candidate-1',
+      }),
+    )
+    expect(context.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'recoverable-error' }),
+    )
+  })
 })

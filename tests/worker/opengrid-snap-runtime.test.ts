@@ -2,16 +2,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   buildModelBRep: vi.fn(),
+  buildModelBRepWithParts: vi.fn(),
   initialiseCadKernel: vi.fn(),
   meshBRep: vi.fn(),
   serializeMesh: vi.fn(),
   assertOpenGridSnapShapeQuality: vi.fn(),
   assertOpenGridSnapOpenConnectShapeQuality: vi.fn(),
+  assertOpenGridWallCoverShapeQuality: vi.fn(),
   loadOpenGridSnapReference: vi.fn(),
   loadOpenGridSnapFixedFootprint: vi.fn(),
   loadOpenGridSnapOpenConnectHead: vi.fn(),
   exportStepBytes: vi.fn(),
   exportStlBytes: vi.fn(),
+  exportThreeMfBytes: vi.fn(),
+  isThreeMfPackage: vi.fn(),
 }))
 
 vi.mock('../../src/cad-kernel/initialise', () => ({
@@ -19,6 +23,7 @@ vi.mock('../../src/cad-kernel/initialise', () => ({
 }))
 vi.mock('../../src/cad-kernel/model', () => ({
   buildModelBRep: mocks.buildModelBRep,
+  buildModelBRepWithParts: mocks.buildModelBRepWithParts,
 }))
 vi.mock('../../src/cad-kernel/mesh', () => ({
   meshBRep: mocks.meshBRep,
@@ -32,6 +37,10 @@ vi.mock('../../src/cad-kernel/components/opengrid-snap/quality', () => ({
   assertOpenGridSnapOpenConnectShapeQuality:
     mocks.assertOpenGridSnapOpenConnectShapeQuality,
 }))
+vi.mock('../../src/cad-kernel/components/opengrid-wall-cover/quality', () => ({
+  assertOpenGridWallCoverShapeQuality:
+    mocks.assertOpenGridWallCoverShapeQuality,
+}))
 vi.mock('../../src/cad-kernel/components/opengrid-snap/builder', () => ({
   loadOpenGridSnapReference: mocks.loadOpenGridSnapReference,
   loadOpenGridSnapFixedFootprint: mocks.loadOpenGridSnapFixedFootprint,
@@ -40,12 +49,15 @@ vi.mock('../../src/cad-kernel/components/opengrid-snap/builder', () => ({
 vi.mock('../../src/cad-kernel/export', () => ({
   exportStepBytes: mocks.exportStepBytes,
   exportStlBytes: mocks.exportStlBytes,
+  exportThreeMfBytes: mocks.exportThreeMfBytes,
+  isThreeMfPackage: mocks.isThreeMfPackage,
 }))
 
 import { CadWorkerRuntime } from '../../src/workers/cad.worker'
 import {
   openGridSnapFileName,
   openGridSnapStlFileName,
+  openGridWallCoverThreeMfFileName,
   type OpenGridSnapParameters,
 } from '../../src/cad-contract/units'
 
@@ -66,6 +78,7 @@ function snapParameters(
       | 'fourCornerLocatingHoles'
       | 'centerRemoverHole'
       | 'openConnect'
+      | 'topText'
       | 'magnetHoleShape'
       | 'magnetHoleLength'
       | 'magnetHoleWidth'
@@ -83,6 +96,7 @@ function snapParameters(
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
     openConnect: fixedFootprintOpenConnect,
+    topText: 'none',
     magnetHoleShape: 'none',
     magnetHoleLength: 0,
     magnetHoleWidth: 0,
@@ -118,6 +132,19 @@ function generateCommand(
   }
 }
 
+function generateWallCoverCommand(generation = 1) {
+  return {
+    ...base,
+    requestId: `wall-cover-request-${generation}`,
+    operationId: `wall-cover-operation-${generation}`,
+    kind: 'model.generate' as const,
+    generation,
+    modelId: 'opengrid-wall-cover' as const,
+    parameters: {},
+    previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
+  }
+}
+
 function configureMocks() {
   mocks.initialiseCadKernel.mockResolvedValue(undefined)
   mocks.meshBRep.mockImplementation((shape: { bounds?: unknown }) => ({
@@ -135,6 +162,14 @@ function configureMocks() {
     triangleCount: mesh.triangleCount,
   }))
   mocks.buildModelBRep.mockImplementation(async () => ({ delete: vi.fn() }))
+  mocks.buildModelBRepWithParts.mockImplementation(async () => ({
+    shape: { delete: vi.fn() },
+    qualityShape: { delete: vi.fn() },
+    parts: [
+      { name: 'body', shape: { delete: vi.fn() } },
+      { name: 'text', shape: { delete: vi.fn() } },
+    ],
+  }))
   mocks.loadOpenGridSnapReference.mockImplementation(async () => ({
     delete: vi.fn(),
   }))
@@ -146,6 +181,10 @@ function configureMocks() {
   }))
   mocks.exportStepBytes.mockResolvedValue(new Uint8Array([1, 2, 3]).buffer)
   mocks.exportStlBytes.mockResolvedValue(new Uint8Array([4, 5, 6]).buffer)
+  mocks.exportThreeMfBytes.mockResolvedValue(
+    new Uint8Array([0x50, 0x4b, 0x03, 0x04]).buffer,
+  )
+  mocks.isThreeMfPackage.mockReturnValue(true)
 }
 
 describe('OpenGrid Snap Worker runtime', () => {
@@ -194,6 +233,18 @@ describe('OpenGrid Snap Worker runtime', () => {
       mocks.assertOpenGridSnapOpenConnectShapeQuality,
     ).toHaveBeenCalledTimes(4)
     expect(mocks.assertOpenGridSnapShapeQuality).not.toHaveBeenCalled()
+    const snapCandidates = events.filter(
+      (
+        event,
+      ): event is { kind: 'model.candidate-ready'; partMeshes?: unknown } =>
+        typeof event === 'object' &&
+        event !== null &&
+        'kind' in event &&
+        event.kind === 'model.candidate-ready',
+    )
+    expect(
+      snapCandidates.every((event) => event.partMeshes === undefined),
+    ).toBe(true)
     expect(events).toContainEqual(
       expect.objectContaining({
         kind: 'model.candidate-ready',
@@ -201,6 +252,44 @@ describe('OpenGrid Snap Worker runtime', () => {
         parameters: snapParameters('Lite', 0),
       }),
     )
+  })
+
+  it('normalizes a legacy Snap text command before protocol validation', async () => {
+    const events: unknown[] = []
+    const runtime = new CadWorkerRuntime('epoch-snap-legacy-text', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(
+      generateCommand(snapParameters('Lite', 0, 'full', { topText: 'SNAP' })),
+    )
+
+    expect(events).not.toContainEqual(
+      expect.objectContaining({
+        kind: 'operation.error',
+        code: 'PROTOCOL_INVALID',
+      }),
+    )
+    expect(mocks.buildModelBRep).toHaveBeenCalledWith(
+      'opengrid-snap',
+      expect.objectContaining({ topText: 'none' }),
+      expect.anything(),
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'model.candidate-ready',
+        modelId: 'opengrid-snap',
+        parameters: expect.objectContaining({ topText: 'none' }),
+      }),
+    )
+    const candidate = events.find(
+      (event) =>
+        typeof event === 'object' &&
+        event !== null &&
+        'kind' in event &&
+        event.kind === 'model.candidate-ready',
+    ) as { partMeshes?: unknown } | undefined
+    expect(candidate?.partMeshes).toBeUndefined()
   })
 
   it('uses fixed footprint assets for Half and Quarter previews', async () => {
@@ -544,6 +633,95 @@ describe('OpenGrid Snap Worker runtime', () => {
           event.kind === 'export.ready',
       ),
     ).toHaveLength(2)
+  })
+
+  it('exports the committed Wall Cover revision as multipart 3MF', async () => {
+    const events: unknown[] = []
+    const runtime = new CadWorkerRuntime('epoch-wall-cover-3mf', (event) =>
+      events.push(event),
+    )
+    await runtime.handle(initCommand())
+    await runtime.handle(generateWallCoverCommand())
+
+    const candidate = events.find(
+      (event) =>
+        typeof event === 'object' &&
+        event !== null &&
+        'kind' in event &&
+        event.kind === 'model.candidate-ready',
+    ) as
+      | {
+          candidateId: string
+          partMeshes?: Array<{ name: string }>
+        }
+      | undefined
+    expect(candidate).toBeDefined()
+    expect(candidate?.partMeshes?.map((part) => part.name)).toEqual([
+      'body',
+      'text',
+    ])
+    await runtime.handle({
+      ...base,
+      requestId: 'wall-cover-3mf-commit-request',
+      operationId: 'wall-cover-3mf-commit-operation',
+      kind: 'model.commit' as const,
+      generation: 1,
+      candidateId: candidate!.candidateId,
+      workerEpoch: 'epoch-wall-cover-3mf',
+    })
+
+    const ready = events.find(
+      (event) =>
+        typeof event === 'object' &&
+        event !== null &&
+        'kind' in event &&
+        event.kind === 'model.ready',
+    ) as
+      | {
+          modelRevision: string
+          mesh?: unknown
+          partMeshes?: Array<{ name: string }>
+        }
+      | undefined
+    expect(ready).toBeDefined()
+    expect(ready?.mesh).toBeDefined()
+    expect(ready?.partMeshes?.map((part) => part.name)).toEqual([
+      'body',
+      'text',
+    ])
+
+    await runtime.handle({
+      ...base,
+      requestId: 'wall-cover-3mf-export-request',
+      operationId: 'wall-cover-3mf-export-operation',
+      kind: 'export.3mf' as const,
+      modelRevision: ready!.modelRevision,
+      workerEpoch: 'epoch-wall-cover-3mf',
+      file: {
+        name: openGridWallCoverThreeMfFileName({}),
+        mime: 'model/3mf' as const,
+      },
+    })
+
+    expect(mocks.buildModelBRepWithParts).toHaveBeenCalledOnce()
+    expect(mocks.exportThreeMfBytes).toHaveBeenCalledOnce()
+    expect(
+      events.filter(
+        (event) =>
+          typeof event === 'object' &&
+          event !== null &&
+          'kind' in event &&
+          event.kind === 'export.ready',
+      ),
+    ).toHaveLength(1)
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'export.ready',
+        format: '3mf',
+        mime: 'model/3mf',
+        fileName: 'opengrid-wall-cover.3mf',
+      }),
+    )
   })
 
   it('disposes loaded variant references once', async () => {

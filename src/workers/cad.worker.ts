@@ -1,9 +1,16 @@
-import { exportStlBytes, exportStepBytes } from '../cad-kernel/export'
+import {
+  exportStlBytes,
+  exportStepBytes,
+  exportThreeMfBytes,
+  isThreeMfPackage,
+} from '../cad-kernel/export'
 import { initialiseCadKernel } from '../cad-kernel/initialise'
 import type { Shape3D } from 'replicad'
 import {
   RevisionLifetime,
   type CandidateRecord,
+  type NativeModelPart,
+  type NativeModelPartMesh,
   type RevisionRecord,
 } from '../cad-kernel/lifetime'
 import { loadHswCellTemplate } from '../cad-kernel/components/hsw-cell/builder'
@@ -25,8 +32,14 @@ import {
   loadOpenGridDetachableCornerSeatHolderReference,
   loadOpenGridDetachableCornerSeatReference,
 } from '../cad-kernel/components/opengrid-locating-assembly/reference'
-import { buildModelBRep, type KernelBuildContext } from '../cad-kernel/model'
+import {
+  buildModelBRep,
+  buildModelBRepWithParts,
+  type KernelBuildContext,
+  type KernelModelBuildResult,
+} from '../cad-kernel/model'
 import { assertOpenGridShapeQuality } from '../cad-kernel/components/opengrid/quality'
+import { assertOpenGridWallCoverShapeQuality } from '../cad-kernel/components/opengrid-wall-cover/quality'
 import {
   assertOpenGridSnapOpenConnectShapeQuality,
   assertOpenGridSnapShapeQuality,
@@ -43,9 +56,11 @@ import {
 import { PreviewTimingRecorder } from '../cad-contract/preview-timing'
 import {
   errorEvent,
+  isWorkerEvent,
   isWorkerCommand,
   PROTOCOL_VERSION,
   type BooleanOperationProgress,
+  type ModelPartMeshSnapshot,
   type ProgressUnit,
   type ProgressEvent,
   type WorkerCommand,
@@ -63,6 +78,9 @@ import {
 import {
   modelFileName,
   modelStlFileName,
+  openGridWallCoverThreeMfFileName,
+  boundsForOpenGridSnap,
+  boundsForOpenGridWallCover,
   isHswCellParameters,
   isOpenGridDividerModelParameters,
   isOpenGridOpenShelfParameters,
@@ -77,6 +95,7 @@ import {
   type OpenGridVariant,
   type OpenGridSnapVariant,
   isOpenGridSnapParameters,
+  isOpenGridWallCoverParameters,
   isPillarParameters,
   validateOpenGridGenerationSupport,
   validateModelParameters,
@@ -112,6 +131,53 @@ type CandidateTerminal = {
 
 function id(): string {
   return crypto.randomUUID()
+}
+
+function normalizeLegacyWorkerCommand(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return value
+  }
+  const command = value as Record<string, unknown>
+  if (
+    command.kind !== 'model.generate' ||
+    command.modelId !== 'opengrid-snap' ||
+    typeof command.parameters !== 'object' ||
+    command.parameters === null ||
+    Array.isArray(command.parameters)
+  ) {
+    return value
+  }
+  const parameters = command.parameters as Record<string, unknown>
+  if (parameters.topText !== 'SNAP') return value
+  return {
+    ...command,
+    parameters: { ...parameters, topText: 'none' },
+  }
+}
+
+function deleteShape(shape: { delete?: () => void } | null | undefined): void {
+  try {
+    shape?.delete?.()
+  } catch {
+    // Keep the original Worker error when native cleanup is already incomplete.
+  }
+}
+
+function deleteBuildShapes(
+  shape: Shape3D | null | undefined,
+  qualityShape: Shape3D | null | undefined,
+  parts: readonly NativeModelPart[] | undefined,
+): void {
+  const deleted = new Set<Shape3D>()
+  for (const candidate of [
+    shape,
+    qualityShape,
+    ...(parts ?? []).map((part) => part.shape),
+  ]) {
+    if (!candidate || deleted.has(candidate)) continue
+    deleted.add(candidate)
+    deleteShape(candidate)
+  }
 }
 
 function makeError(
@@ -178,6 +244,21 @@ export class CadWorkerRuntime {
   // commit/discard messages cannot release a candidate twice or invent a new terminal id.
   private readonly candidateTerminals = new Map<string, CandidateTerminal>()
 
+  private rememberCandidateTerminal(
+    candidateId: string,
+    terminal: CandidateTerminal,
+  ): void {
+    this.candidateTerminals.set(candidateId, terminal)
+    while (
+      this.candidateTerminals.size >
+      PROTOTYPE_CONFIGURATION.pendingCandidateLimit
+    ) {
+      const oldestCandidateId = this.candidateTerminals.keys().next().value
+      if (oldestCandidateId === undefined) break
+      this.candidateTerminals.delete(oldestCandidateId)
+    }
+  }
+
   constructor(
     private readonly epoch: string = `epoch-${id()}`,
     private readonly emit: EventSink = () => undefined,
@@ -191,7 +272,8 @@ export class CadWorkerRuntime {
   }
 
   async handle(value: unknown): Promise<void> {
-    if (!isWorkerCommand(value)) {
+    const normalizedValue = normalizeLegacyWorkerCommand(value)
+    if (!isWorkerCommand(normalizedValue)) {
       this.emit({
         version: PROTOCOL_VERSION,
         kind: 'operation.error',
@@ -205,11 +287,12 @@ export class CadWorkerRuntime {
       })
       return
     }
+    const command = normalizedValue
 
-    if (this.disposed && value.kind !== 'worker.dispose') {
+    if (this.disposed && command.kind !== 'worker.dispose') {
       this.emit(
         errorEvent(
-          value,
+          command,
           makeError(
             'worker',
             'WORKER_TERMINATED',
@@ -222,27 +305,30 @@ export class CadWorkerRuntime {
     }
 
     try {
-      switch (value.kind) {
+      switch (command.kind) {
         case 'engine.init':
-          await this.initialize(value)
+          await this.initialize(command)
           return
         case 'model.generate':
-          await this.generate(value)
+          await this.generate(command)
           return
         case 'model.invalidate':
-          this.invalidate(value)
+          this.invalidate(command)
           return
         case 'model.commit':
-          this.commit(value)
+          this.commit(command)
           return
         case 'model.discard':
-          this.discard(value)
+          this.discard(command)
           return
         case 'export.step':
-          await this.exportStep(value)
+          await this.exportStep(command)
           return
         case 'export.stl':
-          await this.exportStl(value)
+          await this.exportStl(command)
+          return
+        case 'export.3mf':
+          await this.exportThreeMf(command)
           return
         case 'worker.dispose':
           if (this.disposed) return
@@ -268,7 +354,7 @@ export class CadWorkerRuntime {
           return
       }
     } catch (error) {
-      this.emit(errorEvent(value, this.toCadError(error, value)))
+      this.emit(errorEvent(command, this.toCadError(error, command)))
     }
   }
 
@@ -364,6 +450,9 @@ export class CadWorkerRuntime {
         : undefined
     this.emitProgress(command, 'building', undefined, hswProgress)
     let shape: Shape3D
+    let qualityShape: Shape3D | null = null
+    let nativeParts: NativeModelPart[] | undefined
+    let nativePartMeshes: NativeModelPartMesh[] | undefined
     try {
       const {
         useOpenGridCanonicalTileCache = true,
@@ -414,9 +503,29 @@ export class CadWorkerRuntime {
         buildContext.getOpenGridHalfCellPrototype = (key, factory) =>
           this.getOpenGridHalfCellPrototype(key, factory)
       }
-      shape = await timing.measure('build', () =>
-        buildModelBRep(command.modelId, generationParameters, buildContext),
+      const usesWallCoverParts = command.modelId === 'opengrid-wall-cover'
+      const buildResult: KernelModelBuildResult = await timing.measure(
+        'build',
+        async () => {
+          if (usesWallCoverParts) {
+            return buildModelBRepWithParts(
+              command.modelId,
+              generationParameters,
+              buildContext,
+            )
+          }
+          return {
+            shape: await buildModelBRep(
+              command.modelId,
+              generationParameters,
+              buildContext,
+            ),
+          }
+        },
       )
+      shape = buildResult.shape
+      qualityShape = buildResult.qualityShape ?? shape
+      nativeParts = buildResult.parts
     } catch (error) {
       if (error instanceof Error && error.message === 'STALE_GENERATION') {
         this.superseded(command, 'STALE_GENERATION')
@@ -428,7 +537,7 @@ export class CadWorkerRuntime {
       command.generation !== this.latestInputGeneration ||
       this.invalidatedGeneration === command.generation
     ) {
-      shape.delete()
+      deleteBuildShapes(shape, qualityShape, nativeParts)
       this.superseded(command, 'STALE_GENERATION')
       return
     }
@@ -443,6 +552,13 @@ export class CadWorkerRuntime {
           }),
       )
       this.emitProgress(command, 'meshing')
+      const qualityMesh =
+        qualityShape && qualityShape !== shape
+          ? meshBRep(qualityShape, {
+              ...command.previewConfig,
+              reportFaceProgress,
+            })
+          : null
       try {
         mesh = timing.measureSync('mesh', () =>
           meshBRep(shape, {
@@ -479,21 +595,53 @@ export class CadWorkerRuntime {
           timing.measureSync('quality', () => {
             if (generationParameters.openConnect) {
               assertOpenGridSnapOpenConnectShapeQuality(
-                shape,
+                qualityShape ?? shape,
                 generationParameters,
-                mesh,
+                qualityMesh ?? mesh,
                 reference,
               )
               return
             }
             assertOpenGridSnapShapeQuality(
-              shape,
+              qualityShape ?? shape,
               generationParameters,
-              mesh,
+              qualityMesh ?? mesh,
               reference,
             )
           })
         }
+      }
+
+      if (command.modelId === 'opengrid-wall-cover') {
+        if (!isOpenGridWallCoverParameters(generationParameters)) {
+          throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-wall-cover')
+        }
+        const bodyPart = nativeParts?.find((part) => part.name === 'body')
+        const textPart = nativeParts?.find((part) => part.name === 'text')
+        if (!bodyPart || !textPart) {
+          throw new Error('OPENGRID_WALL_COVER_PARTS_INVALID')
+        }
+        const bodyMesh = meshBRep(bodyPart.shape, command.previewConfig)
+        const textMesh = meshBRep(textPart.shape, command.previewConfig)
+        nativePartMeshes = [
+          { name: 'body', mesh: bodyMesh },
+          { name: 'text', mesh: textMesh },
+        ]
+        mesh.bounds = boundsForOpenGridWallCover(generationParameters)
+        const reference = await this.getOpenGridSnapReference(
+          'Lite',
+          'Standard',
+        )
+        timing.measureSync('quality', () =>
+          assertOpenGridWallCoverShapeQuality(
+            qualityShape ?? shape,
+            bodyPart.shape,
+            textPart.shape,
+            bodyMesh,
+            textMesh,
+            reference,
+          ),
+        )
       }
 
       if (command.modelId === 'opengrid-divider') {
@@ -545,12 +693,12 @@ export class CadWorkerRuntime {
           ),
         )
       }
-    } catch (error) {
-      try {
-        shape.delete()
-      } catch {
-        // A failed native delete must not hide the original mesh error.
+      if (qualityShape && qualityShape !== shape) {
+        deleteShape(qualityShape)
+        qualityShape = null
       }
+    } catch (error) {
+      deleteBuildShapes(shape, qualityShape, nativeParts)
       throw error
     }
     const candidate: CandidateRecord = {
@@ -562,6 +710,8 @@ export class CadWorkerRuntime {
       modelId: command.modelId,
       parameters: generationParameters,
       shape,
+      parts: nativeParts,
+      partMeshes: nativePartMeshes,
       mesh,
       previewTiming: timing.snapshot(),
       createdAt: Date.now(),
@@ -584,31 +734,51 @@ export class CadWorkerRuntime {
       this.scheduleCandidateCleanup(candidate)
     })
     let meshSnapshot: ReturnType<typeof serializeMesh>
+    let partMeshSnapshots: ModelPartMeshSnapshot[] | undefined
     try {
       meshSnapshot = timing.measureSync('serialization', () =>
         serializeMesh(mesh),
       )
+      partMeshSnapshots = candidate.partMeshes?.map((part) => ({
+        name: part.name as 'body' | 'text',
+        mesh: serializeMesh(part.mesh),
+      }))
       candidate.previewTiming = timing.snapshot()
     } catch (error) {
-      this.lifetime.discardCandidate(candidate.candidateId)
+      this.discardCandidateAfterFailure(candidate.candidateId)
       throw error
     }
-    this.emit(
-      {
-        version: PROTOCOL_VERSION,
-        kind: 'model.candidate-ready',
-        requestId: id(),
-        operationId: command.operationId,
-        generation: command.generation,
-        candidateId: candidate.candidateId,
-        workerEpoch: this.epoch,
-        modelId: candidate.modelId,
-        parameters: candidate.parameters,
-        mesh: meshSnapshot,
-        previewTiming: candidate.previewTiming,
-      },
-      [meshSnapshot.positions, meshSnapshot.normals, meshSnapshot.indices],
-    )
+    const candidateEvent: WorkerEvent = {
+      version: PROTOCOL_VERSION,
+      kind: 'model.candidate-ready',
+      requestId: id(),
+      operationId: command.operationId,
+      generation: command.generation,
+      candidateId: candidate.candidateId,
+      workerEpoch: this.epoch,
+      modelId: candidate.modelId,
+      parameters: candidate.parameters,
+      mesh: meshSnapshot,
+      partMeshes: partMeshSnapshots,
+      previewTiming: candidate.previewTiming,
+    }
+    if (!isWorkerEvent(candidateEvent)) {
+      this.discardCandidateAfterFailure(candidate.candidateId)
+      throw new Error('MESH_INVALID')
+    }
+    const candidateTransferables: Transferable[] = [
+      meshSnapshot.positions,
+      meshSnapshot.normals,
+      meshSnapshot.indices,
+    ]
+    for (const part of partMeshSnapshots ?? []) {
+      candidateTransferables.push(
+        part.mesh.positions,
+        part.mesh.normals,
+        part.mesh.indices,
+      )
+    }
+    this.emit(candidateEvent, candidateTransferables)
   }
 
   private invalidate(
@@ -701,19 +871,59 @@ export class CadWorkerRuntime {
     command: Extract<WorkerCommand, { kind: 'model.commit' }>,
     revision: RevisionRecord,
   ): void {
-    this.emit({
-      version: PROTOCOL_VERSION,
-      kind: 'model.ready',
-      requestId: id(),
-      operationId: command.operationId,
-      generation: revision.generation,
-      modelRevision: revision.modelRevision,
-      workerEpoch: this.epoch,
-      modelId: revision.modelId,
-      parameters: revision.parameters,
-      bounds: revision.mesh.bounds,
-      previewTiming: revision.previewTiming,
-    })
+    let readyEvent: WorkerEvent
+    let readyMesh: ReturnType<typeof serializeMesh> | undefined
+    let readyPartMeshes: ModelPartMeshSnapshot[] | undefined
+    try {
+      if (revision.modelId === 'opengrid-wall-cover') {
+        readyMesh = serializeMesh(revision.mesh)
+      }
+      readyPartMeshes = revision.partMeshes?.map((part) => ({
+        name: part.name as 'body' | 'text',
+        mesh: serializeMesh(part.mesh),
+      }))
+      const candidateEvent: WorkerEvent = {
+        version: PROTOCOL_VERSION,
+        kind: 'model.ready',
+        requestId: id(),
+        operationId: command.operationId,
+        generation: revision.generation,
+        modelRevision: revision.modelRevision,
+        workerEpoch: this.epoch,
+        modelId: revision.modelId,
+        parameters: revision.parameters,
+        ...(readyMesh ? { mesh: readyMesh } : {}),
+        partMeshes: readyPartMeshes,
+        bounds: revision.mesh.bounds,
+        previewTiming: revision.previewTiming,
+      }
+      if (!isWorkerEvent(candidateEvent)) throw new Error('MESH_INVALID')
+      readyEvent = candidateEvent
+    } catch (error) {
+      this.lifetime.abortRevision(revision.modelRevision)
+      throw error
+    }
+    const transferables: Transferable[] = []
+    if (readyMesh) {
+      transferables.push(
+        readyMesh.positions,
+        readyMesh.normals,
+        readyMesh.indices,
+      )
+    }
+    for (const part of readyPartMeshes ?? []) {
+      transferables.push(
+        part.mesh.positions,
+        part.mesh.normals,
+        part.mesh.indices,
+      )
+    }
+    this.emit(readyEvent, transferables)
+  }
+
+  private discardCandidateAfterFailure(candidateId: string): void {
+    this.clearCandidateTimer(candidateId)
+    this.lifetime.discardCandidate(candidateId)
   }
 
   private discard(
@@ -823,6 +1033,78 @@ export class CadWorkerRuntime {
     }
   }
 
+  private async exportThreeMf(
+    command: Extract<WorkerCommand, { kind: 'export.3mf' }>,
+  ): Promise<void> {
+    if (command.workerEpoch !== this.epoch) throw new Error('WORKER_RESTARTED')
+    const revision = this.lifetime.pin(command.modelRevision)
+    try {
+      const validation = validateModelParameters(
+        revision.modelId,
+        revision.parameters,
+      )
+      if (
+        !validation.valid ||
+        revision.modelId !== 'opengrid-wall-cover' ||
+        !isOpenGridWallCoverParameters(validation.value.parameters)
+      ) {
+        throw new Error('THREEMF_METADATA_INVALID')
+      }
+      if (
+        command.file.name !==
+        openGridWallCoverThreeMfFileName(validation.value.parameters)
+      ) {
+        throw new Error('THREEMF_METADATA_INVALID')
+      }
+      const parts = revision.parts
+      if (
+        !parts ||
+        parts.length !== 2 ||
+        parts[0]?.name !== 'body' ||
+        parts[1]?.name !== 'text'
+      ) {
+        throw new Error('THREEMF_PARTS_INVALID')
+      }
+      const threeMfParts = [
+        { name: 'body' as const, shape: parts[0].shape },
+        { name: 'text' as const, shape: parts[1].shape },
+      ]
+      this.emit({
+        version: PROTOCOL_VERSION,
+        kind: 'export.accepted',
+        requestId: id(),
+        operationId: command.operationId,
+        modelRevision: revision.modelRevision,
+        workerEpoch: this.epoch,
+      })
+      this.emitProgress(command, 'exporting', revision.modelRevision)
+      const bytes = await exportThreeMfBytes(threeMfParts, {
+        tolerance: PROTOTYPE_CONFIGURATION.stlTolerance,
+        angularTolerance: PROTOTYPE_CONFIGURATION.stlAngularTolerance,
+      })
+      if (bytes.byteLength === 0 || !isThreeMfPackage(bytes)) {
+        throw new Error('THREEMF_EXPORT_FAILED')
+      }
+      this.emit(
+        {
+          version: PROTOCOL_VERSION,
+          kind: 'export.ready',
+          requestId: id(),
+          operationId: command.operationId,
+          modelRevision: revision.modelRevision,
+          workerEpoch: this.epoch,
+          format: '3mf',
+          bytes,
+          mime: PROTOTYPE_CONFIGURATION.threeMfMime,
+          fileName: command.file.name,
+        },
+        [bytes],
+      )
+    } finally {
+      this.lifetime.unpin(revision.modelRevision)
+    }
+  }
+
   private emitProgress(
     command: { operationId: string; requestId: string; generation?: number },
     stage: 'loading' | 'building' | 'meshing' | 'exporting',
@@ -875,7 +1157,7 @@ export class CadWorkerRuntime {
       generation: candidate.generation,
       reason,
     } satisfies CandidateTerminal
-    this.candidateTerminals.set(candidate.candidateId, terminal)
+    this.rememberCandidateTerminal(candidate.candidateId, terminal)
     this.emit({
       version: PROTOCOL_VERSION,
       kind: 'operation.superseded',
@@ -1289,6 +1571,13 @@ export class CadWorkerRuntime {
           : 'diagnostic.stlExportFailed'
       return makeError(stage, code, diagnostic(messageId), true)
     }
+    if (command.kind === 'export.3mf') {
+      const messageId =
+        code === 'THREEMF_METADATA_INVALID'
+          ? 'diagnostic.threeMfMetadataInvalid'
+          : 'diagnostic.threeMfExportFailed'
+      return makeError(stage, code, diagnostic(messageId), true)
+    }
     if (code === 'OPENGRID_UNSUPPORTED_CONFIGURATION') {
       return makeError(
         'validation',
@@ -1329,6 +1618,14 @@ export class CadWorkerRuntime {
         'meshing',
         code,
         diagnostic('diagnostic.snapQualityInvalid'),
+        true,
+      )
+    }
+    if (code === 'OPENGRID_WALL_COVER_QUALITY_INVALID') {
+      return makeError(
+        'meshing',
+        code,
+        diagnostic('diagnostic.wallCoverQualityInvalid'),
         true,
       )
     }

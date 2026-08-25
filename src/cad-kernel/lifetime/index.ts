@@ -3,6 +3,16 @@ import type { MeshData } from '../mesh'
 import type { PreviewTiming } from '../../cad-contract/preview-timing'
 import type { ModelId, ModelParameterValues } from '../../cad-contract/units'
 
+export type NativeModelPart = {
+  name: string
+  shape: Shape3D
+}
+
+export type NativeModelPartMesh = {
+  name: string
+  mesh: MeshData
+}
+
 export type CandidateRecord = {
   candidateId: string
   operationId: string
@@ -12,6 +22,8 @@ export type CandidateRecord = {
   modelId: ModelId
   parameters: ModelParameterValues
   shape: Shape3D
+  parts?: NativeModelPart[]
+  partMeshes?: NativeModelPartMesh[]
   mesh: MeshData
   previewTiming: PreviewTiming
   createdAt: number
@@ -25,6 +37,8 @@ export type RevisionRecord = {
   modelId: ModelId
   parameters: ModelParameterValues
   shape: Shape3D
+  parts?: NativeModelPart[]
+  partMeshes?: NativeModelPartMesh[]
   mesh: MeshData
   previewTiming: PreviewTiming
   exportPins: number
@@ -40,6 +54,21 @@ function deleteShape(shape: { delete?: () => void } | null | undefined): void {
     shape?.delete?.()
   } catch {
     // A failed native delete must not prevent the rest of the Worker cleanup.
+  }
+}
+
+function deleteRecordShapes(record: {
+  shape: Shape3D
+  parts?: readonly NativeModelPart[]
+}): void {
+  const deleted = new Set<Shape3D>()
+  for (const shape of [
+    record.shape,
+    ...(record.parts ?? []).map((part) => part.shape),
+  ]) {
+    if (deleted.has(shape)) continue
+    deleted.add(shape)
+    deleteShape(shape)
   }
 }
 
@@ -78,7 +107,7 @@ export class RevisionLifetime {
         )[0]
       if (!replaceable) break
       this.candidates.delete(replaceable.candidateId)
-      deleteShape(replaceable.shape)
+      deleteRecordShapes(replaceable)
       evicted.push(replaceable)
     }
 
@@ -87,7 +116,7 @@ export class RevisionLifetime {
       this.candidates.size > this.candidateLimit
     ) {
       this.candidates.delete(candidate.candidateId)
-      deleteShape(candidate.shape)
+      deleteRecordShapes(candidate)
       throw new Error('CANDIDATE_CAPACITY')
     }
     return evicted
@@ -121,6 +150,8 @@ export class RevisionLifetime {
       modelId: candidate.modelId,
       parameters: candidate.parameters,
       shape: candidate.shape,
+      parts: candidate.parts,
+      partMeshes: candidate.partMeshes,
       mesh: candidate.mesh,
       previewTiming: candidate.previewTiming,
       exportPins: 0,
@@ -136,16 +167,32 @@ export class RevisionLifetime {
       previous.exportPins === 0
     ) {
       this.revisions.delete(previous.modelRevision)
-      deleteShape(previous.shape)
+      deleteRecordShapes(previous)
     }
     return revision
+  }
+
+  abortRevision(modelRevision: string): void {
+    const revision = this.revisions.get(modelRevision)
+    if (!revision || revision.exportPins > 0) return
+
+    for (const [operationId, commit] of this.commits) {
+      if (commit.revision.modelRevision === modelRevision) {
+        this.commits.delete(operationId)
+      }
+    }
+    if (this.currentRevisionId === modelRevision) {
+      this.currentRevisionId = null
+    }
+    this.revisions.delete(modelRevision)
+    deleteRecordShapes(revision)
   }
 
   discardCandidate(candidateId: string): CandidateRecord | null {
     const candidate = this.candidates.get(candidateId)
     if (!candidate) return null
     this.candidates.delete(candidateId)
-    deleteShape(candidate.shape)
+    deleteRecordShapes(candidate)
     return candidate
   }
 
@@ -161,7 +208,7 @@ export class RevisionLifetime {
         (includeLatest && candidate.generation <= latestGeneration)
       ) {
         this.candidates.delete(candidate.candidateId)
-        deleteShape(candidate.shape)
+        deleteRecordShapes(candidate)
         expired.push(candidate)
       }
     }
@@ -184,14 +231,14 @@ export class RevisionLifetime {
       revision.exportPins === 0
     ) {
       this.revisions.delete(revision.modelRevision)
-      deleteShape(revision.shape)
+      deleteRecordShapes(revision)
     }
   }
 
   dispose(): void {
     for (const candidate of this.candidates.values())
-      deleteShape(candidate.shape)
-    for (const revision of this.revisions.values()) deleteShape(revision.shape)
+      deleteRecordShapes(candidate)
+    for (const revision of this.revisions.values()) deleteRecordShapes(revision)
     this.candidates.clear()
     this.revisions.clear()
     this.commits.clear()

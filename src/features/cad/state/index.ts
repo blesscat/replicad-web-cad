@@ -1,5 +1,8 @@
 import type { CadError } from '../../../cad-contract/errors'
-import type { MeshSnapshot } from '../../../cad-contract/messages'
+import type {
+  MeshSnapshot,
+  ModelPartMeshSnapshot,
+} from '../../../cad-contract/messages'
 import {
   HEXAGONAL_COLUMN_CONFIGURATION,
   OPENGRID_DIVIDER_CONFIGURATION,
@@ -9,6 +12,7 @@ import {
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   OPENGRID_SNAP_CONFIGURATION,
+  OPENGRID_WALL_COVER_CONFIGURATION,
   PILLAR_CONFIGURATION,
   PROTOTYPE_CONFIGURATION,
   type BoxParameters,
@@ -34,6 +38,7 @@ export type CommittedModel = {
   modelId: ModelId
   parameters: ModelParameterValues
   mesh: MeshSnapshot
+  partMeshes?: ModelPartMeshSnapshot[]
 }
 
 export type CadState = {
@@ -78,6 +83,9 @@ function defaultParametersForModel(modelId: ModelId): ModelParameterValues {
   }
   if (modelId === 'opengrid-snap') {
     return { ...OPENGRID_SNAP_CONFIGURATION.defaultParameters }
+  }
+  if (modelId === 'opengrid-wall-cover') {
+    return { ...OPENGRID_WALL_COVER_CONFIGURATION.defaultParameters }
   }
   if (modelId === 'opengrid-snap-remover') return {}
 

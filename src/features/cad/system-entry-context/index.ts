@@ -47,12 +47,17 @@ export function systemContextForModel(
     modelId === 'opengrid-stackable-box' ||
     modelId === 'opengrid-stackable-cylinder' ||
     modelId === 'opengrid-snap-remover' ||
-    modelId === 'opengrid-open-shelf'
+    modelId === 'opengrid-open-shelf' ||
+    modelId === 'opengrid-wall-cover'
   if (!isOpenGridModel) return undefined
+  if (modelId === 'opengrid-wall-cover' && context !== 'wall') {
+    return undefined
+  }
   if (
     context === 'wall' &&
     modelId !== 'opengrid' &&
-    modelId !== 'opengrid-snap'
+    modelId !== 'opengrid-snap' &&
+    modelId !== 'opengrid-wall-cover'
   ) {
     return undefined
   }
@@ -82,6 +87,7 @@ function snapPresetFor(context: OpenGridSystemContext): OpenGridSnapParameters {
     fourCornerLocatingHoles: context === 'desk',
     centerRemoverHole: context === 'desk',
     openConnect: false,
+    topText: 'none',
     magnetHoleShape: 'none',
     magnetHoleLength: 0,
     magnetHoleWidth: 0,
@@ -95,6 +101,7 @@ export function getSystemPreset(
   context: OpenGridSystemContext,
 ): ModelParameterValues | undefined {
   if (modelId === 'opengrid-snap') return snapPresetFor(context)
+  if (modelId === 'opengrid-wall-cover' && context === 'wall') return {}
   if (modelId === 'opengrid-pillar' && context === 'desk') {
     return { mode: 'detachable-corner-seat' }
   }

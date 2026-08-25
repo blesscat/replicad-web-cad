@@ -135,6 +135,7 @@
       rawParameters={snapshot.rawParameters}
       fieldErrors={snapshot.fieldErrors}
       canExport={snapshot.canExport}
+      canExportThreeMf={snapshot.canExportThreeMf}
       onInputChange={handleInputChange}
       onSystemContextChange={handleSystemContextChange}
       onOpenGridParametersChange={handleOpenGridParametersChange}
@@ -147,6 +148,7 @@
     <CadViewport
       {locale}
       mesh={snapshot.state.committed?.mesh ?? null}
+      partMeshes={snapshot.state.committed?.partMeshes}
       modelRevision={snapshot.state.committed?.revision ?? null}
       parameters={snapshot.state.committed?.parameters ?? null}
       stale={snapshot.state.stale}

@@ -125,6 +125,7 @@ describe('Worker contract runtime validation', () => {
         fourCornerLocatingHoles: false,
         centerRemoverHole: false,
         openConnect: false,
+        topText: 'none' as const,
         magnetHoleShape: 'none' as const,
         magnetHoleLength: 0,
         magnetHoleWidth: 0,
@@ -452,6 +453,43 @@ describe('Worker contract runtime validation', () => {
     ).toBe(false)
   })
 
+  it('accepts a validated 3MF export command and response', () => {
+    const command = {
+      version: PROTOCOL_VERSION,
+      kind: 'export.3mf',
+      requestId: '3mf-request-1',
+      operationId: '3mf-operation-1',
+      modelRevision: 'rev-1',
+      workerEpoch: 'epoch-1',
+      file: {
+        name: 'opengrid-wall-cover.3mf',
+        mime: 'model/3mf',
+      },
+    }
+    const event = {
+      version: PROTOCOL_VERSION,
+      kind: 'export.ready',
+      requestId: '3mf-response-1',
+      operationId: '3mf-operation-1',
+      modelRevision: 'rev-1',
+      workerEpoch: 'epoch-1',
+      format: '3mf',
+      bytes: new Uint8Array([0x50, 0x4b, 0x03, 0x04]).buffer,
+      mime: 'model/3mf',
+      fileName: 'opengrid-wall-cover.3mf',
+    }
+
+    expect(isWorkerCommand(command)).toBe(true)
+    expect(isWorkerEvent(event)).toBe(true)
+    expect(
+      isWorkerCommand({
+        ...command,
+        file: { ...command.file, name: 'snap.stl' },
+      }),
+    ).toBe(false)
+    expect(isWorkerEvent({ ...event, mime: 'model/stl' })).toBe(false)
+  })
+
   it('accepts transferable mesh responses only when buffers and counts are valid', () => {
     const event = {
       version: PROTOCOL_VERSION,
@@ -482,6 +520,33 @@ describe('Worker contract runtime validation', () => {
       throw new Error('MODEL_READY_WITHOUT_MESH_REJECTED')
     }
     expect(transferablesForEvent(readyWithoutMesh)).toEqual([])
+
+    const partMesh = {
+      positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]).buffer,
+      normals: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]).buffer,
+      indices: new Uint32Array([0, 1, 2]).buffer,
+      bounds: { min: [0, 0, 0], max: [1, 1, 0] },
+      triangleCount: 1,
+    }
+    const coverWithParts = {
+      ...event,
+      modelId: 'opengrid-wall-cover',
+      parameters: {},
+      partMeshes: [
+        { name: 'body' as const, mesh: partMesh },
+        { name: 'text' as const, mesh: partMesh },
+      ],
+    }
+    if (!isWorkerEvent(coverWithParts)) {
+      throw new Error('VALID_COVER_PART_EVENT_REJECTED')
+    }
+    expect(transferablesForEvent(coverWithParts)).toHaveLength(9)
+    expect(
+      isWorkerEvent({
+        ...coverWithParts,
+        partMeshes: [{ name: 'body', mesh: partMesh }],
+      }),
+    ).toBe(true)
   })
 
   it('accepts valid progress counters and rejects incomplete or invalid counters', () => {

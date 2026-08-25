@@ -88,6 +88,7 @@ export type ModelDefinition = {
   boundsForParameters: (parameters: ModelParameterValues) => ModelBounds
   exportFileName: (parameters: ModelParameterValues) => string
   stlFileName: (parameters: ModelParameterValues) => string
+  threeMfFileName?: (parameters: ModelParameterValues) => string | null
   fixedStepDownload?: (
     parameters: ModelParameterValues,
   ) => FixedStepDownload | null

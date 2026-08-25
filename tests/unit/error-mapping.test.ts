@@ -59,6 +59,11 @@ describe('CAD Worker error mapping', () => {
       'OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID',
     ],
     [
+      'OPENGRID_WALL_COVER_QUALITY_INVALID:flat-text-bounds',
+      'model.generate',
+      'OPENGRID_WALL_COVER_QUALITY_INVALID',
+    ],
+    [
       'OPENGRID_STACKABLE_CYLINDER_OPENINGS_INVALID:opening-profile',
       'model.generate',
       'OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID',
@@ -66,10 +71,12 @@ describe('CAD Worker error mapping', () => {
     ['MESH_INVALID: empty', 'model.generate', 'MESH_INVALID'],
     ['STEP_METADATA_INVALID', 'export.step', 'STEP_METADATA_INVALID'],
     ['STL_METADATA_INVALID', 'export.stl', 'STL_METADATA_INVALID'],
+    ['THREEMF_METADATA_INVALID', 'export.3mf', 'THREEMF_METADATA_INVALID'],
     ['ENGINE_NOT_READY', 'model.generate', 'ENGINE_INIT_FAILED'],
     ['unknown', 'engine.init', 'ENGINE_INIT_FAILED'],
     ['unknown', 'export.step', 'STEP_EXPORT_FAILED'],
     ['unknown', 'export.stl', 'STL_EXPORT_FAILED'],
+    ['unknown', 'export.3mf', 'THREEMF_EXPORT_FAILED'],
     ['unknown', 'model.generate', 'MODEL_BUILD_FAILED'],
   ] as const)(
     'maps %s before applying the %s fallback',
@@ -99,6 +106,12 @@ describe('CAD Worker error mapping', () => {
       cadErrorStageFor(
         'model.generate',
         'OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID:brep',
+      ),
+    ).toBe('meshing')
+    expect(
+      cadErrorStageFor(
+        'model.generate',
+        'OPENGRID_WALL_COVER_QUALITY_INVALID:flat-text-bounds',
       ),
     ).toBe('meshing')
     expect(cadErrorStageFor('model.commit')).toBe('worker')

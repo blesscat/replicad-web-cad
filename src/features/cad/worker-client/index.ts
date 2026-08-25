@@ -5,7 +5,10 @@ import {
   type WorkerCommandInput,
   type WorkerEvent,
 } from '../../../cad-contract/messages'
-import type { MeshSnapshot } from '../../../cad-contract/messages'
+import type {
+  MeshSnapshot,
+  ModelPartMeshSnapshot,
+} from '../../../cad-contract/messages'
 
 export type WorkerClientListener = (event: WorkerEvent) => void
 
@@ -134,4 +137,24 @@ export function validateMeshSnapshot(mesh: MeshSnapshot): boolean {
   } catch {
     return false
   }
+}
+
+export function validateModelPartMeshes(
+  partMeshes: readonly ModelPartMeshSnapshot[] | undefined,
+  requireBodyAndText = false,
+): boolean {
+  if (partMeshes === undefined) return !requireBodyAndText
+  const names = new Set<string>()
+  for (const part of partMeshes) {
+    if (
+      (part.name !== 'body' && part.name !== 'text') ||
+      names.has(part.name) ||
+      !validateMeshSnapshot(part.mesh)
+    ) {
+      return false
+    }
+    names.add(part.name)
+  }
+  if (!requireBodyAndText) return partMeshes.length > 0
+  return names.has('body') && names.has('text')
 }

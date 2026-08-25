@@ -12,6 +12,7 @@ import {
 export type OpenGridSnapVariant = 'Full' | 'Lite'
 export type OpenGridSnapProfile = 'Standard' | 'Directional'
 export type OpenGridSnapFootprint = 'full' | 'half' | 'quarter'
+export type OpenGridSnapTopText = 'none' | 'SNAP'
 export type OpenGridSnapMagnetHoleShape = 'none' | 'square' | 'round'
 
 export type OpenGridSnapParameterKey =
@@ -22,6 +23,7 @@ export type OpenGridSnapParameterKey =
   | 'fourCornerLocatingHoles'
   | 'centerRemoverHole'
   | 'openConnect'
+  | 'topText'
   | 'magnetHoleShape'
   | 'magnetHoleLength'
   | 'magnetHoleWidth'
@@ -37,6 +39,7 @@ export type OpenGridSnapParameters = {
   fourCornerLocatingHoles: boolean
   centerRemoverHole: boolean
   openConnect: boolean
+  topText: OpenGridSnapTopText
   magnetHoleShape: OpenGridSnapMagnetHoleShape
   magnetHoleLength: number
   magnetHoleWidth: number
@@ -113,13 +116,14 @@ export const OPENGRID_SNAP_CONFIGURATION = {
     },
   } satisfies Record<OpenGridSnapProfile, Record<OpenGridSnapVariant, string>>,
   defaultParameters: {
-    variant: 'Full' as OpenGridSnapVariant,
+    variant: 'Lite' as OpenGridSnapVariant,
     profile: 'Standard' as OpenGridSnapProfile,
     offset: 0,
     footprint: 'full' as OpenGridSnapFootprint,
     fourCornerLocatingHoles: false,
     centerRemoverHole: false,
     openConnect: false,
+    topText: 'none' as OpenGridSnapTopText,
     magnetHoleShape: 'none' as OpenGridSnapMagnetHoleShape,
     magnetHoleLength: 0,
     magnetHoleWidth: 0,
@@ -136,6 +140,7 @@ const PARAMETER_KEYS: readonly OpenGridSnapParameterKey[] = [
   'fourCornerLocatingHoles',
   'centerRemoverHole',
   'openConnect',
+  'topText',
   'magnetHoleShape',
   'magnetHoleLength',
   'magnetHoleWidth',
@@ -175,6 +180,12 @@ export function isOpenGridSnapMagnetHoleShape(
   value: unknown,
 ): value is OpenGridSnapMagnetHoleShape {
   return value === 'none' || value === 'square' || value === 'round'
+}
+
+export function isOpenGridSnapTopText(
+  value: unknown,
+): value is OpenGridSnapTopText {
+  return value === 'none' || value === 'SNAP'
 }
 
 function formatNumber(value: number): string {
@@ -286,6 +297,10 @@ export function validateOpenGridSnapParameters(
       field: 'openConnect',
       messageId: 'validation.invalid',
     })
+  }
+
+  if (value.topText !== 'none') {
+    issues.push({ field: 'topText', messageId: 'validation.invalid' })
   }
 
   if (!isOpenGridSnapMagnetHoleShape(value.magnetHoleShape)) {
@@ -485,6 +500,7 @@ export function validateOpenGridSnapParameters(
       fourCornerLocatingHoles: value.fourCornerLocatingHoles as boolean,
       centerRemoverHole: value.centerRemoverHole as boolean,
       openConnect: value.openConnect as boolean,
+      topText: value.topText as OpenGridSnapTopText,
       magnetHoleShape: value.magnetHoleShape as OpenGridSnapMagnetHoleShape,
       magnetHoleLength: value.magnetHoleLength as number,
       magnetHoleWidth: value.magnetHoleWidth as number,
@@ -512,6 +528,10 @@ export function normalizeOpenGridSnapParameters(value: unknown): unknown {
   if (!Object.prototype.hasOwnProperty.call(normalized, 'openConnect')) {
     normalized.openConnect = false
   }
+  if (!Object.prototype.hasOwnProperty.call(normalized, 'topText')) {
+    normalized.topText = 'none'
+  }
+  if (normalized.topText === 'SNAP') normalized.topText = 'none'
   if (!Object.prototype.hasOwnProperty.call(normalized, 'magnetHoleShape')) {
     normalized.magnetHoleShape = 'none'
   }
@@ -656,6 +676,12 @@ export function openGridSnapStlFileName(
   parameters: OpenGridSnapParameters,
 ): string {
   return `opengrid-snap-${parameters.profile.toLowerCase()}-${parameters.variant.toLowerCase()}-offset${formatNumber(parameters.offset)}-${parameters.footprint}-corners${parameters.fourCornerLocatingHoles ? 1 : 0}-center${parameters.centerRemoverHole ? 1 : 0}${openGridSnapOpenConnectFileNameSuffix(parameters)}${openGridSnapMagnetFileNameSuffix(parameters)}.stl`
+}
+
+export function openGridSnapThreeMfFileName(
+  _parameters: OpenGridSnapParameters,
+): string {
+  throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap-3mf')
 }
 
 function openGridSnapOpenConnectFileNameSuffix(

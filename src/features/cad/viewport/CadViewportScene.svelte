@@ -7,11 +7,19 @@
     type GizmoOptions,
   } from '@threlte/extras'
   import type { OrbitControls as OrbitControlsInstance } from 'three/examples/jsm/controls/OrbitControls.js'
-  import type { MeshSnapshot } from '../../../cad-contract/messages'
+  import type {
+    MeshSnapshot,
+    ModelPartMeshSnapshot,
+  } from '../../../cad-contract/messages'
   import type { ModelParameterValues } from '../../../cad-contract/units'
   import ModelMesh from './ModelMesh.svelte'
   import DimensionAnnotations from './DimensionAnnotations.svelte'
-  import { CAD_VIEWPORT_GIZMO, CAD_VIEWPORT_LIGHTING } from './config'
+  import {
+    CAD_VIEWPORT_GIZMO,
+    CAD_VIEWPORT_LIGHTING,
+    colorForCadViewportPart,
+    type CadViewportPartName,
+  } from './config'
   import {
     CAD_VIEWPORT_CAMERA,
     CAD_VIEWPORT_GRID_ROTATION,
@@ -24,6 +32,7 @@
   type Props = {
     locale: Locale
     mesh: MeshSnapshot
+    partMeshes?: ModelPartMeshSnapshot[]
     modelRevision: string
     parameters: ModelParameterValues | null
     theme: CadViewportTheme
@@ -44,12 +53,17 @@
   let {
     locale,
     mesh,
+    partMeshes,
     modelRevision,
     parameters,
     theme,
     presentation,
     onPreparationTiming,
   }: Props = $props()
+
+  function isPartName(name: string): name is CadViewportPartName {
+    return name === 'body' || name === 'text'
+  }
   let orbitControls = $state<OrbitControlsInstance | undefined>(undefined)
   let viewportGizmo = $state<ViewportGizmoHandle | undefined>(undefined)
 
@@ -112,7 +126,20 @@
 {/if}
 {#key modelRevision}
   <Bounds margin={boundsMarginFor(presentation)} animate={false}>
-    <ModelMesh {mesh} {theme} {onPreparationTiming} />
+    {#if partMeshes && partMeshes.length > 0}
+      {#each partMeshes as part (part.name)}
+        {#if isPartName(part.name)}
+          <ModelMesh
+            mesh={part.mesh}
+            {theme}
+            materialColor={colorForCadViewportPart(part.name)}
+            {onPreparationTiming}
+          />
+        {/if}
+      {/each}
+    {:else}
+      <ModelMesh {mesh} {theme} {onPreparationTiming} />
+    {/if}
     {#if presentation === 'workspace'}
       <DimensionAnnotations {locale} {mesh} {parameters} {theme} />
     {/if}

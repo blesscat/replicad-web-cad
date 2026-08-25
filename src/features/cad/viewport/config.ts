@@ -2,11 +2,22 @@ import type { ViewportVector } from './coordinates'
 
 export const CAD_VIEWPORT_CONFIG = {
   modelColor: '#4e7cff',
+  modelPartColors: {
+    body: '#4e7cff',
+    text: '#f59e0b',
+  },
   modelEmissiveIntensity: 0.2,
   edgeThresholdAngle: 20,
   largePreviewTriangleThreshold: 5_000,
   edgeOpacity: 0.72,
 } as const
+
+export type CadViewportPartName =
+  keyof typeof CAD_VIEWPORT_CONFIG.modelPartColors
+
+export function colorForCadViewportPart(name: CadViewportPartName): string {
+  return CAD_VIEWPORT_CONFIG.modelPartColors[name]
+}
 
 export const CAD_VIEWPORT_GIZMO = {
   id: 'cad-viewport-xyz-gizmo',
