@@ -4,6 +4,7 @@
     GridDimensionInput,
     GridDimensionResult,
   } from '../../../features/cad/grid-dimensions'
+  import { untrack } from 'svelte'
   import ParameterField from './ParameterField.svelte'
   import { translate, type Locale } from '../../../i18n'
 
@@ -48,8 +49,8 @@
     initialTargetY = '',
   }: Props = $props()
 
-  let targetX = $state(initialTargetX)
-  let targetY = $state(initialTargetY)
+  let targetX = $state(untrack(() => initialTargetX))
+  let targetY = $state(untrack(() => initialTargetY))
   let errors = $state<GridDimensionErrors>({})
   let actualDimensions = $state<ActualDimensions | null>(null)
 
