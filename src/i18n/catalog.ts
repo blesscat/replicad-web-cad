@@ -84,7 +84,7 @@ export const zhHantMessages = {
   'home.maker.eyebrow': '關於 Shape Shortcut',
   'home.maker.title': '把好用的 3D 列印工具，整理在同一個地方',
   'home.maker.body':
-    '我是 Blesscat，一名獨立開發者與 3D 列印愛好者。MakerWorld Custom 很適合快速做小型客製化，但較大型的產生器不容易放進同一套流程；同一個模型的不同變種，也常常需要到不同地方尋找。Shape Shortcut 想把我認為好用的模型與工具集中起來。',
+    '我是 Blesscat，一名獨立開發者與 3D 列印愛好者。MakerWorld Customizer 很適合快速做小型客製化，但較大型的產生器不容易放進同一套流程；同一個模型的不同變種，也常常需要到不同地方尋找。Shape Shortcut 想把我認為好用的模型與工具集中起來。',
   'home.maker.status': '目前狀態：Prototype',
   'home.maker.portraitAlt': 'Blesscat 的插畫肖像',
   'home.maker.aboutCta': '閱讀完整自我介紹 →',
@@ -103,7 +103,7 @@ export const zhHantMessages = {
     '我喜歡把 3D 列印從「找到一個檔案」變成「可以調整、理解並做出適合自己的東西」。Shape Shortcut 是我整理這些工具與實驗的地方。',
   'about.storyHeading': '為什麼做 Shape Shortcut？',
   'about.storyBody':
-    'MakerWorld Custom 的自訂功能很棒，對快速完成小型客製化尤其方便；但當產生器變得更大型、更需要完整參數與流程時，就不一定適合放在那裡。另外，一個模型的不同變種常常分散在各個頁面或專案裡，需要到處尋找。',
+    'MakerWorld Customizer 的功能很棒，對快速完成小型客製化尤其方便；但當產生器變得更大型、更需要完整參數與流程時，就不一定適合放在那裡。另外，一個模型的不同變種常常分散在各個頁面或專案裡，需要到處尋找。',
   'about.projectHeading': '我想整理什麼？',
   'about.projectBody':
     '我希望在同一個地方整理自己認為好用的 OpenGrid、HSW 與其他 3D 列印工具，讓你可以從模型、參數、預覽到匯出，沿著同一條路完成。這個網站仍在 prototype 階段，內容和方向會隨著實際使用持續調整。',
@@ -819,7 +819,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'home.maker.eyebrow': 'About Shape Shortcut',
   'home.maker.title': 'Useful 3D-printing tools, gathered in one place',
   'home.maker.body':
-    'I am Blesscat, an independent developer and 3D-printing enthusiast. MakerWorld Custom is great for quick small customizations, but larger generators do not always fit that format; variants of one model can also be scattered across different places. Shape Shortcut is where I am gathering the models and tools I find useful.',
+    'I am Blesscat, an independent developer and 3D-printing enthusiast. MakerWorld Customizer is great for quick small customizations, but larger generators do not always fit that format; variants of one model can also be scattered across different places. Shape Shortcut is where I am gathering the models and tools I find useful.',
   'home.maker.status': 'Current status: Prototype',
   'home.maker.portraitAlt': 'Illustrated portrait of Blesscat',
   'home.maker.aboutCta': 'Read the full maker story →',
@@ -839,7 +839,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'I like turning 3D printing from “find a file” into “adjust, understand, and make something that fits.” Shape Shortcut is where I collect those tools and experiments.',
   'about.storyHeading': 'Why Shape Shortcut?',
   'about.storyBody':
-    'MakerWorld Custom is excellent for quick small customizations. When a generator becomes larger and needs a fuller parameter and workflow experience, it is not always the best fit. Variants of one model can also end up spread across different pages or projects, which means searching in many places.',
+    'MakerWorld Customizer is excellent for quick small customizations. When a generator becomes larger and needs a fuller parameter and workflow experience, it is not always the best fit. Variants of one model can also end up spread across different pages or projects, which means searching in many places.',
   'about.projectHeading': 'What am I organizing?',
   'about.projectBody':
     'I want one place for the OpenGrid, HSW, and other 3D-printing tools I find useful, so the path from model to parameters, preview, and export stays together. This site is still a prototype; its content and direction will keep changing through real use.',

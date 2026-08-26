@@ -94,6 +94,9 @@ test('home, model selection, and docs are static Astro pages', async ({
   await expect(page.getByTestId('home-desk-system')).toBeVisible()
   await expect(page.getByTestId('home-explore')).toBeVisible()
   await expect(page.getByTestId('home-maker')).toBeVisible()
+  await expect(page.getByTestId('home-maker')).toContainText(
+    'MakerWorld Customizer',
+  )
   await expect(page.getByText('即時 3D 預覽', { exact: true })).toBeVisible()
   await expect(page.getByText('STEP／STL 匯出', { exact: true })).toBeVisible()
   await expect(

@@ -7,6 +7,7 @@ const aboutCases = [
     role: '獨立開發者、3D 列印愛好者',
     portraitAlt: 'Blesscat 的插畫肖像',
     story: '為什麼做 Shape Shortcut？',
+    feature: 'MakerWorld Customizer',
     email: 'blesscat@gmail.com',
   },
   {
@@ -15,6 +16,7 @@ const aboutCases = [
     role: 'Independent developer, 3D-printing enthusiast',
     portraitAlt: 'Illustrated portrait of Blesscat',
     story: 'Why Shape Shortcut?',
+    feature: 'MakerWorld Customizer',
     email: 'blesscat@gmail.com',
   },
 ] as const
@@ -33,6 +35,9 @@ for (const aboutCase of aboutCases) {
     await expect(
       page.getByRole('heading', { name: aboutCase.story }),
     ).toBeVisible()
+    await expect(page.getByTestId('about-story')).toContainText(
+      aboutCase.feature,
+    )
     await expect(page.getByAltText(aboutCase.portraitAlt)).toBeVisible()
     await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
     await expect(page.locator('canvas')).toHaveCount(0)

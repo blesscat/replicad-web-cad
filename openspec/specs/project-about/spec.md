@@ -14,7 +14,7 @@ The system MUST provide static About pages at `/zh-Hant/about/` and
 `/en/about/`. Each page MUST identify `Shape Shortcut by Blesscat`, show the
 supplied maker portrait with meaningful alternative text, describe the maker as
 an independent developer and 3D-printing enthusiast, explain the motivation
-around organizing useful MakerWorld Custom-inspired model variations in one
+around organizing useful MakerWorld Customizer-inspired model variations in one
 place, state that the project is in the Prototype stage, and expose links to
 GitHub and the public email address `blesscat@gmail.com`.
 
