@@ -114,10 +114,11 @@ describe('OpenGrid locating and assembly interface contract', () => {
       bodyHeight: 3.8,
       leadInHeight: 0.2,
       leadInTipDiameter: 4.6,
-      keyWidth: 1.8,
+      keyWidth: 1.96,
       taperTopZ: 5.15,
       wearHeight: 0.15,
       totalHeight: 5.3,
+      nominalVolume: 83.1443982424,
       bounds: {
         min: [-2.5, -2.5, 0],
         max: [2.5, 2.5, 5.3],
@@ -135,7 +136,6 @@ describe('OpenGrid locating and assembly interface contract', () => {
       outerDiameter: 7,
       depth: 1.75,
       passageWidth: 2,
-      keySideClearance: 0.1,
       sourceMinZ: 3,
       sourceMaxZ: 4.75,
       bounds: {
@@ -143,6 +143,7 @@ describe('OpenGrid locating and assembly interface contract', () => {
         max: [3.5, 3.5, 4.75],
       },
     })
+    expect(configuration.female.keySideClearance).toBeCloseTo(0.02, 8)
     expect(configuration.female.depth).toBeCloseTo(
       configuration.femaleReference.depth + 0.25,
       8,
@@ -157,14 +158,14 @@ describe('OpenGrid locating and assembly interface contract', () => {
     const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
 
     expect(configuration.indicator).toMatchObject({
-      width: 2,
-      radialLength: 2,
-      depth: 0.15,
+      width: 0.5,
+      radialLength: 3,
+      depth: 0.4,
       lockRotationDegrees: 90,
     })
+    expect(configuration.male.indicator).toBe(configuration.indicator)
     expect(configuration.male.markedNominalVolume).toBeCloseTo(
-      configuration.male.nominalVolume -
-        configuration.indicator.nominalRemovedVolume,
+      configuration.male.nominalVolume,
       8,
     )
   })

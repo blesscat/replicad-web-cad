@@ -241,28 +241,27 @@ describe('OpenGrid detachable corner-seat canonical references', () => {
     ).toThrow('STALE_GENERATION')
   })
 
-  it('builds the shared 2 mm triangular cutter at the requested recess depth', () => {
+  it('builds the printable straight lock-indicator cutter at the requested recess depth', () => {
     const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
     const cutter = buildOpenGridDetachableCornerSeatIndicatorCutter()
     try {
       expectBoundsClose(shapeBounds(cutter), [
         [
-          -configuration.indicator.width / 2,
           -configuration.indicator.radialLength / 2,
+          -configuration.indicator.width / 2,
           -configuration.indicator.cutterOverlap,
         ],
         [
-          configuration.indicator.width / 2,
           configuration.indicator.radialLength / 2,
+          configuration.indicator.width / 2,
           configuration.indicator.depth,
         ],
       ])
       expect(measureVolume(cutter)).toBeCloseTo(
         configuration.indicator.nominalRemovedVolume +
-          (configuration.indicator.width *
+          configuration.indicator.width *
             configuration.indicator.radialLength *
-            configuration.indicator.cutterOverlap) /
-            2,
+            configuration.indicator.cutterOverlap,
         5,
       )
     } finally {
@@ -321,15 +320,21 @@ describe('OpenGrid detachable corner-seat canonical references', () => {
     }
   })
 
-  it('measures the exact 0.1 mm key clearance on each side from the STEP solids', () => {
+  it('measures the configured key clearance on each side from the STEP solids', () => {
     const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
     const maleSides = keyedPlanarYCoordinates(maleReference)
     const femaleSides = keyedPlanarYCoordinates(holderReference)
     const maleKeyWidth = (maleSides.at(-1) ?? 0) - (maleSides[0] ?? 0)
     const femalePassageWidth = (femaleSides.at(-1) ?? 0) - (femaleSides[0] ?? 0)
 
-    expect(maleSides).toEqual([-0.9, 0.9])
-    expect(femaleSides).toEqual([-1, 1])
+    expect(maleSides).toEqual([
+      -configuration.male.keyWidth / 2,
+      configuration.male.keyWidth / 2,
+    ])
+    expect(femaleSides).toEqual([
+      -configuration.female.passageWidth / 2,
+      configuration.female.passageWidth / 2,
+    ])
     expect(maleKeyWidth).toBeCloseTo(configuration.male.keyWidth, 5)
     expect(femalePassageWidth).toBeCloseTo(configuration.female.passageWidth, 5)
     expect((femalePassageWidth - maleKeyWidth) / 2).toBeCloseTo(

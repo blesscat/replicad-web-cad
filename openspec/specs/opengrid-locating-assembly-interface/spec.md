@@ -200,12 +200,12 @@ display names and OpenGrid identities MUST remain unchanged.
 The shared OpenGrid locating-assembly contract MUST publish one fixed male
 detachable corner-seat geometry and one matching female socket-material
 geometry. The male MUST have a 5 mm maximum locating diameter, a 3.8 mm locating
-height, a 0.2 mm-high lead-in from Ø4.6 mm to Ø5 mm, a 1.8 mm-wide keyed
+height, a 0.2 mm-high lead-in from Ø4.6 mm to Ø5 mm, a 1.96 mm-wide keyed
 retaining head whose 45-degree taper ends at Z=5.15 mm, a 0.15 mm-high flat wear
 surface, and a total height of 5.3 mm. The female socket material MUST have a
 Ø7 mm by 1.75 mm outer envelope, formed by extending the canonical holder
 0.25 mm inward while preserving its bottom entrance, 2 mm-wide keyed passage,
-and retaining tabs. The straight key-width clearance MUST be 0.1 mm per side.
+and retaining tabs. The straight key-width clearance MUST be 0.02 mm per side.
 
 The geometry MUST remain fixed during the Organizer Box prototype phase. No
 consumer MUST redefine a conflicting copy, apply the Pillar XY offset, or expose
@@ -216,10 +216,10 @@ the male/female fit as a user parameter.
 - **WHEN** the Organizer Box socket builder or Pillar detachable-seat builder
   reads the shared locating-assembly contract
 - **THEN** it MUST receive male body diameter 5 mm, body height 3.8 mm, lead-in
-  height 0.2 mm, lead-in tip diameter 4.6 mm, key width 1.8 mm, taper top Z
+  height 0.2 mm, lead-in tip diameter 4.6 mm, key width 1.96 mm, taper top Z
   5.15 mm, wear height 0.15 mm, and total height 5.3 mm
 - **AND** it MUST receive female outer diameter 7 mm, depth 1.75 mm, passage
-  width 2 mm, and key side clearance 0.1 mm
+  width 2 mm, and key side clearance 0.02 mm
 - **AND** neither consumer MUST define a conflicting local copy
 
 #### Scenario: Male lead-in remains printable and insertable
@@ -240,9 +240,10 @@ the male/female fit as a user parameter.
 
 ### Requirement: Detachable corner-seat reference compatibility
 
-The derived canonical male reference MUST be a valid non-empty single solid
+The supplied v8 canonical male reference MUST be a valid non-empty single solid
 with bounds `[-2.5, -2.5, 0]` through `[2.5, 2.5, 5.3]` and nominal volume
-82.4112179657 mm³. The supplied female source reference MUST remain a valid
+83.1443982424 mm³. It MUST include the centered bottom indicator recess with a
+3 mm radial length, 0.5 mm width, and 0.4 mm depth. The supplied female source reference MUST remain a valid
 non-empty single solid with bounds `[-3.5, -3.5, 3]` through
 `[3.5, 3.5, 4.5]` and volume 38.4253392 mm³. Its effective holder material
 MUST extend to Z=4.75 with nominal volume 43.6604635736 mm³. Bounds and volume
@@ -285,30 +286,31 @@ the same male/female fit at every generated locating position.
 
 The shared detachable corner-seat interface MUST define one consistent visual
 indicator contract for the mating male seat and female socket. Each indicator
-MUST be an exposed-bottom, shallow recessed isosceles triangle with a nominal
-2 mm width, a nominal 2 mm radial length, and a 0.15 mm recess depth. The
-indicator depth MUST be shared by both mating parts and MUST remain within the
-requested 0.1–0.2 mm printable range.
+MUST be an exposed-bottom, recessed straight slot with a nominal 0.5 mm width,
+a nominal 3 mm radial length, and a 0.4 mm recess depth. The male indicator
+MUST be carried directly by the supplied v8 pillar solid. The female indicator
+MUST be drawn independently by the socket generator from this shared contract;
+it MUST NOT be copied from the male STEP.
 
-The shared triangle's local radial direction MUST run from its flat edge toward
-its apex along the local positive X axis before any socket-pose transform is
-applied. Both mating indicators MUST use this same local profile datum.
+The shared slot's local radial centerline MUST run along the local X axis before
+any socket-pose transform is applied. Both mating indicators MUST use this same
+local profile datum.
 
 Viewed from the box underside, the indicator orientation MUST communicate the
 clockwise 90-degree locking motion: after the male seat has been turned
-clockwise 90 degrees from its insertion orientation, the male triangle's apex
-MUST point along the corresponding female indicator centerline. Every female
-indicator's apex MUST point toward its socket opening; the upper-left and
+clockwise 90 degrees from its insertion orientation, the male slot centerline
+MUST align with the corresponding female indicator centerline. Every female
+indicator MUST be positioned toward its socket opening; the upper-left and
 lower-right indicators are moved to the opposite side of their sockets while
-retaining that inward-pointing direction. These reference-aligned directions
+retaining that inward-pointing placement. These reference-aligned positions
 MUST represent the locked state.
 
 #### Scenario: Shared indicator dimensions are published once
 
 - **WHEN** the male-seat or female-socket generator reads the detachable
   corner-seat indicator contract
-- **THEN** it MUST receive the same 2 mm by 2 mm triangular profile and 0.15 mm
-  recess depth
+- **THEN** it MUST receive the same 0.5 mm by 3 mm straight-slot profile and
+  0.4 mm recess depth
 - **AND** neither consumer MUST define a conflicting local indicator depth or
   profile
 
@@ -317,11 +319,12 @@ MUST represent the locked state.
 - **WHEN** a compatible male seat is placed in the canonical female socket
   insertion orientation and then turned clockwise 90 degrees around the shared
   Z axis as viewed from below
-- **THEN** the male triangle MUST point along the corresponding female
-  indicator centerline
-- **AND** every female triangle MUST point toward its socket opening, including
-  the upper-left and lower-right markers after they move to the opposite side
-- **AND** the reference-aligned triangles MUST identify the locked state
+- **THEN** the male slot MUST align with the corresponding female indicator
+  centerline
+- **AND** every female slot MUST be positioned toward its socket opening,
+  including the upper-left and lower-right markers after they move to the
+  opposite side
+- **AND** the reference-aligned slots MUST identify the locked state
 - **AND** the insertion orientation MUST remain distinguishable from the locked
   orientation
 
