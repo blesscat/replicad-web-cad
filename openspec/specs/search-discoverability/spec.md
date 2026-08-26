@@ -109,3 +109,38 @@ are unavailable.
 - **WHEN** a visual asset is missing or blocked
 - **THEN** the static HTML MUST still expose equivalent localized instructions
   through visible text, captions, or alternative text
+
+### Requirement: Localized About pages are indexable public pages
+
+The localized About pages MUST emit a localized title and description, a
+self-referencing canonical URL, reciprocal `hreflang` links, and entries in
+the generated sitemap. The unprefixed `/about/` compatibility route MUST not
+become a second indexable page and MUST resolve to the default locale using the
+existing legacy-route behavior.
+
+#### Scenario: About metadata is localized
+
+- **WHEN** a crawler requests `/en/about/` or `/zh-Hant/about/`
+- **THEN** the response MUST contain the matching document language, localized
+  visible content, localized title and description, canonical URL, and both
+  supported locale alternates
+
+#### Scenario: About sitemap coverage is canonical
+
+- **WHEN** the generated sitemap is inspected
+- **THEN** it MUST include `/en/about/` and `/zh-Hant/about/`
+- **AND** it MUST not include the unprefixed `/about/` compatibility route
+
+### Requirement: Product and documentation links remain crawlable
+
+The updated homepage and Docs hub MUST expose ordinary crawlable links between
+the product Hero, system guides, model selection, About, and applicable CAD
+routes. These links MUST remain present in server-rendered HTML without
+executing the interactive CAD workspace.
+
+#### Scenario: Crawler can follow the product entry flow
+
+- **WHEN** a crawler requests a localized homepage or Docs page without
+  executing JavaScript
+- **THEN** it MUST find links to the localized model chooser, Docs or system
+  guidance, About page, and current model routes where the page describes them

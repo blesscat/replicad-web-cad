@@ -10,7 +10,7 @@ import {
   translate,
   type Locale,
 } from '../../../i18n'
-import { publicPathFor } from '../../../i18n/routes'
+import { localizedCadPathFor, publicPathFor } from '../../../i18n/routes'
 
 export function getStaticPaths() {
   return SUPPORTED_LOCALES.map((locale) => ({
@@ -36,6 +36,13 @@ const locatingPostEntry = entryFor('locating-post')
 const gridBoxEntry = entryFor('grid-box')
 const organizerBoxEntry = entryFor('organizer-box')
 const roundBoxEntry = entryFor('round-box')
+const wallBoardPath = localizedCadPathFor(locale, 'opengrid', 'wall')
+const wallSnapPath = localizedCadPathFor(locale, 'opengrid-snap', 'wall')
+const wallCoverPath = localizedCadPathFor(locale, 'opengrid-wall-cover', 'wall')
+const openConnectShelfPath = localizedCadPathFor(
+  locale,
+  'opengrid-openconnect-shelf',
+)
 ---
 
 <SiteLayout
@@ -50,6 +57,32 @@ const roundBoxEntry = entryFor('round-box')
       <p class="text-muted">{t('docs.eyebrow')}</p>
       <h1 class="text-4xl font-semibold leading-tight">{t('docs.title')}</h1>
     </header>
+
+    <nav
+      class="grid gap-3 rounded-xl border border-border-card bg-viewport p-4"
+      aria-label={t('docs.sectionNav')}
+      data-testid="docs-section-nav"
+    >
+      <p class="m-0 font-semibold text-ink">{t('docs.sectionNav')}</p>
+      <div class="flex flex-wrap gap-x-5 gap-y-2">
+        <a
+          class="text-ink underline underline-offset-4"
+          href="#desk-quick-start-title">{t('docs.sectionNav.desk')}</a
+        >
+        <a
+          class="text-ink underline underline-offset-4"
+          href="#docs-wall-system-title">{t('docs.sectionNav.wall')}</a
+        >
+        <a
+          class="text-ink underline underline-offset-4"
+          href="#docs-model-reference-title">{t('docs.sectionNav.models')}</a
+        >
+        <a
+          class="text-ink underline underline-offset-4"
+          href="#docs-reference-title">{t('docs.sectionNav.common')}</a
+        >
+      </div>
+    </nav>
 
     <section
       class="grid gap-8"
@@ -307,6 +340,156 @@ const roundBoxEntry = entryFor('round-box')
         class="rounded-xl border border-border-card bg-viewport p-4 text-sm text-muted"
       >
         {t('docs.deskQuickStart.scopeNote')}
+      </p>
+    </section>
+
+    <section
+      class="grid gap-6"
+      aria-labelledby="docs-wall-system-title"
+      data-testid="docs-wall-system"
+    >
+      <header class="grid gap-3">
+        <h2
+          class="text-3xl font-semibold leading-tight"
+          id="docs-wall-system-title"
+        >
+          {t('docs.wall.title')}
+        </h2>
+        <p class="max-w-3xl leading-normal">{t('docs.wall.intro')}</p>
+      </header>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <article class="grid gap-3 rounded-xl border border-border-card p-4">
+          <img
+            class="aspect-[16/10] w-full rounded-lg border border-border-card bg-viewport object-cover"
+            src="/model-previews/opengrid-wall.png"
+            width="640"
+            height="400"
+            loading="lazy"
+            alt={t('docs.wall.board.alt')}
+          />
+          <h3 class="m-0 text-xl font-semibold">
+            {t('docs.wall.board.title')}
+          </h3>
+          <p class="m-0 leading-normal text-muted">
+            {t('docs.wall.board.body')}
+          </p>
+          <a class="text-ink underline underline-offset-4" href={wallBoardPath}
+            >{t('docs.wall.board.cta')}</a
+          >
+        </article>
+        <article class="grid gap-3 rounded-xl border border-border-card p-4">
+          <img
+            class="aspect-[16/10] w-full rounded-lg border border-border-card bg-viewport object-cover"
+            src="/model-previews/opengrid-snap-wall.png"
+            width="640"
+            height="400"
+            loading="lazy"
+            alt={t('docs.wall.snap.alt')}
+          />
+          <h3 class="m-0 text-xl font-semibold">{t('docs.wall.snap.title')}</h3>
+          <p class="m-0 leading-normal text-muted">
+            {t('docs.wall.snap.body')}
+          </p>
+          <a class="text-ink underline underline-offset-4" href={wallSnapPath}
+            >{t('docs.wall.snap.cta')}</a
+          >
+        </article>
+        <article class="grid gap-3 rounded-xl border border-border-card p-4">
+          <img
+            class="aspect-[16/10] w-full rounded-lg border border-border-card bg-viewport object-cover"
+            src="/model-previews/opengrid-wall-cover-wall.png"
+            width="640"
+            height="400"
+            loading="lazy"
+            alt={t('docs.wall.cover.alt')}
+          />
+          <h3 class="m-0 text-xl font-semibold">
+            {t('docs.wall.cover.title')}
+          </h3>
+          <p class="m-0 leading-normal text-muted">
+            {t('docs.wall.cover.body')}
+          </p>
+          <a class="text-ink underline underline-offset-4" href={wallCoverPath}
+            >{t('docs.wall.cover.cta')}</a
+          >
+        </article>
+        <article class="grid gap-3 rounded-xl border border-border-card p-4">
+          <img
+            class="aspect-[16/10] w-full rounded-lg border border-border-card bg-viewport object-cover"
+            src="/model-previews/opengrid-openconnect-shelf-wall.png"
+            width="640"
+            height="400"
+            loading="lazy"
+            alt={t('docs.wall.shelf.alt')}
+          />
+          <h3 class="m-0 text-xl font-semibold">
+            {t('docs.wall.shelf.title')}
+          </h3>
+          <p class="m-0 leading-normal text-muted">
+            {t('docs.wall.shelf.body')}
+          </p>
+          <a
+            class="text-ink underline underline-offset-4"
+            href={openConnectShelfPath}>{t('docs.wall.shelf.cta')}</a
+          >
+        </article>
+      </div>
+    </section>
+
+    <section
+      class="grid gap-5"
+      aria-labelledby="docs-model-reference-title"
+      data-testid="docs-model-reference"
+    >
+      <header class="grid gap-3">
+        <h2
+          class="text-3xl font-semibold leading-tight"
+          id="docs-model-reference-title"
+        >
+          {t('docs.modelReference.title')}
+        </h2>
+        <p class="max-w-3xl leading-normal">{t('docs.modelReference.body')}</p>
+      </header>
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <article class="grid gap-2 rounded-xl border border-border-card p-4">
+          <h3 class="m-0 text-xl font-semibold">
+            {t('docs.modelReference.desk.title')}
+          </h3>
+          <p class="m-0 text-sm leading-normal text-muted">
+            {t('docs.modelReference.desk.body')}
+          </p>
+        </article>
+        <article class="grid gap-2 rounded-xl border border-border-card p-4">
+          <h3 class="m-0 text-xl font-semibold">
+            {t('docs.modelReference.wall.title')}
+          </h3>
+          <p class="m-0 text-sm leading-normal text-muted">
+            {t('docs.modelReference.wall.body')}
+          </p>
+        </article>
+        <article class="grid gap-2 rounded-xl border border-border-card p-4">
+          <h3 class="m-0 text-xl font-semibold">
+            {t('docs.modelReference.hsw.title')}
+          </h3>
+          <p class="m-0 text-sm leading-normal text-muted">
+            {t('docs.modelReference.hsw.body')}
+          </p>
+        </article>
+        <article class="grid gap-2 rounded-xl border border-border-card p-4">
+          <h3 class="m-0 text-xl font-semibold">
+            {t('docs.modelReference.other.title')}
+          </h3>
+          <p class="m-0 text-sm leading-normal text-muted">
+            {t('docs.modelReference.other.body')}
+          </p>
+        </article>
+      </div>
+      <p class="m-0">
+        <a
+          class="text-ink underline underline-offset-4"
+          href={publicPathFor(locale, 'models')}
+          >{t('docs.modelReference.cta')}</a
+        >
       </p>
     </section>
 

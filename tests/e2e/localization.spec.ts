@@ -68,7 +68,9 @@ test('localized model chooser exposes localized shell and search metadata', asyn
     page.getByRole('heading', { name: 'Choose a CAD model' }),
   ).toBeVisible()
   await expect(
-    page.getByRole('link', { name: 'Models', exact: true }),
+    page
+      .getByRole('navigation', { name: 'Primary navigation' })
+      .getByRole('link', { name: 'Models', exact: true }),
   ).toHaveAttribute('aria-current', 'page')
 
   const canonical = page.locator('link[rel="canonical"]')
@@ -141,7 +143,7 @@ test('model chooser keeps compact cards and stable modal details', async ({
   await expect(dialog.getByRole('heading', { name: 'Grid Box' })).toBeVisible()
   await expect(dialog).not.toContainText('Adjustable settings:')
   await expect(dialog).toContainText('Inner clear height')
-  await expect(dialog).toContainText('STEP and STL')
+  await expect(dialog).toContainText(/STEP.*STL/)
 
   const boundsAfter = await cards.evaluateAll((cardElements) =>
     cardElements.map((card) => {
@@ -240,20 +242,46 @@ test('localized public pages and CAD controls expose both locales', async ({
   await page.goto('/zh-Hant/')
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant')
   await expect(
-    page.getByRole('heading', { name: '用瀏覽器建立、調整並匯出 CAD 模型' }),
+    page.getByRole('heading', {
+      name: '把你想做的 CAD 元件，集中在一個地方',
+    }),
   ).toBeVisible()
 
   await page.goto('/en/docs/')
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(
-    page.getByRole('heading', { name: 'Prototype documentation' }),
+    page.getByRole('heading', { name: 'Shape Shortcut documentation' }),
   ).toBeVisible()
   await expect(
     page.getByRole('heading', { name: 'Parameters and constraints' }),
   ).toBeVisible()
   await expect(
-    page.getByRole('heading', { name: 'Advanced reference' }),
+    page.getByRole('heading', { name: 'Shared reference' }),
   ).toBeVisible()
+
+  await page.goto('/en/about/')
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(
+    page.getByRole('heading', { name: 'Shape Shortcut by Blesscat' }),
+  ).toBeVisible()
+  await expect(
+    page
+      .getByRole('navigation', { name: 'Primary navigation' })
+      .getByRole('link', { name: 'About', exact: true }),
+  ).toHaveAttribute('aria-current', 'page')
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    /\/en\/about\/?$/,
+  )
+  await expect(
+    page.locator('link[rel="alternate"][hreflang="zh-Hant"]'),
+  ).toHaveAttribute('href', /\/zh-Hant\/about\/?$/)
+  await expect(
+    page.getByRole('link', { name: 'GitHub', exact: true }).first(),
+  ).toHaveAttribute('href', 'https://github.com/blesscat')
+  await expect(
+    page.getByRole('link', { name: 'blesscat@gmail.com' }),
+  ).toHaveAttribute('href', 'mailto:blesscat@gmail.com')
 
   await page.goto('/en/cad/box?system=desk&view=search')
   await expect(

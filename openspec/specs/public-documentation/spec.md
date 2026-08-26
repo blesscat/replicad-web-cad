@@ -151,3 +151,45 @@ unchanged.
   used
 - **THEN** the documented links MUST continue to resolve to the current model
   identities and CAD/export behavior
+
+### Requirement: Documentation hub reflects current systems
+
+The localized public Docs page MUST remain a static documentation hub. It MUST
+keep the Desk System Quick Start as the first instructional path while also
+exposing a Wall System guide and a current model/common reference section after
+the primary first-use flow. The added sections MUST describe the current Wall
+components and common browser, unit, and export constraints without requiring a
+CAD Worker.
+
+#### Scenario: Desk remains the first-use entry
+
+- **WHEN** a user opens a localized Docs page
+- **THEN** the first instructional section MUST still introduce the Desk System
+  Quick Start
+- **AND** the page MUST expose navigable entries for Wall System guidance and
+  current model/common reference after that first-use section
+
+#### Scenario: Documentation covers the Wall workflow
+
+- **WHEN** a user reads the localized Wall System documentation
+- **THEN** the page MUST explain the relationship between Wall Board, Wall
+  Snap, Wall Cover, and OpenConnect Shelf
+- **AND** it MUST link to the existing Wall-context CAD routes where applicable
+- **AND** the instructions MUST remain readable when images or JavaScript are
+  unavailable
+
+### Requirement: Documentation stays aligned with the model catalog
+
+The Docs page MUST describe the current user-facing model families and their
+purpose without presenting retired or hidden model IDs as current chooser
+entries. Model and common-reference content MUST include links to the model
+selection page or the applicable CAD route for further action.
+
+#### Scenario: Current model families are discoverable
+
+- **WHEN** a user reads the localized Docs reference section
+- **THEN** the page MUST identify OpenGrid, HSW, Desk, and Wall contexts in
+  user-facing terms
+- **AND** it MUST provide a navigable path to the current model chooser
+- **AND** the page MUST not initialize the CAD runtime merely to render the
+  reference

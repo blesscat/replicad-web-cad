@@ -5,12 +5,13 @@ import {
   type OpenGridSystemContext,
 } from '../features/cad/system-entry-context'
 
-export type PublicRouteName = 'home' | 'models' | 'docs'
+export type PublicRouteName = 'home' | 'models' | 'docs' | 'about'
 
 const PUBLIC_ROUTE_PATHS: Readonly<Record<PublicRouteName, string>> = {
   home: '/',
   models: '/models',
   docs: '/docs/',
+  about: '/about/',
 }
 
 function normalizedPath(pathname: string): string {

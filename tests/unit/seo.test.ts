@@ -20,13 +20,14 @@ describe('localized SEO routes', () => {
   })
 
   it('includes every canonical localized public page exactly once', () => {
-    const expectedCount = 2 * (3 + modelDefinitions.length)
+    const expectedCount = 2 * (4 + modelDefinitions.length)
     const paths = sitemapUrlPaths()
 
     expect(paths).toHaveLength(expectedCount)
     expect(new Set(paths).size).toBe(expectedCount)
     expect(paths).toContain('/zh-Hant/')
     expect(paths).toContain('/en/docs/')
+    expect(paths).toContain('/zh-Hant/about/')
     expect(paths).toContain('/zh-Hant/cad/opengrid')
     expect(paths).not.toContain('/cad/opengrid')
   })
