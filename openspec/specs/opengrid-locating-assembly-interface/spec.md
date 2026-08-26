@@ -240,10 +240,10 @@ the male/female fit as a user parameter.
 
 ### Requirement: Detachable corner-seat reference compatibility
 
-The supplied v6 canonical male reference MUST be a valid non-empty single solid
+The supplied v8 canonical male reference MUST be a valid non-empty single solid
 with bounds `[-2.5, -2.5, 0]` through `[2.5, 2.5, 5.3]` and nominal volume
-83.3443982424 mm³. It MUST include the centered bottom indicator recess with a
-2 mm radial length, 0.5 mm width, and 0.4 mm depth. The supplied female source reference MUST remain a valid
+83.1443982424 mm³. It MUST include the centered bottom indicator recess with a
+3 mm radial length, 0.5 mm width, and 0.4 mm depth. The supplied female source reference MUST remain a valid
 non-empty single solid with bounds `[-3.5, -3.5, 3]` through
 `[3.5, 3.5, 4.5]` and volume 38.4253392 mm³. Its effective holder material
 MUST extend to Z=4.75 with nominal volume 43.6604635736 mm³. Bounds and volume
@@ -287,8 +287,8 @@ the same male/female fit at every generated locating position.
 The shared detachable corner-seat interface MUST define one consistent visual
 indicator contract for the mating male seat and female socket. Each indicator
 MUST be an exposed-bottom, recessed straight slot with a nominal 0.5 mm width,
-a nominal 2 mm radial length, and a 0.4 mm recess depth. The male indicator
-MUST be carried directly by the supplied v6 pillar solid. The female indicator
+a nominal 3 mm radial length, and a 0.4 mm recess depth. The male indicator
+MUST be carried directly by the supplied v8 pillar solid. The female indicator
 MUST be drawn independently by the socket generator from this shared contract;
 it MUST NOT be copied from the male STEP.
 
@@ -309,7 +309,7 @@ MUST represent the locked state.
 
 - **WHEN** the male-seat or female-socket generator reads the detachable
   corner-seat indicator contract
-- **THEN** it MUST receive the same 0.5 mm by 2 mm straight-slot profile and
+- **THEN** it MUST receive the same 0.5 mm by 3 mm straight-slot profile and
   0.4 mm recess depth
 - **AND** neither consumer MUST define a conflicting local indicator depth or
   profile

@@ -305,9 +305,9 @@ expose another component's parameters.
 ### Requirement: Detachable corner-seat male bottom indicator
 
 When `opengrid-pillar` generates the fixed
-`{ mode: 'detachable-corner-seat' }` profile, it MUST use the supplied v6 male
+`{ mode: 'detachable-corner-seat' }` profile, it MUST use the supplied v8 male
 solid directly. Its exposed Z=0 bottom face MUST contain the shared 0.5 mm by
-2 mm straight-slot indicator recessed by 0.4 mm. The indicator MUST remain
+3 mm straight-slot indicator recessed by 0.4 mm. The indicator MUST remain
 centered on the male seat's local rotational datum, MUST not change the outer XY
 or Z bounds, MUST not change any user parameters, and MUST preserve the
 deterministic export identity. The positioning pillar MUST remain unchanged and
@@ -319,7 +319,7 @@ MUST NOT receive this indicator.
   bottom
 - **THEN** one readable straight-slot recess MUST be present on the Z=0 face
 - **AND** the recess depth MUST be 0.4 mm within geometry tolerance
-- **AND** its footprint MUST be nominally 0.5 mm wide by 2 mm long
+- **AND** its footprint MUST be nominally 0.5 mm wide by 3 mm long
 
 #### Scenario: Detachable indicator preserves the fixed pillar contract
 

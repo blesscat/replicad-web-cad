@@ -296,7 +296,7 @@ MUST fall back to organizer-box defaults without affecting other components.
 ### Requirement: Detachable socket bottom lock indicators
 
 When `cornerSeatMode=detachable-corner-seat`, the Organizer Box MUST draw one
-shared 0.5 mm by 2 mm straight-slot recess beside each of its four female
+shared 0.5 mm by 3 mm straight-slot recess beside each of its four female
 socket openings according to the male pillar contract, regardless of body mode.
 Each recess MUST be 0.4 mm deep,
 remain on the exposed box-bottom surface outside the nominal Ø7 mm socket
@@ -320,7 +320,7 @@ deterministic in the same corner order.
   `cornerSeatMode=detachable-corner-seat`
 - **THEN** the generated single box solid MUST contain four readable straight-slot
   recesses on its bottom surface
-- **AND** every recess MUST be nominally 0.5 mm by 2 mm and 0.4 mm deep within
+- **AND** every recess MUST be nominally 0.5 mm by 3 mm and 0.4 mm deep within
   geometry tolerance
 - **AND** all four recesses MUST remain outside their socket openings and
   preserve the existing socket passage and retaining tabs

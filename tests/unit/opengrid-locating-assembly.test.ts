@@ -118,7 +118,7 @@ describe('OpenGrid locating and assembly interface contract', () => {
       taperTopZ: 5.15,
       wearHeight: 0.15,
       totalHeight: 5.3,
-      nominalVolume: 83.3443982424,
+      nominalVolume: 83.1443982424,
       bounds: {
         min: [-2.5, -2.5, 0],
         max: [2.5, 2.5, 5.3],
@@ -159,7 +159,7 @@ describe('OpenGrid locating and assembly interface contract', () => {
 
     expect(configuration.indicator).toMatchObject({
       width: 0.5,
-      radialLength: 2,
+      radialLength: 3,
       depth: 0.4,
       lockRotationDegrees: 90,
     })
