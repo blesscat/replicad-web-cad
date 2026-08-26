@@ -39,9 +39,10 @@ and flat-text component mesh objects, two deterministic material entries, and
 preserved body/text coordinates. The parent object MUST be the only build item;
 the body and text parts MUST remain independently addressable through
 `Metadata/model_settings.config`. The package MUST use millimetres without a
-hidden scale or translation. It MUST also carry a valid Bambu project
-configuration in `Metadata/project_settings.config` identifying a supported
-Bambu printer and two project filament slots. Bambu Studio metadata MUST
+hidden scale; its build item MUST apply the supported printer's plate-centering
+translation while component and part matrices remain identity. It MUST also
+carry a valid Bambu project configuration in `Metadata/project_settings.config`
+identifying a supported Bambu printer and two project filament slots. Bambu Studio metadata MUST
 assign model part `1` (body) to extruder/filament slot `1`, model part `2`
 (text) to extruder/filament slot `2`, and declare the plate filament map `1 2`.
 
@@ -71,6 +72,15 @@ assign model part `1` (body) to extruder/filament slot `1`, model part `2`
   `Metadata/model_settings.config`
 - **AND** the model XML MUST declare millimetre units, finite vertices, and
   valid triangle indices
+
+#### Scenario: Parent object is centered on the supported printer plate
+
+- **WHEN** a Wall Cover 3MF package is generated for the supported Bambu A1
+  project profile
+- **THEN** the single parent build item MUST use the plate-centering transform
+  `1 0 0 0 1 0 0 0 1 128 128 0`
+- **AND** body/text component and part transforms MUST remain identity so their
+  relative placement is unchanged
 
 #### Scenario: Bambu Studio receives distinct default filament assignments
 

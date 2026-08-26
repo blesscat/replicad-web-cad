@@ -177,7 +177,7 @@ opengrid-organizer-box-{countX}x{countY}-{shape}-sm-{linked|independent}-d{diame
 
 `opengrid-wall-cover` 是 Wall-only、無可調參數的固定元件；目前使用 component-local 的 `opengrid-snap-cover.step`，資產為九個 solid 且維持 Snap Lite／Standard／full footprint、offset `0` 的名義外框。一般 `opengrid-snap` 不會啟用這項雙色功能。
 
-這個 POC 不是浮雕，也不是把文字抬高：文字是獨立的第二個 3MF part，從 Z=`3.0 mm` 延伸到與 Lite 本體相同的頂面 Z=`3.4 mm`，因此列印後是同一平面的雙色嵌件。body 會先保留文字 cavity，3MF 再以兩個 material entry、同一個 parent object 下的兩個 component mesh，以及 Bambu Studio model settings 匯出 body 與 text，避免 slicer 把兩者折疊成單一 mesh，並預設 body 使用耗材槽 1、text 使用耗材槽 2。對單噴嘴加 AMS 的印表機，這代表不同耗材槽，不是兩個物理噴嘴。
+這個 POC 不是浮雕，也不是把文字抬高：文字是獨立的第二個 3MF part，從 Z=`3.0 mm` 延伸到與 Lite 本體相同的頂面 Z=`3.4 mm`，因此列印後是同一平面的雙色嵌件。body 會先保留文字 cavity，3MF 再以兩個 material entry、同一個 parent object 下的兩個 component mesh，以及 Bambu Studio model settings 匯出 body 與 text，避免 slicer 把兩者折疊成單一 mesh，並預設 body 使用耗材槽 1、text 使用耗材槽 2。對單噴嘴加 AMS 的印表機，這代表不同耗材槽，不是兩個物理噴嘴。為了讓以原點置中的幾何落在 A1 平台內，3MF 的 parent build item 會以 `+128 mm, +128 mm` 平移到平台中心；body/text 彼此的相對座標不變。
 
 3MF 檔案名固定為 `opengrid-wall-cover.3mf`。目前沒有任意文字輸入、font parser、任意顏色選擇、slicer profile、printer preset、G-code 或自動控制 Bambu Studio；這些都不屬於本次驗證範圍。
 

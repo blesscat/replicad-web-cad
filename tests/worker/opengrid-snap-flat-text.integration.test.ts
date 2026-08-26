@@ -21,6 +21,7 @@ import {
   OPENGRID_WALL_COVER_TEXT_CONFIGURATION,
   openGridWallCoverTextTopZ,
 } from '../../src/cad-kernel/components/opengrid-wall-cover/flat-text'
+import { THREE_MF_BUILD_TRANSFORM } from '../../src/cad-contract/three-mf'
 
 ;(globalThis as typeof globalThis & { __dirname?: string }).__dirname = dirname(
   fileURLToPath(import.meta.url),
@@ -130,7 +131,9 @@ describe('OpenGrid Wall Cover flat text POC', () => {
       expect(threeMfText).toContain('3D/Objects/object_1.model')
       expect(threeMfText).toContain('<object id="3"')
       expect(threeMfText).toContain('<component')
-      expect(threeMfText).toContain('<item objectid="3"')
+      expect(threeMfText).toContain(
+        `transform="${THREE_MF_BUILD_TRANSFORM}" printable="1"`,
+      )
       expect(threeMfText).toContain('Metadata/project_settings.config')
       expect(threeMfText).toContain('Metadata/model_settings.config')
       expect(threeMfText).toMatch(/"printer_model"\s*:\s*"Bambu Lab A1"/)

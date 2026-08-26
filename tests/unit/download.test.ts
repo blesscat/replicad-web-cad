@@ -3,6 +3,7 @@ import {
   PROTOCOL_VERSION,
   type ExportReadyEvent,
 } from '../../src/cad-contract/messages'
+import { THREE_MF_BUILD_TRANSFORM } from '../../src/cad-contract/three-mf'
 import {
   validateStepResponse,
   validateStlResponse,
@@ -219,7 +220,13 @@ function threeMfBytes(
     ],
   ] as const
   function transformEntry(name: string, content: string): string {
-    if (name === '3D/3dmodel.model' || name === '3D/Objects/object_1.model') {
+    if (name === '3D/3dmodel.model') {
+      return modelTransform(content).replace(
+        'transform="1 0 0 0 1 0 0 0 1 0 0 0" printable="1"',
+        `transform="${THREE_MF_BUILD_TRANSFORM}" printable="1"`,
+      )
+    }
+    if (name === '3D/Objects/object_1.model') {
       return modelTransform(content)
     }
     if (name === 'Metadata/model_settings.config') {

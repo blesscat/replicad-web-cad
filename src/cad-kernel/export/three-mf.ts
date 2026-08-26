@@ -1,5 +1,8 @@
 import type { Shape3D } from 'replicad'
-import { isValidThreeMfPackage } from '../../cad-contract/three-mf'
+import {
+  isValidThreeMfPackage,
+  THREE_MF_BUILD_TRANSFORM,
+} from '../../cad-contract/three-mf'
 import { PROTOTYPE_CONFIGURATION } from '../../cad-contract/units'
 import { meshBRep, type MeshData } from '../mesh'
 
@@ -130,7 +133,7 @@ function modelXml(): string {
     </object>
   </resources>
   <build p:UUID="${BUILD_UUID}">
-    <item objectid="3" p:UUID="${BUILD_ITEM_UUID}" transform="${IDENTITY_TRANSFORM}" printable="1" />
+    <item objectid="3" p:UUID="${BUILD_ITEM_UUID}" transform="${THREE_MF_BUILD_TRANSFORM}" printable="1" />
   </build>
 </model>`
 }

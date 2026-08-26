@@ -12,6 +12,7 @@ const THREE_MF_MODEL_SETTINGS_ENTRY = 'Metadata/model_settings.config'
 const THREE_MF_MODEL_RELATIONSHIPS_ENTRY = '3D/_rels/3dmodel.model.rels'
 const THREE_MF_OBJECT_MODEL_ENTRY = '3D/Objects/object_1.model'
 const THREE_MF_IDENTITY_TRANSFORM = '1 0 0 0 1 0 0 0 1 0 0 0'
+export const THREE_MF_BUILD_TRANSFORM = '1 0 0 0 1 0 0 0 1 128 128 0'
 const THREE_MF_IDENTITY_MATRIX = '1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1'
 
 const REQUIRED_ENTRIES = [
@@ -444,7 +445,7 @@ function validModel(xml: string): boolean {
   return (
     buildItems.length === 1 &&
     attribute(buildItems[0]!, 'objectid') === '3' &&
-    attribute(buildItems[0]!, 'transform') === THREE_MF_IDENTITY_TRANSFORM
+    attribute(buildItems[0]!, 'transform') === THREE_MF_BUILD_TRANSFORM
   )
 }
 
