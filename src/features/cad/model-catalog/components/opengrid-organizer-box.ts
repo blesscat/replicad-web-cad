@@ -151,6 +151,7 @@ export const opengridOrganizerBoxDefinition: ModelDefinition = {
   id: 'opengrid-organizer-box',
   buildKey: 'opengrid-organizer-box',
   family: 'opengrid',
+  supportedSystemContexts: ['desk'],
   displayName: 'models.model.opengrid-organizer-box.name',
   selectionLabel: 'models.model.opengrid-organizer-box.selection',
   selectionDescription: 'models.model.opengrid-organizer-box.description',

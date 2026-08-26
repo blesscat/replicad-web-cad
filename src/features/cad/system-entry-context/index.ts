@@ -48,16 +48,22 @@ export function systemContextForModel(
     modelId === 'opengrid-stackable-cylinder' ||
     modelId === 'opengrid-snap-remover' ||
     modelId === 'opengrid-open-shelf' ||
-    modelId === 'opengrid-wall-cover'
+    modelId === 'opengrid-wall-cover' ||
+    modelId === 'opengrid-openconnect-shelf'
   if (!isOpenGridModel) return undefined
-  if (modelId === 'opengrid-wall-cover' && context !== 'wall') {
+  if (
+    (modelId === 'opengrid-wall-cover' ||
+      modelId === 'opengrid-openconnect-shelf') &&
+    context !== 'wall'
+  ) {
     return undefined
   }
   if (
     context === 'wall' &&
     modelId !== 'opengrid' &&
     modelId !== 'opengrid-snap' &&
-    modelId !== 'opengrid-wall-cover'
+    modelId !== 'opengrid-wall-cover' &&
+    modelId !== 'opengrid-openconnect-shelf'
   ) {
     return undefined
   }

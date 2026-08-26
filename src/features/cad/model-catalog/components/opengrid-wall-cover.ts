@@ -59,6 +59,7 @@ export const opengridWallCoverDefinition: ModelDefinition = {
   parameterSchema: [],
   parameterPresentation: { kind: 'fixed' },
   defaultParameters: {},
+  supportedSystemContexts: ['wall'],
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {
     src: '/model-previews/opengrid-wall-cover.png',

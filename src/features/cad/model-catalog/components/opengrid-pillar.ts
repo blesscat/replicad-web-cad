@@ -80,6 +80,7 @@ export const opengridPillarDefinition: ModelDefinition = {
   id: 'opengrid-pillar',
   buildKey: 'opengrid-pillar',
   family: 'opengrid',
+  supportedSystemContexts: ['desk'],
   displayName: 'models.model.opengrid-pillar.name',
   selectionLabel: 'models.model.opengrid-pillar.selection',
   selectionDescription: 'models.model.opengrid-pillar.description',

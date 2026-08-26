@@ -1,3 +1,5 @@
+import type { CadViewportPresentation } from './presentation'
+
 export type CadViewportTheme = {
   background: string
   gridMajor: string
@@ -110,6 +112,14 @@ export function readCadViewportTheme(): CadViewportTheme {
 
   const styles = getComputedStyle(document.documentElement)
   return resolveCadViewportTheme((name) => styles.getPropertyValue(name))
+}
+
+export function viewportThemeForPresentation(
+  presentation: CadViewportPresentation,
+  observedTheme: CadViewportTheme,
+): CadViewportTheme {
+  if (presentation === 'thumbnail') return CAD_VIEWPORT_THEME_FALLBACK
+  return observedTheme
 }
 
 export function subscribeToCadViewportTheme(

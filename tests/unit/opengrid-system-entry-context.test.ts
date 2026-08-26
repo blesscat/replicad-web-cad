@@ -160,7 +160,12 @@ describe('OpenGrid system entry context', () => {
       openGrid?.subgroups
         ?.find((group) => group.key === 'wall')
         ?.definitions.map((entry) => entry.id),
-    ).toEqual(['opengrid', 'opengrid-snap', 'opengrid-wall-cover'])
+    ).toEqual([
+      'opengrid',
+      'opengrid-snap',
+      'opengrid-wall-cover',
+      'opengrid-openconnect-shelf',
+    ])
 
     const deskSnap = openGrid?.subgroups?.[0]?.definitions[1]
     const wallSnap = openGrid?.subgroups?.[1]?.definitions[1]

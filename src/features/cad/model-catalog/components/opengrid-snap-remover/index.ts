@@ -45,6 +45,7 @@ export const openGridSnapRemoverDefinition: ModelDefinition = {
   id: 'opengrid-snap-remover',
   buildKey: 'opengrid-snap-remover',
   family: 'opengrid',
+  supportedSystemContexts: ['desk'],
   displayName: 'models.model.opengrid-snap-remover.name',
   selectionLabel: 'models.model.opengrid-snap-remover.selection',
   selectionDescription: 'models.model.opengrid-snap-remover.description',

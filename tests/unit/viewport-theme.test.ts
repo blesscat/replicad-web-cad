@@ -3,6 +3,7 @@ import {
   CAD_VIEWPORT_THEME_FALLBACK,
   resolveCadViewportTheme,
   subscribeToCadViewportTheme,
+  viewportThemeForPresentation,
 } from '../../src/features/cad/viewport/theme'
 
 function createTokenReader(
@@ -48,6 +49,19 @@ describe('CAD viewport theme', () => {
     expect(resolveCadViewportTheme(createTokenReader())).toEqual(
       CAD_VIEWPORT_THEME_FALLBACK,
     )
+  })
+
+  it('keeps thumbnail rendering on the shared light palette', () => {
+    const darkTheme = {
+      ...CAD_VIEWPORT_THEME_FALLBACK,
+      background: '#101827',
+      edge: '#c0d0ff',
+    }
+
+    expect(viewportThemeForPresentation('thumbnail', darkTheme)).toEqual(
+      CAD_VIEWPORT_THEME_FALLBACK,
+    )
+    expect(viewportThemeForPresentation('workspace', darkTheme)).toBe(darkTheme)
   })
 
   it('notifies subscribers with the current theme and removes the listener', () => {

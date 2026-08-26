@@ -164,6 +164,14 @@ export const zhHantMessages = {
   'models.model.opengrid-open-shelf.description':
     '前方開口、整體向前上仰的 OpenGrid 格櫃。',
   'models.model.opengrid-open-shelf.alt': 'OpenGrid Open Shelf 預覽',
+  'models.model.opengrid-openconnect-shelf.name':
+    'OpenGrid OpenConnect Shelf（壁掛層架）',
+  'models.model.opengrid-openconnect-shelf.selection':
+    'OpenConnect Shelf（壁掛層架）',
+  'models.model.opengrid-openconnect-shelf.description':
+    '完整水平 OpenGrid Full 平面與可選 X/Z 數量的垂直 OpenConnect 鎖定孔形成正確 90° 介面；底側使用 X/Y 格線落地、格間不封底的肋條支撐。',
+  'models.model.opengrid-openconnect-shelf.alt':
+    'OpenGrid OpenConnect 壁掛層架預覽',
   'docs.eyebrow': 'Documentation',
   'docs.deskQuickStart.title': 'Desk System 快速入門',
   'docs.deskQuickStart.intro':
@@ -259,17 +267,24 @@ export const zhHantMessages = {
   'cad.attribution.snap.summary':
     '這個 OpenGrid Snap generator 使用下列 OpenGrid 與 OpenConnect 上游作者與授權資訊。',
   'cad.attribution.snap.credits': '上游作者：',
+  'cad.attribution.openConnectShelf.summary':
+    '這個產生器使用 OpenGrid 介面與 OpenConnect 鎖定孔幾何。',
+  'cad.attribution.openConnectShelf.credits': '原始系統作者：',
   'cad.attribution.author.designRole': '設計',
   'cad.attribution.author.openScadRole': 'OpenSCAD',
   'cad.attribution.author.openConnectRole': 'OpenConnect 設計與 OpenSCAD',
   'cad.attribution.author.openConnectProjectRole': 'OpenConnect 專案',
   'cad.attribution.snap.modified':
     '`snap-half` 與 `snap-quarter` 是根據原始 Snap 修改的衍生版本，固定下載檔名為 `Half.step` 與 `Quarter.step`；OpenConnect head 與底部介面缺口則根據 mitufy 的 OpenConnect 系統整合，來源授權為 CC BY 4.0。',
+  'cad.attribution.openConnectShelf.modified':
+    '產生器以附帶的鎖定孔 STEP 作為減法模板，並建立原生 OpenGrid Full 層板、支撐與列印朝向。',
   'cad.attribution.licenseLabel': '授權',
   'cad.attribution.sourceCodeLicense': '上游程式碼：CC BY-NC-SA 4.0',
   'cad.attribution.derivedPartsLicense': '衍生／產生零件：CC BY 4.0',
   'cad.attribution.openConnectLicense':
     'OpenConnect 原始碼與介面幾何：CC BY 4.0',
+  'cad.attribution.openConnectSocketLicense':
+    'OpenConnect 原始碼與鎖定孔幾何：CC BY 4.0',
   'cad.attribution.note':
     '以上資訊說明上游作者、程式碼與衍生零件的授權，不代表 Shape Shortcut 對上游程式碼或其他模型取得額外權利。',
   'cad.loading': '正在載入 {name} CAD workspace',
@@ -306,6 +321,8 @@ export const zhHantMessages = {
   'parameter.innerXGridCount': '內部 X 格數',
   'parameter.innerZGridCount': '內部 Z 格數',
   'parameter.openingElevation': '前方開口仰角',
+  'parameter.openConnectRows': 'OpenConnect 接口層數',
+  'parameter.shelfAngle': '列印斜面角度',
   'parameter.totalLength': '總長度',
   'parameter.xyDiameterIncrement': 'XY 直徑增量',
   'parameter.frameIncrement': '外框總增量',
@@ -444,6 +461,10 @@ export const zhHantMessages = {
   'panel.openShelf.cellSpace.regular':
     '平行格層 {layers} 層：高 {height} mm（各層與頂板平行）。',
   'panel.openShelf.honeycomb': '省料模式（六角鏤空）',
+  'panel.openConnectShelf.description':
+    '完整 OpenGrid Full 使用水平安裝面，後方 OpenConnect 鎖定孔面保持垂直；Z 控制層板下方的接口層數，角度只控制 X/Y 格線落地、格間透空的肋條與整體列印朝向。',
+  'panel.openConnectShelf.maximumAngle':
+    '目前 Y={rows} 格、Z={connectorRows} 格可用的最大角度為 {maximum}°，確保前端至少保留 7 mm 高度。',
   'panel.opening.direction.front': '前方',
   'panel.opening.direction.back': '後方',
   'panel.opening.direction.left': '左方',
@@ -792,6 +813,12 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'models.model.opengrid-open-shelf.description':
     'An OpenGrid shelf with a forward opening and adjustable angled elevation.',
   'models.model.opengrid-open-shelf.alt': 'OpenGrid Open Shelf preview',
+  'models.model.opengrid-openconnect-shelf.name': 'OpenGrid OpenConnect Shelf',
+  'models.model.opengrid-openconnect-shelf.selection': 'OpenConnect Shelf',
+  'models.model.opengrid-openconnect-shelf.description':
+    'A wall shelf with a complete horizontal OpenGrid Full interface at exactly 90° to a selectable X/Z grid of locked OpenConnect sockets, supported by grounded X/Y ribs with open cell bays.',
+  'models.model.opengrid-openconnect-shelf.alt':
+    'OpenGrid OpenConnect wall shelf preview',
   'docs.eyebrow': 'Documentation',
   'docs.deskQuickStart.title': 'Desk System Quick Start',
   'docs.deskQuickStart.intro':
@@ -892,17 +919,24 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'cad.attribution.snap.summary':
     'This OpenGrid Snap generator uses the following OpenGrid and OpenConnect upstream attribution and licensing information.',
   'cad.attribution.snap.credits': 'Upstream authors:',
+  'cad.attribution.openConnectShelf.summary':
+    'This generator uses the OpenGrid interface and locked OpenConnect socket geometry.',
+  'cad.attribution.openConnectShelf.credits': 'Original system authors:',
   'cad.attribution.author.designRole': 'design',
   'cad.attribution.author.openScadRole': 'OpenSCAD',
   'cad.attribution.author.openConnectRole': 'OpenConnect design and OpenSCAD',
   'cad.attribution.author.openConnectProjectRole': 'OpenConnect project',
   'cad.attribution.snap.modified':
     "`snap-half` and `snap-quarter` are modified derivatives of the original Snap design; the fixed download filenames are `Half.step` and `Quarter.step`. The OpenConnect head and underside interface notch are derived from mitufy's OpenConnect system under CC BY 4.0.",
+  'cad.attribution.openConnectShelf.modified':
+    'The generator uses the supplied locked-socket STEP as a subtractive template and builds the OpenGrid Full shelf, support structure, and print orientation natively.',
   'cad.attribution.licenseLabel': 'Licenses',
   'cad.attribution.sourceCodeLicense': 'Upstream source code: CC BY-NC-SA 4.0',
   'cad.attribution.derivedPartsLicense': 'Derived/generated parts: CC BY 4.0',
   'cad.attribution.openConnectLicense':
     'OpenConnect source and interface geometry: CC BY 4.0',
+  'cad.attribution.openConnectSocketLicense':
+    'OpenConnect source and locked-socket geometry: CC BY 4.0',
   'cad.attribution.note':
     'This information documents the upstream authors, code, and derived-part licenses; it does not grant Shape Shortcut additional rights to the upstream code or other models.',
   'cad.loading': 'Loading {name} CAD workspace',
@@ -941,6 +975,8 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'parameter.innerXGridCount': 'Inner X cell count',
   'parameter.innerZGridCount': 'Inner Z cell count',
   'parameter.openingElevation': 'Front opening elevation',
+  'parameter.openConnectRows': 'OpenConnect interface rows',
+  'parameter.shelfAngle': 'Print-support angle',
   'parameter.totalLength': 'Total length',
   'parameter.xyDiameterIncrement': 'XY diameter increment',
   'parameter.frameIncrement': 'Frame increment',
@@ -1090,6 +1126,10 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'panel.openShelf.cellSpace.regular':
     '{layers} parallel layers: {height} mm high (each layer parallel to the top plate).',
   'panel.openShelf.honeycomb': 'Material-saving mode (hexagonal voids)',
+  'panel.openConnectShelf.description':
+    'The complete OpenGrid Full interface installs horizontally while the rear locked OpenConnect socket plane remains vertical. Z controls the interface rows below the shelf; angle changes only the grounded X/Y ribs with open cell bays and the whole-part print orientation.',
+  'panel.openConnectShelf.maximumAngle':
+    'The maximum angle for Y={rows} cells and Z={connectorRows} cells is {maximum}°, preserving at least 7 mm at the front.',
   'panel.opening.direction.front': 'Front',
   'panel.opening.direction.back': 'Back',
   'panel.opening.direction.left': 'Left',

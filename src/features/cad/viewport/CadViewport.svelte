@@ -11,6 +11,7 @@
     observeCadViewportTheme,
     readCadViewportTheme,
     type CadViewportTheme,
+    viewportThemeForPresentation,
   } from './theme'
   import type { CadViewportPresentation } from './presentation'
   import {
@@ -41,7 +42,10 @@
     onPreparationTiming,
   }: Props = $props()
   let webglSupported = $state(true)
-  let viewportTheme = $state<CadViewportTheme>(readCadViewportTheme())
+  let observedViewportTheme = $state<CadViewportTheme>(readCadViewportTheme())
+  let viewportTheme = $derived(
+    viewportThemeForPresentation(presentation, observedViewportTheme),
+  )
 
   function reportPreparationTiming(timing: ViewportGeometryTiming): void {
     onPreparationTiming?.(timing)
@@ -65,7 +69,7 @@
   onMount(() => {
     webglSupported = canCreateWebGLContext()
     return observeCadViewportTheme((nextTheme) => {
-      viewportTheme = nextTheme
+      observedViewportTheme = nextTheme
     })
   })
 </script>

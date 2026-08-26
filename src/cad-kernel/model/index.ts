@@ -10,6 +10,7 @@ import {
   isOpenGridDividerModelParameters,
   isOpenGridParameters,
   isOpenGridOpenShelfParameters,
+  isOpenGridOpenConnectShelfParameters,
   isOpenGridOrganizerBoxParameters,
   isOpenGridStackableBoxParameters,
   isOpenGridStackableCylinderParameters,
@@ -46,6 +47,7 @@ import {
 import { buildOpenGridSnapRemover } from '../components/opengrid-snap-remover/builder'
 import { buildPillar } from '../components/opengrid-pillar/builder'
 import { buildOpenGridOpenShelf } from '../components/opengrid-open-shelf/builder'
+import { buildOpenGridOpenConnectShelf } from '../components/opengrid-openconnect-shelf/builder'
 import { buildOpenGridOrganizerBox } from '../components/opengrid-organizer-box/builder'
 
 export type KernelBuildContext = {
@@ -76,6 +78,7 @@ export type KernelBuildContext = {
   ) => Promise<Shape3D>
   getOpenGridSnapOpenConnectHead?: () => Promise<Shape3D>
   getOpenGridSnapRemoverAsset?: () => Promise<Shape3D>
+  getOpenGridOpenConnectShelfLockedSlot?: () => Promise<Shape3D>
   getOpenGridDetachableCornerSeatReference?: () => Promise<Shape3D>
   getOpenGridDetachableCornerSeatHolderReference?: () => Promise<Shape3D>
   yieldToEventLoop?: () => Promise<void>
@@ -369,6 +372,36 @@ async function buildOpenGridOpenShelfModel(
   })
 }
 
+async function buildOpenGridOpenConnectShelfModel(
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Promise<Shape3D> {
+  if (!isOpenGridOpenConnectShelfParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-openconnect-shelf')
+  }
+  if (!context.getOpenGridOpenConnectShelfLockedSlot) {
+    throw new Error(
+      'MODEL_ASSET_CONTEXT_MISSING:opengrid-openconnect-shelf-locked-slot',
+    )
+  }
+  return buildOpenGridOpenConnectShelf(parameters, {
+    getLockedSlot: context.getOpenGridOpenConnectShelfLockedSlot,
+    getOpenGridPrototype: context.getOpenGridPrototype,
+    getOpenGridCanonicalTile: context.getOpenGridCanonicalTile,
+    getOpenGridHalfCellPrototype: context.getOpenGridHalfCellPrototype,
+    useCompoundChamferCutters: context.useCompoundChamferCutters,
+    useCompoundScrewParts: context.useCompoundScrewParts,
+    fuseHalfCellExtensionsIntoAssembly:
+      context.fuseHalfCellExtensionsIntoAssembly,
+    balancedFuseBatchSize: context.balancedFuseBatchSize,
+    isGenerationCurrent: context.isGenerationCurrent,
+    yieldToEventLoop: context.yieldToEventLoop,
+    reportProgress: context.reportProgress,
+    reportPhase: context.reportPhase,
+    booleanOperations: context.booleanOperations,
+  })
+}
+
 async function buildOpenGridStackableCylinderModel(
   parameters: ModelParameterValues,
   context: KernelBuildContext,
@@ -487,6 +520,11 @@ export const opengridOpenShelfKernelDefinition: KernelModelDefinition = {
   build: buildOpenGridOpenShelfModel,
 }
 
+export const opengridOpenConnectShelfKernelDefinition: KernelModelDefinition = {
+  id: 'opengrid-openconnect-shelf',
+  build: buildOpenGridOpenConnectShelfModel,
+}
+
 export const openGridSnapRemoverKernelDefinition: KernelModelDefinition = {
   id: 'opengrid-snap-remover',
   build: buildOpenGridSnapRemoverModel,
@@ -508,6 +546,7 @@ export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   opengridOrganizerBoxKernelDefinition,
   opengridStackableCylinderKernelDefinition,
   opengridOpenShelfKernelDefinition,
+  opengridOpenConnectShelfKernelDefinition,
   opengridSnapKernelDefinition,
   opengridWallCoverKernelDefinition,
   openGridSnapRemoverKernelDefinition,

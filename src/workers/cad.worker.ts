@@ -48,6 +48,8 @@ import {
 import { assertOpenGridDividerShapeQuality } from '../cad-kernel/components/opengrid-divider/quality'
 import { assertPillarShapeQuality } from '../cad-kernel/components/opengrid-pillar/quality'
 import { assertOpenGridOpenShelfShapeQuality } from '../cad-kernel/components/opengrid-open-shelf/quality'
+import { assertOpenGridOpenConnectShelfShapeQuality } from '../cad-kernel/components/opengrid-openconnect-shelf/quality'
+import { loadOpenGridOpenConnectShelfLockedSlot } from '../cad-kernel/components/opengrid-openconnect-shelf/slot'
 import { assertOpenGridOrganizerBoxGeometry } from '../cad-kernel/components/opengrid-organizer-box/quality'
 import { meshBRep, serializeMesh, type MeshData } from '../cad-kernel/mesh'
 import {
@@ -85,6 +87,7 @@ import {
   isHswCellParameters,
   isOpenGridDividerModelParameters,
   isOpenGridOpenShelfParameters,
+  isOpenGridOpenConnectShelfParameters,
   isOpenGridOrganizerBoxParameters,
   isOpenGridParameters,
   normalizeOpenGridDividerParameters,
@@ -233,6 +236,9 @@ export class CadWorkerRuntime {
   > | null = null
   private openGridSnapRemoverAsset: Promise<import('replicad').Shape3D> | null =
     null
+  private openGridOpenConnectShelfLockedSlot: Promise<
+    import('replicad').Shape3D
+  > | null = null
   private openGridDetachableCornerSeatReference: Promise<
     import('replicad').Shape3D
   > | null = null
@@ -351,6 +357,7 @@ export class CadWorkerRuntime {
           this.disposeOpenGridSnapFixedFootprints()
           this.disposeOpenGridSnapOpenConnectHead()
           this.disposeOpenGridSnapRemoverAsset()
+          this.disposeOpenGridOpenConnectShelfLockedSlot()
           this.disposeOpenGridDetachableCornerSeatReference()
           this.disposeOpenGridDetachableCornerSeatHolderReference()
           this.initialized = false
@@ -479,6 +486,8 @@ export class CadWorkerRuntime {
         getOpenGridSnapOpenConnectHead: () =>
           this.getOpenGridSnapOpenConnectHead(),
         getOpenGridSnapRemoverAsset: () => this.getOpenGridSnapRemoverAsset(),
+        getOpenGridOpenConnectShelfLockedSlot: () =>
+          this.getOpenGridOpenConnectShelfLockedSlot(),
         getOpenGridDetachableCornerSeatReference: () =>
           this.getOpenGridDetachableCornerSeatReference(),
         getOpenGridDetachableCornerSeatHolderReference: () =>
@@ -673,6 +682,22 @@ export class CadWorkerRuntime {
             shape,
             generationParameters,
             mesh,
+          ),
+        )
+      }
+      if (command.modelId === 'opengrid-openconnect-shelf') {
+        if (!isOpenGridOpenConnectShelfParameters(generationParameters)) {
+          throw new Error(
+            'MODEL_PARAMETERS_MISMATCH:opengrid-openconnect-shelf',
+          )
+        }
+        const lockedSlot = await this.getOpenGridOpenConnectShelfLockedSlot()
+        timing.measureSync('quality', () =>
+          assertOpenGridOpenConnectShelfShapeQuality(
+            shape,
+            generationParameters,
+            mesh,
+            lockedSlot,
           ),
         )
       }
@@ -1429,6 +1454,29 @@ export class CadWorkerRuntime {
     return this.openGridSnapRemoverAsset
   }
 
+  private getOpenGridOpenConnectShelfLockedSlot(): Promise<
+    import('replicad').Shape3D
+  > {
+    if (!this.openGridOpenConnectShelfLockedSlot) {
+      const assetPromise = loadOpenGridOpenConnectShelfLockedSlot()
+        .then((asset) => {
+          if (this.disposed) {
+            asset.delete()
+            throw new Error('WORKER_TERMINATED')
+          }
+          return asset
+        })
+        .catch((error) => {
+          if (this.openGridOpenConnectShelfLockedSlot === assetPromise) {
+            this.openGridOpenConnectShelfLockedSlot = null
+          }
+          throw error
+        })
+      this.openGridOpenConnectShelfLockedSlot = assetPromise
+    }
+    return this.openGridOpenConnectShelfLockedSlot
+  }
+
   private getOpenGridDetachableCornerSeatReference(): Promise<
     import('replicad').Shape3D
   > {
@@ -1572,6 +1620,13 @@ export class CadWorkerRuntime {
   private disposeOpenGridSnapRemoverAsset(): void {
     const assetPromise = this.openGridSnapRemoverAsset
     this.openGridSnapRemoverAsset = null
+    if (!assetPromise) return
+    void assetPromise.then((asset) => asset.delete()).catch(() => undefined)
+  }
+
+  private disposeOpenGridOpenConnectShelfLockedSlot(): void {
+    const assetPromise = this.openGridOpenConnectShelfLockedSlot
+    this.openGridOpenConnectShelfLockedSlot = null
     if (!assetPromise) return
     void assetPromise.then((asset) => asset.delete()).catch(() => undefined)
   }

@@ -55,6 +55,7 @@ export const opengridDefinition: ModelDefinition = {
   id: 'opengrid',
   buildKey: 'opengrid',
   family: 'opengrid',
+  supportedSystemContexts: ['desk', 'wall'],
   displayName: 'models.model.opengrid.name',
   selectionLabel: 'models.model.opengrid.selection',
   selectionDescription: 'models.model.opengrid.description',

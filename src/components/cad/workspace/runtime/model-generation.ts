@@ -2,8 +2,10 @@ import { normalizeError } from '../../../../cad-contract/errors'
 import { diagnostic } from '../../../../cad-contract/diagnostics'
 import {
   OPENGRID_PREVIEW_CONFIGURATION,
+  OPENGRID_OPENCONNECT_SHELF_CONFIGURATION,
   PROTOTYPE_CONFIGURATION,
   isOpenGridParameters,
+  openGridOpenConnectShelfMaximumAngleForRows,
   validateOpenGridGenerationSupport,
   validateOpenGridParameters,
   validateModelParameters,
@@ -18,6 +20,7 @@ import {
   parseRawParameters,
   rawFromParameters,
 } from '../validation'
+import type { RawParameters } from '../types'
 import type { ModelGenerationHandlers, RuntimeContext } from './types'
 
 function previewConfigForModel(modelId: ModelId) {
@@ -28,6 +31,35 @@ function previewConfigForModel(modelId: ModelId) {
     tolerance: PROTOTYPE_CONFIGURATION.boundsTolerance,
     angularTolerance: 0.1,
   }
+}
+
+function isOpenConnectShelfGridCount(value: number): boolean {
+  const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+  return (
+    Number.isSafeInteger(value) &&
+    value >= configuration.minGridCount &&
+    value <= configuration.maxGridCount
+  )
+}
+
+function clampOpenConnectShelfAngle(parameters: RawParameters): RawParameters {
+  const rows = Number(parameters.rows)
+  const connectorRows = Number(parameters.connectorRows)
+  const angle = Number(parameters.angle)
+  if (
+    !isOpenConnectShelfGridCount(rows) ||
+    !isOpenConnectShelfGridCount(connectorRows) ||
+    !Number.isFinite(angle)
+  ) {
+    return parameters
+  }
+
+  const maximumAngle = openGridOpenConnectShelfMaximumAngleForRows(
+    rows,
+    connectorRows,
+  )
+  if (angle <= maximumAngle) return parameters
+  return { ...parameters, angle: String(maximumAngle) }
 }
 
 export function createModelGenerationHandlers(
@@ -146,6 +178,12 @@ export function createModelGenerationHandlers(
     ) {
       const { length: _length, offset: _offset, ...lockingParameters } = next
       next = lockingParameters
+    }
+    if (
+      modelId === 'opengrid-openconnect-shelf' &&
+      (key === 'rows' || key === 'connectorRows')
+    ) {
+      next = clampOpenConnectShelfAngle(next)
     }
     context.refs.rawParameters.current = next
     context.setRawParameters(next)
