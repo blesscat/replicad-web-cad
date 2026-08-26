@@ -304,6 +304,27 @@ test('home, model selection, and docs are static Astro pages', async ({
   await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
 })
 
+test('primary navigation stays at the top while scrolling', async ({
+  page,
+}) => {
+  await page.goto('/en/')
+
+  const navigation = page.getByRole('navigation', {
+    name: 'Primary navigation',
+  })
+  await expect(navigation).toHaveCSS('position', 'sticky')
+
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+
+  await expect
+    .poll(() =>
+      navigation.evaluate((element) =>
+        Math.round(element.getBoundingClientRect().top),
+      ),
+    )
+    .toBe(0)
+})
+
 test('Traditional Chinese homepage uses the Desk System entry flow', async ({
   page,
 }) => {
