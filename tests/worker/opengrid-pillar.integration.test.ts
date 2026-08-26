@@ -107,7 +107,7 @@ describe('OpenGrid pillar CAD kernel integration', () => {
         probeVolumeAt(shape, 0, configuration.indicator.depth + 0.02),
       ).toBeGreaterThan(0)
       expect(measureVolume(shape)).toBeCloseTo(
-        configuration.male.markedNominalVolume,
+        configuration.male.nominalVolume,
         3,
       )
       const mesh = meshBRep(shape, {

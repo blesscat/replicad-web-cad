@@ -191,27 +191,11 @@ export function assertOpenGridDetachableCornerSeatHolderReference(
   assertReference(shape, 'female')
 }
 
-function assertGeneratedMale(shape: Shape3D): void {
-  const inspection = inspectReference(shape)
-  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
-  const expected = configuration.male
-  const volumeMatches =
-    Math.abs(inspection.volume - expected.markedNominalVolume) <=
-    configuration.volumeTolerance
-  if (
-    inspection.solidCount !== 1 ||
-    !inspection.valid ||
-    !boundsMatch(inspection.bounds, expected.bounds) ||
-    !volumeMatches
-  ) {
-    throw new Error(
-      `OPENGRID_DETACHABLE_CORNER_SEAT_GENERATED_MALE_INVALID:${JSON.stringify({ inspection, expected })}`,
-    )
-  }
-}
-
 export function buildOpenGridDetachableCornerSeatIndicatorCutter(): Shape3D {
-  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator
+  // The female box marker is drawn from the dimensions carried by the
+  // supplied male pillar contract; the pillar itself already contains it.
+  const configuration =
+    OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male.indicator
   const sketcher = new Sketcher('XY', [0, 0, -configuration.cutterOverlap])
   let sketch: ReturnType<Sketcher['close']> | null = null
   let cutter: Shape3D | null = null
@@ -265,24 +249,6 @@ export function placeOpenGridDetachableCornerSeatIndicatorShape(
   }
 }
 
-function cutDetachableCornerSeatIndicator(shape: Shape3D): Shape3D {
-  let cutter: Shape3D | null = null
-  try {
-    cutter = buildOpenGridDetachableCornerSeatIndicatorCutter()
-    const marked = runGeometryStage(
-      'OPENGRID_DETACHABLE_CORNER_SEAT_INDICATOR_CUT_FAILED',
-      () => shape.cut(cutter!, { optimisation: 'none' }),
-    )
-    deleteShape(shape)
-    return marked
-  } catch (error) {
-    deleteShape(shape)
-    throw error
-  } finally {
-    deleteShape(cutter)
-  }
-}
-
 function assertGeneratedFemale(shape: Shape3D): void {
   const inspection = inspectReference(shape)
   const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
@@ -306,16 +272,8 @@ export function buildOpenGridDetachableCornerSeatFromReference(
   reference: Shape3D,
 ): Shape3D {
   assertReference(reference, 'male')
-  let result: Shape3D | null = reference.clone()
-  try {
-    result = cutDetachableCornerSeatIndicator(result)
-    assertGeneratedMale(result)
-    const generated = result
-    result = null
-    return generated
-  } finally {
-    deleteShape(result)
-  }
+  // The supplied v6 pillar already contains its own bottom indicator.
+  return reference.clone()
 }
 
 export function buildOpenGridDetachableCornerSeatHolderFromReference(

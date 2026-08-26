@@ -513,8 +513,18 @@ describe('OpenGrid organizer-box B-Rep', () => {
           [indicator.center[0] + 0.08, indicator.center[1] + 0.08, 0.13],
         ])
         const materialProbe = probeVolume(shape, [
-          [indicator.center[0] - 0.08, indicator.center[1] - 0.08, 0.17],
-          [indicator.center[0] + 0.08, indicator.center[1] + 0.08, 0.25],
+          [
+            indicator.center[0] - 0.08,
+            indicator.center[1] - 0.08,
+            OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.depth -
+              0.03,
+          ],
+          [
+            indicator.center[0] + 0.08,
+            indicator.center[1] + 0.08,
+            OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.depth +
+              0.05,
+          ],
         ])
         expect(recessProbe, pose.corner).toBeLessThanOrEqual(
           OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.intersectionVolumeTolerance,

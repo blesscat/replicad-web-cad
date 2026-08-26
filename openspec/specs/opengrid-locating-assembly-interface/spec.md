@@ -200,12 +200,12 @@ display names and OpenGrid identities MUST remain unchanged.
 The shared OpenGrid locating-assembly contract MUST publish one fixed male
 detachable corner-seat geometry and one matching female socket-material
 geometry. The male MUST have a 5 mm maximum locating diameter, a 3.8 mm locating
-height, a 0.2 mm-high lead-in from Ø4.6 mm to Ø5 mm, a 1.94 mm-wide keyed
+height, a 0.2 mm-high lead-in from Ø4.6 mm to Ø5 mm, a 1.96 mm-wide keyed
 retaining head whose 45-degree taper ends at Z=5.15 mm, a 0.15 mm-high flat wear
 surface, and a total height of 5.3 mm. The female socket material MUST have a
 Ø7 mm by 1.75 mm outer envelope, formed by extending the canonical holder
 0.25 mm inward while preserving its bottom entrance, 2 mm-wide keyed passage,
-and retaining tabs. The straight key-width clearance MUST be 0.03 mm per side.
+and retaining tabs. The straight key-width clearance MUST be 0.02 mm per side.
 
 The geometry MUST remain fixed during the Organizer Box prototype phase. No
 consumer MUST redefine a conflicting copy, apply the Pillar XY offset, or expose
@@ -216,10 +216,10 @@ the male/female fit as a user parameter.
 - **WHEN** the Organizer Box socket builder or Pillar detachable-seat builder
   reads the shared locating-assembly contract
 - **THEN** it MUST receive male body diameter 5 mm, body height 3.8 mm, lead-in
-  height 0.2 mm, lead-in tip diameter 4.6 mm, key width 1.94 mm, taper top Z
+  height 0.2 mm, lead-in tip diameter 4.6 mm, key width 1.96 mm, taper top Z
   5.15 mm, wear height 0.15 mm, and total height 5.3 mm
 - **AND** it MUST receive female outer diameter 7 mm, depth 1.75 mm, passage
-  width 2 mm, and key side clearance 0.03 mm
+  width 2 mm, and key side clearance 0.02 mm
 - **AND** neither consumer MUST define a conflicting local copy
 
 #### Scenario: Male lead-in remains printable and insertable
@@ -240,9 +240,10 @@ the male/female fit as a user parameter.
 
 ### Requirement: Detachable corner-seat reference compatibility
 
-The derived canonical male reference MUST be a valid non-empty single solid
+The supplied v6 canonical male reference MUST be a valid non-empty single solid
 with bounds `[-2.5, -2.5, 0]` through `[2.5, 2.5, 5.3]` and nominal volume
-83.5724776437 mm³. The supplied female source reference MUST remain a valid
+83.3443982424 mm³. It MUST include the centered bottom indicator recess with a
+2 mm radial length, 0.5 mm width, and 0.4 mm depth. The supplied female source reference MUST remain a valid
 non-empty single solid with bounds `[-3.5, -3.5, 3]` through
 `[3.5, 3.5, 4.5]` and volume 38.4253392 mm³. Its effective holder material
 MUST extend to Z=4.75 with nominal volume 43.6604635736 mm³. Bounds and volume
@@ -285,10 +286,11 @@ the same male/female fit at every generated locating position.
 
 The shared detachable corner-seat interface MUST define one consistent visual
 indicator contract for the mating male seat and female socket. Each indicator
-MUST be an exposed-bottom, shallow recessed straight slot with a nominal 1 mm
-width, a nominal 2 mm radial length, and a 0.2 mm recess depth. The
-indicator depth MUST be shared by both mating parts and MUST remain within the
-requested 0.1–0.2 mm printable range.
+MUST be an exposed-bottom, recessed straight slot with a nominal 0.5 mm width,
+a nominal 2 mm radial length, and a 0.4 mm recess depth. The male indicator
+MUST be carried directly by the supplied v6 pillar solid. The female indicator
+MUST be drawn independently by the socket generator from this shared contract;
+it MUST NOT be copied from the male STEP.
 
 The shared slot's local radial centerline MUST run along the local X axis before
 any socket-pose transform is applied. Both mating indicators MUST use this same
@@ -307,8 +309,8 @@ MUST represent the locked state.
 
 - **WHEN** the male-seat or female-socket generator reads the detachable
   corner-seat indicator contract
-- **THEN** it MUST receive the same 1 mm by 2 mm straight-slot profile and
-  0.2 mm recess depth
+- **THEN** it MUST receive the same 0.5 mm by 2 mm straight-slot profile and
+  0.4 mm recess depth
 - **AND** neither consumer MUST define a conflicting local indicator depth or
   profile
 
