@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, untrack } from 'svelte'
   import {
     CAD_PROGRESS_STAGES,
     booleanProgressLabel,
@@ -95,10 +95,14 @@
 
   let { progress, locale }: Props = $props()
   let now = $state(clockNow())
-  let trackedStage = progress.stage
-  let trackedOperationId = progress.operationId
+  let trackedStage = untrack(() => progress.stage)
+  let trackedOperationId = untrack(() => progress.operationId)
   let stageStartedAt = $state<number | null>(
-    progress.stage === 'building' || progress.stage === 'meshing' ? now : null,
+    untrack(() =>
+      progress.stage === 'building' || progress.stage === 'meshing'
+        ? now
+        : null,
+    ),
   )
   let current = $derived(progressDetails(progress.stage))
   let currentLabel = $derived(translate(locale, current.labelKey))

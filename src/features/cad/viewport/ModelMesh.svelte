@@ -46,7 +46,7 @@
   let edgeGeometry = $state<THREE.EdgesGeometry | null>(null)
   let edgeMaterial = $derived(createViewportEdgeMaterial(theme.edge))
   let edgePreparation = new ViewportEdgePreparation({
-    onTiming: onPreparationTiming,
+    onTiming: (timing) => onPreparationTiming?.(timing),
   })
 
   $effect(() => {
