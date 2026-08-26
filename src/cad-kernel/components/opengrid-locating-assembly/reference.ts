@@ -218,11 +218,12 @@ export function buildOpenGridDetachableCornerSeatIndicatorCutter(): Shape3D {
   try {
     const halfWidth = configuration.width / 2
     const halfRadialLength = configuration.radialLength / 2
-    // The shared local radial datum runs from the flat edge at negative X to
-    // the triangle apex at positive X.
-    sketcher.movePointerTo([-halfRadialLength, halfWidth])
-    sketcher.lineTo([-halfRadialLength, -halfWidth])
-    sketcher.lineTo([halfRadialLength, 0])
+    // The shared local radial datum runs along the printable straight slot
+    // from negative X to positive X.
+    sketcher.movePointerTo([-halfRadialLength, -halfWidth])
+    sketcher.lineTo([halfRadialLength, -halfWidth])
+    sketcher.lineTo([halfRadialLength, halfWidth])
+    sketcher.lineTo([-halfRadialLength, halfWidth])
     sketch = sketcher.close()
     cutter = sketch.extrude(configuration.depth + configuration.cutterOverlap, {
       extrusionDirection: [0, 0, 1],

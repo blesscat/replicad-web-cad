@@ -296,11 +296,11 @@ MUST fall back to organizer-box defaults without affecting other components.
 ### Requirement: Detachable socket bottom lock indicators
 
 When `cornerSeatMode=detachable-corner-seat`, the Organizer Box MUST add one
-shared 2 mm by 2 mm triangular recess beside each of its four female socket
-openings regardless of body mode. Each recess MUST be 0.15 mm deep, remain on
-the exposed box-bottom surface outside the nominal Ø7 mm socket envelope, and
-remain clear of the keyed passage, retaining tabs, storage cavities, active
-stacking features, and outer boundary.
+shared 0.4 mm by 2 mm straight-slot recess beside each of its four female
+socket openings regardless of body mode. Each recess MUST be 0.2 mm deep,
+remain on the exposed box-bottom surface outside the nominal Ø7 mm socket
+envelope, and remain clear of the keyed passage, retaining tabs, storage
+cavities, active stacking features, and outer boundary.
 
 The four socket poses MUST retain the existing bottom-view orientations:
 upper-left 0°, upper-right 90°, lower-right 180°, and lower-left 270°. For each
@@ -309,17 +309,17 @@ outside the socket envelope. The upper-left and lower-right canonical
 indicators MUST remain on the opposite side of their sockets specified by the
 reference arrows, while retaining the same 0.15 mm boundary clearance. The
 upper-right and lower-left indicators MUST remain on their existing sides. All
-four female triangle apexes MUST point toward their socket openings. With the
-shared triangle's local apex pointing along +X, these directions MUST remain
+four female slot centerlines MUST point toward their socket openings. With the
+shared slot's local centerline aligned to +X, these placements MUST remain
 deterministic in the same corner order.
 
 #### Scenario: Locking corner-seat mode shows four indicators
 
 - **WHEN** a valid Organizer Box snapshot selects `鎖定角座`, normalized as
   `cornerSeatMode=detachable-corner-seat`
-- **THEN** the generated single box solid MUST contain four readable triangular
+- **THEN** the generated single box solid MUST contain four readable straight-slot
   recesses on its bottom surface
-- **AND** every recess MUST be nominally 2 mm by 2 mm and 0.15 mm deep within
+- **AND** every recess MUST be nominally 0.4 mm by 2 mm and 0.2 mm deep within
   geometry tolerance
 - **AND** all four recesses MUST remain outside their socket openings and
   preserve the existing socket passage and retaining tabs
@@ -334,7 +334,7 @@ deterministic in the same corner order.
   the opposite side specified by the reference arrows
 - **AND** each socket MUST accept the same unmirrored male seat in its existing
   insertion orientation
-- **AND** turning that male clockwise 90° MUST make the two visible triangles
+- **AND** turning that male clockwise 90° MUST make the two visible slots
   point to one another
 
 #### Scenario: Indicators do not change Organizer Box interfaces

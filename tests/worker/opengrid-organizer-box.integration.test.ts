@@ -3,13 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beforeAll, describe, expect, it } from 'vitest'
-import {
-  makeBox,
-  measureVolume,
-  setOC,
-  type Edge,
-  type Shape3D,
-} from 'replicad'
+import { makeBox, measureVolume, setOC, type Shape3D } from 'replicad'
 import {
   boundsForOpenGridOrganizerBox,
   openGridOrganizerBoxDetachableIndicatorPlacementFor,
@@ -158,49 +152,46 @@ function horizontalFaceZValuesAt(
   return values
 }
 
-function readEdgeStart(edge: Edge): [number, number] {
-  const point = edge.startPoint
-  try {
-    return [point.x ?? Number.NaN, point.y ?? Number.NaN]
-  } finally {
-    point.delete()
-  }
+type MarkerSlotFootprint = {
+  minimum: [number, number]
+  maximum: [number, number]
 }
 
-function markerTriangleVerticesAt(
+function markerSlotFootprintAt(
   shape: Shape3D,
   center: [number, number],
-): [number, number][] | null {
+): MarkerSlotFootprint | null {
   const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
   for (const face of shape.faces) {
     const boundingBox = face.boundingBox
-    let edges: Edge[] = []
     try {
       const [minimum, maximum] = boundingBox.bounds as [
         [number, number, number],
         [number, number, number],
       ]
+      const horizontalSpan = maximum[0] - minimum[0]
+      const verticalSpan = maximum[1] - minimum[1]
+      const hasMarkerFootprint =
+        (horizontalSpan <= configuration.indicator.radialLength + 0.2 &&
+          verticalSpan <= configuration.indicator.width + 0.2) ||
+        (horizontalSpan <= configuration.indicator.width + 0.2 &&
+          verticalSpan <= configuration.indicator.radialLength + 0.2)
       const isMarkerFloor =
         face.surface.surfaceType === 'PLANE' &&
         Math.abs(minimum[2] - configuration.indicator.depth) <= 0.02 &&
         Math.abs(maximum[2] - configuration.indicator.depth) <= 0.02 &&
-        maximum[0] - minimum[0] <= configuration.indicator.width + 0.2 &&
-        maximum[1] - minimum[1] <= configuration.indicator.radialLength + 0.2 &&
+        hasMarkerFootprint &&
         minimum[0] <= center[0] &&
         maximum[0] >= center[0] &&
         minimum[1] <= center[1] &&
         maximum[1] >= center[1]
-      if (!isMarkerFloor) continue
-      edges = face.edges
-      if (edges.length !== 3) continue
-      return edges
-        .map(readEdgeStart)
-        .sort(([firstX, firstY], [secondX, secondY]) => {
-          if (firstX !== secondX) return firstX - secondX
-          return firstY - secondY
-        })
+      if (isMarkerFloor) {
+        return {
+          minimum: [minimum[0], minimum[1]],
+          maximum: [maximum[0], maximum[1]],
+        }
+      }
     } finally {
-      edges.forEach((edge) => edge.delete())
       boundingBox.delete()
       face.delete()
     }
@@ -208,110 +199,36 @@ function markerTriangleVerticesAt(
   return null
 }
 
-function markerTriangleFloorCount(shape: Shape3D): number {
+function markerSlotFloorCount(shape: Shape3D): number {
   const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
   let count = 0
   for (const face of shape.faces) {
     const boundingBox = face.boundingBox
-    let edges: Edge[] = []
     try {
       const [minimum, maximum] = boundingBox.bounds as [
         [number, number, number],
         [number, number, number],
       ]
+      const horizontalSpan = maximum[0] - minimum[0]
+      const verticalSpan = maximum[1] - minimum[1]
+      const hasMarkerFootprint =
+        (horizontalSpan <= configuration.indicator.radialLength + 0.2 &&
+          verticalSpan <= configuration.indicator.width + 0.2) ||
+        (horizontalSpan <= configuration.indicator.width + 0.2 &&
+          verticalSpan <= configuration.indicator.radialLength + 0.2)
       const isMarkerFloor =
         face.surface.surfaceType === 'PLANE' &&
         Math.abs(minimum[2] - configuration.indicator.depth) <= 0.02 &&
         Math.abs(maximum[2] - configuration.indicator.depth) <= 0.02 &&
-        maximum[0] - minimum[0] <= configuration.indicator.width + 0.2 &&
-        maximum[1] - minimum[1] <= configuration.indicator.radialLength + 0.2
+        hasMarkerFootprint
       if (!isMarkerFloor) continue
-      edges = face.edges
-      if (edges.length === 3) count += 1
+      count += 1
     } finally {
-      edges.forEach((edge) => edge.delete())
       boundingBox.delete()
       face.delete()
     }
   }
   return count
-}
-
-function rotateBottomViewPoint(
-  point: [number, number],
-  rotationDegrees: number,
-): [number, number] {
-  const radians = (rotationDegrees * Math.PI) / 180
-  const cosine = Math.cos(radians)
-  const sine = Math.sin(radians)
-  return [
-    point[0] * cosine - point[1] * sine,
-    point[0] * sine + point[1] * cosine,
-  ]
-}
-
-function markerVerticesRelativeTo(
-  vertices: readonly [number, number][],
-  center: [number, number],
-): [number, number][] {
-  return vertices
-    .map(([x, y]) => [x - center[0], y - center[1]] as [number, number])
-    .sort(([firstX, firstY], [secondX, secondY]) => {
-      if (firstX !== secondX) return firstX - secondX
-      return firstY - secondY
-    })
-}
-
-function expectMarkerTrianglesToMatchReference(
-  box: Shape3D,
-  markedMale: Shape3D,
-  input: OpenGridOrganizerBoxParameters,
-): void {
-  const maleVertices = markerTriangleVerticesAt(markedMale, [0, 0])
-  expect(maleVertices).not.toBeNull()
-  if (!maleVertices) throw new Error('EXPECTED_MALE_INDICATOR_TRIANGLE')
-
-  const maleRelativeVertices = markerVerticesRelativeTo(maleVertices, [0, 0])
-  const maleApex = [...maleRelativeVertices].sort(
-    ([firstX], [secondX]) => secondX - firstX,
-  )[0]
-  expect(maleApex?.[0]).toBeCloseTo(
-    OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.radialLength / 2,
-    3,
-  )
-  expect(maleApex?.[1]).toBeCloseTo(0, 3)
-
-  for (const pose of openGridOrganizerBoxDetachableSocketPosesFor(input)) {
-    const placement = openGridOrganizerBoxDetachableIndicatorPlacementFor(pose)
-    const femaleVertices = markerTriangleVerticesAt(box, placement.center)
-    expect(femaleVertices, pose.corner).not.toBeNull()
-    if (!femaleVertices) continue
-
-    const expectedVertices = markerVerticesRelativeTo(
-      maleVertices.map((vertex) =>
-        rotateBottomViewPoint(
-          vertex,
-          pose.rotationDegrees +
-            OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator
-              .lockRotationDegrees +
-            (pose.corner === 'upper-left' || pose.corner === 'lower-right'
-              ? 0
-              : 180),
-        ),
-      ),
-      [0, 0],
-    )
-    const actualVertices = markerVerticesRelativeTo(
-      femaleVertices,
-      placement.center,
-    )
-    expect(actualVertices, pose.corner).toHaveLength(3)
-    actualVertices.forEach((actual, index) => {
-      const expected = expectedVertices[index]
-      expect(actual[0], pose.corner).toBeCloseTo(expected?.[0] ?? NaN, 3)
-      expect(actual[1], pose.corner).toBeCloseTo(expected?.[1] ?? NaN, 3)
-    })
-  }
 }
 
 describe('OpenGrid organizer-box B-Rep', () => {
@@ -424,7 +341,53 @@ describe('OpenGrid organizer-box B-Rep', () => {
       detachableCornerSeatHolderReference: holderReference,
     })
     try {
-      expectMarkerTrianglesToMatchReference(box, markedMale, input)
+      const maleFootprint = markerSlotFootprintAt(markedMale, [0, 0])
+      expect(maleFootprint).not.toBeNull()
+      if (!maleFootprint) return
+      expect(maleFootprint.maximum[0] - maleFootprint.minimum[0]).toBeCloseTo(
+        OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.radialLength,
+        3,
+      )
+      expect(maleFootprint.maximum[1] - maleFootprint.minimum[1]).toBeCloseTo(
+        OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.width,
+        3,
+      )
+
+      for (const pose of openGridOrganizerBoxDetachableSocketPosesFor(input)) {
+        const placement =
+          openGridOrganizerBoxDetachableIndicatorPlacementFor(pose)
+        const femaleFootprint = markerSlotFootprintAt(box, placement.center)
+        expect(femaleFootprint, pose.corner).not.toBeNull()
+        if (!femaleFootprint) continue
+
+        expect(
+          (femaleFootprint.minimum[0] + femaleFootprint.maximum[0]) / 2,
+          pose.corner,
+        ).toBeCloseTo(placement.center[0], 3)
+        expect(
+          (femaleFootprint.minimum[1] + femaleFootprint.maximum[1]) / 2,
+          pose.corner,
+        ).toBeCloseTo(placement.center[1], 3)
+        const horizontalSpan =
+          femaleFootprint.maximum[0] - femaleFootprint.minimum[0]
+        const verticalSpan =
+          femaleFootprint.maximum[1] - femaleFootprint.minimum[1]
+        const rotated = placement.rotationDegrees % 180 !== 0
+        expect(horizontalSpan, pose.corner).toBeCloseTo(
+          rotated
+            ? OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.width
+            : OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator
+                .radialLength,
+          3,
+        )
+        expect(verticalSpan, pose.corner).toBeCloseTo(
+          rotated
+            ? OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator
+                .radialLength
+            : OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.width,
+          3,
+        )
+      }
     } finally {
       deleteShape(box)
       deleteShape(markedMale)
@@ -463,8 +426,19 @@ describe('OpenGrid organizer-box B-Rep', () => {
       const layout = openGridOrganizerBoxLayoutFor(input)
       expect(layout.gridCountX).toBe(2)
       expect(layout.gridCountY).toBe(2)
-      expect(markerTriangleFloorCount(box)).toBe(4)
-      expectMarkerTrianglesToMatchReference(box, markedMale, input)
+      expect(markerSlotFloorCount(box)).toBe(4)
+
+      const maleFootprint = markerSlotFootprintAt(markedMale, [0, 0])
+      expect(maleFootprint).not.toBeNull()
+      if (!maleFootprint) return
+      expect(maleFootprint.maximum[0] - maleFootprint.minimum[0]).toBeCloseTo(
+        OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.radialLength,
+        3,
+      )
+      expect(maleFootprint.maximum[1] - maleFootprint.minimum[1]).toBeCloseTo(
+        OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.width,
+        3,
+      )
 
       const [width, depth] = layout.footprint
       const seamX = -width / 2 + OPENGRID_STACKABLE_BOX_CONFIGURATION.gridPitch
@@ -529,7 +503,7 @@ describe('OpenGrid organizer-box B-Rep', () => {
       expect(poses.map((pose) => pose.rotationDegrees)).toEqual([
         0, 90, 180, 270,
       ])
-      expect(markerTriangleFloorCount(shape)).toBe(4)
+      expect(markerSlotFloorCount(shape)).toBe(4)
 
       for (const pose of poses) {
         const indicator =
@@ -663,7 +637,7 @@ describe('OpenGrid organizer-box B-Rep', () => {
       })
       const shape = buildOpenGridOrganizerBox(input)
       try {
-        expect(markerTriangleFloorCount(shape)).toBe(0)
+        expect(markerSlotFloorCount(shape)).toBe(0)
       } finally {
         deleteShape(shape)
       }
@@ -721,7 +695,7 @@ describe('OpenGrid organizer-box B-Rep', () => {
           actual.delete()
         }
         expect(measureVolume(shape)).toBeGreaterThan(0)
-        expect(markerTriangleFloorCount(shape)).toBe(
+        expect(markerSlotFloorCount(shape)).toBe(
           cornerSeatMode === 'detachable-corner-seat' ? 4 : 0,
         )
 

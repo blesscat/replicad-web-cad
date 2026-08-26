@@ -179,7 +179,7 @@ local/world XY origin.
 The `detachable-corner-seat` mode MUST use the shared fixed male geometry. Its
 locating section MUST span Z=0 through Z=3.8 with maximum Ø5 mm, beginning with a
 0.2 mm-high lead-in chamfer from Ø4.6 mm at Z=0 to Ø5 mm at Z=0.2. Its keyed
-45-degree retaining head MUST begin at Z=3.8 and retain the shared 1.8 mm key
+45-degree retaining head MUST begin at Z=3.8 and retain the shared 1.94 mm key
 width. The head taper MUST end at Z=5.15, followed by a 0.15 mm-high flat wear
 surface ending at Z=5.3. No locking corner-seat dimension MUST be user
 adjustable.
@@ -306,7 +306,7 @@ expose another component's parameters.
 
 When `opengrid-pillar` generates the fixed
 `{ mode: 'detachable-corner-seat' }` profile, the exposed Z=0 bottom face MUST
-contain the shared 2 mm by 2 mm triangular indicator recessed by 0.15 mm. The
+contain the shared 0.4 mm by 2 mm straight-slot indicator recessed by 0.2 mm. The
 indicator MUST remain centered on the male seat's local rotational datum, MUST
 not change the outer XY or Z bounds, MUST not change any user parameters, and
 MUST preserve the deterministic export identity. The positioning pillar MUST
@@ -316,9 +316,9 @@ remain unchanged and MUST NOT receive this indicator.
 
 - **WHEN** the locking corner-seat pillar is generated and viewed from its
   bottom
-- **THEN** one readable triangular recess MUST be present on the Z=0 face
-- **AND** the recess depth MUST be 0.15 mm within geometry tolerance
-- **AND** its footprint MUST be nominally 2 mm wide by 2 mm long
+- **THEN** one readable straight-slot recess MUST be present on the Z=0 face
+- **AND** the recess depth MUST be 0.2 mm within geometry tolerance
+- **AND** its footprint MUST be nominally 0.4 mm wide by 2 mm long
 
 #### Scenario: Detachable indicator preserves the fixed pillar contract
 
