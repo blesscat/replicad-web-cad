@@ -157,7 +157,7 @@ describe('OpenGrid locating and assembly interface contract', () => {
     const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
 
     expect(configuration.indicator).toMatchObject({
-      width: 0.4,
+      width: 1,
       radialLength: 2,
       depth: 0.2,
       lockRotationDegrees: 90,

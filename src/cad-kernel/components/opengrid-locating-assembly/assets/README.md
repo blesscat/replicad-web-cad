@@ -14,7 +14,7 @@ filenames stable so the Worker asset URLs remain deterministic.
 
 The supplied male target keeps the Ø4.6-to-Ø5 insertion chamfer, increases the
 locating body to 3.8 mm and total height to 5.3 mm, and uses a 1.94 mm keyed
-retaining head. Its exposed-bottom lock indicator is generated as a 0.4 mm-wide
+retaining head. Its exposed-bottom lock indicator is generated as a 1 mm-wide
 by 2 mm radial straight slot with a 0.2 mm recess depth. The supplied female
 remains unchanged on disk; at build time its top planar faces are extended by
 0.25 mm, from 1.5 mm to 1.75 mm effective depth. The extension is fused into

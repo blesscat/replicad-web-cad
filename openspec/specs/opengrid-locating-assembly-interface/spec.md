@@ -285,7 +285,7 @@ the same male/female fit at every generated locating position.
 
 The shared detachable corner-seat interface MUST define one consistent visual
 indicator contract for the mating male seat and female socket. Each indicator
-MUST be an exposed-bottom, shallow recessed straight slot with a nominal 0.4 mm
+MUST be an exposed-bottom, shallow recessed straight slot with a nominal 1 mm
 width, a nominal 2 mm radial length, and a 0.2 mm recess depth. The
 indicator depth MUST be shared by both mating parts and MUST remain within the
 requested 0.1–0.2 mm printable range.
@@ -307,7 +307,7 @@ MUST represent the locked state.
 
 - **WHEN** the male-seat or female-socket generator reads the detachable
   corner-seat indicator contract
-- **THEN** it MUST receive the same 0.4 mm by 2 mm straight-slot profile and
+- **THEN** it MUST receive the same 1 mm by 2 mm straight-slot profile and
   0.2 mm recess depth
 - **AND** neither consumer MUST define a conflicting local indicator depth or
   profile
