@@ -80,7 +80,7 @@ export const zhHantMessages = {
   'models.parameterRange': '{label}：{min}–{max} {unit}',
   'models.fixedParameters': '固定幾何，沒有可調參數。',
   'models.exportFormats': '匯出格式',
-  'models.exportFormatsValue': 'STEP 與 STL',
+  'models.exportFormatsValue': 'STEP、STL 與 OpenGrid Wall Cover 雙色 3MF',
   'models.exportFormatsLine': '{label}：{value}',
   'models.previewUnavailable': '預覽圖片暫時無法載入',
   'models.edit': '編輯 →',
@@ -120,6 +120,11 @@ export const zhHantMessages = {
   'models.model.opengrid-snap.description':
     '提供 Lite／Full、Standard／Directional 的 OpenGrid Snap。',
   'models.model.opengrid-snap.alt': 'OpenGrid Snap 預覽',
+  'models.model.opengrid-wall-cover.name': 'OpenGrid Wall Cover',
+  'models.model.opengrid-wall-cover.selection': 'Wall Cover',
+  'models.model.opengrid-wall-cover.description':
+    '使用指定 Snap cover STEP 的 Wall 專用雙色平面 cover。',
+  'models.model.opengrid-wall-cover.alt': 'OpenGrid Wall Cover 預覽',
   'models.model.opengrid-pillar.name': 'Locating Post (定位柱)',
   'models.model.opengrid-pillar.selection': 'Locating Post (定位柱)',
   'models.model.opengrid-pillar.description':
@@ -324,6 +329,7 @@ export const zhHantMessages = {
   'parameter.organizerHoleShape': '孔形狀',
   'cad.action.step': '下載 STEP',
   'cad.action.stl': '下載 STL',
+  'cad.action.threeMf': '下載 3MF',
   'cad.action.retry': '重試',
   'cad.system.current': '目前系統：{name}',
   'cad.error.title.initializing': 'CAD engine 載入失敗',
@@ -340,6 +346,8 @@ export const zhHantMessages = {
   'diagnostic.workerTerminated': 'CAD Worker 已停止，請重試。',
   'diagnostic.stlMetadataInvalid': 'STL 匯出資料不正確，請重試。',
   'diagnostic.stlExportFailed': 'STL 匯出失敗，請重試。',
+  'diagnostic.threeMfMetadataInvalid': '3MF 匯出資料不正確，請重試。',
+  'diagnostic.threeMfExportFailed': '3MF 匯出失敗，請重試。',
   'diagnostic.opengridUnsupported':
     'OpenGrid 參數與目前規格不相容，請檢查設定後重試。',
   'diagnostic.cylinderParametersInvalid':
@@ -350,6 +358,8 @@ export const zhHantMessages = {
     'OpenGrid 可堆疊圓柱幾何未通過品質檢查，請調整參數後重試。',
   'diagnostic.snapQualityInvalid':
     'OpenGrid Snap 幾何未通過品質檢查，請調整參數後重試。',
+  'diagnostic.wallCoverQualityInvalid':
+    'OpenGrid Wall Cover 幾何未通過品質檢查，請重試。',
   'diagnostic.dividerQualityInvalid':
     'OpenGrid 分隔器幾何未通過品質檢查，請調整參數後重試。',
   'diagnostic.browserEnvironmentRequired':
@@ -360,6 +370,7 @@ export const zhHantMessages = {
   'diagnostic.exportInvalid': '匯出檔案驗證失敗，請重試。',
   'diagnostic.stlExportTimeout': 'STL 匯出超時，請重試。',
   'diagnostic.stepExportTimeout': 'STEP 匯出超時，請重試。',
+  'diagnostic.threeMfExportTimeout': '3MF 匯出超時，請重試。',
   'diagnostic.engineTimeout': 'CAD engine 載入超時，請重試。',
   'diagnostic.workerTimeout': 'CAD Worker 處理超時，請重試。',
   'diagnostic.meshInvalid': '預覽模型資料無效，Worker 將重新啟動。',
@@ -696,7 +707,8 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'models.parameterRange': '{label}: {min}–{max} {unit}',
   'models.fixedParameters': 'Fixed geometry with no adjustable parameters.',
   'models.exportFormats': 'Export formats',
-  'models.exportFormatsValue': 'STEP and STL',
+  'models.exportFormatsValue':
+    'STEP, STL, and the OpenGrid Wall Cover two-color 3MF',
   'models.exportFormatsLine': '{label}: {value}',
   'models.previewUnavailable': 'Preview image is temporarily unavailable',
   'models.edit': 'Edit →',
@@ -737,6 +749,11 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'models.model.opengrid-snap.description':
     'OpenGrid Snap profiles with Lite/Full and Standard/Directional variants.',
   'models.model.opengrid-snap.alt': 'OpenGrid Snap preview',
+  'models.model.opengrid-wall-cover.name': 'OpenGrid Wall Cover',
+  'models.model.opengrid-wall-cover.selection': 'Wall Cover',
+  'models.model.opengrid-wall-cover.description':
+    'A Wall-only two-color surface cover using the supplied Snap cover STEP.',
+  'models.model.opengrid-wall-cover.alt': 'OpenGrid Wall Cover preview',
   'models.model.opengrid-pillar.name': 'OpenGrid Locating Post',
   'models.model.opengrid-pillar.selection': 'Locating Post',
   'models.model.opengrid-pillar.description':
@@ -947,6 +964,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'parameter.organizerHoleShape': 'Hole shape',
   'cad.action.step': 'Download STEP',
   'cad.action.stl': 'Download STL',
+  'cad.action.threeMf': 'Download 3MF',
   'cad.action.retry': 'Retry',
   'cad.system.current': 'Current system: {name}',
   'cad.error.title.initializing': 'CAD engine failed to load',
@@ -967,6 +985,9 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'diagnostic.stlMetadataInvalid':
     'The STL export metadata is invalid. Try again.',
   'diagnostic.stlExportFailed': 'The STL export failed. Try again.',
+  'diagnostic.threeMfMetadataInvalid':
+    'The 3MF export metadata is invalid. Try again.',
+  'diagnostic.threeMfExportFailed': 'The 3MF export failed. Try again.',
   'diagnostic.opengridUnsupported':
     'The OpenGrid parameters are incompatible with the current specification. Check the settings and try again.',
   'diagnostic.cylinderParametersInvalid':
@@ -977,6 +998,8 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'The OpenGrid stackable-cylinder geometry did not pass quality checks. Adjust the parameters and try again.',
   'diagnostic.snapQualityInvalid':
     'The OpenGrid Snap geometry did not pass quality checks. Adjust the parameters and try again.',
+  'diagnostic.wallCoverQualityInvalid':
+    'The OpenGrid Wall Cover geometry did not pass quality checks. Try again.',
   'diagnostic.dividerQualityInvalid':
     'The OpenGrid divider geometry did not pass quality checks. Adjust the parameters and try again.',
   'diagnostic.browserEnvironmentRequired':
@@ -988,6 +1011,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'diagnostic.exportInvalid': 'The export file failed validation. Try again.',
   'diagnostic.stlExportTimeout': 'The STL export timed out. Try again.',
   'diagnostic.stepExportTimeout': 'The STEP export timed out. Try again.',
+  'diagnostic.threeMfExportTimeout': 'The 3MF export timed out. Try again.',
   'diagnostic.engineTimeout':
     'The CAD engine timed out while loading. Try again.',
   'diagnostic.workerTimeout': 'The CAD Worker timed out. Try again.',

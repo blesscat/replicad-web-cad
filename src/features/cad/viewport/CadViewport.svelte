@@ -1,7 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { Canvas } from '@threlte/core'
-  import type { MeshSnapshot } from '../../../cad-contract/messages'
+  import type {
+    MeshSnapshot,
+    ModelPartMeshSnapshot,
+  } from '../../../cad-contract/messages'
   import type { ModelParameterValues } from '../../../cad-contract/units'
   import CadViewportScene from './CadViewportScene.svelte'
   import {
@@ -19,6 +22,7 @@
   type Props = {
     locale: Locale
     mesh: MeshSnapshot | null
+    partMeshes?: ModelPartMeshSnapshot[]
     modelRevision: string | null
     parameters: ModelParameterValues | null
     stale: boolean
@@ -29,6 +33,7 @@
   let {
     locale,
     mesh,
+    partMeshes,
     modelRevision,
     parameters,
     stale,
@@ -86,6 +91,7 @@
       <Canvas>
         <CadViewportScene
           {mesh}
+          {partMeshes}
           {modelRevision}
           {parameters}
           {locale}

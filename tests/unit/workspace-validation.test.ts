@@ -31,6 +31,25 @@ describe('CAD workspace validation helpers', () => {
     expect(parseRawParameters(raw)).toEqual({ valid: true, value: parameters })
   })
 
+  it('requires Wall Cover raw parameters to be an exact empty object', () => {
+    expect(parseRawParameters({}, 'opengrid-wall-cover')).toEqual({
+      valid: true,
+      value: {},
+    })
+    expect(
+      parseRawParameters(
+        { unknown: 'value' } as RawParameters,
+        'opengrid-wall-cover',
+      ),
+    ).toEqual({ valid: false, messageId: 'validation.invalid' })
+    expect(
+      parseRawParameters(
+        null as unknown as RawParameters,
+        'opengrid-wall-cover',
+      ),
+    ).toEqual({ valid: false, messageId: 'validation.invalid' })
+  })
+
   it('round-trips organizer-box shape, spacing, seat, body, and Z inputs', () => {
     const parameters: OpenGridOrganizerBoxParameters = {
       ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
@@ -206,6 +225,7 @@ describe('CAD workspace validation helpers', () => {
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
       openConnect: false,
+      topText: 'none',
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,
@@ -222,6 +242,7 @@ describe('CAD workspace validation helpers', () => {
       fourCornerLocatingHoles: 'false',
       centerRemoverHole: 'false',
       openConnect: 'false',
+      topText: 'none',
       magnetHoleShape: 'none',
       magnetHoleLength: '0',
       magnetHoleWidth: '0',
@@ -271,6 +292,7 @@ describe('CAD workspace validation helpers', () => {
         fourCornerLocatingHoles: false,
         centerRemoverHole: false,
         openConnect: false,
+        topText: 'none',
         magnetHoleShape: 'none',
         magnetHoleLength: 0,
         magnetHoleWidth: 0,

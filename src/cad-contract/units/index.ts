@@ -92,11 +92,13 @@ import {
   isOpenGridSnapParameters,
   isOpenGridSnapFootprint,
   isOpenGridSnapMagnetHoleShape,
+  isOpenGridSnapTopText,
   normalizeOpenGridSnapParameters,
   openGridSnapCanonicalAxesFor,
   openGridSnapFileName,
   openGridSnapFootprintForLegacyAxes,
   openGridSnapStlFileName,
+  openGridSnapThreeMfFileName,
   OPENGRID_SNAP_CONFIGURATION,
   validateOpenGridSnapParameters,
 } from './opengrid-snap'
@@ -107,6 +109,19 @@ import type {
   OpenGridSnapParameters,
   OpenGridSnapValidation,
 } from './opengrid-snap'
+import {
+  boundsForOpenGridWallCover,
+  isOpenGridWallCoverParameters,
+  openGridWallCoverFileName,
+  openGridWallCoverStlFileName,
+  openGridWallCoverThreeMfFileName,
+  OPENGRID_WALL_COVER_CONFIGURATION,
+  validateOpenGridWallCoverParameters,
+} from './opengrid-wall-cover'
+import type {
+  OpenGridWallCoverParameters,
+  OpenGridWallCoverValidation,
+} from './opengrid-wall-cover'
 import {
   boundsForOpenGridDivider,
   classifyOpenGridDividerShape,
@@ -308,15 +323,26 @@ export {
   isOpenGridSnapParameters,
   isOpenGridSnapFootprint,
   isOpenGridSnapMagnetHoleShape,
+  isOpenGridSnapTopText,
   normalizeOpenGridSnapParameters,
   openGridSnapCanonicalAxesFor,
   openGridSnapFileName,
   openGridSnapFootprintForLegacyAxes,
   openGridSnapStlFileName,
+  openGridSnapThreeMfFileName,
   OPENGRID_SNAP_CONFIGURATION,
   parseOpenGridSnapDecimalInput,
   validateOpenGridSnapParameters,
 } from './opengrid-snap'
+export {
+  boundsForOpenGridWallCover,
+  isOpenGridWallCoverParameters,
+  openGridWallCoverFileName,
+  openGridWallCoverStlFileName,
+  openGridWallCoverThreeMfFileName,
+  OPENGRID_WALL_COVER_CONFIGURATION,
+  validateOpenGridWallCoverParameters,
+} from './opengrid-wall-cover'
 export {
   HALF_CELL_CONFIGURATION,
   halfCellDirectionLabel,
@@ -351,11 +377,16 @@ export type {
   OpenGridSnapMagnetHoleShape,
   OpenGridSnapParameterKey,
   OpenGridSnapParameters,
+  OpenGridSnapTopText,
   OpenGridSnapValidation,
   OpenGridSnapValidationIssue,
   OpenGridSnapProfile,
   OpenGridSnapVariant,
 } from './opengrid-snap'
+export type {
+  OpenGridWallCoverParameters,
+  OpenGridWallCoverValidation,
+} from './opengrid-wall-cover'
 export type {
   OpenGridStackableBoxParameterKey,
   OpenGridStackableBoxParameters,
@@ -513,6 +544,8 @@ export const PROTOTYPE_CONFIGURATION = {
   stepMime: 'model/step',
   stlExtension: '.stl',
   stlMime: 'model/stl',
+  threeMfExtension: '.3mf',
+  threeMfMime: 'model/3mf',
   stlTolerance: 0.001,
   stlAngularTolerance: 0.1,
   modularGridBase: {
@@ -566,6 +599,7 @@ export type ModelId =
   | 'opengrid-organizer-box'
   | 'opengrid-stackable-cylinder'
   | 'opengrid-snap'
+  | 'opengrid-wall-cover'
   | 'opengrid-snap-remover'
   | 'opengrid-divider'
   | 'opengrid-pillar'
@@ -607,6 +641,10 @@ export type ModelParameters =
       parameters: OpenGridStackableCylinderParameters
     }
   | { modelId: 'opengrid-snap'; parameters: OpenGridSnapParameters }
+  | {
+      modelId: 'opengrid-wall-cover'
+      parameters: OpenGridWallCoverParameters
+    }
   | {
       modelId: 'opengrid-snap-remover'
       parameters: OpenGridSnapRemoverParameters
@@ -691,6 +729,16 @@ export type OpenGridDividerModelValidation =
 
 export type OpenGridSnapRemoverValidation =
   | { valid: true; value: OpenGridSnapRemoverParameters }
+  | { valid: false; issues: ValidationIssue[] }
+
+export type OpenGridWallCoverModelValidation =
+  | {
+      valid: true
+      value: {
+        modelId: 'opengrid-wall-cover'
+        parameters: OpenGridWallCoverParameters
+      }
+    }
   | { valid: false; issues: ValidationIssue[] }
 
 export type PillarModelValidation =
@@ -1186,6 +1234,15 @@ export function validateModelParameters(
     return { valid: true, value: { modelId, parameters: validation.value } }
   }
 
+  if (modelId === 'opengrid-wall-cover') {
+    const validation = validateOpenGridWallCoverParameters(value)
+    if (!validation.valid) return validation
+    return {
+      valid: true,
+      value: { modelId, parameters: validation.value },
+    }
+  }
+
   if (modelId === 'opengrid-snap-remover') {
     const validation = validateOpenGridSnapRemoverParameters(value)
     if (!validation.valid) return validation
@@ -1455,6 +1512,12 @@ export function isOpenGridSnapModelParameters(
   return isOpenGridSnapParameters(value)
 }
 
+export function isOpenGridWallCoverModelParameters(
+  value: unknown,
+): value is OpenGridWallCoverParameters {
+  return isOpenGridWallCoverParameters(value)
+}
+
 export function isOpenGridSnapRemoverParameters(
   value: unknown,
 ): value is OpenGridSnapRemoverParameters {
@@ -1505,6 +1568,8 @@ export function boundsForModel(model: ModelParameters): ModelBounds {
       return boundsForOpenGridStackableCylinder(model.parameters)
     case 'opengrid-snap':
       return boundsForOpenGridSnap(model.parameters)
+    case 'opengrid-wall-cover':
+      return boundsForOpenGridWallCover(model.parameters)
     case 'opengrid-snap-remover':
       return boundsForOpenGridSnapRemover(model.parameters)
     case 'opengrid-divider':
@@ -1536,6 +1601,8 @@ export function modelFileName(model: ModelParameters): string {
       return openGridStackableCylinderFileName(model.parameters)
     case 'opengrid-snap':
       return openGridSnapFileName(model.parameters)
+    case 'opengrid-wall-cover':
+      return openGridWallCoverFileName(model.parameters)
     case 'opengrid-snap-remover':
       return openGridSnapRemoverFileName(model.parameters)
     case 'opengrid-divider':
@@ -1567,6 +1634,8 @@ export function modelStlFileName(model: ModelParameters): string {
       return openGridStackableCylinderStlFileName(model.parameters)
     case 'opengrid-snap':
       return openGridSnapStlFileName(model.parameters)
+    case 'opengrid-wall-cover':
+      return openGridWallCoverStlFileName(model.parameters)
     case 'opengrid-snap-remover':
       return openGridSnapRemoverStlFileName(model.parameters)
     case 'opengrid-divider':

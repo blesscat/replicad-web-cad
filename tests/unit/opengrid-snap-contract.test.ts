@@ -4,7 +4,9 @@ import {
   isOpenGridSnapParameters,
   openGridSnapFileName,
   openGridSnapStlFileName,
+  openGridSnapThreeMfFileName,
   OPENGRID_SNAP_CONFIGURATION,
+  normalizeOpenGridSnapParameters,
   validateOpenGridSnapParameters,
 } from '../../src/cad-contract/units'
 
@@ -18,6 +20,7 @@ describe('OpenGrid Snap contract', () => {
       fourCornerLocatingHoles: boolean
       centerRemoverHole: boolean
       openConnect: boolean
+      topText: 'none' | 'SNAP'
       magnetHoleShape: 'none' | 'square' | 'round'
       magnetHoleLength: number
       magnetHoleWidth: number
@@ -34,6 +37,7 @@ describe('OpenGrid Snap contract', () => {
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
       openConnect: false,
+      topText: 'none' as const,
       magnetHoleShape: 'none' as const,
       magnetHoleLength: 0,
       magnetHoleWidth: 0,
@@ -89,7 +93,9 @@ describe('OpenGrid Snap contract', () => {
       value: lite,
     })
     expect(isOpenGridSnapParameters(full)).toBe(true)
-    expect(OPENGRID_SNAP_CONFIGURATION.defaultParameters).toEqual(parameters())
+    expect(OPENGRID_SNAP_CONFIGURATION.defaultParameters).toEqual(
+      parameters({ variant: 'Lite' }),
+    )
     expect(
       validateOpenGridSnapParameters({ ...full, halfCellX: 'left' }),
     ).toMatchObject({ valid: false })
@@ -265,6 +271,21 @@ describe('OpenGrid Snap contract', () => {
     )
   })
 
+  it('normalizes legacy flat SNAP text back to single-color Snap', () => {
+    const text = parameters({ variant: 'Lite', topText: 'SNAP' })
+    const normalized = normalizeOpenGridSnapParameters(text)
+    expect(normalized).toMatchObject({ topText: 'none' })
+    expect(validateOpenGridSnapParameters(normalized)).toEqual({
+      valid: true,
+      value: { ...text, topText: 'none' },
+    })
+    expect(() => openGridSnapThreeMfFileName(text)).toThrow(
+      'MODEL_PARAMETERS_MISMATCH:opengrid-snap-3mf',
+    )
+    expect(openGridSnapFileName(text)).not.toContain('-text-snap')
+    expect(openGridSnapStlFileName(text)).not.toContain('-text-snap')
+  })
+
   it('uses fixed STEP filenames for half and quarter downloads', () => {
     expect(
       openGridSnapFileName(
@@ -388,6 +409,7 @@ describe('OpenGrid Snap contract', () => {
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
       openConnect: false,
+      topText: 'none',
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,

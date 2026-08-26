@@ -1,11 +1,12 @@
 import type { ExportReadyEvent } from '../../../cad-contract/messages'
+import { isValidThreeMfPackage } from '../../../cad-contract/three-mf'
 import {
   diagnostic,
   type DiagnosticDescriptor,
 } from '../../../cad-contract/diagnostics'
 import { PROTOTYPE_CONFIGURATION } from '../../../cad-contract/units'
 
-export type ExportFormat = 'step' | 'stl'
+export type ExportFormat = 'step' | 'stl' | '3mf'
 
 export type FixedFileDownload = {
   url: string
@@ -113,6 +114,53 @@ function validateBinaryStl(
 }
 
 export function triggerStlDownload(event: ExportReadyEvent): () => void {
+  const blob = new Blob([event.bytes], { type: event.mime })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = event.fileName
+  anchor.click()
+  return () => URL.revokeObjectURL(url)
+}
+
+export function validateThreeMfResponse(
+  event: ExportReadyEvent,
+  expectedRevision: string,
+  expectedWorkerEpoch?: string,
+  expectedFileName?: string,
+): { valid: true } | { valid: false; message: DiagnosticDescriptor } {
+  if (event.modelRevision !== expectedRevision)
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
+  if (expectedWorkerEpoch && event.workerEpoch !== expectedWorkerEpoch) {
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
+  }
+  if (
+    event.format !== '3mf' ||
+    event.mime !== PROTOTYPE_CONFIGURATION.threeMfMime
+  ) {
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
+  }
+  if (!event.fileName.endsWith(PROTOTYPE_CONFIGURATION.threeMfExtension)) {
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
+  }
+  if (expectedFileName && event.fileName !== expectedFileName) {
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
+  }
+  if (!(event.bytes instanceof ArrayBuffer) || event.bytes.byteLength === 0) {
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
+  }
+
+  if (!validateThreeMfPackage(event.bytes)) {
+    return { valid: false, message: diagnostic('diagnostic.exportInvalid') }
+  }
+  return { valid: true }
+}
+
+export function validateThreeMfPackage(bytes: ArrayBuffer): boolean {
+  return isValidThreeMfPackage(bytes)
+}
+
+export function triggerThreeMfDownload(event: ExportReadyEvent): () => void {
   const blob = new Blob([event.bytes], { type: event.mime })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')

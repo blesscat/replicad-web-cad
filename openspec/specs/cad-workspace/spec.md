@@ -553,13 +553,16 @@ replicad、OpenCascade、B-Rep 操作、mesh 產生與 STEP writer 不得在主�
 
 ### Requirement: 明確非目標
 
-The system MUST expose the runtime-validated component catalog and the component
-capabilities documented by this project, including their STEP and STL download
-flows. It MAY preserve validated component parameter preferences in
-browser-local persistence as defined by the component-parameter-persistence
-capability, but MUST NOT add arbitrary CAD file import, 3MF/G-code workflows,
-saving generated CAD files or models, authentication, collaboration, automatic
-Bambu Studio launching, or native desktop-app integration.
+The system MUST expose the runtime-validated component catalog and the
+component capabilities documented by this project, including their STEP, STL,
+and the documented Snap 3MF download flow. It MAY preserve validated component
+parameter preferences in browser-local persistence as defined by the
+component-parameter-persistence capability, but MUST NOT add arbitrary CAD
+file import, G-code workflows, saving generated CAD files or models,
+authentication, collaboration, automatic Bambu Studio launching, or native
+desktop-app integration. The 3MF flow MUST remain limited to the documented
+Worker-generated Snap POC and MUST NOT be interpreted as arbitrary 3MF editing
+or slicer project generation.
 
 #### Scenario: Prototype 功能清單
 
@@ -567,7 +570,10 @@ Bambu Studio launching, or native desktop-app integration.
 - **When** 檢查模型與輸出功能
 - **Then** 每個 catalog entry MUST expose only its own documented parameters, preview, and export actions
 - **And** component parameter persistence MAY exist under the persistence capability
-- **And** 不得出現 arbitrary import、3MF、G-code、generated CAD file/model saving、auth、collaboration、自動啟動 Bambu Studio 或 native desktop bridge 入口
+- **And** arbitrary import、G-code、generated CAD file/model saving、auth、
+  collaboration、自動啟動 Bambu Studio 或 native desktop bridge 入口不得
+  出現
+- **And** only the documented Snap POC may expose a 3MF download action
 
 ### Requirement: Fine-grained Worker progress
 

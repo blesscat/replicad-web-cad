@@ -3,7 +3,10 @@ import type {
   ModelParameterKey,
   ModelParameterValues,
 } from '../../../cad-contract/units'
-import type { MeshSnapshot } from '../../../cad-contract/messages'
+import type {
+  MeshSnapshot,
+  ModelPartMeshSnapshot,
+} from '../../../cad-contract/messages'
 import type { ExportFormat } from '../../../features/cad/download'
 
 export type RawParameters = Partial<Record<ModelParameterKey, string>>
@@ -15,6 +18,7 @@ export type OperationRecord = {
   parameters?: ModelParameterValues
   modelRevision?: string
   candidateMesh?: MeshSnapshot
+  candidatePartMeshes?: ModelPartMeshSnapshot[]
   requestId: string
 }
 

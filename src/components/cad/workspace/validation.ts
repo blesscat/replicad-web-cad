@@ -17,6 +17,7 @@ import {
   OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
   normalizeOpenGridLocatingSeatMode,
+  isOpenGridWallCoverParameters,
   type OpenGridOpenShelfParameters,
   PILLAR_CONFIGURATION,
   validateModelParameters,
@@ -127,6 +128,7 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
       'fourCornerLocatingHoles',
       'centerRemoverHole',
       'openConnect',
+      'topText',
       'magnetHoleShape',
       'magnetHoleLength',
       'magnetHoleWidth',
@@ -134,7 +136,12 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
       'magnetHoleThickness',
     ]
   }
-  if (modelId === 'opengrid-snap-remover') return []
+  if (
+    modelId === 'opengrid-snap-remover' ||
+    modelId === 'opengrid-wall-cover'
+  ) {
+    return []
+  }
   if (modelId === 'opengrid-divider') return OPENGRID_DIVIDER_PARAMETER_KEYS
   if (modelId === 'opengrid-pillar') return PILLAR_PARAMETER_KEYS
   if (modelId === 'opengrid-open-shelf') {
@@ -647,6 +654,7 @@ export function rawFromParameters(
       fourCornerLocatingHoles: String(snapParameters.fourCornerLocatingHoles),
       centerRemoverHole: String(snapParameters.centerRemoverHole),
       openConnect: String(snapParameters.openConnect),
+      topText: snapParameters.topText ?? 'none',
       magnetHoleShape: snapParameters.magnetHoleShape ?? 'none',
       magnetHoleLength: String(snapParameters.magnetHoleLength ?? 0),
       magnetHoleWidth: String(snapParameters.magnetHoleWidth ?? 0),
@@ -696,7 +704,16 @@ export function parseRawParameters(
       field?: ModelParameterKey
       params?: DiagnosticParams
     } {
-  if (modelId === 'opengrid-snap-remover') {
+  if (
+    modelId === 'opengrid-snap-remover' ||
+    modelId === 'opengrid-wall-cover'
+  ) {
+    if (
+      modelId === 'opengrid-wall-cover' &&
+      !isOpenGridWallCoverParameters(raw)
+    ) {
+      return { valid: false, messageId: 'validation.invalid' }
+    }
     const validation = validateModelParameters(modelId, {})
     if (validation.valid) {
       return { valid: true, value: validation.value.parameters }
@@ -771,6 +788,16 @@ export function parseRawParameters(
     const openConnect = parseBooleanRawParameter(raw.openConnect, 'openConnect')
     if (!openConnect.valid) return openConnect
 
+    const legacyTopText = raw.topText ?? 'none'
+    const topText = legacyTopText === 'SNAP' ? 'none' : legacyTopText
+    if (topText !== 'none') {
+      return {
+        valid: false,
+        messageId: 'validation.invalid',
+        field: 'topText',
+      }
+    }
+
     const magnetHoleShape = raw.magnetHoleShape ?? 'none'
     if (!isOpenGridSnapMagnetHoleShape(magnetHoleShape)) {
       return {
@@ -809,6 +836,7 @@ export function parseRawParameters(
       fourCornerLocatingHoles: fourCornerLocatingHoles.value,
       centerRemoverHole: centerRemoverHole.value,
       openConnect: openConnect.value,
+      topText,
       magnetHoleShape,
       magnetHoleLength: magnetHoleLength.value,
       magnetHoleWidth: magnetHoleWidth.value,

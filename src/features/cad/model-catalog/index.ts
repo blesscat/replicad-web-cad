@@ -14,6 +14,7 @@ import { opengridOrganizerBoxDefinition } from './components/opengrid-organizer-
 import { opengridStackableBoxDefinition } from './components/opengrid-stackable-box'
 import { opengridStackableCylinderDefinition } from './components/opengrid-stackable-cylinder'
 import { opengridSnapDefinition } from './components/opengrid-snap'
+import { opengridWallCoverDefinition } from './components/opengrid-wall-cover'
 import { openGridSnapRemoverDefinition } from './components/opengrid-snap-remover'
 import { opengridPillarDefinition } from './components/opengrid-pillar'
 import { opengridOpenShelfDefinition } from './components/opengrid-open-shelf'
@@ -53,6 +54,7 @@ export { opengridOrganizerBoxDefinition } from './components/opengrid-organizer-
 export { opengridStackableBoxDefinition } from './components/opengrid-stackable-box'
 export { opengridStackableCylinderDefinition } from './components/opengrid-stackable-cylinder'
 export { opengridSnapDefinition } from './components/opengrid-snap'
+export { opengridWallCoverDefinition } from './components/opengrid-wall-cover'
 export { openGridSnapRemoverDefinition } from './components/opengrid-snap-remover'
 export { opengridPillarDefinition } from './components/opengrid-pillar'
 export { opengridOpenShelfDefinition } from './components/opengrid-open-shelf'
@@ -64,6 +66,7 @@ export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   hexagonalColumnDefinition,
   opengridDefinition,
   opengridSnapDefinition,
+  opengridWallCoverDefinition,
   opengridPillarDefinition,
   opengridDividerDefinition,
   opengridOrganizerBoxDefinition,
@@ -124,13 +127,15 @@ function openGridSubgroups(
   const openGridDefinitions = definitions.filter(
     (definition) => definition.family === 'opengrid',
   )
-  const desk = openGridDefinitions.map((definition) =>
-    entryForContext(definition, 'desk'),
-  )
+  const desk = openGridDefinitions
+    .filter((definition) => definition.id !== 'opengrid-wall-cover')
+    .map((definition) => entryForContext(definition, 'desk'))
   const wall = openGridDefinitions
     .filter(
       (definition) =>
-        definition.id === 'opengrid' || definition.id === 'opengrid-snap',
+        definition.id === 'opengrid' ||
+        definition.id === 'opengrid-snap' ||
+        definition.id === 'opengrid-wall-cover',
     )
     .map((definition) => entryForContext(definition, 'wall'))
   return [

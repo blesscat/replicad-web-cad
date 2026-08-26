@@ -5,8 +5,10 @@ import { PROTOTYPE_CONFIGURATION } from '../../../../cad-contract/units'
 import {
   type ExportFormat,
   triggerFixedStepDownload,
+  triggerThreeMfDownload,
   triggerStlDownload,
   triggerStepDownload,
+  validateThreeMfResponse,
   validateStlResponse,
   validateStepResponse,
 } from '../../../../features/cad/download'
@@ -32,6 +34,14 @@ function validateExportResponse(
       request.fileName,
     )
   }
+  if (request.format === '3mf') {
+    return validateThreeMfResponse(
+      event,
+      request.revision,
+      request.workerEpoch,
+      request.fileName,
+    )
+  }
   return validateStepResponse(
     event,
     request.revision,
@@ -45,16 +55,19 @@ function triggerExportDownload(
   event: ExportReadyEvent,
 ): () => void {
   if (format === 'stl') return triggerStlDownload(event)
+  if (format === '3mf') return triggerThreeMfDownload(event)
   return triggerStepDownload(event)
 }
 
 function metadataErrorCode(format: ExportFormat) {
   if (format === 'stl') return 'STL_METADATA_INVALID' as const
+  if (format === '3mf') return 'THREEMF_METADATA_INVALID' as const
   return 'STEP_METADATA_INVALID' as const
 }
 
 function exportTimeoutDiagnostic(format: ExportFormat) {
   if (format === 'stl') return diagnostic('diagnostic.stlExportTimeout')
+  if (format === '3mf') return diagnostic('diagnostic.threeMfExportTimeout')
   return diagnostic('diagnostic.stepExportTimeout')
 }
 
@@ -135,6 +148,20 @@ export function createExportHandlers(context: RuntimeContext): ExportHandlers {
         modelRevision: model.revision,
         workerEpoch,
         file: { name: fileName, mime: PROTOTYPE_CONFIGURATION.stlMime },
+      })
+    } else if (format === '3mf') {
+      const threeMfFileName = definition.threeMfFileName?.(model.parameters)
+      if (!threeMfFileName) return
+      fileName = threeMfFileName
+      requestId = client.send({
+        kind: 'export.3mf',
+        operationId,
+        modelRevision: model.revision,
+        workerEpoch,
+        file: {
+          name: fileName,
+          mime: PROTOTYPE_CONFIGURATION.threeMfMime,
+        },
       })
     } else {
       fileName = definition.exportFileName(model.parameters)

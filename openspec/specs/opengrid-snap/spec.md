@@ -20,7 +20,10 @@ the explicit boolean for a full-footprint snapshot and MUST be `false` for
 `openConnect` MUST use the default `false`; an explicit `true` MUST remain
 true. The selected profile and variant
 MUST be used without substituting a Directional profile for a Standard
-profile. `magnetHoleShape` MUST be `none`, `square`, or `round`. When the shape
+profile. `topText` MUST be `none` in every newly created or normalized Snap
+snapshot and MUST have no geometric effect. The Snap UI MUST NOT offer `SNAP`
+as an active text choice. `magnetHoleShape` MUST be `none`, `square`, or
+`round`. When the shape
 is `none`, all four magnet dimensions MUST be zero and the magnet feature MUST
 have no geometric effect. When the shape is `square`,
 `magnetHoleLength`, `magnetHoleWidth`, and `magnetHoleThickness` MUST be
@@ -125,6 +128,24 @@ Bare Standard reference or its equivalent programmatic baseline. When
   `snap-quarter.step` asset without an OpenConnect head
 - **AND** the fixed result MUST fit both 14 mm host axes
 
+#### Scenario: Legacy Snap snapshots normalize OpenConnect and surface text
+
+- **WHEN** a persisted or imported Snap snapshot predates the `openConnect` or
+  `topText` fields and otherwise contains a valid current Snap configuration
+- **THEN** normalization MUST add `openConnect=false` and `topText=none`
+- **AND** the normalized snapshot MUST remain compatible with the existing
+  single-color generation and export contract
+
+#### Scenario: Legacy Snap surface text is moved to Wall Cover
+
+- **WHEN** a persisted or imported Snap snapshot contains the legacy
+  `topText=SNAP` value
+- **THEN** normalization MUST replace it with `topText=none`
+- **AND** generation MUST produce ordinary single-color Snap geometry without
+  a text cavity or separate text part
+- **AND** the Wall Cover model MUST be used for the dual-color surface text
+  use case
+
 #### Scenario: Legacy Snap snapshots default OpenConnect off when absent
 
 - **WHEN** a persisted or imported full-footprint Snap snapshot predates the
@@ -136,9 +157,9 @@ Bare Standard reference or its equivalent programmatic baseline. When
 #### Scenario: Board or direction fields are rejected by the normalized Snap validator
 
 - **WHEN** a normalized Snap snapshot contains forbidden board/direction fields,
-  an unknown OpenConnect value, an unknown magnet shape, non-zero inactive
-  magnet dimensions, non-positive or non-finite active dimensions, or a magnet
-  conflict with an existing hole flag
+  an unknown OpenConnect value, an unknown `topText` value, an unknown magnet
+  shape, non-zero inactive magnet dimensions, non-positive or non-finite active
+  dimensions, or a magnet conflict with an existing hole flag
 - **THEN** validation MUST reject the snapshot as a model-parameter mismatch
 - **AND** the Worker MUST NOT generate or export that snapshot
 

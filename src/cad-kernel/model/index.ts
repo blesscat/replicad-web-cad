@@ -1,6 +1,7 @@
 import type { Shape3D } from 'replicad'
 import type { ProgressUnit } from '../../cad-contract/messages'
 import type { BooleanOperationReporter } from '../boolean-progress'
+import type { NativeModelPart } from '../lifetime'
 import {
   isBoxParameters,
   isHexagonalColumnParameters,
@@ -16,6 +17,7 @@ import {
   validateOpenGridStackableCylinderParameters,
   isOpenGridSnapParameters,
   isOpenGridSnapRemoverParameters,
+  isOpenGridWallCoverParameters,
   isPillarParameters,
   validateOpenGridGenerationSupport,
   validateModelParameters,
@@ -37,6 +39,10 @@ import {
   buildOpenGridSnap,
   type OpenGridSnapFixedFootprint,
 } from '../components/opengrid-snap/builder'
+import {
+  buildOpenGridWallCover,
+  buildOpenGridWallCoverWithFlatText,
+} from '../components/opengrid-wall-cover/builder'
 import { buildOpenGridSnapRemover } from '../components/opengrid-snap-remover/builder'
 import { buildPillar } from '../components/opengrid-pillar/builder'
 import { buildOpenGridOpenShelf } from '../components/opengrid-open-shelf/builder'
@@ -64,6 +70,7 @@ export type KernelBuildContext = {
     variant: OpenGridSnapVariant,
     profile: OpenGridSnapProfile,
   ) => Promise<Shape3D>
+  getOpenGridWallCoverReference?: () => Promise<Shape3D>
   getOpenGridSnapFixedFootprint?: (
     footprint: OpenGridSnapFixedFootprint,
   ) => Promise<Shape3D>
@@ -96,6 +103,12 @@ export type KernelModelDefinition = {
     parameters: ModelParameterValues,
     context: KernelBuildContext,
   ) => Shape3D | Promise<Shape3D>
+}
+
+export type KernelModelBuildResult = {
+  shape: Shape3D
+  qualityShape?: Shape3D
+  parts?: NativeModelPart[]
 }
 
 function buildBoxModel(
@@ -226,6 +239,24 @@ async function buildOpenGridSnapModel(
   }
   return buildOpenGridSnap(parameters, {
     getOpenGridSnapReference: context.getOpenGridSnapReference,
+    getOpenGridSnapFixedFootprint: context.getOpenGridSnapFixedFootprint,
+    getOpenGridSnapOpenConnectHead: context.getOpenGridSnapOpenConnectHead,
+    yieldToEventLoop: context.yieldToEventLoop,
+    isGenerationCurrent: context.isGenerationCurrent,
+    booleanOperations: context.booleanOperations,
+  })
+}
+
+async function buildOpenGridWallCoverModel(
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Promise<Shape3D> {
+  if (!isOpenGridWallCoverParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-wall-cover')
+  }
+  return buildOpenGridWallCover(parameters, {
+    getOpenGridSnapReference: context.getOpenGridSnapReference,
+    getOpenGridWallCoverReference: context.getOpenGridWallCoverReference,
     getOpenGridSnapFixedFootprint: context.getOpenGridSnapFixedFootprint,
     getOpenGridSnapOpenConnectHead: context.getOpenGridSnapOpenConnectHead,
     yieldToEventLoop: context.yieldToEventLoop,
@@ -430,6 +461,11 @@ export const opengridSnapKernelDefinition: KernelModelDefinition = {
   build: buildOpenGridSnapModel,
 }
 
+export const opengridWallCoverKernelDefinition: KernelModelDefinition = {
+  id: 'opengrid-wall-cover',
+  build: buildOpenGridWallCoverModel,
+}
+
 export const opengridStackableBoxKernelDefinition: KernelModelDefinition = {
   id: 'opengrid-stackable-box',
   build: buildOpenGridStackableBoxModel,
@@ -473,6 +509,7 @@ export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   opengridStackableCylinderKernelDefinition,
   opengridOpenShelfKernelDefinition,
   opengridSnapKernelDefinition,
+  opengridWallCoverKernelDefinition,
   openGridSnapRemoverKernelDefinition,
   opengridDividerKernelDefinition,
 ]
@@ -494,4 +531,29 @@ export async function buildModelBRep(
   const definition = getKernelModelDefinition(modelId)
   if (!definition) throw new Error(`MODEL_DEFINITION_MISSING:${modelId}`)
   return definition.build(parameters, context)
+}
+
+export async function buildModelBRepWithParts(
+  modelId: ModelId,
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Promise<KernelModelBuildResult> {
+  if (modelId === 'opengrid-wall-cover') {
+    if (!isOpenGridWallCoverParameters(parameters)) {
+      throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-wall-cover')
+    }
+    return buildOpenGridWallCoverWithFlatText({
+      getOpenGridSnapReference: context.getOpenGridSnapReference,
+      getOpenGridWallCoverReference: context.getOpenGridWallCoverReference,
+      getOpenGridSnapFixedFootprint: context.getOpenGridSnapFixedFootprint,
+      getOpenGridSnapOpenConnectHead: context.getOpenGridSnapOpenConnectHead,
+      yieldToEventLoop: context.yieldToEventLoop,
+      isGenerationCurrent: context.isGenerationCurrent,
+      booleanOperations: context.booleanOperations,
+    })
+  }
+
+  return {
+    shape: await buildModelBRep(modelId, parameters, context),
+  }
 }

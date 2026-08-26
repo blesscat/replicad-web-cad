@@ -36,6 +36,7 @@ describe('OpenGrid system entry context', () => {
       fourCornerLocatingHoles: true,
       centerRemoverHole: true,
       openConnect: false,
+      topText: 'none',
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,
@@ -50,6 +51,7 @@ describe('OpenGrid system entry context', () => {
       fourCornerLocatingHoles: false,
       centerRemoverHole: false,
       openConnect: false,
+      topText: 'none',
       magnetHoleShape: 'none',
       magnetHoleLength: 0,
       magnetHoleWidth: 0,
@@ -158,7 +160,7 @@ describe('OpenGrid system entry context', () => {
       openGrid?.subgroups
         ?.find((group) => group.key === 'wall')
         ?.definitions.map((entry) => entry.id),
-    ).toEqual(['opengrid', 'opengrid-snap'])
+    ).toEqual(['opengrid', 'opengrid-snap', 'opengrid-wall-cover'])
 
     const deskSnap = openGrid?.subgroups?.[0]?.definitions[1]
     const wallSnap = openGrid?.subgroups?.[1]?.definitions[1]
