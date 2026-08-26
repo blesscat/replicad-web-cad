@@ -12,7 +12,11 @@ import type {
 } from '../cad-contract/errors'
 import { initialiseCadKernel } from '../cad-kernel/initialise'
 import { CadWorkerAssetCache } from './cad-worker-assets'
-import { exportStepCommand, exportStlCommand } from './cad-worker-export'
+import {
+  exportStepCommand,
+  exportStlCommand,
+  exportThreeMfCommand,
+} from './cad-worker-export'
 import {
   emitProgress as emitProgressEvent,
   id,
@@ -28,6 +32,28 @@ import type {
 import { cadErrorCodeFor, cadErrorStageFor } from './error-mapping'
 
 export type { CadWorkerBuildOptions } from './cad-worker-types'
+
+function normalizeLegacyWorkerCommand(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return value
+  }
+  const command = value as Record<string, unknown>
+  if (
+    command.kind !== 'model.generate' ||
+    command.modelId !== 'opengrid-snap' ||
+    typeof command.parameters !== 'object' ||
+    command.parameters === null ||
+    Array.isArray(command.parameters)
+  ) {
+    return value
+  }
+  const parameters = command.parameters as Record<string, unknown>
+  if (parameters.topText !== 'SNAP') return value
+  return {
+    ...command,
+    parameters: { ...parameters, topText: 'none' },
+  }
+}
 
 export class CadWorkerRuntime {
   private initialized = false
@@ -48,7 +74,8 @@ export class CadWorkerRuntime {
   }
 
   async handle(value: unknown): Promise<void> {
-    if (!isWorkerCommand(value)) {
+    const normalizedValue = normalizeLegacyWorkerCommand(value)
+    if (!isWorkerCommand(normalizedValue)) {
       this.emit({
         version: PROTOCOL_VERSION,
         kind: 'operation.error',
@@ -62,11 +89,12 @@ export class CadWorkerRuntime {
       })
       return
     }
+    const command = normalizedValue
 
-    if (this.lifecycle.isDisposed && value.kind !== 'worker.dispose') {
+    if (this.lifecycle.isDisposed && command.kind !== 'worker.dispose') {
       this.emit(
         errorEvent(
-          value,
+          command,
           makeError(
             'worker',
             'WORKER_TERMINATED',
@@ -79,34 +107,37 @@ export class CadWorkerRuntime {
     }
 
     try {
-      switch (value.kind) {
+      switch (command.kind) {
         case 'engine.init':
-          await this.initialize(value)
+          await this.initialize(command)
           return
         case 'model.generate':
-          await this.generate(value)
+          await this.generate(command)
           return
         case 'model.invalidate':
-          this.invalidate(value)
+          this.invalidate(command)
           return
         case 'model.commit':
-          this.commit(value)
+          this.commit(command)
           return
         case 'model.discard':
-          this.discard(value)
+          this.discard(command)
           return
         case 'export.step':
-          await this.exportStep(value)
+          await this.exportStep(command)
           return
         case 'export.stl':
-          await this.exportStl(value)
+          await this.exportStl(command)
+          return
+        case 'export.3mf':
+          await this.exportThreeMf(command)
           return
         case 'worker.dispose':
           this.dispose()
           return
       }
     } catch (error) {
-      this.emit(errorEvent(value, this.toCadError(error, value)))
+      this.emit(errorEvent(command, this.toCadError(error, command)))
     }
   }
 
@@ -206,6 +237,16 @@ export class CadWorkerRuntime {
     })
   }
 
+  private async exportThreeMf(
+    command: Extract<WorkerCommand, { kind: 'export.3mf' }>,
+  ): Promise<void> {
+    await exportThreeMfCommand(command, {
+      epoch: this.epoch,
+      lifecycle: this.lifecycle,
+      emit: this.emit,
+    })
+  }
+
   private emitProgress(...args: Parameters<ProgressEmitter>): void {
     emitProgressEvent(this.emit, ...args)
   }
@@ -227,6 +268,13 @@ export class CadWorkerRuntime {
         code === 'STL_METADATA_INVALID'
           ? 'diagnostic.stlMetadataInvalid'
           : 'diagnostic.stlExportFailed'
+      return makeError(stage, code, diagnostic(messageId), true)
+    }
+    if (command.kind === 'export.3mf') {
+      const messageId =
+        code === 'THREEMF_METADATA_INVALID'
+          ? 'diagnostic.threeMfMetadataInvalid'
+          : 'diagnostic.threeMfExportFailed'
       return makeError(stage, code, diagnostic(messageId), true)
     }
     if (code === 'OPENGRID_UNSUPPORTED_CONFIGURATION') {
@@ -269,6 +317,14 @@ export class CadWorkerRuntime {
         'meshing',
         code,
         diagnostic('diagnostic.snapQualityInvalid'),
+        true,
+      )
+    }
+    if (code === 'OPENGRID_WALL_COVER_QUALITY_INVALID') {
+      return makeError(
+        'meshing',
+        code,
+        diagnostic('diagnostic.wallCoverQualityInvalid'),
         true,
       )
     }

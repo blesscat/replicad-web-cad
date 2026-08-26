@@ -1,9 +1,17 @@
 import type { Shape3D } from 'replicad'
 import { PreviewTimingRecorder } from '../cad-contract/preview-timing'
-import { PROTOCOL_VERSION, type WorkerCommand } from '../cad-contract/messages'
 import {
+  isWorkerEvent,
+  PROTOCOL_VERSION,
+  type ModelPartMeshSnapshot,
+  type WorkerCommand,
+  type WorkerEvent,
+} from '../cad-contract/messages'
+import {
+  boundsForOpenGridWallCover,
   isHswCellParameters,
   isOpenGridDividerModelParameters,
+  isOpenGridOpenConnectShelfParameters,
   isOpenGridOpenShelfParameters,
   isOpenGridOrganizerBoxParameters,
   isOpenGridParameters,
@@ -13,23 +21,35 @@ import {
   normalizeOpenGridParameters,
   normalizeOpenGridSnapParameters,
   type ModelParameterValues,
+  isOpenGridWallCoverParameters,
   validateOpenGridGenerationSupport,
 } from '../cad-contract/units'
 import { createBooleanOperationReporter } from '../cad-kernel/boolean-progress'
-import type { CandidateRecord } from '../cad-kernel/lifetime'
-import { buildModelBRep, type KernelBuildContext } from '../cad-kernel/model'
+import type {
+  CandidateRecord,
+  NativeModelPart,
+  NativeModelPartMesh,
+} from '../cad-kernel/lifetime'
+import {
+  buildModelBRep,
+  buildModelBRepWithParts,
+  type KernelBuildContext,
+  type KernelModelBuildResult,
+} from '../cad-kernel/model'
 import { meshBRep, serializeMesh, type MeshData } from '../cad-kernel/mesh'
 import { assertOpenGridDividerShapeQuality } from '../cad-kernel/components/opengrid-divider/quality'
+import { assertOpenGridOpenConnectShelfShapeQuality } from '../cad-kernel/components/opengrid-openconnect-shelf/quality'
 import { assertOpenGridOpenShelfShapeQuality } from '../cad-kernel/components/opengrid-open-shelf/quality'
 import { assertOpenGridOrganizerBoxGeometry } from '../cad-kernel/components/opengrid-organizer-box/quality'
 import { assertOpenGridShapeQuality } from '../cad-kernel/components/opengrid/quality'
 import { assertPillarShapeQuality } from '../cad-kernel/components/opengrid-pillar/quality'
+import { assertOpenGridWallCoverShapeQuality } from '../cad-kernel/components/opengrid-wall-cover/quality'
 import {
   assertOpenGridSnapOpenConnectShapeQuality,
   assertOpenGridSnapShapeQuality,
 } from '../cad-kernel/components/opengrid-snap/quality'
 import { createThrottledMeshProgressReporter } from './mesh-progress'
-import { id, emitSuperseded } from './cad-worker-events'
+import { id } from './cad-worker-events'
 import type { CadWorkerAssetCache } from './cad-worker-assets'
 import type {
   CadWorkerBuildOptions,
@@ -56,6 +76,31 @@ export type CadWorkerGenerationContext = {
 
 function yieldToWorkerEventLoop(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0))
+}
+
+function deleteShape(shape: { delete?: () => void } | null | undefined): void {
+  try {
+    shape?.delete?.()
+  } catch {
+    // Keep the original Worker error when native cleanup is already incomplete.
+  }
+}
+
+function deleteBuildShapes(
+  shape: Shape3D | null | undefined,
+  qualityShape: Shape3D | null | undefined,
+  parts: readonly NativeModelPart[] | undefined,
+): void {
+  const deleted = new Set<Shape3D>()
+  for (const candidate of [
+    shape,
+    qualityShape,
+    ...(parts ?? []).map((part) => part.shape),
+  ]) {
+    if (!candidate || deleted.has(candidate)) continue
+    deleted.add(candidate)
+    deleteShape(candidate)
+  }
 }
 
 export async function generateCadCandidate(
@@ -100,6 +145,9 @@ export async function generateCadCandidate(
   context.emitProgress(command, 'building', undefined, hswProgress)
 
   let shape: Shape3D
+  let qualityShape: Shape3D | null = null
+  let nativeParts: NativeModelPart[] | undefined
+  let nativePartMeshes: NativeModelPartMesh[] | undefined
   try {
     const {
       useOpenGridCanonicalTileCache = true,
@@ -117,12 +165,16 @@ export async function generateCadCandidate(
         context.assets.getOpenGridPrototype(variant),
       getOpenGridSnapReference: (variant, profile) =>
         context.assets.getOpenGridSnapReference(variant, profile),
+      getOpenGridWallCoverReference: () =>
+        context.assets.getOpenGridWallCoverReference(),
       getOpenGridSnapFixedFootprint: (footprint) =>
         context.assets.getOpenGridSnapFixedFootprint(footprint),
       getOpenGridSnapOpenConnectHead: () =>
         context.assets.getOpenGridSnapOpenConnectHead(),
       getOpenGridSnapRemoverAsset: () =>
         context.assets.getOpenGridSnapRemoverAsset(),
+      getOpenGridOpenConnectShelfLockedSlot: () =>
+        context.assets.getOpenGridOpenConnectShelfLockedSlot(),
       getOpenGridDetachableCornerSeatReference: () =>
         context.assets.getOpenGridDetachableCornerSeatReference(),
       getOpenGridDetachableCornerSeatHolderReference: () =>
@@ -155,24 +207,39 @@ export async function generateCadCandidate(
       buildContext.getOpenGridHalfCellPrototype = (key, factory) =>
         context.assets.getOpenGridHalfCellPrototype(key, factory)
     }
-    shape = await timing.measure('build', () =>
-      buildModelBRep(command.modelId, generationParameters, buildContext),
+    const usesWallCoverParts = command.modelId === 'opengrid-wall-cover'
+    const buildResult: KernelModelBuildResult = await timing.measure(
+      'build',
+      async () => {
+        if (usesWallCoverParts) {
+          return buildModelBRepWithParts(
+            command.modelId,
+            generationParameters,
+            buildContext,
+          )
+        }
+        return {
+          shape: await buildModelBRep(
+            command.modelId,
+            generationParameters,
+            buildContext,
+          ),
+        }
+      },
     )
+    shape = buildResult.shape
+    qualityShape = buildResult.qualityShape ?? shape
+    nativeParts = buildResult.parts
   } catch (error) {
     if (error instanceof Error && error.message === 'STALE_GENERATION') {
-      emitSuperseded(
-        context.emit,
-        command,
-        'STALE_GENERATION',
-        command.generation,
-      )
+      context.supersede(command, 'STALE_GENERATION')
       return
     }
     throw error
   }
 
   if (!context.isGenerationCurrent(command.generation)) {
-    shape.delete()
+    deleteBuildShapes(shape, qualityShape, nativeParts)
     context.supersede(command, 'STALE_GENERATION')
     return
   }
@@ -188,6 +255,13 @@ export async function generateCadCandidate(
         }),
     )
     context.emitProgress(command, 'meshing')
+    const qualityMesh =
+      qualityShape && qualityShape !== shape
+        ? meshBRep(qualityShape, {
+            ...command.previewConfig,
+            reportFaceProgress,
+          })
+        : null
     try {
       mesh = timing.measureSync('mesh', () =>
         meshBRep(shape, {
@@ -224,21 +298,50 @@ export async function generateCadCandidate(
         timing.measureSync('quality', () => {
           if (generationParameters.openConnect) {
             assertOpenGridSnapOpenConnectShapeQuality(
-              shape,
+              qualityShape ?? shape,
               generationParameters,
-              mesh,
+              qualityMesh ?? mesh,
               reference,
             )
             return
           }
           assertOpenGridSnapShapeQuality(
-            shape,
+            qualityShape ?? shape,
             generationParameters,
-            mesh,
+            qualityMesh ?? mesh,
             reference,
           )
         })
       }
+    }
+
+    if (command.modelId === 'opengrid-wall-cover') {
+      if (!isOpenGridWallCoverParameters(generationParameters)) {
+        throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-wall-cover')
+      }
+      const bodyPart = nativeParts?.find((part) => part.name === 'body')
+      const textPart = nativeParts?.find((part) => part.name === 'text')
+      if (!bodyPart || !textPart) {
+        throw new Error('OPENGRID_WALL_COVER_PARTS_INVALID')
+      }
+      const bodyMesh = meshBRep(bodyPart.shape, command.previewConfig)
+      const textMesh = meshBRep(textPart.shape, command.previewConfig)
+      nativePartMeshes = [
+        { name: 'body', mesh: bodyMesh },
+        { name: 'text', mesh: textMesh },
+      ]
+      mesh.bounds = boundsForOpenGridWallCover(generationParameters)
+      const reference = await context.assets.getOpenGridWallCoverReference()
+      timing.measureSync('quality', () =>
+        assertOpenGridWallCoverShapeQuality(
+          qualityShape ?? shape,
+          bodyPart.shape,
+          textPart.shape,
+          bodyMesh,
+          textMesh,
+          reference,
+        ),
+      )
     }
 
     if (command.modelId === 'opengrid-divider') {
@@ -265,6 +368,21 @@ export async function generateCadCandidate(
         assertOpenGridOpenShelfShapeQuality(shape, generationParameters, mesh),
       )
     }
+    if (command.modelId === 'opengrid-openconnect-shelf') {
+      if (!isOpenGridOpenConnectShelfParameters(generationParameters)) {
+        throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-openconnect-shelf')
+      }
+      const lockedSlot =
+        await context.assets.getOpenGridOpenConnectShelfLockedSlot()
+      timing.measureSync('quality', () =>
+        assertOpenGridOpenConnectShelfShapeQuality(
+          shape,
+          generationParameters,
+          mesh,
+          lockedSlot,
+        ),
+      )
+    }
     if (command.modelId === 'opengrid-organizer-box') {
       if (!isOpenGridOrganizerBoxParameters(generationParameters)) {
         throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-organizer-box')
@@ -287,12 +405,13 @@ export async function generateCadCandidate(
       )
     }
   } catch (error) {
-    try {
-      shape.delete()
-    } catch {
-      // A failed native delete must not hide the original mesh error.
-    }
+    deleteBuildShapes(shape, qualityShape, nativeParts)
     throw error
+  }
+
+  if (qualityShape && qualityShape !== shape) {
+    deleteShape(qualityShape)
+    qualityShape = null
   }
 
   const candidate: CandidateRecord = {
@@ -304,6 +423,8 @@ export async function generateCadCandidate(
     modelId: command.modelId,
     parameters: generationParameters,
     shape,
+    parts: nativeParts,
+    partMeshes: nativePartMeshes,
     mesh,
     previewTiming: timing.snapshot(),
     createdAt: Date.now(),
@@ -313,29 +434,49 @@ export async function generateCadCandidate(
     context.registerCandidate(candidate),
   )
   let meshSnapshot: ReturnType<typeof serializeMesh>
+  let partMeshSnapshots: ModelPartMeshSnapshot[] | undefined
   try {
     meshSnapshot = timing.measureSync('serialization', () =>
       serializeMesh(mesh),
     )
+    partMeshSnapshots = candidate.partMeshes?.map((part) => ({
+      name: part.name as 'body' | 'text',
+      mesh: serializeMesh(part.mesh),
+    }))
     candidate.previewTiming = timing.snapshot()
   } catch (error) {
     unregisterCandidate()
     throw error
   }
-  context.emit(
-    {
-      version: PROTOCOL_VERSION,
-      kind: 'model.candidate-ready',
-      requestId: id(),
-      operationId: command.operationId,
-      generation: command.generation,
-      candidateId: candidate.candidateId,
-      workerEpoch: context.epoch,
-      modelId: candidate.modelId,
-      parameters: candidate.parameters,
-      mesh: meshSnapshot,
-      previewTiming: candidate.previewTiming,
-    },
-    [meshSnapshot.positions, meshSnapshot.normals, meshSnapshot.indices],
-  )
+  const candidateEvent: WorkerEvent = {
+    version: PROTOCOL_VERSION,
+    kind: 'model.candidate-ready',
+    requestId: id(),
+    operationId: command.operationId,
+    generation: command.generation,
+    candidateId: candidate.candidateId,
+    workerEpoch: context.epoch,
+    modelId: candidate.modelId,
+    parameters: candidate.parameters,
+    mesh: meshSnapshot,
+    partMeshes: partMeshSnapshots,
+    previewTiming: candidate.previewTiming,
+  }
+  if (!isWorkerEvent(candidateEvent)) {
+    unregisterCandidate()
+    throw new Error('MESH_INVALID')
+  }
+  const candidateTransferables: Transferable[] = [
+    meshSnapshot.positions,
+    meshSnapshot.normals,
+    meshSnapshot.indices,
+  ]
+  for (const part of partMeshSnapshots ?? []) {
+    candidateTransferables.push(
+      part.mesh.positions,
+      part.mesh.normals,
+      part.mesh.indices,
+    )
+  }
+  context.emit(candidateEvent, candidateTransferables)
 }

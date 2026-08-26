@@ -12,11 +12,13 @@ import {
   loadOpenGridSnapReference,
   type OpenGridSnapFixedFootprint,
 } from '../cad-kernel/components/opengrid-snap/builder'
+import { loadOpenGridWallCoverReference } from '../cad-kernel/components/opengrid-wall-cover/builder'
 import { loadOpenGridSnapRemoverAsset } from '../cad-kernel/components/opengrid-snap-remover/builder'
 import {
   loadOpenGridDetachableCornerSeatHolderReference,
   loadOpenGridDetachableCornerSeatReference,
 } from '../cad-kernel/components/opengrid-locating-assembly/reference'
+import { loadOpenGridOpenConnectShelfLockedSlot } from '../cad-kernel/components/opengrid-openconnect-shelf/slot'
 import type { BooleanOperationReporter } from '../cad-kernel/boolean-progress'
 import type {
   OpenGridSnapParameters,
@@ -42,8 +44,10 @@ export class CadWorkerAssetCache {
     OpenGridSnapFixedFootprint,
     ShapePromise
   >()
+  private openGridWallCoverReference: ShapePromise | null = null
   private openGridSnapOpenConnectHeadAsset: ShapePromise | null = null
   private openGridSnapRemoverAsset: ShapePromise | null = null
+  private openGridOpenConnectShelfLockedSlot: ShapePromise | null = null
   private openGridDetachableCornerSeatReference: ShapePromise | null = null
   private openGridDetachableCornerSeatHolderReference: ShapePromise | null =
     null
@@ -202,6 +206,27 @@ export class CadWorkerAssetCache {
     return recoverable
   }
 
+  getOpenGridWallCoverReference(): ShapePromise {
+    if (!this.openGridWallCoverReference) {
+      const referencePromise = loadOpenGridWallCoverReference()
+        .then((reference) => {
+          if (this.isDisposed()) {
+            reference.delete()
+            throw new Error('WORKER_TERMINATED')
+          }
+          return reference
+        })
+        .catch((error) => {
+          if (this.openGridWallCoverReference === referencePromise) {
+            this.openGridWallCoverReference = null
+          }
+          throw error
+        })
+      this.openGridWallCoverReference = referencePromise
+    }
+    return this.openGridWallCoverReference
+  }
+
   getOpenGridSnapOpenConnectHead(): ShapePromise {
     if (!this.openGridSnapOpenConnectHeadAsset) {
       const headPromise = loadOpenGridSnapOpenConnectHead()
@@ -242,6 +267,27 @@ export class CadWorkerAssetCache {
       this.openGridSnapRemoverAsset = assetPromise
     }
     return this.openGridSnapRemoverAsset
+  }
+
+  getOpenGridOpenConnectShelfLockedSlot(): ShapePromise {
+    if (!this.openGridOpenConnectShelfLockedSlot) {
+      const assetPromise = loadOpenGridOpenConnectShelfLockedSlot()
+        .then((asset) => {
+          if (this.isDisposed()) {
+            asset.delete()
+            throw new Error('WORKER_TERMINATED')
+          }
+          return asset
+        })
+        .catch((error) => {
+          if (this.openGridOpenConnectShelfLockedSlot === assetPromise) {
+            this.openGridOpenConnectShelfLockedSlot = null
+          }
+          throw error
+        })
+      this.openGridOpenConnectShelfLockedSlot = assetPromise
+    }
+    return this.openGridOpenConnectShelfLockedSlot
   }
 
   getOpenGridDetachableCornerSeatReference(): ShapePromise {
@@ -298,8 +344,10 @@ export class CadWorkerAssetCache {
     this.disposeShapeMap(this.openGridHalfCellPrototypes)
     this.disposeShapeMap(this.openGridSnapReferences)
     this.disposeShapeMap(this.openGridSnapFixedFootprints)
+    this.disposeShapePromise('openGridWallCoverReference')
     this.disposeShapePromise('openGridSnapOpenConnectHeadAsset')
     this.disposeShapePromise('openGridSnapRemoverAsset')
+    this.disposeShapePromise('openGridOpenConnectShelfLockedSlot')
     this.disposeShapePromise('openGridDetachableCornerSeatReference')
     this.disposeShapePromise('openGridDetachableCornerSeatHolderReference')
   }
@@ -309,8 +357,10 @@ export class CadWorkerAssetCache {
       | 'modularGridBaseTemplate'
       | 'hswCellTemplate'
       | 'hexagonalColumnReference'
+      | 'openGridWallCoverReference'
       | 'openGridSnapOpenConnectHeadAsset'
       | 'openGridSnapRemoverAsset'
+      | 'openGridOpenConnectShelfLockedSlot'
       | 'openGridDetachableCornerSeatReference'
       | 'openGridDetachableCornerSeatHolderReference',
   ): void {

@@ -1,9 +1,16 @@
-import { PROTOCOL_VERSION, type WorkerCommand } from '../cad-contract/messages'
+import {
+  isWorkerEvent,
+  PROTOCOL_VERSION,
+  type ModelPartMeshSnapshot,
+  type WorkerCommand,
+  type WorkerEvent,
+} from '../cad-contract/messages'
 import {
   RevisionLifetime,
   type CandidateRecord,
   type RevisionRecord,
 } from '../cad-kernel/lifetime'
+import { serializeMesh } from '../cad-kernel/mesh'
 import { PROTOTYPE_CONFIGURATION } from '../cad-contract/units'
 import type {
   EventSink,
@@ -36,6 +43,21 @@ export class CadWorkerLifecycle {
       PROTOTYPE_CONFIGURATION.pendingCandidateLimit,
       PROTOTYPE_CONFIGURATION.candidateTtlMs,
     )
+  }
+
+  private rememberCandidateTerminal(
+    candidateId: string,
+    terminal: CandidateTerminal,
+  ): void {
+    this.candidateTerminals.set(candidateId, terminal)
+    while (
+      this.candidateTerminals.size >
+      PROTOTYPE_CONFIGURATION.pendingCandidateLimit
+    ) {
+      const oldestCandidateId = this.candidateTerminals.keys().next().value
+      if (oldestCandidateId === undefined) break
+      this.candidateTerminals.delete(oldestCandidateId)
+    }
   }
 
   get isDisposed(): boolean {
@@ -86,6 +108,7 @@ export class CadWorkerLifecycle {
 
     this.scheduleCandidateCleanup(candidate)
     return () => {
+      this.clearCandidateTimer(candidate.candidateId)
       this.lifetime.discardCandidate(candidate.candidateId)
     }
   }
@@ -213,19 +236,54 @@ export class CadWorkerLifecycle {
     command: Extract<WorkerCommand, { kind: 'model.commit' }>,
     revision: RevisionRecord,
   ): void {
-    this.emit({
-      version: PROTOCOL_VERSION,
-      kind: 'model.ready',
-      requestId: id(),
-      operationId: command.operationId,
-      generation: revision.generation,
-      modelRevision: revision.modelRevision,
-      workerEpoch: this.epoch,
-      modelId: revision.modelId,
-      parameters: revision.parameters,
-      bounds: revision.mesh.bounds,
-      previewTiming: revision.previewTiming,
-    })
+    let readyEvent: WorkerEvent
+    let readyMesh: ReturnType<typeof serializeMesh> | undefined
+    let readyPartMeshes: ModelPartMeshSnapshot[] | undefined
+    try {
+      if (revision.modelId === 'opengrid-wall-cover') {
+        readyMesh = serializeMesh(revision.mesh)
+      }
+      readyPartMeshes = revision.partMeshes?.map((part) => ({
+        name: part.name as 'body' | 'text',
+        mesh: serializeMesh(part.mesh),
+      }))
+      const candidateEvent: WorkerEvent = {
+        version: PROTOCOL_VERSION,
+        kind: 'model.ready',
+        requestId: id(),
+        operationId: command.operationId,
+        generation: revision.generation,
+        modelRevision: revision.modelRevision,
+        workerEpoch: this.epoch,
+        modelId: revision.modelId,
+        parameters: revision.parameters,
+        ...(readyMesh ? { mesh: readyMesh } : {}),
+        partMeshes: readyPartMeshes,
+        bounds: revision.mesh.bounds,
+        previewTiming: revision.previewTiming,
+      }
+      if (!isWorkerEvent(candidateEvent)) throw new Error('MESH_INVALID')
+      readyEvent = candidateEvent
+    } catch (error) {
+      this.lifetime.abortRevision(revision.modelRevision)
+      throw error
+    }
+    const transferables: Transferable[] = []
+    if (readyMesh) {
+      transferables.push(
+        readyMesh.positions,
+        readyMesh.normals,
+        readyMesh.indices,
+      )
+    }
+    for (const part of readyPartMeshes ?? []) {
+      transferables.push(
+        part.mesh.positions,
+        part.mesh.normals,
+        part.mesh.indices,
+      )
+    }
+    this.emit(readyEvent, transferables)
   }
 
   private finalizeCandidate(
@@ -239,7 +297,7 @@ export class CadWorkerLifecycle {
       generation: candidate.generation,
       reason,
     } satisfies CandidateTerminal
-    this.candidateTerminals.set(candidate.candidateId, terminal)
+    this.rememberCandidateTerminal(candidate.candidateId, terminal)
     this.emit({
       version: PROTOCOL_VERSION,
       kind: 'operation.superseded',
