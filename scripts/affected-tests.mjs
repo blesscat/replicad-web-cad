@@ -23,7 +23,7 @@ const sharedCadPrefixes = [
   'src/cad-kernel/model/',
   'src/cad-kernel/bottom-edge-fillet',
   'src/cad-kernel/boolean-progress',
-  'src/workers/cad.worker',
+  'src/workers/cad.worker.ts',
   'src/workers/error-mapping',
   'src/workers/mesh-progress',
   'vendor/replicad-opencascadejs/',

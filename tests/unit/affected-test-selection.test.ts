@@ -154,6 +154,20 @@ describe('affected-test execution planning', () => {
     }
   })
 
+  it('keeps extracted Worker modules on related-test selection', () => {
+    for (const path of [
+      'src/workers/cad-worker-assets.ts',
+      'src/workers/cad-worker-generation.ts',
+      'src/workers/cad-worker-lifecycle.ts',
+      'src/workers/cad-worker-export.ts',
+    ]) {
+      const plan = createExecutionPlan([{ status: 'M', path }])
+
+      expect(plan.kind).toBe('related')
+      expect(plan.reasons).toEqual([])
+    }
+  })
+
   it('keeps focused asset mappings when another change selects all CAD tests', () => {
     const plan = createExecutionPlan([
       { status: 'M', path: 'src/cad-kernel/mesh/index.ts' },
