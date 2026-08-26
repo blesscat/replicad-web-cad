@@ -7,6 +7,7 @@ import {
   openGridOpenConnectShelfFrontHeightFor,
   openGridOpenConnectShelfInstalledBoundsFor,
   openGridOpenConnectShelfMaximumAngleForRows,
+  openGridOpenConnectShelfRearHeightFor,
   openGridOpenConnectShelfSlotOriginsFor,
   OPENGRID_OPENCONNECT_SHELF_CONFIGURATION,
   OPENGRID_OPENCONNECT_SHELF_DEFAULT_PARAMETERS,
@@ -25,10 +26,15 @@ function parameters(
 }
 
 describe('OpenGrid OpenConnect shelf contract', () => {
-  it('accepts only the three typed default controls', () => {
+  it('accepts the four typed default controls', () => {
     const value = parameters()
 
-    expect(value).toEqual({ columns: 3, rows: 3, angle: 14 })
+    expect(value).toEqual({
+      columns: 3,
+      rows: 3,
+      connectorRows: 1,
+      angle: 14,
+    })
     expect(validateOpenGridOpenConnectShelfParameters(value)).toEqual({
       valid: true,
       value,
@@ -45,6 +51,7 @@ describe('OpenGrid OpenConnect shelf contract', () => {
     expect(openGridOpenConnectShelfMaximumAngleForRows(2)).toBe(20)
     expect(openGridOpenConnectShelfMaximumAngleForRows(3)).toBe(14)
     expect(openGridOpenConnectShelfMaximumAngleForRows(4)).toBe(10)
+    expect(openGridOpenConnectShelfMaximumAngleForRows(3, 2)).toBe(30)
 
     expect(
       validateOpenGridOpenConnectShelfParameters(
@@ -81,30 +88,34 @@ describe('OpenGrid OpenConnect shelf contract', () => {
     null,
     {},
     { columns: 3, rows: 3 },
-    { columns: 3, rows: 3, angle: 14, extra: true },
-    { columns: 1.5, rows: 3, angle: 14 },
-    { columns: 3, rows: Number.NaN, angle: 14 },
-    { columns: 3, rows: 3, angle: 13.25 },
-    { columns: 0, rows: 3, angle: 14 },
-    { columns: 3, rows: 11, angle: 1 },
-    { columns: 3, rows: 3, angle: 0 },
+    { columns: 3, rows: 3, connectorRows: 1, angle: 14, extra: true },
+    { columns: 1.5, rows: 3, connectorRows: 1, angle: 14 },
+    { columns: 3, rows: Number.NaN, connectorRows: 1, angle: 14 },
+    { columns: 3, rows: 3, connectorRows: 1.5, angle: 14 },
+    { columns: 3, rows: 3, connectorRows: 1, angle: 13.25 },
+    { columns: 0, rows: 3, connectorRows: 1, angle: 14 },
+    { columns: 3, rows: 11, connectorRows: 1, angle: 1 },
+    { columns: 3, rows: 3, connectorRows: 11, angle: 14 },
+    { columns: 3, rows: 3, connectorRows: 1, angle: 0 },
   ])('rejects malformed or out-of-range snapshot %#', (value) => {
     expect(validateOpenGridOpenConnectShelfParameters(value).valid).toBe(false)
   })
 
   it('derives the installed envelope and grid-aligned locked-slot origins', () => {
-    const value = parameters()
-    const { gridPitch, rearHeight, rearThickness } =
+    const value = parameters({ columns: 2, connectorRows: 2 })
+    const { gridPitch, rearThickness } =
       OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+    const rearHeight = openGridOpenConnectShelfRearHeightFor(value)
 
     expect(openGridOpenConnectShelfInstalledBoundsFor(value)).toEqual({
       min: [-(value.columns * gridPitch) / 2, -value.rows * gridPitch, 0],
       max: [(value.columns * gridPitch) / 2, rearThickness, rearHeight],
     })
     expect(openGridOpenConnectShelfSlotOriginsFor(value)).toEqual([
-      [-gridPitch, rearThickness, rearHeight / 2],
-      [0, rearThickness, rearHeight / 2],
-      [gridPitch, rearThickness, rearHeight / 2],
+      [-gridPitch / 2, rearThickness, gridPitch / 2],
+      [gridPitch / 2, rearThickness, gridPitch / 2],
+      [-gridPitch / 2, rearThickness, (gridPitch * 3) / 2],
+      [gridPitch / 2, rearThickness, (gridPitch * 3) / 2],
     ])
     expect(openGridOpenConnectShelfFrontHeightFor(value)).toBeCloseTo(
       rearHeight -
@@ -113,9 +124,10 @@ describe('OpenGrid OpenConnect shelf contract', () => {
   })
 
   it('reports tight print-oriented bounds with the sloped underside on Z=0', () => {
-    const value = parameters()
-    const { gridPitch, rearHeight, rearThickness } =
+    const value = parameters({ connectorRows: 2 })
+    const { gridPitch, rearThickness } =
       OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+    const rearHeight = openGridOpenConnectShelfRearHeightFor(value)
     const width = value.columns * gridPitch
     const depth = value.rows * gridPitch
     const radians = (value.angle * Math.PI) / 180
@@ -150,14 +162,14 @@ describe('OpenGrid OpenConnect shelf contract', () => {
   it('uses deterministic model-specific STEP and STL names', () => {
     const model = {
       modelId: 'opengrid-openconnect-shelf' as const,
-      parameters: parameters({ angle: 13.5 }),
+      parameters: parameters({ connectorRows: 2, angle: 13.5 }),
     }
 
     expect(modelFileName(model)).toBe(
-      'opengrid-openconnect-shelf-c3-r3-a13.5.step',
+      'opengrid-openconnect-shelf-c3-r3-z2-a13.5.step',
     )
     expect(modelStlFileName(model)).toBe(
-      'opengrid-openconnect-shelf-c3-r3-a13.5.stl',
+      'opengrid-openconnect-shelf-c3-r3-z2-a13.5.stl',
     )
   })
 })

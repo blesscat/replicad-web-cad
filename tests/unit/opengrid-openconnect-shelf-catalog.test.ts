@@ -22,8 +22,19 @@ describe('OpenGrid OpenConnect shelf catalog identity', () => {
     expect(definition?.parameterSchema.map((field) => field.key)).toEqual([
       'columns',
       'rows',
+      'connectorRows',
       'angle',
     ])
+    expect(
+      definition?.parameterSchema.find(
+        (field) => field.key === 'connectorRows',
+      ),
+    ).toMatchObject({
+      axis: 'Z',
+      control: 'range',
+      defaultValue:
+        OPENGRID_OPENCONNECT_SHELF_CONFIGURATION.defaultConnectorRows,
+    })
     expect(
       definition?.parameterSchema.find((field) => field.key === 'angle'),
     ).toMatchObject({

@@ -94,6 +94,7 @@ export const OPENGRID_OPEN_SHELF_PARAMETER_KEYS: ModelParameterKey[] = [
 export const OPENGRID_OPENCONNECT_SHELF_PARAMETER_KEYS: ModelParameterKey[] = [
   'columns',
   'rows',
+  'connectorRows',
   'angle',
 ]
 export const OPENGRID_ORGANIZER_BOX_PARAMETER_KEYS: ModelParameterKey[] = [
@@ -601,6 +602,7 @@ export function rawFromParameters(
     return {
       columns: String(shelfParameters.columns),
       rows: String(shelfParameters.rows),
+      connectorRows: String(shelfParameters.connectorRows),
       angle: String(shelfParameters.angle),
     }
   }

@@ -14,6 +14,8 @@
   import ParameterField from '../ParameterField.svelte'
   import type { ComponentPanelProps } from '../types'
 
+  const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+
   let {
     locale,
     rawParameters,
@@ -21,18 +23,19 @@
     onInputChange,
   }: ComponentPanelProps = $props()
 
-  function rowsForMaximumAngle(): number {
-    const rawRows = rawParameters.rows
-    const rows = Number(rawRows)
-    const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+  function gridCountForMaximumAngle(
+    key: 'rows' | 'connectorRows',
+    fallback: number,
+  ): number {
+    const count = Number(rawParameters[key])
     if (
-      Number.isSafeInteger(rows) &&
-      rows >= configuration.minGridCount &&
-      rows <= configuration.maxGridCount
+      Number.isSafeInteger(count) &&
+      count >= configuration.minGridCount &&
+      count <= configuration.maxGridCount
     ) {
-      return rows
+      return count
     }
-    return configuration.defaultRows
+    return fallback
   }
 
   function fieldForDisplay(
@@ -47,8 +50,18 @@
     }
   }
 
-  let rows = $derived(rowsForMaximumAngle())
-  let maximumAngle = $derived(openGridOpenConnectShelfMaximumAngleForRows(rows))
+  let rows = $derived(
+    gridCountForMaximumAngle('rows', configuration.defaultRows),
+  )
+  let connectorRows = $derived(
+    gridCountForMaximumAngle(
+      'connectorRows',
+      configuration.defaultConnectorRows,
+    ),
+  )
+  let maximumAngle = $derived(
+    openGridOpenConnectShelfMaximumAngleForRows(rows, connectorRows),
+  )
   let parameterSchema = $derived(
     opengridOpenConnectShelfDefinition.parameterSchema.map((field) =>
       fieldForDisplay(field, maximumAngle),
@@ -69,6 +82,7 @@
   >
     {translate(locale, 'panel.openConnectShelf.maximumAngle', {
       rows,
+      connectorRows,
       maximum: maximumAngle,
     })}
   </p>

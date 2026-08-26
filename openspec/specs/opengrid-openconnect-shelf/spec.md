@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines a printable wall-system shelf that presents a native OpenGrid Full surface at 90° to a row of locked OpenConnect receptacles while deriving a sloped build surface from three typed controls.
+Defines a printable wall-system shelf that presents a native OpenGrid Full surface at 90° to a selectable X/Z grid of locked OpenConnect receptacles while deriving a sloped build surface from four typed controls.
 
 ## Requirements
 
@@ -24,23 +24,24 @@ The system MUST register an independent model whose modelId, buildKey, route slu
 
 ### Requirement: Shelf parameters are typed and depth-constrained
 
-The normalized parameter snapshot MUST contain exactly `{ columns, rows, angle }`. `columns` and `rows` MUST be safe integers from 1 through 10, and `angle` MUST be a finite number of degrees aligned to 0.5-degree steps. The defaults MUST be `{ columns: 3, rows: 3, angle: 14 }`. For a selected row count, the maximum valid angle MUST be `floor(atan((28 - 7) / (rows * 28)) * 180 / pi)`, and the valid angle range MUST be from 1 degree through that derived maximum, inclusive. Non-finite values, fractional grid counts, angles outside the 0.5-degree step, missing or unknown fields, and out-of-range values MUST be rejected with a field-specific diagnostic.
+The normalized parameter snapshot MUST contain exactly `{ columns, rows, connectorRows, angle }`. `columns`, `rows`, and `connectorRows` MUST be safe integers from 1 through 10, and `angle` MUST be a finite number of degrees aligned to 0.5-degree steps. The defaults MUST be `{ columns: 3, rows: 3, connectorRows: 1, angle: 14 }`. For selected Y and Z counts, the maximum valid angle MUST be `floor(atan(((connectorRows * 28) - 7) / (rows * 28)) * 180 / pi)`, and the valid angle range MUST be from 1 degree through that derived maximum, inclusive. Non-finite values, fractional grid counts, angles outside the 0.5-degree step, missing or unknown fields, and out-of-range values MUST be rejected with a field-specific diagnostic.
 
 #### Scenario: Accept the default snapshot
 
-- **WHEN** the component validates `{ columns: 3, rows: 3, angle: 14 }`
+- **WHEN** the component validates `{ columns: 3, rows: 3, connectorRows: 1, angle: 14 }`
 - **THEN** validation MUST succeed with the same typed values
 - **AND** the derived functional footprint MUST be `84 mm × 84 mm`
 
-#### Scenario: Derive the maximum angle from depth
+#### Scenario: Derive the maximum angle from depth and rear height
 
-- **WHEN** `rows` is 2, 3, or 4
+- **WHEN** `connectorRows=1` and `rows` is 2, 3, or 4
 - **THEN** the maximum integer angle MUST be 20°, 14°, or 10° respectively
 - **AND** the angle control and validation diagnostic MUST use the same derived limit
+- **AND** changing to `connectorRows=2` with `rows=3` MUST raise the maximum to 30°
 
 #### Scenario: Reject an unsafe depth and angle combination
 
-- **WHEN** a snapshot uses `rows=4` and `angle=14`
+- **WHEN** a snapshot uses `rows=4`, `connectorRows=1`, and `angle=14`
 - **THEN** validation MUST reject `angle` because the derived front height would be below 7 mm
 - **AND** the invalid snapshot MUST NOT be sent to the CAD Worker
 
@@ -52,7 +53,7 @@ The normalized parameter snapshot MUST contain exactly `{ columns, rows, angle }
 
 ### Requirement: Functional interfaces are flat and mutually perpendicular
 
-In the installed coordinate system, the generated shelf MUST preserve a complete canonical OpenGrid Full functional surface with nominal width `columns * 28 mm`, nominal depth `rows * 28 mm`, and standard 6.8 mm Full thickness. That surface MUST be planar and horizontal, with its top at the fixed 28 mm rear-height datum. The OpenConnect interface MUST be a planar 28 mm-high rear face immediately outside the back edge so neither its plate nor its receptacle cutters remove any part of the OpenGrid interface. The OpenGrid surface normal and OpenConnect rear-face normal MUST remain exactly perpendicular for every valid angle; changing `angle` MUST affect only the opposite support side and the whole-model print orientation, not this 90° functional relationship.
+In the installed coordinate system, the generated shelf MUST preserve a complete canonical OpenGrid Full functional surface with nominal width `columns * 28 mm`, nominal depth `rows * 28 mm`, and standard 6.8 mm Full thickness. That surface MUST be planar and horizontal, with its top at the `connectorRows * 28 mm` rear-height datum. The OpenConnect interface MUST be a planar `connectorRows * 28 mm`-high rear face immediately outside the back edge so neither its plate nor its receptacle cutters remove any part of the OpenGrid interface. Every selected connector row MUST remain below the OpenGrid top surface. The OpenGrid surface normal and OpenConnect rear-face normal MUST remain exactly perpendicular for every valid angle; changing `angle` MUST affect only the opposite support side and the whole-model print orientation, not this 90° functional relationship.
 
 #### Scenario: Generate the default functional envelope
 
@@ -62,21 +63,33 @@ In the installed coordinate system, the generated shelf MUST preserve a complete
 - **AND** the two functional planes MUST meet at 90°
 - **AND** the complete rear row of the canonical OpenGrid interface MUST remain present
 
+#### Scenario: Raise the shelf over multiple Z connector rows
+
+- **WHEN** `connectorRows=2`
+- **THEN** the rear OpenConnect face and OpenGrid top datum MUST both be 56 mm above the rear lower datum
+- **AND** no connector row may protrude above the horizontal OpenGrid surface
+
 #### Scenario: Change shelf depth without tilting the interface
 
 - **WHEN** `rows` changes while `columns` and `angle` remain valid
 - **THEN** the OpenGrid depth MUST change in exact 28 mm increments
 - **AND** the OpenGrid plane and rear OpenConnect plane MUST remain perpendicular
 
-### Requirement: Every column has a native locked OpenConnect receptacle
+### Requirement: Every X/Z cell has a native locked OpenConnect receptacle
 
-The rear face MUST contain exactly one upward-oriented OpenConnect receptacle for each OpenGrid column. Every receptacle MUST use the supplied millimetre STEP locked-slot negative at its authored scale and origin, with no scaling, mirroring, or recentering. Its rigid placement MUST match the assembled OpenConnect head direction used by the OpenGrid Snap generator so that the Snap head occupies the locked receptacle without geometric interference. Slot source origins MUST be separated by the 28 mm OpenGrid pitch, aligned with the corresponding column centers, placed at the 14 mm rear-cell height datum on the exterior face of the rear plate, and transformed so the cutter enters that plate without reaching the OpenGrid board. No unlocked or user-selectable lock distribution MUST be exposed.
+The rear face MUST contain exactly `columns * connectorRows` upward-oriented OpenConnect receptacles. Every receptacle MUST use the supplied millimetre STEP locked-slot negative at its authored scale and origin, with no scaling, mirroring, or recentering. Its rigid placement MUST match the assembled OpenConnect head direction used by the OpenGrid Snap generator so that the Snap head occupies the locked receptacle without geometric interference. Slot source origins MUST be separated by the 28 mm OpenGrid pitch in X and Z, aligned with the corresponding column centers, placed at `(connectorRow + 0.5) * 28 mm` on the exterior face of the rear plate, and transformed so the cutter enters that plate without reaching the OpenGrid board. No unlocked or user-selectable lock distribution MUST be exposed.
 
 #### Scenario: Cut all default locking slots
 
 - **WHEN** the default three-column shelf is generated
 - **THEN** the rear face MUST contain exactly three OpenConnect receptacles on 28 mm centers
 - **AND** every receptacle MUST include the supplied locking feature
+
+#### Scenario: Cut multiple vertical locking rows
+
+- **WHEN** a two-column shelf is generated with `connectorRows=2`
+- **THEN** its 56 mm-high rear face MUST contain four locked receptacles
+- **AND** their centers MUST form a 28 mm-pitch two-by-two X/Z grid below the shelf top
 
 #### Scenario: Preserve the supplied cutter geometry
 
@@ -90,11 +103,11 @@ The rear face MUST contain exactly one upward-oriented OpenConnect receptacle fo
 - **THEN** the head MUST be oriented in the same assembly direction as the receptacle
 - **AND** the complete head volume MUST fit within the supplied locked-slot negative within CAD tolerance
 
-#### Scenario: Keep every cutter within one rear row
+#### Scenario: Keep every cutter within its rear row
 
-- **WHEN** any valid column count is generated
-- **THEN** each slot MUST fit within the single 28 mm-high rear interface row
-- **AND** adjacent slot cutters MUST remain distinct and centered on their respective 28 mm columns
+- **WHEN** any valid column and connector-row count is generated
+- **THEN** each slot MUST fit within its corresponding 28 mm-high rear interface row
+- **AND** adjacent slot cutters MUST remain distinct and centered on their respective 28 mm X/Z cells
 
 ### Requirement: The opposite side forms an open printable rib support
 
@@ -139,13 +152,13 @@ In installed coordinates, the lower edges of the two side ribs, every grid-align
 
 ### Requirement: Workspace lifecycle and persistence are independent
 
-The CAD workspace MUST expose only `columns`, `rows`, and `angle` controls for `opengrid-openconnect-shelf`, show the current derived maximum angle, and use the existing debounce, latest-wins candidate, commit, mesh, STEP, and STL gates. The angle control MUST be a slider without a free-text input and MUST advance in 0.5-degree steps. When a row-count change lowers the derived maximum below the current angle, the workspace MUST atomically clamp the angle to the new maximum before validation, persistence, or generation. Valid typed snapshots MUST persist under the `opengrid-openconnect-shelf` key independently of all other models. Missing or malformed persisted data MUST fall back to the new defaults; invalid current input MUST leave the last committed valid model visible as stale and MUST disable new exports.
+The CAD workspace MUST expose only `columns`, `rows`, `connectorRows`, and `angle` controls for `opengrid-openconnect-shelf`, present the three grid controls as X, Y, and Z sliders, show the current derived maximum angle, and use the existing debounce, latest-wins candidate, commit, mesh, STEP, and STL gates. The angle control MUST be a slider without a free-text input and MUST advance in 0.5-degree steps. When a Y- or Z-count change lowers the derived maximum below the current angle, the workspace MUST atomically clamp the angle to the new maximum before validation, persistence, or generation. Valid typed snapshots MUST persist under the `opengrid-openconnect-shelf` key independently of all other models. A valid legacy three-control snapshot MUST hydrate with `connectorRows=1`. Missing or malformed persisted data MUST fall back to the new defaults; invalid current input MUST leave the last committed valid model visible as stale and MUST disable new exports.
 
 #### Scenario: Initialize the dedicated route
 
 - **WHEN** a user opens `/cad/opengrid-openconnect-shelf?system=wall` with browser CAD prerequisites
 - **THEN** the workspace MUST initialize `modelId=opengrid-openconnect-shelf`
-- **AND** generation 1 MUST use a valid saved snapshot or `{ columns: 3, rows: 3, angle: 14 }`
+- **AND** generation 1 MUST use a valid saved snapshot or `{ columns: 3, rows: 3, connectorRows: 1, angle: 14 }`
 
 #### Scenario: Persist valid shelf controls independently
 
@@ -158,7 +171,14 @@ The CAD workspace MUST expose only `columns`, `rows`, and `angle` controls for `
 - **GIVEN** a two-row shelf has a valid angle of 19.5°
 - **WHEN** the user changes the row count to three
 - **THEN** the angle slider MUST change to the new 14° maximum without exposing a text input or invalid intermediate snapshot
-- **AND** the resulting `{ columns, rows: 3, angle: 14 }` snapshot MUST follow the normal persistence and generation lifecycle
+- **AND** the resulting `{ columns, rows: 3, connectorRows: 1, angle: 14 }` snapshot MUST follow the normal persistence and generation lifecycle
+
+#### Scenario: Clamp the angle when Z lowers its ceiling
+
+- **GIVEN** a three-row shelf has `connectorRows=2` and a valid angle of 29.5°
+- **WHEN** the user changes `connectorRows` to one
+- **THEN** the angle slider MUST change atomically to the new 14° maximum
+- **AND** the resulting snapshot MUST remain valid, persistable, and generatable
 
 #### Scenario: Retain the last valid revision for invalid input
 
@@ -168,11 +188,11 @@ The CAD workspace MUST expose only `columns`, `rows`, and `angle` controls for `
 
 ### Requirement: Bounds and exports are deterministic
 
-The component MUST report deterministic bounds for its print-oriented geometry and MUST support the existing committed-B-Rep STEP and binary STL lifecycle. Equivalent typed parameters MUST produce identical filenames. STEP filenames MUST use `opengrid-openconnect-shelf-c{columns}-r{rows}-a{angle}.step`, and STL filenames MUST use the same stem with `.stl`. Invalid or failed generations MUST NOT become exportable revisions.
+The component MUST report deterministic bounds for its print-oriented geometry and MUST support the existing committed-B-Rep STEP and binary STL lifecycle. Equivalent typed parameters MUST produce identical filenames. STEP filenames MUST use `opengrid-openconnect-shelf-c{columns}-r{rows}-z{connectorRows}-a{angle}.step`, and STL filenames MUST use the same stem with `.stl`. Invalid or failed generations MUST NOT become exportable revisions.
 
 #### Scenario: Equivalent snapshots produce stable names
 
-- **WHEN** two accepted snapshots normalize to the same typed `columns`, `rows`, and `angle`
+- **WHEN** two accepted snapshots normalize to the same typed `columns`, `rows`, `connectorRows`, and `angle`
 - **THEN** their STEP and STL filenames MUST be identical
 - **AND** both filenames MUST begin with `opengrid-openconnect-shelf-`
 

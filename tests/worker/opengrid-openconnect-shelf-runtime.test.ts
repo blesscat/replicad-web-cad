@@ -184,7 +184,7 @@ describe('OpenGrid OpenConnect shelf Worker runtime', () => {
       kind: 'model.generate',
       generation: 1,
       modelId: 'opengrid-openconnect-shelf',
-      parameters: { columns: 3, rows: 3, angle: 14 },
+      parameters: { columns: 3, rows: 3, connectorRows: 1, angle: 14 },
       previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
     })
     await firstStarted
@@ -195,7 +195,7 @@ describe('OpenGrid OpenConnect shelf Worker runtime', () => {
       kind: 'model.generate',
       generation: 2,
       modelId: 'opengrid-openconnect-shelf',
-      parameters: { columns: 4, rows: 2, angle: 20 },
+      parameters: { columns: 4, rows: 2, connectorRows: 1, angle: 20 },
       previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
     })
     releaseFirst()
@@ -211,7 +211,7 @@ describe('OpenGrid OpenConnect shelf Worker runtime', () => {
       expect.objectContaining({
         kind: 'model.candidate-ready',
         generation: 2,
-        parameters: { columns: 4, rows: 2, angle: 20 },
+        parameters: { columns: 4, rows: 2, connectorRows: 1, angle: 20 },
       }),
     )
   })

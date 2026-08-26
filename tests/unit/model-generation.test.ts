@@ -199,7 +199,7 @@ describe('CAD model generation debounce', () => {
   it('clamps an OpenConnect shelf angle when a deeper row count lowers its limit', () => {
     const { send, context } = createRuntimeContext(
       'opengrid-openconnect-shelf',
-      { columns: 3, rows: 2, angle: 19.5 },
+      { columns: 3, rows: 2, connectorRows: 1, angle: 19.5 },
     )
     const handlers = createModelGenerationHandlers(context)
 
@@ -208,11 +208,12 @@ describe('CAD model generation debounce', () => {
     expect(context.setRawParameters).toHaveBeenCalledWith({
       columns: '3',
       rows: '3',
+      connectorRows: '1',
       angle: '14',
     })
     expect(context.setPersistedParameters).toHaveBeenCalledWith(
       'opengrid-openconnect-shelf',
-      { columns: 3, rows: 3, angle: 14 },
+      { columns: 3, rows: 3, connectorRows: 1, angle: 14 },
     )
     expect(context.dispatch).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'input-valid' }),
@@ -222,7 +223,36 @@ describe('CAD model generation debounce', () => {
     expect(send).toHaveBeenLastCalledWith(
       expect.objectContaining({
         kind: 'model.generate',
-        parameters: { columns: 3, rows: 3, angle: 14 },
+        parameters: { columns: 3, rows: 3, connectorRows: 1, angle: 14 },
+      }),
+    )
+  })
+
+  it('clamps an OpenConnect shelf angle when fewer Z connectors lower its limit', () => {
+    const { send, context } = createRuntimeContext(
+      'opengrid-openconnect-shelf',
+      { columns: 3, rows: 3, connectorRows: 2, angle: 29.5 },
+    )
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('connectorRows', '1')
+
+    expect(context.setRawParameters).toHaveBeenCalledWith({
+      columns: '3',
+      rows: '3',
+      connectorRows: '1',
+      angle: '14',
+    })
+    expect(context.setPersistedParameters).toHaveBeenCalledWith(
+      'opengrid-openconnect-shelf',
+      { columns: 3, rows: 3, connectorRows: 1, angle: 14 },
+    )
+
+    vi.advanceTimersByTime(500)
+    expect(send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.generate',
+        parameters: { columns: 3, rows: 3, connectorRows: 1, angle: 14 },
       }),
     )
   })

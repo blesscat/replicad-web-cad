@@ -1,10 +1,12 @@
 import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
 
-export type OpenGridOpenConnectShelfParameterKey = 'columns' | 'rows' | 'angle'
+export type OpenGridOpenConnectShelfParameterKey =
+  'columns' | 'rows' | 'connectorRows' | 'angle'
 
 export type OpenGridOpenConnectShelfParameters = {
   columns: number
   rows: number
+  connectorRows: number
   angle: number
 }
 
@@ -23,7 +25,6 @@ export type OpenGridOpenConnectShelfValidation =
 export const OPENGRID_OPENCONNECT_SHELF_CONFIGURATION = {
   gridPitch: OPENGRID_GRID_CONFIGURATION.fullPitch,
   fullThickness: 6.8,
-  rearHeight: 28,
   rearThickness: 3.2,
   supportThickness: 2,
   minimumFrontHeight: 7,
@@ -33,18 +34,21 @@ export const OPENGRID_OPENCONNECT_SHELF_CONFIGURATION = {
   angleStep: 0.5,
   defaultColumns: 3,
   defaultRows: 3,
+  defaultConnectorRows: 1,
   defaultAngle: 14,
 } as const
 
 export const OPENGRID_OPENCONNECT_SHELF_DEFAULT_PARAMETERS = {
   columns: OPENGRID_OPENCONNECT_SHELF_CONFIGURATION.defaultColumns,
   rows: OPENGRID_OPENCONNECT_SHELF_CONFIGURATION.defaultRows,
+  connectorRows: OPENGRID_OPENCONNECT_SHELF_CONFIGURATION.defaultConnectorRows,
   angle: OPENGRID_OPENCONNECT_SHELF_CONFIGURATION.defaultAngle,
 } as const satisfies OpenGridOpenConnectShelfParameters
 
 const PARAMETER_KEYS: readonly OpenGridOpenConnectShelfParameterKey[] = [
   'columns',
   'rows',
+  'connectorRows',
   'angle',
 ]
 
@@ -91,11 +95,12 @@ function isFiniteNumberAtStepInRange(
 
 export function openGridOpenConnectShelfMaximumAngleForRows(
   rows: number,
+  connectorRows: number = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION.defaultConnectorRows,
 ): number {
   const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
   const depth = rows * configuration.gridPitch
-  const maximumRise =
-    configuration.rearHeight - configuration.minimumFrontHeight
+  const rearHeight = openGridOpenConnectShelfRearHeightFor({ connectorRows })
+  const maximumRise = rearHeight - configuration.minimumFrontHeight
   return Math.floor((Math.atan(maximumRise / depth) * 180) / Math.PI)
 }
 
@@ -115,39 +120,65 @@ export function openGridOpenConnectShelfDepthFor(
   return parameters.rows * OPENGRID_OPENCONNECT_SHELF_CONFIGURATION.gridPitch
 }
 
+export function openGridOpenConnectShelfRearHeightFor(
+  parameters: Pick<OpenGridOpenConnectShelfParameters, 'connectorRows'>,
+): number {
+  return (
+    parameters.connectorRows *
+    OPENGRID_OPENCONNECT_SHELF_CONFIGURATION.gridPitch
+  )
+}
+
 export function openGridOpenConnectShelfFrontHeightFor(
-  parameters: Pick<OpenGridOpenConnectShelfParameters, 'rows' | 'angle'>,
+  parameters: Pick<
+    OpenGridOpenConnectShelfParameters,
+    'rows' | 'connectorRows' | 'angle'
+  >,
 ): number {
   const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
   const depth = openGridOpenConnectShelfDepthFor(parameters)
+  const rearHeight = openGridOpenConnectShelfRearHeightFor(parameters)
   const rise =
     depth * Math.tan(openGridOpenConnectShelfAngleRadiansFor(parameters.angle))
-  return configuration.rearHeight - rise
+  return rearHeight - rise
 }
 
 export function openGridOpenConnectShelfSlotOriginsFor(
-  parameters: Pick<OpenGridOpenConnectShelfParameters, 'columns'>,
+  parameters: Pick<
+    OpenGridOpenConnectShelfParameters,
+    'columns' | 'connectorRows'
+  >,
 ): OpenGridOpenConnectShelfPoint3D[] {
   const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
-  return Array.from({ length: parameters.columns }, (_, column) => [
-    (column - (parameters.columns - 1) / 2) * configuration.gridPitch,
-    configuration.rearThickness,
-    configuration.rearHeight / 2,
-  ])
+  return Array.from({ length: parameters.connectorRows }, (_, connectorRow) =>
+    Array.from(
+      { length: parameters.columns },
+      (_, column) =>
+        [
+          (column - (parameters.columns - 1) / 2) * configuration.gridPitch,
+          configuration.rearThickness,
+          (connectorRow + 0.5) * configuration.gridPitch,
+        ] as OpenGridOpenConnectShelfPoint3D,
+    ),
+  ).flat()
 }
 
 export function openGridOpenConnectShelfInstalledBoundsFor(
-  parameters: Pick<OpenGridOpenConnectShelfParameters, 'columns' | 'rows'>,
+  parameters: Pick<
+    OpenGridOpenConnectShelfParameters,
+    'columns' | 'rows' | 'connectorRows'
+  >,
 ) {
   const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
   const width = openGridOpenConnectShelfWidthFor(parameters)
   const depth = openGridOpenConnectShelfDepthFor(parameters)
+  const rearHeight = openGridOpenConnectShelfRearHeightFor(parameters)
   return {
     min: [-width / 2, -depth, 0] as OpenGridOpenConnectShelfPoint3D,
     max: [
       width / 2,
       configuration.rearThickness,
-      configuration.rearHeight,
+      rearHeight,
     ] as OpenGridOpenConnectShelfPoint3D,
   }
 }
@@ -158,20 +189,18 @@ export function boundsForOpenGridOpenConnectShelf(
   const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
   const width = openGridOpenConnectShelfWidthFor(parameters)
   const depth = openGridOpenConnectShelfDepthFor(parameters)
+  const rearHeight = openGridOpenConnectShelfRearHeightFor(parameters)
   const radians = openGridOpenConnectShelfAngleRadiansFor(parameters.angle)
   return {
     min: [
       -width / 2,
-      -(
-        depth * Math.cos(radians) +
-        configuration.rearHeight * Math.sin(radians)
-      ),
+      -(depth * Math.cos(radians) + rearHeight * Math.sin(radians)),
       0,
     ] as OpenGridOpenConnectShelfPoint3D,
     max: [
       width / 2,
       configuration.rearThickness * Math.cos(radians),
-      configuration.rearHeight * Math.cos(radians) +
+      rearHeight * Math.cos(radians) +
         configuration.rearThickness * Math.sin(radians),
     ] as OpenGridOpenConnectShelfPoint3D,
   }
@@ -239,9 +268,27 @@ export function validateOpenGridOpenConnectShelfParameters(
     )
   }
 
-  const maximumAngle = rowsValid
-    ? openGridOpenConnectShelfMaximumAngleForRows(rows)
-    : openGridOpenConnectShelfMaximumAngleForRows(configuration.minGridCount)
+  const connectorRows = value.connectorRows
+  const connectorRowsValid = isSafeIntegerInRange(
+    connectorRows,
+    configuration.minGridCount,
+    configuration.maxGridCount,
+  )
+  if (!connectorRowsValid) {
+    issues.push(
+      invalidRangeIssue(
+        'connectorRows',
+        configuration.minGridCount,
+        configuration.maxGridCount,
+        'count',
+      ),
+    )
+  }
+
+  const maximumAngle = openGridOpenConnectShelfMaximumAngleForRows(
+    rowsValid ? rows : configuration.defaultRows,
+    connectorRowsValid ? connectorRows : configuration.defaultConnectorRows,
+  )
   if (
     !isFiniteNumberAtStepInRange(
       value.angle,
@@ -266,6 +313,7 @@ export function validateOpenGridOpenConnectShelfParameters(
     value: {
       columns: value.columns as number,
       rows: value.rows as number,
+      connectorRows: value.connectorRows as number,
       angle: value.angle as number,
     },
   }
@@ -280,7 +328,7 @@ export function isOpenGridOpenConnectShelfParameters(
 export function openGridOpenConnectShelfFileName(
   parameters: OpenGridOpenConnectShelfParameters,
 ): string {
-  return `opengrid-openconnect-shelf-c${parameters.columns}-r${parameters.rows}-a${parameters.angle}.step`
+  return `opengrid-openconnect-shelf-c${parameters.columns}-r${parameters.rows}-z${parameters.connectorRows}-a${parameters.angle}.step`
 }
 
 export function openGridOpenConnectShelfStlFileName(

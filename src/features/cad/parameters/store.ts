@@ -1,6 +1,7 @@
 import { get as getStoreValue, writable, type Subscriber } from 'svelte/store'
 import {
   OPENGRID_DIVIDER_CONFIGURATION,
+  OPENGRID_OPENCONNECT_SHELF_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
@@ -133,6 +134,16 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
       ...value,
       wallThickness:
         OPENGRID_DIVIDER_CONFIGURATION.defaultParameters.wallThickness,
+    }
+  }
+  if (modelId === 'opengrid-openconnect-shelf' && isRecord(value)) {
+    if (Object.prototype.hasOwnProperty.call(value, 'connectorRows')) {
+      return value
+    }
+    return {
+      ...value,
+      connectorRows:
+        OPENGRID_OPENCONNECT_SHELF_DEFAULT_PARAMETERS.connectorRows,
     }
   }
 

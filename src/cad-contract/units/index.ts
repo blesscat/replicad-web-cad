@@ -272,6 +272,7 @@ export {
   openGridOpenConnectShelfFrontHeightFor,
   openGridOpenConnectShelfInstalledBoundsFor,
   openGridOpenConnectShelfMaximumAngleForRows,
+  openGridOpenConnectShelfRearHeightFor,
   openGridOpenConnectShelfSlotOriginsFor,
   openGridOpenConnectShelfStlFileName,
   openGridOpenConnectShelfWidthFor,

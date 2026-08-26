@@ -40,6 +40,18 @@ const OPENGRID_OPENCONNECT_SHELF_PARAMETER_SCHEMA: ReadonlyArray<ParameterField>
       step: 1,
     },
     {
+      key: 'connectorRows',
+      label: 'parameter.openConnectRows',
+      axis: 'Z',
+      unit: 'grid',
+      labelFormat: 'axis',
+      control: 'range',
+      defaultValue: configuration.defaultConnectorRows,
+      min: configuration.minGridCount,
+      max: configuration.maxGridCount,
+      step: 1,
+    },
+    {
       key: 'angle',
       label: 'parameter.shelfAngle',
       axis: 'Y/Z',
@@ -49,11 +61,13 @@ const OPENGRID_OPENCONNECT_SHELF_PARAMETER_SCHEMA: ReadonlyArray<ParameterField>
       min: configuration.minAngle,
       max: openGridOpenConnectShelfMaximumAngleForRows(
         configuration.minGridCount,
+        configuration.maxGridCount,
       ),
       step: configuration.angleStep,
       sliderMin: configuration.minAngle,
       sliderMax: openGridOpenConnectShelfMaximumAngleForRows(
         configuration.minGridCount,
+        configuration.maxGridCount,
       ),
     },
   ]

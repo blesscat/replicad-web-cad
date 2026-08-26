@@ -96,7 +96,10 @@ describe('OpenGrid OpenConnect locked-slot asset', () => {
     expect(bounds.max).toEqual([13, 3.2, 23])
 
     for (const columns of [1, 3, 10]) {
-      const columnOrigins = openGridOpenConnectShelfSlotOriginsFor({ columns })
+      const columnOrigins = openGridOpenConnectShelfSlotOriginsFor({
+        columns,
+        connectorRows: 1,
+      })
       expect(columnOrigins).toHaveLength(columns)
       for (let index = 1; index < columnOrigins.length; index += 1) {
         expect(columnOrigins[index]![0] - columnOrigins[index - 1]![0]).toBe(28)

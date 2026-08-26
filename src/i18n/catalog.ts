@@ -169,7 +169,7 @@ export const zhHantMessages = {
   'models.model.opengrid-openconnect-shelf.selection':
     'OpenConnect Shelf（壁掛層架）',
   'models.model.opengrid-openconnect-shelf.description':
-    '完整水平 OpenGrid Full 平面與垂直 OpenConnect 鎖定孔形成正確 90° 介面；底側使用 X/Y 格線落地、格間不封底的肋條支撐。',
+    '完整水平 OpenGrid Full 平面與可選 X/Z 數量的垂直 OpenConnect 鎖定孔形成正確 90° 介面；底側使用 X/Y 格線落地、格間不封底的肋條支撐。',
   'models.model.opengrid-openconnect-shelf.alt':
     'OpenGrid OpenConnect 壁掛層架預覽',
   'docs.eyebrow': 'Documentation',
@@ -321,6 +321,7 @@ export const zhHantMessages = {
   'parameter.innerXGridCount': '內部 X 格數',
   'parameter.innerZGridCount': '內部 Z 格數',
   'parameter.openingElevation': '前方開口仰角',
+  'parameter.openConnectRows': 'OpenConnect 接口層數',
   'parameter.shelfAngle': '列印斜面角度',
   'parameter.totalLength': '總長度',
   'parameter.xyDiameterIncrement': 'XY 直徑增量',
@@ -461,9 +462,9 @@ export const zhHantMessages = {
     '平行格層 {layers} 層：高 {height} mm（各層與頂板平行）。',
   'panel.openShelf.honeycomb': '省料模式（六角鏤空）',
   'panel.openConnectShelf.description':
-    '完整 OpenGrid Full 使用水平安裝面，後方 OpenConnect 鎖定孔面保持垂直；角度只控制 X/Y 格線落地、格間透空的肋條與整體列印朝向。',
+    '完整 OpenGrid Full 使用水平安裝面，後方 OpenConnect 鎖定孔面保持垂直；Z 控制層板下方的接口層數，角度只控制 X/Y 格線落地、格間透空的肋條與整體列印朝向。',
   'panel.openConnectShelf.maximumAngle':
-    '目前 {rows} 行深度可用的最大角度為 {maximum}°，確保前端至少保留 7 mm 高度。',
+    '目前 Y={rows} 格、Z={connectorRows} 格可用的最大角度為 {maximum}°，確保前端至少保留 7 mm 高度。',
   'panel.opening.direction.front': '前方',
   'panel.opening.direction.back': '後方',
   'panel.opening.direction.left': '左方',
@@ -815,7 +816,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'models.model.opengrid-openconnect-shelf.name': 'OpenGrid OpenConnect Shelf',
   'models.model.opengrid-openconnect-shelf.selection': 'OpenConnect Shelf',
   'models.model.opengrid-openconnect-shelf.description':
-    'A wall shelf with a complete horizontal OpenGrid Full interface at exactly 90° to locked OpenConnect sockets, supported by grounded X/Y ribs with open cell bays.',
+    'A wall shelf with a complete horizontal OpenGrid Full interface at exactly 90° to a selectable X/Z grid of locked OpenConnect sockets, supported by grounded X/Y ribs with open cell bays.',
   'models.model.opengrid-openconnect-shelf.alt':
     'OpenGrid OpenConnect wall shelf preview',
   'docs.eyebrow': 'Documentation',
@@ -974,6 +975,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'parameter.innerXGridCount': 'Inner X cell count',
   'parameter.innerZGridCount': 'Inner Z cell count',
   'parameter.openingElevation': 'Front opening elevation',
+  'parameter.openConnectRows': 'OpenConnect interface rows',
   'parameter.shelfAngle': 'Print-support angle',
   'parameter.totalLength': 'Total length',
   'parameter.xyDiameterIncrement': 'XY diameter increment',
@@ -1125,9 +1127,9 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     '{layers} parallel layers: {height} mm high (each layer parallel to the top plate).',
   'panel.openShelf.honeycomb': 'Material-saving mode (hexagonal voids)',
   'panel.openConnectShelf.description':
-    'The complete OpenGrid Full interface installs horizontally while the rear locked OpenConnect socket plane remains vertical. Angle changes only the grounded X/Y ribs with open cell bays and the whole-part print orientation.',
+    'The complete OpenGrid Full interface installs horizontally while the rear locked OpenConnect socket plane remains vertical. Z controls the interface rows below the shelf; angle changes only the grounded X/Y ribs with open cell bays and the whole-part print orientation.',
   'panel.openConnectShelf.maximumAngle':
-    'The maximum angle for a depth of {rows} rows is {maximum}°, preserving at least 7 mm at the front.',
+    'The maximum angle for Y={rows} cells and Z={connectorRows} cells is {maximum}°, preserving at least 7 mm at the front.',
   'panel.opening.direction.front': 'Front',
   'panel.opening.direction.back': 'Back',
   'panel.opening.direction.left': 'Left',

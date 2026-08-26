@@ -4,6 +4,7 @@ import {
   openGridOpenConnectShelfAngleRadiansFor,
   openGridOpenConnectShelfDepthFor,
   openGridOpenConnectShelfFrontHeightFor,
+  openGridOpenConnectShelfRearHeightFor,
   openGridOpenConnectShelfSlotOriginsFor,
   openGridOpenConnectShelfWidthFor,
   OPENGRID_CONFIGURATION,
@@ -143,6 +144,7 @@ function makeRearPlate(
 ): Shape3D {
   const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
   const width = openGridOpenConnectShelfWidthFor(parameters)
+  const rearHeight = openGridOpenConnectShelfRearHeightFor(parameters)
   const overlapBottomZ =
     FUSION_OVERLAP *
     Math.tan(openGridOpenConnectShelfAngleRadiansFor(parameters.angle))
@@ -151,8 +153,8 @@ function makeRearPlate(
       [-FUSION_OVERLAP, overlapBottomZ],
       [0, 0],
       [configuration.rearThickness, 0],
-      [configuration.rearThickness, configuration.rearHeight],
-      [-FUSION_OVERLAP, configuration.rearHeight],
+      [configuration.rearThickness, rearHeight],
+      [-FUSION_OVERLAP, rearHeight],
     ],
     -width / 2,
     width,
@@ -165,10 +167,10 @@ function makeLongitudinalRib(
 ): Shape3D {
   const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
   const depth = openGridOpenConnectShelfDepthFor(parameters)
-  const boardBottom = configuration.rearHeight - configuration.fullThickness
+  const rearHeight = openGridOpenConnectShelfRearHeightFor(parameters)
+  const boardBottom = rearHeight - configuration.fullThickness
   const frontUndersideZ =
-    configuration.rearHeight -
-    openGridOpenConnectShelfFrontHeightFor(parameters)
+    rearHeight - openGridOpenConnectShelfFrontHeightFor(parameters)
   return makeProfileExtrusion(
     [
       [-depth, frontUndersideZ],
@@ -193,7 +195,8 @@ function makeTransverseRib(
   const slope = Math.tan(
     openGridOpenConnectShelfAngleRadiansFor(parameters.angle),
   )
-  const boardBottom = configuration.rearHeight - configuration.fullThickness
+  const rearHeight = openGridOpenConnectShelfRearHeightFor(parameters)
+  const boardBottom = rearHeight - configuration.fullThickness
   const bottomZFor = (y: number): number => -y * slope
   return makeProfileExtrusion(
     [
@@ -344,10 +347,11 @@ export async function buildOpenGridOpenConnectShelf(
     )
     const depth = openGridOpenConnectShelfDepthFor(normalized)
     const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
+    const rearHeight = openGridOpenConnectShelfRearHeightFor(normalized)
     const placedBoard = current.translate(
       0,
       -depth / 2,
-      configuration.rearHeight - configuration.fullThickness,
+      rearHeight - configuration.fullThickness,
     )
     if (placedBoard !== current) deleteShape(current)
     current = placedBoard

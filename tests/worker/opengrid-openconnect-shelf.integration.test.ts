@@ -8,6 +8,7 @@ import {
   boundsForOpenGridOpenConnectShelf,
   openGridOpenConnectShelfAngleRadiansFor,
   openGridOpenConnectShelfDepthFor,
+  openGridOpenConnectShelfRearHeightFor,
   openGridOpenConnectShelfSlotOriginsFor,
   openGridOpenConnectShelfWidthFor,
   OPENGRID_OPENCONNECT_SHELF_CONFIGURATION,
@@ -138,13 +139,14 @@ async function buildPrintOrientedFunctionalBoard(
 ): Promise<Shape3D> {
   const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
   const depth = openGridOpenConnectShelfDepthFor(parameters)
+  const rearHeight = openGridOpenConnectShelfRearHeightFor(parameters)
   const board = await buildOpenGridBRep(
     openGridParametersForOpenConnectShelf(parameters),
   )
   const placed = board.translate(
     0,
     -depth / 2,
-    configuration.rearHeight - configuration.fullThickness,
+    rearHeight - configuration.fullThickness,
   )
   if (placed !== board) deleteShape(board)
   return rotateForPrint(placed, parameters.angle)
@@ -176,7 +178,10 @@ describe('OpenGrid OpenConnect shelf CAD kernel integration', () => {
   it('accepts the assembled Snap OpenConnect head in the locked socket direction', async () => {
     const slotSource = await lockedSlotSource()
     const headSource = await snapOpenConnectHeadSource()
-    const origin = openGridOpenConnectShelfSlotOriginsFor({ columns: 1 })[0]!
+    const origin = openGridOpenConnectShelfSlotOriginsFor({
+      columns: 1,
+      connectorRows: 1,
+    })[0]!
     const slot = placeOpenGridOpenConnectShelfLockedSlot(slotSource, origin)
     const head = placeSnapOpenConnectHeadForShelf(headSource, origin)
     let residualHead: Shape3D | null = null
@@ -215,9 +220,11 @@ describe('OpenGrid OpenConnect shelf CAD kernel integration', () => {
         failures: [],
         validBRep: true,
         solidCount: 1,
-        slotCount: parameters.columns,
+        slotCount: parameters.columns * parameters.connectorRows,
       })
-      expect(quality.slotResidualVolumes).toHaveLength(parameters.columns)
+      expect(quality.slotResidualVolumes).toHaveLength(
+        parameters.columns * parameters.connectorRows,
+      )
       expect(quality.slotResidualVolumes.every((volume) => volume < 0.01)).toBe(
         true,
       )
@@ -253,13 +260,10 @@ describe('OpenGrid OpenConnect shelf CAD kernel integration', () => {
     })
     const width = openGridOpenConnectShelfWidthFor(parameters)
     const depth = openGridOpenConnectShelfDepthFor(parameters)
+    const rearHeight = openGridOpenConnectShelfRearHeightFor(parameters)
     const installedInteriorEnvelope = makeBox(
-      [
-        -width / 2,
-        -depth,
-        configuration.rearHeight - configuration.fullThickness + 0.1,
-      ],
-      [width / 2, -0.1, configuration.rearHeight - 0.1],
+      [-width / 2, -depth, rearHeight - configuration.fullThickness + 0.1],
+      [width / 2, -0.1, rearHeight - 0.1],
     )
     const printInteriorEnvelope = rotateForPrint(
       installedInteriorEnvelope,
@@ -407,6 +411,7 @@ describe('OpenGrid OpenConnect shelf CAD kernel integration', () => {
     const parameters: OpenGridOpenConnectShelfParameters = {
       columns: 3,
       rows: 3,
+      connectorRows: 1,
       angle: 1,
     }
     const configuration = OPENGRID_OPENCONNECT_SHELF_CONFIGURATION
@@ -465,6 +470,7 @@ describe('OpenGrid OpenConnect shelf CAD kernel integration', () => {
     const parameters: OpenGridOpenConnectShelfParameters = {
       columns: 1,
       rows: 1,
+      connectorRows: 1,
       angle: 36,
     }
     const source = await lockedSlotSource()
@@ -493,6 +499,7 @@ describe('OpenGrid OpenConnect shelf CAD kernel integration', () => {
     const parameters: OpenGridOpenConnectShelfParameters = {
       columns: 1,
       rows: 2,
+      connectorRows: 1,
       angle: 19.5,
     }
     const source = await lockedSlotSource()
@@ -523,6 +530,44 @@ describe('OpenGrid OpenConnect shelf CAD kernel integration', () => {
       source.delete()
     }
   }, 120_000)
+
+  it('builds every X/Z OpenConnect socket below a two-row shelf top', async () => {
+    const parameters: OpenGridOpenConnectShelfParameters = {
+      columns: 2,
+      rows: 2,
+      connectorRows: 2,
+      angle: 20,
+    }
+    const source = await lockedSlotSource()
+    const shape = await buildOpenGridOpenConnectShelf(parameters, {
+      getLockedSlot: async () => source,
+    })
+    try {
+      const quality = inspectOpenGridOpenConnectShelfShapeQuality(
+        shape,
+        parameters,
+        meshBRep(shape, { tolerance: 0.05, angularTolerance: 0.1 }),
+        source,
+      )
+      expectBoundsClose(
+        boundsOf(shape),
+        boundsForOpenGridOpenConnectShelf(parameters),
+      )
+      expect(quality).toMatchObject({
+        passed: true,
+        failures: [],
+        validBRep: true,
+        solidCount: 1,
+        slotCount: parameters.columns * parameters.connectorRows,
+      })
+      expect(quality.slotResidualVolumes).toHaveLength(
+        parameters.columns * parameters.connectorRows,
+      )
+    } finally {
+      shape.delete()
+      source.delete()
+    }
+  }, 180_000)
 
   it('rejects a shelf when one expected locked socket is filled back in', async () => {
     const parameters = { ...OPENGRID_OPENCONNECT_SHELF_DEFAULT_PARAMETERS }
@@ -567,6 +612,7 @@ describe('OpenGrid OpenConnect shelf CAD kernel integration', () => {
     const parameters: OpenGridOpenConnectShelfParameters = {
       columns: 10,
       rows: 1,
+      connectorRows: 1,
       angle: 36,
     }
     const source = await lockedSlotSource()
@@ -605,6 +651,7 @@ describe('OpenGrid OpenConnect shelf CAD kernel integration', () => {
     const parameters: OpenGridOpenConnectShelfParameters = {
       columns: 1,
       rows: 10,
+      connectorRows: 1,
       angle: 4,
     }
     const source = await lockedSlotSource()
