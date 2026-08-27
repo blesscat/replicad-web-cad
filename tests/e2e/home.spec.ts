@@ -305,9 +305,7 @@ test('Traditional Chinese homepage uses the Desk System entry flow', async ({
   const runtimeObservation = observeHomepageRuntime(page)
   await page.goto('/zh-Hant/')
 
-  await expect(page).toHaveTitle(
-    '在瀏覽器裡打造 OpenGrid Desk System | Shape Shortcut',
-  )
+  await expect(page).toHaveTitle('Shape Shortcut｜瀏覽器 CAD 與 3D 列印')
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     'content',
     /OpenGrid.*STEP／STL/,
@@ -344,9 +342,7 @@ test('English homepage uses localized promotional content and routes', async ({
   const runtimeObservation = observeHomepageRuntime(page)
   await page.goto('/en/')
 
-  await expect(page).toHaveTitle(
-    'Build an OpenGrid Desk System in your browser | Shape Shortcut',
-  )
+  await expect(page).toHaveTitle('Shape Shortcut | Browser CAD & 3D Printing')
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     'content',
     /Adjust OpenGrid.*STEP\/STL/,

@@ -1,5 +1,62 @@
 import { expect, test } from '@playwright/test'
 
+test('localized pages expose branded titles and a shared favicon', async ({
+  page,
+}) => {
+  const pages = [
+    {
+      path: '/zh-Hant/',
+      title: 'Shape Shortcut｜瀏覽器 CAD 與 3D 列印',
+    },
+    {
+      path: '/en/',
+      title: 'Shape Shortcut | Browser CAD & 3D Printing',
+    },
+    {
+      path: '/en/models',
+      title: 'Choose a CAD model | Shape Shortcut',
+    },
+    {
+      path: '/zh-Hant/models',
+      title: '選擇 CAD 模型 | Shape Shortcut',
+    },
+    {
+      path: '/en/docs/',
+      title: 'Prototype documentation | Shape Shortcut',
+    },
+    {
+      path: '/zh-Hant/docs/',
+      title: 'Prototype 文件 | Shape Shortcut',
+    },
+    {
+      path: '/en/cad/box?system=desk',
+      title: 'Box CAD workspace | Shape Shortcut',
+    },
+    {
+      path: '/zh-Hant/cad/box?system=desk',
+      title: '方塊 CAD 工作區 | Shape Shortcut',
+    },
+  ]
+
+  for (const entry of pages) {
+    await page.goto(entry.path)
+    await expect(page).toHaveTitle(entry.title)
+    await expect(page.locator('head link[rel="icon"]')).toHaveAttribute(
+      'href',
+      '/favicon.svg',
+    )
+    await expect(page.locator('head link[rel="icon"]')).toHaveAttribute(
+      'type',
+      'image/svg+xml',
+    )
+  }
+
+  const faviconResponse = await page.request.get('/favicon.svg')
+  expect(faviconResponse.ok()).toBe(true)
+  expect(faviconResponse.headers()['content-type']).toContain('image/svg+xml')
+  expect((await faviconResponse.body()).byteLength).toBeGreaterThan(0)
+})
+
 test('localized model chooser exposes localized shell and search metadata', async ({
   page,
 }) => {

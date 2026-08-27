@@ -8,7 +8,7 @@ export const zhHantMessages = {
   'navigation.switchToEnglish': 'English',
   'navigation.switchToZhHant': '繁體中文',
   'home.eyebrow': 'OpenGrid Desk System · 瀏覽器 CAD Prototype',
-  'home.metaTitle': '在瀏覽器裡打造 OpenGrid Desk System | Shape Shortcut',
+  'home.metaTitle': 'Shape Shortcut｜瀏覽器 CAD 與 3D 列印',
   'home.title': '在瀏覽器裡，做出剛好適合你的桌面收納',
   'home.description':
     '調整 OpenGrid Board、Snap、Grid Box 與 Round Box，查看即時 3D 預覽，再下載可列印或繼續編輯的 STEP／STL 檔案。',
@@ -651,8 +651,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'navigation.switchToEnglish': 'English',
   'navigation.switchToZhHant': '繁體中文',
   'home.eyebrow': 'OpenGrid Desk System · Browser CAD prototype',
-  'home.metaTitle':
-    'Build an OpenGrid Desk System in your browser | Shape Shortcut',
+  'home.metaTitle': 'Shape Shortcut | Browser CAD & 3D Printing',
   'home.title': 'Build the desk setup that fits you—in your browser',
   'home.description':
     'Adjust OpenGrid Boards, Snaps, Grid Boxes, and Round Boxes, inspect a live 3D preview, then download printable or editable STEP/STL files.',
