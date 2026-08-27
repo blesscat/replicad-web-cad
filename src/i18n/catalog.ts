@@ -405,6 +405,7 @@ export const zhHantMessages = {
   'unit.grid': '格',
   'unit.count': '支',
   'parameter.width': '寬度',
+  'parameter.text': '文字',
   'parameter.depth': '深度',
   'parameter.height': '高度',
   'parameter.rows': '行數',
@@ -486,6 +487,10 @@ export const zhHantMessages = {
     'OpenGrid Snap 幾何未通過品質檢查，請調整參數後重試。',
   'diagnostic.wallCoverQualityInvalid':
     'OpenGrid Wall Cover 幾何未通過品質檢查，請重試。',
+  'diagnostic.wallCoverGlyphUnsupported':
+    '輸入文字有字元無法由預設字體建立，請更換文字後重試。',
+  'diagnostic.wallCoverFontLoadFailed':
+    'OpenGrid Wall Cover 預設字體載入失敗，請重新整理後重試。',
   'diagnostic.dividerQualityInvalid':
     'OpenGrid 分隔器幾何未通過品質檢查，請調整參數後重試。',
   'diagnostic.openConnectOrganizerQualityInvalid':
@@ -504,6 +509,8 @@ export const zhHantMessages = {
   'diagnostic.meshInvalid': '預覽模型資料無效，Worker 將重新啟動。',
   'diagnostic.staleGeneration': '這次建模已被較新的輸入取代。',
   'validation.invalid': '{field} 輸入無效，請檢查參數後重試。',
+  'validation.wallCoverTextRequired': '{field} 至少需要 1 個字元。',
+  'validation.wallCoverTextTooLong': '{field} 不可超過 {max} 個字元。',
   'validation.parameter': '參數',
   'validation.invalidNumber': '{field} 必須是有效數字。',
   'validation.requiredDimension': '{axis} 尺寸不可空白。',
@@ -656,6 +663,12 @@ export const zhHantMessages = {
   'panel.snap.magnetRound': '圓形',
   'panel.snap.magnetHoleInvalid': 'Half／Quarter 固定格型不接受挖孔',
   'panel.pillar.fixedVersionAria': '支柱版本',
+  'panel.wallCover.summary': '自訂 Wall Cover 文字',
+  'panel.wallCover.details':
+    '每個字會產生一個獨立的雙色平放 cover；空白會忽略，最多輸入 8 個字。',
+  'panel.wallCover.inputAria': 'Wall Cover 文字',
+  'panel.wallCover.characterCount': '{count} / {max} 字',
+  'panel.wallCover.font': '預設字體：{font}',
   'panel.opengrid.profile': '板型',
   'panel.opengrid.profileAria': 'OpenGrid 板型',
   'panel.opengrid.variant.lite': 'Lite（4 mm）',
@@ -1179,6 +1192,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'unit.grid': 'cells',
   'unit.count': 'columns',
   'parameter.width': 'Width',
+  'parameter.text': 'Text',
   'parameter.depth': 'Depth',
   'parameter.height': 'Height',
   'parameter.rows': 'Rows',
@@ -1265,6 +1279,10 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'The OpenGrid Snap geometry did not pass quality checks. Adjust the parameters and try again.',
   'diagnostic.wallCoverQualityInvalid':
     'The OpenGrid Wall Cover geometry did not pass quality checks. Try again.',
+  'diagnostic.wallCoverGlyphUnsupported':
+    'A character cannot be built with the default font. Choose different text and try again.',
+  'diagnostic.wallCoverFontLoadFailed':
+    'The OpenGrid Wall Cover default font could not be loaded. Reload and try again.',
   'diagnostic.dividerQualityInvalid':
     'The OpenGrid divider geometry did not pass quality checks. Adjust the parameters and try again.',
   'diagnostic.openConnectOrganizerQualityInvalid':
@@ -1287,6 +1305,8 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'diagnostic.staleGeneration': 'This build was superseded by newer input.',
   'validation.invalid':
     '{field} is invalid. Check the parameter and try again.',
+  'validation.wallCoverTextRequired': '{field} requires at least 1 character.',
+  'validation.wallCoverTextTooLong': '{field} cannot exceed {max} characters.',
   'validation.parameter': 'Parameter',
   'validation.invalidNumber': '{field} must be a valid number.',
   'validation.requiredDimension': '{axis} dimension is required.',
@@ -1448,6 +1468,12 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'panel.snap.magnetHoleInvalid':
     'Fixed Half/Quarter footprints do not accept holes',
   'panel.pillar.fixedVersionAria': 'Post version',
+  'panel.wallCover.summary': 'Custom Wall Cover text',
+  'panel.wallCover.details':
+    'Each character creates one independent, flat two-color cover. Whitespace is ignored; enter up to 8 characters.',
+  'panel.wallCover.inputAria': 'Wall Cover text',
+  'panel.wallCover.characterCount': '{count} / {max} characters',
+  'panel.wallCover.font': 'Default font: {font}',
   'panel.opengrid.profile': 'Board profile',
   'panel.opengrid.profileAria': 'OpenGrid board profile',
   'panel.opengrid.variant.lite': 'Lite (4 mm)',

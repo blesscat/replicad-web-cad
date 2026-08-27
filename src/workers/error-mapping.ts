@@ -25,6 +25,7 @@ export function cadErrorCodeFor(
   if (
     message.includes('OPENGRID_SNAP_PARAMETERS_INVALID') ||
     message.includes('MODEL_PARAMETERS_MISMATCH:opengrid-snap') ||
+    message.includes('MODEL_PARAMETERS_MISMATCH:opengrid-wall-cover') ||
     message.includes('OPENGRID_STACKABLE_CYLINDER_PARAMETERS_INVALID') ||
     message.includes('MODEL_PARAMETERS_MISMATCH:opengrid-stackable-cylinder') ||
     message.includes('OPENGRID_ORGANIZER_BOX_PARAMETERS_INVALID') ||

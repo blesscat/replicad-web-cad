@@ -59,6 +59,11 @@ describe('CAD Worker error mapping', () => {
       'INVALID_INPUT',
     ],
     [
+      'MODEL_PARAMETERS_MISMATCH:opengrid-wall-cover',
+      'model.generate',
+      'INVALID_INPUT',
+    ],
+    [
       'OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID:stepped-holes',
       'model.generate',
       'OPENGRID_STACKABLE_CYLINDER_QUALITY_INVALID',

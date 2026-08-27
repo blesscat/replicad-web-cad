@@ -142,3 +142,48 @@ remain unchanged.
 - **WHEN** the user views the export actions
 - **THEN** the 3MF action MUST be disabled
 - **AND** the Worker MUST NOT receive an `export.3mf` request
+
+### Requirement: 3MF exports all requested Wall Cover instances as one flat two-color assembly
+
+For a committed `opengrid-wall-cover` revision containing one through eight
+generated cover instances, the system MUST export one valid 3MF package that
+contains all instances in their previewed positions. The package MUST retain
+one independently addressable body role and one independently addressable text
+role, with body assigned to material slot 1 and text assigned to material slot
+2. Every text top surface MUST remain coplanar with its corresponding cover
+top in the exported geometry.
+
+#### Scenario: IAN exports three covers in one package
+
+- **WHEN** the user requests 3MF for a committed Wall Cover revision generated from `IAN`
+- **THEN** the Worker MUST return one non-empty `.3mf` download
+- **AND** the package MUST contain all three body instances and all three text glyph instances in their left-to-right positions
+- **AND** the package MUST preserve separate body and text material assignments
+- **AND** the package MUST contain one parent build item rather than one build item per character
+
+#### Scenario: Eight-cover export remains bounded
+
+- **WHEN** the user requests 3MF for a committed revision containing eight valid characters
+- **THEN** the package MUST contain all eight cover instances
+- **AND** its body and text parts MUST remain independently selectable
+- **AND** no additional material slot or unrelated build item MAY be emitted
+
+#### Scenario: Flat text remains flush after export
+
+- **WHEN** a generated multi-cover 3MF package is inspected
+- **THEN** each exported text instance MUST have the same maximum Z as its corresponding body surface within the documented CAD tolerance
+- **AND** no exported text instance MAY protrude above the cover
+
+#### Scenario: Bambu A1 profile remains fixed
+
+- **WHEN** a Wall Cover 3MF package is generated
+- **THEN** it MUST continue to use the existing Bambu Lab A1, 0.4 mm nozzle, two-filament project profile
+- **AND** body MUST map to filament slot 1
+- **AND** text MUST map to filament slot 2
+- **AND** the plate filament map MUST remain `1 2`
+
+#### Scenario: Unsupported multi-cover export is rejected
+
+- **WHEN** the committed revision lacks a valid body/text pair, contains invalid text, or contains more than eight generated covers
+- **THEN** the Worker MUST return a structured recoverable export error
+- **AND** it MUST NOT emit export-ready bytes or trigger a download

@@ -64,7 +64,13 @@
     translate(locale, key, values)
 
   function hasParameterControlsFor(modelId: ModelId): boolean {
-    if (modelId === 'opengrid' || modelId === 'opengrid-pillar') return true
+    if (
+      modelId === 'opengrid' ||
+      modelId === 'opengrid-pillar' ||
+      modelId === 'opengrid-wall-cover'
+    ) {
+      return true
+    }
     return (getModelDefinition(modelId)?.parameterSchema.length ?? 0) > 0
   }
 </script>

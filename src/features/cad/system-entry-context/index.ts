@@ -3,6 +3,7 @@ import {
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+  OPENGRID_WALL_COVER_CONFIGURATION,
   type ModelId,
   type ModelParameterValues,
   type OpenGridParameters,
@@ -110,7 +111,9 @@ export function getSystemPreset(
   context: OpenGridSystemContext,
 ): ModelParameterValues | undefined {
   if (modelId === 'opengrid-snap') return snapPresetFor(context)
-  if (modelId === 'opengrid-wall-cover' && context === 'wall') return {}
+  if (modelId === 'opengrid-wall-cover' && context === 'wall') {
+    return { ...OPENGRID_WALL_COVER_CONFIGURATION.defaultParameters }
+  }
   if (modelId === 'opengrid-pillar' && context === 'desk') {
     return { mode: 'detachable-corner-seat' }
   }

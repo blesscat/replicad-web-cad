@@ -144,7 +144,7 @@ function generateWallCoverCommand(generation = 1) {
     kind: 'model.generate' as const,
     generation,
     modelId: 'opengrid-wall-cover' as const,
-    parameters: {},
+    parameters: { text: 'A' },
     previewConfig: { tolerance: 0.01, angularTolerance: 0.1 },
   }
 }
@@ -726,7 +726,7 @@ describe('OpenGrid Snap Worker runtime', () => {
       modelRevision: ready!.modelRevision,
       workerEpoch: 'epoch-wall-cover-3mf',
       file: {
-        name: openGridWallCoverThreeMfFileName({}),
+        name: openGridWallCoverThreeMfFileName({ text: 'A' }),
         mime: 'model/3mf' as const,
       },
     })
@@ -760,6 +760,40 @@ describe('OpenGrid Snap Worker runtime', () => {
     })
     expect(wallCoverReference.delete).toHaveBeenCalledOnce()
   })
+
+  it.each([
+    [
+      'OPENGRID_WALL_COVER_TEXT_GLYPH_UNSUPPORTED',
+      'diagnostic.wallCoverGlyphUnsupported',
+    ],
+    [
+      'OPENGRID_WALL_COVER_FONT_LOAD_FAILED',
+      'diagnostic.wallCoverFontLoadFailed',
+    ],
+  ] as const)(
+    'maps %s to a localized recoverable diagnostic',
+    async (message, messageId) => {
+      const events: unknown[] = []
+      mocks.buildModelBRepWithParts.mockRejectedValueOnce(new Error(message))
+      const runtime = new CadWorkerRuntime(
+        `epoch-wall-cover-${message}`,
+        (event) => events.push(event),
+      )
+
+      await runtime.handle(initCommand())
+      await runtime.handle(generateWallCoverCommand())
+
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          kind: 'operation.error',
+          stage: 'building',
+          code: 'MODEL_BUILD_FAILED',
+          messageId,
+          recoverable: true,
+        }),
+      )
+    },
+  )
 
   it('disposes loaded variant references once', async () => {
     const events: unknown[] = []

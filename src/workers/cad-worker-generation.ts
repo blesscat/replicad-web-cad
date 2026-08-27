@@ -21,6 +21,7 @@ import {
   normalizeOpenGridDividerParameters,
   normalizeOpenGridParameters,
   normalizeOpenGridSnapParameters,
+  validateModelParameters,
   type ModelParameterValues,
   isOpenGridWallCoverParameters,
   validateOpenGridGenerationSupport,
@@ -135,6 +136,16 @@ export async function generateCadCandidate(
       throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-snap')
     }
     generationParameters = normalizedParameters
+  }
+  if (command.modelId === 'opengrid-wall-cover') {
+    const validation = validateModelParameters(
+      command.modelId,
+      command.parameters,
+    )
+    if (!validation.valid) {
+      throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-wall-cover')
+    }
+    generationParameters = validation.value.parameters
   }
   const hswProgress =
     command.modelId === 'hsw-cell' && isHswCellParameters(command.parameters)
@@ -342,6 +353,7 @@ export async function generateCadCandidate(
           bodyMesh,
           textMesh,
           reference,
+          generationParameters,
         ),
       )
     }

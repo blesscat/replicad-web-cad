@@ -16,8 +16,8 @@ import {
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+  normalizeOpenGridWallCoverText,
   normalizeOpenGridLocatingSeatMode,
-  isOpenGridWallCoverParameters,
   type OpenGridOpenShelfParameters,
   type OpenGridOpenConnectShelfParameters,
   PILLAR_CONFIGURATION,
@@ -30,6 +30,7 @@ import {
   type OpenGridSnapParameters,
   type OpenGridOrganizerBoxParameters,
   type OpenGridOpenConnectOrganizerParameters,
+  type OpenGridWallCoverParameters,
   type ScalarModelParameterKey,
   type ValidationIssue,
 } from '../../../cad-contract/units'
@@ -165,7 +166,7 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
     modelId === 'opengrid-snap-remover' ||
     modelId === 'opengrid-wall-cover'
   ) {
-    return []
+    return modelId === 'opengrid-wall-cover' ? ['text'] : []
   }
   if (modelId === 'opengrid-divider') return OPENGRID_DIVIDER_PARAMETER_KEYS
   if (modelId === 'opengrid-pillar') return PILLAR_PARAMETER_KEYS
@@ -610,6 +611,11 @@ export function rawFromParameters(
 ): RawParameters {
   if (Object.keys(parameters).length === 0) return {}
 
+  if ('text' in parameters) {
+    const wallCoverParameters = parameters as OpenGridWallCoverParameters
+    return { text: wallCoverParameters.text }
+  }
+
   if ('diameter' in parameters && 'height' in parameters) {
     const bottomSeatMode =
       normalizeOpenGridLocatingSeatMode(
@@ -854,11 +860,26 @@ export function parseRawParameters(
     modelId === 'opengrid-snap-remover' ||
     modelId === 'opengrid-wall-cover'
   ) {
-    if (
-      modelId === 'opengrid-wall-cover' &&
-      !isOpenGridWallCoverParameters(raw)
-    ) {
-      return { valid: false, messageId: 'validation.invalid' }
+    if (modelId === 'opengrid-wall-cover') {
+      const text =
+        raw !== null && typeof raw === 'object' && typeof raw.text === 'string'
+          ? raw.text
+          : undefined
+      const normalizedRaw =
+        text === undefined
+          ? raw
+          : { ...raw, text: normalizeOpenGridWallCoverText(text) }
+      const validation = validateModelParameters(modelId, normalizedRaw)
+      if (!validation.valid) {
+        const issue = validation.issues[0]
+        return {
+          valid: false,
+          messageId: issue?.messageId ?? 'validation.invalid',
+          field: modelParameterFieldFromDiagnostic(issue?.field),
+          ...(issue?.params ? { params: issue.params } : {}),
+        }
+      }
+      return { valid: true, value: validation.value.parameters }
     }
     const validation = validateModelParameters(modelId, {})
     if (validation.valid) {

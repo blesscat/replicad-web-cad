@@ -8,6 +8,7 @@ import type {
   OpenGridStackableBoxParameters,
   OpenGridStackableCylinderParameters,
   OpenGridSnapParameters,
+  OpenGridWallCoverParameters,
   PillarParameters,
 } from '../../src/cad-contract/units'
 import {
@@ -31,10 +32,24 @@ describe('CAD workspace validation helpers', () => {
     expect(parseRawParameters(raw)).toEqual({ valid: true, value: parameters })
   })
 
-  it('requires Wall Cover raw parameters to be an exact empty object', () => {
+  it('parses and round-trips Wall Cover text with the eight-character limit', () => {
+    const parameters: OpenGridWallCoverParameters = { text: 'IAN' }
+    expect(rawFromParameters(parameters)).toEqual({ text: 'IAN' })
+    expect(
+      parseRawParameters(rawFromParameters(parameters), 'opengrid-wall-cover'),
+    ).toEqual({
+      valid: true,
+      value: parameters,
+    })
+    expect(
+      parseRawParameters({ text: ' I A N ' }, 'opengrid-wall-cover'),
+    ).toEqual({
+      valid: true,
+      value: { text: 'IAN' },
+    })
     expect(parseRawParameters({}, 'opengrid-wall-cover')).toEqual({
       valid: true,
-      value: {},
+      value: { text: 'A' },
     })
     expect(
       parseRawParameters(
@@ -42,6 +57,14 @@ describe('CAD workspace validation helpers', () => {
         'opengrid-wall-cover',
       ),
     ).toEqual({ valid: false, messageId: 'validation.invalid' })
+    expect(
+      parseRawParameters({ text: '123456789' }, 'opengrid-wall-cover'),
+    ).toEqual({
+      valid: false,
+      messageId: 'validation.wallCoverTextTooLong',
+      field: 'text',
+      params: { max: 8 },
+    })
     expect(
       parseRawParameters(
         null as unknown as RawParameters,

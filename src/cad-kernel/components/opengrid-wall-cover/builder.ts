@@ -9,11 +9,12 @@ import {
 } from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
-  isOpenGridWallCoverParameters,
+  OPENGRID_WALL_COVER_CONFIGURATION,
+  validateOpenGridWallCoverParameters,
   type OpenGridWallCoverParameters,
 } from '../../../cad-contract/units'
 import type { OpenGridSnapBuildContext } from '../opengrid-snap/builder'
-import { makeOpenGridWallCoverTextShape } from './flat-text'
+import { makeOpenGridWallCoverTextGlyphShape } from './flat-text'
 import type { BooleanOperationScope } from '../../boolean-progress'
 import { measureBooleanInScope } from '../../boolean-progress'
 
@@ -30,6 +31,12 @@ export const OPEN_GRID_WALL_COVER_REFERENCE_URL = new URL(
 
 export type OpenGridWallCoverBuildContext = OpenGridSnapBuildContext & {
   getOpenGridWallCoverReference?: () => Promise<Shape3D>
+  reportProgress?: (progress: {
+    stage: 'building'
+    completed?: number
+    total?: number
+    unit?: 'steps'
+  }) => void
 }
 
 export type OpenGridWallCoverNativePart = {
@@ -68,6 +75,12 @@ function assertGenerationCurrent(context: OpenGridWallCoverBuildContext): void {
 
 function cloneShape(shape: Shape3D): Shape3D {
   return deserializeShape(shape.serialize()).asShape3D()
+}
+
+function translateShape(shape: Shape3D, x: number): Shape3D {
+  const translated = shape.translate(x, 0, 0)
+  if (translated !== shape) deleteShape(shape)
+  return translated
 }
 
 function extractSolids(shape: Shape3D): Solid[] {
@@ -192,44 +205,114 @@ async function buildCoverBody(
 }
 
 export async function buildOpenGridWallCoverWithFlatText(
+  parameters: OpenGridWallCoverParameters,
   context: OpenGridWallCoverBuildContext,
 ): Promise<OpenGridWallCoverMultipartBuild> {
+  const validation = validateOpenGridWallCoverParameters(parameters)
+  if (!validation.valid) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-wall-cover')
+  }
+  const text = validation.value.text
+  const letters = Array.from(text)
   assertGenerationCurrent(context)
   const baseAssembly = await buildCoverBody(context)
-  let qualityShape: Shape3D | null = cloneShape(baseAssembly)
+  let qualityShape: Shape3D | null = null
   let sourceSolids: Solid[] = []
+  let bodyPieces: Shape3D[] = []
+  let qualityPieces: Shape3D[] = []
+  let textPieces: Shape3D[] = []
   let textPart: Shape3D | null = null
   let bodyPart: Shape3D | null = null
   let previewShape: Shape3D | null = null
 
   try {
-    sourceSolids = extractSolids(baseAssembly)
-    if (sourceSolids.length !== 9) {
-      throw new Error('OPENGRID_WALL_COVER_ASSET_INVALID')
+    if (letters.length < 1) {
+      throw new Error('OPENGRID_WALL_COVER_TEXT_INVALID')
     }
-    const bodyIndex = centralSolidIndex(sourceSolids)
-    const body = sourceSolids[bodyIndex]
-    if (!body) throw new Error('OPENGRID_WALL_COVER_BODY_MISSING')
+    const coverStep =
+      OPENGRID_WALL_COVER_CONFIGURATION.coverWidth +
+      OPENGRID_WALL_COVER_CONFIGURATION.coverGap
+    const centerOffset = ((letters.length - 1) * coverStep) / 2
+    const cutScope = context.booleanOperations?.createScope(letters.length)
+    context.reportProgress?.({
+      stage: 'building',
+      completed: 0,
+      total: letters.length,
+      unit: 'steps',
+    })
 
-    textPart = makeOpenGridWallCoverTextShape()
-    const bodyWithCavity = cutShape(
-      body,
-      cloneShape(textPart),
-      context.booleanOperations?.createScope(1),
-    )
-    sourceSolids[bodyIndex] = bodyWithCavity
+    for (const [index, letter] of letters.entries()) {
+      assertGenerationCurrent(context)
+      const centerX = index * coverStep - centerOffset
+      let referenceClone: Shape3D | null = null
+      let translatedReference: Shape3D | null = null
+      let translatedQualityReference: Shape3D | null = null
+      try {
+        referenceClone = cloneShape(baseAssembly)
+        translatedReference = translateShape(referenceClone, centerX)
+        referenceClone = null
+        translatedQualityReference = cloneShape(translatedReference)
+        qualityPieces.push(translatedQualityReference)
+        translatedQualityReference = null
 
-    bodyPart = makeCompound(
-      sourceSolids.map((solid) => cloneShape(solid)),
-    ).asShape3D()
-    deleteDistinctShapes(sourceSolids)
-    sourceSolids = []
+        sourceSolids = extractSolids(translatedReference)
+        if (sourceSolids.length !== 9) {
+          throw new Error('OPENGRID_WALL_COVER_ASSET_INVALID')
+        }
+        const bodyIndex = centralSolidIndex(sourceSolids)
+        const body = sourceSolids[bodyIndex]
+        if (!body) throw new Error('OPENGRID_WALL_COVER_BODY_MISSING')
+
+        const glyph = await makeOpenGridWallCoverTextGlyphShape(letter, centerX)
+        textPieces.push(glyph)
+        const bodyWithCavity = cutShape(body, cloneShape(glyph), cutScope)
+        sourceSolids[bodyIndex] = bodyWithCavity
+        for (const solid of sourceSolids) {
+          bodyPieces.push(cloneShape(solid))
+        }
+        deleteDistinctShapes(sourceSolids)
+        sourceSolids = []
+        deleteShape(translatedReference)
+        translatedReference = null
+        context.reportProgress?.({
+          stage: 'building',
+          completed: index + 1,
+          total: letters.length,
+          unit: 'steps',
+        })
+      } finally {
+        deleteShape(referenceClone)
+        deleteShape(translatedQualityReference)
+        deleteDistinctShapes(sourceSolids)
+        sourceSolids = []
+        if (translatedReference) deleteShape(translatedReference)
+      }
+      await context.yieldToEventLoop?.()
+    }
+
+    qualityShape = makeCompound(qualityPieces).asShape3D()
+    qualityPieces = []
+    bodyPart = makeCompound(bodyPieces).asShape3D()
+    bodyPieces = []
+    textPart = makeCompound(textPieces).asShape3D()
+    textPieces = []
     deleteShape(baseAssembly)
 
-    previewShape = makeCompound([
-      cloneShape(bodyPart),
-      cloneShape(textPart),
-    ]).asShape3D()
+    let previewBodyClone: Shape3D | null = null
+    let previewTextClone: Shape3D | null = null
+    try {
+      previewBodyClone = cloneShape(bodyPart)
+      previewTextClone = cloneShape(textPart)
+      previewShape = makeCompound([
+        previewBodyClone,
+        previewTextClone,
+      ]).asShape3D()
+      previewBodyClone = null
+      previewTextClone = null
+    } finally {
+      deleteShape(previewBodyClone)
+      deleteShape(previewTextClone)
+    }
 
     const completedPreviewShape = previewShape
     const completedQualityShape = qualityShape
@@ -252,6 +335,9 @@ export async function buildOpenGridWallCoverWithFlatText(
       baseAssembly,
       qualityShape,
       ...sourceSolids,
+      ...bodyPieces,
+      ...qualityPieces,
+      ...textPieces,
       textPart,
       bodyPart,
       previewShape,
@@ -264,10 +350,10 @@ export async function buildOpenGridWallCover(
   parameters: OpenGridWallCoverParameters,
   context: OpenGridWallCoverBuildContext,
 ): Promise<Shape3D> {
-  if (!isOpenGridWallCoverParameters(parameters)) {
+  if (!validateOpenGridWallCoverParameters(parameters).valid) {
     throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-wall-cover')
   }
-  const result = await buildOpenGridWallCoverWithFlatText(context)
+  const result = await buildOpenGridWallCoverWithFlatText(parameters, context)
   for (const part of result.parts) deleteShape(part.shape)
   deleteShape(result.qualityShape)
   return result.shape

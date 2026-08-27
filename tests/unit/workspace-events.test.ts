@@ -330,6 +330,38 @@ describe('CAD Worker progress lifecycle', () => {
     expect(refs.activeProgressOperationId.current).toBe('operation-2')
   })
 
+  it('surfaces Wall Cover glyph failures on the text field', () => {
+    const { context, refs } = createContext()
+    refs.operations.current.set('operation-2', {
+      kind: 'model',
+      generation: 2,
+      modelId: 'opengrid-wall-cover',
+      parameters: { text: 'A' },
+      requestId: 'request-2',
+    })
+    const handle = createWorkerEventHandler(context)
+
+    handle({
+      version: 2,
+      kind: 'operation.error',
+      requestId: 'wall-cover-error-response',
+      operationId: 'operation-2',
+      terminalForRequestId: 'request-2',
+      stage: 'building',
+      code: 'MODEL_BUILD_FAILED',
+      messageId: 'diagnostic.wallCoverGlyphUnsupported',
+      recoverable: true,
+      generation: 2,
+    })
+
+    expect(context.setFieldErrors).toHaveBeenCalledWith({
+      text: {
+        field: 'text',
+        messageId: 'diagnostic.wallCoverGlyphUnsupported',
+      },
+    })
+  })
+
   it('reuses the candidate mesh when model.ready only transfers the revision', () => {
     const { context, refs } = createContext()
     const send = vi.fn()
@@ -452,7 +484,7 @@ describe('CAD Worker progress lifecycle', () => {
       kind: 'model',
       generation: 2,
       modelId: 'opengrid-wall-cover',
-      parameters: {},
+      parameters: { text: 'A' },
       requestId: 'request-2',
     })
     const handle = createWorkerEventHandler(context)
@@ -473,7 +505,7 @@ describe('CAD Worker progress lifecycle', () => {
       candidateId: 'cover-candidate-1',
       workerEpoch: 'epoch-test',
       modelId: 'opengrid-wall-cover',
-      parameters: {},
+      parameters: { text: 'A' },
       mesh,
     })
 
@@ -510,7 +542,7 @@ describe('CAD Worker progress lifecycle', () => {
       candidateId: 'mismatched-candidate-1',
       workerEpoch: 'epoch-test',
       modelId: 'opengrid-wall-cover',
-      parameters: {},
+      parameters: { text: 'A' },
       mesh,
       partMeshes: [
         { name: 'body', mesh },

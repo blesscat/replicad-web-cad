@@ -5,6 +5,7 @@ import {
   openGridWallCoverFileName,
   openGridWallCoverStlFileName,
   openGridWallCoverThreeMfFileName,
+  OPENGRID_WALL_COVER_CONFIGURATION,
   validateOpenGridWallCoverParameters,
 } from '../../../../cad-contract/units'
 import type { ModelDefinition } from '../types'
@@ -57,8 +58,12 @@ export const opengridWallCoverDefinition: ModelDefinition = {
   selectionLabel: 'models.model.opengrid-wall-cover.selection',
   selectionDescription: 'models.model.opengrid-wall-cover.description',
   parameterSchema: [],
-  parameterPresentation: { kind: 'fixed' },
-  defaultParameters: {},
+  parameterPresentation: {
+    kind: 'adjustable',
+    summaryKey: 'panel.wallCover.summary',
+    detailsKey: 'panel.wallCover.details',
+  },
+  defaultParameters: OPENGRID_WALL_COVER_CONFIGURATION.defaultParameters,
   supportedSystemContexts: ['wall'],
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {
