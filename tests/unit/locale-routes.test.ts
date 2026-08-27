@@ -29,6 +29,7 @@ describe('locale route helpers', () => {
 
   it('builds shared public and model paths without translating stable identifiers', () => {
     expect(publicPathFor('en', 'docs')).toBe('/en/docs/')
+    expect(publicPathFor('en', 'about')).toBe('/en/about/')
     expect(localizedCadPathFor('zh-Hant', 'opengrid', 'desk')).toBe(
       '/zh-Hant/cad/opengrid?system=desk',
     )

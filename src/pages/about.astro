@@ -1,0 +1,24 @@
+---
+import { translate } from '../i18n'
+
+const targetPath = '/zh-Hant/about/'
+---
+
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex" />
+    <meta http-equiv="refresh" content={`0;url=${targetPath}`} />
+    <link rel="canonical" href={targetPath} />
+    <title>{translate('zh-Hant', 'about.title')}</title>
+    <script is:inline>
+      window.location.replace('/zh-Hant/about/' + window.location.search)
+    </script>
+  </head>
+  <body>
+    <main>
+      <h1>{translate('zh-Hant', 'about.title')}</h1>
+      <a href={targetPath}>{translate('zh-Hant', 'navigation.about')}</a>
+    </main>
+  </body>
+</html>

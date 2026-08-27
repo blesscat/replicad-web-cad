@@ -8,7 +8,9 @@ const locales = [
     snap: 'Snap (咔咔)',
     gridBox: 'Grid Box (方盒)',
     roundBox: 'Round Box (圓盒)',
-    reference: '進階參考',
+    reference: '共通參考',
+    wall: 'Wall System 快速參考',
+    modelReference: '目前模型與系統',
   },
   {
     code: 'en',
@@ -17,7 +19,9 @@ const locales = [
     snap: 'Snap',
     gridBox: 'Grid Box',
     roundBox: 'Round Box',
-    reference: 'Advanced reference',
+    reference: 'Shared reference',
+    wall: 'Wall System quick reference',
+    modelReference: 'Current models and systems',
   },
 ] as const
 
@@ -33,6 +37,12 @@ for (const locale of locales) {
     await expect(page.getByTestId('cad-workspace')).toHaveCount(0)
     await expect(page.getByTestId('docs-advanced-reference')).toContainText(
       locale.reference,
+    )
+    await expect(page.getByTestId('docs-wall-system')).toContainText(
+      locale.wall,
+    )
+    await expect(page.getByTestId('docs-model-reference')).toContainText(
+      locale.modelReference,
     )
 
     const steps = page
@@ -78,6 +88,11 @@ for (const locale of locales) {
     ).toBeVisible()
 
     await expect(page.locator('img[src^="/docs/desk-system/"]')).toHaveCount(3)
+    await expect(
+      page.locator(
+        '[data-testid="docs-wall-system"] img[src^="/model-previews/"]',
+      ),
+    ).toHaveCount(4)
     const diagramAltPatterns = [
       ['desk-system-flow', /Board|流程圖/],
       ['desk-system-board-snap', /Board|俯視/],

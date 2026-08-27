@@ -8,6 +8,7 @@ export function sitemapUrlPaths(): string[] {
     publicPathFor(locale, 'home'),
     publicPathFor(locale, 'models'),
     publicPathFor(locale, 'docs'),
+    publicPathFor(locale, 'about'),
     ...modelDefinitions.map((definition) =>
       localizedCadPathFor(locale, definition.id),
     ),

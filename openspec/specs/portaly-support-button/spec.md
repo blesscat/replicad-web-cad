@@ -80,3 +80,29 @@ The support entry MUST remain understandable and operable on desktop and mobile 
 - **WHEN** the site is rendered at a narrow mobile viewport
 - **THEN** the support link MUST remain visible or reachable without horizontal overflow
 - **AND** its label `支持這個專案` MUST remain understandable without relying only on an icon
+
+### Requirement: Contextual support entry in project identity surfaces
+
+When a valid Portaly support URL is configured, the localized homepage maker
+introduction and About page MUST expose a clearly labeled contextual support
+entry such as `支持 Shape Shortcut`. The contextual entry MUST use the same
+external support destination and secure new-context link behavior as the shared
+navigation support entry. When the support URL is absent or invalid, the
+project identity surfaces MUST remain usable without rendering a dead link.
+
+#### Scenario: Maker surface links to Portaly support
+
+- **WHEN** a valid Portaly support URL is configured and a user opens the
+  homepage or About page
+- **THEN** the contextual maker/support section MUST show an actionable support
+  link to that URL
+- **AND** the link MUST use `target="_blank"` and
+  `rel="noopener noreferrer"`
+- **AND** the current page or CAD workspace MUST remain open
+
+#### Scenario: Missing support configuration does not break About
+
+- **WHEN** the Portaly support URL is absent or invalid
+- **THEN** the homepage and About page MUST remain renderable
+- **AND** GitHub, email, and About navigation actions MUST remain available
+- **AND** no empty or invalid support link may be rendered

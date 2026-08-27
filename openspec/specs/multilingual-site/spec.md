@@ -85,3 +85,26 @@ locale-neutral. Existing OpenGrid component IDs SHALL remain unchanged.
   supported locale
 - **THEN** the Worker command values, generated geometry, and export filename SHALL
   be identical apart from user-facing status text
+
+### Requirement: Localized project and documentation surfaces
+
+Every new public About route and every newly exposed Docs section MUST be
+available in Traditional Chinese and English under the existing locale
+prefixes. The language switch MUST preserve the equivalent About or Docs route,
+and all new visible copy, headings, image alternative text, accessible names,
+metadata, and link labels MUST come from the selected locale.
+
+#### Scenario: About language switch preserves the page
+
+- **WHEN** a user switches language from `/zh-Hant/about/` or `/en/about/`
+- **THEN** the browser MUST navigate to the equivalent About route in the
+  selected locale
+- **AND** the page MUST retain the same project identity and public contact
+  destinations with localized visible text
+
+#### Scenario: Documentation sections are complete in both locales
+
+- **WHEN** a user opens the localized Docs page
+- **THEN** the Desk, Wall, model-reference, and common-reference headings and
+  content MUST be available in the selected locale
+- **AND** no new section may silently fall back to another supported locale

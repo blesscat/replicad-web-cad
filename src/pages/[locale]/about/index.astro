@@ -1,0 +1,159 @@
+---
+import SiteLayout from '../../../layouts/SiteLayout.astro'
+import { portalySupportUrl } from '../../../features/support/config'
+import {
+  SUPPORTED_LOCALES,
+  isLocale,
+  translate,
+  type Locale,
+} from '../../../i18n'
+import { publicPathFor } from '../../../i18n/routes'
+
+export function getStaticPaths() {
+  return SUPPORTED_LOCALES.map((locale) => ({
+    params: { locale },
+    props: { locale },
+  }))
+}
+
+const locale = Astro.props.locale as Locale
+if (!isLocale(locale)) throw new Error(`UNSUPPORTED_LOCALE:${locale}`)
+const t = (key: string) => translate(locale, key)
+const modelsPath = publicPathFor(locale, 'models')
+const docsPath = publicPathFor(locale, 'docs')
+---
+
+<SiteLayout
+  {locale}
+  title={t('about.metaTitle')}
+  description={t('about.description')}
+>
+  <article class="grid gap-10" data-testid="about-page">
+    <header
+      class="rounded-2xl border border-border-card bg-panel p-5 shadow-card sm:p-8"
+    >
+      <div class="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
+        <img
+          class="aspect-square w-28 shrink-0 rounded-2xl border border-border-card bg-viewport object-cover sm:w-36"
+          src="/about/blesscat.png"
+          width="640"
+          height="640"
+          loading="eager"
+          alt={t('about.portraitAlt')}
+        />
+        <div class="grid gap-4 text-center sm:text-left">
+          <p
+            class="m-0 text-sm font-semibold uppercase tracking-[0.12em] text-primary"
+          >
+            {t('about.eyebrow')}
+          </p>
+          <h1 class="m-0 text-4xl font-semibold leading-tight sm:text-5xl">
+            {t('about.title')}
+          </h1>
+          <p class="m-0 text-lg font-semibold text-ink">{t('about.role')}</p>
+          <p class="m-0 max-w-2xl leading-relaxed text-muted">
+            {t('about.intro')}
+          </p>
+          <p
+            class="m-0 inline-flex w-fit self-center rounded-full border border-border-card bg-viewport px-3 py-1.5 text-sm font-semibold text-ink sm:self-start"
+          >
+            {t('about.status')}
+          </p>
+        </div>
+      </div>
+    </header>
+
+    <section
+      class="grid gap-3 rounded-2xl border border-border-card bg-panel p-5 shadow-sm sm:p-8"
+      aria-labelledby="about-story-title"
+      data-testid="about-story"
+    >
+      <h2
+        class="m-0 text-3xl font-semibold leading-tight"
+        id="about-story-title"
+      >
+        {t('about.storyHeading')}
+      </h2>
+      <p class="m-0 max-w-3xl leading-relaxed text-muted">
+        {t('about.storyBody')}
+      </p>
+    </section>
+
+    <section
+      class="grid gap-3 rounded-2xl border border-border-card bg-panel p-5 shadow-sm sm:p-8"
+      aria-labelledby="about-project-title"
+      data-testid="about-project"
+    >
+      <h2
+        class="m-0 text-3xl font-semibold leading-tight"
+        id="about-project-title"
+      >
+        {t('about.projectHeading')}
+      </h2>
+      <p class="m-0 max-w-3xl leading-relaxed text-muted">
+        {t('about.projectBody')}
+      </p>
+    </section>
+
+    <section
+      class="grid gap-5 rounded-2xl bg-nav p-5 text-nav-foreground shadow-card sm:p-8"
+      aria-labelledby="about-links-title"
+      data-testid="about-links"
+    >
+      <div class="grid gap-2">
+        <h2
+          class="m-0 text-3xl font-semibold leading-tight"
+          id="about-links-title"
+        >
+          {t('about.linksHeading')}
+        </h2>
+        <p class="m-0 max-w-2xl leading-relaxed text-white/75">
+          {t('about.supportDescription')}
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <a
+          class="inline-flex items-center justify-center rounded-lg bg-nav-foreground px-4 py-3 font-semibold text-nav no-underline shadow-sm transition hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          href="https://github.com/blesscat"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {t('about.github')}
+        </a>
+        <a
+          class="inline-flex items-center justify-center rounded-lg border border-white/60 px-4 py-3 font-semibold text-white no-underline transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          href="mailto:blesscat@gmail.com"
+        >
+          {t('about.email')}
+        </a>
+        {
+          portalySupportUrl && (
+            <a
+              class="inline-flex items-center justify-center rounded-lg border border-white/60 px-4 py-3 font-semibold text-white no-underline transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              href={portalySupportUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="about-support-link"
+            >
+              {t('about.support')}
+            </a>
+          )
+        }
+      </div>
+    </section>
+
+    <nav
+      class="flex flex-wrap gap-x-5 gap-y-3"
+      aria-label={t('navigation.primary')}
+    >
+      <a
+        class="font-semibold text-ink underline underline-offset-4"
+        href={modelsPath}>{t('about.modelsCta')}</a
+      >
+      <a
+        class="font-semibold text-ink underline underline-offset-4"
+        href={docsPath}>{t('about.docsCta')}</a
+      >
+    </nav>
+  </article>
+</SiteLayout>

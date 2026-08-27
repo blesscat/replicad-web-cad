@@ -441,46 +441,56 @@ Box, MUST remain available with their existing model IDs and routes.
 
 ### Requirement: Use-case-led promotional homepage
 
-The localized product homepage MUST present the current OpenGrid Desk System as
-the primary use case. It MUST explain the observable journey from configurable
-CAD components to an inspected 3D preview and downloadable STEP or STL output,
-and it MUST provide a clear primary entry into the Desk System context plus a
-secondary entry to the canonical model chooser.
+The localized product homepage MUST present Shape Shortcut as a browser CAD
+product before presenting any single model system. It MUST explain browser-based
+parameter editing, live 3D preview, and CAD export, provide a clear primary entry
+into the localized model chooser, and retain the Desk workflow as a featured
+example. The homepage MUST also expose static starting points for Desk System,
+Wall System, and HSW workflows without rendering the full model chooser.
 
-#### Scenario: New visitor understands the primary product outcome
+#### Scenario: Product hero leads to model selection
 
-- **WHEN** a visitor opens a localized homepage
-- **THEN** the page MUST identify browser-based CAD model creation as the
-  product purpose
-- **AND** the primary promotional message MUST mention the OpenGrid Desk System
-  or its Board/Snap/container workflow
-- **AND** the page MUST visibly communicate live 3D preview and STEP/STL export
+- **WHEN** a user opens a localized homepage
+- **THEN** the first product section MUST identify Shape Shortcut and provide a
+  primary CTA linking to the localized `/models` route
+- **AND** the page MUST describe the product's browser CAD and export value
+- **AND** the page MUST not initialize a CAD Worker or render model-selection
+  cards
 
-#### Scenario: Homepage provides prioritized entry paths
+#### Scenario: Homepage exposes system-level starting points
 
-- **WHEN** a visitor chooses to continue from the localized homepage
-- **THEN** the primary call to action MUST enter the existing OpenGrid Board
-  route with the Desk System context preserved
-- **AND** a secondary call to action MUST link to the localized `/models` page
-- **AND** the page MUST provide a discoverable link to the existing localized
-  Desk System quick-start documentation
+- **WHEN** a user reads the localized homepage below the Hero
+- **THEN** the page MUST expose distinct static entries for Desk System, Wall
+  System, and HSW
+- **AND** each entry MUST link to an existing localized documentation or
+  model-specific route without changing model IDs or system query values
 
-#### Scenario: Homepage remains a static promotional surface
+#### Scenario: Featured Desk workflow remains discoverable
 
-- **WHEN** a visitor loads the localized homepage
-- **THEN** the page MUST render its promotional copy, visuals, and navigation
-  without starting the CAD Worker, loading the CAD WASM runtime, initializing a
-  WebGL viewport, or mounting the Svelte CAD workspace
-- **AND** the page MUST NOT render the full model-selection card grid
-- **AND** the canonical `/models` page MUST remain responsible for complete
-  model browsing
+- **WHEN** a visitor continues below the product Hero
+- **THEN** the page MUST expose the existing Desk System workflow as a featured
+  example with a localized documentation link
+- **AND** the workflow MUST preserve the existing `system=desk` route context
 
 #### Scenario: Promotional content is localized and accessible
 
 - **WHEN** a visitor opens either supported homepage locale
-- **THEN** the hero, capability labels, calls to action, workflow summary, image
-  alternative text, page title, and description MUST use that locale
+- **THEN** the Hero, capability labels, calls to action, workflow summary,
+  image alternative text, page title, and description MUST use that locale
 - **AND** all homepage promotional visuals MUST have meaningful alternative text
   or equivalent visible text
 - **AND** homepage links MUST preserve the existing locale route, model ID,
-  `system=desk` context, and query-string behavior
+  `system=desk|wall` context, and query-string behavior
+
+### Requirement: Static product hero visual
+
+The homepage Hero MUST use a static product visual with localized alternative
+text so the product is understandable without executing CAD code. The visual
+MUST not be the only source of the product explanation.
+
+#### Scenario: Homepage visual remains crawlable
+
+- **WHEN** JavaScript, WebAssembly, or WebGL is unavailable on the homepage
+- **THEN** the Hero visual, product copy, and primary CTA MUST remain available
+- **AND** no client-only CAD workspace or canvas MUST be required to understand
+  the product entry flow
