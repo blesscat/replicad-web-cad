@@ -45,7 +45,9 @@ test('Wall Cover accepts up to eight characters and exports a two-color 3MF', as
   )
   await expect(panel.getByRole('slider')).toHaveCount(0)
   await expect(panel.getByRole('combobox')).toHaveCount(0)
-  await expect(page.getByText('預設字體：Noto Sans CJK TC Bold')).toBeVisible()
+  await expect(
+    page.getByText('預設繁體中文字型：Noto Sans CJK TC Bold'),
+  ).toBeVisible()
 
   await text.fill('123456789')
   await expect(text).toHaveValue('12345678')

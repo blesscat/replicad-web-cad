@@ -15,7 +15,7 @@ import {
 
 export const OPENGRID_WALL_COVER_TEXT_CONFIGURATION = {
   depth: 0.4,
-  fontSize: 4.2,
+  fontSize: 18,
   fontFamily: OPENGRID_WALL_COVER_CONFIGURATION.fontFamily,
 } as const
 

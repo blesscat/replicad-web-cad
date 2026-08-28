@@ -155,7 +155,6 @@ function perCoverQualityFailures(
   textShape: Shape3D,
   parameters: OpenGridWallCoverParameters,
   expectedTop: number,
-  expectedBottom: number,
 ): string[] {
   const envelopes = coverEnvelopesFor(parameters)
   const bodyCounts = envelopes.map(() => 0)
@@ -182,12 +181,6 @@ function perCoverQualityFailures(
       continue
     }
     textCounts[coverIndex] = (textCounts[coverIndex] ?? 0) + 1
-    if (!isClose(bounds.min[2], expectedBottom)) {
-      failures.push('cover-text-bottom')
-    }
-    if (!isClose(bounds.max[2], expectedTop)) {
-      failures.push('cover-text-top')
-    }
   }
 
   if (bodyCounts.some((count) => count !== 9)) {
@@ -223,6 +216,27 @@ function meshIsFinite(mesh: MeshData | MeshSnapshot): boolean {
     [...positions, ...normals].every(Number.isFinite) &&
     [...indices].every(Number.isSafeInteger)
   )
+}
+
+function meshZPlanesMatch(
+  mesh: MeshData | MeshSnapshot,
+  expectedBottom: number,
+  expectedTop: number,
+): boolean {
+  const positions =
+    mesh.positions instanceof ArrayBuffer
+      ? new Float32Array(mesh.positions)
+      : mesh.positions
+  for (let index = 2; index < positions.length; index += 3) {
+    const z = positions[index]
+    if (
+      z === undefined ||
+      (!isClose(z, expectedBottom) && !isClose(z, expectedTop))
+    ) {
+      return false
+    }
+  }
+  return true
 }
 
 function assertTextIsContained(bodyShape: Shape3D, textShape: Shape3D): void {
@@ -326,18 +340,19 @@ export function assertOpenGridWallCoverShapeQuality(
   }
   if (!meshIsFinite(baseMesh)) failures.push('base-mesh-values')
   if (baseMesh.triangleCount <= 0) failures.push('base-mesh-triangles')
-  if (!isClose(textBounds.min[2], expectedBottom)) failures.push('text-bottom')
-  if (!isClose(textBounds.max[2], expectedTop)) failures.push('text-top')
+  if (!isClose(textMesh.bounds.min[2], expectedBottom)) {
+    failures.push('text-bottom')
+  }
+  if (!isClose(textMesh.bounds.max[2], expectedTop)) {
+    failures.push('text-top')
+  }
+  if (!meshZPlanesMatch(textMesh, expectedBottom, expectedTop)) {
+    failures.push('text-z-planes')
+  }
   if (!meshIsFinite(textMesh)) failures.push('text-mesh-values')
   if (textMesh.triangleCount <= 0) failures.push('text-mesh-triangles')
   failures.push(
-    ...perCoverQualityFailures(
-      bodyShape,
-      textShape,
-      parameters,
-      expectedTop,
-      expectedBottom,
-    ),
+    ...perCoverQualityFailures(bodyShape, textShape, parameters, expectedTop),
   )
   if (failures.length > 0) {
     throw new Error(

@@ -18,6 +18,7 @@ import {
   exportThreeMfBytes,
   isThreeMfPackage,
 } from '../../src/cad-kernel/export'
+import { OPENGRID_WALL_COVER_CONFIGURATION } from '../../src/cad-contract/units'
 import {
   loadOpenGridWallCoverFont,
   makeOpenGridWallCoverTextGlyphShape,
@@ -48,6 +49,10 @@ function shapeBounds(shape: Shape3D): number[][] {
   } finally {
     bounds.delete()
   }
+}
+
+function extent(bounds: number[][], axis: 0 | 1): number {
+  return (bounds[1]?.[axis] ?? 0) - (bounds[0]?.[axis] ?? 0)
 }
 
 function countSolids(shape: Shape3D): number {
@@ -178,6 +183,30 @@ describe('OpenGrid Wall Cover supplied STEP', () => {
     }
   })
 
+  it('uses a large label scale for Latin and Traditional Chinese glyphs', async () => {
+    const latin = await makeOpenGridWallCoverTextGlyphShape('A')
+    const traditionalChinese = await makeOpenGridWallCoverTextGlyphShape('收')
+    try {
+      const latinBounds = shapeBounds(latin)
+      const traditionalChineseBounds = shapeBounds(traditionalChinese)
+      const usableLabelSize =
+        OPENGRID_WALL_COVER_CONFIGURATION.coverWidth - 3.2 * 2
+
+      expect(extent(latinBounds, 0)).toBeGreaterThan(10)
+      expect(extent(latinBounds, 1)).toBeGreaterThan(12)
+      expect(extent(traditionalChineseBounds, 0)).toBeGreaterThan(15)
+      expect(extent(traditionalChineseBounds, 1)).toBeGreaterThan(15)
+      expect(extent(traditionalChineseBounds, 0)).toBeLessThan(usableLabelSize)
+      expect(extent(traditionalChineseBounds, 1)).toBeLessThan(usableLabelSize)
+      expect(OPENGRID_WALL_COVER_TEXT_CONFIGURATION.fontFamily).toContain(
+        'CJK TC',
+      )
+    } finally {
+      latin.delete()
+      traditionalChinese.delete()
+    }
+  })
+
   it.each(wallCoverTextCases)(
     'builds one independent cover for each character in $text',
     async ({ text: value, coverCount }) => {
@@ -203,9 +232,6 @@ describe('OpenGrid Wall Cover supplied STEP', () => {
         expect(bounds[1]?.[1]).toBeCloseTo(12.8, 2)
         expect(countSolids(bodyPart.shape)).toBe(9 * coverCount)
         expect(countSolids(generated.qualityShape)).toBe(9 * coverCount)
-        expect(shapeBounds(textPart.shape)[0]?.[2]).toBeCloseTo(3.0, 2)
-        expect(shapeBounds(textPart.shape)[1]?.[2]).toBeCloseTo(3.4, 2)
-
         const bodyMesh = meshBRep(bodyPart.shape, {
           tolerance: 0.05,
           angularTolerance: 0.1,
@@ -214,6 +240,8 @@ describe('OpenGrid Wall Cover supplied STEP', () => {
           tolerance: 0.05,
           angularTolerance: 0.1,
         })
+        expect(textMesh.bounds.min[2]).toBeCloseTo(3.0, 2)
+        expect(textMesh.bounds.max[2]).toBeCloseTo(3.4, 2)
         expect(() =>
           assertOpenGridWallCoverShapeQuality(
             generated.qualityShape,
@@ -226,7 +254,12 @@ describe('OpenGrid Wall Cover supplied STEP', () => {
           ),
         ).not.toThrow()
 
-        if (coverCount === 1 || coverCount === 3 || coverCount === 8) {
+        if (
+          coverCount === 1 ||
+          coverCount === 2 ||
+          coverCount === 3 ||
+          coverCount === 8
+        ) {
           const threeMf = await exportThreeMfBytes([
             { name: 'body', shape: bodyPart.shape },
             { name: 'text', shape: textPart.shape },
