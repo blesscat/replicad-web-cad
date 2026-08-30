@@ -241,21 +241,41 @@ function meshZValuesStayWithinTextSlab(
 }
 
 function assertTextIsContained(bodyShape: Shape3D, textShape: Shape3D): void {
-  let intersection: Shape3D | null = null
+  const oc = getOC()
+  const explorer = new oc.TopExp_Explorer_2(
+    textShape.wrapped,
+    oc.TopAbs_ShapeEnum.TopAbs_SOLID as unknown as TopAbs_ShapeEnum,
+    oc.TopAbs_ShapeEnum.TopAbs_SHAPE as unknown as TopAbs_ShapeEnum,
+  )
+  let solidCount = 0
   try {
-    const textVolume = measureVolume(textShape)
-    intersection = bodyShape.intersect(textShape)
-    const containedVolume = measureVolume(intersection)
-    if (
-      !Number.isFinite(textVolume) ||
-      textVolume <= 0 ||
-      !Number.isFinite(containedVolume) ||
-      Math.abs(textVolume - containedVolume) > QUALITY_TOLERANCE
-    ) {
+    while (explorer.More()) {
+      const solid = new Solid(oc.TopoDS.Solid_1(explorer.Current()))
+      let intersection: Shape3D | null = null
+      try {
+        const solidVolume = measureVolume(solid)
+        intersection = bodyShape.intersect(solid)
+        const containedVolume = measureVolume(intersection)
+        if (
+          !Number.isFinite(solidVolume) ||
+          solidVolume <= 0 ||
+          !Number.isFinite(containedVolume) ||
+          Math.abs(solidVolume - containedVolume) > QUALITY_TOLERANCE
+        ) {
+          throw new Error('OPENGRID_WALL_COVER_TEXT_NOT_CONTAINED')
+        }
+        solidCount += 1
+      } finally {
+        deleteShape(intersection)
+        solid.delete()
+      }
+      explorer.Next()
+    }
+    if (solidCount === 0) {
       throw new Error('OPENGRID_WALL_COVER_TEXT_NOT_CONTAINED')
     }
   } finally {
-    deleteShape(intersection)
+    explorer.delete()
   }
 }
 

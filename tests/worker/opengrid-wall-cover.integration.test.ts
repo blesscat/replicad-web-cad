@@ -3,7 +3,14 @@ import { readFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { getOC, makeBox, measureVolume, type Shape3D } from 'replicad'
+import {
+  CompoundBlueprint,
+  getOC,
+  makeBox,
+  measureVolume,
+  textBlueprints,
+  type Shape3D,
+} from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import { initialiseCadKernel } from '../../src/cad-kernel/initialise'
 import {
@@ -91,6 +98,16 @@ function countSolids(shape: Shape3D): number {
     return count
   } finally {
     explorer.delete()
+  }
+}
+
+function deleteTextDrawings(drawings: ReturnType<typeof textBlueprints>): void {
+  for (const drawing of drawings.blueprints) {
+    if (drawing instanceof CompoundBlueprint) {
+      drawing.blueprints.forEach((blueprint) => blueprint.delete())
+    } else {
+      drawing.delete()
+    }
   }
 }
 
@@ -226,6 +243,66 @@ describe('OpenGrid Wall Cover supplied STEP', () => {
       traditionalChinese.delete()
     }
   })
+
+  it.each(['字', '嗎', '體', '整', '合'] as const)(
+    'preserves the complete font outline for %s',
+    async (character) => {
+      const actual = await makeOpenGridWallCoverTextGlyphShape(character)
+      const drawings = textBlueprints(character, {
+        fontSize: OPENGRID_WALL_COVER_TEXT_CONFIGURATION.fontSize,
+        fontFamily: OPENGRID_WALL_COVER_TEXT_CONFIGURATION.fontFamily,
+      })
+      const sketches = drawings.sketchOnPlane()
+      let expected: Shape3D | null = null
+      try {
+        expected = sketches.extrude(
+          OPENGRID_WALL_COVER_TEXT_CONFIGURATION.depth,
+        ) as Shape3D
+        expect(measureVolume(actual)).toBeCloseTo(measureVolume(expected), 2)
+      } finally {
+        actual.delete()
+        if (expected) expected.delete()
+        for (const sketch of sketches.sketches) {
+          try {
+            sketch.delete()
+          } catch {
+            // Replicad may delete sketches while extruding them.
+          }
+        }
+        deleteTextDrawings(drawings)
+      }
+    },
+  )
+
+  it.each(['字', '嗎', '體', '整', '合'] as const)(
+    'retains the complete font outline after cover assembly for %s',
+    async (character) => {
+      const reference = await importOpenGridWallCoverReference(
+        new Blob([
+          readFileSync(fileURLToPath(OPEN_GRID_WALL_COVER_REFERENCE_URL)),
+        ]),
+      )
+      const expected = await makeOpenGridWallCoverTextGlyphShape(character)
+      const generated = await buildOpenGridWallCoverWithFlatText(
+        { text: character },
+        { getOpenGridWallCoverReference: async () => reference },
+      )
+      try {
+        const textPart = generated.parts.find((part) => part.name === 'text')
+        if (!textPart) throw new Error('wall-cover-text-part-missing')
+        expect(measureVolume(textPart.shape)).toBeCloseTo(
+          measureVolume(expected),
+          2,
+        )
+      } finally {
+        expected.delete()
+        generated.shape.delete()
+        generated.qualityShape.delete()
+        for (const part of generated.parts) part.shape.delete()
+        reference.delete()
+      }
+    },
+  )
 
   it('cuts only the OpenConnect underside stepped opening from every cover', async () => {
     const reference = await importOpenGridWallCoverReference(

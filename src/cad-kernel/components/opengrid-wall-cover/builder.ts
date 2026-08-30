@@ -219,8 +219,8 @@ function cutOpenConnectUndersideNotches(
 
 function fuseTextShape(textShape: Shape3D): Shape3D {
   // Some CJK glyphs contain overlapping solids after their contours are
-  // extruded. Self-fusing the compound resolves those overlaps for the
-  // boolean cut and produces a valid independent text part for 3MF.
+  // extruded. Self-fusing the cutter resolves those overlaps before it cuts
+  // the body, while the original glyph remains available for the text part.
   try {
     const fused = textShape.fuse(textShape)
     deleteShape(textShape)
@@ -317,15 +317,10 @@ export async function buildOpenGridWallCoverWithFlatText(
         }
         sourceSolids[bodyIndex] = bodyWithNotches
 
-        const fusedGlyph = fuseTextShape(
-          await makeOpenGridWallCoverTextGlyphShape(letter, centerX),
-        )
-        textPieces.push(fusedGlyph)
-        const bodyWithCavity = cutShape(
-          bodyWithNotches,
-          cloneShape(fusedGlyph),
-          cutScope,
-        )
+        const glyph = await makeOpenGridWallCoverTextGlyphShape(letter, centerX)
+        textPieces.push(glyph)
+        const bodyCutter = fuseTextShape(cloneShape(glyph))
+        const bodyWithCavity = cutShape(bodyWithNotches, bodyCutter, cutScope)
         sourceSolids[bodyIndex] = bodyWithCavity
         for (const solid of sourceSolids) {
           bodyPieces.push(cloneShape(solid))
