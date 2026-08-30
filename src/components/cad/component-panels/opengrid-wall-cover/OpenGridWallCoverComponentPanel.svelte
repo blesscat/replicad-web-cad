@@ -4,6 +4,7 @@
     OPENGRID_WALL_COVER_CONFIGURATION,
   } from '../../../../cad-contract/units'
   import { translate } from '../../../../i18n'
+  import { formatValidationIssue } from '../../../../i18n/diagnostics'
   import ParameterField from '../ParameterField.svelte'
   import type { ComponentPanelProps } from '../types'
 
@@ -19,6 +20,10 @@
   )
   let normalizedText = $derived(normalizeOpenGridWallCoverText(rawText))
   let textLength = $derived(Array.from(normalizedText).length)
+  let rawOpenConnect = $derived(
+    rawParameters.openConnect ??
+      String(OPENGRID_WALL_COVER_CONFIGURATION.defaultOpenConnect),
+  )
 
   function handleTextInput(event: Event): void {
     if (!(event.currentTarget instanceof HTMLInputElement)) return
@@ -30,6 +35,11 @@
       event.currentTarget.value = limitedText
     }
     onInputChange('text', limitedText)
+  }
+
+  function handleOpenConnectInput(event: Event): void {
+    if (!(event.currentTarget instanceof HTMLInputElement)) return
+    onInputChange('openConnect', String(event.currentTarget.checked))
   }
 </script>
 
@@ -80,6 +90,29 @@
       </span>
     </div>
   </ParameterField>
+
+  <label class="flex items-center gap-2 text-sm text-ink">
+    <input
+      type="checkbox"
+      aria-label={translate(locale, 'panel.wallCover.openConnect')}
+      aria-describedby={fieldErrors.openConnect
+        ? 'opengrid-wall-cover-open-connect-error'
+        : undefined}
+      aria-invalid={Boolean(fieldErrors.openConnect)}
+      checked={rawOpenConnect === 'true'}
+      data-testid="opengrid-wall-cover-open-connect"
+      onchange={handleOpenConnectInput}
+    />
+    {translate(locale, 'panel.wallCover.openConnect')}
+  </label>
+  {#if fieldErrors.openConnect}
+    <span
+      id="opengrid-wall-cover-open-connect-error"
+      class="text-sm text-error"
+      role="alert"
+      >{formatValidationIssue(locale, fieldErrors.openConnect)}</span
+    >
+  {/if}
 
   <p
     id="opengrid-wall-cover-text-help"

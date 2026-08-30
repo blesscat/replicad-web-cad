@@ -251,6 +251,7 @@ export async function buildOpenGridWallCoverWithFlatText(
     throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-wall-cover')
   }
   const text = validation.value.text
+  const openConnectEnabled = validation.value.openConnect !== false
   const letters = Array.from(text)
   assertGenerationCurrent(context)
   const baseAssembly = await buildCoverBody(context)
@@ -271,7 +272,9 @@ export async function buildOpenGridWallCoverWithFlatText(
       OPENGRID_WALL_COVER_CONFIGURATION.coverWidth +
       OPENGRID_WALL_COVER_CONFIGURATION.coverGap
     const centerOffset = ((letters.length - 1) * coverStep) / 2
-    const notchCount = openGridSnapOpenConnectNotchSegmentsFor('Lite').length
+    const notchCount = openConnectEnabled
+      ? openGridSnapOpenConnectNotchSegmentsFor('Lite').length
+      : 0
     const cutScope = context.booleanOperations?.createScope(
       letters.length * (notchCount + 1),
     )
@@ -304,11 +307,14 @@ export async function buildOpenGridWallCoverWithFlatText(
         const body = sourceSolids[bodyIndex]
         if (!body) throw new Error('OPENGRID_WALL_COVER_BODY_MISSING')
 
-        const bodyWithNotches = cutOpenConnectUndersideNotches(
-          body,
-          centerX,
-          cutScope,
-        )
+        let bodyWithNotches = body
+        if (openConnectEnabled) {
+          bodyWithNotches = cutOpenConnectUndersideNotches(
+            body,
+            centerX,
+            cutScope,
+          )
+        }
         sourceSolids[bodyIndex] = bodyWithNotches
 
         const fusedGlyph = fuseTextShape(

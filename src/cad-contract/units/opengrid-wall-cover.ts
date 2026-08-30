@@ -4,10 +4,11 @@ import {
 } from './opengrid-snap'
 import type { DiagnosticParams } from '../diagnostics'
 
-export type OpenGridWallCoverParameterKey = 'text'
+export type OpenGridWallCoverParameterKey = 'text' | 'openConnect'
 
 export type OpenGridWallCoverParameters = {
   text: string
+  openConnect?: boolean
 }
 
 export const OPENGRID_WALL_COVER_CONFIGURATION = {
@@ -16,9 +17,13 @@ export const OPENGRID_WALL_COVER_CONFIGURATION = {
   coverGap: 3,
   maxTextLength: 8,
   defaultText: 'A',
+  defaultOpenConnect: true,
   fontFamily: 'Noto Sans CJK TC Bold',
   fontFileName: 'NotoSansCJKtc-Bold.otf',
-  defaultParameters: { text: 'A' } as OpenGridWallCoverParameters,
+  defaultParameters: {
+    text: 'A',
+    openConnect: true,
+  } as OpenGridWallCoverParameters,
   fileNames: {
     step: 'opengrid-wall-cover.step',
     stl: 'opengrid-wall-cover.stl',
@@ -70,16 +75,22 @@ export function validateOpenGridWallCoverParameters(
   if (!isRecord(value)) return invalid('parameters')
 
   const keys = Object.keys(value)
-  if (keys.length === 0) {
-    return {
-      valid: true,
-      value: { ...OPENGRID_WALL_COVER_CONFIGURATION.defaultParameters },
-    }
+  if (keys.some((key) => key !== 'text' && key !== 'openConnect')) {
+    return invalid('parameters')
   }
-  if (keys.length !== 1 || keys[0] !== 'text') return invalid('parameters')
-  if (typeof value.text !== 'string') return invalid('text')
+  if (value.text !== undefined && typeof value.text !== 'string') {
+    return invalid('text')
+  }
+  if (
+    value.openConnect !== undefined &&
+    typeof value.openConnect !== 'boolean'
+  ) {
+    return invalid('openConnect')
+  }
 
-  const text = normalizeOpenGridWallCoverText(value.text)
+  const text = normalizeOpenGridWallCoverText(
+    value.text ?? OPENGRID_WALL_COVER_CONFIGURATION.defaultText,
+  )
   const textLength = Array.from(text).length
   if (textLength < 1) {
     return invalid('text', 'validation.wallCoverTextRequired')
@@ -90,7 +101,15 @@ export function validateOpenGridWallCoverParameters(
     })
   }
 
-  return { valid: true, value: { text } }
+  return {
+    valid: true,
+    value: {
+      text,
+      openConnect:
+        value.openConnect ??
+        OPENGRID_WALL_COVER_CONFIGURATION.defaultOpenConnect,
+    },
+  }
 }
 
 export function isOpenGridWallCoverParameters(

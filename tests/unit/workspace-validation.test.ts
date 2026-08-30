@@ -33,8 +33,14 @@ describe('CAD workspace validation helpers', () => {
   })
 
   it('parses and round-trips Wall Cover text with the eight-character limit', () => {
-    const parameters: OpenGridWallCoverParameters = { text: 'IAN' }
-    expect(rawFromParameters(parameters)).toEqual({ text: 'IAN' })
+    const parameters: OpenGridWallCoverParameters = {
+      text: 'IAN',
+      openConnect: true,
+    }
+    expect(rawFromParameters(parameters)).toEqual({
+      text: 'IAN',
+      openConnect: 'true',
+    })
     expect(
       parseRawParameters(rawFromParameters(parameters), 'opengrid-wall-cover'),
     ).toEqual({
@@ -45,11 +51,30 @@ describe('CAD workspace validation helpers', () => {
       parseRawParameters({ text: ' I A N ' }, 'opengrid-wall-cover'),
     ).toEqual({
       valid: true,
-      value: { text: 'IAN' },
+      value: { text: 'IAN', openConnect: true },
     })
     expect(parseRawParameters({}, 'opengrid-wall-cover')).toEqual({
       valid: true,
-      value: { text: 'A' },
+      value: { text: 'A', openConnect: true },
+    })
+    expect(
+      parseRawParameters(
+        { text: 'A', openConnect: 'false' },
+        'opengrid-wall-cover',
+      ),
+    ).toEqual({
+      valid: true,
+      value: { text: 'A', openConnect: false },
+    })
+    expect(
+      parseRawParameters(
+        { text: 'A', openConnect: 'maybe' },
+        'opengrid-wall-cover',
+      ),
+    ).toEqual({
+      valid: false,
+      messageId: 'validation.invalid',
+      field: 'openConnect',
     })
     expect(
       parseRawParameters(

@@ -22,18 +22,19 @@ describe('OpenGrid Wall Cover contract', () => {
   it('accepts a canonical text value and migrates legacy empty parameters', () => {
     expect(OPENGRID_WALL_COVER_CONFIGURATION.defaultParameters).toEqual({
       text: 'A',
+      openConnect: true,
     })
     expect(validateOpenGridWallCoverParameters({})).toEqual({
       valid: true,
-      value: { text: 'A' },
+      value: { text: 'A', openConnect: true },
     })
     expect(validateOpenGridWallCoverParameters({ text: 'IAN' })).toEqual({
       valid: true,
-      value: { text: 'IAN' },
+      value: { text: 'IAN', openConnect: true },
     })
     expect(validateOpenGridWallCoverParameters({ text: ' I A N ' })).toEqual({
       valid: true,
-      value: { text: 'IAN' },
+      value: { text: 'IAN', openConnect: true },
     })
     expect(isOpenGridWallCoverParameters({ text: 'A' })).toBe(true)
     expect(validateOpenGridWallCoverParameters({ text: '' })).toMatchObject({
@@ -55,6 +56,27 @@ describe('OpenGrid Wall Cover contract', () => {
       validateOpenGridWallCoverParameters({ text: 'A', extra: true }),
     ).toMatchObject({
       valid: false,
+    })
+  })
+
+  it('accepts the optional OpenConnect underside opening toggle', () => {
+    expect(
+      validateOpenGridWallCoverParameters({
+        text: 'A',
+        openConnect: false,
+      }),
+    ).toEqual({
+      valid: true,
+      value: { text: 'A', openConnect: false },
+    })
+    expect(
+      validateOpenGridWallCoverParameters({
+        text: 'A',
+        openConnect: 'false',
+      }),
+    ).toMatchObject({
+      valid: false,
+      issues: [{ field: 'openConnect', messageId: 'validation.invalid' }],
     })
   })
 
@@ -83,7 +105,7 @@ describe('OpenGrid Wall Cover contract', () => {
       displayName: 'models.model.opengrid-wall-cover.name',
       parameterPresentation: { kind: 'adjustable' },
       parameterSchema: [],
-      defaultParameters: { text: 'A' },
+      defaultParameters: { text: 'A', openConnect: true },
     })
     expect(definition?.exportFileName({ text: 'IAN' })).toBe(
       'opengrid-wall-cover.step',

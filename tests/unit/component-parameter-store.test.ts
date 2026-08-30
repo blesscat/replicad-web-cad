@@ -1155,6 +1155,7 @@ describe('component parameter store', () => {
     }
     expect(persisted.values?.wall?.['opengrid-wall-cover']).toEqual({
       text: 'A',
+      openConnect: true,
     })
     store.dispose()
   })

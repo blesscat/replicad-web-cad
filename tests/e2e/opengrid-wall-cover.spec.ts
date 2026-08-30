@@ -37,9 +37,12 @@ test('Wall Cover accepts up to eight characters and exports a two-color 3MF', as
 
   const panel = page.getByTestId('opengrid-wall-cover-panel')
   const text = page.getByTestId('opengrid-wall-cover-text')
+  const openConnect = page.getByTestId('opengrid-wall-cover-open-connect')
   await expect(panel).toBeVisible()
   await expect(text).toHaveValue('A')
   await expect(text).toHaveAttribute('maxlength', '8')
+  await expect(openConnect).toBeVisible()
+  await expect(openConnect).toBeChecked()
   await expect(page.getByTestId('opengrid-wall-cover-text-count')).toHaveText(
     '1 / 8 字',
   )
@@ -71,7 +74,24 @@ test('Wall Cover accepts up to eight characters and exports a two-color 3MF', as
     )
     .toMatchObject({
       modelId: 'opengrid-wall-cover',
-      parameters: { text: 'IAN' },
+      parameters: { text: 'IAN', openConnect: true },
+    })
+
+  await waitForCadReady(page, 90_000)
+  await openConnect.uncheck()
+  await expect(openConnect).not.toBeChecked()
+  await expect
+    .poll(async () =>
+      page.evaluate(
+        () =>
+          (
+            window as Window & { __cadModelGenerateCaptures?: unknown[] }
+          ).__cadModelGenerateCaptures?.at(-1) ?? null,
+      ),
+    )
+    .toMatchObject({
+      modelId: 'opengrid-wall-cover',
+      parameters: { text: 'IAN', openConnect: false },
     })
 
   await waitForCadReady(page, 90_000)
@@ -89,6 +109,7 @@ test('Wall Cover accepts up to eight characters and exports a two-color 3MF', as
 
   await page.getByRole('button', { name: '全部恢復預設' }).click()
   await expect(text).toHaveValue('A')
+  await expect(openConnect).toBeChecked()
   await expect(page.getByTestId('opengrid-wall-cover-text-count')).toHaveText(
     '1 / 8 字',
   )

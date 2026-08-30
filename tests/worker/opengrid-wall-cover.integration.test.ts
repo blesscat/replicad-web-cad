@@ -273,6 +273,34 @@ describe('OpenGrid Wall Cover supplied STEP', () => {
     }
   })
 
+  it('can disable the OpenConnect underside stepped opening', async () => {
+    const reference = await importOpenGridWallCoverReference(
+      new Blob([
+        readFileSync(fileURLToPath(OPEN_GRID_WALL_COVER_REFERENCE_URL)),
+      ]),
+    )
+    const generated = await buildOpenGridWallCoverWithFlatText(
+      { text: 'A', openConnect: false } as never,
+      { getOpenGridWallCoverReference: async () => reference },
+    )
+    try {
+      const bodyPart = generated.parts.find((part) => part.name === 'body')
+      if (!bodyPart) throw new Error('wall-cover-body-part-missing')
+      const segment = openGridSnapOpenConnectNotchSegmentsFor('Lite')[0]!
+      const notchVolume = volumeInBox(
+        bodyPart.shape,
+        [segment.min[0] + 0.1, segment.min[1] + 0.1, segment.min[2] + 0.1],
+        [segment.max[0] - 0.1, segment.max[1] - 0.1, segment.max[2] - 0.1],
+      )
+      expect(notchVolume).toBeGreaterThan(0.05)
+    } finally {
+      generated.shape.delete()
+      generated.qualityShape.delete()
+      for (const part of generated.parts) part.shape.delete()
+      reference.delete()
+    }
+  })
+
   it.each(wallCoverTextCases)(
     'builds one independent cover for each character in $text',
     async ({ text: value, coverCount }) => {

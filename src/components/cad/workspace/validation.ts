@@ -16,6 +16,7 @@ import {
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+  OPENGRID_WALL_COVER_CONFIGURATION,
   normalizeOpenGridWallCoverText,
   normalizeOpenGridLocatingSeatMode,
   type OpenGridOpenShelfParameters,
@@ -166,7 +167,7 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
     modelId === 'opengrid-snap-remover' ||
     modelId === 'opengrid-wall-cover'
   ) {
-    return modelId === 'opengrid-wall-cover' ? ['text'] : []
+    return modelId === 'opengrid-wall-cover' ? ['text', 'openConnect'] : []
   }
   if (modelId === 'opengrid-divider') return OPENGRID_DIVIDER_PARAMETER_KEYS
   if (modelId === 'opengrid-pillar') return PILLAR_PARAMETER_KEYS
@@ -246,10 +247,11 @@ function legacyNumericDefault(
 function parseBooleanRawParameter(
   rawValue: string | undefined,
   field: ModelParameterKey,
+  defaultValue = false,
 ):
   | { valid: true; value: boolean }
   | { valid: false; messageId: string; field: ModelParameterKey } {
-  const value = rawValue ?? 'false'
+  const value = rawValue ?? String(defaultValue)
   if (value === 'true') return { valid: true, value: true }
   if (value === 'false') return { valid: true, value: false }
   return {
@@ -613,7 +615,13 @@ export function rawFromParameters(
 
   if ('text' in parameters) {
     const wallCoverParameters = parameters as OpenGridWallCoverParameters
-    return { text: wallCoverParameters.text }
+    return {
+      text: wallCoverParameters.text,
+      openConnect: String(
+        wallCoverParameters.openConnect ??
+          OPENGRID_WALL_COVER_CONFIGURATION.defaultOpenConnect,
+      ),
+    }
   }
 
   if ('diameter' in parameters && 'height' in parameters) {
@@ -861,14 +869,23 @@ export function parseRawParameters(
     modelId === 'opengrid-wall-cover'
   ) {
     if (modelId === 'opengrid-wall-cover') {
-      const text =
-        raw !== null && typeof raw === 'object' && typeof raw.text === 'string'
-          ? raw.text
-          : undefined
-      const normalizedRaw =
-        text === undefined
-          ? raw
-          : { ...raw, text: normalizeOpenGridWallCoverText(text) }
+      if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+        return { valid: false, messageId: 'validation.invalid' }
+      }
+      const text = typeof raw.text === 'string' ? raw.text : undefined
+      const openConnect = parseBooleanRawParameter(
+        raw.openConnect,
+        'openConnect',
+        OPENGRID_WALL_COVER_CONFIGURATION.defaultOpenConnect,
+      )
+      if (!openConnect.valid) return openConnect
+      const normalizedRaw = {
+        ...raw,
+        openConnect: openConnect.value,
+        ...(text === undefined
+          ? {}
+          : { text: normalizeOpenGridWallCoverText(text) }),
+      }
       const validation = validateModelParameters(modelId, normalizedRaw)
       if (!validation.valid) {
         const issue = validation.issues[0]
