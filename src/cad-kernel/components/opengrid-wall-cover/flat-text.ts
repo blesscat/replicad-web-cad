@@ -141,17 +141,7 @@ function centerShapeOn(
   return translated
 }
 
-type BlueprintBounds = [[number, number], [number, number]]
 type GlyphContourGroup = [Blueprint, ...Blueprint[]]
-
-function blueprintBounds(blueprint: Blueprint): BlueprintBounds {
-  const bounds = blueprint.boundingBox
-  const [[minX, minY], [maxX, maxY]] = bounds.bounds as number[][]
-  return [
-    [minX!, minY!],
-    [maxX!, maxY!],
-  ]
-}
 
 function deleteDrawingBlueprints(
   drawings: ReturnType<typeof textBlueprints>,
@@ -169,82 +159,19 @@ function deleteDrawingBlueprints(
   drawings.blueprints.forEach(deleteDrawing)
 }
 
-function strictlyContains(
-  outer: BlueprintBounds,
-  inner: BlueprintBounds,
-): boolean {
-  return (
-    outer[0][0] <= inner[0][0] &&
-    outer[0][1] <= inner[0][1] &&
-    outer[1][0] >= inner[1][0] &&
-    outer[1][1] >= inner[1][1] &&
-    (outer[0][0] < inner[0][0] ||
-      outer[0][1] < inner[0][1] ||
-      outer[1][0] > inner[1][0] ||
-      outer[1][1] > inner[1][1])
-  )
-}
-
 function groupGlyphContours(
   drawings: ReturnType<typeof textBlueprints>,
 ): GlyphContourGroup[] {
-  const existingGroups: GlyphContourGroup[] = drawings.blueprints.flatMap(
-    (drawing) => {
-      if (
-        !(drawing instanceof CompoundBlueprint) ||
-        drawing.blueprints.length === 0
-      ) {
-        return []
-      }
-      return [drawing.blueprints as GlyphContourGroup]
-    },
-  )
-  const blueprints: Blueprint[] = drawings.blueprints
-    .filter(
-      (drawing): drawing is Blueprint =>
-        !(drawing instanceof CompoundBlueprint),
-    )
-    .sort(
-      (first, second) =>
-        blueprintArea(blueprintBounds(second)) -
-        blueprintArea(blueprintBounds(first)),
-    )
-  const grouped = new Set<Blueprint>()
-  const result: GlyphContourGroup[] = [...existingGroups]
-
-  for (const drawing of blueprints) {
-    if (grouped.has(drawing)) continue
-
-    const children = blueprints.filter(
-      (candidate) =>
-        candidate !== drawing &&
-        !grouped.has(candidate) &&
-        strictlyContains(blueprintBounds(drawing), blueprintBounds(candidate)),
-    )
-    if (children.length === 0) {
+  const result: GlyphContourGroup[] = []
+  for (const drawing of drawings.blueprints) {
+    if (!(drawing instanceof CompoundBlueprint)) {
       result.push([drawing])
       continue
     }
-    const directChildren = children.filter(
-      (candidate) =>
-        !children.some(
-          (middle) =>
-            middle !== candidate &&
-            strictlyContains(
-              blueprintBounds(middle),
-              blueprintBounds(candidate),
-            ),
-        ),
-    )
-    directChildren.forEach((child) => grouped.add(child))
-    result.push([drawing, ...directChildren])
+    const [outer, ...holes] = drawing.blueprints
+    if (outer) result.push([outer, ...holes])
   }
-
   return result
-}
-
-function blueprintArea(bounds: BlueprintBounds): number {
-  return (bounds[1][0] - bounds[0][0]) * (bounds[1][1] - bounds[0][1])
 }
 
 function extrudeBlueprint(blueprint: Blueprint): Shape3D {

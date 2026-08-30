@@ -244,7 +244,7 @@ describe('OpenGrid Wall Cover supplied STEP', () => {
     }
   })
 
-  it.each(['字', '嗎', '體', '整', '合'] as const)(
+  it.each(['我', '你', '嗎', '字', '體', '整', '合'] as const)(
     'preserves the complete font outline for %s',
     async (character) => {
       const actual = await makeOpenGridWallCoverTextGlyphShape(character)
@@ -274,7 +274,7 @@ describe('OpenGrid Wall Cover supplied STEP', () => {
     },
   )
 
-  it.each(['字', '嗎', '體', '整', '合'] as const)(
+  it.each(['我', '你', '嗎', '字', '體', '整', '合'] as const)(
     'retains the complete font outline after cover assembly for %s',
     async (character) => {
       const reference = await importOpenGridWallCoverReference(
