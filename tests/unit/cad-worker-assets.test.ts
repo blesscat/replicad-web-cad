@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   loadOpenGridSnapOpenConnectHead: vi.fn(),
   loadOpenGridSnapReference: vi.fn(),
   loadOpenGridSnapRemoverAsset: vi.fn(),
+  loadOpenGridOpenConnectShelfLockedSlot: vi.fn(),
 }))
 
 vi.mock('../../src/cad-kernel/components/opengrid/builder', () => ({
@@ -45,6 +46,13 @@ vi.mock(
       mocks.loadOpenGridDetachableCornerSeatHolderReference,
     loadOpenGridDetachableCornerSeatReference:
       mocks.loadOpenGridDetachableCornerSeatReference,
+  }),
+)
+vi.mock(
+  '../../src/cad-kernel/components/opengrid-openconnect-shelf/slot',
+  () => ({
+    loadOpenGridOpenConnectShelfLockedSlot:
+      mocks.loadOpenGridOpenConnectShelfLockedSlot,
   }),
 )
 
@@ -107,5 +115,22 @@ describe('CAD Worker asset cache', () => {
     )
     await expect(cache.getOpenGridPrototype('Full')).resolves.toBe(prototype)
     expect(mocks.loadOpenGridPrototypeTemplate).toHaveBeenCalledTimes(2)
+  })
+
+  it('shares one locked-slot promise between the shelf and organizer builders', async () => {
+    const lockedSlot = { delete: vi.fn() }
+    mocks.loadOpenGridOpenConnectShelfLockedSlot.mockResolvedValue(lockedSlot)
+    const cache = new CadWorkerAssetCache(() => false, {})
+
+    const shelfRequest = cache.getOpenGridOpenConnectShelfLockedSlot()
+    const organizerRequest = cache.getOpenGridOpenConnectShelfLockedSlot()
+
+    expect(organizerRequest).toBe(shelfRequest)
+    await expect(shelfRequest).resolves.toBe(lockedSlot)
+    expect(mocks.loadOpenGridOpenConnectShelfLockedSlot).toHaveBeenCalledOnce()
+
+    cache.dispose()
+    await Promise.resolve()
+    expect(lockedSlot.delete).toHaveBeenCalledOnce()
   })
 })

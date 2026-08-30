@@ -12,6 +12,7 @@ import {
   isHswCellParameters,
   isOpenGridDividerModelParameters,
   isOpenGridOpenConnectShelfParameters,
+  isOpenGridOpenConnectOrganizerParameters,
   isOpenGridOpenShelfParameters,
   isOpenGridOrganizerBoxParameters,
   isOpenGridParameters,
@@ -39,6 +40,7 @@ import {
 import { meshBRep, serializeMesh, type MeshData } from '../cad-kernel/mesh'
 import { assertOpenGridDividerShapeQuality } from '../cad-kernel/components/opengrid-divider/quality'
 import { assertOpenGridOpenConnectShelfShapeQuality } from '../cad-kernel/components/opengrid-openconnect-shelf/quality'
+import { assertOpenGridOpenConnectOrganizerShapeQuality } from '../cad-kernel/components/opengrid-openconnect-organizer/quality'
 import { assertOpenGridOpenShelfShapeQuality } from '../cad-kernel/components/opengrid-open-shelf/quality'
 import { assertOpenGridOrganizerBoxGeometry } from '../cad-kernel/components/opengrid-organizer-box/quality'
 import { assertOpenGridShapeQuality } from '../cad-kernel/components/opengrid/quality'
@@ -383,6 +385,28 @@ export async function generateCadCandidate(
         ),
       )
     }
+    if (command.modelId === 'opengrid-openconnect-organizer') {
+      if (!isOpenGridOpenConnectOrganizerParameters(generationParameters)) {
+        throw new Error(
+          'MODEL_PARAMETERS_MISMATCH:opengrid-openconnect-organizer',
+        )
+      }
+      const lockedSlot =
+        await context.assets.getOpenGridOpenConnectShelfLockedSlot()
+      await timing.measure('quality', () =>
+        assertOpenGridOpenConnectOrganizerShapeQuality(
+          shape,
+          generationParameters,
+          mesh,
+          lockedSlot,
+          {
+            yieldToEventLoop: yieldToWorkerEventLoop,
+            isGenerationCurrent: () =>
+              context.isGenerationCurrent(command.generation),
+          },
+        ),
+      )
+    }
     if (command.modelId === 'opengrid-organizer-box') {
       if (!isOpenGridOrganizerBoxParameters(generationParameters)) {
         throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-organizer-box')
@@ -406,6 +430,10 @@ export async function generateCadCandidate(
     }
   } catch (error) {
     deleteBuildShapes(shape, qualityShape, nativeParts)
+    if (error instanceof Error && error.message === 'STALE_GENERATION') {
+      context.supersede(command, 'STALE_GENERATION')
+      return
+    }
     throw error
   }
 

@@ -1,7 +1,8 @@
-# OpenGrid OpenConnect Shelf reference asset
+# Shared OpenGrid OpenConnect locked-socket reference asset
 
 `openconnect-slot-negative-lock.step` is the locked OpenConnect receptacle
-negative supplied for this component. It was provided as
+negative shared by the `opengrid-openconnect-shelf` and
+`opengrid-openconnect-organizer` generators. It was provided as
 `openConnect_slot_negative_lock.step` and is stored byte-for-byte without
 unit conversion, scaling, mirroring, healing, or recentering.
 
@@ -14,7 +15,8 @@ unit conversion, scaling, mirroring, healing, or recentering.
 
 Runtime placement preserves the authored dimensions and first applies the same
 180° Y-axis assembly rotation used by the OpenGrid Snap OpenConnect head. It
-then stands the slot upright with a +90° X rotation. The installed transform
+then stands the slot upright with a +90° X rotation. Both consumers preserve
+this installed socket orientation. The installed transform
 maps source `[x, y, z]` to
 `[-x + columnCenterX, z - 2.7 + rearThickness, y + 14]`. One copy is cut at
 every 28 mm column center; every copy contains the supplied lock geometry and

@@ -11,6 +11,7 @@ import {
   isOpenGridParameters,
   isOpenGridOpenShelfParameters,
   isOpenGridOpenConnectShelfParameters,
+  isOpenGridOpenConnectOrganizerParameters,
   isOpenGridOrganizerBoxParameters,
   isOpenGridStackableBoxParameters,
   isOpenGridStackableCylinderParameters,
@@ -48,6 +49,7 @@ import { buildOpenGridSnapRemover } from '../components/opengrid-snap-remover/bu
 import { buildPillar } from '../components/opengrid-pillar/builder'
 import { buildOpenGridOpenShelf } from '../components/opengrid-open-shelf/builder'
 import { buildOpenGridOpenConnectShelf } from '../components/opengrid-openconnect-shelf/builder'
+import { buildOpenGridOpenConnectOrganizer } from '../components/opengrid-openconnect-organizer/builder'
 import { buildOpenGridOrganizerBox } from '../components/opengrid-organizer-box/builder'
 
 export type KernelBuildContext = {
@@ -402,6 +404,27 @@ async function buildOpenGridOpenConnectShelfModel(
   })
 }
 
+async function buildOpenGridOpenConnectOrganizerModel(
+  parameters: ModelParameterValues,
+  context: KernelBuildContext,
+): Promise<Shape3D> {
+  if (!isOpenGridOpenConnectOrganizerParameters(parameters)) {
+    throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-openconnect-organizer')
+  }
+  if (!context.getOpenGridOpenConnectShelfLockedSlot) {
+    throw new Error(
+      'MODEL_ASSET_CONTEXT_MISSING:opengrid-openconnect-organizer-locked-slot',
+    )
+  }
+  return buildOpenGridOpenConnectOrganizer(parameters, {
+    getLockedSlot: context.getOpenGridOpenConnectShelfLockedSlot,
+    isGenerationCurrent: context.isGenerationCurrent,
+    yieldToEventLoop: context.yieldToEventLoop,
+    reportProgress: context.reportProgress,
+    booleanOperations: context.booleanOperations,
+  })
+}
+
 async function buildOpenGridStackableCylinderModel(
   parameters: ModelParameterValues,
   context: KernelBuildContext,
@@ -525,6 +548,12 @@ export const opengridOpenConnectShelfKernelDefinition: KernelModelDefinition = {
   build: buildOpenGridOpenConnectShelfModel,
 }
 
+export const opengridOpenConnectOrganizerKernelDefinition: KernelModelDefinition =
+  {
+    id: 'opengrid-openconnect-organizer',
+    build: buildOpenGridOpenConnectOrganizerModel,
+  }
+
 export const openGridSnapRemoverKernelDefinition: KernelModelDefinition = {
   id: 'opengrid-snap-remover',
   build: buildOpenGridSnapRemoverModel,
@@ -547,6 +576,7 @@ export const kernelModelDefinitions: ReadonlyArray<KernelModelDefinition> = [
   opengridStackableCylinderKernelDefinition,
   opengridOpenShelfKernelDefinition,
   opengridOpenConnectShelfKernelDefinition,
+  opengridOpenConnectOrganizerKernelDefinition,
   opengridSnapKernelDefinition,
   opengridWallCoverKernelDefinition,
   openGridSnapRemoverKernelDefinition,

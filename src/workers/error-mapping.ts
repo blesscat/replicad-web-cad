@@ -28,7 +28,8 @@ export function cadErrorCodeFor(
     message.includes('OPENGRID_STACKABLE_CYLINDER_PARAMETERS_INVALID') ||
     message.includes('MODEL_PARAMETERS_MISMATCH:opengrid-stackable-cylinder') ||
     message.includes('OPENGRID_ORGANIZER_BOX_PARAMETERS_INVALID') ||
-    message.includes('MODEL_PARAMETERS_MISMATCH:opengrid-organizer-box')
+    message.includes('MODEL_PARAMETERS_MISMATCH:opengrid-organizer-box') ||
+    message.includes('MODEL_PARAMETERS_MISMATCH:opengrid-openconnect-organizer')
   ) {
     return 'INVALID_INPUT'
   }
@@ -60,6 +61,7 @@ export function cadErrorCodeFor(
   if (
     message.includes('OPENGRID_QUALITY_INVALID') ||
     message.includes('OPENGRID_OPENCONNECT_SHELF_QUALITY_FAILED') ||
+    message.includes('OPENGRID_OPENCONNECT_ORGANIZER_QUALITY_FAILED') ||
     message.includes('OPENGRID_BREP_INVALID') ||
     message.includes('OPENGRID_STACKABLE_BOX_') ||
     message.includes('OPENGRID_ORGANIZER_BOX_')
@@ -123,6 +125,7 @@ export function cadErrorStageFor(
   if (
     message.includes('OPENGRID_QUALITY_INVALID') ||
     message.includes('OPENGRID_OPENCONNECT_SHELF_QUALITY_FAILED') ||
+    message.includes('OPENGRID_OPENCONNECT_ORGANIZER_QUALITY_FAILED') ||
     message.includes('OPENGRID_STACKABLE_BOX_') ||
     message.includes('OPENGRID_ORGANIZER_BOX_')
   ) {

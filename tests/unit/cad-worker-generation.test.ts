@@ -1,9 +1,10 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type {
   WorkerCommand,
   WorkerEvent,
 } from '../../src/cad-contract/messages'
 import type { CandidateRecord } from '../../src/cad-kernel/lifetime'
+import { OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS } from '../../src/cad-contract/units'
 import { generateCadCandidate } from '../../src/workers/cad-worker-generation'
 import type { CadWorkerGenerationContext } from '../../src/workers/cad-worker-generation'
 
@@ -11,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   buildModelBRep: vi.fn(),
   meshBRep: vi.fn(),
   serializeMesh: vi.fn(),
+  assertOpenGridOpenConnectOrganizerShapeQuality: vi.fn(),
 }))
 
 vi.mock('../../src/cad-kernel/model', () => ({
@@ -20,6 +22,13 @@ vi.mock('../../src/cad-kernel/mesh', () => ({
   meshBRep: mocks.meshBRep,
   serializeMesh: mocks.serializeMesh,
 }))
+vi.mock(
+  '../../src/cad-kernel/components/opengrid-openconnect-organizer/quality',
+  () => ({
+    assertOpenGridOpenConnectOrganizerShapeQuality:
+      mocks.assertOpenGridOpenConnectOrganizerShapeQuality,
+  }),
+)
 
 const command: Extract<WorkerCommand, { kind: 'model.generate' }> = {
   version: 2,
@@ -33,6 +42,13 @@ const command: Extract<WorkerCommand, { kind: 'model.generate' }> = {
 }
 
 describe('CAD Worker generation seam', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    mocks.assertOpenGridOpenConnectOrganizerShapeQuality.mockResolvedValue(
+      undefined,
+    )
+  })
+
   it('builds, meshes, serializes, and registers a candidate', async () => {
     const shape = { delete: vi.fn() }
     const mesh = {
@@ -89,5 +105,123 @@ describe('CAD Worker generation seam', () => {
     )
     expect(unregister).not.toHaveBeenCalled()
     expect(mocks.serializeMesh).toHaveBeenCalledWith(mesh)
+  })
+
+  it('runs the OpenConnect organizer through shared-asset quality before registration', async () => {
+    const parameters = {
+      ...OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS,
+    }
+    const organizerCommand = {
+      ...command,
+      modelId: 'opengrid-openconnect-organizer' as const,
+      parameters,
+    }
+    const shape = { delete: vi.fn() }
+    const lockedSlot = { delete: vi.fn() }
+    const mesh = {
+      positions: new Float32Array([0, 0, 0]),
+      normals: new Float32Array([0, 0, 1]),
+      indices: new Uint32Array([0, 0, 0]),
+      bounds: { min: [0, 0, 0], max: [1, 1, 1] },
+      triangleCount: 1,
+    }
+    const meshSnapshot = {
+      positions: new ArrayBuffer(4),
+      normals: new ArrayBuffer(4),
+      indices: new ArrayBuffer(4),
+      bounds: mesh.bounds,
+      triangleCount: mesh.triangleCount,
+    }
+    mocks.buildModelBRep.mockResolvedValue(shape)
+    mocks.meshBRep.mockReturnValue(mesh)
+    mocks.serializeMesh.mockReturnValue(meshSnapshot)
+
+    const registerCandidate = vi.fn(() => vi.fn())
+    const getLockedSlot = vi.fn(async () => lockedSlot)
+    const context = {
+      epoch: 'epoch-organizer',
+      assets: {
+        getOpenGridOpenConnectShelfLockedSlot: getLockedSlot,
+      },
+      buildOptions: {},
+      emit: vi.fn(),
+      emitProgress: vi.fn(),
+      isGenerationCurrent: vi.fn(() => true),
+      registerCandidate,
+      supersede: vi.fn(),
+    } as unknown as CadWorkerGenerationContext
+
+    await generateCadCandidate(organizerCommand, context)
+
+    expect(mocks.buildModelBRep).toHaveBeenCalledWith(
+      'opengrid-openconnect-organizer',
+      parameters,
+      expect.objectContaining({
+        getOpenGridOpenConnectShelfLockedSlot: expect.any(Function),
+      }),
+    )
+    expect(getLockedSlot).toHaveBeenCalledOnce()
+    expect(
+      mocks.assertOpenGridOpenConnectOrganizerShapeQuality,
+    ).toHaveBeenCalledWith(
+      shape,
+      parameters,
+      mesh,
+      lockedSlot,
+      expect.objectContaining({
+        isGenerationCurrent: expect.any(Function),
+        yieldToEventLoop: expect.any(Function),
+      }),
+    )
+    expect(registerCandidate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modelId: 'opengrid-openconnect-organizer',
+        parameters,
+        shape,
+      }),
+    )
+  })
+
+  it('cleans up and supersedes a generation cancelled during organizer quality checks', async () => {
+    const organizerCommand = {
+      ...command,
+      modelId: 'opengrid-openconnect-organizer' as const,
+      parameters: { ...OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS },
+    }
+    const shape = { delete: vi.fn() }
+    const lockedSlot = { delete: vi.fn() }
+    const mesh = {
+      positions: new Float32Array([0, 0, 0]),
+      normals: new Float32Array([0, 0, 1]),
+      indices: new Uint32Array([0, 0, 0]),
+      bounds: { min: [0, 0, 0], max: [1, 1, 1] },
+      triangleCount: 1,
+    }
+    mocks.buildModelBRep.mockResolvedValue(shape)
+    mocks.meshBRep.mockReturnValue(mesh)
+    mocks.assertOpenGridOpenConnectOrganizerShapeQuality.mockRejectedValue(
+      new Error('STALE_GENERATION'),
+    )
+    const context = {
+      epoch: 'epoch-cancelled-quality',
+      assets: {
+        getOpenGridOpenConnectShelfLockedSlot: vi.fn(async () => lockedSlot),
+      },
+      buildOptions: {},
+      emit: vi.fn(),
+      emitProgress: vi.fn(),
+      isGenerationCurrent: vi.fn(() => true),
+      registerCandidate: vi.fn(),
+      supersede: vi.fn(),
+    } as unknown as CadWorkerGenerationContext
+
+    await generateCadCandidate(organizerCommand, context)
+
+    expect(shape.delete).toHaveBeenCalledOnce()
+    expect(context.supersede).toHaveBeenCalledWith(
+      organizerCommand,
+      'STALE_GENERATION',
+    )
+    expect(context.registerCandidate).not.toHaveBeenCalled()
   })
 })
