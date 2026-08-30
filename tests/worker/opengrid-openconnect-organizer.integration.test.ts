@@ -419,6 +419,31 @@ describe('OpenGrid OpenConnect organizer CAD kernel integration', () => {
     }
   }, 180_000)
 
+  it('keeps a shallow legal body valid without a degenerate front fillet', async () => {
+    const value = parameters({
+      holeCountX: 1,
+      holeCountY: 1,
+      holeShape: 'square',
+      holeDiameter: 1,
+      holeDepth: 1,
+      bottomThickness: 1,
+      edgeThickness: 0.72,
+      tiltAngle: 0,
+    })
+    const { shape, slot, quality } = await buildAndInspect(value)
+    try {
+      expect(quality).toMatchObject({
+        passed: true,
+        failures: [],
+        validBRep: true,
+        solidCount: 1,
+      })
+    } finally {
+      deleteShape(shape)
+      deleteShape(slot)
+    }
+  }, 180_000)
+
   it('rejects invalid geometry before loading the shared slot asset', async () => {
     let slotLoads = 0
     await expect(

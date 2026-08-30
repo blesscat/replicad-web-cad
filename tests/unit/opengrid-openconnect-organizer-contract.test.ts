@@ -31,13 +31,13 @@ describe('OpenGrid OpenConnect organizer contract', () => {
       holeCountX: 2,
       holeCountY: 2,
       holeSpacingMode: 'linked',
-      holeSpacingX: 2,
-      holeSpacingY: 2,
+      holeSpacingX: 1,
+      holeSpacingY: 1,
       holeShape: 'circle',
       holeDiameter: 20,
       holeDepth: 20,
-      bottomThickness: 2,
-      edgeThickness: 3,
+      bottomThickness: 1,
+      edgeThickness: 1,
       tiltAngle: 15,
     })
     expect(validateOpenGridOpenConnectOrganizerParameters(value)).toEqual({
@@ -94,7 +94,7 @@ describe('OpenGrid OpenConnect organizer contract', () => {
       [12, 7],
     ])
     expect(layout.requiredSpan).toEqual({ x: 34, y: 24 })
-    expect(layout.bodyDepth).toBe(30)
+    expect(layout.bodyDepth).toBe(26)
   })
 
   it('uses the selected edge on local X/Y while preserving the 28 mm width minimum', () => {
@@ -116,14 +116,32 @@ describe('OpenGrid OpenConnect organizer contract', () => {
     expect((layout.bodyDepth - layout.requiredSpan.y) / 2).toBeCloseTo(0.4, 10)
   })
 
-  it('uses R2.5 front corners and preserves thinner selected edges', () => {
+  it('uses R2.5 front corners and safely clamps thinner selected edges', () => {
     const standard = openGridOpenConnectOrganizerLayoutFor(parameters())
     const thinEdge = openGridOpenConnectOrganizerLayoutFor(
       parameters({ edgeThickness: 0.4 }),
     )
 
     expect(standard.frontCornerRadius).toBe(2.5)
-    expect(thinEdge.frontCornerRadius).toBe(0.4)
+    expect(thinEdge.frontCornerRadius).toBeCloseTo(0.4 * (2 + Math.SQRT2), 10)
+  })
+
+  it('keeps a non-degenerate straight side before shallow-body rear corners', () => {
+    const layout = openGridOpenConnectOrganizerLayoutFor(
+      parameters({
+        holeCountX: 1,
+        holeCountY: 1,
+        holeShape: 'square',
+        holeDiameter: 1,
+        holeDepth: 1,
+        bottomThickness: 1,
+        edgeThickness: 0.72,
+        tiltAngle: 0,
+      }),
+    )
+
+    expect(layout.bodyDepth).toBe(2.44)
+    expect(layout.bodyDepth - layout.frontCornerRadius).toBeCloseTo(0.05, 10)
   })
 
   it('keeps the default body continuous with one centered, top-aligned socket', () => {
@@ -131,11 +149,12 @@ describe('OpenGrid OpenConnect organizer contract', () => {
     const layout = openGridOpenConnectOrganizerLayoutFor(value)
     const configuration = OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION
 
-    expect(layout.bodyThickness).toBe(22)
-    expect(layout.bodyWidth).toBe(48)
+    expect(layout.bodyThickness).toBe(21)
+    expect(layout.bodyWidth).toBe(43)
+    expect(layout.bodyDepth).toBe(43)
     expect(layout.connectorColumns).toBe(1)
     expect(layout.connectorRows).toBe(1)
-    expect(layout.rearInterfaceWidth).toBe(48)
+    expect(layout.rearInterfaceWidth).toBe(43)
     expect(layout.rearInterfaceHeight).toBe(configuration.gridPitch)
     expect(openGridOpenConnectOrganizerSlotOriginsFor(value)).toEqual([
       [0, configuration.rearThickness, 14],

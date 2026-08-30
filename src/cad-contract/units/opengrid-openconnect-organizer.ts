@@ -82,6 +82,7 @@ export const OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION = {
   gridPitch: OPENGRID_GRID_CONFIGURATION.fullPitch,
   rearThickness: 3.2,
   frontCornerRadius: 2.5,
+  frontCornerRearStraightLength: 0.05,
   fusionOverlap: 0.05,
   minimumInterfaceSeparation: 0.5,
   workspaceMaxDimension: 500,
@@ -103,12 +104,12 @@ export const OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION = {
   defaultHoleCountX: 2,
   defaultHoleCountY: 2,
   defaultHoleSpacingMode: 'linked' as OpenGridOpenConnectOrganizerSpacingMode,
-  defaultHoleSpacing: 2,
+  defaultHoleSpacing: 1,
   defaultHoleShape: 'circle' as OpenGridOpenConnectOrganizerShape,
   defaultHoleDiameter: 20,
   defaultHoleDepth: 20,
-  defaultBottomThickness: 2,
-  defaultEdgeThickness: 3,
+  defaultBottomThickness: 1,
+  defaultEdgeThickness: 1,
   defaultTiltAngle: 15,
 } as const
 
@@ -158,6 +159,7 @@ const POLYGON_SIDES: Record<
 }
 
 const VALIDATION_TOLERANCE = 1e-9
+const SQUARE_CORNER_CLEARANCE_FACTOR = 2 + Math.SQRT2
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -300,9 +302,14 @@ function layoutForUnchecked(
     requiredSpan.x + 2 * parameters.edgeThickness,
   )
   const bodyDepth = requiredSpan.y + 2 * parameters.edgeThickness
+  const maximumSafeFrontCornerRadius =
+    parameters.edgeThickness * SQUARE_CORNER_CLEARANCE_FACTOR
+  const maximumFrontCornerRadiusForBody =
+    bodyDepth - configuration.frontCornerRearStraightLength
   const frontCornerRadius = Math.min(
     configuration.frontCornerRadius,
-    parameters.edgeThickness,
+    maximumSafeFrontCornerRadius,
+    maximumFrontCornerRadiusForBody,
   )
   const rearInterfaceWidth = bodyWidth
   const rearInterfaceHeight = Math.max(configuration.gridPitch, bodyThickness)

@@ -50,7 +50,7 @@ test('OpenConnect organizer is Wall-only and starts from the canonical snapshot'
   await expect(page.getByRole('radio', { name: '連動' })).toBeChecked()
   await expect(
     page.getByRole('textbox', { name: '孔外圍間距（X）' }),
-  ).toHaveValue('2')
+  ).toHaveValue('1')
   await expect(
     page.getByRole('textbox', { name: '孔外圍間距（Y）' }),
   ).toHaveCount(0)
@@ -63,10 +63,10 @@ test('OpenConnect organizer is Wall-only and starts from the canonical snapshot'
   )
   await expect(
     page.getByRole('textbox', { name: '底部加厚（Z）' }),
-  ).toHaveValue('2')
+  ).toHaveValue('1')
   await expect(
     page.getByRole('textbox', { name: '孔洞至外緣厚度（X/Y）' }),
-  ).toHaveValue('3')
+  ).toHaveValue('1')
   await expect(
     page.getByTestId('opengrid-openconnect-organizer-thickness-help'),
   ).toContainText('底厚設為 0 mm 時孔洞會貫穿底部')

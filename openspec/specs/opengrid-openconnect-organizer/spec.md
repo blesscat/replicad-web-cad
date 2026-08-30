@@ -46,9 +46,9 @@ hole depth MUST be finite from 1 through 500 mm, and bottom thickness MUST be
 finite from 0 through 100 mm. `edgeThickness` MUST be finite from 0.4 through
 100 mm. `tiltAngle` MUST be a finite value from 0 through 45 degrees on
 whole-degree steps. The defaults MUST be `{ holeCountX: 2,
-holeCountY: 2, holeSpacingMode: 'linked', holeSpacingX: 2, holeSpacingY: 2,
-holeShape: 'circle', holeDiameter: 20, holeDepth: 20, bottomThickness: 2,
-edgeThickness: 3, tiltAngle: 15 }`. In linked spacing mode the two canonical
+holeCountY: 2, holeSpacingMode: 'linked', holeSpacingX: 1, holeSpacingY: 1,
+holeShape: 'circle', holeDiameter: 20, holeDepth: 20, bottomThickness: 1,
+edgeThickness: 1, tiltAngle: 15 }`. In linked spacing mode the two canonical
 spacing values MUST be equal; in independent mode they MAY differ.
 
 The component MUST reject missing or unknown fields, unsupported enum values,
@@ -126,10 +126,11 @@ MUST be at least `edgeThickness`. Any extra width required by the 28 mm minimum
 MUST be divided equally between the two X edges.
 
 The two front-facing vertical outer corners, farthest from the wall interface,
-MUST use a target radius of 2.5 mm. When `edgeThickness` is below 2.5 mm, the
-actual radius MUST equal `edgeThickness` so the rounded corner cannot consume
-the selected cavity-to-edge allowance. This rounding MUST NOT be applied to the
-two rear vertical body corners.
+MUST use a target radius of 2.5 mm. The actual radius MUST be the smallest of
+2.5 mm, `edgeThickness * (2 + sqrt(2))`, and `bodyDepth - 0.05 mm`. These
+limits MUST keep the worst-case square cavity envelope inside the rounded body
+and preserve at least 0.05 mm of straight side before the rear corner. This
+rounding MUST NOT be applied to the two rear vertical body corners.
 
 #### Scenario: Generate circular cavities
 
@@ -156,16 +157,24 @@ two rear vertical body corners.
 
 #### Scenario: Round the two front vertical corners
 
-- **WHEN** the organizer is generated with `edgeThickness` of at least 2.5 mm
+- **WHEN** the organizer is generated with the default `edgeThickness=1 mm`
 - **THEN** its two front-facing vertical outer corners MUST each have a 2.5 mm
   radius
 - **AND** the rear vertical body corners MUST remain unrounded
 
 #### Scenario: Preserve a thinner selected edge
 
-- **WHEN** `edgeThickness` is below 2.5 mm
-- **THEN** each front-corner radius MUST be limited to `edgeThickness`
+- **WHEN** the requested R2.5 corner would violate the selected edge allowance
+- **THEN** each front-corner radius MUST be limited to
+  `edgeThickness * (2 + sqrt(2))`
 - **AND** the accepted thin-edge layout MUST remain a valid connected solid
+
+#### Scenario: Preserve a shallow-body rear edge
+
+- **WHEN** the target radius would leave less than 0.05 mm of straight body
+  side before a rear corner
+- **THEN** each front-corner radius MUST be limited to `bodyDepth - 0.05 mm`
+- **AND** the accepted shallow body MUST remain a valid connected solid
 
 #### Scenario: Generate regular polygon cavities
 
