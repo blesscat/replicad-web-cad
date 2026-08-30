@@ -16,7 +16,6 @@ if (!isLocale(locale)) throw new Error(`UNSUPPORTED_LOCALE:${locale}`)
 const t = (key: string) => translate(locale, key)
 const deskBoardPath = localizedCadPathFor(locale, 'opengrid', 'desk')
 const wallBoardPath = localizedCadPathFor(locale, 'opengrid', 'wall')
-const hswCellPath = localizedCadPathFor(locale, 'hsw-cell')
 const modelsPath = publicPathFor(locale, 'models')
 const docsPath = publicPathFor(locale, 'docs')
 const aboutPath = publicPathFor(locale, 'about')
@@ -293,7 +292,7 @@ const inlineLinkClass =
           {t('home.explore.title')}
         </h2>
       </header>
-      <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div class="grid gap-6 md:grid-cols-2">
         <article
           class="grid gap-4 rounded-2xl border border-border-card bg-panel p-4 shadow-sm sm:grid-cols-[minmax(9rem,0.85fr)_minmax(0,1.15fr)] sm:items-center lg:grid-cols-1"
         >
@@ -318,7 +317,7 @@ const inlineLinkClass =
           </div>
         </article>
         <article
-          class="grid gap-4 rounded-2xl border border-border-card bg-panel p-4 shadow-sm sm:grid-cols-[minmax(9rem,0.85fr)_minmax(0,1.15fr)] sm:items-center"
+          class="grid gap-4 rounded-2xl border border-border-card bg-panel p-4 shadow-sm sm:grid-cols-[minmax(9rem,0.85fr)_minmax(0,1.15fr)] sm:items-center lg:grid-cols-1"
         >
           <img
             class="aspect-[16/10] w-full rounded-xl border border-border-card bg-viewport object-cover"
@@ -337,29 +336,6 @@ const inlineLinkClass =
             </p>
             <a class={inlineLinkClass} href={wallBoardPath}
               >{t('home.explore.wall.cta')}</a
-            >
-          </div>
-        </article>
-        <article
-          class="grid gap-4 rounded-2xl border border-border-card bg-panel p-4 shadow-sm sm:grid-cols-[minmax(9rem,0.85fr)_minmax(0,1.15fr)] sm:items-center"
-        >
-          <img
-            class="aspect-[16/10] w-full rounded-xl border border-border-card bg-viewport object-cover"
-            src="/model-previews/hsw-cell.png"
-            width="640"
-            height="400"
-            loading="lazy"
-            alt={t('home.explore.hsw.alt')}
-          />
-          <div class="grid gap-2">
-            <h3 class="m-0 text-xl font-semibold leading-tight">
-              {t('home.explore.hsw.title')}
-            </h3>
-            <p class="m-0 text-sm leading-normal text-muted">
-              {t('home.explore.hsw.description')}
-            </p>
-            <a class={inlineLinkClass} href={hswCellPath}
-              >{t('home.explore.hsw.cta')}</a
             >
           </div>
         </article>

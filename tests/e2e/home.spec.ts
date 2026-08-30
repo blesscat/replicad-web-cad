@@ -79,6 +79,62 @@ async function expectStaticHomepage(
   expect(imageAlts.every((alt) => alt.length > 0)).toBe(true)
 }
 
+type ExploreCardLayout = {
+  width: number
+  isStacked: boolean
+  isSplit: boolean
+}
+
+async function expectHomepageExploreCards(page: Page): Promise<void> {
+  const explore = page.getByTestId('home-explore')
+  const cards = explore.locator('article')
+
+  await expect(cards).toHaveCount(2)
+  await expect(
+    cards.nth(0).getByRole('heading', { name: 'OpenGrid Desk', exact: true }),
+  ).toBeVisible()
+  await expect(
+    cards.nth(1).getByRole('heading', { name: 'OpenGrid Wall', exact: true }),
+  ).toBeVisible()
+  await expect(cards.nth(0).getByRole('link')).toHaveAttribute(
+    'href',
+    /\/cad\/opengrid\?system=desk$/,
+  )
+  await expect(cards.nth(1).getByRole('link')).toHaveAttribute(
+    'href',
+    /\/cad\/opengrid\?system=wall$/,
+  )
+  await expect(explore.getByRole('heading', { name: /^HSW/ })).toHaveCount(0)
+  await expect(explore.locator('img[src*="hsw-cell"]')).toHaveCount(0)
+  await expect(explore.locator('a[href*="/cad/hsw-cell"]')).toHaveCount(0)
+}
+
+async function readExploreCardLayouts(
+  page: Page,
+): Promise<ExploreCardLayout[]> {
+  return page
+    .getByTestId('home-explore')
+    .locator('article')
+    .evaluateAll((cards) =>
+      cards.map((card) => {
+        const image = card.querySelector('img')
+        const content = card.children.item(1)
+        if (!image || !(content instanceof HTMLElement)) {
+          throw new Error('EXPLORE_CARD_STRUCTURE_MISMATCH')
+        }
+
+        const cardRect = card.getBoundingClientRect()
+        const imageRect = image.getBoundingClientRect()
+        const contentRect = content.getBoundingClientRect()
+        return {
+          width: cardRect.width,
+          isStacked: imageRect.bottom <= contentRect.top + 1,
+          isSplit: imageRect.right <= contentRect.left + 1,
+        }
+      }),
+    )
+}
+
 test('home, model selection, and docs are static Astro pages', async ({
   page,
 }) => {
@@ -93,6 +149,7 @@ test('home, model selection, and docs are static Astro pages', async ({
   await expect(page.getByTestId('home-capabilities')).toBeVisible()
   await expect(page.getByTestId('home-desk-system')).toBeVisible()
   await expect(page.getByTestId('home-explore')).toBeVisible()
+  await expectHomepageExploreCards(page)
   await expect(page.getByTestId('home-maker')).toBeVisible()
   await expect(page.getByTestId('home-maker')).toContainText(
     'MakerWorld Customizer',
@@ -348,6 +405,7 @@ test('Traditional Chinese homepage uses the Desk System entry flow', async ({
   ).toBeVisible()
   await expect(page.getByTestId('home-hero')).toBeVisible()
   await expect(page.getByTestId('home-desk-system')).toBeVisible()
+  await expectHomepageExploreCards(page)
   await expect(page.getByRole('link', { name: '開始設計' })).toHaveAttribute(
     'href',
     '/zh-Hant/models',
@@ -362,9 +420,6 @@ test('Traditional Chinese homepage uses the Desk System entry flow', async ({
   await expect(
     page.getByRole('link', { name: '探索 Wall Related →' }),
   ).toHaveAttribute('href', '/zh-Hant/cad/opengrid?system=wall')
-  await expect(
-    page.getByRole('link', { name: '建立六角蜂巢 →' }),
-  ).toHaveAttribute('href', '/zh-Hant/cad/hsw-cell')
   await expect(
     page.getByAltText('OpenGrid Desk System Board 底板預覽'),
   ).toBeVisible()
@@ -389,6 +444,7 @@ test('English homepage uses localized promotional content and routes', async ({
       name: 'Keep the CAD parts you want to make in one place',
     }),
   ).toBeVisible()
+  await expectHomepageExploreCards(page)
   await expect(
     page.getByRole('link', { name: 'Start designing' }),
   ).toHaveAttribute('href', '/en/models')
@@ -402,12 +458,38 @@ test('English homepage uses localized promotional content and routes', async ({
     page.getByRole('link', { name: 'Explore Wall Related →' }),
   ).toHaveAttribute('href', '/en/cad/opengrid?system=wall')
   await expect(
-    page.getByRole('link', { name: 'Build a honeycomb →' }),
-  ).toHaveAttribute('href', '/en/cad/hsw-cell')
-  await expect(
     page.getByAltText('OpenGrid Desk System Board preview'),
   ).toBeVisible()
   await expectStaticHomepage(page, runtimeObservation)
+})
+
+test('localized homepage keeps Desk and Wall explore cards aligned', async ({
+  page,
+}) => {
+  const viewportCases = [
+    { width: 1440, height: 900, stacked: true, split: false },
+    { width: 900, height: 900, stacked: false, split: true },
+    { width: 390, height: 844, stacked: true, split: false },
+  ]
+
+  for (const path of ['/zh-Hant/', '/en/']) {
+    await page.goto(path)
+    await expectHomepageExploreCards(page)
+
+    for (const viewportCase of viewportCases) {
+      await page.setViewportSize(viewportCase)
+      const layouts = await readExploreCardLayouts(page)
+      const first = layouts[0]
+      const second = layouts[1]
+      if (!first || !second) throw new Error('EXPLORE_CARD_COUNT_MISMATCH')
+
+      expect(Math.abs(first.width - second.width)).toBeLessThan(1)
+      expect(first.isStacked).toBe(viewportCase.stacked)
+      expect(second.isStacked).toBe(viewportCase.stacked)
+      expect(first.isSplit).toBe(viewportCase.split)
+      expect(second.isSplit).toBe(viewportCase.split)
+    }
+  }
 })
 
 test('localized homepage final CTA remains readable in both color schemes', async ({

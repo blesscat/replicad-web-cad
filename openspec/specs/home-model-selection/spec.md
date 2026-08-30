@@ -144,7 +144,7 @@ The `/models` chooser MUST include `hsw-cell` as a currently available CAD compo
 
 #### Scenario: Model page lists HSW cell
 
-- **WHEN** a user opens the homepage
+- **WHEN** a user opens `/models`
 - **THEN** the model chooser MUST display the HSW component in the HSW series
 - **AND** the chooser MUST provide a link to `/cad/hsw-cell`
 
@@ -446,7 +446,8 @@ product before presenting any single model system. It MUST explain browser-based
 parameter editing, live 3D preview, and CAD export, provide a clear primary entry
 into the localized model chooser, and retain the Desk workflow as a featured
 example. The homepage MUST also expose static starting points for Desk System,
-Wall System, and HSW workflows without rendering the full model chooser.
+Wall System without rendering the full model chooser or an HSW promotional
+card.
 
 #### Scenario: Product hero leads to model selection
 
@@ -460,9 +461,11 @@ Wall System, and HSW workflows without rendering the full model chooser.
 #### Scenario: Homepage exposes system-level starting points
 
 - **WHEN** a user reads the localized homepage below the Hero
-- **THEN** the page MUST expose distinct static entries for Desk System, Wall
-  System, and HSW
-- **AND** each entry MUST link to an existing localized documentation or
+- **THEN** the page MUST expose distinct static entries for Desk System and Wall
+  System
+- **AND** the page MUST NOT expose an HSW promotional entry in this starting
+  point section
+- **AND** each visible entry MUST link to an existing localized documentation or
   model-specific route without changing model IDs or system query values
 
 #### Scenario: Featured Desk workflow remains discoverable
@@ -481,6 +484,30 @@ Wall System, and HSW workflows without rendering the full model chooser.
   or equivalent visible text
 - **AND** homepage links MUST preserve the existing locale route, model ID,
   `system=desk|wall` context, and query-string behavior
+
+### Requirement: Desk 與 Wall 起始卡片採用一致響應式排列
+
+The Desk and Wall starting-point cards MUST use the same responsive presentation
+and ordering. On a wide viewport, the two cards MUST occupy equal columns and
+each card MUST place its preview above its title, description, and entry link.
+At narrower viewports, both cards MUST transition through the same layout rules
+and preserve the preview-before-content order.
+
+#### Scenario: 寬版首頁的兩張卡片上下排列
+
+- **WHEN** a user views the localized homepage at a wide viewport
+- **THEN** the Desk and Wall cards MUST have equal visual width
+- **AND** each card's preview MUST appear above its title and description
+- **AND** the Wall card MUST have the same content ordering and spacing pattern
+  as the Desk card
+
+#### Scenario: 窄版首頁維持一致卡片行為
+
+- **WHEN** a user views the localized homepage at a narrow or intermediate
+  viewport
+- **THEN** the Desk and Wall cards MUST use the same responsive transition
+- **AND** neither card MUST switch to a unique layout or reorder its preview
+  ahead of its content
 
 ### Requirement: Static product hero visual
 
