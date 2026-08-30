@@ -19,7 +19,7 @@ import {
   isThreeMfPackage,
 } from '../../src/cad-kernel/export'
 import { OPENGRID_WALL_COVER_CONFIGURATION } from '../../src/cad-contract/units'
-import { openGridSnapProfileFor } from '../../src/cad-kernel/components/opengrid-snap/profile'
+import { openGridSnapOpenConnectNotchSegmentsFor } from '../../src/cad-kernel/components/opengrid-snap/openconnect'
 import {
   loadOpenGridWallCoverFont,
   makeOpenGridWallCoverTextGlyphShape,
@@ -227,7 +227,7 @@ describe('OpenGrid Wall Cover supplied STEP', () => {
     }
   })
 
-  it('cuts the Snap-compatible center-remover passage from every cover', async () => {
+  it('cuts only the OpenConnect underside stepped opening from every cover', async () => {
     const reference = await importOpenGridWallCoverReference(
       new Blob([
         readFileSync(fileURLToPath(OPEN_GRID_WALL_COVER_REFERENCE_URL)),
@@ -242,34 +242,28 @@ describe('OpenGrid Wall Cover supplied STEP', () => {
       const bodyPart = generated.parts.find((part) => part.name === 'body')
       if (!bodyPart) throw new Error('wall-cover-body-part-missing')
 
-      const definition = openGridSnapProfileFor('Standard', 'Lite')
+      const notchSegments = openGridSnapOpenConnectNotchSegmentsFor('Lite')
       const coverStep =
         OPENGRID_WALL_COVER_CONFIGURATION.coverWidth +
         OPENGRID_WALL_COVER_CONFIGURATION.coverGap
       const centerOffset = ((Array.from(text).length - 1) * coverStep) / 2
       for (const [index] of Array.from(text).entries()) {
         const centerX = index * coverStep - centerOffset
-        const passageVolume = volumeInBox(
-          bodyPart.shape,
-          [centerX - 0.5, -0.5, 0.1],
-          [centerX + 0.5, 0.5, definition.centerRemoverStepZ - 0.1],
+        const notchVolumes = notchSegments.map(({ min, max }) =>
+          volumeInBox(
+            bodyPart.shape,
+            [centerX + min[0] + 0.1, min[1] + 0.1, min[2] + 0.1],
+            [centerX + max[0] - 0.1, max[1] - 0.1, max[2] - 0.1],
+          ),
         )
-        expect(passageVolume).toBeLessThan(0.05)
+        expect(notchVolumes.every((volume) => volume < 0.05)).toBe(true)
 
-        const upperOpeningVolume = volumeInBox(
+        const neighboringMaterialVolume = volumeInBox(
           bodyPart.shape,
-          [
-            centerX + definition.centerRemoverUpperHalfWidth * 0.75,
-            definition.centerRemoverHalfDepth * 0.75,
-            definition.centerRemoverStepZ + 0.1,
-          ],
-          [
-            centerX + definition.centerRemoverUpperHalfWidth - 0.1,
-            definition.centerRemoverHalfDepth - 0.1,
-            definition.expectedBounds.max[2] - 0.1,
-          ],
+          [centerX + 3, notchSegments[0]!.min[1] + 0.1, 2.0],
+          [centerX + 4, notchSegments[0]!.max[1] - 0.1, 2.5],
         )
-        expect(upperOpeningVolume).toBeLessThan(0.05)
+        expect(neighboringMaterialVolume).toBeGreaterThan(0.05)
       }
     } finally {
       generated.shape.delete()

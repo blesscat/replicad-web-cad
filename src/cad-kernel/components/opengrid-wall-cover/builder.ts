@@ -14,9 +14,10 @@ import {
   type OpenGridWallCoverParameters,
 } from '../../../cad-contract/units'
 import {
-  makeOpenGridSnapCenterRemoverCutter,
+  makeOpenGridSnapOpenConnectUndersideNotchCutters,
   type OpenGridSnapBuildContext,
 } from '../opengrid-snap/builder'
+import { openGridSnapOpenConnectNotchSegmentsFor } from '../opengrid-snap/openconnect'
 import { makeOpenGridWallCoverTextGlyphShape } from './flat-text'
 import type { BooleanOperationScope } from '../../boolean-progress'
 import { measureBooleanInScope } from '../../boolean-progress'
@@ -196,6 +197,26 @@ function cutShape(
   }
 }
 
+function cutOpenConnectUndersideNotches(
+  body: Shape3D,
+  centerX: number,
+  scope: BooleanOperationScope | undefined,
+): Shape3D {
+  const cutters = makeOpenGridSnapOpenConnectUndersideNotchCutters('Lite')
+  let result = body
+  try {
+    for (const cutter of cutters) {
+      result = cutShape(result, translateShape(cutter, centerX), scope)
+    }
+    return result
+  } catch (error) {
+    deleteShape(result)
+    throw error
+  } finally {
+    cutters.forEach(deleteShape)
+  }
+}
+
 function fuseTextShape(textShape: Shape3D): Shape3D {
   // Some CJK glyphs contain overlapping solids after their contours are
   // extruded. Self-fusing the compound resolves those overlaps for the
@@ -250,9 +271,9 @@ export async function buildOpenGridWallCoverWithFlatText(
       OPENGRID_WALL_COVER_CONFIGURATION.coverWidth +
       OPENGRID_WALL_COVER_CONFIGURATION.coverGap
     const centerOffset = ((letters.length - 1) * coverStep) / 2
-    const cutScope = context.booleanOperations?.createScope(letters.length * 2)
-    const centerRemoverFuseScope = context.booleanOperations?.createScope(
-      letters.length * 2,
+    const notchCount = openGridSnapOpenConnectNotchSegmentsFor('Lite').length
+    const cutScope = context.booleanOperations?.createScope(
+      letters.length * (notchCount + 1),
     )
     context.reportProgress?.({
       stage: 'building',
@@ -267,7 +288,6 @@ export async function buildOpenGridWallCoverWithFlatText(
       let referenceClone: Shape3D | null = null
       let translatedReference: Shape3D | null = null
       let translatedQualityReference: Shape3D | null = null
-      let centerRemoverCutter: Shape3D | null = null
       try {
         referenceClone = cloneShape(baseAssembly)
         translatedReference = translateShape(referenceClone, centerX)
@@ -284,28 +304,19 @@ export async function buildOpenGridWallCoverWithFlatText(
         const body = sourceSolids[bodyIndex]
         if (!body) throw new Error('OPENGRID_WALL_COVER_BODY_MISSING')
 
-        centerRemoverCutter = translateShape(
-          makeOpenGridSnapCenterRemoverCutter(
-            'Lite',
-            'Standard',
-            centerRemoverFuseScope,
-          ),
-          centerX,
-        )
-        const bodyWithCenterRemover = cutShape(
+        const bodyWithNotches = cutOpenConnectUndersideNotches(
           body,
-          centerRemoverCutter,
+          centerX,
           cutScope,
         )
-        centerRemoverCutter = null
-        sourceSolids[bodyIndex] = bodyWithCenterRemover
+        sourceSolids[bodyIndex] = bodyWithNotches
 
         const fusedGlyph = fuseTextShape(
           await makeOpenGridWallCoverTextGlyphShape(letter, centerX),
         )
         textPieces.push(fusedGlyph)
         const bodyWithCavity = cutShape(
-          bodyWithCenterRemover,
+          bodyWithNotches,
           cloneShape(fusedGlyph),
           cutScope,
         )
@@ -326,7 +337,6 @@ export async function buildOpenGridWallCoverWithFlatText(
       } finally {
         deleteShape(referenceClone)
         deleteShape(translatedQualityReference)
-        deleteShape(centerRemoverCutter)
         deleteDistinctShapes(sourceSolids)
         sourceSolids = []
         if (translatedReference) deleteShape(translatedReference)
