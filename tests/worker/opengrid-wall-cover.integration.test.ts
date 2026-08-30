@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { getOC, type Shape3D } from 'replicad'
+import { getOC, makeBox, measureVolume, type Shape3D } from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import { initialiseCadKernel } from '../../src/cad-kernel/initialise'
 import {
@@ -19,6 +19,7 @@ import {
   isThreeMfPackage,
 } from '../../src/cad-kernel/export'
 import { OPENGRID_WALL_COVER_CONFIGURATION } from '../../src/cad-contract/units'
+import { openGridSnapProfileFor } from '../../src/cad-kernel/components/opengrid-snap/profile'
 import {
   loadOpenGridWallCoverFont,
   makeOpenGridWallCoverTextGlyphShape,
@@ -56,6 +57,22 @@ function shapeBounds(shape: Shape3D): number[][] {
 
 function extent(bounds: number[][], axis: 0 | 1): number {
   return (bounds[1]?.[axis] ?? 0) - (bounds[0]?.[axis] ?? 0)
+}
+
+function volumeInBox(
+  shape: Shape3D,
+  min: [number, number, number],
+  max: [number, number, number],
+): number {
+  const probe = makeBox(min, max)
+  let intersection: Shape3D | null = null
+  try {
+    intersection = shape.intersect(probe)
+    return measureVolume(intersection)
+  } finally {
+    if (intersection && intersection !== shape) intersection.delete()
+    probe.delete()
+  }
 }
 
 function countSolids(shape: Shape3D): number {
@@ -207,6 +224,58 @@ describe('OpenGrid Wall Cover supplied STEP', () => {
     } finally {
       latin.delete()
       traditionalChinese.delete()
+    }
+  })
+
+  it('cuts the Snap-compatible center-remover passage from every cover', async () => {
+    const reference = await importOpenGridWallCoverReference(
+      new Blob([
+        readFileSync(fileURLToPath(OPEN_GRID_WALL_COVER_REFERENCE_URL)),
+      ]),
+    )
+    const text = 'IAN'
+    const generated = await buildOpenGridWallCoverWithFlatText(
+      { text },
+      { getOpenGridWallCoverReference: async () => reference },
+    )
+    try {
+      const bodyPart = generated.parts.find((part) => part.name === 'body')
+      if (!bodyPart) throw new Error('wall-cover-body-part-missing')
+
+      const definition = openGridSnapProfileFor('Standard', 'Lite')
+      const coverStep =
+        OPENGRID_WALL_COVER_CONFIGURATION.coverWidth +
+        OPENGRID_WALL_COVER_CONFIGURATION.coverGap
+      const centerOffset = ((Array.from(text).length - 1) * coverStep) / 2
+      for (const [index] of Array.from(text).entries()) {
+        const centerX = index * coverStep - centerOffset
+        const passageVolume = volumeInBox(
+          bodyPart.shape,
+          [centerX - 0.5, -0.5, 0.1],
+          [centerX + 0.5, 0.5, definition.centerRemoverStepZ - 0.1],
+        )
+        expect(passageVolume).toBeLessThan(0.05)
+
+        const upperOpeningVolume = volumeInBox(
+          bodyPart.shape,
+          [
+            centerX + definition.centerRemoverUpperHalfWidth * 0.75,
+            definition.centerRemoverHalfDepth * 0.75,
+            definition.centerRemoverStepZ + 0.1,
+          ],
+          [
+            centerX + definition.centerRemoverUpperHalfWidth - 0.1,
+            definition.centerRemoverHalfDepth - 0.1,
+            definition.expectedBounds.max[2] - 0.1,
+          ],
+        )
+        expect(upperOpeningVolume).toBeLessThan(0.05)
+      }
+    } finally {
+      generated.shape.delete()
+      generated.qualityShape.delete()
+      for (const part of generated.parts) part.shape.delete()
+      reference.delete()
     }
   })
 

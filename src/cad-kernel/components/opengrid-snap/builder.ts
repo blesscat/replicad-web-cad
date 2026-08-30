@@ -415,6 +415,17 @@ function makeCenterRemoverCutter(
   }
 }
 
+export function makeOpenGridSnapCenterRemoverCutter(
+  variant: OpenGridSnapVariant,
+  profile: OpenGridSnapProfile = 'Standard',
+  scope?: BooleanOperationScope,
+): Shape3D {
+  return makeCenterRemoverCutter(
+    openGridSnapProfileFor(profile, variant),
+    scope,
+  )
+}
+
 function makeLocatingHolesCutter(
   definition: OpenGridSnapProfileDefinition,
   reporter: BooleanOperationReporter | undefined,

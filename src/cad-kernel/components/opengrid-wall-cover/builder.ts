@@ -13,7 +13,10 @@ import {
   validateOpenGridWallCoverParameters,
   type OpenGridWallCoverParameters,
 } from '../../../cad-contract/units'
-import type { OpenGridSnapBuildContext } from '../opengrid-snap/builder'
+import {
+  makeOpenGridSnapCenterRemoverCutter,
+  type OpenGridSnapBuildContext,
+} from '../opengrid-snap/builder'
 import { makeOpenGridWallCoverTextGlyphShape } from './flat-text'
 import type { BooleanOperationScope } from '../../boolean-progress'
 import { measureBooleanInScope } from '../../boolean-progress'
@@ -247,7 +250,10 @@ export async function buildOpenGridWallCoverWithFlatText(
       OPENGRID_WALL_COVER_CONFIGURATION.coverWidth +
       OPENGRID_WALL_COVER_CONFIGURATION.coverGap
     const centerOffset = ((letters.length - 1) * coverStep) / 2
-    const cutScope = context.booleanOperations?.createScope(letters.length)
+    const cutScope = context.booleanOperations?.createScope(letters.length * 2)
+    const centerRemoverFuseScope = context.booleanOperations?.createScope(
+      letters.length * 2,
+    )
     context.reportProgress?.({
       stage: 'building',
       completed: 0,
@@ -261,6 +267,7 @@ export async function buildOpenGridWallCoverWithFlatText(
       let referenceClone: Shape3D | null = null
       let translatedReference: Shape3D | null = null
       let translatedQualityReference: Shape3D | null = null
+      let centerRemoverCutter: Shape3D | null = null
       try {
         referenceClone = cloneShape(baseAssembly)
         translatedReference = translateShape(referenceClone, centerX)
@@ -277,11 +284,31 @@ export async function buildOpenGridWallCoverWithFlatText(
         const body = sourceSolids[bodyIndex]
         if (!body) throw new Error('OPENGRID_WALL_COVER_BODY_MISSING')
 
+        centerRemoverCutter = translateShape(
+          makeOpenGridSnapCenterRemoverCutter(
+            'Lite',
+            'Standard',
+            centerRemoverFuseScope,
+          ),
+          centerX,
+        )
+        const bodyWithCenterRemover = cutShape(
+          body,
+          centerRemoverCutter,
+          cutScope,
+        )
+        centerRemoverCutter = null
+        sourceSolids[bodyIndex] = bodyWithCenterRemover
+
         const fusedGlyph = fuseTextShape(
           await makeOpenGridWallCoverTextGlyphShape(letter, centerX),
         )
         textPieces.push(fusedGlyph)
-        const bodyWithCavity = cutShape(body, cloneShape(fusedGlyph), cutScope)
+        const bodyWithCavity = cutShape(
+          bodyWithCenterRemover,
+          cloneShape(fusedGlyph),
+          cutScope,
+        )
         sourceSolids[bodyIndex] = bodyWithCavity
         for (const solid of sourceSolids) {
           bodyPieces.push(cloneShape(solid))
@@ -299,6 +326,7 @@ export async function buildOpenGridWallCoverWithFlatText(
       } finally {
         deleteShape(referenceClone)
         deleteShape(translatedQualityReference)
+        deleteShape(centerRemoverCutter)
         deleteDistinctShapes(sourceSolids)
         sourceSolids = []
         if (translatedReference) deleteShape(translatedReference)
