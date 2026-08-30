@@ -184,6 +184,26 @@ describe('OpenGrid OpenConnect organizer CAD kernel integration', () => {
     180_000,
   )
 
+  it('keeps the exact default circular matrix valid when the bottom is open', async () => {
+    const value = parameters({ bottomThickness: 0 })
+    const { shape, slot, quality } = await buildAndInspect(value)
+    try {
+      expect(quality).toMatchObject({
+        passed: true,
+        failures: [],
+        validBRep: true,
+        solidCount: 1,
+        cavityCount: 4,
+        cavitySideCounts: [1, 1, 1, 1],
+        cavityFloorCount: 0,
+        bottomThicknessValid: true,
+      })
+    } finally {
+      deleteShape(shape)
+      deleteShape(slot)
+    }
+  }, 180_000)
+
   it('builds the default direct-mount body with one locked female socket', async () => {
     const value = parameters()
     const { shape, slot, quality } = await buildAndInspect(value)

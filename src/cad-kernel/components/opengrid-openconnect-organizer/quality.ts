@@ -13,6 +13,7 @@ import {
   openGridOpenConnectOrganizerTiltAxisFor,
   OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION,
   type ModelBounds,
+  type OpenGridOpenConnectOrganizerLayout,
   type OpenGridOpenConnectOrganizerParameters,
 } from '../../../cad-contract/units'
 import { applyOpenGridOpenConnectOrganizerOwnedTransforms } from './builder'
@@ -270,6 +271,33 @@ function expectedCavitySideCount(
   return 6
 }
 
+function faceRecordMatchesCavityFootprint(
+  record: FaceRecord,
+  parameters: OpenGridOpenConnectOrganizerParameters,
+  layout: OpenGridOpenConnectOrganizerLayout,
+  centerX: number,
+  centerY: number,
+): boolean {
+  const recordCenterX = (record.min[0] + record.max[0]) / 2
+  const recordCenterY = (record.min[1] + record.max[1]) / 2
+  if (parameters.holeShape === 'circle') {
+    const xSpan = record.max[0] - record.min[0]
+    const ySpan = record.max[1] - record.min[1]
+    return (
+      closeEnough(recordCenterX, centerX) &&
+      closeEnough(recordCenterY, centerY) &&
+      closeEnough(xSpan, layout.cavityEnvelope.x) &&
+      closeEnough(ySpan, layout.cavityEnvelope.y)
+    )
+  }
+  return (
+    Math.abs(recordCenterX - centerX) <=
+      layout.cavityEnvelope.x / 2 + GEOMETRY_TOLERANCE &&
+    Math.abs(recordCenterY - centerY) <=
+      layout.cavityEnvelope.y / 2 + GEOMETRY_TOLERANCE
+  )
+}
+
 async function inspectCavities(
   shape: Shape3D,
   parameters: OpenGridOpenConnectOrganizerParameters,
@@ -307,17 +335,18 @@ async function inspectCavities(
       const index = start + offset
       const sideRecords = records.filter((record) => {
         const zSpan = record.max[2] - record.min[2]
-        const recordCenterX = (record.min[0] + record.max[0]) / 2
-        const recordCenterY = (record.min[1] + record.max[1]) / 2
         return (
           record.surfaceType === expectedSurface &&
           zSpan >= parameters.holeDepth - GEOMETRY_TOLERANCE &&
           record.min[2] >= parameters.bottomThickness - GEOMETRY_TOLERANCE &&
           record.max[2] >= layout.bodyThickness - GEOMETRY_TOLERANCE &&
-          Math.abs(recordCenterX - centerX) <=
-            layout.cavityEnvelope.x / 2 + GEOMETRY_TOLERANCE &&
-          Math.abs(recordCenterY - centerY) <=
-            layout.cavityEnvelope.y / 2 + GEOMETRY_TOLERANCE
+          faceRecordMatchesCavityFootprint(
+            record,
+            parameters,
+            layout,
+            centerX,
+            centerY,
+          )
         )
       })
       sideCounts.push(sideRecords.length)

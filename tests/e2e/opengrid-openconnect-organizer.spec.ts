@@ -82,6 +82,34 @@ test('OpenConnect organizer is Wall-only and starts from the canonical snapshot'
   )
 })
 
+test('the default circular matrix stays exportable with an open bottom', async ({
+  page,
+  browserName,
+}) => {
+  test.setTimeout(180_000)
+  skipHeadlessFirefoxWithoutWebGL(browserName)
+  await page.goto('/zh-Hant/cad/opengrid-openconnect-organizer?system=wall')
+  await waitForCadReady(page, 90_000)
+
+  const viewport = page.getByTestId('cad-viewport')
+  const initialRevision = await viewport.getAttribute('data-model-revision')
+  expect(initialRevision).toBeTruthy()
+
+  await page.getByRole('textbox', { name: '底部加厚（Z）' }).fill('0')
+  await expect(viewport).not.toHaveAttribute(
+    'data-model-revision',
+    initialRevision ?? '',
+    { timeout: 90_000 },
+  )
+  await waitForCadReady(page, 90_000)
+
+  await expect(page.getByRole('button', { name: '下載 STEP' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: '下載 STL' })).toBeEnabled()
+  await expect(
+    page.getByRole('textbox', { name: '底部加厚（Z）' }),
+  ).toHaveValue('0')
+})
+
 test('OpenConnect organizer edits, persists, resets, and exports one committed revision', async ({
   page,
   browserName,
