@@ -43,6 +43,7 @@ test('Wall Cover accepts up to eight characters and exports a two-color 3MF', as
   await expect(text).toHaveAttribute('maxlength', '8')
   await expect(openConnect).toBeVisible()
   await expect(openConnect).toBeChecked()
+  await expect(openConnect).toHaveAccessibleName('移除孔')
   await expect(page.getByTestId('opengrid-wall-cover-text-count')).toHaveText(
     '1 / 8 字',
   )
@@ -55,7 +56,7 @@ test('Wall Cover accepts up to eight characters and exports a two-color 3MF', as
   await expect(panel.getByRole('slider')).toHaveCount(0)
   await expect(panel.getByRole('combobox')).toHaveCount(0)
   await expect(
-    page.getByText('預設繁體中文字型：Noto Sans CJK TC Bold'),
+    page.getByText('目前只支援中英文', { exact: true }),
   ).toBeVisible()
 
   await text.fill('123456789')
