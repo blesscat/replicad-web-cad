@@ -3,8 +3,8 @@
 ## Purpose
 
 Provide a directly wall-mounted OpenGrid organizer with configurable shaped
-blind cavities, an integrated locked OpenConnect female interface, and a
-forward tilt that moves the cavity openings toward the user for easier access.
+cavities, an integrated locked OpenConnect female interface, and a forward
+tilt that moves the cavity openings toward the user for easier access.
 
 ## Requirements
 
@@ -35,19 +35,21 @@ routes, persisted entries, generators, and export names MUST remain unchanged.
 
 The normalized parameter snapshot MUST contain exactly `holeCountX`,
 `holeCountY`, `holeSpacingMode`, `holeSpacingX`, `holeSpacingY`, `holeShape`,
-`holeDiameter`, `holeDepth`, `bottomThickness`, and `tiltAngle`.
+`holeDiameter`, `holeDepth`, `bottomThickness`, `edgeThickness`, and
+`tiltAngle`.
 `holeSpacingMode` MUST be either `linked` or `independent`, and `holeShape`
 MUST be one of `circle`, `triangle`, `square`, `pentagon`, or `hexagon`.
 
 Hole counts MUST be safe integers from 1 through 20. X/Y spacing MUST be finite
 from 0.5 through 300 mm, hole diameter MUST be finite from 1 through 300 mm,
 hole depth MUST be finite from 1 through 500 mm, and bottom thickness MUST be
-finite from 1 through 100 mm. `tiltAngle` MUST be a finite value from 0 through
-45 degrees on 0.5-degree steps. The defaults MUST be `{ holeCountX: 2,
+finite from 0 through 100 mm. `edgeThickness` MUST be finite from 0.4 through
+100 mm. `tiltAngle` MUST be a finite value from 0 through 45 degrees on
+whole-degree steps. The defaults MUST be `{ holeCountX: 2,
 holeCountY: 2, holeSpacingMode: 'linked', holeSpacingX: 2, holeSpacingY: 2,
 holeShape: 'circle', holeDiameter: 20, holeDepth: 20, bottomThickness: 2,
-tiltAngle: 15 }`. In linked spacing mode the two canonical spacing values MUST
-be equal; in independent mode they MAY differ.
+edgeThickness: 3, tiltAngle: 15 }`. In linked spacing mode the two canonical
+spacing values MUST be equal; in independent mode they MAY differ.
 
 The component MUST reject missing or unknown fields, unsupported enum values,
 non-finite or out-of-range dimensions, fractional counts, off-step angles,
@@ -75,6 +77,19 @@ revision, persist, generate, or become exportable.
 - **THEN** the panel MUST expose separate X and Y edge-to-edge spacing controls
 - **AND** generation MUST preserve both accepted values
 
+#### Scenario: Configure the outer edge and open bottom
+
+- **WHEN** the user sets `edgeThickness` and `bottomThickness=0`
+- **THEN** the cavity matrix MUST retain at least the selected edge distance on
+  both local X and Y sides
+- **AND** every cavity MUST open through the body underside
+
+#### Scenario: Use whole-degree forward tilt
+
+- **WHEN** the user changes the forward-tilt control
+- **THEN** the accepted value MUST change in one-degree steps
+- **AND** a fractional-degree value MUST be rejected
+
 #### Scenario: Reject invalid organizer input
 
 - **WHEN** any canonical field is missing, unknown, malformed, out of range, or
@@ -82,9 +97,9 @@ revision, persist, generate, or become exportable.
 - **THEN** validation MUST identify the affected field or parameter object
 - **AND** no generation, persistence, or export MUST be accepted for that input
 
-### Requirement: Shaped blind cavities form a centered local matrix
+### Requirement: Shaped cavities form a centered local matrix
 
-The organizer MUST contain exactly one blind cavity for every requested X/Y
+The organizer MUST contain exactly one cavity for every requested X/Y
 index pair. Every cavity in one result MUST share the selected shape, diameter,
 depth, orientation, and axis. A circular cavity MUST use `holeDiameter` as its
 diameter. A triangular, square, pentagonal, or hexagonal cavity MUST be a
@@ -97,17 +112,41 @@ For the selected shape's fixed local orientation, let `envelopeX` and
 spacing values represent clear outer-envelope-to-outer-envelope material, not
 center distance. The cavity matrix MUST be centered in the organizer opening
 plane. Each cavity MUST stop at the requested axial depth and leave exactly the
-requested bottom thickness, within geometry tolerance, between its floor and
-the parallel body underside. Side walls and material between adjacent cavities
-MUST remain solid.
+requested positive bottom thickness, within geometry tolerance, between its
+floor and the parallel body underside. When `bottomThickness=0`, every cavity
+MUST pass fully through the parallel body underside and MUST NOT retain a cavity
+floor. Side walls and material between adjacent cavities MUST remain solid.
+
+The local body width MUST be
+`max(28 mm, requiredSpanX + 2 * edgeThickness)`, and the local body depth MUST
+be `requiredSpanY + 2 * edgeThickness`; neither dimension MAY be rounded up to
+a 28 mm Desk-style grid envelope. The cavity matrix MUST remain centered, so
+the clear X/Y distance from its outer envelope to each corresponding body edge
+MUST be at least `edgeThickness`. Any extra width required by the 28 mm minimum
+MUST be divided equally between the two X edges.
 
 #### Scenario: Generate circular cavities
 
 - **WHEN** a valid snapshot selects `circle`
 - **THEN** the result MUST contain exactly `holeCountX * holeCountY` circular
-  blind cavities
+  cavities
 - **AND** their diameter, depth, X/Y edge spacing, and bottom thickness MUST
   match the accepted snapshot within geometry tolerance
+
+#### Scenario: Generate through-open cavities
+
+- **WHEN** `bottomThickness=0`
+- **THEN** every requested cavity MUST open through both the organizer opening
+  plane and the parallel body underside
+- **AND** the surrounding perimeter and inter-cavity walls MUST remain solid
+
+#### Scenario: Size the outer body without grid rounding
+
+- **WHEN** the selected cavity matrix plus its two X edge thicknesses is less
+  than 28 mm wide
+- **THEN** the body width MUST be exactly 28 mm
+- **AND** for every larger matrix the body width MUST follow its continuous
+  cavity-envelope calculation without rounding to a 28 mm multiple
 
 #### Scenario: Generate regular polygon cavities
 
@@ -136,11 +175,11 @@ be vertical. At every positive angle each cavity opening MUST therefore be
 farther from the wall than its floor; the lower body MUST NOT be tilted toward
 the user instead.
 
-Hole diameter, depth, bottom thickness, polygon orientation, cavity-center
-spacing, and matrix centering MUST be measured in the organizer's local tilted
-frame. Changing only `tiltAngle` MUST rigidly change that local frame relative
-to the wall interface without changing any of those local cavity measurements
-or rotating the OpenConnect female interface.
+Hole diameter, depth, bottom thickness, edge thickness, polygon orientation,
+cavity-center spacing, and matrix centering MUST be measured in the organizer's
+local tilted frame. Changing only `tiltAngle` MUST rigidly change that local
+frame relative to the wall interface without changing any of those local
+cavity measurements or rotating the OpenConnect female interface.
 
 #### Scenario: Keep zero tilt vertical
 
@@ -160,8 +199,8 @@ or rotating the OpenConnect female interface.
 #### Scenario: Preserve local cavity geometry across angle changes
 
 - **WHEN** two accepted snapshots differ only by `tiltAngle`
-- **THEN** their local cavity shape, count, diameter, depth, spacing, and bottom
-  thickness MUST be identical
+- **THEN** their local cavity shape, count, diameter, depth, spacing, bottom
+  thickness, and edge thickness MUST be identical
 - **AND** their OpenConnect female opening planes MUST both remain parallel to
   the wall
 
@@ -174,13 +213,21 @@ directly from this integrated rear surface. The result MUST NOT require or emit
 a separate mounting base, rear plate part, adapter, OpenGrid desk interface,
 corner seat, foot, or second printable solid.
 
-The rear interface MUST use the 28 mm OpenGrid pitch. Its derived column count
-MUST be the smallest positive integer whose `count * 28 mm` width contains the
-selected shape matrix plus at least 3 mm of body boundary on both X sides. Its
-derived row count MUST be the smallest positive integer whose `count * 28 mm`
-height contains `holeDepth + bottomThickness` plus at least 3 mm of body
-boundary at both axial ends. The interface MUST contain one locked female
-receptacle in every derived X/Z cell, centered on 28 mm pitch.
+The rear interface MUST use the 28 mm OpenGrid pitch without forcing the body
+width or height to a pitch multiple. Its width MUST equal the continuously
+derived body width. Its height MUST equal
+`max(28 mm, holeDepth + bottomThickness)`. The derived column count MUST be
+`max(1, floor(bodyWidth / 28 mm))`, and the derived row count MUST be
+`max(1, floor(rearInterfaceHeight / 28 mm))`. Consequently every width or
+height from 28 mm through values below 56 mm MUST retain one receptacle on that
+axis, and the second receptacle MUST first appear at exactly 56 mm.
+
+The interface MUST contain one locked female receptacle in every derived X/Z
+cell. The complete 28 mm-pitch column group MUST be centered horizontally in
+the continuous interface width. The complete row group MUST be aligned to the
+top of the interface: the top row center MUST be 14 mm below its top edge, and
+additional row centers MUST proceed downward at 28 mm pitch. Unused vertical
+height MUST remain below the row group.
 
 Every receptacle MUST preserve the supplied locked OpenConnect negative at its
 authored millimetre scale and asymmetric origin. Only rigid placement MAY be
@@ -193,9 +240,9 @@ and MUST form one watertight solid.
 #### Scenario: Mount directly with the default interface
 
 - **WHEN** the default two-by-two circular organizer is generated
-- **THEN** its integrated rear surface MUST derive two OpenConnect columns and
+- **THEN** its integrated rear surface MUST derive one OpenConnect column and
   one OpenConnect row
-- **AND** it MUST contain exactly two locked female receptacles without any
+- **AND** it MUST contain exactly one locked female receptacle without any
   separate mounting part
 
 #### Scenario: Keep female openings parallel to the wall
@@ -207,11 +254,18 @@ and MUST form one watertight solid.
 
 #### Scenario: Grow connector occupancy with the organizer
 
-- **WHEN** cavity shape, count, diameter, spacing, depth, or bottom thickness
-  requires a larger rear interface
-- **THEN** the derived OpenConnect X/Z cell counts MUST grow to the smallest
-  legal 28 mm grid envelope
-- **AND** every derived cell MUST contain one distinct locked receptacle
+- **WHEN** the continuous body width or interface height crosses from below
+  56 mm to exactly 56 mm
+- **THEN** the corresponding OpenConnect count MUST grow from one to two
+- **AND** each additional completed 28 mm span MUST add one centered or
+  top-aligned receptacle on that axis
+
+#### Scenario: Center columns and top-align rows
+
+- **WHEN** the body dimensions leave width or height that is not occupied by
+  the derived 28 mm connector group
+- **THEN** the column group MUST have equal unused width on its left and right
+- **AND** all unused interface height MUST remain below the row group
 
 #### Scenario: Accept the existing OpenConnect head
 
@@ -249,7 +303,7 @@ filenames, and failed or invalid generations MUST never become exportable.
 - **WHEN** a valid tilted organizer is prepared for preview or export
 - **THEN** its parallel body underside MUST lie on `Z=0` within geometry
   tolerance
-- **AND** every blind cavity MUST open upward in print coordinates
+- **AND** every cavity MUST open upward in print coordinates
 
 #### Scenario: Persist parameters independently
 

@@ -222,7 +222,7 @@ export const zhHantMessages = {
   'models.model.opengrid-openconnect-organizer.selection':
     'OpenConnect Organizer（壁掛收納方格）',
   'models.model.opengrid-openconnect-organizer.description':
-    '直接以背面 OpenConnect 母座掛牆的盲孔收納件；可調整 X/Y 孔數、孔距、圓形或 3–6 邊形孔、孔深、底厚與開口朝使用者的前傾角。',
+    '直接以背面 OpenConnect 母座掛牆的收納件；可調整 X/Y 孔數、孔距、圓形或 3–6 邊形孔、孔深、底厚、邊緣厚度與開口朝使用者的前傾角。',
   'models.model.opengrid-openconnect-organizer.alt':
     'OpenGrid OpenConnect 壁掛前傾收納方格預覽',
   'docs.eyebrow': 'Documentation',
@@ -445,6 +445,9 @@ export const zhHantMessages = {
   'parameter.organizerHoleDiameter': '孔直徑（多邊形為內切圓直徑）',
   'parameter.organizerHoleDepth': '孔深度',
   'parameter.organizerBottomThickness': '底部加厚',
+  'parameter.organizerEdgeThickness': '孔洞至外緣厚度',
+  'parameter.organizerThicknessHelp':
+    '底厚設為 0 mm 時孔洞會貫穿底部；邊緣厚度同時控制局部 X/Y 孔洞外緣到本體外緣的最小距離。',
   'parameter.organizerStackingClearance': '堆疊淨空',
   'parameter.organizerHoleShape': '孔形狀',
   'parameter.organizerForwardTilt': '開口前傾角',
@@ -574,7 +577,7 @@ export const zhHantMessages = {
   'panel.openConnectShelf.maximumAngle':
     '目前 Y={rows} 格、Z={connectorRows} 格可用的最大角度為 {maximum}°，確保前端至少保留 7 mm 高度。',
   'panel.openConnectOrganizer.description':
-    '不需要底座或轉接件：OpenConnect 母座直接切在整合背面，母座開口面與牆面平行。',
+    '不需要底座或轉接件：OpenConnect 母座直接切在整合背面，母座開口面與牆面平行，欄位水平置中、列位垂直置頂。',
   'panel.openConnectOrganizer.interfaceSummary': '自動計算掛牆介面',
   'panel.openConnectOrganizer.interfaceValue':
     '{columns} 欄 × {rows} 列 OpenConnect 母座；介面 {width} × {height} mm',
@@ -984,7 +987,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'models.model.opengrid-openconnect-organizer.selection':
     'OpenConnect Organizer',
   'models.model.opengrid-openconnect-organizer.description':
-    'A blind-cavity organizer that mounts directly through integrated rear OpenConnect female sockets, with configurable X/Y counts, spacing, circle or regular 3–6-sided cavities, depth, bottom thickness, and opening-toward-user tilt.',
+    'An organizer that mounts directly through integrated rear OpenConnect female sockets, with configurable X/Y counts, spacing, circle or regular 3–6-sided cavities, depth, bottom thickness, edge thickness, and opening-toward-user tilt.',
   'models.model.opengrid-openconnect-organizer.alt':
     'OpenGrid OpenConnect forward-tilted wall organizer preview',
   'docs.eyebrow': 'Documentation',
@@ -1216,6 +1219,9 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'parameter.organizerHoleDiameter': 'Hole diameter (inscribed for polygons)',
   'parameter.organizerHoleDepth': 'Hole depth',
   'parameter.organizerBottomThickness': 'Bottom thickness',
+  'parameter.organizerEdgeThickness': 'Cavity-to-edge thickness',
+  'parameter.organizerThicknessHelp':
+    'Set bottom thickness to 0 mm for through-open cavities. Edge thickness controls the minimum local X/Y distance from the cavity envelope to the body edge.',
   'parameter.organizerStackingClearance': 'Stacking clearance',
   'parameter.organizerHoleShape': 'Hole shape',
   'parameter.organizerForwardTilt': 'Opening forward tilt',
@@ -1356,7 +1362,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'panel.openConnectShelf.maximumAngle':
     'The maximum angle for Y={rows} cells and Z={connectorRows} cells is {maximum}°, preserving at least 7 mm at the front.',
   'panel.openConnectOrganizer.description':
-    'No base or adapter is required: OpenConnect female sockets are cut directly into the integrated rear surface, with their opening planes parallel to the wall.',
+    'No base or adapter is required: OpenConnect female sockets are cut directly into the integrated rear surface, with opening planes parallel to the wall, columns centered, and rows top-aligned.',
   'panel.openConnectOrganizer.interfaceSummary': 'Calculated wall interface',
   'panel.openConnectOrganizer.interfaceValue':
     '{columns} columns × {rows} rows of OpenConnect female sockets; {width} × {height} mm interface',

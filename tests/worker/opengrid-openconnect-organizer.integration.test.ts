@@ -84,6 +84,9 @@ const shapeCases: ReadonlyArray<[OpenGridOpenConnectOrganizerShape, number]> = [
   ['pentagon', 5],
   ['hexagon', 6],
 ]
+const throughOpenShapeCases = shapeCases.filter(
+  ([shape]) => shape === 'circle' || shape === 'hexagon',
+)
 
 describe('OpenGrid OpenConnect organizer CAD kernel integration', () => {
   it.each(shapeCases)(
@@ -119,7 +122,37 @@ describe('OpenGrid OpenConnect organizer CAD kernel integration', () => {
     180_000,
   )
 
-  it('builds the default direct-mount body with two locked female sockets', async () => {
+  it.each(throughOpenShapeCases)(
+    'builds a through-open %s cavity when bottom thickness is zero',
+    async (holeShape, sideCount) => {
+      const value = parameters({
+        holeCountX: 1,
+        holeCountY: 1,
+        holeShape,
+        holeDiameter: 14,
+        holeDepth: 12,
+        bottomThickness: 0,
+        tiltAngle: 0,
+      })
+      const { shape, slot, quality } = await buildAndInspect(value)
+      try {
+        expect(quality).toMatchObject({
+          passed: true,
+          failures: [],
+          cavityCount: 1,
+          cavitySideCounts: [sideCount],
+          cavityFloorCount: 0,
+          bottomThicknessValid: true,
+        })
+      } finally {
+        deleteShape(shape)
+        deleteShape(slot)
+      }
+    },
+    180_000,
+  )
+
+  it('builds the default direct-mount body with one locked female socket', async () => {
     const value = parameters()
     const { shape, slot, quality } = await buildAndInspect(value)
     try {
@@ -129,12 +162,12 @@ describe('OpenGrid OpenConnect organizer CAD kernel integration', () => {
         validBRep: true,
         solidCount: 1,
         cavityCount: 4,
-        slotCount: 2,
+        slotCount: 1,
         interfacePlaneParallelToWall: true,
-        separationSkinCount: 2,
+        separationSkinCount: 1,
         printUndersideAtZero: true,
       })
-      expect(quality.slotResidualVolumes).toHaveLength(2)
+      expect(quality.slotResidualVolumes).toHaveLength(1)
       expect(quality.slotResidualVolumes.every((volume) => volume < 0.01)).toBe(
         true,
       )
@@ -155,12 +188,37 @@ describe('OpenGrid OpenConnect organizer CAD kernel integration', () => {
     }
   }, 180_000)
 
+  it('cuts centered columns and top-aligned rows after the 56 mm boundaries', async () => {
+    const value = parameters({
+      holeCountX: 1,
+      holeCountY: 1,
+      holeDiameter: 48,
+      holeDepth: 65,
+      bottomThickness: 1,
+      edgeThickness: 4,
+      tiltAngle: 0,
+    })
+    const { shape, slot, quality } = await buildAndInspect(value)
+    try {
+      expect(quality).toMatchObject({
+        passed: true,
+        failures: [],
+        slotCount: 4,
+        separationSkinCount: 4,
+      })
+      expect(quality.slotResidualVolumes).toHaveLength(4)
+    } finally {
+      deleteShape(shape)
+      deleteShape(slot)
+    }
+  }, 180_000)
+
   it('verifies every socket across multiple quality batches and cancels between them', async () => {
     const value = parameters({
       holeCountX: 1,
       holeCountY: 1,
       holeDiameter: 14,
-      holeDepth: 440,
+      holeDepth: 473,
       bottomThickness: 3,
       tiltAngle: 0,
     })

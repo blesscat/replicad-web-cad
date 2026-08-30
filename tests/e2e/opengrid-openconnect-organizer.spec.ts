@@ -64,13 +64,19 @@ test('OpenConnect organizer is Wall-only and starts from the canonical snapshot'
   await expect(
     page.getByRole('textbox', { name: '底部加厚（Z）' }),
   ).toHaveValue('2')
-  await expect(page.getByRole('slider', { name: /開口前傾角/ })).toHaveValue(
-    '15',
-  )
+  await expect(
+    page.getByRole('textbox', { name: '孔洞至外緣厚度（X/Y）' }),
+  ).toHaveValue('3')
+  await expect(
+    page.getByTestId('opengrid-openconnect-organizer-thickness-help'),
+  ).toContainText('底厚設為 0 mm 時孔洞會貫穿底部')
+  const tilt = page.getByRole('slider', { name: /開口前傾角/ })
+  await expect(tilt).toHaveValue('15')
+  await expect(tilt).toHaveAttribute('step', '1')
   await expect(page.getByText(/收納孔開口上方會朝使用者移動/)).toBeVisible()
   await expect(
     page.getByTestId('opengrid-openconnect-organizer-interface-summary'),
-  ).toContainText('2 欄 × 1 列 OpenConnect 母座')
+  ).toContainText('1 欄 × 1 列 OpenConnect 母座')
   await expect(page.getByTestId('cad-attribution')).toContainText(
     'OpenConnect project',
   )
@@ -108,6 +114,8 @@ test('OpenConnect organizer edits, persists, resets, and exports one committed r
     await shape.selectOption(value)
     await expect(shape).toHaveValue(value)
   }
+  await page.getByRole('textbox', { name: '底部加厚（Z）' }).fill('0')
+  await page.getByRole('textbox', { name: '孔洞至外緣厚度（X/Y）' }).fill('4')
   await page.getByRole('slider', { name: /開口前傾角/ }).fill('30')
 
   await expect(viewport).not.toHaveAttribute(
@@ -130,6 +138,8 @@ test('OpenConnect organizer edits, persists, resets, and exports one committed r
     holeSpacingX: 2.5,
     holeSpacingY: 2.5,
     holeShape: 'hexagon',
+    bottomThickness: 0,
+    edgeThickness: 4,
     tiltAngle: 30,
   })
   expect(
@@ -140,7 +150,7 @@ test('OpenConnect organizer edits, persists, resets, and exports one committed r
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-openconnect-organizer-x2-y2-sm-independent-sx2.5-sy2.5-hexagon-d20-h20-b2-a30.step',
+    'opengrid-openconnect-organizer-x2-y2-sm-independent-sx2.5-sy2.5-hexagon-d20-h20-b0-e4-a30.step',
   )
 
   await page.reload()
@@ -151,6 +161,12 @@ test('OpenConnect organizer edits, persists, resets, and exports one committed r
   await expect(page.getByRole('slider', { name: /開口前傾角/ })).toHaveValue(
     '30',
   )
+  await expect(
+    page.getByRole('textbox', { name: '底部加厚（Z）' }),
+  ).toHaveValue('0')
+  await expect(
+    page.getByRole('textbox', { name: '孔洞至外緣厚度（X/Y）' }),
+  ).toHaveValue('4')
   await page.getByRole('button', { name: /復原開口前傾角/ }).click()
   await expect(page.getByRole('slider', { name: /開口前傾角/ })).toHaveValue(
     '15',

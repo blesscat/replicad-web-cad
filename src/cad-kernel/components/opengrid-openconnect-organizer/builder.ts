@@ -43,6 +43,7 @@ export type OpenGridOpenConnectOrganizerBuildContext = {
 const CAVITY_BOOLEAN_BATCH_SIZE = 16
 const SLOT_BOOLEAN_BATCH_SIZE = 16
 const CAVITY_TOP_OVERLAP = 0.02
+const CAVITY_BOTTOM_OVERLAP = 0.02
 const FUSION_OVERLAP =
   OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION.fusionOverlap
 
@@ -116,11 +117,11 @@ function polygonCavityCutter(
     parameters.holeShape,
     parameters.holeDiameter,
   )
-  const sketcher = new Sketcher('XY', [
-    center[0],
-    center[1],
-    parameters.bottomThickness,
-  ])
+  const startZ =
+    parameters.bottomThickness === 0
+      ? -CAVITY_BOTTOM_OVERLAP
+      : parameters.bottomThickness
+  const sketcher = new Sketcher('XY', [center[0], center[1], startZ])
   let sketch: ReturnType<Sketcher['close']> | null = null
   try {
     const first = points[0]
@@ -141,12 +142,16 @@ function cavityCutterFor(
   parameters: OpenGridOpenConnectOrganizerParameters,
   center: Point2D,
 ): Shape3D {
-  const height = parameters.holeDepth + CAVITY_TOP_OVERLAP
+  const throughBottomOverlap =
+    parameters.bottomThickness === 0 ? CAVITY_BOTTOM_OVERLAP : 0
+  const height =
+    parameters.holeDepth + CAVITY_TOP_OVERLAP + throughBottomOverlap
+  const startZ = parameters.bottomThickness - throughBottomOverlap
   if (parameters.holeShape === 'circle') {
     return makeCylinder(parameters.holeDiameter / 2, height, [
       center[0],
       center[1],
-      parameters.bottomThickness,
+      startZ,
     ])
   }
   return polygonCavityCutter(parameters, center, height)

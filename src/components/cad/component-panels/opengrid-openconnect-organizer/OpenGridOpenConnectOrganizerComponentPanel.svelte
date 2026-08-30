@@ -34,6 +34,7 @@
     'holeDiameter',
     'holeDepth',
     'bottomThickness',
+    'edgeThickness',
     'tiltAngle',
   ] as const
 
@@ -140,6 +141,10 @@
       bottomThickness: numberFor(
         'bottomThickness',
         OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS.bottomThickness,
+      ),
+      edgeThickness: numberFor(
+        'edgeThickness',
+        OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS.edgeThickness,
       ),
       tiltAngle: numberFor(
         'tiltAngle',
@@ -312,7 +317,14 @@
     </select>
   </ParameterField>
 
-  {#each [fieldFor('holeDiameter'), fieldFor('holeDepth'), fieldFor('bottomThickness')] as field (field.key)}
+  <p
+    class="m-0 text-sm leading-6 text-muted"
+    data-testid="opengrid-openconnect-organizer-thickness-help"
+  >
+    {translate(locale, 'parameter.organizerThicknessHelp')}
+  </p>
+
+  {#each [fieldFor('holeDiameter'), fieldFor('holeDepth'), fieldFor('bottomThickness'), fieldFor('edgeThickness')] as field (field.key)}
     {@const value = valueFor(field)}
     <ParameterField
       {locale}

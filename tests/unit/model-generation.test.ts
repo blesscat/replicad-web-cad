@@ -204,7 +204,7 @@ describe('CAD model generation debounce', () => {
     const initial = {
       ...OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS,
       holeShape: 'triangle' as const,
-      tiltAngle: 20.5,
+      tiltAngle: 20,
     }
     const { send, context } = createRuntimeContext(
       'opengrid-openconnect-organizer',

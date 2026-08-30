@@ -36,7 +36,7 @@ describe('OpenGrid OpenConnect organizer catalog identity', () => {
     )
   })
 
-  it('publishes the numeric controls and a half-degree forward tilt', () => {
+  it('publishes the edge, open-bottom, and whole-degree controls', () => {
     const definition = getModelDefinition('opengrid-openconnect-organizer')
 
     expect(definition?.parameterSchema.map(({ key }) => key)).toEqual([
@@ -47,8 +47,21 @@ describe('OpenGrid OpenConnect organizer catalog identity', () => {
       'holeDiameter',
       'holeDepth',
       'bottomThickness',
+      'edgeThickness',
       'tiltAngle',
     ])
+    expect(
+      definition?.parameterSchema.find(({ key }) => key === 'bottomThickness'),
+    ).toMatchObject({
+      min: 0,
+    })
+    expect(
+      definition?.parameterSchema.find(({ key }) => key === 'edgeThickness'),
+    ).toMatchObject({
+      unit: 'mm',
+      min: OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION.minEdgeThickness,
+      max: OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION.maxEdgeThickness,
+    })
     expect(
       definition?.parameterSchema.find(({ key }) => key === 'tiltAngle'),
     ).toMatchObject({

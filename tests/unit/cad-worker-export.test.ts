@@ -143,7 +143,8 @@ describe('CAD Worker export seam', () => {
       holeDiameter: 18.75,
       holeDepth: 30,
       bottomThickness: 3.25,
-      tiltAngle: 22.5,
+      edgeThickness: 4.25,
+      tiltAngle: 22,
     }
     const organizerModel = {
       modelId: 'opengrid-openconnect-organizer' as const,

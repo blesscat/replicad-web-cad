@@ -15,6 +15,7 @@ export type OpenGridOpenConnectOrganizerParameterKey =
   | 'holeDiameter'
   | 'holeDepth'
   | 'bottomThickness'
+  | 'edgeThickness'
   | 'tiltAngle'
 
 export type OpenGridOpenConnectOrganizerParameters = {
@@ -27,6 +28,7 @@ export type OpenGridOpenConnectOrganizerParameters = {
   holeDiameter: number
   holeDepth: number
   bottomThickness: number
+  edgeThickness: number
   tiltAngle: number
 }
 
@@ -78,7 +80,6 @@ export const OPENGRID_OPENCONNECT_ORGANIZER_SPACING_MODES = [
 export const OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION = {
   gridPitch: OPENGRID_GRID_CONFIGURATION.fullPitch,
   rearThickness: 3.2,
-  boundaryThickness: 3,
   fusionOverlap: 0.05,
   minimumInterfaceSeparation: 0.5,
   workspaceMaxDimension: 500,
@@ -90,11 +91,13 @@ export const OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION = {
   maxHoleDiameter: 300,
   minHoleDepth: 1,
   maxHoleDepth: 500,
-  minBottomThickness: 1,
+  minBottomThickness: 0,
   maxBottomThickness: 100,
+  minEdgeThickness: 0.4,
+  maxEdgeThickness: 100,
   minTiltAngle: 0,
   maxTiltAngle: 45,
-  tiltAngleStep: 0.5,
+  tiltAngleStep: 1,
   defaultHoleCountX: 2,
   defaultHoleCountY: 2,
   defaultHoleSpacingMode: 'linked' as OpenGridOpenConnectOrganizerSpacingMode,
@@ -103,6 +106,7 @@ export const OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION = {
   defaultHoleDiameter: 20,
   defaultHoleDepth: 20,
   defaultBottomThickness: 2,
+  defaultEdgeThickness: 3,
   defaultTiltAngle: 15,
 } as const
 
@@ -122,6 +126,8 @@ export const OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS: OpenGridOpenConn
     holeDepth: OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION.defaultHoleDepth,
     bottomThickness:
       OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION.defaultBottomThickness,
+    edgeThickness:
+      OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION.defaultEdgeThickness,
     tiltAngle: OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION.defaultTiltAngle,
   }
 
@@ -135,6 +141,7 @@ const PARAMETER_KEYS: readonly OpenGridOpenConnectOrganizerParameterKey[] = [
   'holeDiameter',
   'holeDepth',
   'bottomThickness',
+  'edgeThickness',
   'tiltAngle',
 ]
 
@@ -183,15 +190,15 @@ function isSafeIntegerInRange(
   return isFiniteInRange(value, minimum, maximum) && Number.isSafeInteger(value)
 }
 
-function isHalfStepInRange(
+function isStepInRange(
   value: unknown,
   minimum: number,
   maximum: number,
+  step: number,
 ): value is number {
-  return (
-    isFiniteInRange(value, minimum, maximum) &&
-    Number.isSafeInteger((value - minimum) * 2)
-  )
+  if (!isFiniteInRange(value, minimum, maximum)) return false
+  const stepCount = (value - minimum) / step
+  return Number.isSafeInteger(stepCount)
 }
 
 function isShape(value: unknown): value is OpenGridOpenConnectOrganizerShape {
@@ -259,12 +266,9 @@ function centersForAxis(count: number, pitch: number): number[] {
   return Array.from({ length: count }, (_, index) => first + index * pitch)
 }
 
-function roundedGridCountFor(span: number): number {
+function completedGridCountFor(span: number): number {
   const configuration = OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION
-  return Math.max(
-    1,
-    Math.ceil((span - VALIDATION_TOLERANCE) / configuration.gridPitch),
-  )
+  return Math.max(1, Math.floor(span / configuration.gridPitch))
 }
 
 function layoutForUnchecked(
@@ -289,14 +293,15 @@ function layoutForUnchecked(
     y: cavityEnvelope.y + (parameters.holeCountY - 1) * pitchY,
   }
   const bodyThickness = parameters.holeDepth + parameters.bottomThickness
-  const connectorColumns = roundedGridCountFor(
-    requiredSpan.x + 2 * configuration.boundaryThickness,
+  const bodyWidth = Math.max(
+    configuration.gridPitch,
+    requiredSpan.x + 2 * parameters.edgeThickness,
   )
-  const connectorRows = roundedGridCountFor(
-    bodyThickness + 2 * configuration.boundaryThickness,
-  )
-  const rearInterfaceWidth = connectorColumns * configuration.gridPitch
-  const rearInterfaceHeight = connectorRows * configuration.gridPitch
+  const bodyDepth = requiredSpan.y + 2 * parameters.edgeThickness
+  const rearInterfaceWidth = bodyWidth
+  const rearInterfaceHeight = Math.max(configuration.gridPitch, bodyThickness)
+  const connectorColumns = completedGridCountFor(rearInterfaceWidth)
+  const connectorRows = completedGridCountFor(rearInterfaceHeight)
   const radians = (parameters.tiltAngle * Math.PI) / 180
 
   return {
@@ -304,8 +309,8 @@ function layoutForUnchecked(
     cavityPitch: [pitchX, pitchY],
     cavityCenters,
     requiredSpan,
-    bodyWidth: rearInterfaceWidth,
-    bodyDepth: requiredSpan.y + 2 * configuration.boundaryThickness,
+    bodyWidth,
+    bodyDepth,
     bodyThickness,
     connectorColumns,
     connectorRows,
@@ -345,7 +350,7 @@ export function openGridOpenConnectOrganizerSlotOriginsFor(
           (column - (layout.connectorColumns - 1) / 2) *
             configuration.gridPitch,
           configuration.rearThickness,
-          (row + 0.5) * configuration.gridPitch,
+          layout.rearInterfaceHeight - (row + 0.5) * configuration.gridPitch,
         ] as OpenGridOpenConnectOrganizerPoint3D,
     ),
   ).flat()
@@ -588,10 +593,20 @@ export function validateOpenGridOpenConnectOrganizerParameters(
     issues.push(issue('bottomThickness'))
   }
   if (
-    !isHalfStepInRange(
+    !isFiniteInRange(
+      value.edgeThickness,
+      configuration.minEdgeThickness,
+      configuration.maxEdgeThickness,
+    )
+  ) {
+    issues.push(issue('edgeThickness'))
+  }
+  if (
+    !isStepInRange(
       value.tiltAngle,
       configuration.minTiltAngle,
       configuration.maxTiltAngle,
+      configuration.tiltAngleStep,
     )
   ) {
     issues.push(issue('tiltAngle'))
@@ -624,6 +639,7 @@ function fileStem(parameters: OpenGridOpenConnectOrganizerParameters): string {
     `d${parameters.holeDiameter}`,
     `h${parameters.holeDepth}`,
     `b${parameters.bottomThickness}`,
+    `e${parameters.edgeThickness}`,
     `a${parameters.tiltAngle}`,
   ].join('-')
 }

@@ -123,6 +123,7 @@ export const OPENGRID_OPENCONNECT_ORGANIZER_PARAMETER_KEYS: ModelParameterKey[] 
     'holeDiameter',
     'holeDepth',
     'bottomThickness',
+    'edgeThickness',
     'tiltAngle',
   ]
 
@@ -570,7 +571,9 @@ function parseOpenGridOpenConnectOrganizerRawParameters(raw: RawParameters):
   if (holeDepth === null) return invalid('holeDepth')
   const bottomThickness = parseFiniteDecimalInput(raw.bottomThickness ?? '')
   if (bottomThickness === null) return invalid('bottomThickness')
-  const tiltAngle = parseHalfStepInput(raw.tiltAngle ?? '')
+  const edgeThickness = parseFiniteDecimalInput(raw.edgeThickness ?? '')
+  if (edgeThickness === null) return invalid('edgeThickness')
+  const tiltAngle = parseFiniteDecimalInput(raw.tiltAngle ?? '')
   if (tiltAngle === null) return invalid('tiltAngle')
 
   const parameters: OpenGridOpenConnectOrganizerParameters = {
@@ -583,6 +586,7 @@ function parseOpenGridOpenConnectOrganizerRawParameters(raw: RawParameters):
     holeDiameter,
     holeDepth,
     bottomThickness,
+    edgeThickness,
     tiltAngle,
   }
   const validation = validateModelParameters(
@@ -648,6 +652,7 @@ export function rawFromParameters(
       holeDiameter: String(organizerParameters.holeDiameter),
       holeDepth: String(organizerParameters.holeDepth),
       bottomThickness: String(organizerParameters.bottomThickness),
+      edgeThickness: String(organizerParameters.edgeThickness),
       tiltAngle: String(organizerParameters.tiltAngle),
     }
   }

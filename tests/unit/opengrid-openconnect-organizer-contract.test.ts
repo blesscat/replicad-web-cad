@@ -37,6 +37,7 @@ describe('OpenGrid OpenConnect organizer contract', () => {
       holeDiameter: 20,
       holeDepth: 20,
       bottomThickness: 2,
+      edgeThickness: 3,
       tiltAngle: 15,
     })
     expect(validateOpenGridOpenConnectOrganizerParameters(value)).toEqual({
@@ -96,36 +97,122 @@ describe('OpenGrid OpenConnect organizer contract', () => {
     expect(layout.bodyDepth).toBe(30)
   })
 
-  it('derives a direct 2-by-1 locked interface for the default body', () => {
+  it('uses the selected edge on local X/Y while preserving the 28 mm width minimum', () => {
+    const layout = openGridOpenConnectOrganizerLayoutFor(
+      parameters({
+        holeCountX: 1,
+        holeCountY: 1,
+        holeDiameter: 10,
+        edgeThickness: 0.4,
+      }),
+    )
+
+    expect(layout.requiredSpan).toEqual({ x: 10, y: 10 })
+    expect(layout.bodyWidth).toBe(28)
+    expect(layout.bodyDepth).toBeCloseTo(10.8, 10)
+    expect(
+      (layout.bodyWidth - layout.requiredSpan.x) / 2,
+    ).toBeGreaterThanOrEqual(0.4)
+    expect((layout.bodyDepth - layout.requiredSpan.y) / 2).toBeCloseTo(0.4, 10)
+  })
+
+  it('keeps the default body continuous with one centered, top-aligned socket', () => {
     const value = parameters()
     const layout = openGridOpenConnectOrganizerLayoutFor(value)
     const configuration = OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION
 
     expect(layout.bodyThickness).toBe(22)
-    expect(layout.connectorColumns).toBe(2)
+    expect(layout.bodyWidth).toBe(48)
+    expect(layout.connectorColumns).toBe(1)
     expect(layout.connectorRows).toBe(1)
-    expect(layout.rearInterfaceWidth).toBe(2 * configuration.gridPitch)
+    expect(layout.rearInterfaceWidth).toBe(48)
     expect(layout.rearInterfaceHeight).toBe(configuration.gridPitch)
     expect(openGridOpenConnectOrganizerSlotOriginsFor(value)).toEqual([
-      [-configuration.gridPitch / 2, configuration.rearThickness, 14],
-      [configuration.gridPitch / 2, configuration.rearThickness, 14],
+      [0, configuration.rearThickness, 14],
     ])
   })
 
-  it('grows the smallest 28 mm interface around larger layouts', () => {
-    const shallow = openGridOpenConnectOrganizerLayoutFor(
-      parameters({ holeCountX: 1, holeCountY: 1, holeDiameter: 10 }),
-    )
-    const wide = openGridOpenConnectOrganizerLayoutFor(
-      parameters({ holeCountX: 4, holeCountY: 1, holeDiameter: 20 }),
-    )
-    const deep = openGridOpenConnectOrganizerLayoutFor(
-      parameters({ holeCountX: 1, holeCountY: 1, holeDepth: 60 }),
-    )
+  it('uses completed 28 mm spans and grows the second connector at 56 mm', () => {
+    const layoutForWidth = (bodyWidth: number) =>
+      openGridOpenConnectOrganizerLayoutFor(
+        parameters({
+          holeCountX: 1,
+          holeCountY: 1,
+          holeDiameter: bodyWidth - 8,
+          edgeThickness: 4,
+        }),
+      )
+    const layoutForHeight = (bodyThickness: number) =>
+      openGridOpenConnectOrganizerLayoutFor(
+        parameters({
+          holeCountX: 1,
+          holeCountY: 1,
+          holeDepth: bodyThickness,
+          bottomThickness: 0,
+        }),
+      )
 
-    expect(shallow.connectorColumns).toBe(1)
-    expect(wide.connectorColumns).toBe(4)
-    expect(deep.connectorRows).toBe(3)
+    expect(layoutForWidth(28)).toMatchObject({
+      bodyWidth: 28,
+      connectorColumns: 1,
+      rearInterfaceWidth: 28,
+    })
+    expect(layoutForWidth(55)).toMatchObject({
+      bodyWidth: 55,
+      connectorColumns: 1,
+      rearInterfaceWidth: 55,
+    })
+    expect(layoutForWidth(55.9999999995)).toMatchObject({
+      bodyWidth: 55.9999999995,
+      connectorColumns: 1,
+      rearInterfaceWidth: 55.9999999995,
+    })
+    expect(layoutForWidth(56)).toMatchObject({
+      bodyWidth: 56,
+      connectorColumns: 2,
+      rearInterfaceWidth: 56,
+    })
+    expect(layoutForHeight(28)).toMatchObject({
+      connectorRows: 1,
+      rearInterfaceHeight: 28,
+    })
+    expect(layoutForHeight(55)).toMatchObject({
+      connectorRows: 1,
+      rearInterfaceHeight: 55,
+    })
+    expect(layoutForHeight(55.9999999995)).toMatchObject({
+      connectorRows: 1,
+      rearInterfaceHeight: 55.9999999995,
+    })
+    expect(layoutForHeight(56)).toMatchObject({
+      connectorRows: 2,
+      rearInterfaceHeight: 56,
+    })
+  })
+
+  it('centers columns and aligns rows to the interface top', () => {
+    const horizontal = parameters({
+      holeCountX: 1,
+      holeCountY: 1,
+      holeDiameter: 48,
+      edgeThickness: 4,
+    })
+    const vertical = parameters({
+      holeCountX: 1,
+      holeCountY: 1,
+      holeDepth: 66,
+      bottomThickness: 0,
+    })
+    const configuration = OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION
+
+    expect(openGridOpenConnectOrganizerSlotOriginsFor(horizontal)).toEqual([
+      [-14, configuration.rearThickness, 14],
+      [14, configuration.rearThickness, 14],
+    ])
+    expect(openGridOpenConnectOrganizerSlotOriginsFor(vertical)).toEqual([
+      [0, configuration.rearThickness, 52],
+      [0, configuration.rearThickness, 24],
+    ])
   })
 
   it('tilts every floor-to-opening axis toward the user', () => {
@@ -138,16 +225,18 @@ describe('OpenGrid OpenConnect organizer contract', () => {
     expect(Math.hypot(...axis)).toBeCloseTo(1, 10)
   })
 
-  it('enforces linked spacing, exact keys, ranges, and half-degree tilt', () => {
+  it('enforces linked spacing, exact keys, ranges, and whole-degree tilt', () => {
     const invalid = [
       parameters({ holeSpacingY: 3 }),
       parameters({ holeShape: 'octagon' as never }),
       parameters({ holeCountX: 1.5 }),
       parameters({ holeDiameter: Number.NaN }),
       parameters({ holeDepth: 0 }),
-      parameters({ bottomThickness: 0 }),
+      parameters({ bottomThickness: -0.1 }),
+      parameters({ edgeThickness: 0.39 }),
       parameters({ tiltAngle: 45.5 }),
-      parameters({ tiltAngle: 13.25 }),
+      parameters({ tiltAngle: 13.5 }),
+      parameters({ tiltAngle: 13.0000000005 }),
       { ...parameters(), extra: true },
     ]
 
@@ -158,7 +247,11 @@ describe('OpenGrid OpenConnect organizer contract', () => {
     }
     expect(
       validateOpenGridOpenConnectOrganizerParameters(
-        parameters({ tiltAngle: 13.5 }),
+        parameters({
+          bottomThickness: 0,
+          edgeThickness: 0.4,
+          tiltAngle: 13,
+        }),
       ).valid,
     ).toBe(true)
   })
@@ -187,8 +280,8 @@ describe('OpenGrid OpenConnect organizer contract', () => {
     const validation = validateOpenGridOpenConnectOrganizerParameters(
       parameters({
         holeCountX: 1,
-        holeCountY: 1,
-        holeDiameter: 1,
+        holeCountY: 2,
+        holeDiameter: 20,
         holeDepth: 470,
         bottomThickness: 1,
         tiltAngle: 45,
@@ -212,7 +305,8 @@ describe('OpenGrid OpenConnect organizer contract', () => {
       holeDiameter: 18,
       holeDepth: 30,
       bottomThickness: 3,
-      tiltAngle: 22.5,
+      edgeThickness: 4.5,
+      tiltAngle: 22,
     })
     const bounds = boundsForOpenGridOpenConnectOrganizer(value)
     const installedBounds =
@@ -239,7 +333,8 @@ describe('OpenGrid OpenConnect organizer contract', () => {
       'd18',
       'h30',
       'b3',
-      'a22.5',
+      'e4.5',
+      'a22',
     ]) {
       expect(step).toContain(token)
     }

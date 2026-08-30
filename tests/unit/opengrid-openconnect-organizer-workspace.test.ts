@@ -39,7 +39,7 @@ function parameters(
 }
 
 describe('OpenGrid OpenConnect organizer workspace integration', () => {
-  it('round-trips the exact ten-field snapshot used for generation', () => {
+  it('round-trips the exact eleven-field snapshot used for generation', () => {
     const value = parameters({
       holeCountX: 3,
       holeCountY: 4,
@@ -50,7 +50,8 @@ describe('OpenGrid OpenConnect organizer workspace integration', () => {
       holeDiameter: 18.5,
       holeDepth: 32,
       bottomThickness: 3.5,
-      tiltAngle: 22.5,
+      edgeThickness: 4.5,
+      tiltAngle: 22,
     })
     const raw = rawFromParameters(value)
 
@@ -64,7 +65,8 @@ describe('OpenGrid OpenConnect organizer workspace integration', () => {
       holeDiameter: '18.5',
       holeDepth: '32',
       bottomThickness: '3.5',
-      tiltAngle: '22.5',
+      edgeThickness: '4.5',
+      tiltAngle: '22',
     })
     expect(parseRawParameters(raw, 'opengrid-openconnect-organizer')).toEqual({
       valid: true,
@@ -78,7 +80,7 @@ describe('OpenGrid OpenConnect organizer workspace integration', () => {
     })
   })
 
-  it('rejects mismatched linked spacing, unsupported shapes, and quarter-degree tilt', () => {
+  it('rejects mismatched linked spacing, unsupported shapes, and fractional tilt', () => {
     expect(
       parseRawParameters(
         {
@@ -101,22 +103,23 @@ describe('OpenGrid OpenConnect organizer workspace integration', () => {
       parseRawParameters(
         {
           ...rawFromParameters(parameters()),
-          tiltAngle: '12.25',
+          tiltAngle: '12.5',
         },
         'opengrid-openconnect-organizer',
       ),
     ).toMatchObject({ valid: false, field: 'tiltAngle' })
   })
 
-  it('accepts finite decimal dimensions while keeping tilt on half degrees', () => {
+  it('accepts zero bottom and decimal dimensions while keeping whole-degree tilt', () => {
     const value = parameters({
       holeSpacingMode: 'independent',
       holeSpacingX: 2.25,
       holeSpacingY: 3.125,
       holeDiameter: 18.75,
       holeDepth: 27.25,
-      bottomThickness: 2.125,
-      tiltAngle: 12.5,
+      bottomThickness: 0,
+      edgeThickness: 0.4,
+      tiltAngle: 12,
     })
 
     expect(

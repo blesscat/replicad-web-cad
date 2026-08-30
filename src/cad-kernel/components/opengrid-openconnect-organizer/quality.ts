@@ -243,6 +243,23 @@ function volumeInOwnedProbes(
   }
 }
 
+function probeIsMostlyFilled(probe: {
+  actual: number
+  expected: number
+}): boolean {
+  return probe.expected > 0 && probe.actual >= probe.expected * 0.9
+}
+
+function probeIsMostlyEmpty(probe: {
+  actual: number
+  expected: number
+}): boolean {
+  return (
+    probe.expected > 0 &&
+    probe.actual <= Math.min(PROBE_VOLUME_TOLERANCE, probe.expected * 0.1)
+  )
+}
+
 function expectedCavitySideCount(
   shape: OpenGridOpenConnectOrganizerParameters['holeShape'],
 ): number {
@@ -276,6 +293,7 @@ async function inspectCavities(
   let floorCount = 0
   let cavityCount = 0
   let bottomThicknessValid = true
+  const expectsFloor = parameters.bottomThickness > 0
 
   for (
     let start = 0;
@@ -329,9 +347,15 @@ async function inspectCavities(
           record.max[1] - record.min[1] <=
             layout.cavityEnvelope.y + 2 * GEOMETRY_TOLERANCE,
       )
-      if (hasFloor) floorCount += 1
-      else failures.push(`cavity-floor-${index}`)
-      topologyValid.push(hasFloor && sideRecords.length === expectedSideCount)
+      if (expectsFloor && hasFloor) floorCount += 1
+      if (expectsFloor && !hasFloor) failures.push(`cavity-floor-${index}`)
+      if (!expectsFloor && hasFloor) {
+        failures.push(`unexpected-cavity-floor-${index}`)
+      }
+      const floorTopologyValid = expectsFloor ? hasFloor : !hasFloor
+      topologyValid.push(
+        floorTopologyValid && sideRecords.length === expectedSideCount,
+      )
     }
 
     const cavityProbes = createOwnedShapes(batch, ([centerX, centerY]) => {
@@ -348,25 +372,38 @@ async function inspectCavities(
 
     const bottomProbes = createOwnedShapes(batch, ([centerX, centerY]) => {
       const probeHalf = Math.min(0.2, parameters.holeDiameter / 8)
+      if (!expectsFloor) {
+        return makeBox(
+          [centerX - probeHalf, centerY - probeHalf, 0],
+          [
+            centerX + probeHalf,
+            centerY + probeHalf,
+            Math.min(0.1, parameters.holeDepth / 2),
+          ],
+        )
+      }
+      const bottomInset = Math.min(0.05, parameters.bottomThickness / 4)
       return makeBox(
-        [centerX - probeHalf, centerY - probeHalf, 0.1],
+        [centerX - probeHalf, centerY - probeHalf, bottomInset],
         [
           centerX + probeHalf,
           centerY + probeHalf,
-          parameters.bottomThickness - 0.1,
+          parameters.bottomThickness - bottomInset,
         ],
       )
     })
     const bottomProbe = volumeInOwnedProbes(shape, bottomProbes)
-    const bottomsPresent =
-      bottomProbe.expected > 0 &&
-      bottomProbe.expected - bottomProbe.actual <= PROBE_VOLUME_TOLERANCE
-    if (!bottomsPresent) {
-      failures.push(`bottom-thickness-batch-${start}`)
+    const bottomsCorrect = expectsFloor
+      ? probeIsMostlyFilled(bottomProbe)
+      : probeIsMostlyEmpty(bottomProbe)
+    if (!bottomsCorrect) {
+      failures.push(
+        `${expectsFloor ? 'bottom-thickness' : 'through-bottom'}-batch-${start}`,
+      )
       bottomThicknessValid = false
     }
 
-    if (cavitiesOpen && bottomsPresent) {
+    if (cavitiesOpen && bottomsCorrect) {
       cavityCount += topologyValid.filter(Boolean).length
     }
     await yieldAtQualityBoundary(context)
