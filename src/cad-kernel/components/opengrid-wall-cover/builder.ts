@@ -193,6 +193,20 @@ function cutShape(
   }
 }
 
+function fuseTextShape(textShape: Shape3D): Shape3D {
+  // Some CJK glyphs contain overlapping solids after their contours are
+  // extruded. Self-fusing the compound resolves those overlaps for the
+  // boolean cut and produces a valid independent text part for 3MF.
+  try {
+    const fused = textShape.fuse(textShape)
+    deleteShape(textShape)
+    return fused
+  } catch (error) {
+    deleteShape(textShape)
+    throw error
+  }
+}
+
 async function buildCoverBody(
   context: OpenGridWallCoverBuildContext,
 ): Promise<Shape3D> {
@@ -263,9 +277,11 @@ export async function buildOpenGridWallCoverWithFlatText(
         const body = sourceSolids[bodyIndex]
         if (!body) throw new Error('OPENGRID_WALL_COVER_BODY_MISSING')
 
-        const glyph = await makeOpenGridWallCoverTextGlyphShape(letter, centerX)
-        textPieces.push(glyph)
-        const bodyWithCavity = cutShape(body, cloneShape(glyph), cutScope)
+        const fusedGlyph = fuseTextShape(
+          await makeOpenGridWallCoverTextGlyphShape(letter, centerX),
+        )
+        textPieces.push(fusedGlyph)
+        const bodyWithCavity = cutShape(body, cloneShape(fusedGlyph), cutScope)
         sourceSolids[bodyIndex] = bodyWithCavity
         for (const solid of sourceSolids) {
           bodyPieces.push(cloneShape(solid))

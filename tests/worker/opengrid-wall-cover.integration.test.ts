@@ -30,6 +30,9 @@ const wallCoverTextCases = [
   { text: 'A', coverCount: 1 },
   { text: 'IAN', coverCount: 3 },
   { text: '收納', coverCount: 2 },
+  { text: '字', coverCount: 1 },
+  { text: '嗎', coverCount: 1 },
+  { text: '都會做', coverCount: 3 },
   { text: 'ABCDEFGH', coverCount: 8 },
 ] as const
 
