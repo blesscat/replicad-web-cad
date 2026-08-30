@@ -9,6 +9,7 @@ import type {
 import {
   OPENGRID_CONFIGURATION,
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+  OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_PREVIEW_CONFIGURATION,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
@@ -45,6 +46,9 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
   }
   if (modelId === 'opengrid-stackable-cylinder') {
     return { ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS }
+  }
+  if (modelId === 'opengrid-openconnect-organizer') {
+    return { ...OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS }
   }
   if (modelId === 'opengrid-snap') {
     return {
@@ -194,6 +198,30 @@ describe('CAD model generation debounce', () => {
       depth: 30,
       height: 40,
     })
+  })
+
+  it('dispatches the exact OpenConnect organizer snapshot to generation', () => {
+    const initial = {
+      ...OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS,
+      holeShape: 'triangle' as const,
+      tiltAngle: 20,
+    }
+    const { send, context } = createRuntimeContext(
+      'opengrid-openconnect-organizer',
+      initial,
+    )
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('holeDepth', '30')
+    vi.advanceTimersByTime(PROTOTYPE_CONFIGURATION.inputDebounceMs)
+
+    expect(send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.generate',
+        modelId: 'opengrid-openconnect-organizer',
+        parameters: { ...initial, holeDepth: 30 },
+      }),
+    )
   })
 
   it('clamps an OpenConnect shelf angle when a deeper row count lowers its limit', () => {
@@ -458,6 +486,32 @@ describe('CAD model generation debounce', () => {
     expect(generateCalls[0]?.[0]).toMatchObject({
       generation: 3,
       parameters: { width: 23, depth: 30, height: 40 },
+    })
+  })
+
+  it('generates only the latest rapid OpenConnect organizer snapshot', () => {
+    const { send, context } = createRuntimeContext(
+      'opengrid-openconnect-organizer',
+    )
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('tiltAngle', '20')
+    handlers.handleInputChange('tiltAngle', '25')
+    handlers.handleInputChange('tiltAngle', '30')
+
+    vi.advanceTimersByTime(PROTOTYPE_CONFIGURATION.inputDebounceMs)
+
+    const generateCalls = send.mock.calls.filter(
+      ([command]) => command.kind === 'model.generate',
+    )
+    expect(generateCalls).toHaveLength(1)
+    expect(generateCalls[0]?.[0]).toMatchObject({
+      modelId: 'opengrid-openconnect-organizer',
+      generation: 3,
+      parameters: {
+        ...OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS,
+        tiltAngle: 30,
+      },
     })
   })
 

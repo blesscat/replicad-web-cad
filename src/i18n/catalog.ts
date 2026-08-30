@@ -217,6 +217,14 @@ export const zhHantMessages = {
     '完整水平 OpenGrid Full 平面與可選 X/Z 數量的垂直 OpenConnect 鎖定孔形成正確 90° 介面；底側使用 X/Y 格線落地、格間不封底的肋條支撐。',
   'models.model.opengrid-openconnect-shelf.alt':
     'OpenGrid OpenConnect 壁掛層架預覽',
+  'models.model.opengrid-openconnect-organizer.name':
+    'OpenGrid OpenConnect Organizer（壁掛收納方格）',
+  'models.model.opengrid-openconnect-organizer.selection':
+    'OpenConnect Organizer（壁掛收納方格）',
+  'models.model.opengrid-openconnect-organizer.description':
+    '直接以背面 OpenConnect 母座掛牆的收納件；可調整 X/Y 孔數、孔距、圓形或 3–6 邊形孔、孔深、底厚、邊緣厚度與開口朝使用者的前傾角。',
+  'models.model.opengrid-openconnect-organizer.alt':
+    'OpenGrid OpenConnect 壁掛前傾收納方格預覽',
   'docs.eyebrow': 'Documentation',
   'docs.deskQuickStart.title': 'Desk System 快速入門',
   'docs.deskQuickStart.intro':
@@ -309,6 +317,11 @@ export const zhHantMessages = {
     'OpenConnect Shelf 將水平 OpenGrid Full 層板與垂直 OpenConnect 鎖定孔組合成壁掛層架。',
   'docs.wall.shelf.cta': '開啟 OpenConnect Shelf →',
   'docs.wall.shelf.alt': 'OpenGrid OpenConnect 壁掛層架預覽',
+  'docs.wall.organizer.title': 'OpenConnect 壁掛收納格',
+  'docs.wall.organizer.body':
+    '直接以與牆面平行的 OpenConnect 母座掛牆，可選孔陣列、圓形或 3／4／5／6 邊形，以及讓上方開口朝使用者前傾的角度。',
+  'docs.wall.organizer.cta': '開啟 OpenConnect 壁掛收納格 →',
+  'docs.wall.organizer.alt': 'OpenGrid OpenConnect 壁掛收納格預覽',
   'docs.modelReference.title': '目前模型與系統',
   'docs.modelReference.body':
     '模型選擇頁是目前所有可用產生器的入口。以下用系統情境整理主要模型；實際參數、範圍與匯出格式請以模型詳情和 CAD 工作區為準。',
@@ -366,6 +379,8 @@ export const zhHantMessages = {
     '`snap-half` 與 `snap-quarter` 是根據原始 Snap 修改的衍生版本，固定下載檔名為 `Half.step` 與 `Quarter.step`；OpenConnect head 與底部介面缺口則根據 mitufy 的 OpenConnect 系統整合，來源授權為 CC BY 4.0。',
   'cad.attribution.openConnectShelf.modified':
     '產生器以附帶的鎖定孔 STEP 作為減法模板，並建立原生 OpenGrid Full 層板、支撐與列印朝向。',
+  'cad.attribution.openConnectOrganizer.modified':
+    '產生器以附帶的鎖定孔 STEP 作為減法模板，並建立單件收納本體、向使用者前傾的孔軸與平行牆面的整合式後方母座。',
   'cad.attribution.licenseLabel': '授權',
   'cad.attribution.sourceCodeLicense': '上游程式碼：CC BY-NC-SA 4.0',
   'cad.attribution.derivedPartsLicense': '衍生／產生零件：CC BY 4.0',
@@ -430,8 +445,14 @@ export const zhHantMessages = {
   'parameter.organizerHoleDiameter': '孔直徑（多邊形為內切圓直徑）',
   'parameter.organizerHoleDepth': '孔深度',
   'parameter.organizerBottomThickness': '底部加厚',
+  'parameter.organizerEdgeThickness': '孔洞至外緣厚度',
+  'parameter.organizerThicknessHelp':
+    '底厚設為 0 mm 時孔洞會貫穿底部；邊緣厚度同時控制局部 X/Y 孔洞外緣到本體外緣的最小距離。',
   'parameter.organizerStackingClearance': '堆疊淨空',
   'parameter.organizerHoleShape': '孔形狀',
+  'parameter.organizerForwardTilt': '開口前傾角',
+  'parameter.organizerForwardTiltHelp':
+    '角度增加時，收納孔開口上方會朝使用者移動，底部仍較靠近牆面。',
   'cad.action.step': '下載 STEP',
   'cad.action.stl': '下載 STL',
   'cad.action.threeMf': '下載 3MF',
@@ -467,6 +488,8 @@ export const zhHantMessages = {
     'OpenGrid Wall Cover 幾何未通過品質檢查，請重試。',
   'diagnostic.dividerQualityInvalid':
     'OpenGrid 分隔器幾何未通過品質檢查，請調整參數後重試。',
+  'diagnostic.openConnectOrganizerQualityInvalid':
+    'OpenGrid OpenConnect 壁掛收納件未通過單一實體與接孔品質檢查，請調整參數後重試。',
   'diagnostic.browserEnvironmentRequired':
     '需要瀏覽器環境才能使用 CAD workspace。',
   'diagnostic.webAssemblyUnsupported': '此瀏覽器不支援 WebAssembly。',
@@ -553,6 +576,12 @@ export const zhHantMessages = {
     '完整 OpenGrid Full 使用水平安裝面，後方 OpenConnect 鎖定孔面保持垂直；Z 控制層板下方的接口層數，角度只控制 X/Y 格線落地、格間透空的肋條與整體列印朝向。',
   'panel.openConnectShelf.maximumAngle':
     '目前 Y={rows} 格、Z={connectorRows} 格可用的最大角度為 {maximum}°，確保前端至少保留 7 mm 高度。',
+  'panel.openConnectOrganizer.description':
+    '不需要底座或轉接件：OpenConnect 母座直接切在整合背面，母座開口面與牆面平行，欄位水平置中、列位垂直置頂。',
+  'panel.openConnectOrganizer.interfaceSummary': '自動計算掛牆介面',
+  'panel.openConnectOrganizer.interfaceValue':
+    '{columns} 欄 × {rows} 列 OpenConnect 母座；介面 {width} × {height} mm',
+  'panel.openConnectOrganizer.interfaceInvalid': '目前輸入尚無法計算掛牆介面',
   'panel.opening.direction.front': '前方',
   'panel.opening.direction.back': '後方',
   'panel.opening.direction.left': '左方',
@@ -953,6 +982,14 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'A wall shelf with a complete horizontal OpenGrid Full interface at exactly 90° to a selectable X/Z grid of locked OpenConnect sockets, supported by grounded X/Y ribs with open cell bays.',
   'models.model.opengrid-openconnect-shelf.alt':
     'OpenGrid OpenConnect wall shelf preview',
+  'models.model.opengrid-openconnect-organizer.name':
+    'OpenGrid OpenConnect Organizer',
+  'models.model.opengrid-openconnect-organizer.selection':
+    'OpenConnect Organizer',
+  'models.model.opengrid-openconnect-organizer.description':
+    'An organizer that mounts directly through integrated rear OpenConnect female sockets, with configurable X/Y counts, spacing, circle or regular 3–6-sided cavities, depth, bottom thickness, edge thickness, and opening-toward-user tilt.',
+  'models.model.opengrid-openconnect-organizer.alt':
+    'OpenGrid OpenConnect forward-tilted wall organizer preview',
   'docs.eyebrow': 'Documentation',
   'docs.deskQuickStart.title': 'Desk System Quick Start',
   'docs.deskQuickStart.intro':
@@ -1049,6 +1086,11 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'OpenConnect Shelf combines a horizontal OpenGrid Full shelf with vertical OpenConnect locking sockets to form a wall shelf.',
   'docs.wall.shelf.cta': 'Open OpenConnect Shelf →',
   'docs.wall.shelf.alt': 'OpenGrid OpenConnect wall shelf preview',
+  'docs.wall.organizer.title': 'OpenConnect Wall Organizer',
+  'docs.wall.organizer.body':
+    'Mount directly with wall-parallel OpenConnect female sockets, then choose the cavity matrix, circular or 3/4/5/6-sided openings, and a forward tilt that brings the top openings toward you.',
+  'docs.wall.organizer.cta': 'Open OpenConnect Wall Organizer →',
+  'docs.wall.organizer.alt': 'OpenGrid OpenConnect wall organizer preview',
   'docs.modelReference.title': 'Current models and systems',
   'docs.modelReference.body':
     'The model chooser is the entry point for every currently available generator. These groups organize the main models by use case; use each model detail view and CAD workspace for exact parameters, ranges, and export formats.',
@@ -1109,6 +1151,8 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     "`snap-half` and `snap-quarter` are modified derivatives of the original Snap design; the fixed download filenames are `Half.step` and `Quarter.step`. The OpenConnect head and underside interface notch are derived from mitufy's OpenConnect system under CC BY 4.0.",
   'cad.attribution.openConnectShelf.modified':
     'The generator uses the supplied locked-socket STEP as a subtractive template and builds the OpenGrid Full shelf, support structure, and print orientation natively.',
+  'cad.attribution.openConnectOrganizer.modified':
+    'The generator uses the supplied locked-socket STEP as a subtractive template and natively builds the one-piece organizer body, user-facing cavity tilt, and integrated rear female interface parallel to the wall.',
   'cad.attribution.licenseLabel': 'Licenses',
   'cad.attribution.sourceCodeLicense': 'Upstream source code: CC BY-NC-SA 4.0',
   'cad.attribution.derivedPartsLicense': 'Derived/generated parts: CC BY 4.0',
@@ -1175,8 +1219,14 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'parameter.organizerHoleDiameter': 'Hole diameter (inscribed for polygons)',
   'parameter.organizerHoleDepth': 'Hole depth',
   'parameter.organizerBottomThickness': 'Bottom thickness',
+  'parameter.organizerEdgeThickness': 'Cavity-to-edge thickness',
+  'parameter.organizerThicknessHelp':
+    'Set bottom thickness to 0 mm for through-open cavities. Edge thickness controls the minimum local X/Y distance from the cavity envelope to the body edge.',
   'parameter.organizerStackingClearance': 'Stacking clearance',
   'parameter.organizerHoleShape': 'Hole shape',
+  'parameter.organizerForwardTilt': 'Opening forward tilt',
+  'parameter.organizerForwardTiltHelp':
+    'Increasing the angle moves the cavity openings toward the user while the bottom remains closer to the wall.',
   'cad.action.step': 'Download STEP',
   'cad.action.stl': 'Download STL',
   'cad.action.threeMf': 'Download 3MF',
@@ -1217,6 +1267,8 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'The OpenGrid Wall Cover geometry did not pass quality checks. Try again.',
   'diagnostic.dividerQualityInvalid':
     'The OpenGrid divider geometry did not pass quality checks. Adjust the parameters and try again.',
+  'diagnostic.openConnectOrganizerQualityInvalid':
+    'The OpenGrid OpenConnect wall organizer did not pass its single-solid and socket quality checks. Adjust the parameters and try again.',
   'diagnostic.browserEnvironmentRequired':
     'A browser environment is required for the CAD workspace.',
   'diagnostic.webAssemblyUnsupported':
@@ -1309,6 +1361,13 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'The complete OpenGrid Full interface installs horizontally while the rear locked OpenConnect socket plane remains vertical. Z controls the interface rows below the shelf; angle changes only the grounded X/Y ribs with open cell bays and the whole-part print orientation.',
   'panel.openConnectShelf.maximumAngle':
     'The maximum angle for Y={rows} cells and Z={connectorRows} cells is {maximum}°, preserving at least 7 mm at the front.',
+  'panel.openConnectOrganizer.description':
+    'No base or adapter is required: OpenConnect female sockets are cut directly into the integrated rear surface, with opening planes parallel to the wall, columns centered, and rows top-aligned.',
+  'panel.openConnectOrganizer.interfaceSummary': 'Calculated wall interface',
+  'panel.openConnectOrganizer.interfaceValue':
+    '{columns} columns × {rows} rows of OpenConnect female sockets; {width} × {height} mm interface',
+  'panel.openConnectOrganizer.interfaceInvalid':
+    'The wall interface cannot be calculated from the current input yet',
   'panel.opening.direction.front': 'Front',
   'panel.opening.direction.back': 'Back',
   'panel.opening.direction.left': 'Left',

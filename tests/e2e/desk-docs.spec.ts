@@ -92,7 +92,7 @@ for (const locale of locales) {
       page.locator(
         '[data-testid="docs-wall-system"] img[src^="/model-previews/"]',
       ),
-    ).toHaveCount(4)
+    ).toHaveCount(5)
     const diagramAltPatterns = [
       ['desk-system-flow', /Board|流程圖/],
       ['desk-system-board-snap', /Board|俯視/],

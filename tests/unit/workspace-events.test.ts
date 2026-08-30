@@ -3,6 +3,11 @@ import type {
   MeshSnapshot,
   ProgressEvent,
 } from '../../src/cad-contract/messages'
+import {
+  OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS,
+  type ModelId,
+  type ModelParameterValues,
+} from '../../src/cad-contract/units'
 import { initialCadState } from '../../src/features/cad/state'
 import { rawFromParameters } from '../../src/components/cad/workspace/validation'
 import { createWorkerEventHandler } from '../../src/components/cad/workspace/runtime/events'
@@ -11,20 +16,23 @@ import type {
   RuntimeRefs,
 } from '../../src/components/cad/workspace/runtime/types'
 
-function createContext() {
-  const state = initialCadState()
+function createContext(
+  modelId: ModelId = 'box',
+  parameters: ModelParameterValues = { width: 20, depth: 30, height: 40 },
+) {
+  const state = initialCadState(modelId, parameters)
   const operations = new Map()
   operations.set('operation-2', {
     kind: 'model',
     generation: 2,
-    modelId: 'box',
+    modelId,
     parameters: state.input,
     requestId: 'request-2',
   })
   operations.set('operation-1', {
     kind: 'model',
     generation: 1,
-    modelId: 'box',
+    modelId,
     parameters: state.input,
     requestId: 'request-1',
   })
@@ -371,6 +379,69 @@ describe('CAD Worker progress lifecycle', () => {
       model: expect.objectContaining({ mesh }),
     })
     expect(refs.operations.current.has('operation-2')).toBe(false)
+  })
+
+  it('commits the validated OpenConnect organizer candidate mesh for the current revision', () => {
+    const parameters = {
+      ...OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS,
+      holeShape: 'hexagon' as const,
+      tiltAngle: 30,
+    }
+    const { context, refs } = createContext(
+      'opengrid-openconnect-organizer',
+      parameters,
+    )
+    const send = vi.fn()
+    refs.client.current = { send } as never
+    const handle = createWorkerEventHandler(context)
+    const mesh: MeshSnapshot = {
+      positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]).buffer,
+      normals: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]).buffer,
+      indices: new Uint32Array([0, 1, 2]).buffer,
+      bounds: { min: [-28, 0, 0], max: [28, 32, 56] },
+      triangleCount: 1,
+    }
+
+    handle({
+      version: 2,
+      kind: 'model.candidate-ready',
+      requestId: 'organizer-candidate-response',
+      operationId: 'operation-2',
+      generation: 2,
+      candidateId: 'organizer-candidate-1',
+      workerEpoch: 'epoch-test',
+      modelId: 'opengrid-openconnect-organizer',
+      parameters,
+      mesh,
+    })
+    handle({
+      version: 2,
+      kind: 'model.ready',
+      requestId: 'organizer-ready-response',
+      operationId: 'operation-2',
+      generation: 2,
+      modelRevision: 'organizer-revision-1',
+      workerEpoch: 'epoch-test',
+      modelId: 'opengrid-openconnect-organizer',
+      parameters,
+      bounds: mesh.bounds,
+    })
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'model.commit',
+        candidateId: 'organizer-candidate-1',
+      }),
+    )
+    expect(context.dispatch).toHaveBeenCalledWith({
+      type: 'model-ready',
+      model: expect.objectContaining({
+        revision: 'organizer-revision-1',
+        modelId: 'opengrid-openconnect-organizer',
+        parameters,
+        mesh,
+      }),
+    })
   })
 
   it('does not commit a Wall Cover candidate without both named part meshes', () => {

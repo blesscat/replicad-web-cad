@@ -216,6 +216,19 @@ import type {
   OpenGridOpenConnectShelfParameterKey,
   OpenGridOpenConnectShelfParameters,
 } from './opengrid-openconnect-shelf'
+import {
+  boundsForOpenGridOpenConnectOrganizer,
+  isOpenGridOpenConnectOrganizerParameters,
+  openGridOpenConnectOrganizerFileName,
+  openGridOpenConnectOrganizerStlFileName,
+  OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION,
+  OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS,
+  validateOpenGridOpenConnectOrganizerParameters,
+} from './opengrid-openconnect-organizer'
+import type {
+  OpenGridOpenConnectOrganizerParameterKey,
+  OpenGridOpenConnectOrganizerParameters,
+} from './opengrid-openconnect-organizer'
 
 export {
   OPENGRID_CONFIGURATION,
@@ -280,6 +293,23 @@ export {
   OPENGRID_OPENCONNECT_SHELF_DEFAULT_PARAMETERS,
   validateOpenGridOpenConnectShelfParameters,
 } from './opengrid-openconnect-shelf'
+export {
+  boundsForOpenGridOpenConnectOrganizer,
+  installedBoundsForOpenGridOpenConnectOrganizer,
+  isOpenGridOpenConnectOrganizerParameters,
+  openGridOpenConnectOrganizerCavityEnvelopeFor,
+  openGridOpenConnectOrganizerFileName,
+  openGridOpenConnectOrganizerLayoutFor,
+  openGridOpenConnectOrganizerPolygonPointsFor,
+  openGridOpenConnectOrganizerSlotOriginsFor,
+  openGridOpenConnectOrganizerStlFileName,
+  openGridOpenConnectOrganizerTiltAxisFor,
+  OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION,
+  OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS,
+  OPENGRID_OPENCONNECT_ORGANIZER_SHAPES,
+  OPENGRID_OPENCONNECT_ORGANIZER_SPACING_MODES,
+  validateOpenGridOpenConnectOrganizerParameters,
+} from './opengrid-openconnect-organizer'
 export {
   boundsForOpenGridDivider,
   classifyOpenGridDividerShape,
@@ -503,6 +533,18 @@ export type {
   OpenGridOpenConnectShelfValidationIssue,
 } from './opengrid-openconnect-shelf'
 export type {
+  OpenGridOpenConnectOrganizerCavityEnvelope,
+  OpenGridOpenConnectOrganizerLayout,
+  OpenGridOpenConnectOrganizerParameterKey,
+  OpenGridOpenConnectOrganizerParameters,
+  OpenGridOpenConnectOrganizerPoint2D,
+  OpenGridOpenConnectOrganizerPoint3D,
+  OpenGridOpenConnectOrganizerShape,
+  OpenGridOpenConnectOrganizerSpacingMode,
+  OpenGridOpenConnectOrganizerValidation,
+  OpenGridOpenConnectOrganizerValidationIssue,
+} from './opengrid-openconnect-organizer'
+export type {
   OpenGridDividerAxis,
   OpenGridDividerParameterKey,
   OpenGridDividerParameters,
@@ -602,6 +644,7 @@ export const PROTOTYPE_CONFIGURATION = {
   opengridDivider: OPENGRID_DIVIDER_CONFIGURATION,
   opengridOpenShelf: OPENGRID_OPEN_SHELF_CONFIGURATION,
   opengridOpenConnectShelf: OPENGRID_OPENCONNECT_SHELF_CONFIGURATION,
+  opengridOpenConnectOrganizer: OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION,
 } as const
 
 export type DimensionKey = 'width' | 'depth' | 'height'
@@ -621,6 +664,7 @@ export type ModelParameterKey =
   | PillarParameterKey
   | OpenGridOpenShelfParameterKey
   | OpenGridOpenConnectShelfParameterKey
+  | OpenGridOpenConnectOrganizerParameterKey
 export type ScalarModelParameterKey =
   | DimensionKey
   | GridParameterKey
@@ -644,6 +688,7 @@ export type ModelId =
   | 'opengrid-pillar'
   | 'opengrid-open-shelf'
   | 'opengrid-openconnect-shelf'
+  | 'opengrid-openconnect-organizer'
 
 export type BoxParameters = Record<DimensionKey, number>
 export type ModularGridBaseParameters = Record<GridParameterKey, number>
@@ -701,6 +746,10 @@ export type ModelParameters =
   | {
       modelId: 'opengrid-openconnect-shelf'
       parameters: OpenGridOpenConnectShelfParameters
+    }
+  | {
+      modelId: 'opengrid-openconnect-organizer'
+      parameters: OpenGridOpenConnectOrganizerParameters
     }
 
 export type ModelParameterValues = ModelParameters['parameters']
@@ -1344,6 +1393,12 @@ export function validateModelParameters(
     return { valid: true, value: { modelId, parameters: validation.value } }
   }
 
+  if (modelId === 'opengrid-openconnect-organizer') {
+    const validation = validateOpenGridOpenConnectOrganizerParameters(value)
+    if (!validation.valid) return validation
+    return { valid: true, value: { modelId, parameters: validation.value } }
+  }
+
   return {
     valid: false,
     issues: [{ field: 'parameters', messageId: 'validation.invalid' }],
@@ -1598,6 +1653,12 @@ export function isOpenGridOpenConnectShelfModelParameters(
   return isOpenGridOpenConnectShelfParameters(value)
 }
 
+export function isOpenGridOpenConnectOrganizerModelParameters(
+  value: unknown,
+): value is OpenGridOpenConnectOrganizerParameters {
+  return isOpenGridOpenConnectOrganizerParameters(value)
+}
+
 export function isModelParameters(value: unknown): value is ModelParameters {
   if (!value || typeof value !== 'object') return false
   const model = value as { modelId?: unknown; parameters?: unknown }
@@ -1636,6 +1697,8 @@ export function boundsForModel(model: ModelParameters): ModelBounds {
       return boundsForOpenGridOpenShelf(model.parameters)
     case 'opengrid-openconnect-shelf':
       return boundsForOpenGridOpenConnectShelf(model.parameters)
+    case 'opengrid-openconnect-organizer':
+      return boundsForOpenGridOpenConnectOrganizer(model.parameters)
   }
 }
 
@@ -1671,6 +1734,8 @@ export function modelFileName(model: ModelParameters): string {
       return openGridOpenShelfFileName(model.parameters)
     case 'opengrid-openconnect-shelf':
       return openGridOpenConnectShelfFileName(model.parameters)
+    case 'opengrid-openconnect-organizer':
+      return openGridOpenConnectOrganizerFileName(model.parameters)
   }
 }
 
@@ -1706,5 +1771,7 @@ export function modelStlFileName(model: ModelParameters): string {
       return openGridOpenShelfStlFileName(model.parameters)
     case 'opengrid-openconnect-shelf':
       return openGridOpenConnectShelfStlFileName(model.parameters)
+    case 'opengrid-openconnect-organizer':
+      return openGridOpenConnectOrganizerStlFileName(model.parameters)
   }
 }

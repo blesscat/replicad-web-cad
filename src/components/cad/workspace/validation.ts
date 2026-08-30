@@ -29,6 +29,7 @@ import {
   type ModelParameterValues,
   type OpenGridSnapParameters,
   type OpenGridOrganizerBoxParameters,
+  type OpenGridOpenConnectOrganizerParameters,
   type ScalarModelParameterKey,
   type ValidationIssue,
 } from '../../../cad-contract/units'
@@ -111,6 +112,20 @@ export const OPENGRID_ORGANIZER_BOX_PARAMETER_KEYS: ModelParameterKey[] = [
   'boxMode',
   'stackingClearanceHeight',
 ]
+export const OPENGRID_OPENCONNECT_ORGANIZER_PARAMETER_KEYS: ModelParameterKey[] =
+  [
+    'holeCountX',
+    'holeCountY',
+    'holeSpacingMode',
+    'holeSpacingX',
+    'holeSpacingY',
+    'holeShape',
+    'holeDiameter',
+    'holeDepth',
+    'bottomThickness',
+    'edgeThickness',
+    'tiltAngle',
+  ]
 
 function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   if (modelId === 'box') return DIMENSION_KEYS
@@ -122,6 +137,9 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
   }
   if (modelId === 'opengrid-organizer-box') {
     return OPENGRID_ORGANIZER_BOX_PARAMETER_KEYS
+  }
+  if (modelId === 'opengrid-openconnect-organizer') {
+    return OPENGRID_OPENCONNECT_ORGANIZER_PARAMETER_KEYS
   }
   if (modelId === 'opengrid-stackable-cylinder') {
     return OPENGRID_STACKABLE_CYLINDER_PARAMETER_KEYS
@@ -504,6 +522,89 @@ function parseOpenGridOrganizerBoxRawParameters(raw: RawParameters):
   return { valid: true, value: validation.value.parameters }
 }
 
+function parseOpenGridOpenConnectOrganizerRawParameters(raw: RawParameters):
+  | { valid: true; value: ModelParameterValues }
+  | {
+      valid: false
+      messageId: string
+      field?: ModelParameterKey
+      params?: DiagnosticParams
+    } {
+  const invalid = (field: ModelParameterKey) => ({
+    valid: false as const,
+    messageId: 'validation.invalid',
+    field,
+  })
+  const missingField = OPENGRID_OPENCONNECT_ORGANIZER_PARAMETER_KEYS.find(
+    (field) => raw[field] === undefined,
+  )
+  if (missingField) return invalid(missingField)
+
+  const holeCountX = parseDimensionInput(raw.holeCountX ?? '')
+  if (holeCountX === null) return invalid('holeCountX')
+  const holeCountY = parseDimensionInput(raw.holeCountY ?? '')
+  if (holeCountY === null) return invalid('holeCountY')
+
+  const holeSpacingMode = raw.holeSpacingMode
+  if (holeSpacingMode !== 'linked' && holeSpacingMode !== 'independent') {
+    return invalid('holeSpacingMode')
+  }
+  const holeSpacingX = parseFiniteDecimalInput(raw.holeSpacingX ?? '')
+  if (holeSpacingX === null) return invalid('holeSpacingX')
+  const holeSpacingY = parseFiniteDecimalInput(raw.holeSpacingY ?? '')
+  if (holeSpacingY === null) return invalid('holeSpacingY')
+
+  const holeShape = raw.holeShape
+  if (
+    holeShape !== 'circle' &&
+    holeShape !== 'triangle' &&
+    holeShape !== 'square' &&
+    holeShape !== 'pentagon' &&
+    holeShape !== 'hexagon'
+  ) {
+    return invalid('holeShape')
+  }
+
+  const holeDiameter = parseFiniteDecimalInput(raw.holeDiameter ?? '')
+  if (holeDiameter === null) return invalid('holeDiameter')
+  const holeDepth = parseFiniteDecimalInput(raw.holeDepth ?? '')
+  if (holeDepth === null) return invalid('holeDepth')
+  const bottomThickness = parseFiniteDecimalInput(raw.bottomThickness ?? '')
+  if (bottomThickness === null) return invalid('bottomThickness')
+  const edgeThickness = parseFiniteDecimalInput(raw.edgeThickness ?? '')
+  if (edgeThickness === null) return invalid('edgeThickness')
+  const tiltAngle = parseFiniteDecimalInput(raw.tiltAngle ?? '')
+  if (tiltAngle === null) return invalid('tiltAngle')
+
+  const parameters: OpenGridOpenConnectOrganizerParameters = {
+    holeCountX,
+    holeCountY,
+    holeSpacingMode,
+    holeSpacingX,
+    holeSpacingY,
+    holeShape,
+    holeDiameter,
+    holeDepth,
+    bottomThickness,
+    edgeThickness,
+    tiltAngle,
+  }
+  const validation = validateModelParameters(
+    'opengrid-openconnect-organizer',
+    parameters,
+  )
+  if (!validation.valid) {
+    const issue = validation.issues[0]
+    return {
+      valid: false,
+      messageId: issue?.messageId ?? 'validation.invalid',
+      field: modelParameterFieldFromDiagnostic(issue?.field),
+      ...(issue?.params ? { params: issue.params } : {}),
+    }
+  }
+  return { valid: true, value: validation.value.parameters }
+}
+
 export function rawFromParameters(
   parameters: ModelParameterValues,
 ): RawParameters {
@@ -536,6 +637,24 @@ export function rawFromParameters(
       )
     }
     return raw
+  }
+
+  if ('holeCountX' in parameters && 'tiltAngle' in parameters) {
+    const organizerParameters =
+      parameters as OpenGridOpenConnectOrganizerParameters
+    return {
+      holeCountX: String(organizerParameters.holeCountX),
+      holeCountY: String(organizerParameters.holeCountY),
+      holeSpacingMode: organizerParameters.holeSpacingMode,
+      holeSpacingX: String(organizerParameters.holeSpacingX),
+      holeSpacingY: String(organizerParameters.holeSpacingY),
+      holeShape: organizerParameters.holeShape,
+      holeDiameter: String(organizerParameters.holeDiameter),
+      holeDepth: String(organizerParameters.holeDepth),
+      bottomThickness: String(organizerParameters.bottomThickness),
+      edgeThickness: String(organizerParameters.edgeThickness),
+      tiltAngle: String(organizerParameters.tiltAngle),
+    }
   }
 
   if ('holeCountX' in parameters) {
@@ -887,6 +1006,10 @@ export function parseRawParameters(
     return parseOpenGridOrganizerBoxRawParameters(raw)
   }
 
+  if (modelId === 'opengrid-openconnect-organizer') {
+    return parseOpenGridOpenConnectOrganizerRawParameters(raw)
+  }
+
   const parsed: Partial<
     Record<ModelParameterKey, number | string | boolean | null>
   > = {}
@@ -966,6 +1089,14 @@ function parseHalfStepInput(raw: string): number | null {
     return null
   }
   return parsed
+}
+
+function parseFiniteDecimalInput(raw: string): number | null {
+  const value = raw.trim()
+  if (!/^-?(?:\d+\.?\d*|\.\d+)$/.test(value)) return null
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 export function supportsCadBrowser():

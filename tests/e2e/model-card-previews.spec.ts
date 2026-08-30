@@ -7,6 +7,8 @@ import {
   modelSelectionLabelFor,
 } from '../../src/features/cad/model-catalog'
 import { CAD_VIEWPORT_THEME_FALLBACK } from '../../src/features/cad/viewport/theme'
+import { translate } from '../../src/i18n'
+import { localizedCadPathFor } from '../../src/i18n/routes'
 import { waitForCadReady } from './helpers'
 
 const PREVIEW_WIDTH = 640
@@ -206,6 +208,7 @@ test('model cards expose static previews and preserve selection on image failure
     route.abort(),
   )
   await page.goto('/models')
+  const locale = 'zh-Hant' as const
 
   for (const definition of VISIBLE_MODEL_DEFINITIONS) {
     const preview = definition.previewImage
@@ -214,14 +217,17 @@ test('model cards expose static previews and preserve selection on image failure
 
     const card = page.locator(`[data-entry-key="${entryKey(definition)}"]`)
     await expect(card.locator('img')).toHaveAttribute('src', preview.src)
-    await expect(card.locator('img')).toHaveAttribute('alt', preview.alt)
+    await expect(card.locator('img')).toHaveAttribute(
+      'alt',
+      translate(locale, preview.alt),
+    )
     await expect(
       card.getByRole('link', {
-        name: `編輯 ${modelSelectionLabelFor(definition)}`,
+        name: `編輯 ${translate(locale, modelSelectionLabelFor(definition))}`,
       }),
     ).toHaveAttribute(
       'href',
-      cadPathForModel(definition.id, definition.systemContext),
+      localizedCadPathFor(locale, definition.id, definition.systemContext),
     )
   }
 

@@ -4,6 +4,7 @@ import {
   OPENGRID_CONFIGURATION,
   OPENGRID_DIVIDER_CONFIGURATION,
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+  OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   type OpenGridParameters,
@@ -204,5 +205,63 @@ describe('CAD state machine', () => {
     expect(stale.committed?.revision).toBe('opengrid-revision-1')
     expect(stale.stale).toBe(true)
     expect(stale.exportStatus).toBe('disabled')
+  })
+
+  it('keeps the committed OpenConnect organizer isolated from a failed candidate', () => {
+    const parameters = {
+      ...OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS,
+    }
+    const committedMesh = {
+      positions: new Float32Array([0, 0, 0]).buffer,
+      normals: new Float32Array([0, 0, 1]).buffer,
+      indices: new Uint32Array([0, 0, 0]).buffer,
+      bounds: {
+        min: [-28, 0, 0] as [number, number, number],
+        max: [28, 32, 56] as [number, number, number],
+      },
+      triangleCount: 1,
+    }
+    const ready = cadReducer(
+      initialCadState('opengrid-openconnect-organizer', parameters),
+      {
+        type: 'model-ready',
+        model: {
+          revision: 'organizer-revision-1',
+          workerEpoch: 'epoch-organizer',
+          generation: 1,
+          modelId: 'opengrid-openconnect-organizer',
+          parameters,
+          mesh: committedMesh,
+        },
+      },
+    )
+    const generating = cadReducer(ready, {
+      type: 'input-valid',
+      modelId: 'opengrid-openconnect-organizer',
+      input: { ...parameters, tiltAngle: 30 },
+      generation: 2,
+    })
+    const failed = cadReducer(generating, {
+      type: 'recoverable-error',
+      error: normalizeError(new Error('candidate failed'), {
+        stage: 'building',
+        code: 'MODEL_BUILD_FAILED',
+        message: { messageId: 'diagnostic.modelBuildFailed' },
+        recoverable: true,
+        generation: 2,
+      }),
+    })
+
+    expect(failed).toMatchObject({
+      status: 'recoverable-error',
+      exportStatus: 'disabled',
+      stale: true,
+    })
+    expect(failed.committed).toMatchObject({
+      revision: 'organizer-revision-1',
+      modelId: 'opengrid-openconnect-organizer',
+      parameters,
+      mesh: committedMesh,
+    })
   })
 })

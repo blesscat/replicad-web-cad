@@ -165,6 +165,7 @@ describe('OpenGrid system entry context', () => {
       'opengrid-snap',
       'opengrid-wall-cover',
       'opengrid-openconnect-shelf',
+      'opengrid-openconnect-organizer',
     ])
 
     const deskSnap = openGrid?.subgroups?.[0]?.definitions[1]

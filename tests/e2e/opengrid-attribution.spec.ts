@@ -101,6 +101,39 @@ const attributionCases = [
       'OpenConnect source and locked-socket geometry: CC BY 4.0',
     modifiedText: 'supplied locked-socket STEP',
   },
+  {
+    path: '/zh-Hant/cad/opengrid-openconnect-organizer?system=wall',
+    heading: '來源與授權',
+    creditsText: '原始系統作者：',
+    authors: [
+      { name: 'David D', url: DAVID_D_PROFILE_URL },
+      { name: 'mitufy', url: OPENCONNECT_AUTHOR_PROFILE_URL },
+      { name: 'OpenConnect project', url: OPENCONNECT_PROJECT_URL },
+    ],
+    removedSourceLinkText: '查看固定版本的上游來源',
+    sourceCodeLicenseText: '上游程式碼：CC BY-NC-SA 4.0',
+    derivedPartsLicenseText: '衍生／產生零件：CC BY 4.0',
+    openConnectLicenseText: 'OpenConnect 原始碼與鎖定孔幾何：CC BY 4.0',
+    modifiedText: '整合式後方母座',
+    excludedModifiedTexts: ['層板', '支撐'],
+  },
+  {
+    path: '/en/cad/opengrid-openconnect-organizer?system=wall',
+    heading: 'Source and licensing',
+    creditsText: 'Original system authors:',
+    authors: [
+      { name: 'David D', url: DAVID_D_PROFILE_URL },
+      { name: 'mitufy', url: OPENCONNECT_AUTHOR_PROFILE_URL },
+      { name: 'OpenConnect project', url: OPENCONNECT_PROJECT_URL },
+    ],
+    removedSourceLinkText: 'View the pinned upstream source',
+    sourceCodeLicenseText: 'Upstream source code: CC BY-NC-SA 4.0',
+    derivedPartsLicenseText: 'Derived/generated parts: CC BY 4.0',
+    openConnectLicenseText:
+      'OpenConnect source and locked-socket geometry: CC BY 4.0',
+    modifiedText: 'integrated rear female interface',
+    excludedModifiedTexts: ['shelf', 'support structure'],
+  },
 ] as const
 
 for (const attributionCase of attributionCases) {
@@ -180,6 +213,11 @@ for (const attributionCase of attributionCases) {
 
     if (attributionCase.modifiedText) {
       await expect(notice).toContainText(attributionCase.modifiedText)
+    }
+    if ('excludedModifiedTexts' in attributionCase) {
+      for (const excludedText of attributionCase.excludedModifiedTexts) {
+        await expect(notice).not.toContainText(excludedText)
+      }
     }
     if (
       'expectsSnapDerivatives' in attributionCase &&

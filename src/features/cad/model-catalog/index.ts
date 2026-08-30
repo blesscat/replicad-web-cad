@@ -19,6 +19,7 @@ import { openGridSnapRemoverDefinition } from './components/opengrid-snap-remove
 import { opengridPillarDefinition } from './components/opengrid-pillar'
 import { opengridOpenShelfDefinition } from './components/opengrid-open-shelf'
 import { opengridOpenConnectShelfDefinition } from './components/opengrid-openconnect-shelf'
+import { opengridOpenConnectOrganizerDefinition } from './components/opengrid-openconnect-organizer'
 import type {
   ModelDefinition,
   ModelFamily,
@@ -60,6 +61,7 @@ export { openGridSnapRemoverDefinition } from './components/opengrid-snap-remove
 export { opengridPillarDefinition } from './components/opengrid-pillar'
 export { opengridOpenShelfDefinition } from './components/opengrid-open-shelf'
 export { opengridOpenConnectShelfDefinition } from './components/opengrid-openconnect-shelf'
+export { opengridOpenConnectOrganizerDefinition } from './components/opengrid-openconnect-organizer'
 
 export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   boxDefinition,
@@ -77,6 +79,7 @@ export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
   openGridSnapRemoverDefinition,
   opengridOpenShelfDefinition,
   opengridOpenConnectShelfDefinition,
+  opengridOpenConnectOrganizerDefinition,
 ]
 
 export const modelFamilyOrder: ReadonlyArray<ModelFamily> = ['opengrid', 'hsw']
