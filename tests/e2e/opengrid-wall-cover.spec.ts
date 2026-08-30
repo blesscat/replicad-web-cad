@@ -93,6 +93,10 @@ test('Wall Cover accepts up to eight characters and exports a two-color 3MF', as
     '1 / 8 字',
   )
 
+  await text.fill('嗎')
+  await waitForCadReady(page, 90_000)
+  await expect(threeMfButton).toBeEnabled()
+
   await text.fill('\uE000')
   await expect(panel.getByText('輸入文字有字元無法由預設字體建立')).toBeVisible(
     { timeout: 90_000 },

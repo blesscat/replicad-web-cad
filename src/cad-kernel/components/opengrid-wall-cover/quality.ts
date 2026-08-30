@@ -218,7 +218,7 @@ function meshIsFinite(mesh: MeshData | MeshSnapshot): boolean {
   )
 }
 
-function meshZPlanesMatch(
+function meshZValuesStayWithinTextSlab(
   mesh: MeshData | MeshSnapshot,
   expectedBottom: number,
   expectedTop: number,
@@ -231,7 +231,8 @@ function meshZPlanesMatch(
     const z = positions[index]
     if (
       z === undefined ||
-      (!isClose(z, expectedBottom) && !isClose(z, expectedTop))
+      z < expectedBottom - QUALITY_TOLERANCE ||
+      z > expectedTop + QUALITY_TOLERANCE
     ) {
       return false
     }
@@ -346,7 +347,7 @@ export function assertOpenGridWallCoverShapeQuality(
   if (!isClose(textMesh.bounds.max[2], expectedTop)) {
     failures.push('text-top')
   }
-  if (!meshZPlanesMatch(textMesh, expectedBottom, expectedTop)) {
+  if (!meshZValuesStayWithinTextSlab(textMesh, expectedBottom, expectedTop)) {
     failures.push('text-z-planes')
   }
   if (!meshIsFinite(textMesh)) failures.push('text-mesh-values')

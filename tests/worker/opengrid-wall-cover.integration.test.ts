@@ -160,11 +160,11 @@ describe('OpenGrid Wall Cover supplied STEP', () => {
       expect(shapeBounds(generated.shape)[1]?.[2]).toBeCloseTo(expectedTop, 2)
 
       const bodyMesh = meshBRep(bodyPart.shape, {
-        tolerance: 0.05,
+        tolerance: 0.01,
         angularTolerance: 0.1,
       })
       const textMesh = meshBRep(textPart.shape, {
-        tolerance: 0.05,
+        tolerance: 0.01,
         angularTolerance: 0.1,
       })
       expect(() =>
@@ -236,11 +236,11 @@ describe('OpenGrid Wall Cover supplied STEP', () => {
         expect(countSolids(bodyPart.shape)).toBe(9 * coverCount)
         expect(countSolids(generated.qualityShape)).toBe(9 * coverCount)
         const bodyMesh = meshBRep(bodyPart.shape, {
-          tolerance: 0.05,
+          tolerance: 0.01,
           angularTolerance: 0.1,
         })
         const textMesh = meshBRep(textPart.shape, {
-          tolerance: 0.05,
+          tolerance: 0.01,
           angularTolerance: 0.1,
         })
         expect(textMesh.bounds.min[2]).toBeCloseTo(3.0, 2)
