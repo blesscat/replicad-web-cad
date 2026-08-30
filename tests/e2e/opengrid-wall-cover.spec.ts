@@ -46,6 +46,12 @@ test('Wall Cover accepts up to eight characters and exports a two-color 3MF', as
   await expect(page.getByTestId('opengrid-wall-cover-text-count')).toHaveText(
     '1 / 8 字',
   )
+  await expect(page.getByRole('button', { name: '下載 STEP' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '下載 STL' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '下載 3MF' })).toBeVisible()
+  await expect(
+    page.getByTestId('opengrid-wall-cover-three-mf-note'),
+  ).toHaveText('雙色效果僅適用於 3MF；STEP 不包含雙色列印資訊。')
   await expect(panel.getByRole('slider')).toHaveCount(0)
   await expect(panel.getByRole('combobox')).toHaveCount(0)
   await expect(
