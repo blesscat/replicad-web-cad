@@ -237,6 +237,11 @@ OpenConnect head. Receptacles, cavities, and the transition joining the tilted
 body to the rear interface MUST retain at least 0.5 mm of separating material
 and MUST form one watertight solid.
 
+At every positive `tiltAngle`, the upper transition surface MUST meet the front
+top edge of the rear interface. The rear-interface plate MUST NOT stand above
+that transition as a separate projecting lip between the tilted body and the
+wall-facing plate.
+
 #### Scenario: Mount directly with the default interface
 
 - **WHEN** the default two-by-two circular organizer is generated
@@ -251,6 +256,13 @@ and MUST form one watertight solid.
 - **THEN** every OpenConnect female opening plane MUST remain parallel to the
   wall plane
 - **AND** every OpenConnect insertion axis MUST remain perpendicular to the wall
+
+#### Scenario: Keep the tilted transition flush with the rear interface
+
+- **WHEN** the organizer is generated with a positive `tiltAngle`
+- **THEN** the transition MUST extend continuously from the tilted body to the
+  front top edge of the rear interface
+- **AND** the rear-interface plate MUST NOT form a separate projecting upper lip
 
 #### Scenario: Grow connector occupancy with the organizer
 

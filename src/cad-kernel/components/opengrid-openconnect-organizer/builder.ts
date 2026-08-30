@@ -228,7 +228,10 @@ function makeTransition(
   const upperZ =
     layout.installedBodyPivotZ + layout.bodyThickness * Math.cos(radians)
   const lowerZ = layout.installedBodyPivotZ
-  const plateTopZ = Math.max(upperZ, FUSION_OVERLAP)
+  let plateTopZ = Math.max(upperZ, FUSION_OVERLAP)
+  if (parameters.tiltAngle > 0) {
+    plateTopZ = layout.rearInterfaceHeight
+  }
   const rearThickness =
     OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION.rearThickness
   const sketcher = new Sketcher('YZ', [-layout.bodyWidth / 2, 0, 0])
@@ -236,7 +239,7 @@ function makeTransition(
   try {
     sketcher.movePointerTo([0, lowerZ])
     sketcher.lineTo([rearThickness, 0])
-    sketcher.lineTo([rearThickness, plateTopZ])
+    sketcher.lineTo([0, plateTopZ])
     sketcher.lineTo([upperY - FUSION_OVERLAP, upperZ])
     sketch = sketcher.close()
     return sketch.extrude(layout.bodyWidth, {

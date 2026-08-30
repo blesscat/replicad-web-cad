@@ -3,15 +3,19 @@ import { readFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { measureVolume, setOC, type Shape3D } from 'replicad'
+import { makeBox, measureVolume, setOC, type Shape3D } from 'replicad'
 import {
   boundsForOpenGridOpenConnectOrganizer,
+  openGridOpenConnectOrganizerLayoutFor,
   openGridOpenConnectOrganizerTiltAxisFor,
   OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS,
   type OpenGridOpenConnectOrganizerParameters,
   type OpenGridOpenConnectOrganizerShape,
 } from '../../src/cad-contract/units'
-import { buildOpenGridOpenConnectOrganizer } from '../../src/cad-kernel/components/opengrid-openconnect-organizer/builder'
+import {
+  applyOpenGridOpenConnectOrganizerOwnedTransforms,
+  buildOpenGridOpenConnectOrganizer,
+} from '../../src/cad-kernel/components/opengrid-openconnect-organizer/builder'
 import { inspectOpenGridOpenConnectOrganizerShapeQuality } from '../../src/cad-kernel/components/opengrid-openconnect-organizer/quality'
 import {
   importOpenGridOpenConnectShelfLockedSlot,
@@ -284,6 +288,52 @@ describe('OpenGrid OpenConnect organizer CAD kernel integration', () => {
       expect(quality.interfacePlaneParallelToWall).toBe(true)
       expect(quality.passed).toBe(true)
     } finally {
+      deleteShape(shape)
+      deleteShape(slot)
+    }
+  }, 180_000)
+
+  it('joins a tilted body to the rear interface top without an exposed lip', async () => {
+    const value = parameters({
+      holeCountX: 1,
+      holeCountY: 1,
+      holeDepth: 30,
+      bottomThickness: 4,
+      tiltAngle: 30,
+    })
+    const layout = openGridOpenConnectOrganizerLayoutFor(value)
+    const radians = (value.tiltAngle * Math.PI) / 180
+    const bodyTopZ =
+      layout.installedBodyPivotZ + layout.bodyThickness * Math.cos(radians)
+    const probeTopInset = Math.min(
+      0.4,
+      (layout.rearInterfaceHeight - bodyTopZ) / 4,
+    )
+    const probeCenterZ = layout.rearInterfaceHeight - probeTopInset
+    const installedProbe = makeBox(
+      [layout.bodyWidth / 2 - 2, -0.4, probeCenterZ - probeTopInset / 2],
+      [layout.bodyWidth / 2 - 1, -0.2, probeCenterZ + probeTopInset / 2],
+    )
+    const printProbe = applyOpenGridOpenConnectOrganizerOwnedTransforms(
+      installedProbe,
+      [
+        (current) => current.translate(0, 0, -layout.installedBodyPivotZ),
+        (current) => current.rotate(-value.tiltAngle, [0, 0, 0], [1, 0, 0]),
+      ],
+    )
+    const slot = await lockedSlotSource()
+    const shape = await buildOpenGridOpenConnectOrganizer(value, {
+      getLockedSlot: async () => slot,
+    })
+    let overlap: Shape3D | null = null
+    try {
+      overlap = shape.intersect(printProbe)
+      expect(measureVolume(overlap)).toBeGreaterThanOrEqual(
+        measureVolume(printProbe) * 0.9,
+      )
+    } finally {
+      deleteShape(overlap)
+      deleteShape(printProbe)
       deleteShape(shape)
       deleteShape(slot)
     }
