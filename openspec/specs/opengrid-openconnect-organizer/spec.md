@@ -125,6 +125,12 @@ the clear X/Y distance from its outer envelope to each corresponding body edge
 MUST be at least `edgeThickness`. Any extra width required by the 28 mm minimum
 MUST be divided equally between the two X edges.
 
+The two front-facing vertical outer corners, farthest from the wall interface,
+MUST use a target radius of 2.5 mm. When `edgeThickness` is below 2.5 mm, the
+actual radius MUST equal `edgeThickness` so the rounded corner cannot consume
+the selected cavity-to-edge allowance. This rounding MUST NOT be applied to the
+two rear vertical body corners.
+
 #### Scenario: Generate circular cavities
 
 - **WHEN** a valid snapshot selects `circle`
@@ -147,6 +153,19 @@ MUST be divided equally between the two X edges.
 - **THEN** the body width MUST be exactly 28 mm
 - **AND** for every larger matrix the body width MUST follow its continuous
   cavity-envelope calculation without rounding to a 28 mm multiple
+
+#### Scenario: Round the two front vertical corners
+
+- **WHEN** the organizer is generated with `edgeThickness` of at least 2.5 mm
+- **THEN** its two front-facing vertical outer corners MUST each have a 2.5 mm
+  radius
+- **AND** the rear vertical body corners MUST remain unrounded
+
+#### Scenario: Preserve a thinner selected edge
+
+- **WHEN** `edgeThickness` is below 2.5 mm
+- **THEN** each front-corner radius MUST be limited to `edgeThickness`
+- **AND** the accepted thin-edge layout MUST remain a valid connected solid
 
 #### Scenario: Generate regular polygon cavities
 

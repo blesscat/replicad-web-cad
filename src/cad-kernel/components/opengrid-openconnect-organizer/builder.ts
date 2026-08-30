@@ -5,6 +5,7 @@ import {
   makeCylinder,
   Sketcher,
   Solid,
+  type Edge,
   type Shape3D,
 } from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
@@ -13,6 +14,7 @@ import {
   openGridOpenConnectOrganizerPolygonPointsFor,
   openGridOpenConnectOrganizerSlotOriginsFor,
   OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION,
+  type OpenGridOpenConnectOrganizerLayout,
   validateOpenGridOpenConnectOrganizerParameters,
   type OpenGridOpenConnectOrganizerParameters,
 } from '../../../cad-contract/units'
@@ -44,6 +46,7 @@ const CAVITY_BOOLEAN_BATCH_SIZE = 16
 const SLOT_BOOLEAN_BATCH_SIZE = 16
 const CAVITY_TOP_OVERLAP = 0.02
 const CAVITY_BOTTOM_OVERLAP = 0.02
+const EDGE_COORDINATE_TOLERANCE = 0.02
 const FUSION_OVERLAP =
   OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION.fusionOverlap
 
@@ -87,6 +90,64 @@ function reportProgress(
 function replaceOwnedShape(current: Shape3D, replacement: Shape3D): Shape3D {
   if (replacement !== current) deleteShape(current)
   return replacement
+}
+
+function edgePointTuple(point: {
+  toTuple: () => number[]
+  delete: () => void
+}): [number, number, number] {
+  try {
+    return point.toTuple() as [number, number, number]
+  } finally {
+    point.delete()
+  }
+}
+
+function edgeCoordinateMatches(first: number, second: number): boolean {
+  return Math.abs(first - second) <= EDGE_COORDINATE_TOLERANCE
+}
+
+function isFrontVerticalBodyEdge(
+  edge: Edge,
+  layout: OpenGridOpenConnectOrganizerLayout,
+): boolean {
+  if (edge.geomType !== 'LINE') return false
+  const start = edgePointTuple(edge.startPoint)
+  const end = edgePointTuple(edge.endPoint)
+  const spansBodyHeight = edgeCoordinateMatches(
+    Math.abs(start[2] - end[2]),
+    layout.bodyThickness,
+  )
+  const hasStablePlanPosition =
+    edgeCoordinateMatches(start[0], end[0]) &&
+    edgeCoordinateMatches(start[1], end[1])
+  const isAtBodySide = edgeCoordinateMatches(
+    Math.abs(start[0]),
+    layout.bodyWidth / 2,
+  )
+  const isAtBodyFront = edgeCoordinateMatches(start[1], -layout.bodyDepth)
+  return (
+    spansBodyHeight && hasStablePlanPosition && isAtBodySide && isAtBodyFront
+  )
+}
+
+function makeRoundedOrganizerBody(
+  layout: OpenGridOpenConnectOrganizerLayout,
+): Shape3D {
+  const body = makeBox(
+    [-layout.bodyWidth / 2, -layout.bodyDepth, 0],
+    [layout.bodyWidth / 2, 0, layout.bodyThickness],
+  )
+  try {
+    const rounded = body.fillet((edge) =>
+      isFrontVerticalBodyEdge(edge, layout) ? layout.frontCornerRadius : null,
+    )
+    if (rounded !== body) deleteShape(body)
+    return rounded
+  } catch (error) {
+    deleteShape(body)
+    throw error
+  }
 }
 
 export function applyOpenGridOpenConnectOrganizerOwnedTransforms(
@@ -386,10 +447,7 @@ export async function buildOpenGridOpenConnectOrganizer(
   )
   const totalSteps = cavityBatches + 6
   let completed = 0
-  let current: Shape3D | null = makeBox(
-    [-layout.bodyWidth / 2, -layout.bodyDepth, 0],
-    [layout.bodyWidth / 2, 0, layout.bodyThickness],
-  )
+  let current: Shape3D | null = makeRoundedOrganizerBody(layout)
   try {
     current = await cutCavities(current, normalized, context)
     completed += cavityBatches

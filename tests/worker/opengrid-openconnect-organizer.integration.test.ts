@@ -58,6 +58,34 @@ function deleteShape(shape: { delete: () => void } | null | undefined): void {
   }
 }
 
+type FaceBounds = {
+  min: [number, number, number]
+  max: [number, number, number]
+}
+
+function cylindricalFaceBoundsFor(shape: Shape3D): FaceBounds[] {
+  const faces = shape.faces
+  const bounds: FaceBounds[] = []
+  try {
+    for (const face of faces) {
+      if (face.geomType !== 'CYLINDRE') continue
+      const boundingBox = face.boundingBox
+      try {
+        const [min, max] = boundingBox.bounds as [
+          [number, number, number],
+          [number, number, number],
+        ]
+        bounds.push({ min: [...min], max: [...max] })
+      } finally {
+        boundingBox.delete()
+      }
+    }
+    return bounds
+  } finally {
+    faces.forEach(deleteShape)
+  }
+}
+
 async function lockedSlotSource(): Promise<Shape3D> {
   return importOpenGridOpenConnectShelfLockedSlot(
     new Blob([
@@ -334,6 +362,58 @@ describe('OpenGrid OpenConnect organizer CAD kernel integration', () => {
     } finally {
       deleteShape(overlap)
       deleteShape(printProbe)
+      deleteShape(shape)
+      deleteShape(slot)
+    }
+  }, 180_000)
+
+  it('rounds only the two front vertical body corners to R2.5', async () => {
+    const value = parameters({ holeShape: 'square' })
+    const layout = openGridOpenConnectOrganizerLayoutFor(value)
+    const { shape, slot, quality } = await buildAndInspect(value)
+    try {
+      const frontCornerFaces = cylindricalFaceBoundsFor(shape).filter(
+        ({ min, max }) => {
+          const touchesFront = Math.abs(min[1] + layout.bodyDepth) <= 0.1
+          const touchesLeft = Math.abs(min[0] + layout.bodyWidth / 2) <= 0.1
+          const touchesRight = Math.abs(max[0] - layout.bodyWidth / 2) <= 0.1
+          const spansBodyHeight =
+            Math.abs(max[2] - min[2] - layout.bodyThickness) <= 0.1
+          return (
+            touchesFront && (touchesLeft || touchesRight) && spansBodyHeight
+          )
+        },
+      )
+
+      expect(quality.passed).toBe(true)
+      expect(frontCornerFaces).toHaveLength(2)
+      for (const { min, max } of frontCornerFaces) {
+        expect(max[0] - min[0]).toBeCloseTo(2.5, 1)
+        expect(max[1] - min[1]).toBeCloseTo(2.5, 1)
+      }
+    } finally {
+      deleteShape(shape)
+      deleteShape(slot)
+    }
+  }, 180_000)
+
+  it('keeps a thin-edge body valid with a safely limited front radius', async () => {
+    const value = parameters({
+      holeCountX: 1,
+      holeCountY: 1,
+      holeShape: 'square',
+      holeDiameter: 10,
+      edgeThickness: 0.4,
+    })
+    const { shape, slot, quality } = await buildAndInspect(value)
+    try {
+      expect(quality).toMatchObject({
+        passed: true,
+        failures: [],
+        validBRep: true,
+        solidCount: 1,
+      })
+    } finally {
       deleteShape(shape)
       deleteShape(slot)
     }

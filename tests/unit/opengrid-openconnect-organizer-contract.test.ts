@@ -116,6 +116,16 @@ describe('OpenGrid OpenConnect organizer contract', () => {
     expect((layout.bodyDepth - layout.requiredSpan.y) / 2).toBeCloseTo(0.4, 10)
   })
 
+  it('uses R2.5 front corners and preserves thinner selected edges', () => {
+    const standard = openGridOpenConnectOrganizerLayoutFor(parameters())
+    const thinEdge = openGridOpenConnectOrganizerLayoutFor(
+      parameters({ edgeThickness: 0.4 }),
+    )
+
+    expect(standard.frontCornerRadius).toBe(2.5)
+    expect(thinEdge.frontCornerRadius).toBe(0.4)
+  })
+
   it('keeps the default body continuous with one centered, top-aligned socket', () => {
     const value = parameters()
     const layout = openGridOpenConnectOrganizerLayoutFor(value)

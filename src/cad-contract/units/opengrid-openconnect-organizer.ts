@@ -48,6 +48,7 @@ export type OpenGridOpenConnectOrganizerLayout = {
   bodyWidth: number
   bodyDepth: number
   bodyThickness: number
+  frontCornerRadius: number
   connectorColumns: number
   connectorRows: number
   rearInterfaceWidth: number
@@ -80,6 +81,7 @@ export const OPENGRID_OPENCONNECT_ORGANIZER_SPACING_MODES = [
 export const OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION = {
   gridPitch: OPENGRID_GRID_CONFIGURATION.fullPitch,
   rearThickness: 3.2,
+  frontCornerRadius: 2.5,
   fusionOverlap: 0.05,
   minimumInterfaceSeparation: 0.5,
   workspaceMaxDimension: 500,
@@ -298,6 +300,10 @@ function layoutForUnchecked(
     requiredSpan.x + 2 * parameters.edgeThickness,
   )
   const bodyDepth = requiredSpan.y + 2 * parameters.edgeThickness
+  const frontCornerRadius = Math.min(
+    configuration.frontCornerRadius,
+    parameters.edgeThickness,
+  )
   const rearInterfaceWidth = bodyWidth
   const rearInterfaceHeight = Math.max(configuration.gridPitch, bodyThickness)
   const connectorColumns = completedGridCountFor(rearInterfaceWidth)
@@ -312,6 +318,7 @@ function layoutForUnchecked(
     bodyWidth,
     bodyDepth,
     bodyThickness,
+    frontCornerRadius,
     connectorColumns,
     connectorRows,
     rearInterfaceWidth,
