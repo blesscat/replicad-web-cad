@@ -107,7 +107,7 @@ export const OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION = {
   defaultHoleSpacing: 1,
   defaultHoleShape: 'circle' as OpenGridOpenConnectOrganizerShape,
   defaultHoleDiameter: 20,
-  defaultHoleDepth: 20,
+  defaultHoleDepth: 28,
   defaultBottomThickness: 1,
   defaultEdgeThickness: 1,
   defaultTiltAngle: 15,

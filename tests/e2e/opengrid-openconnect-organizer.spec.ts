@@ -59,7 +59,7 @@ test('OpenConnect organizer is Wall-only and starts from the canonical snapshot'
   )
   await expect(page.getByRole('textbox', { name: /孔直徑/ })).toHaveValue('20')
   await expect(page.getByRole('textbox', { name: '孔深度（Z）' })).toHaveValue(
-    '20',
+    '28',
   )
   await expect(
     page.getByRole('textbox', { name: '底部加厚（Z）' }),
@@ -178,7 +178,7 @@ test('OpenConnect organizer edits, persists, resets, and exports one committed r
   await page.getByRole('button', { name: '下載 STEP' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe(
-    'opengrid-openconnect-organizer-x2-y2-sm-independent-sx2.5-sy2.5-hexagon-d20-h20-b0-e4-a30.step',
+    'opengrid-openconnect-organizer-x2-y2-sm-independent-sx2.5-sy2.5-hexagon-d20-h28-b0-e4-a30.step',
   )
 
   await page.reload()

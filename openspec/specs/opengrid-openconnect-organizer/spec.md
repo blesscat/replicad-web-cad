@@ -47,7 +47,7 @@ finite from 0 through 100 mm. `edgeThickness` MUST be finite from 0.4 through
 100 mm. `tiltAngle` MUST be a finite value from 0 through 45 degrees on
 whole-degree steps. The defaults MUST be `{ holeCountX: 2,
 holeCountY: 2, holeSpacingMode: 'linked', holeSpacingX: 1, holeSpacingY: 1,
-holeShape: 'circle', holeDiameter: 20, holeDepth: 20, bottomThickness: 1,
+holeShape: 'circle', holeDiameter: 20, holeDepth: 28, bottomThickness: 1,
 edgeThickness: 1, tiltAngle: 15 }`. In linked spacing mode the two canonical
 spacing values MUST be equal; in independent mode they MAY differ.
 
@@ -61,7 +61,7 @@ revision, persist, generate, or become exportable.
 #### Scenario: Initialize the default organizer
 
 - **WHEN** the organizer route starts without a valid saved snapshot
-- **THEN** it MUST initialize the exact default snapshot
+- **THEN** it MUST initialize the exact default snapshot with `holeDepth=28`
 - **AND** its first Worker request MUST use
   `modelId=opengrid-openconnect-organizer`
 
