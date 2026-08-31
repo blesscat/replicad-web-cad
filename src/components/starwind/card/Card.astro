@@ -1,0 +1,25 @@
+---
+import type { HTMLAttributes } from 'astro/types'
+import type { VariantProps } from 'tailwind-variants'
+
+import { card } from './variants'
+
+type Props = HTMLAttributes<'div'> &
+  VariantProps<typeof card> & {
+    as?: 'div' | 'article' | 'section' | 'nav' | 'header' | 'li' | 'a' | 'p'
+    href?: string
+  }
+
+const { as = 'div', size = 'md', class: className, ...rest } = Astro.props
+const Tag = as
+---
+
+<Tag
+  data-sw-card
+  class={card({ size, class: className })}
+  {...rest}
+  data-size={size}
+  data-slot="card"
+>
+  <slot />
+</Tag>

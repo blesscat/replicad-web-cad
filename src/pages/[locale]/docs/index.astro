@@ -1,5 +1,10 @@
 ---
 import SiteLayout from '../../../layouts/SiteLayout.astro'
+import '../../../styles/starwind.css'
+import { Badge } from '../../../components/starwind/badge'
+import { Button } from '../../../components/starwind/button'
+import { Card } from '../../../components/starwind/card'
+import { Separator } from '../../../components/starwind/separator'
 import {
   deskQuickStartEntries,
   type DeskQuickStartRole,
@@ -54,16 +59,18 @@ const openConnectOrganizerPath = localizedCadPathFor(
   title={`${t('docs.title')} | Shape Shortcut`}
   description={t('docs.description')}
 >
-  <article
-    class="grid gap-10 rounded-2xl border border-border-card bg-panel p-5 shadow-card"
-  >
+  <Card as="article" class="grid gap-10 p-5 shadow-card sm:p-8">
     <header class="grid gap-3">
-      <p class="text-muted">{t('docs.eyebrow')}</p>
+      <Badge variant="primary" size="sm" class="w-fit">
+        {t('docs.eyebrow')}
+      </Badge>
       <h1 class="text-4xl font-semibold leading-tight">{t('docs.title')}</h1>
     </header>
 
-    <nav
-      class="grid gap-3 rounded-xl border border-border-card bg-viewport p-4"
+    <Card
+      as="nav"
+      size="sm"
+      class="grid gap-3 bg-viewport p-4"
       aria-label={t('docs.sectionNav')}
       data-testid="docs-section-nav"
     >
@@ -86,7 +93,8 @@ const openConnectOrganizerPath = localizedCadPathFor(
           href="#docs-reference-title">{t('docs.sectionNav.common')}</a
         >
       </div>
-    </nav>
+    </Card>
+    <Separator class="bg-border-card" />
 
     <section
       class="grid gap-8"
@@ -124,10 +132,7 @@ const openConnectOrganizerPath = localizedCadPathFor(
           {t('docs.deskQuickStart.workflowHeading')}
         </h3>
         <ol class="grid gap-4">
-          <li
-            class="rounded-xl border border-border-card p-4"
-            data-step="board"
-          >
+          <Card as="li" size="sm" class="p-4" data-step="board">
             <h4 class="font-semibold">
               <a
                 class="text-ink underline underline-offset-4"
@@ -141,8 +146,8 @@ const openConnectOrganizerPath = localizedCadPathFor(
             <p class="mt-2 text-sm text-muted">
               {t('docs.deskQuickStart.step.board.note')}
             </p>
-          </li>
-          <li class="rounded-xl border border-border-card p-4" data-step="snap">
+          </Card>
+          <Card as="li" size="sm" class="p-4" data-step="snap">
             <h4 class="font-semibold">
               <a
                 class="text-ink underline underline-offset-4"
@@ -153,22 +158,16 @@ const openConnectOrganizerPath = localizedCadPathFor(
             <p class="mt-2 leading-normal">
               {t('docs.deskQuickStart.step.snap.body')}
             </p>
-          </li>
-          <li
-            class="rounded-xl border border-border-card p-4"
-            data-step="locating"
-          >
+          </Card>
+          <Card as="li" size="sm" class="p-4" data-step="locating">
             <h4 class="font-semibold">
               {t('docs.deskQuickStart.step.locating.title')}
             </h4>
             <p class="mt-2 leading-normal">
               {t('docs.deskQuickStart.step.locating.body')}
             </p>
-          </li>
-          <li
-            class="rounded-xl border border-border-card p-4"
-            data-step="container"
-          >
+          </Card>
+          <Card as="li" size="sm" class="p-4" data-step="container">
             <h4 class="font-semibold">
               {t('docs.deskQuickStart.step.container.title')}
             </h4>
@@ -189,7 +188,7 @@ const openConnectOrganizerPath = localizedCadPathFor(
                 href={roundBoxEntry.href}>{t(roundBoxEntry.labelKey)}</a
               >
             </p>
-          </li>
+          </Card>
         </ol>
       </section>
 
@@ -212,7 +211,7 @@ const openConnectOrganizerPath = localizedCadPathFor(
           {t('docs.deskQuickStart.locatingHeading')}
         </h3>
         <div class="grid gap-4 md:grid-cols-2">
-          <article class="grid gap-2 rounded-xl border border-border-card p-4">
+          <Card as="article" size="sm" class="grid gap-2 p-4">
             <h4 class="font-semibold">
               <a
                 class="text-ink underline underline-offset-4"
@@ -223,8 +222,8 @@ const openConnectOrganizerPath = localizedCadPathFor(
             <p class="leading-normal">
               {t('docs.deskQuickStart.locating.separate.body')}
             </p>
-          </article>
-          <article class="grid gap-2 rounded-xl border border-border-card p-4">
+          </Card>
+          <Card as="article" size="sm" class="grid gap-2 p-4">
             <h4 class="font-semibold">
               {t('docs.deskQuickStart.locating.builtin.title')}
             </h4>
@@ -234,7 +233,7 @@ const openConnectOrganizerPath = localizedCadPathFor(
             <p class="font-semibold text-muted">
               {t('docs.deskQuickStart.locating.builtin.noPost')}
             </p>
-          </article>
+          </Card>
         </div>
       </section>
 
@@ -318,8 +317,10 @@ const openConnectOrganizerPath = localizedCadPathFor(
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {
             quickStartEntries.map((entry) => (
-              <a
-                class="grid gap-2 rounded-xl border border-border-card p-3 transition-shadow hover:shadow-md"
+              <Card
+                as="a"
+                size="sm"
+                class="grid gap-2 p-3 no-underline transition-shadow hover:shadow-md"
                 href={entry.href}
               >
                 <img
@@ -334,17 +335,15 @@ const openConnectOrganizerPath = localizedCadPathFor(
                 <span class="text-sm text-muted">
                   {t(entry.descriptionKey)}
                 </span>
-              </a>
+              </Card>
             ))
           }
         </div>
       </section>
 
-      <p
-        class="rounded-xl border border-border-card bg-viewport p-4 text-sm text-muted"
-      >
+      <Card as="p" size="sm" class="bg-viewport p-4 text-sm text-muted">
         {t('docs.deskQuickStart.scopeNote')}
-      </p>
+      </Card>
     </section>
 
     <section
@@ -362,7 +361,7 @@ const openConnectOrganizerPath = localizedCadPathFor(
         <p class="max-w-3xl leading-normal">{t('docs.wall.intro')}</p>
       </header>
       <div class="grid gap-4 sm:grid-cols-2">
-        <article class="grid gap-3 rounded-xl border border-border-card p-4">
+        <Card as="article" size="sm" class="grid gap-3 p-4">
           <img
             class="aspect-[16/10] w-full rounded-lg border border-border-card bg-viewport object-cover"
             src="/model-previews/opengrid-wall.png"
@@ -380,8 +379,8 @@ const openConnectOrganizerPath = localizedCadPathFor(
           <a class="text-ink underline underline-offset-4" href={wallBoardPath}
             >{t('docs.wall.board.cta')}</a
           >
-        </article>
-        <article class="grid gap-3 rounded-xl border border-border-card p-4">
+        </Card>
+        <Card as="article" size="sm" class="grid gap-3 p-4">
           <img
             class="aspect-[16/10] w-full rounded-lg border border-border-card bg-viewport object-cover"
             src="/model-previews/opengrid-snap-wall.png"
@@ -397,8 +396,8 @@ const openConnectOrganizerPath = localizedCadPathFor(
           <a class="text-ink underline underline-offset-4" href={wallSnapPath}
             >{t('docs.wall.snap.cta')}</a
           >
-        </article>
-        <article class="grid gap-3 rounded-xl border border-border-card p-4">
+        </Card>
+        <Card as="article" size="sm" class="grid gap-3 p-4">
           <img
             class="aspect-[16/10] w-full rounded-lg border border-border-card bg-viewport object-cover"
             src="/model-previews/opengrid-wall-cover-wall.png"
@@ -416,8 +415,8 @@ const openConnectOrganizerPath = localizedCadPathFor(
           <a class="text-ink underline underline-offset-4" href={wallCoverPath}
             >{t('docs.wall.cover.cta')}</a
           >
-        </article>
-        <article class="grid gap-3 rounded-xl border border-border-card p-4">
+        </Card>
+        <Card as="article" size="sm" class="grid gap-3 p-4">
           <img
             class="aspect-[16/10] w-full rounded-lg border border-border-card bg-viewport object-cover"
             src="/model-previews/opengrid-openconnect-shelf-wall.png"
@@ -436,8 +435,8 @@ const openConnectOrganizerPath = localizedCadPathFor(
             class="text-ink underline underline-offset-4"
             href={openConnectShelfPath}>{t('docs.wall.shelf.cta')}</a
           >
-        </article>
-        <article class="grid gap-3 rounded-xl border border-border-card p-4">
+        </Card>
+        <Card as="article" size="sm" class="grid gap-3 p-4">
           <img
             class="aspect-[16/10] w-full rounded-lg border border-border-card bg-viewport object-cover"
             src="/model-previews/opengrid-openconnect-organizer-wall.png"
@@ -456,7 +455,7 @@ const openConnectOrganizerPath = localizedCadPathFor(
             class="text-ink underline underline-offset-4"
             href={openConnectOrganizerPath}>{t('docs.wall.organizer.cta')}</a
           >
-        </article>
+        </Card>
       </div>
     </section>
 
@@ -475,46 +474,47 @@ const openConnectOrganizerPath = localizedCadPathFor(
         <p class="max-w-3xl leading-normal">{t('docs.modelReference.body')}</p>
       </header>
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <article class="grid gap-2 rounded-xl border border-border-card p-4">
+        <Card as="article" size="sm" class="grid gap-2 p-4">
           <h3 class="m-0 text-xl font-semibold">
             {t('docs.modelReference.desk.title')}
           </h3>
           <p class="m-0 text-sm leading-normal text-muted">
             {t('docs.modelReference.desk.body')}
           </p>
-        </article>
-        <article class="grid gap-2 rounded-xl border border-border-card p-4">
+        </Card>
+        <Card as="article" size="sm" class="grid gap-2 p-4">
           <h3 class="m-0 text-xl font-semibold">
             {t('docs.modelReference.wall.title')}
           </h3>
           <p class="m-0 text-sm leading-normal text-muted">
             {t('docs.modelReference.wall.body')}
           </p>
-        </article>
-        <article class="grid gap-2 rounded-xl border border-border-card p-4">
+        </Card>
+        <Card as="article" size="sm" class="grid gap-2 p-4">
           <h3 class="m-0 text-xl font-semibold">
             {t('docs.modelReference.hsw.title')}
           </h3>
           <p class="m-0 text-sm leading-normal text-muted">
             {t('docs.modelReference.hsw.body')}
           </p>
-        </article>
-        <article class="grid gap-2 rounded-xl border border-border-card p-4">
+        </Card>
+        <Card as="article" size="sm" class="grid gap-2 p-4">
           <h3 class="m-0 text-xl font-semibold">
             {t('docs.modelReference.other.title')}
           </h3>
           <p class="m-0 text-sm leading-normal text-muted">
             {t('docs.modelReference.other.body')}
           </p>
-        </article>
+        </Card>
       </div>
-      <p class="m-0">
-        <a
-          class="text-ink underline underline-offset-4"
-          href={publicPathFor(locale, 'models')}
-          >{t('docs.modelReference.cta')}</a
-        >
-      </p>
+      <Button
+        as="a"
+        href={publicPathFor(locale, 'models')}
+        variant="outline"
+        size="sm"
+        class="justify-self-start no-underline"
+        >{t('docs.modelReference.cta')}</Button
+      >
     </section>
 
     <section
@@ -529,11 +529,14 @@ const openConnectOrganizerPath = localizedCadPathFor(
         {t('docs.referenceHeading')}
       </h2>
       <p class="leading-normal">{t('docs.referenceBody')}</p>
-      <p>
-        <a
-          class="text-ink underline underline-offset-4"
+      <p class="m-0">
+        <Button
+          as="a"
           href={publicPathFor(locale, 'models')}
-          >{t('common.backToModelsArrow')}</a
+          variant="ghost"
+          size="sm"
+          class="px-0 text-ink underline underline-offset-4"
+          >{t('common.backToModelsArrow')}</Button
         >
       </p>
     </section>
@@ -565,5 +568,5 @@ const openConnectOrganizerPath = localizedCadPathFor(
       <p class="leading-normal">{t('docs.browserBody')}</p>
     </section>
     <p class="leading-normal">{t('docs.architecture')}</p>
-  </article>
+  </Card>
 </SiteLayout>
