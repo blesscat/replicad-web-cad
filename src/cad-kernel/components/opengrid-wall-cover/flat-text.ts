@@ -1,20 +1,34 @@
-import { makeBox, makeCompound, Sketcher, type Shape3D } from 'replicad'
-import { OPENGRID_SNAP_CONFIGURATION } from '../../../cad-contract/units'
+import {
+  CompoundBlueprint,
+  getFont,
+  loadFont,
+  makeCompound,
+  textBlueprints,
+  type Blueprint,
+  type Shape3D,
+} from 'replicad'
+import {
+  OPENGRID_SNAP_CONFIGURATION,
+  OPENGRID_WALL_COVER_CONFIGURATION,
+  normalizeOpenGridWallCoverText,
+} from '../../../cad-contract/units'
 
 export const OPENGRID_WALL_COVER_TEXT_CONFIGURATION = {
-  value: 'SNAP' as const,
   depth: 0.4,
-  glyphWidth: 2.4,
-  glyphHeight: 4.2,
-  stroke: 0.65,
-  letterGap: 0.65,
+  fontSize: 18,
+  fontFamily: OPENGRID_WALL_COVER_CONFIGURATION.fontFamily,
 } as const
+
+export const OPEN_GRID_WALL_COVER_FONT_URL = new URL(
+  `./assets/${OPENGRID_WALL_COVER_CONFIGURATION.fontFileName}`,
+  import.meta.url,
+)
+
+let fontLoadPromise: Promise<void> | null = null
 
 export function openGridWallCoverTextTopZ(): number {
   return OPENGRID_SNAP_CONFIGURATION.variantHeights.Lite
 }
-
-type Point2D = [number, number]
 
 function deleteShape(shape: { delete?: () => void } | null | undefined): void {
   try {
@@ -24,233 +38,249 @@ function deleteShape(shape: { delete?: () => void } | null | undefined): void {
   }
 }
 
-function extrudePolygon(
-  points: readonly Point2D[],
-  baseZ: number,
-  height: number,
-): Shape3D {
-  const sketcher = new Sketcher('XY', [0, 0, baseZ])
-  let sketch: ReturnType<Sketcher['close']> | null = null
-  try {
-    const first = points[0]
-    if (!first) throw new Error('OPENGRID_WALL_COVER_TEXT_POLYGON_EMPTY')
-    sketcher.movePointerTo(first)
-    for (const point of points.slice(1)) sketcher.lineTo(point)
-    sketch = sketcher.close()
-    return sketch.extrude(height)
-  } finally {
-    deleteShape(sketch)
-    sketcher.delete()
+function arrayBufferFor(data: ArrayBuffer | ArrayBufferView): ArrayBuffer {
+  if (data instanceof ArrayBuffer) return data
+  const copy = new Uint8Array(data.byteLength)
+  copy.set(new Uint8Array(data.buffer, data.byteOffset, data.byteLength))
+  return copy.buffer
+}
+
+function normalizeFontLoadError(error: unknown): Error {
+  if (
+    error instanceof Error &&
+    error.message.startsWith('OPENGRID_WALL_COVER_FONT_')
+  ) {
+    return error
+  }
+  return new Error('OPENGRID_WALL_COVER_FONT_LOAD_FAILED')
+}
+
+function rememberFontLoad(promise: Promise<unknown>): Promise<void> {
+  const tracked = promise.then(() => undefined)
+  const recoverable = tracked.catch((error) => {
+    if (fontLoadPromise === recoverable) fontLoadPromise = null
+    throw normalizeFontLoadError(error)
+  })
+  fontLoadPromise = recoverable
+  return recoverable
+}
+
+export function loadOpenGridWallCoverFont(
+  fontData?: ArrayBuffer | ArrayBufferView,
+): Promise<void> {
+  if (fontData) {
+    try {
+      return rememberFontLoad(
+        loadFont(
+          arrayBufferFor(fontData),
+          OPENGRID_WALL_COVER_TEXT_CONFIGURATION.fontFamily,
+        ),
+      )
+    } catch {
+      return Promise.reject(new Error('OPENGRID_WALL_COVER_FONT_LOAD_FAILED'))
+    }
+  }
+  if (!fontLoadPromise) {
+    try {
+      rememberFontLoad(
+        loadFont(
+          OPEN_GRID_WALL_COVER_FONT_URL.href,
+          OPENGRID_WALL_COVER_TEXT_CONFIGURATION.fontFamily,
+        ),
+      )
+    } catch {
+      fontLoadPromise = Promise.reject(
+        new Error('OPENGRID_WALL_COVER_FONT_LOAD_FAILED'),
+      )
+    }
+  }
+  const promise = fontLoadPromise
+  if (!promise) throw new Error('OPENGRID_WALL_COVER_FONT_MISSING')
+  return promise
+}
+
+function assertGlyphSupported(character: string): void {
+  const font = getFont(OPENGRID_WALL_COVER_TEXT_CONFIGURATION.fontFamily)
+  const glyph = font?.charToGlyph(character)
+  const glyphPath = glyph?.getPath(
+    0,
+    0,
+    OPENGRID_WALL_COVER_TEXT_CONFIGURATION.fontSize,
+  )
+  if (!glyph || glyph.index === 0 || !glyphPath?.commands.length) {
+    throw new Error('OPENGRID_WALL_COVER_TEXT_GLYPH_UNSUPPORTED')
   }
 }
 
-function rectangularBar(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  baseZ: number,
-  depth: number,
+function centerShapeOn(
+  shape: Shape3D,
+  centerX: number,
+  centerY: number,
 ): Shape3D {
-  return makeBox([x, y, baseZ], [x + width, y + height, baseZ + depth])
-}
-
-function slantedBar(
-  start: Point2D,
-  end: Point2D,
-  width: number,
-  baseZ: number,
-  depth: number,
-): Shape3D {
-  const dx = end[0] - start[0]
-  const dy = end[1] - start[1]
-  const length = Math.hypot(dx, dy)
-  if (length <= 0) throw new Error('OPENGRID_WALL_COVER_TEXT_BAR_INVALID')
-  const halfWidth = width / 2
-  const normal: Point2D = [
-    (-dy / length) * halfWidth,
-    (dx / length) * halfWidth,
-  ]
-  return extrudePolygon(
-    [
-      [start[0] + normal[0], start[1] + normal[1]],
-      [end[0] + normal[0], end[1] + normal[1]],
-      [end[0] - normal[0], end[1] - normal[1]],
-      [start[0] - normal[0], start[1] - normal[1]],
-    ],
-    baseZ,
-    depth,
-  )
-}
-
-function fuseBars(bars: Shape3D[]): Shape3D {
-  const first = bars.shift()
-  if (!first) throw new Error('OPENGRID_WALL_COVER_TEXT_GLYPH_EMPTY')
-  let result = first
+  const bounds = shape.boundingBox
+  let minX: number
+  let maxX: number
+  let minY: number
+  let maxY: number
   try {
-    for (const bar of bars) {
-      const fused = result.fuse(bar, { optimisation: 'none' })
-      if (fused !== result) deleteShape(result)
-      if (fused !== bar) deleteShape(bar)
-      result = fused
+    const [[lowerX, lowerY], [upperX, upperY]] = bounds.bounds as number[][]
+    minX = lowerX!
+    maxX = upperX!
+    minY = lowerY!
+    maxY = upperY!
+  } finally {
+    bounds.delete()
+  }
+
+  const translated = shape.translate(
+    centerX - (minX + maxX) / 2,
+    centerY - (minY + maxY) / 2,
+    openGridWallCoverTextTopZ() - OPENGRID_WALL_COVER_TEXT_CONFIGURATION.depth,
+  )
+  if (translated !== shape) deleteShape(shape)
+  return translated
+}
+
+type GlyphContourGroup = [Blueprint, ...Blueprint[]]
+
+function deleteDrawingBlueprints(
+  drawings: ReturnType<typeof textBlueprints>,
+): void {
+  const deleted = new Set<Blueprint>()
+  const deleteDrawing = (drawing: Blueprint | CompoundBlueprint): void => {
+    if (drawing instanceof CompoundBlueprint) {
+      drawing.blueprints.forEach(deleteDrawing)
+      return
     }
+    if (deleted.has(drawing)) return
+    deleted.add(drawing)
+    drawing.delete()
+  }
+  drawings.blueprints.forEach(deleteDrawing)
+}
+
+function groupGlyphContours(
+  drawings: ReturnType<typeof textBlueprints>,
+): GlyphContourGroup[] {
+  const result: GlyphContourGroup[] = []
+  for (const drawing of drawings.blueprints) {
+    if (!(drawing instanceof CompoundBlueprint)) {
+      result.push([drawing])
+      continue
+    }
+    const [outer, ...holes] = drawing.blueprints
+    if (outer) result.push([outer, ...holes])
+  }
+  return result
+}
+
+function extrudeBlueprint(blueprint: Blueprint): Shape3D {
+  const sketch = blueprint.sketchOnPlane()
+  try {
+    return sketch.extrude(
+      OPENGRID_WALL_COVER_TEXT_CONFIGURATION.depth,
+    ) as Shape3D
+  } finally {
+    deleteShape(sketch)
+  }
+}
+
+function cutContourHole(source: Shape3D, hole: Shape3D): Shape3D {
+  try {
+    const result = source.cut(hole)
+    if (result !== source) deleteShape(source)
+    deleteShape(hole)
     return result
   } catch (error) {
-    deleteShape(result)
-    for (const bar of bars) deleteShape(bar)
+    deleteShape(hole)
     throw error
   }
 }
 
-function makeGlyph(
-  letter: 'S' | 'N' | 'A' | 'P',
-  originX: number,
-  originY: number,
-  baseZ: number,
-): Shape3D {
-  const {
-    glyphWidth: width,
-    glyphHeight: height,
-    stroke,
-    depth,
-  } = OPENGRID_WALL_COVER_TEXT_CONFIGURATION
-  const halfHeight = height / 2
-  const bars: Shape3D[] = []
-
-  if (letter === 'S') {
-    bars.push(
-      rectangularBar(
-        originX,
-        originY + height - stroke,
-        width,
-        stroke,
-        baseZ,
-        depth,
-      ),
-      rectangularBar(
-        originX,
-        originY + halfHeight,
-        stroke,
-        halfHeight,
-        baseZ,
-        depth,
-      ),
-      rectangularBar(
-        originX,
-        originY + halfHeight - stroke / 2,
-        width,
-        stroke,
-        baseZ,
-        depth,
-      ),
-      rectangularBar(
-        originX + width - stroke,
-        originY,
-        stroke,
-        halfHeight,
-        baseZ,
-        depth,
-      ),
-      rectangularBar(originX, originY, width, stroke, baseZ, depth),
-    )
-  } else if (letter === 'N') {
-    bars.push(
-      rectangularBar(originX, originY, stroke, height, baseZ, depth),
-      rectangularBar(
-        originX + width - stroke,
-        originY,
-        stroke,
-        height,
-        baseZ,
-        depth,
-      ),
-      slantedBar(
-        [originX + stroke / 2, originY],
-        [originX + width - stroke / 2, originY + height],
-        stroke,
-        baseZ,
-        depth,
-      ),
-    )
-  } else if (letter === 'A') {
-    bars.push(
-      slantedBar(
-        [originX + stroke / 2, originY],
-        [originX + width / 2, originY + height],
-        stroke,
-        baseZ,
-        depth,
-      ),
-      slantedBar(
-        [originX + width - stroke / 2, originY],
-        [originX + width / 2, originY + height],
-        stroke,
-        baseZ,
-        depth,
-      ),
-      rectangularBar(
-        originX + width * 0.2,
-        originY + height * 0.42,
-        width * 0.6,
-        stroke,
-        baseZ,
-        depth,
-      ),
-    )
-  } else {
-    bars.push(
-      rectangularBar(originX, originY, stroke, height, baseZ, depth),
-      rectangularBar(
-        originX,
-        originY + height - stroke,
-        width * 0.75,
-        stroke,
-        baseZ,
-        depth,
-      ),
-      rectangularBar(
-        originX,
-        originY + halfHeight - stroke / 2,
-        width * 0.75,
-        stroke,
-        baseZ,
-        depth,
-      ),
-      rectangularBar(
-        originX + width * 0.7,
-        originY + halfHeight,
-        stroke,
-        halfHeight - stroke / 2,
-        baseZ,
-        depth,
-      ),
-    )
+function extrudeContourGroup(group: GlyphContourGroup): Shape3D {
+  let result: Shape3D = extrudeBlueprint(group[0])
+  try {
+    for (const holeBlueprint of group.slice(1)) {
+      const hole = extrudeBlueprint(holeBlueprint)
+      result = cutContourHole(result, hole)
+    }
+    return result
+  } catch (error) {
+    deleteShape(result)
+    throw error
   }
-
-  return fuseBars(bars)
 }
 
-export function makeOpenGridWallCoverTextShape(): Shape3D {
-  const {
-    glyphWidth: width,
-    glyphHeight: height,
-    letterGap,
-    depth,
-  } = OPENGRID_WALL_COVER_TEXT_CONFIGURATION
-  const letters: readonly ['S', 'N', 'A', 'P'] = ['S', 'N', 'A', 'P']
-  const totalWidth = letters.length * width + (letters.length - 1) * letterGap
-  const startX = -totalWidth / 2
-  const startY = -height / 2
-  const baseZ = openGridWallCoverTextTopZ() - depth
-  const glyphs: Shape3D[] = []
-
+function makeGlyph(character: string, centerX: number): Shape3D {
+  assertGlyphSupported(character)
+  let pieces: Shape3D[] = []
+  let extruded: Shape3D | null = null
+  const drawings = textBlueprints(character, {
+    fontSize: OPENGRID_WALL_COVER_TEXT_CONFIGURATION.fontSize,
+    fontFamily: OPENGRID_WALL_COVER_TEXT_CONFIGURATION.fontFamily,
+  })
   try {
-    letters.forEach((letter, index) => {
+    const contourGroups = groupGlyphContours(drawings)
+    for (const group of contourGroups) {
+      pieces.push(extrudeContourGroup(group))
+    }
+    extruded = makeCompound(pieces).asShape3D()
+    pieces = []
+    const result = centerShapeOn(extruded, centerX, 0)
+    extruded = null
+    return result
+  } catch (error) {
+    deleteShape(extruded)
+    for (const piece of pieces) deleteShape(piece)
+    throw error
+  } finally {
+    deleteDrawingBlueprints(drawings)
+  }
+}
+
+export async function makeOpenGridWallCoverTextGlyphShape(
+  character: string,
+  centerX = 0,
+): Promise<Shape3D> {
+  await loadOpenGridWallCoverFont()
+  const letters = Array.from(normalizeOpenGridWallCoverText(character))
+  if (letters.length !== 1) {
+    throw new Error('OPENGRID_WALL_COVER_TEXT_GLYPH_INVALID')
+  }
+  return makeGlyph(letters[0]!, centerX)
+}
+
+export async function makeOpenGridWallCoverTextShape(
+  text: string,
+): Promise<Shape3D> {
+  await loadOpenGridWallCoverFont()
+  const letters = Array.from(normalizeOpenGridWallCoverText(text))
+  if (
+    letters.length < 1 ||
+    letters.length > OPENGRID_WALL_COVER_CONFIGURATION.maxTextLength
+  ) {
+    throw new Error('OPENGRID_WALL_COVER_TEXT_INVALID')
+  }
+
+  const coverWidth = OPENGRID_WALL_COVER_CONFIGURATION.coverWidth
+  const centerOffset =
+    ((letters.length - 1) *
+      (coverWidth + OPENGRID_WALL_COVER_CONFIGURATION.coverGap)) /
+    2
+  const glyphs: Shape3D[] = []
+  try {
+    for (const [index, character] of letters.entries()) {
       glyphs.push(
-        makeGlyph(letter, startX + index * (width + letterGap), startY, baseZ),
+        makeGlyph(
+          character,
+          index * (coverWidth + OPENGRID_WALL_COVER_CONFIGURATION.coverGap) -
+            centerOffset,
+        ),
       )
-    })
-    return makeCompound(glyphs).asShape3D()
+    }
+    const result = makeCompound(glyphs).asShape3D()
+    glyphs.length = 0
+    return result
   } catch (error) {
     for (const glyph of glyphs) deleteShape(glyph)
     throw error

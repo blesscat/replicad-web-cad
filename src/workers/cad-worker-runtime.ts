@@ -328,6 +328,22 @@ export class CadWorkerRuntime {
         true,
       )
     }
+    if (message.includes('OPENGRID_WALL_COVER_TEXT_GLYPH_UNSUPPORTED')) {
+      return makeError(
+        'building',
+        code,
+        diagnostic('diagnostic.wallCoverGlyphUnsupported'),
+        true,
+      )
+    }
+    if (message.includes('OPENGRID_WALL_COVER_FONT_')) {
+      return makeError(
+        'building',
+        code,
+        diagnostic('diagnostic.wallCoverFontLoadFailed'),
+        true,
+      )
+    }
 
     if (code === 'OPENGRID_DIVIDER_QUALITY_INVALID') {
       return makeError(

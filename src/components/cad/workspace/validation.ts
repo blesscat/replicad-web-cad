@@ -16,8 +16,9 @@ import {
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
+  OPENGRID_WALL_COVER_CONFIGURATION,
+  normalizeOpenGridWallCoverText,
   normalizeOpenGridLocatingSeatMode,
-  isOpenGridWallCoverParameters,
   type OpenGridOpenShelfParameters,
   type OpenGridOpenConnectShelfParameters,
   PILLAR_CONFIGURATION,
@@ -30,6 +31,7 @@ import {
   type OpenGridSnapParameters,
   type OpenGridOrganizerBoxParameters,
   type OpenGridOpenConnectOrganizerParameters,
+  type OpenGridWallCoverParameters,
   type ScalarModelParameterKey,
   type ValidationIssue,
 } from '../../../cad-contract/units'
@@ -165,7 +167,7 @@ function parameterKeysForModel(modelId: ModelId): readonly ModelParameterKey[] {
     modelId === 'opengrid-snap-remover' ||
     modelId === 'opengrid-wall-cover'
   ) {
-    return []
+    return modelId === 'opengrid-wall-cover' ? ['text', 'openConnect'] : []
   }
   if (modelId === 'opengrid-divider') return OPENGRID_DIVIDER_PARAMETER_KEYS
   if (modelId === 'opengrid-pillar') return PILLAR_PARAMETER_KEYS
@@ -245,10 +247,11 @@ function legacyNumericDefault(
 function parseBooleanRawParameter(
   rawValue: string | undefined,
   field: ModelParameterKey,
+  defaultValue = false,
 ):
   | { valid: true; value: boolean }
   | { valid: false; messageId: string; field: ModelParameterKey } {
-  const value = rawValue ?? 'false'
+  const value = rawValue ?? String(defaultValue)
   if (value === 'true') return { valid: true, value: true }
   if (value === 'false') return { valid: true, value: false }
   return {
@@ -610,6 +613,17 @@ export function rawFromParameters(
 ): RawParameters {
   if (Object.keys(parameters).length === 0) return {}
 
+  if ('text' in parameters) {
+    const wallCoverParameters = parameters as OpenGridWallCoverParameters
+    return {
+      text: wallCoverParameters.text,
+      openConnect: String(
+        wallCoverParameters.openConnect ??
+          OPENGRID_WALL_COVER_CONFIGURATION.defaultOpenConnect,
+      ),
+    }
+  }
+
   if ('diameter' in parameters && 'height' in parameters) {
     const bottomSeatMode =
       normalizeOpenGridLocatingSeatMode(
@@ -854,11 +868,35 @@ export function parseRawParameters(
     modelId === 'opengrid-snap-remover' ||
     modelId === 'opengrid-wall-cover'
   ) {
-    if (
-      modelId === 'opengrid-wall-cover' &&
-      !isOpenGridWallCoverParameters(raw)
-    ) {
-      return { valid: false, messageId: 'validation.invalid' }
+    if (modelId === 'opengrid-wall-cover') {
+      if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+        return { valid: false, messageId: 'validation.invalid' }
+      }
+      const text = typeof raw.text === 'string' ? raw.text : undefined
+      const openConnect = parseBooleanRawParameter(
+        raw.openConnect,
+        'openConnect',
+        OPENGRID_WALL_COVER_CONFIGURATION.defaultOpenConnect,
+      )
+      if (!openConnect.valid) return openConnect
+      const normalizedRaw = {
+        ...raw,
+        openConnect: openConnect.value,
+        ...(text === undefined
+          ? {}
+          : { text: normalizeOpenGridWallCoverText(text) }),
+      }
+      const validation = validateModelParameters(modelId, normalizedRaw)
+      if (!validation.valid) {
+        const issue = validation.issues[0]
+        return {
+          valid: false,
+          messageId: issue?.messageId ?? 'validation.invalid',
+          field: modelParameterFieldFromDiagnostic(issue?.field),
+          ...(issue?.params ? { params: issue.params } : {}),
+        }
+      }
+      return { valid: true, value: validation.value.parameters }
     }
     const validation = validateModelParameters(modelId, {})
     if (validation.valid) {

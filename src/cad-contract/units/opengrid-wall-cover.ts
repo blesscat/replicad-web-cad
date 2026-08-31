@@ -2,18 +2,28 @@ import {
   boundsForOpenGridSnap,
   OPENGRID_SNAP_CONFIGURATION,
 } from './opengrid-snap'
+import type { DiagnosticParams } from '../diagnostics'
 
-export type OpenGridWallCoverParameters = Record<never, never>
+export type OpenGridWallCoverParameterKey = 'text' | 'openConnect'
 
-export type OpenGridWallCoverValidation =
-  | { valid: true; value: OpenGridWallCoverParameters }
-  | {
-      valid: false
-      issues: [{ field: 'parameters'; messageId: 'validation.invalid' }]
-    }
+export type OpenGridWallCoverParameters = {
+  text: string
+  openConnect?: boolean
+}
 
 export const OPENGRID_WALL_COVER_CONFIGURATION = {
-  defaultParameters: {} as OpenGridWallCoverParameters,
+  coverWidth: OPENGRID_SNAP_CONFIGURATION.nominalWidth,
+  coverDepth: OPENGRID_SNAP_CONFIGURATION.nominalDepth,
+  coverGap: 3,
+  maxTextLength: 8,
+  defaultText: 'A',
+  defaultOpenConnect: true,
+  fontFamily: 'Noto Sans CJK TC Bold',
+  fontFileName: 'NotoSansCJKtc-Bold.otf',
+  defaultParameters: {
+    text: 'A',
+    openConnect: true,
+  } as OpenGridWallCoverParameters,
   fileNames: {
     step: 'opengrid-wall-cover.step',
     stl: 'opengrid-wall-cover.stl',
@@ -21,29 +31,85 @@ export const OPENGRID_WALL_COVER_CONFIGURATION = {
   },
 } as const
 
-function isPlainEmptyObject(
-  value: unknown,
-): value is OpenGridWallCoverParameters {
+export type OpenGridWallCoverValidation =
+  | {
+      valid: true
+      value: OpenGridWallCoverParameters
+    }
+  | {
+      valid: false
+      issues: Array<{
+        field: OpenGridWallCoverParameterKey | 'parameters'
+        messageId: string
+        params?: DiagnosticParams
+      }>
+    }
+
+export function normalizeOpenGridWallCoverText(value: string): string {
+  return value.normalize('NFC').replace(/\s/gu, '')
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     return false
   }
 
   const prototype = Object.getPrototypeOf(value)
-  if (prototype !== Object.prototype && prototype !== null) return false
-  return Object.keys(value).length === 0
+  return prototype === Object.prototype || prototype === null
+}
+
+function invalid(
+  field: OpenGridWallCoverParameterKey | 'parameters',
+  messageId = 'validation.invalid',
+  params?: DiagnosticParams,
+) {
+  return {
+    valid: false as const,
+    issues: [{ field, messageId, ...(params ? { params } : {}) }],
+  }
 }
 
 export function validateOpenGridWallCoverParameters(
   value: unknown,
 ): OpenGridWallCoverValidation {
-  if (!isPlainEmptyObject(value)) {
-    return {
-      valid: false,
-      issues: [{ field: 'parameters', messageId: 'validation.invalid' }],
-    }
+  if (!isRecord(value)) return invalid('parameters')
+
+  const keys = Object.keys(value)
+  if (keys.some((key) => key !== 'text' && key !== 'openConnect')) {
+    return invalid('parameters')
+  }
+  if (value.text !== undefined && typeof value.text !== 'string') {
+    return invalid('text')
+  }
+  if (
+    value.openConnect !== undefined &&
+    typeof value.openConnect !== 'boolean'
+  ) {
+    return invalid('openConnect')
   }
 
-  return { valid: true, value }
+  const text = normalizeOpenGridWallCoverText(
+    value.text ?? OPENGRID_WALL_COVER_CONFIGURATION.defaultText,
+  )
+  const textLength = Array.from(text).length
+  if (textLength < 1) {
+    return invalid('text', 'validation.wallCoverTextRequired')
+  }
+  if (textLength > OPENGRID_WALL_COVER_CONFIGURATION.maxTextLength) {
+    return invalid('text', 'validation.wallCoverTextTooLong', {
+      max: OPENGRID_WALL_COVER_CONFIGURATION.maxTextLength,
+    })
+  }
+
+  return {
+    valid: true,
+    value: {
+      text,
+      openConnect:
+        value.openConnect ??
+        OPENGRID_WALL_COVER_CONFIGURATION.defaultOpenConnect,
+    },
+  }
 }
 
 export function isOpenGridWallCoverParameters(
@@ -55,17 +121,35 @@ export function isOpenGridWallCoverParameters(
 export function boundsForOpenGridWallCover(
   parameters: OpenGridWallCoverParameters,
 ) {
-  if (!isOpenGridWallCoverParameters(parameters)) {
+  const validation = validateOpenGridWallCoverParameters(parameters)
+  if (!validation.valid) {
     throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-wall-cover')
   }
 
-  return boundsForOpenGridSnap({
+  const coverBounds = boundsForOpenGridSnap({
     ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
     variant: 'Lite',
     profile: 'Standard',
     offset: 0,
     footprint: 'full',
   })
+  const coverCount = Array.from(validation.value.text).length
+  const width =
+    coverCount * OPENGRID_WALL_COVER_CONFIGURATION.coverWidth +
+    (coverCount - 1) * OPENGRID_WALL_COVER_CONFIGURATION.coverGap
+  const halfWidth = Number((width / 2).toFixed(6))
+  return {
+    min: [-halfWidth, coverBounds.min[1], coverBounds.min[2]] as [
+      number,
+      number,
+      number,
+    ],
+    max: [halfWidth, coverBounds.max[1], coverBounds.max[2]] as [
+      number,
+      number,
+      number,
+    ],
+  }
 }
 
 function fileNameFor(

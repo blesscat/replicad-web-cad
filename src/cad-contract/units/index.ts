@@ -112,6 +112,7 @@ import type {
 import {
   boundsForOpenGridWallCover,
   isOpenGridWallCoverParameters,
+  normalizeOpenGridWallCoverText,
   openGridWallCoverFileName,
   openGridWallCoverStlFileName,
   openGridWallCoverThreeMfFileName,
@@ -120,6 +121,7 @@ import {
 } from './opengrid-wall-cover'
 import type {
   OpenGridWallCoverParameters,
+  OpenGridWallCoverParameterKey,
   OpenGridWallCoverValidation,
 } from './opengrid-wall-cover'
 import {
@@ -397,6 +399,7 @@ export {
 export {
   boundsForOpenGridWallCover,
   isOpenGridWallCoverParameters,
+  normalizeOpenGridWallCoverText,
   openGridWallCoverFileName,
   openGridWallCoverStlFileName,
   openGridWallCoverThreeMfFileName,
@@ -445,6 +448,7 @@ export type {
 } from './opengrid-snap'
 export type {
   OpenGridWallCoverParameters,
+  OpenGridWallCoverParameterKey,
   OpenGridWallCoverValidation,
 } from './opengrid-wall-cover'
 export type {
@@ -665,6 +669,7 @@ export type ModelParameterKey =
   | OpenGridOpenShelfParameterKey
   | OpenGridOpenConnectShelfParameterKey
   | OpenGridOpenConnectOrganizerParameterKey
+  | OpenGridWallCoverParameterKey
 export type ScalarModelParameterKey =
   | DimensionKey
   | GridParameterKey

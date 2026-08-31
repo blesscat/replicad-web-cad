@@ -37,9 +37,9 @@ function createContext(
   let bounds: ModelBounds
 
   if (modelId === 'opengrid-wall-cover') {
-    parameters = {}
-    rawParameters = {}
-    bounds = boundsForOpenGridWallCover({})
+    parameters = { text: 'A' }
+    rawParameters = { text: 'A' }
+    bounds = boundsForOpenGridWallCover({ text: 'A' })
   } else if (modelId === 'opengrid-snap') {
     const snapParameters: OpenGridSnapParameters = {
       variant: 'Lite',

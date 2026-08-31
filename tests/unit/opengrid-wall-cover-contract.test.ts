@@ -6,6 +6,7 @@ import {
   openGridWallCoverFileName,
   openGridWallCoverStlFileName,
   openGridWallCoverThreeMfFileName,
+  OPENGRID_WALL_COVER_CONFIGURATION,
   OPENGRID_SNAP_CONFIGURATION,
   normalizeOpenGridSnapParameters,
   validateOpenGridWallCoverParameters,
@@ -18,21 +19,69 @@ import {
 import { systemContextForModel } from '../../src/features/cad/system-entry-context'
 
 describe('OpenGrid Wall Cover contract', () => {
-  it('accepts only the fixed empty parameter object', () => {
+  it('accepts a canonical text value and migrates legacy empty parameters', () => {
+    expect(OPENGRID_WALL_COVER_CONFIGURATION.defaultParameters).toEqual({
+      text: 'A',
+      openConnect: true,
+    })
     expect(validateOpenGridWallCoverParameters({})).toEqual({
       valid: true,
-      value: {},
+      value: { text: 'A', openConnect: true },
     })
-    expect(isOpenGridWallCoverParameters({})).toBe(true)
+    expect(validateOpenGridWallCoverParameters({ text: 'IAN' })).toEqual({
+      valid: true,
+      value: { text: 'IAN', openConnect: true },
+    })
+    expect(validateOpenGridWallCoverParameters({ text: ' I A N ' })).toEqual({
+      valid: true,
+      value: { text: 'IAN', openConnect: true },
+    })
+    expect(isOpenGridWallCoverParameters({ text: 'A' })).toBe(true)
+    expect(validateOpenGridWallCoverParameters({ text: '' })).toMatchObject({
+      valid: false,
+      issues: [{ messageId: 'validation.wallCoverTextRequired' }],
+    })
     expect(
-      validateOpenGridWallCoverParameters({ variant: 'Lite' }),
+      validateOpenGridWallCoverParameters({ text: '123456789' }),
+    ).toMatchObject({
+      valid: false,
+      issues: [
+        {
+          messageId: 'validation.wallCoverTextTooLong',
+          params: { max: 8 },
+        },
+      ],
+    })
+    expect(
+      validateOpenGridWallCoverParameters({ text: 'A', extra: true }),
     ).toMatchObject({
       valid: false,
     })
   })
 
-  it('uses the fixed Snap Lite Standard full-footprint cover bounds', () => {
-    expect(boundsForOpenGridWallCover({})).toEqual(
+  it('accepts the optional OpenConnect underside opening toggle', () => {
+    expect(
+      validateOpenGridWallCoverParameters({
+        text: 'A',
+        openConnect: false,
+      }),
+    ).toEqual({
+      valid: true,
+      value: { text: 'A', openConnect: false },
+    })
+    expect(
+      validateOpenGridWallCoverParameters({
+        text: 'A',
+        openConnect: 'false',
+      }),
+    ).toMatchObject({
+      valid: false,
+      issues: [{ field: 'openConnect', messageId: 'validation.invalid' }],
+    })
+  })
+
+  it('uses one fixed cover envelope per input character', () => {
+    expect(boundsForOpenGridWallCover({ text: 'A' })).toEqual(
       boundsForOpenGridSnap({
         ...OPENGRID_SNAP_CONFIGURATION.defaultParameters,
         variant: 'Lite',
@@ -41,24 +90,41 @@ describe('OpenGrid Wall Cover contract', () => {
         footprint: 'full',
       }),
     )
+    expect(boundsForOpenGridWallCover({ text: 'IAN' })).toEqual({
+      min: [-41.4, -12.8, 0],
+      max: [41.4, 12.8, 3.4],
+    })
   })
 
-  it('exposes stable names and a 3MF filename for the fixed model', () => {
+  it('exposes stable names and a 3MF filename for the text model', () => {
     const definition = getModelDefinition('opengrid-wall-cover')
 
     expect(definition).toMatchObject({
       id: 'opengrid-wall-cover',
       buildKey: 'opengrid-wall-cover',
       displayName: 'models.model.opengrid-wall-cover.name',
-      parameterPresentation: { kind: 'fixed' },
+      parameterPresentation: { kind: 'adjustable' },
       parameterSchema: [],
+      defaultParameters: { text: 'A', openConnect: true },
     })
-    expect(definition?.exportFileName({})).toBe('opengrid-wall-cover.step')
-    expect(definition?.stlFileName({})).toBe('opengrid-wall-cover.stl')
-    expect(definition?.threeMfFileName?.({})).toBe('opengrid-wall-cover.3mf')
-    expect(openGridWallCoverFileName({})).toBe('opengrid-wall-cover.step')
-    expect(openGridWallCoverStlFileName({})).toBe('opengrid-wall-cover.stl')
-    expect(openGridWallCoverThreeMfFileName({})).toBe('opengrid-wall-cover.3mf')
+    expect(definition?.exportFileName({ text: 'IAN' })).toBe(
+      'opengrid-wall-cover.step',
+    )
+    expect(definition?.stlFileName({ text: 'IAN' })).toBe(
+      'opengrid-wall-cover.stl',
+    )
+    expect(definition?.threeMfFileName?.({ text: 'IAN' })).toBe(
+      'opengrid-wall-cover.3mf',
+    )
+    expect(openGridWallCoverFileName({ text: 'IAN' })).toBe(
+      'opengrid-wall-cover.step',
+    )
+    expect(openGridWallCoverStlFileName({ text: 'IAN' })).toBe(
+      'opengrid-wall-cover.stl',
+    )
+    expect(openGridWallCoverThreeMfFileName({ text: 'IAN' })).toBe(
+      'opengrid-wall-cover.3mf',
+    )
     expect(getModelDefinition('opengrid-snap')?.threeMfFileName).toBeUndefined()
   })
 

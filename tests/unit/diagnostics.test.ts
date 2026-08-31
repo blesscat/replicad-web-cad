@@ -47,6 +47,18 @@ describe('locale-neutral CAD diagnostics', () => {
         messageId: 'validation.invalid',
       }),
     ).toContain('寬度 輸入無效')
+    expect(
+      formatValidationIssue('zh-Hant', {
+        field: 'text',
+        messageId: 'validation.wallCoverTextTooLong',
+        params: { max: 8 },
+      }),
+    ).toContain('文字 不可超過 8 個字元')
+    expect(
+      formatDiagnostic('en', {
+        messageId: 'diagnostic.wallCoverGlyphUnsupported',
+      }),
+    ).toContain('default font')
   })
 
   it('accepts descriptor-based Worker errors and rejects sentence transport', () => {

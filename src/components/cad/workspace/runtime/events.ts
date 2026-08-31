@@ -1,5 +1,9 @@
 import { normalizeError } from '../../../../cad-contract/errors'
-import { diagnostic } from '../../../../cad-contract/diagnostics'
+import {
+  diagnostic,
+  type DiagnosticParams,
+  type FieldDiagnostic,
+} from '../../../../cad-contract/diagnostics'
 import {
   isWorkerEvent,
   type ProgressEvent,
@@ -111,6 +115,26 @@ function modelEventMatchesOperation(
     JSON.stringify(stableParameterValue(expected.value.parameters)) ===
     JSON.stringify(stableParameterValue(actual.value.parameters))
   )
+}
+
+function wallCoverFieldErrorFor(
+  operation: { kind: string; modelId?: ModelId } | undefined,
+  messageId: string,
+  params: DiagnosticParams | undefined,
+): FieldDiagnostic | null {
+  if (
+    operation?.kind !== 'model' ||
+    operation.modelId !== 'opengrid-wall-cover' ||
+    (messageId !== 'diagnostic.wallCoverGlyphUnsupported' &&
+      messageId !== 'diagnostic.wallCoverFontLoadFailed')
+  ) {
+    return null
+  }
+  return {
+    field: 'text',
+    messageId,
+    ...(params ? { params } : {}),
+  }
 }
 
 function progressFromEvent(event: ProgressEvent) {
@@ -429,6 +453,14 @@ export function createWorkerEventHandler(
           modelRevision: event.modelRevision,
           operationId: event.operationId,
         })
+        const wallCoverFieldError = wallCoverFieldErrorFor(
+          operation,
+          event.messageId,
+          event.messageParams,
+        )
+        if (wallCoverFieldError) {
+          context.setFieldErrors({ text: wallCoverFieldError })
+        }
         if (event.code === 'ENGINE_INIT_FAILED') {
           context.recoverWorker(error)
         } else {

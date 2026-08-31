@@ -17,9 +17,9 @@ import {
   isOpenGridStackableCylinderParameters,
   validateOpenGridStackableBoxParameters,
   validateOpenGridStackableCylinderParameters,
+  validateOpenGridWallCoverParameters,
   isOpenGridSnapParameters,
   isOpenGridSnapRemoverParameters,
-  isOpenGridWallCoverParameters,
   isPillarParameters,
   validateOpenGridGenerationSupport,
   validateModelParameters,
@@ -256,10 +256,11 @@ async function buildOpenGridWallCoverModel(
   parameters: ModelParameterValues,
   context: KernelBuildContext,
 ): Promise<Shape3D> {
-  if (!isOpenGridWallCoverParameters(parameters)) {
+  const validation = validateOpenGridWallCoverParameters(parameters)
+  if (!validation.valid) {
     throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-wall-cover')
   }
-  return buildOpenGridWallCover(parameters, {
+  return buildOpenGridWallCover(validation.value, {
     getOpenGridSnapReference: context.getOpenGridSnapReference,
     getOpenGridWallCoverReference: context.getOpenGridWallCoverReference,
     getOpenGridSnapFixedFootprint: context.getOpenGridSnapFixedFootprint,
@@ -267,6 +268,7 @@ async function buildOpenGridWallCoverModel(
     yieldToEventLoop: context.yieldToEventLoop,
     isGenerationCurrent: context.isGenerationCurrent,
     booleanOperations: context.booleanOperations,
+    reportProgress: context.reportProgress,
   })
 }
 
@@ -608,10 +610,11 @@ export async function buildModelBRepWithParts(
   context: KernelBuildContext,
 ): Promise<KernelModelBuildResult> {
   if (modelId === 'opengrid-wall-cover') {
-    if (!isOpenGridWallCoverParameters(parameters)) {
+    const validation = validateOpenGridWallCoverParameters(parameters)
+    if (!validation.valid) {
       throw new Error('MODEL_PARAMETERS_MISMATCH:opengrid-wall-cover')
     }
-    return buildOpenGridWallCoverWithFlatText({
+    return buildOpenGridWallCoverWithFlatText(validation.value, {
       getOpenGridSnapReference: context.getOpenGridSnapReference,
       getOpenGridWallCoverReference: context.getOpenGridWallCoverReference,
       getOpenGridSnapFixedFootprint: context.getOpenGridSnapFixedFootprint,
@@ -619,6 +622,7 @@ export async function buildModelBRepWithParts(
       yieldToEventLoop: context.yieldToEventLoop,
       isGenerationCurrent: context.isGenerationCurrent,
       booleanOperations: context.booleanOperations,
+      reportProgress: context.reportProgress,
     })
   }
 

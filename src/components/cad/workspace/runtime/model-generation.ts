@@ -195,6 +195,7 @@ export function createModelGenerationHandlers(
       const issue = {
         field: parsed.field ?? key,
         messageId: parsed.messageId,
+        ...(parsed.params ? { params: parsed.params } : {}),
       }
       context.setFieldErrors({ [issue.field]: issue })
       context.dispatch({

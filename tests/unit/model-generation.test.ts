@@ -67,6 +67,7 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
       magnetHoleThickness: 0,
     }
   }
+  if (modelId === 'opengrid-wall-cover') return { text: 'A' }
   if (modelId === 'opengrid-divider') {
     return {
       left: 1,
@@ -526,6 +527,35 @@ describe('CAD model generation debounce', () => {
       expect.objectContaining({ type: 'input-invalid' }),
     )
     expect(context.setPersistedParameters).not.toHaveBeenCalled()
+  })
+
+  it('rejects an overlong Wall Cover label without scheduling generation', () => {
+    const { client, send, context } = createRuntimeContext(
+      'opengrid-wall-cover',
+      { text: 'A' },
+    )
+    const handlers = createModelGenerationHandlers(context)
+
+    handlers.handleInputChange('text', '123456789')
+
+    expect(context.setFieldErrors).toHaveBeenCalledWith({
+      text: {
+        field: 'text',
+        messageId: 'validation.wallCoverTextTooLong',
+        params: { max: 8 },
+      },
+    })
+    expect(client.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: 'model.invalidate',
+        generation: 1,
+        reason: 'invalid-input',
+      }),
+    )
+    vi.advanceTimersByTime(500)
+    expect(
+      send.mock.calls.some(([command]) => command.kind === 'model.generate'),
+    ).toBe(false)
   })
 
   it('keeps generation flow when persistence storage rejects a write', () => {

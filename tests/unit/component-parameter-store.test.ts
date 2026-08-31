@@ -10,6 +10,7 @@ import {
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   OPENGRID_SNAP_CONFIGURATION,
   OPENGRID_DIVIDER_CONFIGURATION,
+  OPENGRID_WALL_COVER_CONFIGURATION,
   PILLAR_CONFIGURATION,
   type OpenGridParameters,
 } from '../../src/cad-contract/units'
@@ -1129,6 +1130,34 @@ describe('component parameter store', () => {
       PILLAR_CONFIGURATION.defaultParameters,
     )
     unsupportedStore.dispose()
+  })
+
+  it('migrates a legacy empty Wall Cover snapshot to the default label', () => {
+    const storage = createMemoryStorage(
+      JSON.stringify({
+        version: 2,
+        values: { wall: { 'opengrid-wall-cover': {} } },
+      }),
+    )
+    const store = createComponentParameterStore({
+      storage,
+      systemContext: 'wall',
+    })
+
+    expect(store.get('opengrid-wall-cover')).toEqual(
+      OPENGRID_WALL_COVER_CONFIGURATION.defaultParameters,
+    )
+    expect(
+      store.set('opengrid-wall-cover', store.get('opengrid-wall-cover')),
+    ).toBe(true)
+    const persisted = JSON.parse(storage.writes.at(-1) ?? '{}') as {
+      values?: { wall?: Record<string, Record<string, unknown>> }
+    }
+    expect(persisted.values?.wall?.['opengrid-wall-cover']).toEqual({
+      text: 'A',
+      openConnect: true,
+    })
+    store.dispose()
   })
 
   it('migrates legacy positioning snapshots and does not overwrite them with an invalid draft', () => {

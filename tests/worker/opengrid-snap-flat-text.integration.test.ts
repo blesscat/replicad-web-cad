@@ -18,6 +18,8 @@ import {
   isThreeMfPackage,
 } from '../../src/cad-kernel/export'
 import {
+  loadOpenGridWallCoverFont,
+  OPEN_GRID_WALL_COVER_FONT_URL,
   OPENGRID_WALL_COVER_TEXT_CONFIGURATION,
   openGridWallCoverTextTopZ,
 } from '../../src/cad-kernel/components/opengrid-wall-cover/flat-text'
@@ -69,6 +71,9 @@ function wallCoverReferenceBlob(): Blob {
 describe('OpenGrid Wall Cover flat text POC', () => {
   beforeAll(async () => {
     await initialiseCadKernel(WASM_PATH)
+    await loadOpenGridWallCoverFont(
+      readFileSync(fileURLToPath(OPEN_GRID_WALL_COVER_FONT_URL)),
+    )
   })
 
   afterAll(() => undefined)
@@ -77,9 +82,10 @@ describe('OpenGrid Wall Cover flat text POC', () => {
     const reference = await importOpenGridWallCoverReference(
       wallCoverReferenceBlob(),
     )
-    const generated = await buildOpenGridWallCoverWithFlatText({
-      getOpenGridWallCoverReference: async () => reference,
-    })
+    const generated = await buildOpenGridWallCoverWithFlatText(
+      { text: 'SNAP' },
+      { getOpenGridWallCoverReference: async () => reference },
+    )
     try {
       const bodyPart = generated.parts.find((part) => part.name === 'body')
       const textPart = generated.parts.find((part) => part.name === 'text')
@@ -90,7 +96,16 @@ describe('OpenGrid Wall Cover flat text POC', () => {
       const expectedTop = openGridWallCoverTextTopZ()
       const expectedBottom =
         expectedTop - OPENGRID_WALL_COVER_TEXT_CONFIGURATION.depth
-      expect(countSolids(bodyPart.shape)).toBe(9)
+      const expectedWidth = 4 * 25.6 + 3 * 3
+      expect(shapeBounds(generated.shape)[0]?.[0]).toBeCloseTo(
+        -expectedWidth / 2,
+        2,
+      )
+      expect(shapeBounds(generated.shape)[1]?.[0]).toBeCloseTo(
+        expectedWidth / 2,
+        2,
+      )
+      expect(countSolids(bodyPart.shape)).toBe(9 * 4)
       expect(countSolids(textPart.shape)).toBeGreaterThan(0)
       expect(textBounds[0]?.[2]).toBeCloseTo(expectedBottom, 2)
       expect(textBounds[1]?.[2]).toBeCloseTo(expectedTop, 2)
@@ -118,6 +133,7 @@ describe('OpenGrid Wall Cover flat text POC', () => {
           qualityMesh,
           textMesh,
           reference,
+          { text: 'SNAP' },
         ),
       ).not.toThrow()
 
@@ -156,5 +172,5 @@ describe('OpenGrid Wall Cover flat text POC', () => {
       for (const part of generated.parts) part.shape.delete()
       reference.delete()
     }
-  })
+  }, 30000)
 })

@@ -415,6 +415,17 @@ function makeCenterRemoverCutter(
   }
 }
 
+export function makeOpenGridSnapCenterRemoverCutter(
+  variant: OpenGridSnapVariant,
+  profile: OpenGridSnapProfile = 'Standard',
+  scope?: BooleanOperationScope,
+): Shape3D {
+  return makeCenterRemoverCutter(
+    openGridSnapProfileFor(profile, variant),
+    scope,
+  )
+}
+
 function makeLocatingHolesCutter(
   definition: OpenGridSnapProfileDefinition,
   reporter: BooleanOperationReporter | undefined,
@@ -1145,9 +1156,9 @@ function placeOpenConnectHead(
   }
 }
 
-function makeOpenConnectUndersideNotches(
+export function makeOpenGridSnapOpenConnectUndersideNotchCutters(
   variant: OpenGridSnapVariant,
-  transform: XYScaleTransform | null,
+  transform: XYScaleTransform | null = null,
 ): Shape3D[] {
   // Lite's Standard assembly needs a tiny overlap to avoid a coplanar sliver;
   // keep Full's cutter exactly at its existing nominal coordinates.
@@ -1174,7 +1185,10 @@ function cutOpenConnectUndersideNotches(
   transform: XYScaleTransform | null,
   scope: BooleanOperationScope | undefined,
 ): Shape3D {
-  const cutters = makeOpenConnectUndersideNotches(variant, transform)
+  const cutters = makeOpenGridSnapOpenConnectUndersideNotchCutters(
+    variant,
+    transform,
+  )
   let result = assembly
   try {
     for (const cutter of cutters) {

@@ -531,7 +531,7 @@ describe('Worker contract runtime validation', () => {
     const coverWithParts = {
       ...event,
       modelId: 'opengrid-wall-cover',
-      parameters: {},
+      parameters: { text: 'A' },
       partMeshes: [
         { name: 'body' as const, mesh: partMesh },
         { name: 'text' as const, mesh: partMesh },

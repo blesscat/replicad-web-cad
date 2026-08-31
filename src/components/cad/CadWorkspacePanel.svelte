@@ -64,7 +64,13 @@
     translate(locale, key, values)
 
   function hasParameterControlsFor(modelId: ModelId): boolean {
-    if (modelId === 'opengrid' || modelId === 'opengrid-pillar') return true
+    if (
+      modelId === 'opengrid' ||
+      modelId === 'opengrid-pillar' ||
+      modelId === 'opengrid-wall-cover'
+    ) {
+      return true
+    }
     return (getModelDefinition(modelId)?.parameterSchema.length ?? 0) > 0
   }
 </script>
@@ -99,14 +105,16 @@
     >
       {t('cad.action.step')}
     </button>
-    <button
-      class={ACTION_BUTTON_CLASS}
-      type="button"
-      disabled={!canExport}
-      onclick={() => onExport('stl')}
-    >
-      {t('cad.action.stl')}
-    </button>
+    {#if modelId !== 'opengrid-wall-cover'}
+      <button
+        class={ACTION_BUTTON_CLASS}
+        type="button"
+        disabled={!canExport}
+        onclick={() => onExport('stl')}
+      >
+        {t('cad.action.stl')}
+      </button>
+    {/if}
     {#if modelId === 'opengrid-wall-cover'}
       <button
         class={ACTION_BUTTON_CLASS}
@@ -123,4 +131,12 @@
       </button>
     {/if}
   </div>
+  {#if modelId === 'opengrid-wall-cover'}
+    <p
+      class="m-0 text-sm leading-6 text-muted"
+      data-testid="opengrid-wall-cover-three-mf-note"
+    >
+      {t('cad.wallCover.threeMfNote')}
+    </p>
+  {/if}
 </div>
