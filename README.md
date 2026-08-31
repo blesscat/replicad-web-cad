@@ -8,17 +8,18 @@
 
 公開頁面使用 `/zh-Hant/` 與 `/en/` 前綴；未帶 locale 的舊網址會導向繁體中文版本。production 預設 origin 設定在 `.env.production` 的 `PUBLIC_SITE_URL`（目前為 `https://shape-shortcut.blesscat.dev`），其他部署環境可用同名環境變數覆寫，讓 canonical、`hreflang` 與 `/sitemap.xml` 使用正確網址；本機開發與測試未設定時才會使用 `http://localhost:3456` fallback。Cloudflare Pages 會讀取 `public/_redirects`，以同 origin 的相對路徑發出保留 query string 的 308 redirect；其他 static hosting 需要用等效的 redirect 設定。靜態 fallback 仍會使用 `noindex`、canonical、meta refresh 與 JavaScript 導向，其中 JavaScript 會保留 query string，靜態 meta refresh 與無 JavaScript anchor 僅能導向穩定路徑。
 
-## Portaly 支持設定
+## 贊助平台設定
 
-網站導覽列的「支持這個專案」按鈕會連到 Portaly 的外部贊助頁。目前 production 使用：
+網站導覽列的「支持這個專案」按鈕會開啟贊助選項，顯示所有已設定的外部平台；選項不依語系切換。production 目前使用：
 
 ```env
 PUBLIC_PORTALY_SUPPORT_URL=https://portaly.cc/blesscat/support
+PUBLIC_KOFI_SUPPORT_URL=https://ko-fi.com/blesscat
 ```
 
-這是公開的 build-time 設定，不是 API secret。若要在其他環境啟用，請在 Astro build 前設定同名環境變數；修改後必須重新 build 與部署。Portaly 贊助頁應設定為單筆支持，可提供建議金額與自訂金額，不在 Shape Shortcut 內收集付款資料、發票資料或付款狀態。
+這些是公開的 build-time 設定，不是 API secret。若要在其他環境啟用或替換平台，請在 Astro build 前設定同名環境變數；修改後必須重新 build 與部署。每個外部平台都應設定為單筆 donation，避免啟用 membership 或 recurring payment；金額選項由平台頁面負責。Shape Shortcut 不在站內收集付款資料、發票資料或付款狀態。
 
-部署後請從首頁、文件頁與任一 CAD 頁確認按鈕可見、會在新分頁開啟 Portaly，且原本的 CAD workspace 不會被關閉。
+部署後請從首頁、文件頁與任一 CAD 頁確認兩個贊助選項可見、會在新分頁開啟對應平台，且原本的 CAD workspace 不會被關閉。
 
 ## 主要架構
 
@@ -206,6 +207,8 @@ pnpm check
 pnpm test
 pnpm test:e2e
 ```
+
+贊助選項的 E2E fallback 測試依 build-time 環境變數執行：CI 應分別用「Portaly 與 Ko-fi 都設定」、「只設定其中一個」及「兩者皆未設定」三組環境執行 `tests/e2e/home.spec.ts`。測試會驗證雙平台選擇、單平台 fallback，以及沒有有效平台時不顯示贊助入口。
 
 E2E 預設會在 Chromium 完成 WebGL CAD/STEP gate，並在 Firefox headless 執行 route/fallback smoke；要在本機以虛擬桌面補跑 Firefox 的完整 WebGL gate，可使用：
 

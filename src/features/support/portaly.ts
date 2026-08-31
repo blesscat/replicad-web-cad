@@ -1,4 +1,4 @@
-export function getValidPortalySupportUrl(value: unknown): string | undefined {
+export function getValidSupportUrl(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined
 
   const trimmedValue = value.trim()
@@ -12,3 +12,5 @@ export function getValidPortalySupportUrl(value: unknown): string | undefined {
     return undefined
   }
 }
+
+export const getValidPortalySupportUrl = getValidSupportUrl

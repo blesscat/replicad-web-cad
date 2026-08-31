@@ -1,6 +1,6 @@
 ---
 import SiteLayout from '../../../layouts/SiteLayout.astro'
-import { portalySupportUrl } from '../../../features/support/config'
+import { supportProviders } from '../../../features/support/config'
 import {
   SUPPORTED_LOCALES,
   isLocale,
@@ -127,16 +127,17 @@ const docsPath = publicPathFor(locale, 'docs')
           {t('about.email')}
         </a>
         {
-          portalySupportUrl && (
-            <a
+          supportProviders.length > 0 && (
+            <button
+              type="button"
               class="inline-flex items-center justify-center rounded-lg border border-white/60 px-4 py-3 font-semibold text-white no-underline transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-              href={portalySupportUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="about-support-link"
+              data-support-dialog-open
+              data-testid="about-support-trigger"
+              aria-controls="support-dialog"
+              aria-haspopup="dialog"
             >
               {t('about.support')}
-            </a>
+            </button>
           )
         }
       </div>

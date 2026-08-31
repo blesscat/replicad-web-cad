@@ -1,29 +1,58 @@
 import { describe, expect, it } from 'vitest'
-import { getValidPortalySupportUrl } from '../../src/features/support/portaly'
+import { supportProvidersFor } from '../../src/features/support/config'
+import { getValidSupportUrl } from '../../src/features/support/portaly'
 
-describe('Portaly support URL configuration', () => {
+describe('support URL configuration', () => {
   it('accepts and normalizes an absolute HTTPS URL', () => {
-    expect(
-      getValidPortalySupportUrl('  https://portaly.example/support  '),
-    ).toBe('https://portaly.example/support')
+    expect(getValidSupportUrl('  https://portaly.example/support  ')).toBe(
+      'https://portaly.example/support',
+    )
   })
 
   it('returns no destination for missing or blank configuration', () => {
-    expect(getValidPortalySupportUrl(undefined)).toBeUndefined()
-    expect(getValidPortalySupportUrl('')).toBeUndefined()
-    expect(getValidPortalySupportUrl('   ')).toBeUndefined()
+    expect(getValidSupportUrl(undefined)).toBeUndefined()
+    expect(getValidSupportUrl('')).toBeUndefined()
+    expect(getValidSupportUrl('   ')).toBeUndefined()
   })
 
   it('returns no destination for malformed configuration', () => {
-    expect(getValidPortalySupportUrl('https://')).toBeUndefined()
-    expect(getValidPortalySupportUrl('/support')).toBeUndefined()
+    expect(getValidSupportUrl('https://')).toBeUndefined()
+    expect(getValidSupportUrl('/support')).toBeUndefined()
   })
 
   it('returns no destination for non-HTTPS schemes', () => {
-    expect(getValidPortalySupportUrl('http://portaly.example/support')).toBe(
-      undefined,
-    )
-    expect(getValidPortalySupportUrl('javascript:alert(1)')).toBeUndefined()
-    expect(getValidPortalySupportUrl('data:text/plain,support')).toBeUndefined()
+    expect(getValidSupportUrl('http://portaly.example/support')).toBe(undefined)
+    expect(getValidSupportUrl('javascript:alert(1)')).toBeUndefined()
+    expect(getValidSupportUrl('data:text/plain,support')).toBeUndefined()
+  })
+
+  it('keeps valid Portaly and Ko-fi destinations in provider order', () => {
+    expect(
+      supportProvidersFor({
+        portaly: '  https://portaly.example/support  ',
+        kofi: '  https://ko-fi.example/blesscat  ',
+      }),
+    ).toEqual([
+      { id: 'portaly', url: 'https://portaly.example/support' },
+      { id: 'kofi', url: 'https://ko-fi.example/blesscat' },
+    ])
+  })
+
+  it('filters an invalid provider without removing the valid provider', () => {
+    expect(
+      supportProvidersFor({
+        portaly: 'http://portaly.example/support',
+        kofi: 'https://ko-fi.example/blesscat',
+      }),
+    ).toEqual([{ id: 'kofi', url: 'https://ko-fi.example/blesscat' }])
+  })
+
+  it('returns no providers when all provider destinations are invalid', () => {
+    expect(
+      supportProvidersFor({
+        portaly: undefined,
+        kofi: 'javascript:alert(1)',
+      }),
+    ).toEqual([])
   })
 })

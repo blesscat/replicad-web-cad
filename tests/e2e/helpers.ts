@@ -5,7 +5,7 @@ import {
   type Locator,
   type Page,
 } from '@playwright/test'
-import { getValidPortalySupportUrl } from '../../src/features/support/portaly'
+import { supportProvidersFor } from '../../src/features/support/config'
 
 export function skipHeadlessFirefoxWithoutWebGL(browserName: string): void {
   test.skip(
@@ -26,9 +26,10 @@ export function isAstroDevToolbarError(message: string): boolean {
   )
 }
 
-export const configuredPortalySupportUrl = getValidPortalySupportUrl(
-  process.env.PUBLIC_PORTALY_SUPPORT_URL,
-)
+export const configuredSupportProviders = supportProvidersFor({
+  portaly: process.env.PUBLIC_PORTALY_SUPPORT_URL,
+  kofi: process.env.PUBLIC_KOFI_SUPPORT_URL,
+})
 
 export const CAD_LIGHTING_TEST_VIEWPORT = {
   width: 1440,
@@ -384,11 +385,12 @@ export async function readCadViewportAppearance(
   }, screenshot.toString('base64'))
 }
 
-export function supportLink(page: Page) {
-  return page.getByRole('link', {
-    name: '支持這個專案',
-    exact: true,
-  })
+export function supportTrigger(page: Page) {
+  return page.getByTestId('support-trigger')
+}
+
+export function supportDialog(page: Page) {
+  return page.getByTestId('support-dialog')
 }
 
 export async function readBinaryStlByteLength(

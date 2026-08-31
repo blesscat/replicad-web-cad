@@ -1,5 +1,17 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { configuredPortalySupportUrl, supportLink } from './helpers'
+import {
+  configuredSupportProviders,
+  supportDialog,
+  supportTrigger,
+} from './helpers'
+
+async function dismissCadErrorToast(page: Page) {
+  const toast = page.getByTestId('cad-error-toast')
+  if ((await toast.count()) === 0) return
+
+  await toast.getByRole('button').click()
+  await expect(toast).toHaveCount(0)
+}
 
 type HomepageRuntimeObservation = {
   workerUrls: string[]
@@ -582,41 +594,64 @@ test('model cards keep long localized names on one line', async ({ page }) => {
   expect(layout.hasReadableHeight).toBe(true)
 })
 
-test('shared navigation exposes the configured support link contract', async ({
+test('shared navigation exposes the configured support choices', async ({
   page,
 }) => {
   test.skip(
-    !configuredPortalySupportUrl,
-    'Set PUBLIC_PORTALY_SUPPORT_URL to run the configured-support route checks.',
+    configuredSupportProviders.length !== 2,
+    'Set both PUBLIC_PORTALY_SUPPORT_URL and PUBLIC_KOFI_SUPPORT_URL to run the two-provider support checks.',
   )
 
   for (const path of ['/', '/docs/', '/about/', '/cad/box']) {
     await page.goto(path)
-    const link = supportLink(page)
+    if (path === '/cad/box') await dismissCadErrorToast(page)
+    const trigger = supportTrigger(page)
 
-    await expect(link).toBeVisible()
-    await expect(link).toHaveAttribute(
-      'href',
-      configuredPortalySupportUrl ?? '',
-    )
-    await expect(link).toHaveAttribute('target', '_blank')
-    await expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    await expect(trigger).toBeVisible()
+    await expect(trigger).toHaveAttribute('aria-haspopup', 'dialog')
+    await trigger.click()
+    const dialog = supportDialog(page)
+    await expect(dialog).toBeVisible()
+    await expect(dialog.locator('[data-support-provider]')).toHaveCount(2)
+    for (const provider of configuredSupportProviders) {
+      await expect(
+        dialog.locator(`[data-support-provider="${provider.id}"]`),
+      ).toHaveAttribute('href', provider.url)
+    }
+    for (const option of await dialog
+      .locator('[data-support-provider]')
+      .all()) {
+      await expect(option).toHaveAttribute('target', '_blank')
+      await expect(option).toHaveAttribute('rel', 'noopener noreferrer')
+    }
+    await page.keyboard.press('Escape')
+    await expect(dialog).not.toBeVisible()
+    await expect(trigger).toBeFocused()
   }
 
   await page.goto('/en/')
-  await expect(page.getByTestId('home-maker-support-link')).toHaveAttribute(
-    'href',
-    configuredPortalySupportUrl ?? '',
-  )
+  await page.getByTestId('home-maker-support-trigger').click()
+  await expect(supportDialog(page)).toBeVisible()
+  await expect(
+    supportDialog(page).locator('[data-support-provider]'),
+  ).toHaveCount(2)
+  await page.keyboard.press('Escape')
   await page.goto('/en/about/')
-  await expect(page.getByTestId('about-support-link')).toHaveAttribute(
-    'href',
-    configuredPortalySupportUrl ?? '',
-  )
+  await page.getByTestId('about-support-trigger').click()
+  await expect(supportDialog(page)).toBeVisible()
+  await expect(
+    supportDialog(page).locator('[data-support-provider]'),
+  ).toHaveCount(2)
+  await page.keyboard.press('Escape')
 
   await page.setViewportSize({ width: 320, height: 720 })
   await page.goto('/')
-  await expect(supportLink(page)).toBeVisible()
+  await expect(supportTrigger(page)).toBeVisible()
+  await supportTrigger(page).click()
+  await expect(supportDialog(page)).toBeVisible()
+  await expect(
+    supportDialog(page).locator('[data-support-provider]'),
+  ).toHaveCount(2)
   expect(
     await page.evaluate(
       () =>
@@ -625,18 +660,20 @@ test('shared navigation exposes the configured support link contract', async ({
     ),
   ).toBeTruthy()
 
+  await page.keyboard.press('Escape')
+  await page.goto('/')
   const linkCount = await page.locator('a').count()
-  let supportLinkFocused = false
+  let supportTriggerFocused = false
   for (let index = 0; index < linkCount + 2; index += 1) {
     await page.keyboard.press('Tab')
-    supportLinkFocused = await supportLink(page).evaluate(
+    supportTriggerFocused = await supportTrigger(page).evaluate(
       (element) => element === document.activeElement,
     )
-    if (supportLinkFocused) break
+    if (supportTriggerFocused) break
   }
-  expect(supportLinkFocused).toBe(true)
-  await expect(supportLink(page)).toBeFocused()
-  const focusStyle = await supportLink(page).evaluate((element) => {
+  expect(supportTriggerFocused).toBe(true)
+  await expect(supportTrigger(page)).toBeFocused()
+  const focusStyle = await supportTrigger(page).evaluate((element) => {
     const style = getComputedStyle(element)
     return {
       outlineStyle: style.outlineStyle,
@@ -647,8 +684,14 @@ test('shared navigation exposes the configured support link contract', async ({
   expect(Number.parseFloat(focusStyle.outlineWidth)).toBeGreaterThan(0)
 
   await page.goto('/cad/box')
+  await dismissCadErrorToast(page)
   const currentCadUrl = page.url()
-  const supportOrigin = new URL(configuredPortalySupportUrl ?? '').origin
+  const portalyProvider = configuredSupportProviders.find(
+    (provider) => provider.id === 'portaly',
+  )
+  if (!portalyProvider)
+    throw new Error('Expected a configured Portaly provider')
+  const supportOrigin = new URL(portalyProvider.url).origin
   await page.context().route(`${supportOrigin}/**`, async (route) => {
     await route.fulfill({
       contentType: 'text/html',
@@ -656,30 +699,52 @@ test('shared navigation exposes the configured support link contract', async ({
     })
   })
   const popupPromise = page.waitForEvent('popup')
-  await supportLink(page).click()
+  await supportTrigger(page).click()
+  await supportDialog(page).locator('[data-support-provider="portaly"]').click()
   const popup = await popupPromise
   await popup.waitForLoadState('domcontentloaded')
-  await expect(popup).toHaveURL(configuredPortalySupportUrl ?? '')
+  await expect(popup).toHaveURL(portalyProvider.url)
   await expect(page).toHaveURL(currentCadUrl)
   await popup.close()
+})
+
+test('shared navigation exposes a single configured support choice', async ({
+  page,
+}) => {
+  test.skip(
+    configuredSupportProviders.length !== 1,
+    'Set exactly one support URL to run the single-provider fallback check.',
+  )
+
+  const provider = configuredSupportProviders[0]
+  if (!provider) throw new Error('Expected one configured support provider')
+
+  await page.goto('/')
+  await supportTrigger(page).click()
+  const dialog = supportDialog(page)
+  await expect(dialog).toBeVisible()
+  await expect(dialog.locator('[data-support-provider]')).toHaveCount(1)
+  await expect(
+    dialog.locator(`[data-support-provider="${provider.id}"]`),
+  ).toHaveAttribute('href', provider.url)
 })
 
 test('missing support configuration leaves primary routes usable', async ({
   page,
 }) => {
   test.skip(
-    Boolean(configuredPortalySupportUrl),
-    'Run without PUBLIC_PORTALY_SUPPORT_URL to verify the missing-configuration fallback.',
+    configuredSupportProviders.length !== 0,
+    'Run without either support URL to verify the missing-configuration fallback.',
   )
 
   for (const path of ['/', '/docs/', '/about/', '/cad/box']) {
     await page.goto(path)
-    await expect(supportLink(page)).toHaveCount(0)
+    await expect(supportTrigger(page)).toHaveCount(0)
   }
   await page.goto('/en/')
-  await expect(page.getByTestId('home-maker-support-link')).toHaveCount(0)
+  await expect(page.getByTestId('home-maker-support-trigger')).toHaveCount(0)
   await page.goto('/en/about/')
-  await expect(page.getByTestId('about-support-link')).toHaveCount(0)
+  await expect(page.getByTestId('about-support-trigger')).toHaveCount(0)
 })
 
 test('local development serves same-origin Vite HMR client', async ({
