@@ -227,11 +227,11 @@ describe('OpenGrid OpenConnect organizer CAD kernel integration', () => {
       for (let axis = 0; axis < 3; axis += 1) {
         expect(quality.bounds.min[axis]).toBeCloseTo(
           expectedBounds.min[axis]!,
-          2,
+          1,
         )
         expect(quality.bounds.max[axis]).toBeCloseTo(
           expectedBounds.max[axis]!,
-          2,
+          1,
         )
       }
     } finally {

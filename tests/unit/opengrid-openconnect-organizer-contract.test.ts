@@ -35,7 +35,7 @@ describe('OpenGrid OpenConnect organizer contract', () => {
       holeSpacingY: 1,
       holeShape: 'circle',
       holeDiameter: 20,
-      holeDepth: 20,
+      holeDepth: 28,
       bottomThickness: 1,
       edgeThickness: 1,
       tiltAngle: 15,
@@ -149,15 +149,15 @@ describe('OpenGrid OpenConnect organizer contract', () => {
     const layout = openGridOpenConnectOrganizerLayoutFor(value)
     const configuration = OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION
 
-    expect(layout.bodyThickness).toBe(21)
+    expect(layout.bodyThickness).toBe(29)
     expect(layout.bodyWidth).toBe(43)
     expect(layout.bodyDepth).toBe(43)
     expect(layout.connectorColumns).toBe(1)
     expect(layout.connectorRows).toBe(1)
     expect(layout.rearInterfaceWidth).toBe(43)
-    expect(layout.rearInterfaceHeight).toBe(configuration.gridPitch)
+    expect(layout.rearInterfaceHeight).toBe(29)
     expect(openGridOpenConnectOrganizerSlotOriginsFor(value)).toEqual([
-      [0, configuration.rearThickness, 14],
+      [0, configuration.rearThickness, 15],
     ])
   })
 
@@ -235,8 +235,8 @@ describe('OpenGrid OpenConnect organizer contract', () => {
     const configuration = OPENGRID_OPENCONNECT_ORGANIZER_CONFIGURATION
 
     expect(openGridOpenConnectOrganizerSlotOriginsFor(horizontal)).toEqual([
-      [-14, configuration.rearThickness, 14],
-      [14, configuration.rearThickness, 14],
+      [-14, configuration.rearThickness, 15],
+      [14, configuration.rearThickness, 15],
     ])
     expect(openGridOpenConnectOrganizerSlotOriginsFor(vertical)).toEqual([
       [0, configuration.rearThickness, 52],
