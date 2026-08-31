@@ -1,6 +1,9 @@
 ---
 import '../styles/global.css'
-import { portalySupportUrl } from '../features/support/config'
+import {
+  supportProviders,
+  type SupportProviderId,
+} from '../features/support/config'
 import { localeAlternatesFor, absoluteUrlFor } from '../i18n/seo'
 import {
   localizedPathFor,
@@ -34,6 +37,21 @@ const alternateLocale = alternateLinks.find(
   (alternate) => alternate.locale !== locale,
 )
 const t = (key: string) => translate(locale, key)
+const supportCopyById: Record<
+  SupportProviderId,
+  { name: string; description: string; aria: string }
+> = {
+  portaly: {
+    name: 'support.portalyName',
+    description: 'support.portalyDescription',
+    aria: 'support.portalyAria',
+  },
+  kofi: {
+    name: 'support.kofiName',
+    description: 'support.kofiDescription',
+    aria: 'support.kofiAria',
+  },
+}
 ---
 
 <html lang={locale}>
@@ -111,19 +129,83 @@ const t = (key: string) => translate(locale, key)
             )
           }
           {
-            portalySupportUrl && (
-              <a
-                class="whitespace-nowrap rounded-full border border-white/60 px-3 py-1.5 text-sm font-semibold no-underline transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                href={portalySupportUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+            supportProviders.length > 0 && (
+              <button
+                type="button"
+                class="cursor-pointer whitespace-nowrap rounded-full border border-white/60 px-3 py-1.5 text-sm font-semibold no-underline transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                data-support-dialog-open
+                data-testid="support-trigger"
+                aria-controls="support-dialog"
+                aria-haspopup="dialog"
               >
                 {t('navigation.support')}
-              </a>
+              </button>
             )
           }
         </div>
       </nav>
+      {
+        supportProviders.length > 0 && (
+          <dialog
+            id="support-dialog"
+            class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-xl overflow-hidden rounded-2xl border border-border-card bg-panel p-0 text-ink shadow-card backdrop:bg-black/60"
+            aria-labelledby="support-dialog-title"
+            aria-describedby="support-dialog-description"
+            data-testid="support-dialog"
+          >
+            <div class="grid max-h-[calc(100dvh-2rem)] min-w-0 gap-5 overflow-y-auto p-5 sm:p-6">
+              <header class="flex min-w-0 items-start justify-between gap-4">
+                <div class="min-w-0">
+                  <h2
+                    class="m-0 break-words text-2xl font-semibold leading-tight"
+                    id="support-dialog-title"
+                  >
+                    {t('support.dialogTitle')}
+                  </h2>
+                  <p
+                    class="m-0 mt-2 break-words text-sm leading-relaxed text-muted"
+                    id="support-dialog-description"
+                  >
+                    {t('support.dialogDescription')}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="shrink-0 rounded-lg border border-border-card bg-page px-3 py-2 font-semibold text-ink shadow-sm hover:bg-viewport focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                  data-support-dialog-close
+                  aria-label={t('support.close')}
+                >
+                  {t('support.close')}
+                </button>
+              </header>
+              <div
+                class="grid min-w-0 gap-3 sm:grid-cols-2"
+                data-testid="support-provider-options"
+              >
+                {supportProviders.map((provider) => {
+                  const copy = supportCopyById[provider.id]
+                  return (
+                    <a
+                      class="grid min-w-0 gap-1 rounded-xl border border-border-card bg-page p-4 no-underline shadow-sm transition-colors hover:bg-viewport focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                      href={provider.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-support-provider={provider.id}
+                      data-testid={`support-provider-${provider.id}`}
+                      aria-label={t(copy.aria)}
+                    >
+                      <span class="font-semibold text-ink">{t(copy.name)}</span>
+                      <span class="text-sm text-muted">
+                        {t(copy.description)}
+                      </span>
+                    </a>
+                  )
+                })}
+              </div>
+            </div>
+          </dialog>
+        )
+      }
       <script is:inline>
         for (const link of document.querySelectorAll('[data-locale-switch]')) {
           const url = new URL(link.href, window.location.href)
@@ -172,6 +254,72 @@ const t = (key: string) => translate(locale, key)
           </div>
         </div>
       </footer>
+      <script is:inline>
+        const supportDialog = document.getElementById('support-dialog')
+        const canUseSupportModal =
+          typeof HTMLDialogElement !== 'undefined' &&
+          supportDialog instanceof HTMLDialogElement &&
+          typeof HTMLDialogElement.prototype.showModal === 'function'
+
+        if (supportDialog instanceof HTMLElement) {
+          let lastSupportOpener = null
+          const restoreFocus = () => {
+            if (lastSupportOpener instanceof HTMLElement) {
+              lastSupportOpener.focus()
+            }
+            lastSupportOpener = null
+          }
+          const closeSupportDialog = () => {
+            if (canUseSupportModal) {
+              if (supportDialog.open) supportDialog.close()
+              return
+            }
+            supportDialog.removeAttribute('open')
+            restoreFocus()
+          }
+
+          for (const opener of document.querySelectorAll(
+            '[data-support-dialog-open]',
+          )) {
+            if (!(opener instanceof HTMLElement)) continue
+            opener.addEventListener('click', () => {
+              lastSupportOpener = opener
+              if (canUseSupportModal) {
+                if (!supportDialog.open) supportDialog.showModal()
+              } else {
+                supportDialog.setAttribute('open', '')
+              }
+              supportDialog
+                .querySelector('[data-support-dialog-close]')
+                ?.focus()
+            })
+          }
+
+          supportDialog.addEventListener('close', () => {
+            restoreFocus()
+          })
+          supportDialog.addEventListener('click', (event) => {
+            if (event.target === supportDialog) closeSupportDialog()
+          })
+          supportDialog.addEventListener('keydown', (event) => {
+            if (!canUseSupportModal && event.key === 'Escape') {
+              closeSupportDialog()
+            }
+          })
+
+          for (const closeControl of supportDialog.querySelectorAll(
+            '[data-support-dialog-close]',
+          )) {
+            closeControl.addEventListener('click', closeSupportDialog)
+          }
+
+          for (const providerLink of supportDialog.querySelectorAll(
+            '[data-support-provider]',
+          )) {
+            providerLink.addEventListener('click', closeSupportDialog)
+          }
+        }
+      </script>
     </div>
   </body>
 </html>

@@ -1,6 +1,6 @@
 ---
 import SiteLayout from '../../layouts/SiteLayout.astro'
-import { portalySupportUrl } from '../../features/support/config'
+import { supportProviders } from '../../features/support/config'
 import { SUPPORTED_LOCALES, isLocale, translate, type Locale } from '../../i18n'
 import { localizedCadPathFor, publicPathFor } from '../../i18n/routes'
 
@@ -385,16 +385,17 @@ const inlineLinkClass =
             >{t('home.maker.emailCta')}</a
           >
           {
-            portalySupportUrl && (
-              <a
+            supportProviders.length > 0 && (
+              <button
+                type="button"
                 class={inlineLinkClass}
-                href={portalySupportUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid="home-maker-support-link"
+                data-support-dialog-open
+                data-testid="home-maker-support-trigger"
+                aria-controls="support-dialog"
+                aria-haspopup="dialog"
               >
                 {t('home.maker.supportCta')}
-              </a>
+              </button>
             )
           }
         </div>
