@@ -116,7 +116,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light):not(.dark) {
     --background: var(--color-neutral-950);
     --foreground: var(--color-neutral-50);
     --card: var(--color-neutral-900);

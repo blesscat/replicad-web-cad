@@ -35,14 +35,63 @@ function observeHomepageRuntime(page: Page): HomepageRuntimeObservation {
   return observation
 }
 
-function parseRgb(value: string): [number, number, number] {
-  const components = value.match(/\d+(?:\.\d+)?/g)?.map(Number) ?? []
-  if (components.length < 3) throw new Error(`Unsupported color: ${value}`)
-  return [components[0] ?? 0, components[1] ?? 0, components[2] ?? 0]
+function parseColor(value: string): [number, number, number] {
+  const rgbComponents = value.match(/rgba?\(([^)]+)\)/)?.[1]
+  if (rgbComponents) {
+    const components = rgbComponents.split(',').map(Number)
+    if (components.length < 3) throw new Error(`Unsupported color: ${value}`)
+    return [components[0] ?? 0, components[1] ?? 0, components[2] ?? 0]
+  }
+
+  const oklchMatch = value.match(
+    /^oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+|none)/,
+  )
+  if (!oklchMatch) throw new Error(`Unsupported color: ${value}`)
+
+  const lightness = Number(oklchMatch[1])
+  const chroma = Number(oklchMatch[2])
+  const hue = oklchMatch[3] === 'none' ? 0 : Number(oklchMatch[3])
+  const hueRadians = (hue * Math.PI) / 180
+  const labA = chroma * Math.cos(hueRadians)
+  const labB = chroma * Math.sin(hueRadians)
+
+  const lightnessPrime = lightness + 0.3963377774 * labA + 0.2158037573 * labB
+  const greenPrime = lightness - 0.1055613458 * labA - 0.0638541728 * labB
+  const bluePrime = lightness - 0.0894841775 * labA - 1.291485548 * labB
+  const lightnessCube = lightnessPrime ** 3
+  const greenCube = greenPrime ** 3
+  const blueCube = bluePrime ** 3
+
+  const linearRed =
+    4.0767416621 * lightnessCube -
+    3.3077115913 * greenCube +
+    0.2309699292 * blueCube
+  const linearGreen =
+    -1.2684380046 * lightnessCube +
+    2.6097574011 * greenCube -
+    0.3413193965 * blueCube
+  const linearBlue =
+    -0.0041960863 * lightnessCube -
+    0.7034186147 * greenCube +
+    1.707614701 * blueCube
+
+  function srgbChannel(linearChannel: number): number {
+    const normalized =
+      linearChannel <= 0.0031308
+        ? 12.92 * linearChannel
+        : 1.055 * linearChannel ** (1 / 2.4) - 0.055
+    return Math.max(0, Math.min(255, normalized * 255))
+  }
+
+  return [
+    srgbChannel(linearRed),
+    srgbChannel(linearGreen),
+    srgbChannel(linearBlue),
+  ]
 }
 
 function relativeLuminance(value: string): number {
-  const channels = parseRgb(value).map((channel) => channel / 255)
+  const channels = parseColor(value).map((channel) => channel / 255)
   const linearChannels = channels.map((channel) =>
     channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
   )
@@ -70,6 +119,23 @@ async function readCtaColors(locator: Locator): Promise<{
     return {
       color: style.color,
       backgroundColor: style.backgroundColor,
+    }
+  })
+}
+
+async function readHomepageSecondaryTextColors(page: Page): Promise<{
+  color: string
+  backgroundColor: string
+}> {
+  const description = page.getByTestId('home-hero').locator('p').first()
+  await expect(description).toBeVisible()
+
+  return description.evaluate((element) => {
+    const textStyle = getComputedStyle(element)
+    const pageStyle = getComputedStyle(document.body)
+    return {
+      color: textStyle.color,
+      backgroundColor: pageStyle.backgroundColor,
     }
   })
 }
@@ -543,6 +609,27 @@ test('localized homepage final CTA remains readable in both color schemes', asyn
       const hoverColors = await readCtaColors(cta)
       expect(
         contrastRatio(hoverColors.color, hoverColors.backgroundColor),
+      ).toBeGreaterThanOrEqual(4.5)
+    }
+  }
+})
+
+test('localized homepage secondary text remains readable in both color schemes', async ({
+  page,
+}) => {
+  const homepagePaths = ['/zh-Hant/', '/en/']
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme })
+
+    for (const homepagePath of homepagePaths) {
+      await page.goto(homepagePath)
+      const colors = await readHomepageSecondaryTextColors(page)
+
+      expect(
+        contrastRatio(colors.color, colors.backgroundColor),
       ).toBeGreaterThanOrEqual(4.5)
     }
   }

@@ -12,6 +12,8 @@ import {
   unlocalizedPathFor,
 } from '../i18n/routes'
 import { translate, type Locale } from '../i18n'
+import Moon from '@tabler/icons/outline/moon.svg'
+import Sun from '@tabler/icons/outline/sun.svg'
 
 interface Props {
   locale: Locale
@@ -76,6 +78,93 @@ const supportCopyById: Record<
       hreflang="x-default"
       href={absoluteUrlFor(alternateLinks[0]?.path ?? canonicalPath)}
     />
+    <script is:inline>
+      ;(() => {
+        const themeStorageKey = 'shape-shortcut-theme'
+        const themeRoot = document.documentElement
+        const themeMediaQuery =
+          typeof window.matchMedia === 'function'
+            ? window.matchMedia('(prefers-color-scheme: dark)')
+            : null
+
+        const readStoredTheme = () => {
+          try {
+            const storedTheme = window.localStorage.getItem(themeStorageKey)
+            return storedTheme === 'light' || storedTheme === 'dark'
+              ? storedTheme
+              : null
+          } catch {
+            return null
+          }
+        }
+
+        const systemTheme = () => (themeMediaQuery?.matches ? 'dark' : 'light')
+
+        const applyTheme = () => {
+          const storedTheme = readStoredTheme()
+          const theme = storedTheme ?? systemTheme()
+          themeRoot.classList.toggle('dark', theme === 'dark')
+          themeRoot.classList.toggle('light', storedTheme === 'light')
+          themeRoot.style.colorScheme = theme
+          return theme
+        }
+
+        const updateThemeToggle = (theme) => {
+          const toggle = document.querySelector('[data-theme-toggle]')
+          if (!(toggle instanceof HTMLButtonElement)) return
+
+          const isDark = theme === 'dark'
+          const nextLabel = isDark
+            ? toggle.dataset.themeSwitchToLight
+            : toggle.dataset.themeSwitchToDark
+          if (nextLabel) toggle.setAttribute('aria-label', nextLabel)
+          toggle.setAttribute('aria-pressed', String(isDark))
+
+          const activeIcon = isDark ? 'light' : 'dark'
+          for (const icon of toggle.querySelectorAll('[data-theme-icon]')) {
+            if (icon instanceof HTMLElement) {
+              icon.hidden = icon.dataset.themeIcon !== activeIcon
+            }
+          }
+
+          const label = toggle.querySelector('[data-theme-toggle-label]')
+          if (label instanceof HTMLElement) {
+            label.textContent = isDark
+              ? (toggle.dataset.themeLightLabel ?? '')
+              : (toggle.dataset.themeDarkLabel ?? '')
+          }
+        }
+
+        const syncTheme = () => updateThemeToggle(applyTheme())
+
+        syncTheme()
+
+        const handleSystemThemeChange = () => {
+          if (readStoredTheme() === null) syncTheme()
+        }
+        if (typeof themeMediaQuery?.addEventListener === 'function') {
+          themeMediaQuery.addEventListener('change', handleSystemThemeChange)
+        } else {
+          themeMediaQuery?.addListener?.(handleSystemThemeChange)
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+          const toggle = document.querySelector('[data-theme-toggle]')
+          if (!(toggle instanceof HTMLButtonElement)) return
+
+          syncTheme()
+          toggle.addEventListener('click', () => {
+            const nextTheme = applyTheme() === 'dark' ? 'light' : 'dark'
+            try {
+              window.localStorage.setItem(themeStorageKey, nextTheme)
+            } catch {
+              // Theme changes still apply for the current page if storage is unavailable.
+            }
+            syncTheme()
+          })
+        })
+      })()
+    </script>
   </head>
   <body>
     <div class="min-h-screen">
@@ -107,6 +196,26 @@ const supportCopyById: Record<
             aria-current={isAboutPage ? 'page' : undefined}
             >{t('navigation.about')}</a
           >
+          <button
+            type="button"
+            class="inline-flex items-center gap-1.5 rounded-full border border-white/60 bg-transparent px-3 py-1.5 text-sm font-semibold no-underline transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            data-theme-toggle
+            data-theme-switch-to-light={t('navigation.switchToLight')}
+            data-theme-switch-to-dark={t('navigation.switchToDark')}
+            data-theme-light-label={t('navigation.light')}
+            data-theme-dark-label={t('navigation.dark')}
+            aria-label={t('navigation.theme')}
+            aria-pressed="false"
+          >
+            <Sun class="size-4" data-theme-icon="light" aria-hidden="true" />
+            <Moon
+              class="size-4"
+              data-theme-icon="dark"
+              aria-hidden="true"
+              hidden
+            />
+            <span data-theme-toggle-label>{t('navigation.theme')}</span>
+          </button>
           {
             alternateLocale && (
               <a
@@ -148,7 +257,7 @@ const supportCopyById: Record<
         supportProviders.length > 0 && (
           <dialog
             id="support-dialog"
-            class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-xl overflow-hidden rounded-2xl border border-border-card bg-panel p-0 text-ink shadow-card backdrop:bg-black/60"
+            class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-xl overflow-hidden rounded-2xl border border-border bg-card p-0 text-card-foreground shadow-lg backdrop:bg-black/60"
             aria-labelledby="support-dialog-title"
             aria-describedby="support-dialog-description"
             data-testid="support-dialog"
@@ -163,7 +272,7 @@ const supportCopyById: Record<
                     {t('support.dialogTitle')}
                   </h2>
                   <p
-                    class="m-0 mt-2 break-words text-sm leading-relaxed text-muted"
+                    class="m-0 mt-2 break-words text-sm leading-relaxed text-muted-foreground"
                     id="support-dialog-description"
                   >
                     {t('support.dialogDescription')}
@@ -171,7 +280,7 @@ const supportCopyById: Record<
                 </div>
                 <button
                   type="button"
-                  class="shrink-0 rounded-lg border border-border-card bg-page px-3 py-2 font-semibold text-ink shadow-sm hover:bg-viewport focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                  class="shrink-0 rounded-lg border border-border bg-background px-3 py-2 font-semibold text-foreground shadow-sm hover:bg-foreground/5 focus-visible:ring-3 focus-visible:ring-outline/50"
                   data-support-dialog-close
                   aria-label={t('support.close')}
                 >
@@ -186,7 +295,7 @@ const supportCopyById: Record<
                   const copy = supportCopyById[provider.id]
                   return (
                     <a
-                      class="grid min-w-0 gap-1 rounded-xl border border-border-card bg-page p-4 no-underline shadow-sm transition-colors hover:bg-viewport focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                      class="grid min-w-0 gap-1 rounded-xl border border-border bg-background p-4 text-foreground no-underline shadow-sm transition-colors hover:bg-foreground/5 focus-visible:ring-3 focus-visible:ring-outline/50"
                       href={provider.url}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -194,8 +303,8 @@ const supportCopyById: Record<
                       data-testid={`support-provider-${provider.id}`}
                       aria-label={t(copy.aria)}
                     >
-                      <span class="font-semibold text-ink">{t(copy.name)}</span>
-                      <span class="text-sm text-muted">
+                      <span class="font-semibold">{t(copy.name)}</span>
+                      <span class="text-sm text-muted-foreground">
                         {t(copy.description)}
                       </span>
                     </a>
@@ -224,12 +333,12 @@ const supportCopyById: Record<
         <slot />
       </main>
       <footer
-        class="grid gap-5 border-t border-border-card bg-panel px-[clamp(1rem,4vw,4rem)] py-8 text-sm text-muted"
+        class="grid gap-5 border-t border-border bg-card px-[clamp(1rem,4vw,4rem)] py-8 text-sm text-muted-foreground"
         aria-label={t('navigation.footer')}
       >
         <div class="mx-auto grid w-full max-w-[1200px] gap-5 sm:grid-cols-2">
           <div class="grid gap-2">
-            <p class="m-0 font-semibold text-ink">Shape Shortcut</p>
+            <p class="m-0 font-semibold text-foreground">Shape Shortcut</p>
             <p class="m-0">{t('navigation.product')}</p>
             <div class="flex flex-wrap gap-x-4 gap-y-2">
               <a href={publicPathFor(locale, 'models')}
@@ -242,7 +351,9 @@ const supportCopyById: Record<
             </div>
           </div>
           <div class="grid gap-2 sm:justify-items-end">
-            <p class="m-0 font-semibold text-ink">{t('navigation.project')}</p>
+            <p class="m-0 font-semibold text-foreground">
+              {t('navigation.project')}
+            </p>
             <div class="flex flex-wrap gap-x-4 gap-y-2 sm:justify-end">
               <a
                 href="https://github.com/blesscat"

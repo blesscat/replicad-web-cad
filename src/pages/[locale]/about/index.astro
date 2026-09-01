@@ -33,10 +33,10 @@ const docsPath = publicPathFor(locale, 'docs')
   description={t('about.description')}
 >
   <article class="grid gap-10" data-testid="about-page">
-    <Card as="header" class="p-5 shadow-card sm:p-8">
+    <Card as="header" class="p-5 shadow-lg sm:p-8">
       <div class="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
         <img
-          class="aspect-square w-28 shrink-0 rounded-2xl border border-border-card bg-viewport object-cover sm:w-36"
+          class="aspect-square w-28 shrink-0 rounded-2xl border border-border bg-muted object-cover sm:w-36"
           src="/about/blesscat.png"
           width="640"
           height="640"
@@ -54,8 +54,10 @@ const docsPath = publicPathFor(locale, 'docs')
           <h1 class="m-0 text-4xl font-semibold leading-tight sm:text-5xl">
             {t('about.title')}
           </h1>
-          <p class="m-0 text-lg font-semibold text-ink">{t('about.role')}</p>
-          <p class="m-0 max-w-2xl leading-relaxed text-muted">
+          <p class="m-0 text-lg font-semibold text-foreground">
+            {t('about.role')}
+          </p>
+          <p class="m-0 max-w-2xl leading-relaxed text-muted-foreground">
             {t('about.intro')}
           </p>
           <Badge
@@ -81,7 +83,7 @@ const docsPath = publicPathFor(locale, 'docs')
       >
         {t('about.storyHeading')}
       </h2>
-      <p class="m-0 max-w-3xl leading-relaxed text-muted">
+      <p class="m-0 max-w-3xl leading-relaxed text-muted-foreground">
         {t('about.storyBody')}
       </p>
     </Card>
@@ -98,14 +100,14 @@ const docsPath = publicPathFor(locale, 'docs')
       >
         {t('about.projectHeading')}
       </h2>
-      <p class="m-0 max-w-3xl leading-relaxed text-muted">
+      <p class="m-0 max-w-3xl leading-relaxed text-muted-foreground">
         {t('about.projectBody')}
       </p>
     </Card>
 
     <Card
       as="section"
-      class="grid gap-5 !bg-nav p-5 !text-nav-foreground shadow-card ring-0 sm:p-8"
+      class="grid gap-5 !bg-nav p-5 !text-nav-foreground shadow-lg ring-0 sm:p-8"
       aria-labelledby="about-links-title"
       data-testid="about-links"
     >
@@ -169,7 +171,7 @@ const docsPath = publicPathFor(locale, 'docs')
         href={modelsPath}
         variant="ghost"
         size="sm"
-        class="px-0 font-semibold text-ink underline underline-offset-4"
+        class="px-0 font-semibold text-foreground underline underline-offset-4"
         >{t('about.modelsCta')}</Button
       >
       <Button
@@ -177,7 +179,7 @@ const docsPath = publicPathFor(locale, 'docs')
         href={docsPath}
         variant="ghost"
         size="sm"
-        class="px-0 font-semibold text-ink underline underline-offset-4"
+        class="px-0 font-semibold text-foreground underline underline-offset-4"
         >{t('about.docsCta')}</Button
       >
     </nav>

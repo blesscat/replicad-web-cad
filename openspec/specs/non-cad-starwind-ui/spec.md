@@ -48,19 +48,27 @@ destinations.
 - **THEN** the existing headings, translated copy, links, metadata, image alternative text, and support actions MUST remain available in the selected locale
 - **AND** external support choices MUST continue to open on the configured provider pages without collecting payment data in Shape Shortcut
 
-### Requirement: Non-CAD theme and localization remain complete
+### Requirement: Non-CAD theme, user preference, and localization remain complete
 
-The non-CAD UI treatment MUST work with the existing light and dark system
-appearance and MUST preserve the existing responsive layout behavior. Every
+The non-CAD UI treatment MUST work with the light or dark appearance selected by
+the system preference or the shared header theme control and MUST preserve the
+existing responsive layout behavior. Every
 new visible label, accessible name, state message, and component text
 introduced by the UI treatment MUST be available in Traditional Chinese and
 English through the existing localization contract.
 
 #### Scenario: Non-CAD pages remain readable in both color schemes
 
-- **WHEN** a user views a supported non-CAD page with either a light or dark system color preference
+- **WHEN** a user views a supported non-CAD page with either a light or dark system color preference or an explicit header theme selection
 - **THEN** page surfaces, text, muted text, borders, controls, links, dialogs, and focus indicators MUST remain readable and distinguishable
 - **AND** the page MUST not gain horizontal overflow solely because the color scheme changed
+
+#### Scenario: Non-CAD theme selection persists across localized pages
+
+- **WHEN** a user selects light or dark mode from the shared header on a supported non-CAD page
+- **THEN** the page MUST update its surfaces, text, controls, borders, and focus indicators to the selected mode
+- **AND** the selected mode MUST remain active after navigating between `/en/` and `/zh-Hant/` routes or reloading the page
+- **AND** the page MUST remain renderable without initializing a CAD Worker, WebAssembly CAD kernel, WebGL renderer, or Svelte CAD workspace
 
 #### Scenario: English and Traditional Chinese render equivalent UI states
 
