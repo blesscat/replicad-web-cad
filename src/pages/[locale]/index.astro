@@ -9,6 +9,8 @@ import BrowserIcon from '@tabler/icons/outline/browser.svg'
 import AdjustmentsIcon from '@tabler/icons/outline/adjustments-horizontal.svg'
 import Rotate3dIcon from '@tabler/icons/outline/rotate-3d.svg'
 import DownloadIcon from '@tabler/icons/outline/download.svg'
+import BrandGithubIcon from '@tabler/icons/outline/brand-github.svg'
+import MailIcon from '@tabler/icons/outline/mail.svg'
 import { supportProviders } from '../../features/support/config'
 import { SUPPORTED_LOCALES, isLocale, translate, type Locale } from '../../i18n'
 import { localizedCadPathFor, publicPathFor } from '../../i18n/routes'
@@ -40,11 +42,12 @@ const homeTitleHtml = (() => {
     /(CAD 元件|CAD parts)/,
     '<span class="text-primary-strong dark:text-cyber-cyan">$1</span>',
   )
-  return highlighted.replace(
-    /(<span[^>]*>[^<]*<\/span>)(，|,)?/,
-    (_match, span: string, comma: string | undefined) =>
-      `${span}${comma ?? ''}<br />`,
+  const parts = highlighted.match(
+    /^(.*?)<span[^>]*>([^<]*)<\/span>(，|,)?(.*)$/,
   )
+  if (!parts) return highlighted
+  const [, before, phrase, comma, after] = parts
+  return `${before}<br /><span class="text-primary-strong dark:text-cyber-cyan">${phrase}</span>${comma ?? ''}<br />${after}`
 })()
 ---
 
@@ -53,14 +56,20 @@ const homeTitleHtml = (() => {
   title={t('home.metaTitle')}
   description={t('home.description')}
 >
-  <div class="grid gap-16">
+  <div class="grid gap-24 lg:gap-32">
     <section
       class="grid items-center gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-12"
       aria-labelledby="home-title"
       data-testid="home-hero"
     >
       <div class="grid gap-5 lg:order-2">
-        <Badge variant="primary" eyebrow size="sm" class="w-fit font-semibold">
+        <Badge
+          tone="primary"
+          appearance="text"
+          eyebrow
+          size="sm"
+          class="w-fit text-primary-strong dark:text-cyber-cyan"
+        >
           {t('home.eyebrow')}
         </Badge>
         <h1
@@ -86,7 +95,7 @@ const homeTitleHtml = (() => {
             href={deskBoardPath}
             variant="outline"
             size="lg"
-            class="w-full no-underline sm:w-auto"
+            class="w-full border-primary-strong/60 bg-transparent text-primary-strong hover:bg-primary-strong/5 hover:text-primary-strong no-underline dark:border-neon/60 dark:bg-transparent dark:text-primary dark:hover:bg-neon/10 sm:w-auto"
           >
             {t('home.secondaryCta')}
           </Button>
@@ -141,7 +150,7 @@ const homeTitleHtml = (() => {
     </section>
 
     <section
-      class="grid gap-6 border-y border-border py-8"
+      class="grid gap-10"
       aria-labelledby="home-capabilities-title"
       data-testid="home-capabilities"
     >
@@ -165,16 +174,19 @@ const homeTitleHtml = (() => {
         <Card
           as="article"
           size="sm"
-          class="cyber-card grid justify-items-center gap-2 p-4 text-center shadow-sm"
+          class="cyber-card grid gap-3 p-4 shadow-sm"
         >
-          <span
-            class="grid size-10 place-items-center rounded-lg border border-border bg-muted text-primary"
-          >
-            <BrowserIcon class="size-5" aria-hidden="true" />
-          </span>
-          <h3 class="m-0 text-lg font-semibold leading-tight">
-            {t('home.feature.browser.title')}
-          </h3>
+          <div class="flex items-center gap-2.5">
+            <span
+              class="grid size-9 shrink-0 place-items-center rounded-lg border border-cyber-cyan/30 bg-cyber-cyan/10 text-cyber-cyan"
+            >
+              <BrowserIcon class="size-5" aria-hidden="true" />
+            </span>
+            <h3 class="m-0 text-lg font-semibold leading-tight">
+              {t('home.feature.browser.title')}
+            </h3>
+          </div>
+          <div class="h-px w-full bg-border" aria-hidden="true"></div>
           <p class="m-0 text-sm leading-normal text-muted-foreground">
             {t('home.feature.browser.description')}
           </p>
@@ -182,16 +194,19 @@ const homeTitleHtml = (() => {
         <Card
           as="article"
           size="sm"
-          class="cyber-card grid justify-items-center gap-2 p-4 text-center shadow-sm"
+          class="cyber-card grid gap-3 p-4 shadow-sm"
         >
-          <span
-            class="grid size-10 place-items-center rounded-lg border border-border bg-muted text-primary"
-          >
-            <AdjustmentsIcon class="size-5" aria-hidden="true" />
-          </span>
-          <h3 class="m-0 text-lg font-semibold leading-tight">
-            {t('home.feature.parameters.title')}
-          </h3>
+          <div class="flex items-center gap-2.5">
+            <span
+              class="grid size-9 shrink-0 place-items-center rounded-lg border border-cyber-purple/30 bg-cyber-purple/10 text-cyber-purple"
+            >
+              <AdjustmentsIcon class="size-5" aria-hidden="true" />
+            </span>
+            <h3 class="m-0 text-lg font-semibold leading-tight">
+              {t('home.feature.parameters.title')}
+            </h3>
+          </div>
+          <div class="h-px w-full bg-border" aria-hidden="true"></div>
           <p class="m-0 text-sm leading-normal text-muted-foreground">
             {t('home.feature.parameters.description')}
           </p>
@@ -199,16 +214,19 @@ const homeTitleHtml = (() => {
         <Card
           as="article"
           size="sm"
-          class="cyber-card grid justify-items-center gap-2 p-4 text-center shadow-sm"
+          class="cyber-card grid gap-3 p-4 shadow-sm"
         >
-          <span
-            class="grid size-10 place-items-center rounded-lg border border-border bg-muted text-primary"
-          >
-            <Rotate3dIcon class="size-5" aria-hidden="true" />
-          </span>
-          <h3 class="m-0 text-lg font-semibold leading-tight">
-            {t('home.feature.preview.title')}
-          </h3>
+          <div class="flex items-center gap-2.5">
+            <span
+              class="grid size-9 shrink-0 place-items-center rounded-lg border border-neon/30 bg-neon/10 text-neon"
+            >
+              <Rotate3dIcon class="size-5" aria-hidden="true" />
+            </span>
+            <h3 class="m-0 text-lg font-semibold leading-tight">
+              {t('home.feature.preview.title')}
+            </h3>
+          </div>
+          <div class="h-px w-full bg-border" aria-hidden="true"></div>
           <p class="m-0 text-sm leading-normal text-muted-foreground">
             {t('home.feature.preview.description')}
           </p>
@@ -216,16 +234,19 @@ const homeTitleHtml = (() => {
         <Card
           as="article"
           size="sm"
-          class="cyber-card grid justify-items-center gap-2 p-4 text-center shadow-sm"
+          class="cyber-card grid gap-3 p-4 shadow-sm"
         >
-          <span
-            class="grid size-10 place-items-center rounded-lg border border-border bg-muted text-primary"
-          >
-            <DownloadIcon class="size-5" aria-hidden="true" />
-          </span>
-          <h3 class="m-0 text-lg font-semibold leading-tight">
-            {t('home.feature.export.title')}
-          </h3>
+          <div class="flex items-center gap-2.5">
+            <span
+              class="grid size-9 shrink-0 place-items-center rounded-lg border border-primary/30 bg-primary/10 text-primary"
+            >
+              <DownloadIcon class="size-5" aria-hidden="true" />
+            </span>
+            <h3 class="m-0 text-lg font-semibold leading-tight">
+              {t('home.feature.export.title')}
+            </h3>
+          </div>
+          <div class="h-px w-full bg-border" aria-hidden="true"></div>
           <p class="m-0 text-sm leading-normal text-muted-foreground">
             {t('home.feature.export.description')}
           </p>
@@ -275,7 +296,7 @@ const homeTitleHtml = (() => {
           <ol class="m-0 grid gap-6 p-0 sm:grid-cols-2 lg:grid-cols-4">
             <li class="grid justify-items-center gap-3 text-center">
               <span
-                class="grid size-10 shrink-0 place-items-center rounded-full bg-cyber-cyan font-semibold text-[#08101f]"
+                class="grid size-10 shrink-0 place-items-center rounded-full border-2 border-cyber-cyan font-semibold text-cyan-700 dark:text-cyber-cyan"
                 >1</span
               >
               <div class="grid gap-1">
@@ -289,7 +310,7 @@ const homeTitleHtml = (() => {
             </li>
             <li class="grid justify-items-center gap-3 text-center">
               <span
-                class="grid size-10 shrink-0 place-items-center rounded-full bg-neon font-semibold text-[#08101f]"
+                class="grid size-10 shrink-0 place-items-center rounded-full border-2 border-neon font-semibold text-sky-700 dark:text-neon"
                 >2</span
               >
               <div class="grid gap-1">
@@ -303,7 +324,7 @@ const homeTitleHtml = (() => {
             </li>
             <li class="grid justify-items-center gap-3 text-center">
               <span
-                class="grid size-10 shrink-0 place-items-center rounded-full bg-amber-400 font-semibold text-[#08101f]"
+                class="grid size-10 shrink-0 place-items-center rounded-full border-2 border-amber-400 font-semibold text-amber-700 dark:text-amber-400"
                 >3</span
               >
               <div class="grid gap-1">
@@ -317,7 +338,7 @@ const homeTitleHtml = (() => {
             </li>
             <li class="grid justify-items-center gap-3 text-center">
               <span
-                class="grid size-10 shrink-0 place-items-center rounded-full bg-cyber-purple font-semibold text-[#08101f]"
+                class="grid size-10 shrink-0 place-items-center rounded-full border-2 border-cyber-purple font-semibold text-violet-700 dark:text-cyber-purple"
                 >4</span
               >
               <div class="grid gap-1">
@@ -445,19 +466,32 @@ const homeTitleHtml = (() => {
         <p class="m-0 text-sm font-semibold text-foreground">
           {t('home.maker.status')}
         </p>
-        <div class="flex flex-wrap gap-x-4 gap-y-3">
-          <a class={inlineLinkClass} href={aboutPath}
-            >{t('home.maker.aboutCta')}</a
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-3">
+          <Button
+            as="a"
+            href={aboutPath}
+            variant="outline"
+            size="sm"
+            class="border-primary-strong/60 bg-transparent text-primary-strong hover:bg-primary-strong/5 hover:text-primary-strong no-underline dark:border-neon/60 dark:bg-transparent dark:text-primary dark:hover:bg-neon/10"
           >
+            {t('home.maker.aboutCta')}
+          </Button>
           <a
-            class={inlineLinkClass}
+            class="grid size-10 place-items-center rounded-lg border border-border-field text-foreground transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-outline/50"
             href="https://github.com/blesscat"
             target="_blank"
-            rel="noopener noreferrer">{t('home.maker.githubCta')}</a
+            rel="noopener noreferrer"
+            aria-label={t('home.maker.githubCta')}
           >
-          <a class={inlineLinkClass} href="mailto:blesscat@gmail.com"
-            >{t('home.maker.emailCta')}</a
+            <BrandGithubIcon class="size-4.5" aria-hidden="true" />
+          </a>
+          <a
+            class="grid size-10 place-items-center rounded-lg border border-border-field text-foreground transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-outline/50"
+            href="mailto:blesscat@gmail.com"
+            aria-label={t('home.maker.emailCta')}
           >
+            <MailIcon class="size-4.5" aria-hidden="true" />
+          </a>
           {
             supportProviders.length > 0 && (
               <Button
