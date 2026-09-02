@@ -420,7 +420,7 @@ const inlineLinkClass =
 
     <Card
       as="section"
-      class="grid gap-4 !bg-nav p-6 !text-nav-foreground shadow-lg ring-0 sm:p-8"
+      class="grid gap-4 bg-banner p-6 text-banner-foreground shadow-lg ring-0 sm:p-8"
       aria-labelledby="home-final-title"
     >
       <h2
@@ -429,7 +429,7 @@ const inlineLinkClass =
       >
         {t('home.final.title')}
       </h2>
-      <p class="m-0 max-w-2xl leading-relaxed text-white/75">
+      <p class="m-0 max-w-2xl leading-relaxed text-white/90">
         {t('home.final.description')}
       </p>
       <p class="m-0">
@@ -438,7 +438,7 @@ const inlineLinkClass =
           href={modelsPath}
           variant="outline"
           size="lg"
-          class="!border-transparent !bg-nav-foreground !text-nav no-underline hover:brightness-95 focus-visible:ring-white"
+          class="border-transparent bg-nav-foreground text-nav hover:bg-nav-foreground hover:text-nav no-underline hover:brightness-95 focus-visible:ring-white dark:border-transparent dark:bg-nav-foreground dark:hover:bg-nav-foreground"
         >
           {t('home.final.cta')}
         </Button>

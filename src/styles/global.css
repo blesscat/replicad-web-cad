@@ -28,6 +28,8 @@
   --color-progress-fill: #2457d6;
   --color-nav: #172033;
   --color-nav-foreground: #ffffff;
+  --color-banner: #2457d6;
+  --color-banner-foreground: #ffffff;
   --color-viewport: #eef2f8;
   --shadow-card: 0 1rem 3rem rgb(23 32 51 / 7%);
   --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
@@ -80,6 +82,8 @@
     --color-progress-fill: #edf2fb;
     --color-nav: #080d17;
     --color-nav-foreground: #f3f7ff;
+    --color-banner: #080d17;
+    --color-banner-foreground: #f3f7ff;
     --color-viewport: #101827;
     --shadow-card: 0 1rem 3rem rgb(0 0 0 / 35%);
     --cad-viewport-grid-major: #53637d;
@@ -123,6 +127,8 @@
   --color-progress-fill: #edf2fb;
   --color-nav: #080d17;
   --color-nav-foreground: #f3f7ff;
+  --color-banner: #080d17;
+  --color-banner-foreground: #f3f7ff;
   --color-viewport: #101827;
   --shadow-card: 0 1rem 3rem rgb(0 0 0 / 35%);
   --cad-viewport-grid-major: #53637d;

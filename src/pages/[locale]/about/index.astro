@@ -107,7 +107,7 @@ const docsPath = publicPathFor(locale, 'docs')
 
     <Card
       as="section"
-      class="grid gap-5 !bg-nav p-5 !text-nav-foreground shadow-lg ring-0 sm:p-8"
+      class="grid gap-5 bg-banner p-5 text-banner-foreground shadow-lg ring-0 sm:p-8"
       aria-labelledby="about-links-title"
       data-testid="about-links"
     >
@@ -118,7 +118,7 @@ const docsPath = publicPathFor(locale, 'docs')
         >
           {t('about.linksHeading')}
         </h2>
-        <p class="m-0 max-w-2xl leading-relaxed text-white/75">
+        <p class="m-0 max-w-2xl leading-relaxed text-white/90">
           {t('about.supportDescription')}
         </p>
       </div>
@@ -128,7 +128,7 @@ const docsPath = publicPathFor(locale, 'docs')
           href="https://github.com/blesscat"
           variant="outline"
           size="lg"
-          class="!border-transparent !bg-nav-foreground !text-nav no-underline hover:brightness-95 focus-visible:ring-white"
+          class="border-transparent bg-nav-foreground text-nav hover:bg-nav-foreground hover:text-nav no-underline hover:brightness-95 focus-visible:ring-white dark:border-transparent dark:bg-nav-foreground dark:hover:bg-nav-foreground"
           target="_blank"
           rel="noopener noreferrer"
         >
