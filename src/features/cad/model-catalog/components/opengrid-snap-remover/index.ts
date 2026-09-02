@@ -56,7 +56,7 @@ export const openGridSnapRemoverDefinition: ModelDefinition = {
     baseAtZ: -5.005506125135993,
   },
   previewImage: {
-    src: '/model-previews/opengrid-snap-remover.png',
+    src: '/model-previews/opengrid-snap-remover.webp',
     alt: 'models.model.opengrid-snap-remover.alt',
     width: 640,
     height: 400,

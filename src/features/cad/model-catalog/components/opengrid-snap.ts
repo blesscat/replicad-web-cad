@@ -146,7 +146,7 @@ export const opengridSnapDefinition: ModelDefinition = {
   defaultParameters: OPENGRID_SNAP_CONFIGURATION.defaultParameters,
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {
-    src: '/model-previews/opengrid-snap.png',
+    src: '/model-previews/opengrid-snap.webp',
     alt: 'models.model.opengrid-snap.alt',
     width: 640,
     height: 400,

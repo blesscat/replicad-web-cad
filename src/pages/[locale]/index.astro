@@ -4,6 +4,7 @@ import '../../styles/starwind.css'
 import { Badge } from '../../components/starwind/badge'
 import { Button } from '../../components/starwind/button'
 import { Card } from '../../components/starwind/card'
+import ModelPreviewPicture from '../../components/ModelPreviewPicture.astro'
 import { supportProviders } from '../../features/support/config'
 import { SUPPORTED_LOCALES, isLocale, translate, type Locale } from '../../i18n'
 import { localizedCadPathFor, publicPathFor } from '../../i18n/routes'
@@ -83,26 +84,29 @@ const inlineLinkClass =
         <div
           class="grid gap-3 sm:grid-cols-[minmax(0,1.35fr)_minmax(8rem,0.65fr)]"
         >
-          <img
+          <ModelPreviewPicture
             class="aspect-[16/10] h-full w-full rounded-2xl border border-border bg-muted object-cover shadow-lg"
-            src="/model-previews/opengrid-desk.png"
+            src="/model-previews/opengrid-desk.webp"
+            darkSrc="/model-previews/opengrid-desk-dark.webp"
             width="640"
             height="400"
             loading="eager"
             alt={t('home.heroVisual.boardAlt')}
           />
           <div class="grid grid-cols-2 gap-3 sm:grid-cols-1">
-            <img
+            <ModelPreviewPicture
               class="aspect-[16/10] w-full rounded-xl border border-border bg-muted object-cover"
-              src="/model-previews/opengrid-stackable-box-desk.png"
+              src="/model-previews/opengrid-stackable-box-desk.webp"
+              darkSrc="/model-previews/opengrid-stackable-box-desk-dark.webp"
               width="640"
               height="400"
               loading="lazy"
               alt={t('home.heroVisual.boxAlt')}
             />
-            <img
+            <ModelPreviewPicture
               class="aspect-[16/10] w-full rounded-xl border border-border bg-muted object-cover"
-              src="/model-previews/opengrid-stackable-cylinder-desk.png"
+              src="/model-previews/opengrid-stackable-cylinder-desk.webp"
+              darkSrc="/model-previews/opengrid-stackable-cylinder-desk-dark.webp"
               width="640"
               height="400"
               loading="lazy"
@@ -306,9 +310,10 @@ const inlineLinkClass =
           as="article"
           class="grid gap-4 p-4 shadow-sm sm:grid-cols-[minmax(9rem,0.85fr)_minmax(0,1.15fr)] sm:items-center lg:grid-cols-1"
         >
-          <img
+          <ModelPreviewPicture
             class="aspect-[16/10] w-full rounded-xl border border-border bg-muted object-cover"
-            src="/model-previews/opengrid-desk.png"
+            src="/model-previews/opengrid-desk.webp"
+            darkSrc="/model-previews/opengrid-desk-dark.webp"
             width="640"
             height="400"
             loading="lazy"
@@ -330,9 +335,10 @@ const inlineLinkClass =
           as="article"
           class="grid gap-4 p-4 shadow-sm sm:grid-cols-[minmax(9rem,0.85fr)_minmax(0,1.15fr)] sm:items-center lg:grid-cols-1"
         >
-          <img
+          <ModelPreviewPicture
             class="aspect-[16/10] w-full rounded-xl border border-border bg-muted object-cover"
-            src="/model-previews/opengrid-wall.png"
+            src="/model-previews/opengrid-wall.webp"
+            darkSrc="/model-previews/opengrid-wall-dark.webp"
             width="640"
             height="400"
             loading="lazy"

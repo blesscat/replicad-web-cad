@@ -88,7 +88,7 @@ export const opengridPillarDefinition: ModelDefinition = {
   defaultParameters: { ...PILLAR_CONFIGURATION.defaultParameters },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {
-    src: '/model-previews/opengrid-pillar.png',
+    src: '/model-previews/opengrid-pillar.webp',
     alt: 'models.model.opengrid-pillar.alt',
     width: 640,
     height: 400,

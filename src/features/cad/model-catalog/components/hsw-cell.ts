@@ -73,7 +73,7 @@ export const hswCellDefinition: ModelDefinition = {
   defaultParameters: { rows: 1, columns: 1 },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {
-    src: '/model-previews/hsw-cell.png',
+    src: '/model-previews/hsw-cell.webp',
     alt: 'models.model.hsw-cell.alt',
     width: 640,
     height: 400,

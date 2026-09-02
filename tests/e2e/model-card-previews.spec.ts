@@ -13,6 +13,13 @@ import { waitForCadReady } from './helpers'
 
 const PREVIEW_WIDTH = 640
 const PREVIEW_HEIGHT = 400
+const WEBP_QUALITY = 0.9
+/**
+ * Mirrors the dark `--color-viewport` token in global.css. The capture
+ * workflow reads the live theme from the page, so this assertion fails
+ * loudly if the CSS token drifts from the value the previews were built on.
+ */
+const DARK_PREVIEW_BACKGROUND = '#101827'
 const CAPTURE_MODEL_PREVIEWS = process.env.CAPTURE_MODEL_PREVIEWS === '1'
 const MODEL_PREVIEW_ID = process.env.MODEL_PREVIEW_ID
 const PREVIEW_DIRECTORY = path.resolve(process.cwd(), 'public/model-previews')
@@ -22,6 +29,13 @@ const VISIBLE_MODEL_DEFINITIONS = groupModelDefinitions()
     (definition) => !MODEL_PREVIEW_ID || definition.id === MODEL_PREVIEW_ID,
   )
 
+const APPEARANCES = [
+  { key: 'light', backgroundColor: CAD_VIEWPORT_THEME_FALLBACK.background },
+  { key: 'dark', backgroundColor: DARK_PREVIEW_BACKGROUND },
+] as const
+
+type AppearanceKey = (typeof APPEARANCES)[number]['key']
+
 function entryKey(
   definition: (typeof VISIBLE_MODEL_DEFINITIONS)[number],
 ): string {
@@ -30,35 +44,79 @@ function entryKey(
 
 function previewRoute(
   definition: (typeof VISIBLE_MODEL_DEFINITIONS)[number],
+  appearance: AppearanceKey,
 ): string {
   const route = cadPathForModel(definition.id, definition.systemContext)
-  return `${route}${route.includes('?') ? '&' : '?'}preview=thumbnail`
+  const appearanceQuery = appearance === 'dark' ? '&appearance=dark' : ''
+  return `${route}${route.includes('?') ? '&' : '?'}preview=thumbnail${appearanceQuery}`
+}
+
+function previewSrcFor(
+  definition: (typeof VISIBLE_MODEL_DEFINITIONS)[number],
+  appearance: AppearanceKey,
+): string {
+  const preview = definition.previewImage
+  if (!preview)
+    throw new Error(`PREVIEW_METADATA_MISSING:${entryKey(definition)}`)
+  return appearance === 'dark' ? preview.darkSrc : preview.src
 }
 
 function previewAssetPath(
   definition: (typeof VISIBLE_MODEL_DEFINITIONS)[number],
+  appearance: AppearanceKey,
 ) {
-  const preview = definition.previewImage
-  if (!preview)
-    throw new Error(`PREVIEW_METADATA_MISSING:${entryKey(definition)}`)
-  return path.resolve(process.cwd(), 'public', preview.src.slice(1))
+  return path.resolve(
+    process.cwd(),
+    'public',
+    previewSrcFor(definition, appearance).slice(1),
+  )
 }
 
-function readPngDimensions(filePath: string): {
+function readWebpDimensions(filePath: string): {
   width: number
   height: number
 } {
   const payload = readFileSync(filePath)
-  const pngSignature = Buffer.from([
-    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-  ])
-  if (!payload.subarray(0, pngSignature.length).equals(pngSignature)) {
-    throw new Error(`PREVIEW_NOT_PNG:${filePath}`)
+  const riffSignature = Buffer.from('RIFF')
+  const webpSignature = Buffer.from('WEBP')
+  if (
+    !payload.subarray(0, 4).equals(riffSignature) ||
+    !payload.subarray(8, 12).equals(webpSignature)
+  ) {
+    throw new Error(`PREVIEW_NOT_WEBP:${filePath}`)
   }
-  return {
-    width: payload.readUInt32BE(16),
-    height: payload.readUInt32BE(20),
+  const chunkFourcc = payload.subarray(12, 16).toString('ascii')
+  if (chunkFourcc === 'VP8X') {
+    return {
+      width: payload.readUIntLE(24, 3) + 1,
+      height: payload.readUIntLE(27, 3) + 1,
+    }
   }
+  if (chunkFourcc === 'VP8 ') {
+    const frameTag = payload.subarray(20, 23)
+    const syncBytes = payload.subarray(23, 26)
+    if (
+      (frameTag[2]! & 0x01) !== 0 ||
+      !syncBytes.equals(Buffer.from([0x9d, 0x01, 0x2a]))
+    ) {
+      throw new Error(`PREVIEW_MALFORMED_WEBP:${filePath}`)
+    }
+    return {
+      width: payload.readUInt16LE(26) & 0x3fff,
+      height: payload.readUInt16LE(28) & 0x3fff,
+    }
+  }
+  if (chunkFourcc === 'VP8L') {
+    if (payload[20] !== 0x2f) {
+      throw new Error(`PREVIEW_MALFORMED_WEBP:${filePath}`)
+    }
+    const bits = payload.readUInt32LE(21)
+    return {
+      width: (bits & 0x3fff) + 1,
+      height: ((bits >> 14) & 0x3fff) + 1,
+    }
+  }
+  throw new Error(`PREVIEW_UNSUPPORTED_WEBP:${filePath}:${chunkFourcc}`)
 }
 
 function rgbaForHexColor(color: string): [number, number, number, number] {
@@ -99,10 +157,17 @@ async function sampleCanvasBackground(
 async function resizeScreenshot(
   page: Page,
   screenshot: Buffer,
+  backgroundColor: string,
 ): Promise<Buffer> {
   const encoded = screenshot.toString('base64')
   const resized = await page.evaluate(
-    async ({ encodedScreenshot, width, height }) => {
+    async ({
+      encodedScreenshot,
+      width,
+      height,
+      backgroundColor,
+      quality,
+    }) => {
       const response = await fetch(`data:image/png;base64,${encodedScreenshot}`)
       const bitmap = await createImageBitmap(await response.blob())
       const output = document.createElement('canvas')
@@ -111,7 +176,7 @@ async function resizeScreenshot(
       const context = output.getContext('2d')
       if (!context) throw new Error('PREVIEW_CANVAS_CONTEXT_UNAVAILABLE')
 
-      context.fillStyle = '#eef2f8'
+      context.fillStyle = backgroundColor
       context.fillRect(0, 0, width, height)
       const scale = Math.min(width / bitmap.width, height / bitmap.height)
       const drawWidth = bitmap.width * scale
@@ -125,13 +190,15 @@ async function resizeScreenshot(
       )
       bitmap.close()
       return output
-        .toDataURL('image/png')
-        .slice('data:image/png;base64,'.length)
+        .toDataURL('image/webp', quality)
+        .slice('data:image/webp;base64,'.length)
     },
     {
       encodedScreenshot: encoded,
       width: PREVIEW_WIDTH,
       height: PREVIEW_HEIGHT,
+      backgroundColor,
+      quality: WEBP_QUALITY,
     },
   )
   return Buffer.from(resized, 'base64')
@@ -141,24 +208,29 @@ async function capturePreview(
   page: Page,
   canvas: Locator,
   filePath: string,
+  backgroundColor: string,
 ): Promise<void> {
   mkdirSync(PREVIEW_DIRECTORY, { recursive: true })
   const screenshot = await canvas.screenshot()
-  writeFileSync(filePath, await resizeScreenshot(page, screenshot))
+  writeFileSync(
+    filePath,
+    await resizeScreenshot(page, screenshot, backgroundColor),
+  )
 }
 
 function assertPreviewAsset(
   definition: (typeof VISIBLE_MODEL_DEFINITIONS)[number],
+  appearance: AppearanceKey,
 ) {
   const preview = definition.previewImage
   if (!preview)
     throw new Error(`PREVIEW_METADATA_MISSING:${entryKey(definition)}`)
-  const filePath = previewAssetPath(definition)
+  const filePath = previewAssetPath(definition, appearance)
   expect(
     existsSync(filePath),
-    `Missing preview for ${entryKey(definition)}`,
+    `Missing ${appearance} preview for ${entryKey(definition)}`,
   ).toBe(true)
-  expect(readPngDimensions(filePath)).toEqual({
+  expect(readWebpDimensions(filePath)).toEqual({
     width: preview.width,
     height: preview.height,
   })
@@ -173,38 +245,48 @@ test.describe.configure({ mode: 'serial' })
 test('visible model previews are captured from ready generators', async ({
   page,
 }) => {
-  test.setTimeout(240_000)
+  test.setTimeout(480_000)
   await page.setViewportSize({ width: 1440, height: 900 })
 
   for (const definition of VISIBLE_MODEL_DEFINITIONS) {
-    await page.goto('/models')
-    await page.evaluate(() => localStorage.clear())
-    await page.goto(previewRoute(definition))
+    for (const appearance of APPEARANCES) {
+      await page.emulateMedia({
+        colorScheme: appearance.key === 'dark' ? 'dark' : 'light',
+      })
+      await page.goto('/models')
+      await page.evaluate(() => localStorage.clear())
+      await page.goto(previewRoute(definition, appearance.key))
 
-    await expect(page.getByTestId('cad-viewport')).toHaveAttribute(
-      'data-presentation',
-      'thumbnail',
-    )
-    await waitForCadReady(page)
-    await page.waitForTimeout(300)
-    const canvas = page.getByTestId('cad-viewport').locator('canvas')
-    await expect(canvas).toBeVisible()
-    await expect(sampleCanvasBackground(page, canvas)).resolves.toEqual(
-      rgbaForHexColor(CAD_VIEWPORT_THEME_FALLBACK.background),
-    )
+      await expect(page.getByTestId('cad-viewport')).toHaveAttribute(
+        'data-presentation',
+        'thumbnail',
+      )
+      await waitForCadReady(page)
+      await page.waitForTimeout(300)
+      const canvas = page.getByTestId('cad-viewport').locator('canvas')
+      await expect(canvas).toBeVisible()
+      await expect(sampleCanvasBackground(page, canvas)).resolves.toEqual(
+        rgbaForHexColor(appearance.backgroundColor),
+      )
 
-    const filePath = previewAssetPath(definition)
-    if (CAPTURE_MODEL_PREVIEWS) {
-      await capturePreview(page, canvas, filePath)
+      const filePath = previewAssetPath(definition, appearance.key)
+      if (CAPTURE_MODEL_PREVIEWS) {
+        await capturePreview(
+          page,
+          canvas,
+          filePath,
+          appearance.backgroundColor,
+        )
+      }
+      assertPreviewAsset(definition, appearance.key)
     }
-    assertPreviewAsset(definition)
   }
 })
 
 test('model cards expose static previews and preserve selection on image failure', async ({
   page,
 }) => {
-  await page.route('**/model-previews/opengrid-desk.png', (route) =>
+  await page.route('**/model-previews/opengrid-desk.webp', (route) =>
     route.abort(),
   )
   await page.goto('/models')
@@ -216,11 +298,12 @@ test('model cards expose static previews and preserve selection on image failure
       throw new Error(`PREVIEW_METADATA_MISSING:${entryKey(definition)}`)
 
     const card = page.locator(`[data-entry-key="${entryKey(definition)}"]`)
-    await expect(card.locator('img')).toHaveAttribute('src', preview.src)
-    await expect(card.locator('img')).toHaveAttribute(
-      'alt',
-      translate(locale, preview.alt),
-    )
+    const lightImage = card.locator('img').first()
+    const darkImage = card.locator('img').nth(1)
+    await expect(lightImage).toHaveAttribute('src', preview.src)
+    await expect(darkImage).toHaveAttribute('src', preview.darkSrc)
+    await expect(lightImage).toHaveAttribute('alt', translate(locale, preview.alt))
+    await expect(darkImage).toHaveAttribute('alt', '')
     await expect(
       card.getByRole('link', {
         name: `編輯 ${translate(locale, modelSelectionLabelFor(definition))}`,

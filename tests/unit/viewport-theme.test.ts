@@ -51,7 +51,7 @@ describe('CAD viewport theme', () => {
     )
   })
 
-  it('keeps thumbnail rendering on the shared light palette', () => {
+  it('keeps light thumbnail rendering on the shared light palette and honors the dark appearance', () => {
     const darkTheme = {
       ...CAD_VIEWPORT_THEME_FALLBACK,
       background: '#101827',
@@ -60,6 +60,12 @@ describe('CAD viewport theme', () => {
 
     expect(viewportThemeForPresentation('thumbnail', darkTheme)).toEqual(
       CAD_VIEWPORT_THEME_FALLBACK,
+    )
+    expect(
+      viewportThemeForPresentation('thumbnail', darkTheme, 'light'),
+    ).toEqual(CAD_VIEWPORT_THEME_FALLBACK)
+    expect(viewportThemeForPresentation('thumbnail', darkTheme, 'dark')).toBe(
+      darkTheme,
     )
     expect(viewportThemeForPresentation('workspace', darkTheme)).toBe(darkTheme)
   })

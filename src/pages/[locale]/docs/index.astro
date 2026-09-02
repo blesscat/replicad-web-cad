@@ -5,6 +5,7 @@ import { Badge } from '../../../components/starwind/badge'
 import { Button } from '../../../components/starwind/button'
 import { Card } from '../../../components/starwind/card'
 import { Separator } from '../../../components/starwind/separator'
+import ModelPreviewPicture from '../../../components/ModelPreviewPicture.astro'
 import {
   deskQuickStartEntries,
   type DeskQuickStartRole,
@@ -323,9 +324,10 @@ const openConnectOrganizerPath = localizedCadPathFor(
                 class="grid gap-2 p-3 no-underline transition-shadow hover:shadow-md"
                 href={entry.href}
               >
-                <img
+                <ModelPreviewPicture
                   class="aspect-[16/10] w-full rounded-lg border border-border object-cover"
-                  src={entry.previewPath}
+                  src={entry.previewImage.src}
+                  darkSrc={entry.previewImage.darkSrc}
                   width="640"
                   height="400"
                   loading="lazy"
@@ -362,9 +364,10 @@ const openConnectOrganizerPath = localizedCadPathFor(
       </header>
       <div class="grid gap-4 sm:grid-cols-2">
         <Card as="article" size="sm" class="grid gap-3 p-4">
-          <img
+          <ModelPreviewPicture
             class="aspect-[16/10] w-full rounded-lg border border-border bg-muted object-cover"
-            src="/model-previews/opengrid-wall.png"
+            src="/model-previews/opengrid-wall.webp"
+            darkSrc="/model-previews/opengrid-wall-dark.webp"
             width="640"
             height="400"
             loading="lazy"
@@ -382,9 +385,10 @@ const openConnectOrganizerPath = localizedCadPathFor(
           >
         </Card>
         <Card as="article" size="sm" class="grid gap-3 p-4">
-          <img
+          <ModelPreviewPicture
             class="aspect-[16/10] w-full rounded-lg border border-border bg-muted object-cover"
-            src="/model-previews/opengrid-snap-wall.png"
+            src="/model-previews/opengrid-snap-wall.webp"
+            darkSrc="/model-previews/opengrid-snap-wall-dark.webp"
             width="640"
             height="400"
             loading="lazy"
@@ -400,9 +404,10 @@ const openConnectOrganizerPath = localizedCadPathFor(
           >
         </Card>
         <Card as="article" size="sm" class="grid gap-3 p-4">
-          <img
+          <ModelPreviewPicture
             class="aspect-[16/10] w-full rounded-lg border border-border bg-muted object-cover"
-            src="/model-previews/opengrid-wall-cover-wall.png"
+            src="/model-previews/opengrid-wall-cover-wall.webp"
+            darkSrc="/model-previews/opengrid-wall-cover-wall-dark.webp"
             width="640"
             height="400"
             loading="lazy"
@@ -420,9 +425,10 @@ const openConnectOrganizerPath = localizedCadPathFor(
           >
         </Card>
         <Card as="article" size="sm" class="grid gap-3 p-4">
-          <img
+          <ModelPreviewPicture
             class="aspect-[16/10] w-full rounded-lg border border-border bg-muted object-cover"
-            src="/model-previews/opengrid-openconnect-shelf-wall.png"
+            src="/model-previews/opengrid-openconnect-shelf-wall.webp"
+            darkSrc="/model-previews/opengrid-openconnect-shelf-wall-dark.webp"
             width="640"
             height="400"
             loading="lazy"
@@ -440,9 +446,10 @@ const openConnectOrganizerPath = localizedCadPathFor(
           >
         </Card>
         <Card as="article" size="sm" class="grid gap-3 p-4">
-          <img
+          <ModelPreviewPicture
             class="aspect-[16/10] w-full rounded-lg border border-border bg-muted object-cover"
-            src="/model-previews/opengrid-openconnect-organizer-wall.png"
+            src="/model-previews/opengrid-openconnect-organizer-wall.webp"
+            darkSrc="/model-previews/opengrid-openconnect-organizer-wall-dark.webp"
             width="640"
             height="400"
             loading="lazy"

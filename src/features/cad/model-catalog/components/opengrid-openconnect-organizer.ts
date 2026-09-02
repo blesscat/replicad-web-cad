@@ -159,7 +159,7 @@ export const opengridOpenConnectOrganizerDefinition: ModelDefinition = {
   defaultParameters: { ...OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS },
   previewMetadata: { centeredOnXY: false, baseAtZ: 0 },
   previewImage: {
-    src: '/model-previews/opengrid-openconnect-organizer-wall.png',
+    src: '/model-previews/opengrid-openconnect-organizer-wall.webp',
     alt: 'models.model.opengrid-openconnect-organizer.alt',
     width: 640,
     height: 400,

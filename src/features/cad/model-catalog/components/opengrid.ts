@@ -68,7 +68,7 @@ export const opengridDefinition: ModelDefinition = {
   defaultParameters: { ...OPENGRID_CONFIGURATION.defaultParameters },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {
-    src: '/model-previews/opengrid.png',
+    src: '/model-previews/opengrid.webp',
     alt: 'models.model.opengrid.alt',
     width: 640,
     height: 400,

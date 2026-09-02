@@ -13,7 +13,9 @@
   } from '../../features/cad/parameters'
   import CadViewport from '../../features/cad/viewport/CadViewport.svelte'
   import {
+    viewportAppearanceForSearch,
     viewportPresentationForSearch,
+    type CadViewportAppearance,
     type CadViewportPresentation,
   } from '../../features/cad/viewport/presentation'
   import {
@@ -43,6 +45,7 @@
   let toastError = $state<CadError | null>(null)
   let resetVersion = $state(0)
   let presentation = $state<CadViewportPresentation>('workspace')
+  let appearance = $state<CadViewportAppearance>('light')
   let systemContext = $state<OpenGridSystemContext | undefined>(undefined)
   let controller: CadWorkspaceController | null = null
   let parameterStore: ComponentParameterStore | null = null
@@ -60,6 +63,7 @@
 
   onMount(() => {
     presentation = viewportPresentationForSearch(window.location.search)
+    appearance = viewportAppearanceForSearch(window.location.search)
     systemContext = systemContextForModel(
       modelId,
       parseSystemContext(window.location.search),
@@ -153,6 +157,7 @@
       parameters={snapshot.state.committed?.parameters ?? null}
       stale={snapshot.state.stale}
       {presentation}
+      {appearance}
     />
     {#if snapshot.progress}
       <CadProgressIndicator progress={snapshot.progress} {locale} />

@@ -90,7 +90,12 @@ for (const locale of locales) {
     await expect(page.locator('img[src^="/docs/desk-system/"]')).toHaveCount(3)
     await expect(
       page.locator(
-        '[data-testid="docs-wall-system"] img[src^="/model-previews/"]',
+        '[data-testid="docs-wall-system"] img[src$=".webp"]:not([src$="-dark.webp"])',
+      ),
+    ).toHaveCount(5)
+    await expect(
+      page.locator(
+        '[data-testid="docs-wall-system"] img[src$="-dark.webp"]',
       ),
     ).toHaveCount(5)
     const diagramAltPatterns = [

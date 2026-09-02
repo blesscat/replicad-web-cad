@@ -67,7 +67,7 @@ export const opengridWallCoverDefinition: ModelDefinition = {
   supportedSystemContexts: ['wall'],
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {
-    src: '/model-previews/opengrid-wall-cover.png',
+    src: '/model-previews/opengrid-wall-cover.webp',
     alt: 'models.model.opengrid-wall-cover.alt',
     width: 640,
     height: 400,

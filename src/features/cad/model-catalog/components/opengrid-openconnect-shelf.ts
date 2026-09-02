@@ -116,7 +116,7 @@ export const opengridOpenConnectShelfDefinition: ModelDefinition = {
   defaultParameters: { ...OPENGRID_OPENCONNECT_SHELF_DEFAULT_PARAMETERS },
   previewMetadata: { centeredOnXY: false, baseAtZ: 0 },
   previewImage: {
-    src: '/model-previews/opengrid-openconnect-shelf.png',
+    src: '/model-previews/opengrid-openconnect-shelf.webp',
     alt: 'models.model.opengrid-openconnect-shelf.alt',
     width: 640,
     height: 400,

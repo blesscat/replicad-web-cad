@@ -13,6 +13,7 @@ import {
   DialogTrigger,
 } from '../../components/starwind/dialog'
 import { Separator } from '../../components/starwind/separator'
+import ModelPreviewPicture from '../../components/ModelPreviewPicture.astro'
 import {
   displayParameterLabel,
   groupModelDefinitions,
@@ -220,14 +221,15 @@ function detailsDialogIdFor(definition: ModelDefinition): string {
                               >
                                 {t('models.previewUnavailable')}
                               </div>
-                              <img
+                              <ModelPreviewPicture
                                 src={preview.src}
-                                alt={previewAlt}
+                                darkSrc={preview.darkSrc}
                                 width={preview.width}
                                 height={preview.height}
+                                alt={previewAlt}
                                 loading="lazy"
                                 class="h-full w-full object-contain"
-                                onerror="this.hidden = true; this.previousElementSibling.removeAttribute('hidden')"
+                                onerror="if (this.offsetParent) { this.hidden = true; this.closest('[data-testid=model-preview]')?.querySelector('[data-testid=model-preview-fallback]')?.removeAttribute('hidden') }"
                               />
                             </div>
                             {hasSubgroups ? (

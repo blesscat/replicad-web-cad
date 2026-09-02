@@ -128,7 +128,7 @@ export const opengridDividerDefinition: ModelDefinition = {
   defaultParameters: { ...OPENGRID_DIVIDER_CONFIGURATION.defaultParameters },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {
-    src: '/model-previews/opengrid-divider.png',
+    src: '/model-previews/opengrid-divider.webp',
     alt: 'models.model.opengrid-divider.alt',
     width: 640,
     height: 400,

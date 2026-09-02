@@ -265,7 +265,7 @@ export const opengridStackableCylinderDefinition: ModelDefinition = {
   defaultParameters: { ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {
-    src: '/model-previews/opengrid-stackable-cylinder.png',
+    src: '/model-previews/opengrid-stackable-cylinder.webp',
     alt: 'models.model.opengrid-stackable-cylinder.alt',
     width: 640,
     height: 400,
