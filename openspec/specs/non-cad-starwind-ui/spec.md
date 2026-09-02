@@ -22,7 +22,16 @@ primary actions in the system primary color (neon gradient with dark label
 text in dark appearance), monospaced technical labels per the system
 typography (Fira Code in dark, JetBrains Mono in light), and — in dark
 appearance only — the cyan-tinted background grid, top scanline, and status
-pulse accents. Typography MUST follow the active design system (Inter in dark,
+pulse accents. The homepage MUST follow the systems' layout composition: a
+hero with the model preview visual on the left and the eyebrow, two-line
+headline with the accent-highlighted phrase, description, and dual actions on
+the right (text first on narrow screens), centered section headers for the
+feature, workflow, and explore bands, an icon-led four-card feature row, and
+a four-across numbered workflow step row (numbered chips above the step
+titles). The model-selection and About pages MUST apply the same centered
+page-header vocabulary; the documentation page MUST keep its left-aligned
+reading layout while sharing the same container and card vocabulary.
+Typography MUST follow the active design system (Inter in dark,
 Hanken Grotesk in light). The shared
 treatment MUST expose readable hover, disabled, and keyboard-focus states
 without requiring a client-side CAD runtime.

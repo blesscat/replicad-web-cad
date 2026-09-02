@@ -5,6 +5,10 @@ import { Badge } from '../../components/starwind/badge'
 import { Button } from '../../components/starwind/button'
 import { Card } from '../../components/starwind/card'
 import ModelPreviewPicture from '../../components/ModelPreviewPicture.astro'
+import BrowserIcon from '@tabler/icons/outline/browser.svg'
+import AdjustmentsIcon from '@tabler/icons/outline/adjustments-horizontal.svg'
+import Rotate3dIcon from '@tabler/icons/outline/rotate-3d.svg'
+import DownloadIcon from '@tabler/icons/outline/download.svg'
 import { supportProviders } from '../../features/support/config'
 import { SUPPORTED_LOCALES, isLocale, translate, type Locale } from '../../i18n'
 import { localizedCadPathFor, publicPathFor } from '../../i18n/routes'
@@ -28,6 +32,20 @@ const deskFlowPath = `/docs/desk-system/desk-system-flow.${locale}.svg`
 
 const inlineLinkClass =
   'font-semibold text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground focus-visible:ring-3 focus-visible:ring-outline/50'
+
+/* Presentational-only title treatment: highlight the CAD phrase and stack the
+   headline on two lines. The translated wording itself is unchanged. */
+const homeTitleHtml = (() => {
+  const highlighted = t('home.title').replace(
+    /(CAD 元件|CAD parts)/,
+    '<span class="text-primary-strong dark:text-cyber-cyan">$1</span>',
+  )
+  return highlighted.replace(
+    /(<span[^>]*>[^<]*<\/span>)(，|,)?/,
+    (_match, span: string, comma: string | undefined) =>
+      `${span}${comma ?? ''}<br />`,
+  )
+})()
 ---
 
 <SiteLayout
@@ -41,16 +59,15 @@ const inlineLinkClass =
       aria-labelledby="home-title"
       data-testid="home-hero"
     >
-      <div class="grid gap-5">
+      <div class="grid gap-5 lg:order-2">
         <Badge variant="primary" eyebrow size="sm" class="w-fit font-semibold">
           {t('home.eyebrow')}
         </Badge>
         <h1
           class="glow-text m-0 max-w-2xl text-4xl font-semibold leading-tight sm:text-5xl"
           id="home-title"
-        >
-          {t('home.title')}
-        </h1>
+          set:html={homeTitleHtml}
+        />
         <p class="m-0 max-w-2xl text-lg leading-relaxed text-muted-foreground">
           {t('home.description')}
         </p>
@@ -80,7 +97,10 @@ const inlineLinkClass =
         </p>
       </div>
 
-      <figure class="m-0 grid gap-3" data-testid="home-hero-visual">
+      <figure
+        class="cyber-card m-0 grid gap-3 rounded-2xl p-3 lg:order-1"
+        data-testid="home-hero-visual"
+      >
         <div
           class="grid gap-3 sm:grid-cols-[minmax(0,1.35fr)_minmax(8rem,0.65fr)]"
         >
@@ -125,7 +145,7 @@ const inlineLinkClass =
       aria-labelledby="home-capabilities-title"
       data-testid="home-capabilities"
     >
-      <header class="grid gap-2">
+      <header class="grid justify-items-center gap-2 text-center">
         <p
           class="m-0 font-mono text-sm font-semibold tracking-[0.12em] text-muted-foreground uppercase"
         >
@@ -145,8 +165,13 @@ const inlineLinkClass =
         <Card
           as="article"
           size="sm"
-          class="cyber-card grid gap-2 p-4 shadow-sm"
+          class="cyber-card grid justify-items-center gap-2 p-4 text-center shadow-sm"
         >
+          <span
+            class="grid size-10 place-items-center rounded-lg border border-border bg-muted text-primary"
+          >
+            <BrowserIcon class="size-5" aria-hidden="true" />
+          </span>
           <h3 class="m-0 text-lg font-semibold leading-tight">
             {t('home.feature.browser.title')}
           </h3>
@@ -157,8 +182,13 @@ const inlineLinkClass =
         <Card
           as="article"
           size="sm"
-          class="cyber-card grid gap-2 p-4 shadow-sm"
+          class="cyber-card grid justify-items-center gap-2 p-4 text-center shadow-sm"
         >
+          <span
+            class="grid size-10 place-items-center rounded-lg border border-border bg-muted text-primary"
+          >
+            <AdjustmentsIcon class="size-5" aria-hidden="true" />
+          </span>
           <h3 class="m-0 text-lg font-semibold leading-tight">
             {t('home.feature.parameters.title')}
           </h3>
@@ -169,8 +199,13 @@ const inlineLinkClass =
         <Card
           as="article"
           size="sm"
-          class="cyber-card grid gap-2 p-4 shadow-sm"
+          class="cyber-card grid justify-items-center gap-2 p-4 text-center shadow-sm"
         >
+          <span
+            class="grid size-10 place-items-center rounded-lg border border-border bg-muted text-primary"
+          >
+            <Rotate3dIcon class="size-5" aria-hidden="true" />
+          </span>
           <h3 class="m-0 text-lg font-semibold leading-tight">
             {t('home.feature.preview.title')}
           </h3>
@@ -181,8 +216,13 @@ const inlineLinkClass =
         <Card
           as="article"
           size="sm"
-          class="cyber-card grid gap-2 p-4 shadow-sm"
+          class="cyber-card grid justify-items-center gap-2 p-4 text-center shadow-sm"
         >
+          <span
+            class="grid size-10 place-items-center rounded-lg border border-border bg-muted text-primary"
+          >
+            <DownloadIcon class="size-5" aria-hidden="true" />
+          </span>
           <h3 class="m-0 text-lg font-semibold leading-tight">
             {t('home.feature.export.title')}
           </h3>
@@ -199,7 +239,7 @@ const inlineLinkClass =
       aria-labelledby="home-desk-title"
       data-testid="home-desk-system"
     >
-      <header class="grid gap-3">
+      <header class="grid justify-items-center gap-3 text-center">
         <p
           class="m-0 font-mono text-sm font-semibold tracking-[0.12em] text-primary-strong uppercase dark:text-primary"
         >
@@ -216,9 +256,7 @@ const inlineLinkClass =
         </p>
       </header>
 
-      <div
-        class="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)] lg:items-start"
-      >
+      <div class="grid gap-8">
         <figure class="m-0 grid gap-3">
           <img
             class="w-full rounded-xl border border-border bg-muted"
@@ -234,10 +272,10 @@ const inlineLinkClass =
         </figure>
 
         <div class="grid gap-5">
-          <ol class="m-0 grid gap-4 p-0">
-            <li class="flex gap-3">
+          <ol class="m-0 grid gap-6 p-0 sm:grid-cols-2 lg:grid-cols-4">
+            <li class="grid justify-items-center gap-3 text-center">
               <span
-                class="grid size-8 shrink-0 place-items-center rounded-full bg-cyber-cyan font-semibold text-[#08101f]"
+                class="grid size-10 shrink-0 place-items-center rounded-full bg-cyber-cyan font-semibold text-[#08101f]"
                 >1</span
               >
               <div class="grid gap-1">
@@ -249,9 +287,9 @@ const inlineLinkClass =
                 </p>
               </div>
             </li>
-            <li class="flex gap-3">
+            <li class="grid justify-items-center gap-3 text-center">
               <span
-                class="grid size-8 shrink-0 place-items-center rounded-full bg-neon font-semibold text-[#08101f]"
+                class="grid size-10 shrink-0 place-items-center rounded-full bg-neon font-semibold text-[#08101f]"
                 >2</span
               >
               <div class="grid gap-1">
@@ -263,9 +301,9 @@ const inlineLinkClass =
                 </p>
               </div>
             </li>
-            <li class="flex gap-3">
+            <li class="grid justify-items-center gap-3 text-center">
               <span
-                class="grid size-8 shrink-0 place-items-center rounded-full bg-amber-400 font-semibold text-[#08101f]"
+                class="grid size-10 shrink-0 place-items-center rounded-full bg-amber-400 font-semibold text-[#08101f]"
                 >3</span
               >
               <div class="grid gap-1">
@@ -277,9 +315,9 @@ const inlineLinkClass =
                 </p>
               </div>
             </li>
-            <li class="flex gap-3">
+            <li class="grid justify-items-center gap-3 text-center">
               <span
-                class="grid size-8 shrink-0 place-items-center rounded-full bg-cyber-purple font-semibold text-[#08101f]"
+                class="grid size-10 shrink-0 place-items-center rounded-full bg-cyber-purple font-semibold text-[#08101f]"
                 >4</span
               >
               <div class="grid gap-1">
@@ -296,7 +334,7 @@ const inlineLinkClass =
             as="a"
             href={docsPath}
             variant="outline"
-            class="justify-self-start no-underline"
+            class="justify-self-center no-underline"
             >{t('home.desk.docsCta')}</Button
           >
         </div>
@@ -308,9 +346,9 @@ const inlineLinkClass =
       aria-labelledby="home-explore-title"
       data-testid="home-explore"
     >
-      <header class="grid gap-2">
+      <header class="grid justify-items-center gap-2 text-center">
         <p
-          class="m-0 text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground"
+          class="m-0 font-mono text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground"
         >
           {t('home.explore.eyebrow')}
         </p>
