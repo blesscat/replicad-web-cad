@@ -13,7 +13,10 @@
     type CadViewportTheme,
     viewportThemeForPresentation,
   } from './theme'
-  import type { CadViewportPresentation } from './presentation'
+  import type {
+    CadViewportAppearance,
+    CadViewportPresentation,
+  } from './presentation'
   import {
     CAD_VIEWPORT_TIMING_EVENT,
     type ViewportGeometryTiming,
@@ -28,6 +31,7 @@
     parameters: ModelParameterValues | null
     stale: boolean
     presentation: CadViewportPresentation
+    appearance?: CadViewportAppearance
     onPreparationTiming?: (timing: ViewportGeometryTiming) => void
   }
 
@@ -39,12 +43,13 @@
     parameters,
     stale,
     presentation,
+    appearance = 'light',
     onPreparationTiming,
   }: Props = $props()
   let webglSupported = $state(true)
   let observedViewportTheme = $state<CadViewportTheme>(readCadViewportTheme())
   let viewportTheme = $derived(
-    viewportThemeForPresentation(presentation, observedViewportTheme),
+    viewportThemeForPresentation(presentation, observedViewportTheme, appearance),
   )
 
   function reportPreparationTiming(timing: ViewportGeometryTiming): void {

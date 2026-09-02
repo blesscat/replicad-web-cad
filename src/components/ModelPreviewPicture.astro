@@ -1,0 +1,36 @@
+---
+type Props = {
+  src: string
+  darkSrc: string
+  width: number
+  height: number
+  alt: string
+  class?: string
+  loading?: 'eager' | 'lazy'
+  onerror?: string
+}
+
+const {
+  src,
+  darkSrc,
+  width,
+  height,
+  alt,
+  class: className,
+  loading = 'lazy',
+  onerror,
+} = Astro.props
+
+/**
+ * The header theme toggle applies `.dark` to <html> (system preference when
+ * no manual choice is stored), so the variant must switch on the class,
+ * not on prefers-color-scheme. Both elements share the alt text; the hidden
+ * one is excluded from the accessibility tree and only the visible variant
+ * is downloaded (lazy images without a layout box are not fetched).
+ */
+const lightClass = [className, 'dark:hidden'].filter(Boolean).join(' ')
+const darkClass = [className, 'hidden dark:block'].filter(Boolean).join(' ')
+---
+
+<img src={src} alt={alt} width={width} height={height} loading={loading} class={lightClass} onerror={onerror} />
+<img src={darkSrc} alt="" aria-hidden="true" width={width} height={height} loading={loading} class={darkClass} onerror={onerror} />

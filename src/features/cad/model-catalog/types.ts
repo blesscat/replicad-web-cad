@@ -18,14 +18,14 @@ export type ModelFamilyMetadata = {
 }
 
 export type ModelFamilyGroup = ModelFamilyMetadata & {
-  definitions: ReadonlyArray<ModelDefinition>
+  definitions: ReadonlyArray<ModelDefinition<ModelPreviewImage>>
   subgroups?: ReadonlyArray<ModelSelectionSubgroup>
 }
 
 export type ModelSelectionSubgroup = {
   key: OpenGridSystemContext
   label: string
-  definitions: ReadonlyArray<ModelDefinition>
+  definitions: ReadonlyArray<ModelDefinition<ModelPreviewImage>>
 }
 
 export type ParameterField = {
@@ -47,11 +47,19 @@ export type ParameterField = {
 
 export type ModelPreviewImage = {
   src: string
+  /** Dark-appearance variant of the preview, selected via prefers-color-scheme. */
+  darkSrc: string
   /** Stable translation key; never render this value directly. */
   alt: string
   width: number
   height: number
 }
+
+/**
+ * Preview metadata as authored per component definition; the dark variant
+ * asset is derived centrally from `src`, so authors never repeat it.
+ */
+export type ModelPreviewImageSpec = Omit<ModelPreviewImage, 'darkSrc'>
 
 export type ModelParameterPresentation =
   | {
@@ -70,7 +78,9 @@ export type FixedStepDownload = {
   fileName: string
 }
 
-export type ModelDefinition = {
+export type ModelDefinition<
+  PreviewImage extends ModelPreviewImageSpec = ModelPreviewImageSpec,
+> = {
   id: ModelId
   buildKey: ModelId
   family: ModelFamily
@@ -83,7 +93,7 @@ export type ModelDefinition = {
   parameterPresentation?: ModelParameterPresentation
   defaultParameters: ModelParameterValues
   previewMetadata: { centeredOnXY: boolean; baseAtZ: number }
-  previewImage?: ModelPreviewImage
+  previewImage?: PreviewImage
   validateParameters: (parameters: unknown) => ModelValidation
   boundsForParameters: (parameters: ModelParameterValues) => ModelBounds
   exportFileName: (parameters: ModelParameterValues) => string

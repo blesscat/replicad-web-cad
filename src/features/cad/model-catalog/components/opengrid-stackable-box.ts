@@ -177,7 +177,7 @@ export const opengridStackableBoxDefinition: ModelDefinition = {
   },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {
-    src: '/model-previews/opengrid-stackable-box.png',
+    src: '/model-previews/opengrid-stackable-box.webp',
     alt: 'models.model.opengrid-stackable-box.alt',
     width: 640,
     height: 400,

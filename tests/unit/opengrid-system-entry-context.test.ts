@@ -173,10 +173,16 @@ describe('OpenGrid system entry context', () => {
     expect(deskSnap?.systemContext).toBe('desk')
     expect(wallSnap?.systemContext).toBe('wall')
     expect(deskSnap?.previewImage?.src).toBe(
-      '/model-previews/opengrid-snap-desk.png',
+      '/model-previews/opengrid-snap-desk.webp',
+    )
+    expect(deskSnap?.previewImage?.darkSrc).toBe(
+      '/model-previews/opengrid-snap-desk-dark.webp',
     )
     expect(wallSnap?.previewImage?.src).toBe(
-      '/model-previews/opengrid-snap-wall.png',
+      '/model-previews/opengrid-snap-wall.webp',
+    )
+    expect(wallSnap?.previewImage?.darkSrc).toBe(
+      '/model-previews/opengrid-snap-wall-dark.webp',
     )
     expect(cadPathForModel('opengrid-snap', 'wall')).toBe(
       '/cad/opengrid-snap?system=wall',

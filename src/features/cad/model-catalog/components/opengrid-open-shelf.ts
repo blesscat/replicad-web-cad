@@ -132,7 +132,7 @@ export const opengridOpenShelfDefinition: ModelDefinition = {
   defaultParameters: { ...OPENGRID_OPEN_SHELF_DEFAULT_PARAMETERS },
   previewMetadata: { centeredOnXY: true, baseAtZ: -3 },
   previewImage: {
-    src: '/model-previews/opengrid-open-shelf.png',
+    src: '/model-previews/opengrid-open-shelf.webp',
     alt: 'models.model.opengrid-open-shelf.alt',
     width: 640,
     height: 400,

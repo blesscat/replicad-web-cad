@@ -25,7 +25,9 @@ describe('OpenGrid OpenConnect organizer catalog identity', () => {
       supportedSystemContexts: ['wall'],
       defaultParameters: OPENGRID_OPENCONNECT_ORGANIZER_DEFAULT_PARAMETERS,
       previewImage: {
-        src: '/model-previews/opengrid-openconnect-organizer-wall.png',
+        src: '/model-previews/opengrid-openconnect-organizer-wall.webp',
+        darkSrc:
+          '/model-previews/opengrid-openconnect-organizer-wall-dark.webp',
       },
     })
     expect(cadPathForModel('opengrid-openconnect-organizer', 'wall')).toBe(

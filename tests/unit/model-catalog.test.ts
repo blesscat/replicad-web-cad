@@ -68,10 +68,15 @@ describe('CAD component catalog', () => {
       new Set(resolvedPreviewImages.map((preview) => preview.src)).size,
     ).toBe(resolvedPreviewImages.length)
     expect(
+      new Set(resolvedPreviewImages.map((preview) => preview.darkSrc)).size,
+    ).toBe(resolvedPreviewImages.length)
+    expect(
       resolvedPreviewImages.every(
         (preview) =>
           preview.src.startsWith('/model-previews/') &&
-          preview.src.endsWith('.png') &&
+          preview.src.endsWith('.webp') &&
+          preview.darkSrc.startsWith('/model-previews/') &&
+          preview.darkSrc.endsWith('-dark.webp') &&
           preview.alt.length > 0 &&
           preview.width > 0 &&
           preview.height > 0,

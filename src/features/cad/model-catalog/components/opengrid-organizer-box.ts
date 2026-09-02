@@ -159,7 +159,7 @@ export const opengridOrganizerBoxDefinition: ModelDefinition = {
   defaultParameters: { ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS },
   previewMetadata: { centeredOnXY: true, baseAtZ: 0 },
   previewImage: {
-    src: '/model-previews/opengrid-organizer-box.png',
+    src: '/model-previews/opengrid-organizer-box.webp',
     alt: 'models.model.opengrid-organizer-box.alt',
     width: 640,
     height: 400,

@@ -1,4 +1,7 @@
-import type { CadViewportPresentation } from './presentation'
+import type {
+  CadViewportAppearance,
+  CadViewportPresentation,
+} from './presentation'
 
 export type CadViewportTheme = {
   background: string
@@ -117,8 +120,11 @@ export function readCadViewportTheme(): CadViewportTheme {
 export function viewportThemeForPresentation(
   presentation: CadViewportPresentation,
   observedTheme: CadViewportTheme,
+  appearance: CadViewportAppearance = 'light',
 ): CadViewportTheme {
-  if (presentation === 'thumbnail') return CAD_VIEWPORT_THEME_FALLBACK
+  if (presentation === 'thumbnail' && appearance !== 'dark') {
+    return CAD_VIEWPORT_THEME_FALLBACK
+  }
   return observedTheme
 }
 

@@ -4,27 +4,28 @@ import {
   systemContextLabelKey,
   type OpenGridSystemContext,
 } from '../system-entry-context'
-import { boxDefinition } from './components/box'
-import { hexagonalColumnDefinition } from './components/hexagonal-column'
-import { hswCellDefinition } from './components/hsw-cell'
-import { modularGridBaseDefinition } from './components/modular-grid-base'
-import { opengridDefinition } from './components/opengrid'
-import { opengridDividerDefinition } from './components/opengrid-divider'
-import { opengridOrganizerBoxDefinition } from './components/opengrid-organizer-box'
-import { opengridStackableBoxDefinition } from './components/opengrid-stackable-box'
-import { opengridStackableCylinderDefinition } from './components/opengrid-stackable-cylinder'
-import { opengridSnapDefinition } from './components/opengrid-snap'
-import { opengridWallCoverDefinition } from './components/opengrid-wall-cover'
-import { openGridSnapRemoverDefinition } from './components/opengrid-snap-remover'
-import { opengridPillarDefinition } from './components/opengrid-pillar'
-import { opengridOpenShelfDefinition } from './components/opengrid-open-shelf'
-import { opengridOpenConnectShelfDefinition } from './components/opengrid-openconnect-shelf'
-import { opengridOpenConnectOrganizerDefinition } from './components/opengrid-openconnect-organizer'
+import { boxDefinition as rawBoxDefinition } from './components/box'
+import { hexagonalColumnDefinition as rawHexagonalColumnDefinition } from './components/hexagonal-column'
+import { hswCellDefinition as rawHswCellDefinition } from './components/hsw-cell'
+import { modularGridBaseDefinition as rawModularGridBaseDefinition } from './components/modular-grid-base'
+import { opengridDefinition as rawOpengridDefinition } from './components/opengrid'
+import { opengridDividerDefinition as rawOpengridDividerDefinition } from './components/opengrid-divider'
+import { opengridOrganizerBoxDefinition as rawOpengridOrganizerBoxDefinition } from './components/opengrid-organizer-box'
+import { opengridStackableBoxDefinition as rawOpengridStackableBoxDefinition } from './components/opengrid-stackable-box'
+import { opengridStackableCylinderDefinition as rawOpengridStackableCylinderDefinition } from './components/opengrid-stackable-cylinder'
+import { opengridSnapDefinition as rawOpengridSnapDefinition } from './components/opengrid-snap'
+import { opengridWallCoverDefinition as rawOpengridWallCoverDefinition } from './components/opengrid-wall-cover'
+import { openGridSnapRemoverDefinition as rawOpenGridSnapRemoverDefinition } from './components/opengrid-snap-remover'
+import { opengridPillarDefinition as rawOpengridPillarDefinition } from './components/opengrid-pillar'
+import { opengridOpenShelfDefinition as rawOpengridOpenShelfDefinition } from './components/opengrid-open-shelf'
+import { opengridOpenConnectShelfDefinition as rawOpengridOpenConnectShelfDefinition } from './components/opengrid-openconnect-shelf'
+import { opengridOpenConnectOrganizerDefinition as rawOpengridOpenConnectOrganizerDefinition } from './components/opengrid-openconnect-organizer'
 import type {
   ModelDefinition,
   ModelFamily,
   ModelFamilyGroup,
   ModelFamilyMetadata,
+  ModelPreviewImage,
   ModelSelectionSubgroup,
 } from './types'
 
@@ -46,24 +47,69 @@ export type {
   FixedStepDownload,
 } from './types'
 export type { OpenGridSystemContext } from '../system-entry-context'
-export { boxDefinition } from './components/box'
-export { hexagonalColumnDefinition } from './components/hexagonal-column'
-export { hswCellDefinition } from './components/hsw-cell'
-export { modularGridBaseDefinition } from './components/modular-grid-base'
-export { opengridDefinition } from './components/opengrid'
-export { opengridDividerDefinition } from './components/opengrid-divider'
-export { opengridOrganizerBoxDefinition } from './components/opengrid-organizer-box'
-export { opengridStackableBoxDefinition } from './components/opengrid-stackable-box'
-export { opengridStackableCylinderDefinition } from './components/opengrid-stackable-cylinder'
-export { opengridSnapDefinition } from './components/opengrid-snap'
-export { opengridWallCoverDefinition } from './components/opengrid-wall-cover'
-export { openGridSnapRemoverDefinition } from './components/opengrid-snap-remover'
-export { opengridPillarDefinition } from './components/opengrid-pillar'
-export { opengridOpenShelfDefinition } from './components/opengrid-open-shelf'
-export { opengridOpenConnectShelfDefinition } from './components/opengrid-openconnect-shelf'
-export { opengridOpenConnectOrganizerDefinition } from './components/opengrid-openconnect-organizer'
 
-export const modelDefinitions: ReadonlyArray<ModelDefinition> = [
+/**
+ * Catalog definitions exposed with the derived dark preview asset so every
+ * consumer shares one object identity per model (raw component definitions
+ * stay preview-agnostic and name only the light asset).
+ */
+export const boxDefinition: ModelDefinition<ModelPreviewImage> =
+  withDerivedDarkPreview(rawBoxDefinition)
+export const hexagonalColumnDefinition: ModelDefinition<ModelPreviewImage> =
+  withDerivedDarkPreview(rawHexagonalColumnDefinition)
+export const hswCellDefinition: ModelDefinition<ModelPreviewImage> =
+  withDerivedDarkPreview(rawHswCellDefinition)
+export const modularGridBaseDefinition: ModelDefinition<ModelPreviewImage> =
+  withDerivedDarkPreview(rawModularGridBaseDefinition)
+export const opengridDefinition: ModelDefinition<ModelPreviewImage> =
+  withDerivedDarkPreview(rawOpengridDefinition)
+export const opengridDividerDefinition: ModelDefinition<ModelPreviewImage> =
+  withDerivedDarkPreview(rawOpengridDividerDefinition)
+export const opengridOrganizerBoxDefinition: ModelDefinition<ModelPreviewImage> =
+  withDerivedDarkPreview(rawOpengridOrganizerBoxDefinition)
+export const opengridStackableBoxDefinition: ModelDefinition<ModelPreviewImage> =
+  withDerivedDarkPreview(rawOpengridStackableBoxDefinition)
+export const opengridStackableCylinderDefinition: ModelDefinition<ModelPreviewImage> =
+  withDerivedDarkPreview(rawOpengridStackableCylinderDefinition)
+export const opengridSnapDefinition: ModelDefinition<ModelPreviewImage> =
+  withDerivedDarkPreview(rawOpengridSnapDefinition)
+export const opengridWallCoverDefinition: ModelDefinition<ModelPreviewImage> =
+  withDerivedDarkPreview(rawOpengridWallCoverDefinition)
+export const openGridSnapRemoverDefinition: ModelDefinition<ModelPreviewImage> =
+  withDerivedDarkPreview(rawOpenGridSnapRemoverDefinition)
+export const opengridPillarDefinition: ModelDefinition<ModelPreviewImage> =
+  withDerivedDarkPreview(rawOpengridPillarDefinition)
+export const opengridOpenShelfDefinition: ModelDefinition<ModelPreviewImage> =
+  withDerivedDarkPreview(rawOpengridOpenShelfDefinition)
+export const opengridOpenConnectShelfDefinition: ModelDefinition<ModelPreviewImage> =
+  withDerivedDarkPreview(rawOpengridOpenConnectShelfDefinition)
+export const opengridOpenConnectOrganizerDefinition: ModelDefinition<ModelPreviewImage> =
+  withDerivedDarkPreview(rawOpengridOpenConnectOrganizerDefinition)
+
+/** Dark variant asset name derived from the light asset name: x.webp → x-dark.webp */
+export function darkPreviewSrcFor(src: string): string {
+  return src.replace(/\.webp$/, '-dark.webp')
+}
+
+function withDerivedDarkPreview(
+  definition: ModelDefinition,
+): ModelDefinition<ModelPreviewImage> {
+  const preview = definition.previewImage
+  if (!preview) {
+    return { ...definition, previewImage: undefined }
+  }
+  return {
+    ...definition,
+    previewImage: {
+      ...preview,
+      darkSrc: darkPreviewSrcFor(preview.src),
+    },
+  }
+}
+
+export const modelDefinitions: ReadonlyArray<
+  ModelDefinition<ModelPreviewImage>
+> = [
   boxDefinition,
   modularGridBaseDefinition,
   hswCellDefinition,
@@ -105,21 +151,30 @@ export const modelFamilyMetadata: Readonly<
 }
 
 function contextPreviewFor(
-  definition: ModelDefinition,
+  definition: ModelDefinition<ModelPreviewImage>,
   context: OpenGridSystemContext,
 ) {
   if (!definition.previewImage) return undefined
+  const src = `/model-previews/${definition.id}-${context}.webp`
   return {
     ...definition.previewImage,
-    src: `/model-previews/${definition.id}-${context}.png`,
+    src,
+    darkSrc: darkPreviewSrcFor(src),
     alt: definition.previewImage.alt,
   }
 }
 
-function entryForContext(
-  definition: ModelDefinition,
+export function contextPreviewImageFor(
+  definition: ModelDefinition<ModelPreviewImage>,
   context: OpenGridSystemContext,
-): ModelDefinition {
+): ModelPreviewImage | undefined {
+  return contextPreviewFor(definition, context)
+}
+
+function entryForContext(
+  definition: ModelDefinition<ModelPreviewImage>,
+  context: OpenGridSystemContext,
+): ModelDefinition<ModelPreviewImage> {
   return {
     ...definition,
     systemContext: context,
@@ -128,13 +183,13 @@ function entryForContext(
 }
 
 function openGridSubgroups(
-  definitions: ReadonlyArray<ModelDefinition>,
+  definitions: ReadonlyArray<ModelDefinition<ModelPreviewImage>>,
 ): ReadonlyArray<ModelSelectionSubgroup> {
   const openGridDefinitions = definitions.filter(
     (definition) => definition.family === 'opengrid',
   )
   const supportsContext = (
-    definition: ModelDefinition,
+    definition: ModelDefinition<ModelPreviewImage>,
     context: OpenGridSystemContext,
   ): boolean => {
     return definition.supportedSystemContexts?.includes(context) ?? false
@@ -160,7 +215,7 @@ function openGridSubgroups(
 }
 
 export function groupModelDefinitions(
-  definitions: ReadonlyArray<ModelDefinition> = modelDefinitions,
+  definitions: ReadonlyArray<ModelDefinition<ModelPreviewImage>> = modelDefinitions,
 ): ReadonlyArray<ModelFamilyGroup> {
   return modelFamilyOrder.map((family) => {
     if (family === 'opengrid') {
@@ -180,13 +235,15 @@ export function groupModelDefinitions(
   })
 }
 
-export function modelSelectionLabelFor(definition: ModelDefinition): string {
+export function modelSelectionLabelFor(
+  definition: ModelDefinition<ModelPreviewImage>,
+): string {
   return definition.selectionLabel ?? definition.displayName
 }
 
 export function getModelDefinition(
   modelId: ModelId,
-): ModelDefinition | undefined {
+): ModelDefinition<ModelPreviewImage> | undefined {
   return modelDefinitions.find((definition) => definition.id === modelId)
 }
 

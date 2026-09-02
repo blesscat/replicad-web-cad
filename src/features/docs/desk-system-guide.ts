@@ -1,5 +1,9 @@
 import type { ModelId } from '../../cad-contract/units'
-import { getModelDefinition } from '../cad/model-catalog'
+import {
+  contextPreviewImageFor,
+  getModelDefinition,
+} from '../cad/model-catalog'
+import type { ModelPreviewImage } from '../cad/model-catalog'
 import { localizedCadPathFor } from '../../i18n/routes'
 import type { Locale } from '../../i18n'
 
@@ -34,7 +38,7 @@ export type DeskQuickStartEntry = DeskQuickStartComponent & {
   readonly labelKey: string
   readonly descriptionKey: string
   readonly previewAltKey: string
-  readonly previewPath: string
+  readonly previewImage: ModelPreviewImage
   readonly href: string
 }
 
@@ -45,6 +49,10 @@ export function deskQuickStartEntries(
     const definition = getModelDefinition(component.modelId)
     if (!definition) {
       throw new Error(`DESK_QUICK_START_MODEL_MISSING:${component.modelId}`)
+    }
+    const previewImage = contextPreviewImageFor(definition, 'desk')
+    if (!previewImage) {
+      throw new Error(`DESK_QUICK_START_PREVIEW_MISSING:${component.modelId}`)
     }
 
     let labelKey = definition.selectionLabel ?? definition.displayName
@@ -57,7 +65,7 @@ export function deskQuickStartEntries(
       labelKey,
       descriptionKey: definition.selectionDescription,
       previewAltKey: definition.previewImage?.alt ?? definition.displayName,
-      previewPath: `/model-previews/${component.modelId}-desk.png`,
+      previewImage,
       href: localizedCadPathFor(locale, component.modelId, 'desk'),
     }
   })
