@@ -1,5 +1,9 @@
 ---
 import SiteLayout from '../../layouts/SiteLayout.astro'
+import '../../styles/starwind.css'
+import { Badge } from '../../components/starwind/badge'
+import { Button } from '../../components/starwind/button'
+import { Card } from '../../components/starwind/card'
 import { supportProviders } from '../../features/support/config'
 import { SUPPORTED_LOCALES, isLocale, translate, type Locale } from '../../i18n'
 import { localizedCadPathFor, publicPathFor } from '../../i18n/routes'
@@ -21,12 +25,8 @@ const docsPath = publicPathFor(locale, 'docs')
 const aboutPath = publicPathFor(locale, 'about')
 const deskFlowPath = `/docs/desk-system/desk-system-flow.${locale}.svg`
 
-const primaryCtaClass =
-  'inline-flex items-center justify-center rounded-lg bg-primary px-4 py-3 font-semibold text-white no-underline shadow-sm transition-colors hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus'
-const secondaryCtaClass =
-  'inline-flex items-center justify-center rounded-lg border border-border-card bg-panel px-4 py-3 font-semibold text-ink no-underline shadow-sm transition-colors hover:bg-page focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus'
 const inlineLinkClass =
-  'font-semibold text-ink underline decoration-border-card underline-offset-4 hover:decoration-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus'
+  'font-semibold text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground focus-visible:ring-3 focus-visible:ring-outline/50'
 ---
 
 <SiteLayout
@@ -41,27 +41,39 @@ const inlineLinkClass =
       data-testid="home-hero"
     >
       <div class="grid gap-5">
-        <p class="m-0 font-semibold uppercase tracking-[0.12em] text-primary">
+        <Badge variant="primary" size="sm" class="w-fit font-semibold">
           {t('home.eyebrow')}
-        </p>
+        </Badge>
         <h1
           class="m-0 max-w-2xl text-4xl font-semibold leading-tight sm:text-5xl"
           id="home-title"
         >
           {t('home.title')}
         </h1>
-        <p class="m-0 max-w-2xl text-lg leading-relaxed text-muted">
+        <p class="m-0 max-w-2xl text-lg leading-relaxed text-muted-foreground">
           {t('home.description')}
         </p>
         <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <a class={primaryCtaClass} href={modelsPath}>
+          <Button
+            as="a"
+            href={modelsPath}
+            variant="primary"
+            size="lg"
+            class="w-full no-underline sm:w-auto"
+          >
             {t('home.primaryCta')}
-          </a>
-          <a class={secondaryCtaClass} href={deskBoardPath}>
+          </Button>
+          <Button
+            as="a"
+            href={deskBoardPath}
+            variant="outline"
+            size="lg"
+            class="w-full no-underline sm:w-auto"
+          >
             {t('home.secondaryCta')}
-          </a>
+          </Button>
         </div>
-        <p class="m-0 text-sm leading-normal text-muted">
+        <p class="m-0 text-sm leading-normal text-muted-foreground">
           <a class={inlineLinkClass} href={docsPath}>{t('home.docsCta')}</a>
           <span aria-hidden="true"> · </span>{t('home.heroNote')}
         </p>
@@ -72,7 +84,7 @@ const inlineLinkClass =
           class="grid gap-3 sm:grid-cols-[minmax(0,1.35fr)_minmax(8rem,0.65fr)]"
         >
           <img
-            class="aspect-[16/10] h-full w-full rounded-2xl border border-border-card bg-viewport object-cover shadow-card"
+            class="aspect-[16/10] h-full w-full rounded-2xl border border-border bg-muted object-cover shadow-lg"
             src="/model-previews/opengrid-desk.png"
             width="640"
             height="400"
@@ -81,7 +93,7 @@ const inlineLinkClass =
           />
           <div class="grid grid-cols-2 gap-3 sm:grid-cols-1">
             <img
-              class="aspect-[16/10] w-full rounded-xl border border-border-card bg-viewport object-cover"
+              class="aspect-[16/10] w-full rounded-xl border border-border bg-muted object-cover"
               src="/model-previews/opengrid-stackable-box-desk.png"
               width="640"
               height="400"
@@ -89,7 +101,7 @@ const inlineLinkClass =
               alt={t('home.heroVisual.boxAlt')}
             />
             <img
-              class="aspect-[16/10] w-full rounded-xl border border-border-card bg-viewport object-cover"
+              class="aspect-[16/10] w-full rounded-xl border border-border bg-muted object-cover"
               src="/model-previews/opengrid-stackable-cylinder-desk.png"
               width="640"
               height="400"
@@ -98,20 +110,20 @@ const inlineLinkClass =
             />
           </div>
         </div>
-        <figcaption class="text-sm leading-normal text-muted">
+        <figcaption class="text-sm leading-normal text-muted-foreground">
           {t('home.heroVisual.caption')}
         </figcaption>
       </figure>
     </section>
 
     <section
-      class="grid gap-6 border-y border-border-card py-8"
+      class="grid gap-6 border-y border-border py-8"
       aria-labelledby="home-capabilities-title"
       data-testid="home-capabilities"
     >
       <header class="grid gap-2">
         <p
-          class="m-0 text-sm font-semibold uppercase tracking-[0.12em] text-muted"
+          class="m-0 text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground"
         >
           {t('home.features')}
         </p>
@@ -126,51 +138,44 @@ const inlineLinkClass =
         class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
         aria-label={t('home.features')}
       >
-        <article
-          class="grid gap-2 rounded-xl border border-border-card bg-panel p-4 shadow-sm"
-        >
+        <Card as="article" size="sm" class="grid gap-2 p-4 shadow-sm">
           <h3 class="m-0 text-lg font-semibold leading-tight">
             {t('home.feature.browser.title')}
           </h3>
-          <p class="m-0 text-sm leading-normal text-muted">
+          <p class="m-0 text-sm leading-normal text-muted-foreground">
             {t('home.feature.browser.description')}
           </p>
-        </article>
-        <article
-          class="grid gap-2 rounded-xl border border-border-card bg-panel p-4 shadow-sm"
-        >
+        </Card>
+        <Card as="article" size="sm" class="grid gap-2 p-4 shadow-sm">
           <h3 class="m-0 text-lg font-semibold leading-tight">
             {t('home.feature.parameters.title')}
           </h3>
-          <p class="m-0 text-sm leading-normal text-muted">
+          <p class="m-0 text-sm leading-normal text-muted-foreground">
             {t('home.feature.parameters.description')}
           </p>
-        </article>
-        <article
-          class="grid gap-2 rounded-xl border border-border-card bg-panel p-4 shadow-sm"
-        >
+        </Card>
+        <Card as="article" size="sm" class="grid gap-2 p-4 shadow-sm">
           <h3 class="m-0 text-lg font-semibold leading-tight">
             {t('home.feature.preview.title')}
           </h3>
-          <p class="m-0 text-sm leading-normal text-muted">
+          <p class="m-0 text-sm leading-normal text-muted-foreground">
             {t('home.feature.preview.description')}
           </p>
-        </article>
-        <article
-          class="grid gap-2 rounded-xl border border-border-card bg-panel p-4 shadow-sm"
-        >
+        </Card>
+        <Card as="article" size="sm" class="grid gap-2 p-4 shadow-sm">
           <h3 class="m-0 text-lg font-semibold leading-tight">
             {t('home.feature.export.title')}
           </h3>
-          <p class="m-0 text-sm leading-normal text-muted">
+          <p class="m-0 text-sm leading-normal text-muted-foreground">
             {t('home.feature.export.description')}
           </p>
-        </article>
+        </Card>
       </div>
     </section>
 
-    <section
-      class="grid gap-8 rounded-2xl border border-border-card bg-panel p-5 shadow-card sm:p-8"
+    <Card
+      as="section"
+      class="grid gap-8 p-5 shadow-lg sm:p-8"
       aria-labelledby="home-desk-title"
       data-testid="home-desk-system"
     >
@@ -186,7 +191,7 @@ const inlineLinkClass =
         >
           {t('home.desk.title')}
         </h2>
-        <p class="m-0 max-w-3xl leading-relaxed text-muted">
+        <p class="m-0 max-w-3xl leading-relaxed text-muted-foreground">
           {t('home.desk.description')}
         </p>
       </header>
@@ -196,14 +201,14 @@ const inlineLinkClass =
       >
         <figure class="m-0 grid gap-3">
           <img
-            class="w-full rounded-xl border border-border-card bg-viewport"
+            class="w-full rounded-xl border border-border bg-muted"
             src={deskFlowPath}
             width="1400"
             height="820"
             loading="lazy"
             alt={t('home.desk.flowAlt')}
           />
-          <figcaption class="text-sm leading-normal text-muted">
+          <figcaption class="text-sm leading-normal text-muted-foreground">
             {t('home.desk.flowCaption')}
           </figcaption>
         </figure>
@@ -219,7 +224,7 @@ const inlineLinkClass =
                 <h3 class="m-0 font-semibold">
                   {t('home.desk.step.board.title')}
                 </h3>
-                <p class="m-0 text-sm leading-normal text-muted">
+                <p class="m-0 text-sm leading-normal text-muted-foreground">
                   {t('home.desk.step.board.description')}
                 </p>
               </div>
@@ -233,7 +238,7 @@ const inlineLinkClass =
                 <h3 class="m-0 font-semibold">
                   {t('home.desk.step.snap.title')}
                 </h3>
-                <p class="m-0 text-sm leading-normal text-muted">
+                <p class="m-0 text-sm leading-normal text-muted-foreground">
                   {t('home.desk.step.snap.description')}
                 </p>
               </div>
@@ -247,7 +252,7 @@ const inlineLinkClass =
                 <h3 class="m-0 font-semibold">
                   {t('home.desk.step.locating.title')}
                 </h3>
-                <p class="m-0 text-sm leading-normal text-muted">
+                <p class="m-0 text-sm leading-normal text-muted-foreground">
                   {t('home.desk.step.locating.description')}
                 </p>
               </div>
@@ -261,18 +266,22 @@ const inlineLinkClass =
                 <h3 class="m-0 font-semibold">
                   {t('home.desk.step.container.title')}
                 </h3>
-                <p class="m-0 text-sm leading-normal text-muted">
+                <p class="m-0 text-sm leading-normal text-muted-foreground">
                   {t('home.desk.step.container.description')}
                 </p>
               </div>
             </li>
           </ol>
-          <a class={secondaryCtaClass} href={docsPath}
-            >{t('home.desk.docsCta')}</a
+          <Button
+            as="a"
+            href={docsPath}
+            variant="outline"
+            class="justify-self-start no-underline"
+            >{t('home.desk.docsCta')}</Button
           >
         </div>
       </div>
-    </section>
+    </Card>
 
     <section
       class="grid gap-6"
@@ -281,7 +290,7 @@ const inlineLinkClass =
     >
       <header class="grid gap-2">
         <p
-          class="m-0 text-sm font-semibold uppercase tracking-[0.12em] text-muted"
+          class="m-0 text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground"
         >
           {t('home.explore.eyebrow')}
         </p>
@@ -293,11 +302,12 @@ const inlineLinkClass =
         </h2>
       </header>
       <div class="grid gap-6 md:grid-cols-2">
-        <article
-          class="grid gap-4 rounded-2xl border border-border-card bg-panel p-4 shadow-sm sm:grid-cols-[minmax(9rem,0.85fr)_minmax(0,1.15fr)] sm:items-center lg:grid-cols-1"
+        <Card
+          as="article"
+          class="grid gap-4 p-4 shadow-sm sm:grid-cols-[minmax(9rem,0.85fr)_minmax(0,1.15fr)] sm:items-center lg:grid-cols-1"
         >
           <img
-            class="aspect-[16/10] w-full rounded-xl border border-border-card bg-viewport object-cover"
+            class="aspect-[16/10] w-full rounded-xl border border-border bg-muted object-cover"
             src="/model-previews/opengrid-desk.png"
             width="640"
             height="400"
@@ -308,19 +318,20 @@ const inlineLinkClass =
             <h3 class="m-0 text-xl font-semibold leading-tight">
               {t('home.explore.desk.title')}
             </h3>
-            <p class="m-0 text-sm leading-normal text-muted">
+            <p class="m-0 text-sm leading-normal text-muted-foreground">
               {t('home.explore.desk.description')}
             </p>
             <a class={inlineLinkClass} href={deskBoardPath}
               >{t('home.explore.desk.cta')}</a
             >
           </div>
-        </article>
-        <article
-          class="grid gap-4 rounded-2xl border border-border-card bg-panel p-4 shadow-sm sm:grid-cols-[minmax(9rem,0.85fr)_minmax(0,1.15fr)] sm:items-center lg:grid-cols-1"
+        </Card>
+        <Card
+          as="article"
+          class="grid gap-4 p-4 shadow-sm sm:grid-cols-[minmax(9rem,0.85fr)_minmax(0,1.15fr)] sm:items-center lg:grid-cols-1"
         >
           <img
-            class="aspect-[16/10] w-full rounded-xl border border-border-card bg-viewport object-cover"
+            class="aspect-[16/10] w-full rounded-xl border border-border bg-muted object-cover"
             src="/model-previews/opengrid-wall.png"
             width="640"
             height="400"
@@ -331,24 +342,25 @@ const inlineLinkClass =
             <h3 class="m-0 text-xl font-semibold leading-tight">
               {t('home.explore.wall.title')}
             </h3>
-            <p class="m-0 text-sm leading-normal text-muted">
+            <p class="m-0 text-sm leading-normal text-muted-foreground">
               {t('home.explore.wall.description')}
             </p>
             <a class={inlineLinkClass} href={wallBoardPath}
               >{t('home.explore.wall.cta')}</a
             >
           </div>
-        </article>
+        </Card>
       </div>
     </section>
 
-    <section
-      class="grid gap-6 rounded-2xl border border-border-card bg-panel p-5 shadow-card sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:p-8"
+    <Card
+      as="section"
+      class="grid gap-6 p-5 shadow-lg sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:p-8"
       aria-labelledby="home-maker-title"
       data-testid="home-maker"
     >
       <img
-        class="mx-auto aspect-square w-24 rounded-2xl border border-border-card bg-viewport object-cover sm:mx-0 sm:w-28"
+        class="mx-auto aspect-square w-24 rounded-2xl border border-border bg-muted object-cover sm:mx-0 sm:w-28"
         src="/about/blesscat.png"
         width="640"
         height="640"
@@ -367,8 +379,10 @@ const inlineLinkClass =
         >
           {t('home.maker.title')}
         </h2>
-        <p class="m-0 leading-relaxed text-muted">{t('home.maker.body')}</p>
-        <p class="m-0 text-sm font-semibold text-ink">
+        <p class="m-0 leading-relaxed text-muted-foreground">
+          {t('home.maker.body')}
+        </p>
+        <p class="m-0 text-sm font-semibold text-foreground">
           {t('home.maker.status')}
         </p>
         <div class="flex flex-wrap gap-x-4 gap-y-3">
@@ -386,24 +400,27 @@ const inlineLinkClass =
           >
           {
             supportProviders.length > 0 && (
-              <button
+              <Button
                 type="button"
-                class={inlineLinkClass}
+                variant="ghost"
+                size="sm"
+                class={`${inlineLinkClass} h-auto rounded-none px-0 py-0 text-left hover:bg-transparent`}
                 data-support-dialog-open
                 data-testid="home-maker-support-trigger"
                 aria-controls="support-dialog"
                 aria-haspopup="dialog"
               >
                 {t('home.maker.supportCta')}
-              </button>
+              </Button>
             )
           }
         </div>
       </div>
-    </section>
+    </Card>
 
-    <section
-      class="grid gap-4 rounded-2xl bg-nav p-6 text-nav-foreground shadow-card sm:p-8"
+    <Card
+      as="section"
+      class="grid gap-4 bg-banner p-6 text-banner-foreground shadow-lg ring-0 sm:p-8"
       aria-labelledby="home-final-title"
     >
       <h2
@@ -412,17 +429,20 @@ const inlineLinkClass =
       >
         {t('home.final.title')}
       </h2>
-      <p class="m-0 max-w-2xl leading-relaxed text-white/75">
+      <p class="m-0 max-w-2xl leading-relaxed text-white/90">
         {t('home.final.description')}
       </p>
       <p class="m-0">
-        <a
-          class="inline-flex items-center justify-center rounded-lg bg-nav-foreground px-4 py-3 font-semibold text-nav no-underline shadow-sm transition hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        <Button
+          as="a"
           href={modelsPath}
+          variant="outline"
+          size="lg"
+          class="border-transparent bg-nav-foreground text-nav hover:bg-nav-foreground hover:text-nav no-underline hover:brightness-95 focus-visible:ring-white dark:border-transparent dark:bg-nav-foreground dark:hover:bg-nav-foreground"
         >
           {t('home.final.cta')}
-        </a>
+        </Button>
       </p>
-    </section>
+    </Card>
   </div>
 </SiteLayout>

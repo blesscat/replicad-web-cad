@@ -159,5 +159,24 @@ export function observeCadViewportTheme(
   }
 
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-  return subscribeToCadViewportTheme(mediaQuery, readCadViewportTheme, onChange)
+  const disposeMediaQuery = subscribeToCadViewportTheme(
+    mediaQuery,
+    readCadViewportTheme,
+    onChange,
+  )
+
+  if (typeof MutationObserver === 'undefined') return disposeMediaQuery
+
+  const observer = new MutationObserver(() => {
+    onChange(readCadViewportTheme())
+  })
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class'],
+  })
+
+  return () => {
+    disposeMediaQuery()
+    observer.disconnect()
+  }
 }

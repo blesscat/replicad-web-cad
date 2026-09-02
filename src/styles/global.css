@@ -4,9 +4,15 @@
   --breakpoint-cad: 760px;
   --color-ink: #172033;
   --color-muted: #5b6578;
+  --color-muted-foreground: #5b6578;
   --color-page: #f5f7fb;
   --color-panel: #ffffff;
+  --color-background: #f5f7fb;
+  --color-card: #ffffff;
+  --color-foreground: #172033;
+  --color-card-foreground: #172033;
   --color-border-card: #dfe4ee;
+  --color-border: #dfe4ee;
   --color-border-field: #bfc8d9;
   --color-error: #a32828;
   --color-error-border: #c44747;
@@ -15,12 +21,15 @@
   --color-stale-text: #69470d;
   --color-primary: #2457d6;
   --color-focus: #2457d6;
+  --color-outline: #2457d6;
   --color-disabled: #aeb8ca;
   --color-status: #3d485d;
   --color-progress-track: #dfe4ee;
   --color-progress-fill: #2457d6;
   --color-nav: #172033;
   --color-nav-foreground: #ffffff;
+  --color-banner: #2457d6;
+  --color-banner-foreground: #ffffff;
   --color-viewport: #eef2f8;
   --shadow-card: 0 1rem 3rem rgb(23 32 51 / 7%);
   --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
@@ -45,13 +54,19 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light):not(.dark) {
     color-scheme: dark;
     --color-ink: #edf2fb;
     --color-muted: #a9b5c7;
+    --color-muted-foreground: #a9b5c7;
     --color-page: #0c121d;
     --color-panel: #161f2e;
+    --color-background: #0c121d;
+    --color-card: #161f2e;
+    --color-foreground: #edf2fb;
+    --color-card-foreground: #edf2fb;
     --color-border-card: #5b6b85;
+    --color-border: #5b6b85;
     --color-border-field: #6a7b98;
     --color-error: #ff9d9d;
     --color-error-border: #e16b73;
@@ -60,12 +75,15 @@
     --color-stale-text: #ffe4a4;
     --color-primary: #3b70de;
     --color-focus: #6a7b98;
+    --color-outline: #6a7b98;
     --color-disabled: #5d6a80;
     --color-status: #c5d0e2;
     --color-progress-track: #5b6b85;
     --color-progress-fill: #edf2fb;
     --color-nav: #080d17;
     --color-nav-foreground: #f3f7ff;
+    --color-banner: #080d17;
+    --color-banner-foreground: #f3f7ff;
     --color-viewport: #101827;
     --shadow-card: 0 1rem 3rem rgb(0 0 0 / 35%);
     --cad-viewport-grid-major: #53637d;
@@ -79,6 +97,50 @@
     --cad-viewport-light-key: #f2f6ff;
     --cad-viewport-light-fill: #a9c1f2;
   }
+}
+
+:root.dark {
+  color-scheme: dark;
+  --color-ink: #edf2fb;
+  --color-muted: #a9b5c7;
+  --color-muted-foreground: #a9b5c7;
+  --color-page: #0c121d;
+  --color-panel: #161f2e;
+  --color-background: #0c121d;
+  --color-card: #161f2e;
+  --color-foreground: #edf2fb;
+  --color-card-foreground: #edf2fb;
+  --color-border-card: #5b6b85;
+  --color-border: #5b6b85;
+  --color-border-field: #6a7b98;
+  --color-error: #ff9d9d;
+  --color-error-border: #e16b73;
+  --color-stale: #f5c96b;
+  --color-stale-background: #493812;
+  --color-stale-text: #ffe4a4;
+  --color-primary: #3b70de;
+  --color-focus: #6a7b98;
+  --color-outline: #6a7b98;
+  --color-disabled: #5d6a80;
+  --color-status: #c5d0e2;
+  --color-progress-track: #5b6b85;
+  --color-progress-fill: #edf2fb;
+  --color-nav: #080d17;
+  --color-nav-foreground: #f3f7ff;
+  --color-banner: #080d17;
+  --color-banner-foreground: #f3f7ff;
+  --color-viewport: #101827;
+  --shadow-card: 0 1rem 3rem rgb(0 0 0 / 35%);
+  --cad-viewport-grid-major: #53637d;
+  --cad-viewport-grid-minor: #303d54;
+  --cad-viewport-gizmo-background: #202b3d;
+  --cad-viewport-edge: #c0d0ff;
+  --cad-viewport-annotation: #d9e1f0;
+  --cad-viewport-annotation-label: #c8d3e7;
+  --cad-viewport-light-sky: #d8e2f2;
+  --cad-viewport-light-ground: #56647b;
+  --cad-viewport-light-key: #f2f6ff;
+  --cad-viewport-light-fill: #a9c1f2;
 }
 
 * {

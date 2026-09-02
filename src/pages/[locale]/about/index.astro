@@ -1,5 +1,9 @@
 ---
 import SiteLayout from '../../../layouts/SiteLayout.astro'
+import '../../../styles/starwind.css'
+import { Badge } from '../../../components/starwind/badge'
+import { Button } from '../../../components/starwind/button'
+import { Card } from '../../../components/starwind/card'
 import { supportProviders } from '../../../features/support/config'
 import {
   SUPPORTED_LOCALES,
@@ -29,12 +33,10 @@ const docsPath = publicPathFor(locale, 'docs')
   description={t('about.description')}
 >
   <article class="grid gap-10" data-testid="about-page">
-    <header
-      class="rounded-2xl border border-border-card bg-panel p-5 shadow-card sm:p-8"
-    >
+    <Card as="header" class="p-5 shadow-lg sm:p-8">
       <div class="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
         <img
-          class="aspect-square w-28 shrink-0 rounded-2xl border border-border-card bg-viewport object-cover sm:w-36"
+          class="aspect-square w-28 shrink-0 rounded-2xl border border-border bg-muted object-cover sm:w-36"
           src="/about/blesscat.png"
           width="640"
           height="640"
@@ -42,29 +44,36 @@ const docsPath = publicPathFor(locale, 'docs')
           alt={t('about.portraitAlt')}
         />
         <div class="grid gap-4 text-center sm:text-left">
-          <p
-            class="m-0 text-sm font-semibold uppercase tracking-[0.12em] text-primary"
+          <Badge
+            variant="primary"
+            size="sm"
+            class="w-fit self-center sm:self-start"
           >
             {t('about.eyebrow')}
-          </p>
+          </Badge>
           <h1 class="m-0 text-4xl font-semibold leading-tight sm:text-5xl">
             {t('about.title')}
           </h1>
-          <p class="m-0 text-lg font-semibold text-ink">{t('about.role')}</p>
-          <p class="m-0 max-w-2xl leading-relaxed text-muted">
+          <p class="m-0 text-lg font-semibold text-foreground">
+            {t('about.role')}
+          </p>
+          <p class="m-0 max-w-2xl leading-relaxed text-muted-foreground">
             {t('about.intro')}
           </p>
-          <p
-            class="m-0 inline-flex w-fit self-center rounded-full border border-border-card bg-viewport px-3 py-1.5 text-sm font-semibold text-ink sm:self-start"
+          <Badge
+            variant="secondary"
+            size="sm"
+            class="w-fit self-center font-semibold sm:self-start"
           >
             {t('about.status')}
-          </p>
+          </Badge>
         </div>
       </div>
-    </header>
+    </Card>
 
-    <section
-      class="grid gap-3 rounded-2xl border border-border-card bg-panel p-5 shadow-sm sm:p-8"
+    <Card
+      as="section"
+      class="grid gap-3 p-5 shadow-sm sm:p-8"
       aria-labelledby="about-story-title"
       data-testid="about-story"
     >
@@ -74,13 +83,14 @@ const docsPath = publicPathFor(locale, 'docs')
       >
         {t('about.storyHeading')}
       </h2>
-      <p class="m-0 max-w-3xl leading-relaxed text-muted">
+      <p class="m-0 max-w-3xl leading-relaxed text-muted-foreground">
         {t('about.storyBody')}
       </p>
-    </section>
+    </Card>
 
-    <section
-      class="grid gap-3 rounded-2xl border border-border-card bg-panel p-5 shadow-sm sm:p-8"
+    <Card
+      as="section"
+      class="grid gap-3 p-5 shadow-sm sm:p-8"
       aria-labelledby="about-project-title"
       data-testid="about-project"
     >
@@ -90,13 +100,14 @@ const docsPath = publicPathFor(locale, 'docs')
       >
         {t('about.projectHeading')}
       </h2>
-      <p class="m-0 max-w-3xl leading-relaxed text-muted">
+      <p class="m-0 max-w-3xl leading-relaxed text-muted-foreground">
         {t('about.projectBody')}
       </p>
-    </section>
+    </Card>
 
-    <section
-      class="grid gap-5 rounded-2xl bg-nav p-5 text-nav-foreground shadow-card sm:p-8"
+    <Card
+      as="section"
+      class="grid gap-5 bg-banner p-5 text-banner-foreground shadow-lg ring-0 sm:p-8"
       aria-labelledby="about-links-title"
       data-testid="about-links"
     >
@@ -107,53 +118,69 @@ const docsPath = publicPathFor(locale, 'docs')
         >
           {t('about.linksHeading')}
         </h2>
-        <p class="m-0 max-w-2xl leading-relaxed text-white/75">
+        <p class="m-0 max-w-2xl leading-relaxed text-white/90">
           {t('about.supportDescription')}
         </p>
       </div>
       <div class="flex flex-wrap gap-3">
-        <a
-          class="inline-flex items-center justify-center rounded-lg bg-nav-foreground px-4 py-3 font-semibold text-nav no-underline shadow-sm transition hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        <Button
+          as="a"
           href="https://github.com/blesscat"
+          variant="outline"
+          size="lg"
+          class="border-transparent bg-nav-foreground text-nav hover:bg-nav-foreground hover:text-nav no-underline hover:brightness-95 focus-visible:ring-white dark:border-transparent dark:bg-nav-foreground dark:hover:bg-nav-foreground"
           target="_blank"
           rel="noopener noreferrer"
         >
           {t('about.github')}
-        </a>
-        <a
-          class="inline-flex items-center justify-center rounded-lg border border-white/60 px-4 py-3 font-semibold text-white no-underline transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        </Button>
+        <Button
+          as="a"
           href="mailto:blesscat@gmail.com"
+          variant="outline"
+          size="lg"
+          class="!border-white/60 !bg-transparent !text-white no-underline hover:!bg-white/10 focus-visible:ring-white"
         >
           {t('about.email')}
-        </a>
+        </Button>
         {
           supportProviders.length > 0 && (
-            <button
+            <Button
               type="button"
-              class="inline-flex items-center justify-center rounded-lg border border-white/60 px-4 py-3 font-semibold text-white no-underline transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              variant="outline"
+              size="lg"
+              class="!border-white/60 !bg-transparent !text-white no-underline hover:!bg-white/10 focus-visible:ring-white"
               data-support-dialog-open
               data-testid="about-support-trigger"
               aria-controls="support-dialog"
               aria-haspopup="dialog"
             >
               {t('about.support')}
-            </button>
+            </Button>
           )
         }
       </div>
-    </section>
+    </Card>
 
     <nav
       class="flex flex-wrap gap-x-5 gap-y-3"
       aria-label={t('navigation.primary')}
     >
-      <a
-        class="font-semibold text-ink underline underline-offset-4"
-        href={modelsPath}>{t('about.modelsCta')}</a
+      <Button
+        as="a"
+        href={modelsPath}
+        variant="ghost"
+        size="sm"
+        class="px-0 font-semibold text-foreground underline underline-offset-4"
+        >{t('about.modelsCta')}</Button
       >
-      <a
-        class="font-semibold text-ink underline underline-offset-4"
-        href={docsPath}>{t('about.docsCta')}</a
+      <Button
+        as="a"
+        href={docsPath}
+        variant="ghost"
+        size="sm"
+        class="px-0 font-semibold text-foreground underline underline-offset-4"
+        >{t('about.docsCta')}</Button
       >
     </nav>
   </article>
