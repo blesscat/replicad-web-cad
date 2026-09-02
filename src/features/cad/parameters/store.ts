@@ -5,6 +5,7 @@ import {
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+  legacyInnerDiameterFor,
   normalizeOpenGridLocatingSeatMode,
   normalizeOpenGridOrganizerBoxParameters,
   isOpenGridSnapParameters,
@@ -100,8 +101,18 @@ function normalizeLegacyParameters(modelId: ModelId, value: unknown): unknown {
     return normalizeOpenGridOrganizerBoxParameters(value)
   }
   if (modelId === 'opengrid-stackable-cylinder' && isRecord(value)) {
-    const withoutLegacy = { ...value }
+    const withoutLegacy: Record<string, unknown> = { ...value }
     delete withoutLegacy.bottomHolesEnabled
+    if (
+      !Object.prototype.hasOwnProperty.call(withoutLegacy, 'innerDiameter') &&
+      Object.prototype.hasOwnProperty.call(withoutLegacy, 'diameter')
+    ) {
+      const legacyInnerDiameter = legacyInnerDiameterFor(withoutLegacy)
+      delete withoutLegacy.diameter
+      if (legacyInnerDiameter !== undefined) {
+        withoutLegacy.innerDiameter = legacyInnerDiameter
+      }
+    }
     return {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       ...withoutLegacy,

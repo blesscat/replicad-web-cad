@@ -89,7 +89,7 @@ function parameters(
 ): OpenGridStackableCylinderParameters {
   return {
     ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-    diameter: overrides.diameter ?? 56,
+    innerDiameter: overrides.innerDiameter ?? 52,
     height: overrides.height ?? 30,
     ...overrides,
   }
@@ -129,17 +129,17 @@ function boundsOf(shape: Shape3D): number[][] {
 
 describe('OpenGrid stackable-cylinder B-Rep', () => {
   it.each([
-    { diameter: 20, expectedOuterHoleCount: 0 },
-    { diameter: 39, expectedOuterHoleCount: 0 },
-    { diameter: 40, expectedOuterHoleCount: 0 },
-    { diameter: 47, expectedOuterHoleCount: 4 },
-    { diameter: 48, expectedOuterHoleCount: 4 },
-    { diameter: 56, expectedOuterHoleCount: 4 },
-    { diameter: 300, expectedOuterHoleCount: 4 },
+    { innerDiameter: 20, expectedOuterHoleCount: 0 },
+    { innerDiameter: 35, expectedOuterHoleCount: 0 },
+    { innerDiameter: 36, expectedOuterHoleCount: 0 },
+    { innerDiameter: 43, expectedOuterHoleCount: 4 },
+    { innerDiameter: 44, expectedOuterHoleCount: 4 },
+    { innerDiameter: 52, expectedOuterHoleCount: 4 },
+    { innerDiameter: 296, expectedOuterHoleCount: 4 },
   ])(
-    'builds a valid centered $diameter mm cylinder with the safe cardinal layout',
-    ({ diameter, expectedOuterHoleCount }) => {
-      const input = parameters({ diameter })
+    'builds a valid centered $innerDiameter mm inner-diameter cylinder with the safe cardinal layout',
+    ({ innerDiameter, expectedOuterHoleCount }) => {
+      const input = parameters({ innerDiameter })
       const shape = buildOpenGridStackableCylinder(input)
       try {
         const report = inspectOpenGridStackableCylinderInterface(shape, input)
@@ -223,14 +223,14 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
   }, 120_000)
 
   it.each([
-    { diameter: 20, expectedHoleCount: 1 },
-    { diameter: 47, expectedHoleCount: 5 },
-    { diameter: 48, expectedHoleCount: 5 },
-    { diameter: 300, expectedHoleCount: 5 },
+    { innerDiameter: 20, expectedHoleCount: 1 },
+    { innerDiameter: 43, expectedHoleCount: 5 },
+    { innerDiameter: 44, expectedHoleCount: 5 },
+    { innerDiameter: 296, expectedHoleCount: 5 },
   ])(
-    'builds the bottom-plate profile at the supported $diameter mm envelope and hole threshold',
-    ({ diameter, expectedHoleCount }) => {
-      const input = parameters({ diameter, bottomPlateMode: true })
+    'builds the bottom-plate profile at the supported $innerDiameter mm inner diameter and hole threshold',
+    ({ innerDiameter, expectedHoleCount }) => {
+      const input = parameters({ innerDiameter, bottomPlateMode: true })
       const shape = buildOpenGridStackableCylinder(input)
       try {
         const report = inspectOpenGridStackableCylinderInterface(shape, input)
@@ -268,7 +268,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
     'keeps the center locking seat valid in $name mode',
     ({ overrides }) => {
       const input = parameters({
-        diameter: 56,
+        innerDiameter: 52,
         ...overrides,
       })
       const shape = buildOpenGridStackableCylinder(input)
@@ -295,7 +295,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
   )
 
   it('keeps the default five-millimetre floor and internal fillet profile', () => {
-    const input = parameters({ diameter: 56 })
+    const input = parameters({ innerDiameter: 52 })
     const shape = buildOpenGridStackableCylinder(input)
     try {
       const report = inspectOpenGridStackableCylinderInterface(shape, input)
@@ -452,13 +452,13 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
   }, 120_000)
 
   it.each([
-    { diameter: 20, expectedHoleCount: 1 },
-    { diameter: 56, expectedHoleCount: 5 },
-    { diameter: 300, expectedHoleCount: 5 },
+    { innerDiameter: 20, expectedHoleCount: 1 },
+    { innerDiameter: 53, expectedHoleCount: 5 },
+    { innerDiameter: 296, expectedHoleCount: 5 },
   ])(
-    'builds the thin profile at supported envelope diameter $diameter',
-    ({ diameter, expectedHoleCount }) => {
-      const input = parameters({ diameter, thinBottomMode: true })
+    'builds the thin profile at supported inner diameter $innerDiameter',
+    ({ innerDiameter, expectedHoleCount }) => {
+      const input = parameters({ innerDiameter, thinBottomMode: true })
       const shape = buildOpenGridStackableCylinder(input)
       try {
         const report = inspectOpenGridStackableCylinderInterface(shape, input)
@@ -474,13 +474,13 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
   )
 
   it.each([
-    { diameter: 47, expectedHoleCount: 1 },
-    { diameter: 48, expectedHoleCount: 1 },
-    { diameter: 49, expectedHoleCount: 1 },
+    { innerDiameter: 43, expectedHoleCount: 1 },
+    { innerDiameter: 44, expectedHoleCount: 1 },
+    { innerDiameter: 45, expectedHoleCount: 1 },
   ])(
-    'builds the thin profile at the $diameter mm outer-hole threshold',
-    ({ diameter, expectedHoleCount }) => {
-      const input = parameters({ diameter, thinBottomMode: true })
+    'builds the thin profile at the $innerDiameter mm inner-diameter outer-hole threshold',
+    ({ innerDiameter, expectedHoleCount }) => {
+      const input = parameters({ innerDiameter, thinBottomMode: true })
       const shape = buildOpenGridStackableCylinder(input)
       try {
         const report = inspectOpenGridStackableCylinderInterface(shape, input)
@@ -493,7 +493,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
   )
 
   it('keeps the central flat floor at 2 mm', () => {
-    const input = parameters({ diameter: 56, thinBottomMode: true })
+    const input = parameters({ innerDiameter: 52, thinBottomMode: true })
     const shape = buildOpenGridStackableCylinder(input)
     const belowCavity = makeCylinder(0.5, 0.1, [10, 0, 1.9])
     const insideCavity = makeCylinder(0.5, 0.1, [10, 0, 2.01])
@@ -512,7 +512,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
   }, 120_000)
 
   it('keeps every hole outer edge at least 2 mm from the cylinder edge', () => {
-    const input = parameters({ diameter: 300, thinBottomMode: true })
+    const input = parameters({ innerDiameter: 296, thinBottomMode: true })
     const shape = buildOpenGridStackableCylinder(input)
     try {
       const report = inspectOpenGridStackableCylinderInterface(shape, input)
@@ -537,7 +537,9 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
           ...hole.sections.map((section) => section.diameter),
         )
         expect(
-          input.diameter / 2 - centerRadius - largestSection / 2,
+          openGridStackableCylinderDerivedGeometryFor(input).radius -
+            centerRadius -
+            largestSection / 2,
         ).toBeGreaterThanOrEqual(
           OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.outerEdgeClearance - 0.05,
         )
@@ -555,7 +557,11 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
   }, 120_000)
 
   it('keeps the reference-inspired profile valid after a dimension update', () => {
-    const input = parameters({ diameter: 57, height: 31, thinBottomMode: true })
+    const input = parameters({
+      innerDiameter: 54,
+      height: 31,
+      thinBottomMode: true,
+    })
     const derived = openGridStackableCylinderDerivedGeometryFor(input)
     const shape = buildOpenGridStackableCylinder(input)
     try {
@@ -723,7 +729,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
     'mates equal-diameter cylinders through the bottom protrusion and cavity (%s)',
     (thinBottomMode) => {
       const input = parameters({
-        diameter: 56,
+        innerDiameter: 52,
         height: 30,
         thinBottomMode,
       })
@@ -789,8 +795,8 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
   )
 
   it('does not promise the same interface for different outer diameters', () => {
-    const lowerInput = parameters({ diameter: 56, height: 30 })
-    const upperInput = parameters({ diameter: 60, height: 30 })
+    const lowerInput = parameters({ innerDiameter: 56, height: 30 })
+    const upperInput = parameters({ innerDiameter: 56, height: 30 })
     const lower = buildOpenGridStackableCylinder(lowerInput)
     const upper = buildOpenGridStackableCylinder(upperInput)
     try {
@@ -808,7 +814,7 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
 
   it('meshes and exports the validated cylinder as STEP and STL', async () => {
     const input = parameters({
-      diameter: 56,
+      innerDiameter: 52,
       height: 30,
       honeycombMode: true,
     })

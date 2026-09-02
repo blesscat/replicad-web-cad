@@ -140,7 +140,7 @@ describe('OpenGrid detachable corner-seat canonical references', () => {
     }
     const cylinderParameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      diameter: 60,
+      innerDiameter: 56,
       height: 20,
       bottomSeatMode: 'detachable-corner-seat' as const,
     }
@@ -200,7 +200,7 @@ describe('OpenGrid detachable corner-seat canonical references', () => {
     }
     const cylinderParameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      diameter: 60,
+      innerDiameter: 56,
       height: 20,
       bottomSeatMode: 'detachable-corner-seat' as const,
     }

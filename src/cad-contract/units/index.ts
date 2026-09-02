@@ -63,6 +63,7 @@ import type {
 import {
   boundsForOpenGridStackableCylinder,
   isOpenGridStackableCylinderParameters,
+  legacyInnerDiameterFor,
   openGridStackableCylinderDerivedGeometryFor,
   openGridStackableCylinderFileName,
   openGridStackableCylinderHoleCentersFor,
@@ -368,6 +369,7 @@ export {
 export {
   boundsForOpenGridStackableCylinder,
   isOpenGridStackableCylinderParameters,
+  legacyInnerDiameterFor,
   openGridStackableCylinderDerivedGeometryFor,
   openGridStackableCylinderFileName,
   openGridStackableCylinderHoleCentersFor,
@@ -674,7 +676,6 @@ export type ScalarModelParameterKey =
   | DimensionKey
   | GridParameterKey
   | HexagonalColumnParameterKey
-  | 'diameter'
   | OpenGridDividerParameterKey
   | 'offset'
 export type ModelId =

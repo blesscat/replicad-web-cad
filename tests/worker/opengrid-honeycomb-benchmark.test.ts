@@ -114,7 +114,7 @@ describe.skipIf(!runBenchmark)('OpenGrid honeycomb benchmark', () => {
     const boxHoneycombInput = { ...boxInput, honeycombMode: true }
     const cylinderInput = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      diameter: 100,
+      innerDiameter: 96,
       height: 60,
     }
     const cylinderHoneycombInput = { ...cylinderInput, honeycombMode: true }

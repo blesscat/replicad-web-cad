@@ -360,7 +360,7 @@ describe('OpenGrid honeycomb visible bottom floors', () => {
   it('cuts complete floor cells through the Desk thin-bottom cylinder floor', () => {
     const parameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      diameter: 60,
+      innerDiameter: 56,
       height: 30,
       bottomSeatMode: 'integrated' as const,
       thinBottomMode: true,
@@ -389,7 +389,7 @@ describe('OpenGrid honeycomb visible bottom floors', () => {
     const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
     const protectedFloorRadius = Math.min(
       derived.flatFloorRadius - OPENGRID_HONEYCOMB_CONFIGURATION.bottomFrame,
-      parameters.diameter / 2 -
+      openGridStackableCylinderDerivedGeometryFor(parameters).radius -
         OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.outerEdgeClearance,
     )
     const boundaryProbe = makeAnnularProbe(
@@ -456,7 +456,7 @@ describe('OpenGrid honeycomb visible bottom floors', () => {
   it('cancels and cleans up cylinder-floor circular clipping operations', () => {
     const parameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      diameter: 60,
+      innerDiameter: 56,
       height: 30,
       thinBottomMode: true,
       honeycombMode: true,

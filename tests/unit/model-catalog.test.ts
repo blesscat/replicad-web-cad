@@ -910,7 +910,7 @@ describe('CAD component catalog', () => {
     expect(definition?.parameterSchema).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          key: 'diameter',
+          key: 'innerDiameter',
           min: 20,
           max: 300,
           step: 1,
@@ -942,7 +942,7 @@ describe('CAD component catalog', () => {
       'models.model.opengrid-stackable-cylinder.description',
     )
     expect(
-      definition?.validateParameters({ diameter: 60, height: 20 }),
+      definition?.validateParameters({ innerDiameter: 56, height: 20 }),
     ).toEqual({
       valid: true,
       value: {
@@ -957,7 +957,7 @@ describe('CAD component catalog', () => {
         OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
       ),
     ).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat.step',
+      'opengrid-stackable-cylinder-d56-h20-seats-detachable-corner-seat.step',
     )
     expect(
       definition?.stlFileName({
@@ -965,14 +965,14 @@ describe('CAD component catalog', () => {
         thinBottomMode: true,
         bottomSeatMode: 'none',
       }),
-    ).toBe('opengrid-stackable-cylinder-d60-h20-seats-none-thin.stl')
+    ).toBe('opengrid-stackable-cylinder-d56-h20-seats-none-thin.stl')
     expect(
       definition?.exportFileName({
         ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
         bottomPlateMode: true,
       }),
     ).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat-bottom-plate.step',
+      'opengrid-stackable-cylinder-d56-h20-seats-detachable-corner-seat-bottom-plate.step',
     )
   })
 })

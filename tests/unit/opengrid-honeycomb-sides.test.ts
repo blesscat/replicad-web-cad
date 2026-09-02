@@ -217,7 +217,7 @@ describe('OpenGrid clipped container-side Hex Mesh', () => {
   it('fills the protected cylinder wall band and opening edge with partial cells', () => {
     const parameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      diameter: 60,
+      innerDiameter: 56,
       height: 60,
       bottomSeatMode: 'none' as const,
       openingPlusXDepth: 20,
@@ -248,7 +248,7 @@ describe('OpenGrid clipped container-side Hex Mesh', () => {
     const protectedAngularHalfWidth =
       opening.angularHalfWidth +
       OPENGRID_HONEYCOMB_CONFIGURATION.featureClearance /
-        (parameters.diameter / 2)
+        openGridStackableCylinderDerivedGeometryFor(parameters).radius
     const belowOpening = entries.filter(
       ({ bounds, angle }) =>
         angularDistanceFromPositiveX(angle) <= protectedAngularHalfWidth &&
@@ -279,7 +279,7 @@ describe('OpenGrid clipped container-side Hex Mesh', () => {
   it('preserves cylinder opening bridges and cuts complete and clipped cells through the inner curve', () => {
     const parameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      diameter: 60,
+      innerDiameter: 56,
       height: 60,
       bottomSeatMode: 'none' as const,
       openingPlusXDepth: 20,
@@ -296,7 +296,7 @@ describe('OpenGrid clipped container-side Hex Mesh', () => {
     const protectedAngularHalfWidth =
       opening.angularHalfWidth +
       OPENGRID_HONEYCOMB_CONFIGURATION.featureClearance /
-        (parameters.diameter / 2)
+        openGridStackableCylinderDerivedGeometryFor(parameters).radius
     const entries = cutters.map((cutter) => {
       const bounds = boundsOf(cutter)
       return { cutter, bounds, angle: angleForBounds(bounds) }
@@ -324,7 +324,8 @@ describe('OpenGrid clipped container-side Hex Mesh', () => {
       }),
     )
     const honeycomb = remember(buildOpenGridStackableCylinder(parameters))
-    const radius = parameters.diameter / 2
+    const radius =
+      openGridStackableCylinderDerivedGeometryFor(parameters).radius
     const wallProbeRadius = (derived.innerRadius + radius) / 2
     const sideBridgeAngle =
       opening.angularHalfWidth +

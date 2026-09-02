@@ -13,17 +13,18 @@ import type { ModelDefinition, ParameterField } from '../types'
 const OPENGRID_STACKABLE_CYLINDER_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> =
   [
     {
-      key: 'diameter',
-      label: 'parameter.outerDiameter',
+      key: 'innerDiameter',
+      label: 'parameter.innerDiameter',
       axis: 'D',
       unit: 'mm',
       control: 'range-text',
-      defaultValue: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultDiameter,
-      min: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.minDiameter,
-      max: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.maxDiameter,
+      defaultValue:
+        OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultInnerDiameter,
+      min: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.minInnerDiameter,
+      max: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.maxInnerDiameter,
       step: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.inputStep,
-      sliderMin: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.minDiameter,
-      sliderMax: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.maxDiameter,
+      sliderMin: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.minInnerDiameter,
+      sliderMax: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.maxInnerDiameter,
     },
     {
       key: 'height',

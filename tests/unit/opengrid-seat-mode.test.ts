@@ -47,7 +47,7 @@ function cylinderParameters(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> {
   return {
-    diameter: 60,
+    innerDiameter: 56,
     height: 20,
     thinBottomMode: false,
     bottomPlateMode: false,

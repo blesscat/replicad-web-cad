@@ -663,7 +663,7 @@ describe('CAD workspace validation helpers', () => {
   it('round-trips OpenGrid stackable-cylinder integer inputs', () => {
     const parameters: OpenGridStackableCylinderParameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      diameter: 56,
+      innerDiameter: 56,
       height: 30,
       openingPlusXDepth: 8,
       openingPlusXBottomLength: 12,
@@ -692,12 +692,12 @@ describe('CAD workspace validation helpers', () => {
     ).toBe('detachable-corner-seat')
     const legacyParameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      diameter: 56,
+      innerDiameter: 52,
       height: 30,
     }
     expect(
       parseRawParameters(
-        { diameter: '56', height: '30' },
+        { diameter: '56', height: '30' } as RawParameters,
         'opengrid-stackable-cylinder',
       ),
     ).toEqual({
@@ -711,13 +711,16 @@ describe('CAD workspace validation helpers', () => {
           height: '30',
           thinBottomMode: 'false',
           bottomSeatMode: 'hole',
-        },
+        } as RawParameters,
         'opengrid-stackable-cylinder',
       ),
     ).toEqual({
-      valid: false,
-      messageId: 'validation.invalid',
-      field: 'diameter',
+      valid: true,
+      value: {
+        ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
+        innerDiameter: 53,
+        height: 30,
+      },
     })
   })
 })

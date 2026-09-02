@@ -884,7 +884,7 @@ describe('OpenGrid Worker runtime', () => {
     await runtime.handle(
       stackableCylinderGenerateCommand(1, {
         parameters: {
-          diameter: 56,
+          innerDiameter: 56,
           height: 30,
           thinBottomMode: false,
           bottomPlateMode: true,
@@ -896,7 +896,7 @@ describe('OpenGrid Worker runtime', () => {
     expect(mocks.buildModelBRep).toHaveBeenCalledWith(
       'opengrid-stackable-cylinder',
       {
-        diameter: 56,
+        innerDiameter: 56,
         height: 30,
         thinBottomMode: false,
         bottomPlateMode: true,

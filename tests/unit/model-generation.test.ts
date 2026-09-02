@@ -814,7 +814,7 @@ describe('CAD model generation debounce', () => {
     const { client, send, context } = createRuntimeContext(
       'opengrid-stackable-cylinder',
       {
-        diameter: 56,
+        innerDiameter: 56,
         height: 30,
         thinBottomMode: false,
         bottomPlateMode: false,
@@ -823,7 +823,7 @@ describe('CAD model generation debounce', () => {
     )
     const handlers = createModelGenerationHandlers(context)
 
-    handlers.handleInputChange('diameter', '57')
+    handlers.handleInputChange('innerDiameter', '57')
     vi.advanceTimersByTime(500)
 
     expect(send).toHaveBeenLastCalledWith(
@@ -832,7 +832,7 @@ describe('CAD model generation debounce', () => {
         modelId: 'opengrid-stackable-cylinder',
         parameters: {
           ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-          diameter: 57,
+          innerDiameter: 57,
           height: 30,
         },
       }),

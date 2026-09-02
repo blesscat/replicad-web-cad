@@ -155,7 +155,7 @@ export function getSystemPreset(
   if (context === 'desk' && modelId === 'opengrid-stackable-cylinder') {
     return cloneModelParameters({
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      diameter: 60,
+      innerDiameter: 57,
       height: 30,
       thinBottomMode: true,
       bottomPlateMode: false,

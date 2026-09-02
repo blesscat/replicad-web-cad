@@ -279,7 +279,7 @@ describe('OpenGrid honeycomb material-saving builders', () => {
     }
     const cylinderParameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      diameter: 100,
+      innerDiameter: 96,
       height: 60,
       bottomSeatMode: 'none' as const,
       honeycombMode: true,
@@ -586,7 +586,7 @@ describe('OpenGrid honeycomb material-saving builders', () => {
   it('uses the same dense Hex Mesh lattice around a cylinder wall', () => {
     const parameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      diameter: 100,
+      innerDiameter: 96,
       height: 60,
       honeycombMode: true,
     }
@@ -611,9 +611,11 @@ describe('OpenGrid honeycomb material-saving builders', () => {
     )[0]
     expect(fullestRow).toBeDefined()
     const sortedAngles = fullestRow!.toSorted((first, second) => first - second)
+    const outerRadius =
+      openGridStackableCylinderDerivedGeometryFor(parameters).radius
     const tangentGaps = sortedAngles.slice(1).map((angle, index) => {
       const previousAngle = sortedAngles[index]!
-      return (angle - previousAngle) * (parameters.diameter / 2)
+      return (angle - previousAngle) * outerRadius
     })
     expect(tangentGaps.length).toBeGreaterThan(0)
     const minimumGap = Math.min(...tangentGaps)
@@ -897,7 +899,7 @@ describe('OpenGrid honeycomb material-saving builders', () => {
     const [centerZ, seamAngles] = seamRow!
     const sortedSeamAngles = seamAngles.toSorted((left, right) => left - right)
     const edgeAngles = [sortedSeamAngles[0], sortedSeamAngles.at(-1)]
-    const probeRadius = parameters.diameter / 2 - derived.wallThickness / 2
+    const probeRadius = derived.radius - derived.wallThickness / 2
     for (const angle of edgeAngles) {
       expect(angle).toBeDefined()
       const probe = makeCylinder(0.15, 0.4, [
@@ -975,7 +977,7 @@ describe('OpenGrid honeycomb material-saving builders', () => {
     }
     const cylinder = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      diameter: 100,
+      innerDiameter: 96,
       height: 60,
       bottomSeatMode: 'none' as const,
       honeycombMode: true,
@@ -989,7 +991,7 @@ describe('OpenGrid honeycomb material-saving builders', () => {
     }
     const smallCylinder = {
       ...cylinder,
-      diameter: 20,
+      innerDiameter: 20,
       height: 10,
       bottomSeatMode: 'none' as const,
     }
@@ -1035,7 +1037,7 @@ describe('OpenGrid honeycomb material-saving builders', () => {
       buildOpenGridStackableCylinder(
         {
           ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-          diameter: 100,
+          innerDiameter: 100,
           height: 60,
           honeycombMode: true,
         },
@@ -1073,7 +1075,7 @@ describe('OpenGrid honeycomb material-saving builders', () => {
       buildOpenGridStackableCylinder(
         {
           ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-          diameter: 56,
+          innerDiameter: 56,
           height: 30,
           bottomSeatMode: 'none' as const,
           honeycombMode: true,

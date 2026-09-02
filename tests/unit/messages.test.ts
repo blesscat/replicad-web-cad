@@ -277,7 +277,7 @@ describe('Worker contract runtime validation', () => {
     ).toBe(false)
   })
 
-  it('accepts OpenGrid stackable-cylinder commands only with integer diameter and height', () => {
+  it('accepts OpenGrid stackable-cylinder commands only with integer inner diameter and height', () => {
     const command = {
       version: PROTOCOL_VERSION,
       kind: 'model.generate' as const,
@@ -286,7 +286,7 @@ describe('Worker contract runtime validation', () => {
       generation: 1,
       modelId: 'opengrid-stackable-cylinder' as const,
       parameters: {
-        diameter: 56,
+        innerDiameter: 56,
         height: 30,
         thinBottomMode: false,
         bottomPlateMode: false,
@@ -300,7 +300,7 @@ describe('Worker contract runtime validation', () => {
       isWorkerCommand({
         ...command,
         parameters: {
-          diameter: 56.5,
+          innerDiameter: 56.5,
           height: 30,
           thinBottomMode: false,
           bottomPlateMode: false,
@@ -312,7 +312,7 @@ describe('Worker contract runtime validation', () => {
       isWorkerCommand({
         ...command,
         parameters: {
-          diameter: 56,
+          innerDiameter: 56,
           height: 30,
           thinBottomMode: false,
           bottomPlateMode: false,

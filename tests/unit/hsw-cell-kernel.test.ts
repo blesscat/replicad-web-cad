@@ -239,7 +239,7 @@ describe('HSW kernel model registration', () => {
     const shape = await buildModelBRep(
       'opengrid-stackable-cylinder',
       {
-        diameter: 56,
+        innerDiameter: 56,
         height: 30,
         thinBottomMode: false,
         bottomPlateMode: false,
@@ -251,7 +251,7 @@ describe('HSW kernel model registration', () => {
     expect(shape).toMatchObject({ model: 'opengrid-stackable-cylinder' })
     expect(mocks.buildOpenGridStackableCylinder).toHaveBeenCalledWith(
       expect.objectContaining({
-        diameter: 56,
+        innerDiameter: 56,
         height: 30,
         thinBottomMode: false,
         bottomPlateMode: false,

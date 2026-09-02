@@ -200,7 +200,7 @@ describe('OpenGrid locating and assembly interface contract', () => {
   it('matches Organizer Box orientation for circular cardinal seats', () => {
     const cylinderParameters = {
       ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-      diameter: 60,
+      innerDiameter: 56,
       bottomSeatMode: 'detachable-corner-seat' as const,
     }
     const centers = openGridStackableCylinderHoleCentersFor(cylinderParameters)
