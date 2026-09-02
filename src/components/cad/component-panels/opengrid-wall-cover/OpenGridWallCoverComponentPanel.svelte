@@ -48,7 +48,7 @@
   data-testid="opengrid-wall-cover-panel"
 >
   <p
-    class="m-0 text-sm leading-6 text-muted"
+    class="m-0 text-sm leading-6 text-muted-foreground"
     data-testid="opengrid-wall-cover-details"
   >
     {translate(locale, 'panel.wallCover.details')}
@@ -80,7 +80,7 @@
       />
       <span
         aria-live="polite"
-        class="text-right text-sm text-muted"
+        class="text-right text-sm text-muted-foreground"
         data-testid="opengrid-wall-cover-text-count"
       >
         {translate(locale, 'panel.wallCover.characterCount', {
@@ -116,7 +116,7 @@
 
   <p
     id="opengrid-wall-cover-text-help"
-    class="m-0 text-sm leading-6 text-muted"
+    class="m-0 text-sm leading-6 text-muted-foreground"
   >
     {translate(locale, 'panel.wallCover.font', {
       font: OPENGRID_WALL_COVER_CONFIGURATION.fontFamily,

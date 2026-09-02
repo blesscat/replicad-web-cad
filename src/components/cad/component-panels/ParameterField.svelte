@@ -36,7 +36,7 @@
   <div class="relative min-w-0 flex items-center gap-2 font-[650]">
     <span class="min-w-0 break-words">{label}</span>
     <span
-      class="min-w-0 flex-1 text-center text-sm text-muted"
+      class="min-w-0 flex-1 text-center text-sm text-muted-foreground"
       aria-live={unitAriaLive ? 'polite' : undefined}>{unit}</span
     >
     {#if onRestore}

@@ -13,6 +13,11 @@
   const Z_INDEX_RANGE: [number, number] = [2, 1]
   const ANNOTATION_LABEL_CLASS =
     'pointer-events-none whitespace-nowrap px-1 text-[0.68rem] font-medium'
+  /* Annotation boxes must stay pixel-stable across theme switches, so the
+     label pins one literal mono stack instead of the theme-switching
+     --font-sans/--font-mono tokens. */
+  const ANNOTATION_LABEL_FONT =
+    "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
 
   let { annotation, theme }: Props = $props()
 </script>
@@ -35,6 +40,7 @@
       aria-label={annotation.ariaLabel}
       class={ANNOTATION_LABEL_CLASS}
       style:color={theme.annotationLabel}
+      style:font-family={ANNOTATION_LABEL_FONT}
     >
       {annotation.valueLabel}
     </span>

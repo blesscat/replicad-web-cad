@@ -33,7 +33,7 @@ const docsPath = publicPathFor(locale, 'docs')
   description={t('about.description')}
 >
   <article class="grid gap-10" data-testid="about-page">
-    <Card as="header" class="p-5 shadow-lg sm:p-8">
+    <Card as="header" class="cyber-card p-5 shadow-lg sm:p-8">
       <div class="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
         <img
           class="aspect-square w-28 shrink-0 rounded-2xl border border-border bg-muted object-cover sm:w-36"
@@ -73,7 +73,7 @@ const docsPath = publicPathFor(locale, 'docs')
 
     <Card
       as="section"
-      class="grid gap-3 p-5 shadow-sm sm:p-8"
+      class="cyber-card grid gap-3 p-5 shadow-sm sm:p-8"
       aria-labelledby="about-story-title"
       data-testid="about-story"
     >
@@ -90,7 +90,7 @@ const docsPath = publicPathFor(locale, 'docs')
 
     <Card
       as="section"
-      class="grid gap-3 p-5 shadow-sm sm:p-8"
+      class="cyber-card grid gap-3 p-5 shadow-sm sm:p-8"
       aria-labelledby="about-project-title"
       data-testid="about-project"
     >
@@ -107,7 +107,7 @@ const docsPath = publicPathFor(locale, 'docs')
 
     <Card
       as="section"
-      class="grid gap-5 bg-banner p-5 text-banner-foreground shadow-lg ring-0 sm:p-8"
+      class="grid gap-5 bg-banner p-5 text-banner-foreground shadow-lg ring-0 sm:p-8 dark:shadow-glow dark:ring-1 dark:ring-neon/25"
       aria-labelledby="about-links-title"
       data-testid="about-links"
     >
@@ -118,7 +118,7 @@ const docsPath = publicPathFor(locale, 'docs')
         >
           {t('about.linksHeading')}
         </h2>
-        <p class="m-0 max-w-2xl leading-relaxed text-white/90">
+        <p class="m-0 max-w-2xl leading-relaxed text-banner-foreground/85">
           {t('about.supportDescription')}
         </p>
       </div>
@@ -128,7 +128,7 @@ const docsPath = publicPathFor(locale, 'docs')
           href="https://github.com/blesscat"
           variant="outline"
           size="lg"
-          class="border-transparent bg-nav-foreground text-nav hover:bg-nav-foreground hover:text-nav no-underline hover:brightness-95 focus-visible:ring-white dark:border-transparent dark:bg-nav-foreground dark:hover:bg-nav-foreground"
+          class="no-underline border-transparent bg-primary-strong text-white hover:bg-primary-strong hover:text-white hover:brightness-110 focus-visible:ring-primary-strong/50 dark:bg-[#8ed5ff] dark:text-[#0b1326] dark:hover:bg-[#8ed5ff] dark:hover:text-[#0b1326] dark:focus-visible:ring-[#8ed5ff]/50"
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -139,7 +139,7 @@ const docsPath = publicPathFor(locale, 'docs')
           href="mailto:blesscat@gmail.com"
           variant="outline"
           size="lg"
-          class="!border-white/60 !bg-transparent !text-white no-underline hover:!bg-white/10 focus-visible:ring-white"
+          class="!border-border-field !bg-transparent !text-foreground no-underline hover:!bg-foreground/5 focus-visible:ring-outline/50 dark:!border-neon/40 dark:!bg-transparent dark:!text-[#dae2fd] dark:hover:!bg-white/10 dark:focus-visible:ring-neon/50"
         >
           {t('about.email')}
         </Button>
@@ -149,7 +149,7 @@ const docsPath = publicPathFor(locale, 'docs')
               type="button"
               variant="outline"
               size="lg"
-              class="!border-white/60 !bg-transparent !text-white no-underline hover:!bg-white/10 focus-visible:ring-white"
+              class="!border-border-field !bg-transparent !text-foreground no-underline hover:!bg-foreground/5 focus-visible:ring-outline/50 dark:!border-neon/40 dark:!bg-transparent dark:!text-[#dae2fd] dark:hover:!bg-white/10 dark:focus-visible:ring-neon/50"
               data-support-dialog-open
               data-testid="about-support-trigger"
               aria-controls="support-dialog"

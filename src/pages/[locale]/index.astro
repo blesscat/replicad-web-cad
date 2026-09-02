@@ -42,11 +42,11 @@ const inlineLinkClass =
       data-testid="home-hero"
     >
       <div class="grid gap-5">
-        <Badge variant="primary" size="sm" class="w-fit font-semibold">
+        <Badge variant="primary" eyebrow size="sm" class="w-fit font-semibold">
           {t('home.eyebrow')}
         </Badge>
         <h1
-          class="m-0 max-w-2xl text-4xl font-semibold leading-tight sm:text-5xl"
+          class="glow-text m-0 max-w-2xl text-4xl font-semibold leading-tight sm:text-5xl"
           id="home-title"
         >
           {t('home.title')}
@@ -58,7 +58,7 @@ const inlineLinkClass =
           <Button
             as="a"
             href={modelsPath}
-            variant="primary"
+            variant="neon"
             size="lg"
             class="w-full no-underline sm:w-auto"
           >
@@ -127,7 +127,7 @@ const inlineLinkClass =
     >
       <header class="grid gap-2">
         <p
-          class="m-0 text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground"
+          class="m-0 font-mono text-sm font-semibold tracking-[0.12em] text-muted-foreground uppercase"
         >
           {t('home.features')}
         </p>
@@ -142,7 +142,11 @@ const inlineLinkClass =
         class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
         aria-label={t('home.features')}
       >
-        <Card as="article" size="sm" class="grid gap-2 p-4 shadow-sm">
+        <Card
+          as="article"
+          size="sm"
+          class="cyber-card grid gap-2 p-4 shadow-sm"
+        >
           <h3 class="m-0 text-lg font-semibold leading-tight">
             {t('home.feature.browser.title')}
           </h3>
@@ -150,7 +154,11 @@ const inlineLinkClass =
             {t('home.feature.browser.description')}
           </p>
         </Card>
-        <Card as="article" size="sm" class="grid gap-2 p-4 shadow-sm">
+        <Card
+          as="article"
+          size="sm"
+          class="cyber-card grid gap-2 p-4 shadow-sm"
+        >
           <h3 class="m-0 text-lg font-semibold leading-tight">
             {t('home.feature.parameters.title')}
           </h3>
@@ -158,7 +166,11 @@ const inlineLinkClass =
             {t('home.feature.parameters.description')}
           </p>
         </Card>
-        <Card as="article" size="sm" class="grid gap-2 p-4 shadow-sm">
+        <Card
+          as="article"
+          size="sm"
+          class="cyber-card grid gap-2 p-4 shadow-sm"
+        >
           <h3 class="m-0 text-lg font-semibold leading-tight">
             {t('home.feature.preview.title')}
           </h3>
@@ -166,7 +178,11 @@ const inlineLinkClass =
             {t('home.feature.preview.description')}
           </p>
         </Card>
-        <Card as="article" size="sm" class="grid gap-2 p-4 shadow-sm">
+        <Card
+          as="article"
+          size="sm"
+          class="cyber-card grid gap-2 p-4 shadow-sm"
+        >
           <h3 class="m-0 text-lg font-semibold leading-tight">
             {t('home.feature.export.title')}
           </h3>
@@ -179,13 +195,13 @@ const inlineLinkClass =
 
     <Card
       as="section"
-      class="grid gap-8 p-5 shadow-lg sm:p-8"
+      class="cyber-card grid gap-8 p-5 shadow-lg sm:p-8"
       aria-labelledby="home-desk-title"
       data-testid="home-desk-system"
     >
       <header class="grid gap-3">
         <p
-          class="m-0 text-sm font-semibold uppercase tracking-[0.12em] text-primary"
+          class="m-0 font-mono text-sm font-semibold tracking-[0.12em] text-primary-strong uppercase dark:text-primary"
         >
           {t('home.desk.eyebrow')}
         </p>
@@ -221,7 +237,7 @@ const inlineLinkClass =
           <ol class="m-0 grid gap-4 p-0">
             <li class="flex gap-3">
               <span
-                class="grid size-8 shrink-0 place-items-center rounded-full bg-primary font-semibold text-white"
+                class="grid size-8 shrink-0 place-items-center rounded-full bg-cyber-cyan font-semibold text-[#08101f]"
                 >1</span
               >
               <div class="grid gap-1">
@@ -235,7 +251,7 @@ const inlineLinkClass =
             </li>
             <li class="flex gap-3">
               <span
-                class="grid size-8 shrink-0 place-items-center rounded-full bg-[#0d9488] font-semibold text-white"
+                class="grid size-8 shrink-0 place-items-center rounded-full bg-neon font-semibold text-[#08101f]"
                 >2</span
               >
               <div class="grid gap-1">
@@ -249,7 +265,7 @@ const inlineLinkClass =
             </li>
             <li class="flex gap-3">
               <span
-                class="grid size-8 shrink-0 place-items-center rounded-full bg-[#f59e0b] font-semibold text-white"
+                class="grid size-8 shrink-0 place-items-center rounded-full bg-amber-400 font-semibold text-[#08101f]"
                 >3</span
               >
               <div class="grid gap-1">
@@ -263,7 +279,7 @@ const inlineLinkClass =
             </li>
             <li class="flex gap-3">
               <span
-                class="grid size-8 shrink-0 place-items-center rounded-full bg-[#7c3aed] font-semibold text-white"
+                class="grid size-8 shrink-0 place-items-center rounded-full bg-cyber-purple font-semibold text-[#08101f]"
                 >4</span
               >
               <div class="grid gap-1">
@@ -308,7 +324,7 @@ const inlineLinkClass =
       <div class="grid gap-6 md:grid-cols-2">
         <Card
           as="article"
-          class="grid gap-4 p-4 shadow-sm sm:grid-cols-[minmax(9rem,0.85fr)_minmax(0,1.15fr)] sm:items-center lg:grid-cols-1"
+          class="cyber-card grid gap-4 p-4 shadow-sm sm:grid-cols-[minmax(9rem,0.85fr)_minmax(0,1.15fr)] sm:items-center lg:grid-cols-1"
         >
           <ModelPreviewPicture
             class="aspect-[16/10] w-full rounded-xl border border-border bg-muted object-cover"
@@ -333,7 +349,7 @@ const inlineLinkClass =
         </Card>
         <Card
           as="article"
-          class="grid gap-4 p-4 shadow-sm sm:grid-cols-[minmax(9rem,0.85fr)_minmax(0,1.15fr)] sm:items-center lg:grid-cols-1"
+          class="cyber-card grid gap-4 p-4 shadow-sm sm:grid-cols-[minmax(9rem,0.85fr)_minmax(0,1.15fr)] sm:items-center lg:grid-cols-1"
         >
           <ModelPreviewPicture
             class="aspect-[16/10] w-full rounded-xl border border-border bg-muted object-cover"
@@ -361,7 +377,7 @@ const inlineLinkClass =
 
     <Card
       as="section"
-      class="grid gap-6 p-5 shadow-lg sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:p-8"
+      class="cyber-card grid gap-6 p-5 shadow-lg sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:p-8"
       aria-labelledby="home-maker-title"
       data-testid="home-maker"
     >
@@ -375,7 +391,7 @@ const inlineLinkClass =
       />
       <div class="grid gap-4">
         <p
-          class="m-0 text-sm font-semibold uppercase tracking-[0.12em] text-primary"
+          class="m-0 font-mono text-sm font-semibold tracking-[0.12em] text-primary-strong uppercase dark:text-primary"
         >
           {t('home.maker.eyebrow')}
         </p>
@@ -426,7 +442,7 @@ const inlineLinkClass =
 
     <Card
       as="section"
-      class="grid gap-4 bg-banner p-6 text-banner-foreground shadow-lg ring-0 sm:p-8"
+      class="grid gap-4 bg-banner p-6 text-banner-foreground shadow-lg ring-0 sm:p-8 dark:shadow-glow dark:ring-1 dark:ring-neon/25"
       aria-labelledby="home-final-title"
     >
       <h2
@@ -435,7 +451,7 @@ const inlineLinkClass =
       >
         {t('home.final.title')}
       </h2>
-      <p class="m-0 max-w-2xl leading-relaxed text-white/90">
+      <p class="m-0 max-w-2xl leading-relaxed text-banner-foreground/85">
         {t('home.final.description')}
       </p>
       <p class="m-0">
@@ -444,7 +460,7 @@ const inlineLinkClass =
           href={modelsPath}
           variant="outline"
           size="lg"
-          class="border-transparent bg-nav-foreground text-nav hover:bg-nav-foreground hover:text-nav no-underline hover:brightness-95 focus-visible:ring-white dark:border-transparent dark:bg-nav-foreground dark:hover:bg-nav-foreground"
+          class="no-underline border-transparent bg-primary-strong text-white hover:bg-primary-strong hover:text-white hover:brightness-110 focus-visible:ring-primary-strong/50 dark:bg-[#8ed5ff] dark:text-[#0b1326] dark:hover:bg-[#8ed5ff] dark:hover:text-[#0b1326] dark:focus-visible:ring-[#8ed5ff]/50"
         >
           {t('home.final.cta')}
         </Button>

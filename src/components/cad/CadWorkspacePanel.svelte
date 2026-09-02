@@ -133,7 +133,7 @@
   </div>
   {#if modelId === 'opengrid-wall-cover'}
     <p
-      class="m-0 text-sm leading-6 text-muted"
+      class="m-0 text-sm leading-6 text-muted-foreground"
       data-testid="opengrid-wall-cover-three-mf-note"
     >
       {t('cad.wallCover.threeMfNote')}

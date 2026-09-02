@@ -71,13 +71,13 @@
 
 <div class="grid gap-3">
   <p
-    class="m-0 text-sm leading-6 text-muted"
+    class="m-0 text-sm leading-6 text-muted-foreground"
     data-testid="opengrid-openconnect-shelf-help"
   >
     {translate(locale, 'panel.openConnectShelf.description')}
   </p>
   <p
-    class="m-0 rounded-lg border border-border-card bg-page px-3 py-2 text-sm text-muted"
+    class="m-0 rounded-lg border border-border-card bg-page px-3 py-2 text-sm text-muted-foreground"
     data-testid="opengrid-openconnect-shelf-angle-limit"
   >
     {translate(locale, 'panel.openConnectShelf.maximumAngle', {

@@ -60,7 +60,7 @@
         {onChange}
       />
       {#if field.control === 'range'}
-        <span aria-live="polite" class="text-right text-sm text-muted">
+        <span aria-live="polite" class="text-right text-sm text-muted-foreground">
           {value}
           {unitLabel}
         </span>
@@ -75,7 +75,7 @@
             {value}
             oninput={handleInput}
           />
-          <span class="shrink-0 text-sm text-muted">{unitLabel}</span>
+          <span class="shrink-0 text-sm text-muted-foreground">{unitLabel}</span>
         </div>
       {/if}
     </div>

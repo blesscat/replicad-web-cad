@@ -14,6 +14,15 @@ const buttonVariantStyles = {
     'bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-outline/50',
   primary:
     'bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-primary/50',
+  /* Light keeps the solid Kinetic deep blue; dark layers the Cyber-CAD neon
+     gradient over a solid #38bdf8 face (the computed backgroundColor stays
+     constant for the home CTA contrast check) with the on-primary dark label.
+     Hover boosts brightness via filter so backgroundColor never changes. */
+  neon: [
+    'bg-primary-strong text-primary-foreground shadow-xs',
+    'hover:brightness-110 focus-visible:ring-primary-strong/50',
+    'dark:bg-neon dark:bg-linear-to-r dark:from-cyber-cyan dark:to-neon dark:text-[#00354a] dark:shadow-glow dark:focus-visible:ring-neon/50',
+  ].join(' '),
   secondary:
     'bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] focus-visible:ring-secondary/50',
   outline:

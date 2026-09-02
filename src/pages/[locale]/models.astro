@@ -119,7 +119,7 @@ function detailsDialogIdFor(definition: ModelDefinition): string {
     data-testid="model-selection"
   >
     <header class="grid gap-3">
-      <Badge variant="outline" size="sm" class="w-fit">
+      <Badge variant="outline" eyebrow size="sm" class="w-fit">
         {t('models.series')}
       </Badge>
       <h1
@@ -203,7 +203,7 @@ function detailsDialogIdFor(definition: ModelDefinition): string {
                           <Card
                             as="article"
                             size="sm"
-                            class="grid gap-3 p-3 shadow-sm transition-shadow hover:shadow-md sm:p-4"
+                            class="cyber-card grid gap-3 p-3 shadow-sm transition-shadow hover:shadow-md sm:p-4"
                             data-model-id={definition.id}
                             data-entry-key={`${definition.id}-${definition.systemContext ?? 'legacy'}`}
                             data-system-context={definition.systemContext}

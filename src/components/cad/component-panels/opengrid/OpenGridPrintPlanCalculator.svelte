@@ -82,7 +82,7 @@
     <h3 class="m-0 text-base font-semibold">
       {translate(locale, 'panel.printPlan.title')}
     </h3>
-    <p class="mt-1 mb-0 text-sm text-muted">
+    <p class="mt-1 mb-0 text-sm text-muted-foreground">
       {translate(locale, 'panel.printPlan.description')}
     </p>
   </div>
@@ -234,7 +234,7 @@
           count: plan.totalPieces,
         })}
       </p>
-      <p class="m-0 text-muted">
+      <p class="m-0 text-muted-foreground">
         {translate(locale, 'panel.printPlan.note')}
       </p>
     </div>

@@ -165,17 +165,17 @@
 >
   <div class="flex items-center justify-between gap-4 text-sm">
     <strong class="text-ink">{translate(locale, 'cad.progress.title')}</strong>
-    <span class="text-muted" data-testid="cad-progress-count"
+    <span class="text-muted-foreground" data-testid="cad-progress-count"
       >{countLabel ?? `${current.step} / ${current.totalSteps}`}</span
     >
   </div>
   {#if booleanLabel !== null}
-    <p class="text-sm text-muted" data-testid="cad-progress-boolean">
+    <p class="text-sm text-muted-foreground" data-testid="cad-progress-boolean">
       {booleanLabel}
     </p>
   {/if}
   {#if stageElapsedDescriptionText !== null}
-    <p class="text-sm text-muted" data-testid="cad-progress-elapsed">
+    <p class="text-sm text-muted-foreground" data-testid="cad-progress-elapsed">
       {stageElapsedDescriptionText}
     </p>
   {/if}
@@ -194,7 +194,7 @@
       style:width={`${completion}%`}
     ></div>
   </div>
-  <ol class="grid grid-cols-4 gap-1 text-xs text-muted">
+  <ol class="grid grid-cols-4 gap-1 text-xs text-muted-foreground">
     {#each CAD_PROGRESS_STAGES as progressStage (progressStage)}
       {@const details = progressDetails(progressStage)}
       {@const isCurrent = progressStage === current.stage}

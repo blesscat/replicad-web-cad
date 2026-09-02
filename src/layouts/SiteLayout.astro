@@ -1,5 +1,17 @@
 ---
 import '../styles/global.css'
+import '@fontsource/hanken-grotesk/latin-400.css'
+import '@fontsource/hanken-grotesk/latin-500.css'
+import '@fontsource/hanken-grotesk/latin-600.css'
+import '@fontsource/hanken-grotesk/latin-700.css'
+import '@fontsource/jetbrains-mono/latin-400.css'
+import '@fontsource/jetbrains-mono/latin-600.css'
+import '@fontsource/inter/latin-400.css'
+import '@fontsource/inter/latin-500.css'
+import '@fontsource/inter/latin-600.css'
+import '@fontsource/inter/latin-700.css'
+import '@fontsource/fira-code/latin-400.css'
+import '@fontsource/fira-code/latin-600.css'
 import {
   supportProviders,
   type SupportProviderId,
@@ -167,9 +179,32 @@ const supportCopyById: Record<
     </script>
   </head>
   <body>
-    <div class="min-h-screen">
+    {
+      /* The nav is a floating capsule in both themes; identical geometry keeps
+        theme switches from shifting the page layout (CAD annotation boxes and
+        viewport anchors must stay put). */
+    }
+    <div class="min-h-screen pt-6">
+      <div class="hidden dark:block" aria-hidden="true">
+        <div
+          class="pointer-events-none fixed inset-x-0 top-0 z-30 h-px animate-pulse bg-linear-to-r from-transparent via-neon to-transparent opacity-70 motion-reduce:animate-none"
+        >
+        </div>
+        <div
+          class="pointer-events-none fixed top-28 left-[12%] z-0 size-2 animate-pulse rounded-full bg-neon/80 shadow-glow motion-reduce:animate-none"
+        >
+        </div>
+        <div
+          class="pointer-events-none fixed top-72 right-[18%] z-0 size-1.5 animate-ping rounded-full bg-cyber-purple/70 motion-reduce:animate-none"
+        >
+        </div>
+        <div
+          class="pointer-events-none fixed top-1/2 left-[24%] z-0 size-1 animate-pulse rounded-full bg-cyber-cyan/60 motion-reduce:animate-none"
+        >
+        </div>
+      </div>
       <nav
-        class="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 bg-nav px-[clamp(1rem,4vw,4rem)] py-4 text-nav-foreground shadow-sm"
+        class="sticky top-0 z-40 mx-auto flex w-[90%] max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-2xl border border-border bg-nav px-[clamp(1rem,4vw,4rem)] py-4 text-nav-foreground shadow-sm backdrop-blur-md dark:top-6 dark:border-neon/25 dark:shadow-glow"
         aria-label={t('navigation.primary')}
       >
         <a
@@ -179,26 +214,26 @@ const supportCopyById: Record<
         >
         <div class="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
           <a
-            class="no-underline"
+            class="font-mono text-sm tracking-wide no-underline"
             href={publicPathFor(locale, 'docs')}
             aria-current={isDocsPage ? 'page' : undefined}
             >{t('navigation.docs')}</a
           >
           <a
-            class="no-underline"
+            class="font-mono text-sm tracking-wide no-underline"
             href={publicPathFor(locale, 'models')}
             aria-current={isModelSelectionPage ? 'page' : undefined}
             >{t('navigation.models')}</a
           >
           <a
-            class="no-underline"
+            class="font-mono text-sm tracking-wide no-underline"
             href={publicPathFor(locale, 'about')}
             aria-current={isAboutPage ? 'page' : undefined}
             >{t('navigation.about')}</a
           >
           <button
             type="button"
-            class="inline-flex items-center gap-1.5 rounded-full border border-white/60 bg-transparent px-3 py-1.5 text-sm font-semibold no-underline transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            class="inline-flex items-center gap-1.5 rounded-full border border-nav-foreground/40 bg-transparent px-3 py-1.5 text-sm font-semibold no-underline transition-colors hover:bg-nav-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nav-foreground"
             data-theme-toggle
             data-theme-switch-to-light={t('navigation.switchToLight')}
             data-theme-switch-to-dark={t('navigation.switchToDark')}
@@ -241,7 +276,7 @@ const supportCopyById: Record<
             supportProviders.length > 0 && (
               <button
                 type="button"
-                class="cursor-pointer whitespace-nowrap rounded-full border border-white/60 px-3 py-1.5 text-sm font-semibold no-underline transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                class="cursor-pointer whitespace-nowrap rounded-full border border-nav-foreground/40 px-3 py-1.5 text-sm font-semibold no-underline transition-colors hover:bg-nav-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nav-foreground"
                 data-support-dialog-open
                 data-testid="support-trigger"
                 aria-controls="support-dialog"
@@ -257,7 +292,7 @@ const supportCopyById: Record<
         supportProviders.length > 0 && (
           <dialog
             id="support-dialog"
-            class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-xl overflow-hidden rounded-2xl border border-border bg-card p-0 text-card-foreground shadow-lg backdrop:bg-black/60"
+            class="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-xl overflow-hidden rounded-2xl border border-border bg-card p-0 text-card-foreground shadow-lg backdrop:bg-black/60 dark:border-neon/25 dark:bg-panel/90 dark:shadow-glow dark:backdrop-blur-xl"
             aria-labelledby="support-dialog-title"
             aria-describedby="support-dialog-description"
             data-testid="support-dialog"
@@ -333,12 +368,16 @@ const supportCopyById: Record<
         <slot />
       </main>
       <footer
-        class="grid gap-5 border-t border-border bg-card px-[clamp(1rem,4vw,4rem)] py-8 text-sm text-muted-foreground"
+        class="grid gap-5 border-t border-border bg-card px-[clamp(1rem,4vw,4rem)] py-8 text-sm text-muted-foreground dark:border-neon/20"
         aria-label={t('navigation.footer')}
       >
         <div class="mx-auto grid w-full max-w-[1200px] gap-5 sm:grid-cols-2">
           <div class="grid gap-2">
-            <p class="m-0 font-semibold text-foreground">Shape Shortcut</p>
+            <p
+              class="m-0 font-mono font-semibold tracking-wide text-foreground"
+            >
+              Shape Shortcut
+            </p>
             <p class="m-0">{t('navigation.product')}</p>
             <div class="flex flex-wrap gap-x-4 gap-y-2">
               <a href={publicPathFor(locale, 'models')}
@@ -351,7 +390,9 @@ const supportCopyById: Record<
             </div>
           </div>
           <div class="grid gap-2 sm:justify-items-end">
-            <p class="m-0 font-semibold text-foreground">
+            <p
+              class="m-0 font-mono font-semibold tracking-wide text-foreground"
+            >
               {t('navigation.project')}
             </p>
             <div class="flex flex-wrap gap-x-4 gap-y-2 sm:justify-end">

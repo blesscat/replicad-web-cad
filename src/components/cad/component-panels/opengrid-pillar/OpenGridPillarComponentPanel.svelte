@@ -62,7 +62,7 @@
         <span class="grid gap-1">
           <span class="font-[650]">{translate(locale, option.labelKey)}</span>
           {#if 'descriptionKey' in option}
-            <span class="text-sm text-muted">
+            <span class="text-sm text-muted-foreground">
               {translate(locale, option.descriptionKey)}
             </span>
           {/if}

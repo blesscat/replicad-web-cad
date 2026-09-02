@@ -294,7 +294,7 @@
           </label>
         {/each}
       </div>
-      <span class="text-sm text-muted">
+      <span class="text-sm text-muted-foreground">
         {seatModeOptions.find(
           (option) => option.value === seatModeForRawParameters(),
         )?.descriptionKey
@@ -387,11 +387,11 @@
       </label>
     </div>
     {#if rawParameters.thinShellMode === 'true'}
-      <span class="text-sm text-muted">
+      <span class="text-sm text-muted-foreground">
         {translate(locale, 'panel.thinShellDescription')}
       </span>
     {:else}
-      <span class="text-sm text-muted">
+      <span class="text-sm text-muted-foreground">
         {translate(locale, 'panel.stackableDescription')}
       </span>
     {/if}

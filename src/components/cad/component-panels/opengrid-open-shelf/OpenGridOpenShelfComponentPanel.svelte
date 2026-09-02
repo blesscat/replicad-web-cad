@@ -68,14 +68,14 @@
 
 <div class="grid gap-3">
   <p
-    class="m-0 text-sm leading-6 text-muted"
+    class="m-0 text-sm leading-6 text-muted-foreground"
     data-testid="opengrid-open-shelf-help"
   >
     {translate(locale, 'panel.openShelf.description')}
   </p>
   {#if cellSpace}
     <div
-      class="grid gap-1 rounded-lg border border-border-card bg-page px-3 py-2 text-sm text-muted"
+      class="grid gap-1 rounded-lg border border-border-card bg-page px-3 py-2 text-sm text-muted-foreground"
       data-testid="opengrid-open-shelf-cell-space"
     >
       <p class="m-0 font-[650] text-ink">

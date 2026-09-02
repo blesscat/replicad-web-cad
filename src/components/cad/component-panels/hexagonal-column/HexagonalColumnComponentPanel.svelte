@@ -26,7 +26,7 @@
 </script>
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
-  <p class="m-0 text-sm text-muted">
+  <p class="m-0 text-sm text-muted-foreground">
     {translate(locale, 'panel.hexagonalColumn.description')}
   </p>
   {#each hexagonalColumnDefinition.parameterSchema as field (field.key)}

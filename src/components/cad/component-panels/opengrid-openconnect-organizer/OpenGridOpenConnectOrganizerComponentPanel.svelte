@@ -191,7 +191,7 @@
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
   <p
-    class="m-0 text-sm leading-6 text-muted"
+    class="m-0 text-sm leading-6 text-muted-foreground"
     data-testid="opengrid-openconnect-organizer-help"
   >
     {translate(locale, 'panel.openConnectOrganizer.description')}
@@ -252,7 +252,7 @@
         </label>
       {/each}
     </div>
-    <span class="text-sm text-muted">
+    <span class="text-sm text-muted-foreground">
       {translate(
         locale,
         spacingOptions.find(
@@ -318,7 +318,7 @@
   </ParameterField>
 
   <p
-    class="m-0 text-sm leading-6 text-muted"
+    class="m-0 text-sm leading-6 text-muted-foreground"
     data-testid="opengrid-openconnect-organizer-thickness-help"
   >
     {translate(locale, 'parameter.organizerThicknessHelp')}
@@ -345,7 +345,7 @@
     </ParameterField>
   {/each}
 
-  <p class="m-0 text-sm leading-6 text-muted">
+  <p class="m-0 text-sm leading-6 text-muted-foreground">
     {translate(locale, 'parameter.organizerForwardTiltHelp')}
   </p>
   <ParameterField
@@ -384,7 +384,7 @@
         })}
       </span>
     {:else}
-      <span class="ml-2 text-muted">
+      <span class="ml-2 text-muted-foreground">
         {translate(locale, 'panel.openConnectOrganizer.interfaceInvalid')}
       </span>
     {/if}
