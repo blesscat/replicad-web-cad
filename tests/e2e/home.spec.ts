@@ -148,8 +148,10 @@ async function expectStaticHomepage(
   expect(observation.workerUrls).toEqual([])
   expect(observation.wasmRequests).toEqual([])
 
+  // Hidden appearance variants are decorative (aria-hidden, empty alt) by
+  // design — only the visible variants carry alternative text.
   const imageAlts = await page
-    .locator('main img')
+    .locator('main img:not([aria-hidden="true"])')
     .evaluateAll((images) =>
       images.map((image) => image.getAttribute('alt')?.trim() ?? ''),
     )

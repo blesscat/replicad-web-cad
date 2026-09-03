@@ -31,6 +31,7 @@ const modelsPath = publicPathFor(locale, 'models')
 const docsPath = publicPathFor(locale, 'docs')
 const aboutPath = publicPathFor(locale, 'about')
 const deskFlowPath = `/docs/desk-system/desk-system-flow.${locale}.svg`
+const deskFlowDarkPath = `/docs/desk-system/desk-system-flow.${locale}-dark.svg`
 
 const inlineLinkClass =
   'font-semibold text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground focus-visible:ring-3 focus-visible:ring-outline/50'
@@ -279,11 +280,12 @@ const homeTitleHtml = (() => {
 
       <div class="grid gap-8">
         <figure class="m-0 grid gap-3">
-          <img
+          <ModelPreviewPicture
             class="w-full rounded-xl border border-border bg-muted"
             src={deskFlowPath}
-            width="1400"
-            height="820"
+            darkSrc={deskFlowDarkPath}
+            width={1400}
+            height={820}
             loading="lazy"
             alt={t('home.desk.flowAlt')}
           />
