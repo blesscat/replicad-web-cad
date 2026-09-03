@@ -1011,7 +1011,7 @@ function cylinderSideOpeningKeepouts(
   upperZ: number,
 ): Rectangle2D[] {
   const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
-  const radius = parameters.diameter / 2
+  const radius = derived.radius
   const circumference = 2 * Math.PI * radius
   const clearance = OPENGRID_HONEYCOMB_CONFIGURATION.featureClearance
   const directions: ReadonlyArray<
@@ -1051,7 +1051,7 @@ function cylinderSideCellGroups(
 ): CylinderSideCellGroup[] {
   const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
   const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
-  const radius = parameters.diameter / 2
+  const radius = derived.radius
   const lowerZ = derived.outerTransitionEndZ + honeycomb.lowerFrame
   const topProtectedHeight = Math.max(
     honeycomb.topFrame,
@@ -1109,7 +1109,7 @@ export function makeOpenGridStackableCylinderSideHoneycombCutters(
 ): Shape3D[] {
   const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
   const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
-  const radius = parameters.diameter / 2
+  const radius = derived.radius
   const cutters: Shape3D[] = []
   try {
     for (const group of cylinderSideCellGroups(parameters)) {
@@ -1160,7 +1160,7 @@ function cylinderBottomOpeningRadius(
   const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
   const honeycomb = OPENGRID_HONEYCOMB_CONFIGURATION
   const derived = openGridStackableCylinderDerivedGeometryFor(parameters)
-  const radius = parameters.diameter / 2
+  const radius = derived.radius
   return Math.max(
     0,
     Math.min(

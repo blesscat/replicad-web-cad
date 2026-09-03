@@ -168,9 +168,9 @@
   }
 
   function parametersForRange(): OpenGridStackableCylinderParameters | null {
-    const diameter = rawNumberFor('diameter')
+    const innerDiameter = rawNumberFor('innerDiameter')
     const height = rawNumberFor('height')
-    if (diameter === null || height === null) return null
+    if (innerDiameter === null || height === null) return null
 
     const openingValues = {} as Record<
       OpenGridStackableCylinderOpeningParameterKey,
@@ -183,7 +183,7 @@
     }
 
     return {
-      diameter,
+      innerDiameter,
       height,
       thinBottomMode: rawParameters.thinBottomMode === 'true',
       bottomPlateMode: rawParameters.bottomPlateMode === 'true',
@@ -191,6 +191,18 @@
       honeycombMode: rawParameters.honeycombMode === 'true',
       ...openingValues,
     }
+  }
+
+  function derivedOuterDiameterText(): string {
+    const innerDiameter = rawNumberFor('innerDiameter')
+    if (innerDiameter === null) return ''
+    const wallThickness = thinBottomMode
+      ? OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.thinWallThickness
+      : OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.wallThickness
+    const outerDiameter = Number((innerDiameter + wallThickness * 2).toFixed(2))
+    return translate(locale, 'panel.innerDiameterOuterHint', {
+      value: String(outerDiameter),
+    })
   }
 
   function fieldsFor(
@@ -353,6 +365,14 @@
         error={fieldErrors[field.key]}
         onChange={(nextValue) => onInputChange(field.key, nextValue)}
       />
+      {#if field.key === 'innerDiameter'}
+        <span
+          class="text-sm text-muted"
+          data-testid="opengrid-cylinder-outer-diameter"
+        >
+          {derivedOuterDiameterText()}
+        </span>
+      {/if}
     </ParameterField>
   {/each}
   <details

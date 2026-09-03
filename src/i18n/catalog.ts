@@ -209,7 +209,7 @@ export const zhHantMessages = {
   'models.model.opengrid-stackable-cylinder.name': 'Round Box (圓盒)',
   'models.model.opengrid-stackable-cylinder.selection': 'Round Box (圓盒)',
   'models.model.opengrid-stackable-cylinder.description':
-    '可調整外徑、高度、開口與底部定位座模式的堆疊圓盒。',
+    '可調整內徑、高度、開口與底部定位座模式的堆疊圓盒。',
   'models.model.opengrid-stackable-cylinder.alt': 'Round Box 圓盒預覽',
   'models.model.opengrid-snap-remover.name': 'OpenGrid Snap Remover',
   'models.model.opengrid-snap-remover.selection': 'Snap Remover',
@@ -451,7 +451,8 @@ export const zhHantMessages = {
   'parameter.xGridCount': 'X 格數',
   'parameter.yGridCount': 'Y 格數',
   'parameter.innerHeight': '盒內淨高',
-  'parameter.outerDiameter': '外徑',
+  'parameter.innerDiameter': '內徑',
+  'panel.innerDiameterOuterHint': '外徑 {value} mm',
   'parameter.openingDepth': '下切深度',
   'parameter.openingBottomLength': '切口底部長度',
   'parameter.sideWallAngle': '側壁角度',
@@ -494,7 +495,7 @@ export const zhHantMessages = {
   'diagnostic.opengridUnsupported':
     'OpenGrid 參數與目前規格不相容，請檢查設定後重試。',
   'diagnostic.cylinderParametersInvalid':
-    'OpenGrid 可堆疊圓柱參數無效，請檢查外徑與高度。',
+    'OpenGrid 可堆疊圓柱參數無效，請檢查內徑與高度。',
   'diagnostic.opengridQualityInvalid':
     'OpenGrid 幾何未通過品質檢查，請調整參數後重試。',
   'diagnostic.cylinderQualityInvalid':
@@ -1007,7 +1008,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'models.model.opengrid-stackable-cylinder.name': 'OpenGrid Round Box',
   'models.model.opengrid-stackable-cylinder.selection': 'Round Box',
   'models.model.opengrid-stackable-cylinder.description':
-    'A stackable round box with adjustable diameter, height, openings, and seats.',
+    'A stackable round box with adjustable inner diameter, height, openings, and seats.',
   'models.model.opengrid-stackable-cylinder.alt': 'Round Box preview',
   'models.model.opengrid-snap-remover.name': 'OpenGrid Snap Remover',
   'models.model.opengrid-snap-remover.selection': 'Snap Remover',
@@ -1256,7 +1257,8 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'parameter.xGridCount': 'X cell count',
   'parameter.yGridCount': 'Y cell count',
   'parameter.innerHeight': 'Inner clear height',
-  'parameter.outerDiameter': 'Outer diameter',
+  'parameter.innerDiameter': 'Inner diameter',
+  'panel.innerDiameterOuterHint': 'Outer diameter {value} mm',
   'parameter.openingDepth': 'Cut depth',
   'parameter.openingBottomLength': 'Opening bottom length',
   'parameter.sideWallAngle': 'Side-wall angle',
@@ -1304,7 +1306,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'diagnostic.opengridUnsupported':
     'The OpenGrid parameters are incompatible with the current specification. Check the settings and try again.',
   'diagnostic.cylinderParametersInvalid':
-    'The OpenGrid stackable-cylinder parameters are invalid. Check the diameter and height.',
+    'The OpenGrid stackable-cylinder parameters are invalid. Check the inner diameter and height.',
   'diagnostic.opengridQualityInvalid':
     'The OpenGrid geometry did not pass quality checks. Adjust the parameters and try again.',
   'diagnostic.cylinderQualityInvalid':

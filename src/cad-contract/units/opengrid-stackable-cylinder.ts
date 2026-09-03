@@ -7,7 +7,7 @@ import {
 } from './opengrid-locating-assembly'
 
 export type OpenGridStackableCylinderParameterKey =
-  | 'diameter'
+  | 'innerDiameter'
   | 'height'
   | 'thinBottomMode'
   | 'bottomPlateMode'
@@ -33,7 +33,7 @@ export type OpenGridStackableCylinderProfile =
   'default' | 'thin' | 'bottom-plate'
 
 export type OpenGridStackableCylinderParameters = {
-  diameter: number
+  innerDiameter: number
   height: number
   thinBottomMode: boolean
   bottomPlateMode: boolean
@@ -99,9 +99,9 @@ export type OpenGridStackableCylinderValidation =
   | { valid: false; issues: OpenGridStackableCylinderValidationIssue[] }
 
 export const OPENGRID_STACKABLE_CYLINDER_CONFIGURATION = {
-  defaultDiameter: 60,
-  minDiameter: 20,
-  maxDiameter: 300,
+  defaultInnerDiameter: 56,
+  minInnerDiameter: 20,
+  maxInnerDiameter: 300,
   defaultHeight: 20,
   minHeight: 10,
   maxHeight: 500,
@@ -149,7 +149,7 @@ export const OPENGRID_STACKABLE_CYLINDER_CONFIGURATION = {
 } as const
 
 export const OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS = {
-  diameter: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultDiameter,
+  innerDiameter: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultInnerDiameter,
   height: OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.defaultHeight,
   thinBottomMode: false,
   bottomPlateMode: false,
@@ -304,6 +304,7 @@ function validateBottomSeatMode(
 }
 
 const ALL_SUPPORTED_PARAMETER_KEYS = new Set<string>([
+  'innerDiameter',
   'diameter',
   'height',
   'thinBottomMode',
@@ -363,7 +364,7 @@ function openingValidationIssuesFor(
       })
     }
     if (
-      opening.upperWidth >= parameters.diameter ||
+      opening.upperWidth >= derived.radius * 2 ||
       opening.angularHalfWidth >= Math.PI / 2
     ) {
       issues.push({
@@ -388,6 +389,31 @@ function openingValidationIssuesFor(
   return issues
 }
 
+export function legacyInnerDiameterFor(
+  value: Record<string, unknown>,
+): number | undefined {
+  const legacyOuterDiameter = value.diameter
+  let outerDiameter = Number.NaN
+  if (typeof legacyOuterDiameter === 'number') {
+    outerDiameter = legacyOuterDiameter
+  } else if (
+    typeof legacyOuterDiameter === 'string' &&
+    legacyOuterDiameter.trim() !== ''
+  ) {
+    outerDiameter = Number(legacyOuterDiameter)
+  }
+  if (!Number.isFinite(outerDiameter)) {
+    return undefined
+  }
+  const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
+  const thinBottomMode = value.thinBottomMode
+  const wallThickness =
+    thinBottomMode === true || thinBottomMode === 'true'
+      ? configuration.thinWallThickness
+      : configuration.wallThickness
+  return Math.round(outerDiameter - wallThickness * 2)
+}
+
 export function validateOpenGridStackableCylinderParameters(
   value: unknown,
 ): OpenGridStackableCylinderValidation {
@@ -405,7 +431,11 @@ export function validateOpenGridStackableCylinderParameters(
 
   const issues: OpenGridStackableCylinderValidationIssue[] = []
   const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
-  const hasCoreParameters = hasOwn(value, 'diameter') && hasOwn(value, 'height')
+  const hasCanonicalInnerDiameter = hasOwn(value, 'innerDiameter')
+  const hasLegacyOuterDiameter = hasOwn(value, 'diameter')
+  const hasCoreParameters =
+    (hasCanonicalInnerDiameter || hasLegacyOuterDiameter) &&
+    hasOwn(value, 'height')
   const hasSupportedShape =
     hasCoreParameters && hasOnlySupportedParameterKeys(value)
   const hasCurrentSeatMode = hasOwn(value, 'bottomSeatMode')
@@ -426,13 +456,28 @@ export function validateOpenGridStackableCylinderParameters(
     issues.push({ field: 'parameters', messageId: 'validation.invalid' })
   }
 
-  validateIntegerField(
-    value.diameter,
-    'diameter',
-    configuration.minDiameter,
-    configuration.maxDiameter,
-    issues,
-  )
+  const legacyInnerDiameter = hasLegacyOuterDiameter
+    ? legacyInnerDiameterFor(value)
+    : undefined
+  if (hasCanonicalInnerDiameter) {
+    validateIntegerField(
+      value.innerDiameter,
+      'innerDiameter',
+      configuration.minInnerDiameter,
+      configuration.maxInnerDiameter,
+      issues,
+    )
+  } else if (legacyInnerDiameter !== undefined) {
+    validateIntegerField(
+      legacyInnerDiameter,
+      'innerDiameter',
+      configuration.minInnerDiameter,
+      configuration.maxInnerDiameter,
+      issues,
+    )
+  } else if (hasLegacyOuterDiameter) {
+    issues.push({ field: 'innerDiameter', messageId: 'validation.invalid' })
+  }
   validateIntegerField(
     value.height,
     'height',
@@ -497,7 +542,10 @@ export function validateOpenGridStackableCylinderParameters(
 
   const openingValues = openingValuesFor(value, hasOpeningParameters)
   const normalizedValue = {
-    diameter: value.diameter as number,
+    innerDiameter:
+      typeof value.innerDiameter === 'number'
+        ? (value.innerDiameter as number)
+        : (legacyInnerDiameter as number),
     height: value.height as number,
     thinBottomMode:
       typeof value.thinBottomMode === 'boolean'
@@ -541,7 +589,7 @@ export function isOpenGridStackableCylinderParameters(
 export function boundsForOpenGridStackableCylinder(
   parameters: OpenGridStackableCylinderParameters,
 ) {
-  const radius = parameters.diameter / 2
+  const radius = derivedOuterRadiusFor(parameters)
   const minimumZ =
     parameters.bottomSeatMode === 'integrated'
       ? OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatMinZ
@@ -690,9 +738,19 @@ function bottomHoleSectionDepthForProfile(
   return OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.bottomHoleSectionDepth
 }
 
+function derivedOuterRadiusFor(
+  parameters: OpenGridStackableCylinderParameters,
+): number {
+  return (
+    parameters.innerDiameter / 2 +
+    wallThicknessForProfile(profileForParameters(parameters))
+  )
+}
+
 function openingGeometryForDirection(
   parameters: OpenGridStackableCylinderParameters,
   direction: OpenGridStackableCylinderOpeningDirection,
+  outerRadius: number,
 ): OpenGridStackableCylinderDerivedOpening {
   const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
   const keys = OPENING_KEYS_BY_DIRECTION[direction]
@@ -731,7 +789,7 @@ function openingGeometryForDirection(
       : verticalSideHeight / Math.tan(angleRadians)
   const horizontalRun = cornerRun * 2 + straightSideRun
   const upperWidth = bottomLength + horizontalRun * 2
-  const radius = parameters.diameter / 2
+  const radius = outerRadius
   const halfWidthRatio = upperWidth / 2 / radius
   const angularHalfWidth =
     halfWidthRatio < 1 ? Math.asin(halfWidthRatio) : Math.PI / 2
@@ -757,6 +815,7 @@ function openingGeometryForDirection(
 function openingGeometryFor(
   parameters: OpenGridStackableCylinderParameters,
   floorThickness: number,
+  outerRadius: number,
 ): Record<
   OpenGridStackableCylinderOpeningDirection,
   OpenGridStackableCylinderDerivedOpening
@@ -766,7 +825,11 @@ function openingGeometryFor(
     OpenGridStackableCylinderDerivedOpening
   >
   for (const direction of OPENGRID_STACKABLE_CYLINDER_OPENING_DIRECTIONS) {
-    openings[direction] = openingGeometryForDirection(parameters, direction)
+    openings[direction] = openingGeometryForDirection(
+      parameters,
+      direction,
+      outerRadius,
+    )
   }
   return openings
 }
@@ -776,10 +839,10 @@ export function openGridStackableCylinderDerivedGeometryFor(
 ): OpenGridStackableCylinderDerivedGeometry {
   const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
   const profile = profileForParameters(parameters)
-  const radius = parameters.diameter / 2
   const wallThickness = wallThicknessForProfile(profile)
+  const innerRadius = parameters.innerDiameter / 2
+  const radius = innerRadius + wallThickness
   const topInnerChamfer = topInnerChamferForProfile(profile)
-  const innerRadius = radius - wallThickness
   const matingProtrusionRadius = innerRadius - configuration.stackFitClearance
   const isBottomPlate = profile === 'bottom-plate'
   const outerTransitionStartRadius = matingProtrusionRadius
@@ -829,7 +892,7 @@ export function openGridStackableCylinderDerivedGeometryFor(
     flatFloorZ,
     innerRampEndRadius,
     innerRampEndZ,
-    openings: openingGeometryFor(parameters, floorThickness),
+    openings: openingGeometryFor(parameters, floorThickness, radius),
   }
 }
 
@@ -852,9 +915,7 @@ export function openGridStackableCylinderOpeningBottomLengthMaximumFor(
 
   let maximum = Math.min(
     configuration.openingBottomLengthMax,
-    largestIntegerStrictlyBelow(
-      parameters.diameter - opening.horizontalRun * 2,
-    ),
+    largestIntegerStrictlyBelow(derived.radius * 2 - opening.horizontalRun * 2),
   )
 
   for (const [firstDirection, secondDirection] of ADJACENT_OPENING_DIRECTIONS) {
@@ -869,7 +930,7 @@ export function openGridStackableCylinderOpeningBottomLengthMaximumFor(
     const remainingAngle = Math.PI / 2 - neighbor.angularHalfWidth
     if (remainingAngle <= 0) return configuration.openingBottomLengthMin
 
-    const upperWidthLimit = parameters.diameter * Math.sin(remainingAngle)
+    const upperWidthLimit = derived.radius * 2 * Math.sin(remainingAngle)
     const neighboringMaximum = largestIntegerStrictlyBelow(
       upperWidthLimit - opening.horizontalRun * 2,
     )
@@ -982,7 +1043,7 @@ export function openGridStackableCylinderFileName(
   const seatSuffix = seatSuffixFor(parameters)
   const honeycombSuffix = honeycombSuffixFor(parameters)
   const openingSuffix = openingFingerprintFor(parameters)
-  return `opengrid-stackable-cylinder-d${parameters.diameter}-h${parameters.height}${seatSuffix}${modeSuffix}${honeycombSuffix}${openingSuffix}.step`
+  return `opengrid-stackable-cylinder-d${parameters.innerDiameter}-h${parameters.height}${seatSuffix}${modeSuffix}${honeycombSuffix}${openingSuffix}.step`
 }
 
 export function openGridStackableCylinderStlFileName(
@@ -992,5 +1053,5 @@ export function openGridStackableCylinderStlFileName(
   const seatSuffix = seatSuffixFor(parameters)
   const honeycombSuffix = honeycombSuffixFor(parameters)
   const openingSuffix = openingFingerprintFor(parameters)
-  return `opengrid-stackable-cylinder-d${parameters.diameter}-h${parameters.height}${seatSuffix}${modeSuffix}${honeycombSuffix}${openingSuffix}.stl`
+  return `opengrid-stackable-cylinder-d${parameters.innerDiameter}-h${parameters.height}${seatSuffix}${modeSuffix}${honeycombSuffix}${openingSuffix}.stl`
 }

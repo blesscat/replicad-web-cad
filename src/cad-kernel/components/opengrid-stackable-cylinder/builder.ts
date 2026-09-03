@@ -419,7 +419,7 @@ function makeSideOpeningCutter(
     sketcher.lineTo(leftTransition)
     sketcher.threePointsArcTo(leftBottom, leftBottomMidpoint)
     sketch = sketcher.close()
-    current = sketch.extrude(parameters.diameter + topExtension, {
+    current = sketch.extrude(derived.radius * 2 + topExtension, {
       extrusionDirection: [1, 0, 0],
     })
 
@@ -1246,7 +1246,7 @@ export function inspectOpenGridStackableCylinderInterface(
     shape,
     parameters.height - 0.05,
     parameters.height + 0.05,
-    parameters.diameter / 2 - 0.01,
+    derived.radius - 0.01,
   )
   const topInnerChamferFaceCount = countConicalFacesInRadialBand(
     shape,
@@ -1297,14 +1297,14 @@ export function inspectOpenGridStackableCylinderInterface(
     derived.outerTransitionStartZ - 0.05,
     derived.outerTransitionEndZ + 0.05,
     derived.outerTransitionStartRadius - 0.2,
-    parameters.diameter / 2 + 0.2,
+    derived.radius + 0.2,
   )
   const bottomOuterChamferHeight = maxConicalFaceHeightInRadialBand(
     shape,
     derived.outerTransitionStartZ - 0.05,
     derived.outerTransitionEndZ + 0.05,
     derived.outerTransitionStartRadius - 0.2,
-    parameters.diameter / 2 + 0.2,
+    derived.radius + 0.2,
   )
   const innerRampFaceCount =
     derived.profile === 'thin'

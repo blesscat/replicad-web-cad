@@ -95,28 +95,28 @@ describe('OpenGrid honeycomb material-saving profile modes', () => {
   it.each([
     {
       name: 'cylinder default',
-      diameter: 48,
+      innerDiameter: 44,
       thinBottomMode: false,
       bottomPlateMode: false,
     },
     {
       name: 'cylinder thin',
-      diameter: 48,
+      innerDiameter: 44,
       thinBottomMode: true,
       bottomPlateMode: false,
     },
     {
       name: 'cylinder bottom-plate',
-      diameter: 48,
+      innerDiameter: 44,
       thinBottomMode: false,
       bottomPlateMode: true,
     },
   ])(
     'keeps the $name lower stacking boundary while adding eligible bottom honeycomb cells',
-    ({ diameter, thinBottomMode, bottomPlateMode }) => {
+    ({ innerDiameter, thinBottomMode, bottomPlateMode }) => {
       const input = {
         ...OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-        diameter,
+        innerDiameter,
         height: 20,
         thinBottomMode,
         bottomPlateMode,

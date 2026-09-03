@@ -105,7 +105,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
     ).toBe(false)
   })
 
-  it('accepts the exact typed outer-diameter and height snapshot', () => {
+  it('accepts the exact typed inner-diameter and height snapshot', () => {
     const value = parameters()
 
     expect(validateOpenGridStackableCylinderParameters(value)).toEqual({
@@ -390,20 +390,72 @@ describe('OpenGrid stackable-cylinder contract', () => {
     }
   })
 
-  it('normalizes legacy diameter and height snapshots to the default profile', () => {
-    const legacyParameters = parameters({ diameter: 56, height: 30 })
+  it('normalizes legacy inner diameter and height snapshots to the default profile', () => {
+    const legacyParameters = parameters({ innerDiameter: 56, height: 30 })
     expect(
-      validateOpenGridStackableCylinderParameters({ diameter: 56, height: 30 }),
+      validateOpenGridStackableCylinderParameters({
+        innerDiameter: 56,
+        height: 30,
+      }),
     ).toEqual({
       valid: true,
       value: legacyParameters,
     })
   })
 
+  it('migrates a legacy outer diameter to the inner diameter per profile', () => {
+    const stacking = validateOpenGridStackableCylinderParameters({
+      diameter: 60,
+      height: 20,
+    })
+    expect(stacking).toEqual({
+      valid: true,
+      value: parameters({ innerDiameter: 56, height: 20 }),
+    })
+
+    const bottomPlate = validateOpenGridStackableCylinderParameters({
+      diameter: 60,
+      height: 20,
+      bottomPlateMode: true,
+    })
+    expect(bottomPlate).toEqual({
+      valid: true,
+      value: parameters({
+        innerDiameter: 56,
+        height: 20,
+        bottomPlateMode: true,
+      }),
+    })
+
+    const thin = validateOpenGridStackableCylinderParameters({
+      diameter: 60,
+      height: 20,
+      thinBottomMode: true,
+    })
+    expect(thin).toEqual({
+      valid: true,
+      value: parameters({
+        innerDiameter: 57,
+        height: 20,
+        thinBottomMode: true,
+      }),
+    })
+
+    const canonicalWins = validateOpenGridStackableCylinderParameters({
+      diameter: 60,
+      innerDiameter: 40,
+      height: 20,
+    })
+    expect(canonicalWins).toEqual({
+      valid: true,
+      value: parameters({ innerDiameter: 40, height: 20 }),
+    })
+  })
+
   it.each([
-    [parameters({ diameter: 19 }), 'diameter'],
-    [parameters({ diameter: 301 }), 'diameter'],
-    [parameters({ diameter: 56.5 }), 'diameter'],
+    [parameters({ innerDiameter: 19 }), 'innerDiameter'],
+    [parameters({ innerDiameter: 301 }), 'innerDiameter'],
+    [parameters({ innerDiameter: 56.5 }), 'innerDiameter'],
     [parameters({ height: 9 }), 'height'],
     [parameters({ height: 501 }), 'height'],
     [parameters({ height: 30.5 }), 'height'],
@@ -416,6 +468,19 @@ describe('OpenGrid stackable-cylinder contract', () => {
       if (!validation.valid) expect(validation.issues[0]?.field).toBe(field)
     },
   )
+
+  it('rejects a migrated legacy outer diameter outside the inner range', () => {
+    const validation = validateOpenGridStackableCylinderParameters({
+      diameter: 20,
+      height: 20,
+      thinBottomMode: true,
+    })
+
+    expect(validation.valid).toBe(false)
+    if (!validation.valid) {
+      expect(validation.issues[0]?.field).toBe('innerDiameter')
+    }
+  })
 
   it.each([
     ['thinBottomMode', 'true'],
@@ -455,10 +520,10 @@ describe('OpenGrid stackable-cylinder contract', () => {
       max: [30, 30, 20],
     })
     expect(openGridStackableCylinderFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat.step',
+      'opengrid-stackable-cylinder-d56-h20-seats-detachable-corner-seat.step',
     )
     expect(openGridStackableCylinderStlFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat.stl',
+      'opengrid-stackable-cylinder-d56-h20-seats-detachable-corner-seat.stl',
     )
     const model = {
       modelId: 'opengrid-stackable-cylinder' as const,
@@ -468,10 +533,10 @@ describe('OpenGrid stackable-cylinder contract', () => {
       boundsForOpenGridStackableCylinder(value),
     )
     expect(modelFileName(model)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat.step',
+      'opengrid-stackable-cylinder-d56-h20-seats-detachable-corner-seat.step',
     )
     expect(modelStlFileName(model)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat.stl',
+      'opengrid-stackable-cylinder-d56-h20-seats-detachable-corner-seat.stl',
     )
     expect(validateModelParameters(model.modelId, value)).toEqual({
       valid: true,
@@ -489,21 +554,21 @@ describe('OpenGrid stackable-cylinder contract', () => {
     }
 
     expect(openGridStackableCylinderFileName(thin)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat-thin.step',
+      'opengrid-stackable-cylinder-d56-h20-seats-detachable-corner-seat-thin.step',
     )
     expect(openGridStackableCylinderStlFileName(noSeats)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-none.stl',
+      'opengrid-stackable-cylinder-d56-h20-seats-none.stl',
     )
     expect(openGridStackableCylinderFileName(thinNoHoles)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-none-thin.step',
+      'opengrid-stackable-cylinder-d56-h20-seats-none-thin.step',
     )
     expect(openGridStackableCylinderFileName(integrated)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-integrated.step',
+      'opengrid-stackable-cylinder-d56-h20-seats-integrated.step',
     )
     expect(
       openGridStackableCylinderFileName(parameters({ bottomPlateMode: true })),
     ).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat-bottom-plate.step',
+      'opengrid-stackable-cylinder-d56-h20-seats-detachable-corner-seat-bottom-plate.step',
     )
   })
 
@@ -515,10 +580,10 @@ describe('OpenGrid stackable-cylinder contract', () => {
     })
 
     expect(openGridStackableCylinderFileName(input)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
+      'opengrid-stackable-cylinder-d56-h20-seats-detachable-corner-seat-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
     )
     expect(openGridStackableCylinderStlFileName(input)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat-open-8-12-70_0-1-90_0-1-90_0-1-90.stl',
+      'opengrid-stackable-cylinder-d56-h20-seats-detachable-corner-seat-open-8-12-70_0-1-90_0-1-90_0-1-90.stl',
     )
   })
 
@@ -526,10 +591,10 @@ describe('OpenGrid stackable-cylinder contract', () => {
     const value = parameters({ honeycombMode: true })
 
     expect(openGridStackableCylinderFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat-honeycomb.step',
+      'opengrid-stackable-cylinder-d56-h20-seats-detachable-corner-seat-honeycomb.step',
     )
     expect(openGridStackableCylinderStlFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-detachable-corner-seat-honeycomb.stl',
+      'opengrid-stackable-cylinder-d56-h20-seats-detachable-corner-seat-honeycomb.stl',
     )
   })
 
@@ -544,10 +609,10 @@ describe('OpenGrid stackable-cylinder contract', () => {
     })
 
     expect(openGridStackableCylinderFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-none-thin-honeycomb-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
+      'opengrid-stackable-cylinder-d56-h20-seats-none-thin-honeycomb-open-8-12-70_0-1-90_0-1-90_0-1-90.step',
     )
     expect(openGridStackableCylinderStlFileName(value)).toBe(
-      'opengrid-stackable-cylinder-d60-h20-seats-none-thin-honeycomb-open-8-12-70_0-1-90_0-1-90_0-1-90.stl',
+      'opengrid-stackable-cylinder-d56-h20-seats-none-thin-honeycomb-open-8-12-70_0-1-90_0-1-90_0-1-90.stl',
     )
   })
 
@@ -563,20 +628,22 @@ describe('OpenGrid stackable-cylinder contract', () => {
 
   it('keeps only the center hole when the outer layer cannot clear the edge', () => {
     expect(
-      openGridStackableCylinderHoleCentersFor(parameters({ diameter: 20 })),
+      openGridStackableCylinderHoleCentersFor(
+        parameters({ innerDiameter: 20 }),
+      ),
     ).toEqual([[0, 0]])
   })
 
   it.each([
-    [39, 0],
-    [40, 0],
-    [47, 4],
-    [48, 4],
+    [35, 0],
+    [36, 0],
+    [43, 4],
+    [44, 4],
   ])(
-    'selects the first flat-floor-safe outer layer at diameter %s',
-    (diameter, expectedOuterHoleCount) => {
+    'selects the first flat-floor-safe outer layer at inner diameter %s',
+    (innerDiameter, expectedOuterHoleCount) => {
       expect(
-        openGridStackableCylinderHoleCentersFor(parameters({ diameter })),
+        openGridStackableCylinderHoleCentersFor(parameters({ innerDiameter })),
       ).toHaveLength(expectedOuterHoleCount + 1)
     },
   )
@@ -584,19 +651,24 @@ describe('OpenGrid stackable-cylinder contract', () => {
   it('preserves the existing integrated outer layer while locking uses its full envelope', () => {
     expect(
       openGridStackableCylinderHoleCentersFor(
-        parameters({ diameter: 40, bottomSeatMode: 'integrated' }),
+        parameters({ innerDiameter: 36, bottomSeatMode: 'integrated' }),
       ),
     ).toHaveLength(5)
     expect(
       openGridStackableCylinderHoleCentersFor(
-        parameters({ diameter: 40, bottomSeatMode: 'detachable-corner-seat' }),
+        parameters({
+          innerDiameter: 36,
+          bottomSeatMode: 'detachable-corner-seat',
+        }),
       ),
     ).toHaveLength(1)
   })
 
   it('uses the maximum safe 14 mm layer at the largest diameter', () => {
     expect(
-      openGridStackableCylinderHoleCentersFor(parameters({ diameter: 300 })),
+      openGridStackableCylinderHoleCentersFor(
+        parameters({ innerDiameter: 296 }),
+      ),
     ).toEqual([
       [0, 0],
       [140, 0],
@@ -607,17 +679,17 @@ describe('OpenGrid stackable-cylinder contract', () => {
   })
 
   it.each([
-    [39, 0],
-    [40, 0],
-    [47, 0],
-    [48, 0],
-    [49, 0],
+    [35, 0],
+    [36, 0],
+    [43, 0],
+    [44, 0],
+    [45, 0],
   ])(
-    'selects the thin-mode outer layer at diameter %s',
-    (diameter, expectedOuterHoleCount) => {
+    'selects the thin-mode outer layer at inner diameter %s',
+    (innerDiameter, expectedOuterHoleCount) => {
       expect(
         openGridStackableCylinderHoleCentersFor(
-          parameters({ diameter, thinBottomMode: true }),
+          parameters({ innerDiameter, thinBottomMode: true }),
         ),
       ).toHaveLength(expectedOuterHoleCount + 1)
     },
@@ -632,7 +704,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
   })
 
   it('derives the default floor fillet and mating protrusion from fixed geometry', () => {
-    const input = parameters({ diameter: 56 })
+    const input = parameters({ innerDiameter: 56 })
     const derived = openGridStackableCylinderDerivedGeometryFor(input)
     const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
 
@@ -659,7 +731,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
   })
 
   it('derives the thin floor ramp independently from the default profile', () => {
-    const input = parameters({ diameter: 56, thinBottomMode: true })
+    const input = parameters({ innerDiameter: 56, thinBottomMode: true })
     const derived = openGridStackableCylinderDerivedGeometryFor(input)
     const configuration = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION
 
@@ -693,7 +765,7 @@ describe('OpenGrid stackable-cylinder contract', () => {
 
   it('uses the box-aligned thin shell thickness while retaining stack clearance', () => {
     const derived = openGridStackableCylinderDerivedGeometryFor(
-      parameters({ diameter: 56, thinBottomMode: true }),
+      parameters({ innerDiameter: 56, thinBottomMode: true }),
     )
 
     expect(derived.flatFloorZ).toBe(2)
@@ -744,9 +816,9 @@ describe('OpenGrid stackable-cylinder contract', () => {
   })
 
   it('keeps the bottom-plate interior vertical and uses the default hole layout', () => {
-    const defaultInput = parameters({ diameter: 47 })
+    const defaultInput = parameters({ innerDiameter: 47 })
     const bottomPlateInput = parameters({
-      diameter: 47,
+      innerDiameter: 47,
       bottomPlateMode: true,
     })
     const derived =

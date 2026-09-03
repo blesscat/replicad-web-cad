@@ -8,6 +8,7 @@ import {
   HEXAGONAL_COLUMN_CONFIGURATION,
   isOpenGridSnapFootprint,
   isOpenGridSnapMagnetHoleShape,
+  legacyInnerDiameterFor,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_OPENING_PARAMETER_KEYS,
   OPENGRID_LOCATING_SEAT_MODES,
@@ -58,7 +59,7 @@ export const OPENGRID_STACKABLE_BOX_PARAMETER_KEYS: ModelParameterKey[] = [
   ...OPENGRID_STACKABLE_BOX_OPENING_PARAMETER_KEYS,
 ]
 export const OPENGRID_STACKABLE_CYLINDER_PARAMETER_KEYS: ModelParameterKey[] = [
-  'diameter',
+  'innerDiameter',
   'height',
   'thinBottomMode',
   'bottomPlateMode',
@@ -624,13 +625,13 @@ export function rawFromParameters(
     }
   }
 
-  if ('diameter' in parameters && 'height' in parameters) {
+  if ('innerDiameter' in parameters && 'height' in parameters) {
     const bottomSeatMode =
       normalizeOpenGridLocatingSeatMode(
         'bottomSeatMode' in parameters ? parameters.bottomSeatMode : undefined,
       ) ?? OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS.bottomSeatMode
     const raw: RawParameters = {
-      diameter: String(parameters.diameter),
+      innerDiameter: String(parameters.innerDiameter),
       height: String(parameters.height),
       thinBottomMode: String(
         'thinBottomMode' in parameters ? parameters.thinBottomMode : false,
@@ -909,11 +910,30 @@ export function parseRawParameters(
   }
 
   const keys = parameterKeysForModel(modelId)
+  const legacyAliases =
+    modelId === 'opengrid-stackable-cylinder' ? (['diameter'] as const) : []
   const unexpectedKey = Object.keys(raw).find(
-    (key) => !keys.includes(key as ModelParameterKey),
+    (key) =>
+      !keys.includes(key as ModelParameterKey) &&
+      !legacyAliases.includes(key as never),
   )
   if (unexpectedKey) {
     return { valid: false, messageId: 'validation.invalid' }
+  }
+
+  if (
+    modelId === 'opengrid-stackable-cylinder' &&
+    raw.innerDiameter === undefined
+  ) {
+    const legacyInnerDiameter = legacyInnerDiameterFor(
+      raw as unknown as Record<string, unknown>,
+    )
+    if (legacyInnerDiameter !== undefined) {
+      raw = {
+        ...raw,
+        innerDiameter: String(legacyInnerDiameter),
+      } as RawParameters
+    }
   }
 
   if (modelId === 'opengrid-pillar') {
