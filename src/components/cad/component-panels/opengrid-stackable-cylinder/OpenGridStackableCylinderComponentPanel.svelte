@@ -276,7 +276,7 @@
     </label>
   </div>
   <p
-    class="m-0 text-sm text-muted"
+    class="m-0 text-sm text-muted-foreground"
     data-testid="opengrid-cylinder-mode-description"
     aria-live="polite"
   >
@@ -309,7 +309,7 @@
         </label>
       {/each}
     </div>
-    <span class="text-sm text-muted">
+    <span class="text-sm text-muted-foreground">
       {seatModeDescription()}
     </span>
     {#if fieldErrors.bottomSeatMode}

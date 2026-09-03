@@ -26,7 +26,7 @@
 
 {#if systemContext}
   <p
-    class="m-0 text-sm font-semibold text-muted"
+    class="m-0 text-sm font-semibold text-muted-foreground"
     data-testid="cad-system-context"
   >
     {translate(locale, 'cad.system.current', {

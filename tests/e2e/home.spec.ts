@@ -220,7 +220,7 @@ test('home, model selection, and docs are static Astro pages', async ({
   await expect(page).toHaveURL(/\/zh-Hant\/$/)
   await expect(
     page.getByRole('heading', {
-      name: '把你想做的 CAD 元件，集中在一個地方',
+      name: /把你想做的 CAD 元件，\s*集中在一個地方/,
     }),
   ).toBeVisible()
   await expect(page.getByTestId('home-hero')).toBeVisible()
@@ -478,7 +478,7 @@ test('Traditional Chinese homepage uses the Desk System entry flow', async ({
   )
   await expect(
     page.getByRole('heading', {
-      name: '把你想做的 CAD 元件，集中在一個地方',
+      name: /把你想做的 CAD 元件，\s*集中在一個地方/,
     }),
   ).toBeVisible()
   await expect(page.getByTestId('home-hero')).toBeVisible()
@@ -519,7 +519,7 @@ test('English homepage uses localized promotional content and routes', async ({
   )
   await expect(
     page.getByRole('heading', {
-      name: 'Keep the CAD parts you want to make in one place',
+      name: /Keep the CAD parts\s*you want to make in one place/,
     }),
   ).toBeVisible()
   await expectHomepageExploreCards(page)

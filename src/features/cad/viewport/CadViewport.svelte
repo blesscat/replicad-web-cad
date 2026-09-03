@@ -90,7 +90,7 @@
   <div id="cad-viewport-surface" class="viewport-surface">
     {#if !webglSupported}
       <div
-        class="flex h-full items-center justify-center text-muted"
+        class="flex h-full items-center justify-center text-muted-foreground"
         role="alert"
       >
         {translate(locale, 'cad.viewport.webglUnsupported')}
@@ -110,7 +110,7 @@
         />
       </Canvas>
     {:else}
-      <div class="flex h-full items-center justify-center text-muted">
+      <div class="flex h-full items-center justify-center text-muted-foreground">
         {translate(locale, 'cad.viewport.empty')}
       </div>
     {/if}

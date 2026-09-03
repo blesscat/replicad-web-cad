@@ -19,7 +19,8 @@ const WEBP_QUALITY = 0.9
  * workflow reads the live theme from the page, so this assertion fails
  * loudly if the CSS token drifts from the value the previews were built on.
  */
-const DARK_PREVIEW_BACKGROUND = '#101827'
+/* Must match the dark --color-viewport token in src/styles/global.css. */
+const DARK_PREVIEW_BACKGROUND = '#060e20'
 const CAPTURE_MODEL_PREVIEWS = process.env.CAPTURE_MODEL_PREVIEWS === '1'
 const MODEL_PREVIEW_ID = process.env.MODEL_PREVIEW_ID
 const PREVIEW_DIRECTORY = path.resolve(process.cwd(), 'public/model-previews')

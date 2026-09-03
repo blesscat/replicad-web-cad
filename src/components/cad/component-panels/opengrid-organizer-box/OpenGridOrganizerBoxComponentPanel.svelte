@@ -244,7 +244,7 @@
 </script>
 
 <fieldset class="m-0 grid gap-3 border-0 p-0">
-  <p class="text-sm text-muted">
+  <p class="text-sm text-muted-foreground">
     {translate(locale, 'panel.organizerBox.description')}
   </p>
 
@@ -275,7 +275,7 @@
         </label>
       {/each}
     </div>
-    <span class="text-sm text-muted">
+    <span class="text-sm text-muted-foreground">
       {translate(
         locale,
         seatOptions.find(
@@ -315,7 +315,7 @@
         </label>
       {/each}
     </div>
-    <span class="text-sm text-muted">
+    <span class="text-sm text-muted-foreground">
       {translate(
         locale,
         bodyOptions.find(
@@ -400,7 +400,7 @@
         </label>
       {/each}
     </div>
-    <span class="text-sm text-muted">
+    <span class="text-sm text-muted-foreground">
       {translate(
         locale,
         spacingOptions.find(
@@ -427,7 +427,7 @@
         })}
       </span>
     {:else}
-      <span class="ml-2 text-muted">
+      <span class="ml-2 text-muted-foreground">
         {translate(locale, 'panel.organizerBox.layoutInvalid')}
       </span>
     {/if}

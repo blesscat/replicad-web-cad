@@ -101,9 +101,9 @@
       {translate(locale, 'panel.gridDimension.title')}
     </h3>
     {#if description}
-      <p class="mt-1 mb-0 text-sm text-muted">{description}</p>
+      <p class="mt-1 mb-0 text-sm text-muted-foreground">{description}</p>
     {:else}
-      <p class="mt-1 mb-0 text-sm text-muted">
+      <p class="mt-1 mb-0 text-sm text-muted-foreground">
         {translate(locale, 'panel.gridDimension.description')}
       </p>
     {/if}
@@ -162,7 +162,7 @@
 
   {#if actualDimensions}
     <p
-      class="m-0 text-sm text-muted"
+      class="m-0 text-sm text-muted-foreground"
       data-testid="grid-dimension-result"
       aria-live="polite"
     >

@@ -532,7 +532,7 @@
       </label>
       <p
         id="opengrid-fit-to-target-description"
-        class="m-0 pl-6 text-sm text-muted"
+        class="m-0 pl-6 text-sm text-muted-foreground"
         data-testid="opengrid-fit-to-target-description"
       >
         {translate(locale, 'panel.opengrid.fitToTargetDescription')}
@@ -765,7 +765,7 @@
     </ParameterField>
   </div>
 
-  <p class="m-0 text-sm text-muted">
+  <p class="m-0 text-sm text-muted-foreground">
     {translate(locale, 'panel.opengrid.dimensions', {
       width,
       depth,
@@ -773,7 +773,7 @@
     })}
   </p>
   {#if parameters.variant === 'Hybrid'}
-    <p class="m-0 text-sm text-muted" data-testid="opengrid-hybrid-description">
+    <p class="m-0 text-sm text-muted-foreground" data-testid="opengrid-hybrid-description">
       {translate(locale, 'panel.opengrid.hybridDescription')}
     </p>
   {/if}
@@ -997,7 +997,7 @@
       >
     </select>
     {#if isScrewPreset(selectedScrewPreset)}
-      <p class="m-0 text-sm text-muted">
+      <p class="m-0 text-sm text-muted-foreground">
         {translate(locale, 'panel.opengrid.woodScrewDescription')}
       </p>
     {/if}

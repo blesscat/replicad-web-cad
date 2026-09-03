@@ -311,7 +311,7 @@
       onChange={(nextValue) => onInputChange('offset', nextValue)}
     />
     {#if !offsetIsAdjustable}
-      <p class="m-0 text-sm text-muted" role="status">
+      <p class="m-0 text-sm text-muted-foreground" role="status">
         {translate(locale, 'panel.snap.invalidOffset')}
       </p>
     {/if}
@@ -414,7 +414,7 @@
       >
     </select>
     {#if magnetControlsAreDisabled}
-      <p class="m-0 text-sm text-muted" role="status">
+      <p class="m-0 text-sm text-muted-foreground" role="status">
         {translate(locale, 'panel.snap.magnetHoleInvalid')}
       </p>
     {/if}
@@ -517,7 +517,7 @@
           {translate(locale, 'panel.snap.locatingHoles')}
         </label>
         {#if fixedFootprintFeaturesAreDisabled}
-          <p class="m-0 text-sm text-muted" role="status">
+          <p class="m-0 text-sm text-muted-foreground" role="status">
             {translate(locale, 'panel.snap.locatingHolesInvalid')}
           </p>
         {/if}
@@ -548,7 +548,7 @@
           {translate(locale, 'panel.snap.removerHole')}
         </label>
         {#if fixedFootprintFeaturesAreDisabled}
-          <p class="m-0 text-sm text-muted" role="status">
+          <p class="m-0 text-sm text-muted-foreground" role="status">
             {translate(locale, 'panel.snap.removerHoleInvalid')}
           </p>
         {/if}

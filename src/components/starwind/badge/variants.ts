@@ -42,7 +42,7 @@ const badgeAppearanceStyles = {
 } as const
 
 const badgeEyebrowStyles = {
-  true: 'uppercase tracking-wider',
+  true: 'font-mono uppercase tracking-wider',
   false: '',
 } as const
 

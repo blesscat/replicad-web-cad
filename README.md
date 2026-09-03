@@ -77,6 +77,7 @@ src/
 - `pages/` 只提供頁面內容、fallback 與 Svelte 掛載點；共用 Astro shell、導覽與 head metadata 由 `layouts/` 負責。
 - `layouts/` 負責共用 Astro shell、導覽與 head metadata。
 - `styles/` 是全域樣式入口，只放 Tailwind import、`@theme` tokens、reset 與必要的 base rules，不放頁面或功能元件 selector。
+- 站台外觀跟隨兩套 Stitch 設計系統：深色 = Minimalist Futurism／Cyber-CAD Industrial（`#0b1326` 底、`#38bdf8` neon、青色網格與 glow），淺色 = Kinetic Utility v2（`#f8f9fa` 底、白卡 1px 邊框、`#3b82f6` primary）。所有站台色彩 token 以 `styles/global.css` 為唯一定義點；`styles/starwind.css` 只保留 Starwind 專屬語意並以 `var()` 引用 global token，不得重複定義同名 `--color-*`。
 - 頁面與元件預設使用 Tailwind utility classes；utility class 必須以完整、可靜態掃描的字串呈現，不拼接部分 class token。
 - `features/cad/viewport/` 與其他功能資料夾預設使用 Tailwind；只有 utility 不易表達的複雜 selector 或 descendant rule 才在實際擁有該樣式的資料夾放 scoped SCSS。
 - `components/cad/` 組裝 Svelte workspace，負責 UI controller、輸入驗證、Worker lifecycle、控制面板與 viewport，不直接 import CAD kernel。
