@@ -40,15 +40,15 @@ export const flowDiagram = {
       'zh-Hant': 'Board（底版）',
     },
     'print-and-place-on-the-desk': {
-      en: 'Print and place on the desk',
+      en: 'Print and place it',
       'zh-Hant': '列印並放在桌面上',
     },
     'simple-placement-is-enough': {
-      en: 'Simple placement is enough',
+      en: 'Just place it down',
       'zh-Hant': '直接放置即可',
     },
     'screw-hole-fastening-optional': {
-      en: 'Screw-hole fastening: optional',
+      en: 'Screw holes optional',
       'zh-Hant': '螺絲孔固定：非必要',
     },
     snap: {
@@ -60,11 +60,11 @@ export const flowDiagram = {
       'zh-Hant': '每個盒子位置一個',
     },
     'prepare-the-matching-snap': {
-      en: 'Prepare the matching Snap',
+      en: 'Get the matching Snap',
       'zh-Hant': '準備對應的 Snap',
     },
     'before-adding-the-container': {
-      en: 'before adding the container',
+      en: 'before adding a box',
       'zh-Hant': '再放入容器',
     },
     'choose-one-locator': {

@@ -28,7 +28,7 @@ export const locatingOptionsDiagram = {
       'zh-Hant': 'A. 獨立 Locating Post',
     },
     'box-has-a-regular-seat-hole': {
-      en: 'Box has a regular seat hole.',
+      en: 'Uses regular seat holes',
       'zh-Hant': '盒子使用一般角座孔。',
     },
     'print-and-install-one': {
@@ -36,7 +36,7 @@ export const locatingOptionsDiagram = {
       'zh-Hant': '另外列印並安裝一個',
     },
     'separate-locating-post': {
-      en: 'separate Locating Post.',
+      en: 'separate Locating Post',
       'zh-Hant': '獨立 Locating Post。',
     },
     'extra-part-required': {
@@ -48,19 +48,19 @@ export const locatingOptionsDiagram = {
       'zh-Hant': 'B. 內建角座',
     },
     'choose-the-box-option': {
-      en: 'Choose the box option',
+      en: "Pick the box's",
       'zh-Hant': '選擇盒子的',
     },
-    text: {
-      en: '`內建角座`.',
+    'built-in-seat-option': {
+      en: 'built-in seat option',
       'zh-Hant': '「內建角座」選項。',
     },
     'the-seat-is-part-of-the': {
-      en: 'The seat is part of the box.',
+      en: 'The seat is built in',
       'zh-Hant': '定位座是盒子的一部分。',
     },
     'no-extra-locating-post': {
-      en: 'No extra Locating Post',
+      en: 'No extra Post needed',
       'zh-Hant': '不需要額外 Locating Post',
     },
     'choose-a-or-b-never-both': {
@@ -103,7 +103,7 @@ export const locatingOptionsDiagram = {
   <path d="M 745 370 V 415" stroke="${c.color('accentAmber')}" stroke-width="14" stroke-linecap="round"/>
   <circle cx="745" cy="255" r="24" fill="${c.color('accentAmber')}" stroke="white" stroke-width="5"/>
   <text x="860" y="270" fill="${c.color('body')}" font-family="${c.font}" font-size="17">${c.t('choose-the-box-option')}</text>
-  <text x="860" y="302" fill="${c.color('muted')}" font-family="${c.font}" font-size="17">${c.t('text')}</text>
+  <text x="860" y="302" fill="${c.color('muted')}" font-family="${c.font}" font-size="17">${c.t('built-in-seat-option')}</text>
   <text x="860" y="330" fill="${c.color('muted')}" font-family="${c.font}" font-size="17">${c.t('the-seat-is-part-of-the')}</text>
   <text x="860" y="380" fill="${c.color('headingAmber')}" font-family="${c.font}" font-size="16" font-weight="700">${c.t('no-extra-locating-post')}</text>
 

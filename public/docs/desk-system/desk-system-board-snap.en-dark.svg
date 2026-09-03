@@ -44,6 +44,6 @@
     <rect x="700" y="330" width="230" height="120" rx="20" fill="#451a03" stroke="#fbbf24" stroke-width="3"/>
   </g>
   <text x="730" y="370" fill="#fcd34d" font-family="Inter, sans-serif" font-size="21" font-weight="700">Next</text>
-  <text x="730" y="403" fill="#c8d3e7" font-family="Inter, sans-serif" font-size="16">Add one locating method</text>
+  <text x="730" y="403" fill="#c8d3e7" font-family="Inter, sans-serif" font-size="16">Add a locating method</text>
   <text x="730" y="428" fill="#9ca3af" font-family="Inter, sans-serif" font-size="16">before the container</text>
 </svg>

@@ -48,7 +48,7 @@ export const boardSnapDiagram = {
       'zh-Hant': '下一步',
     },
     'add-one-locating-method': {
-      en: 'Add one locating method',
+      en: 'Add a locating method',
       'zh-Hant': '加入一種定位方式',
     },
     'before-the-container': {
