@@ -18,6 +18,8 @@
     "test:e2e": "playwright test",
     "capture:model-previews": "CAPTURE_MODEL_PREVIEWS=1 playwright test tests/e2e/model-card-previews.spec.ts --project=chromium --workers=1",
     "verify:model-previews": "playwright test tests/e2e/model-card-previews.spec.ts --project=chromium --workers=1",
+    "generate:desk-diagrams": "node scripts/desk-diagrams/generate.mjs",
+    "verify:desk-diagrams": "node scripts/desk-diagrams/generate.mjs --check",
     "test:e2e:firefox": "xvfb-run -a env PW_HEADFUL=1 playwright test --project=firefox --headed"
   },
   "engines": {

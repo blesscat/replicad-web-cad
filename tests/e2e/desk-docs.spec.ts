@@ -87,16 +87,30 @@ for (const locale of locales) {
       page.getByRole('link', { name: locale.roundBox }).first(),
     ).toBeVisible()
 
-    await expect(page.locator('img[src^="/docs/desk-system/"]')).toHaveCount(3)
+    const quickStartDiagrams = page.locator(
+      '[data-testid="desk-quick-start"] img[src^="/docs/desk-system/"]',
+    )
+    await expect(quickStartDiagrams).toHaveCount(6)
+    await expect(
+      page.locator(
+        '[data-testid="desk-quick-start"] img[src^="/docs/desk-system/"]:not([src$="-dark.svg"])',
+      ),
+    ).toHaveCount(3)
+    const darkDiagrams = page.locator(
+      '[data-testid="desk-quick-start"] img[src^="/docs/desk-system/"][src$="-dark.svg"]',
+    )
+    await expect(darkDiagrams).toHaveCount(3)
+    for (const diagram of await darkDiagrams.all()) {
+      await expect(diagram).toHaveAttribute('alt', '')
+      await expect(diagram).toHaveAttribute('aria-hidden', 'true')
+    }
     await expect(
       page.locator(
         '[data-testid="docs-wall-system"] img[src$=".webp"]:not([src$="-dark.webp"])',
       ),
     ).toHaveCount(5)
     await expect(
-      page.locator(
-        '[data-testid="docs-wall-system"] img[src$="-dark.webp"]',
-      ),
+      page.locator('[data-testid="docs-wall-system"] img[src$="-dark.webp"]'),
     ).toHaveCount(5)
     const diagramAltPatterns = [
       ['desk-system-flow', /Board|流程圖/],

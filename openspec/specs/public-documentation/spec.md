@@ -112,15 +112,34 @@ The quick start MUST include static visual documentation for the numbered
 assembly flow, Board/Snap placement, and the two locating strategies. Each
 visual MUST have localized alternative text or a caption, and the surrounding
 page MUST provide equivalent text so the instructions remain understandable
-when an image cannot be displayed.
+when an image cannot be displayed. Each visual MUST exist as a light and a dark
+static variant, and the displayed variant MUST follow the site's effective
+appearance — including the manual theme toggle, not only the system
+preference — while the hidden variant MUST NOT degrade accessibility of the
+page.
 
 #### Scenario: Visuals load as static documentation assets
 
 - **WHEN** a user loads the localized Docs page
 - **THEN** the flow, placement, and locating-comparison visuals MUST be
-  addressable static assets
+  addressable static assets in both light and dark variants
 - **AND** the page MUST not require a CAD Worker or client-only geometry render
   to explain the relationships
+
+#### Scenario: Dark appearance renders dark diagram variants
+
+- **WHEN** the site's effective appearance is dark — via system preference or
+  the header theme toggle
+- **THEN** every quick-start visual MUST display its dark variant
+- **AND** switching the effective appearance MUST switch the displayed diagram
+  variant accordingly
+
+#### Scenario: The hidden variant stays accessibility-neutral
+
+- **WHEN** a diagram renders one appearance variant
+- **THEN** the other variant MUST NOT be exposed to the accessibility tree
+- **AND** the displayed diagram MUST have a localized accessible name via the
+  visible variant's alt text or its figure caption
 
 #### Scenario: Images are unavailable
 

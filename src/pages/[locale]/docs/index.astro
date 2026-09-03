@@ -31,6 +31,8 @@ const t = (key: string) => translate(locale, key)
 const quickStartEntries = deskQuickStartEntries(locale)
 const deskDiagramPathFor = (name: string) =>
   `/docs/desk-system/${name}.${locale}.svg`
+const deskDiagramDarkPathFor = (name: string) =>
+  `/docs/desk-system/${name}.${locale}-dark.svg`
 function entryFor(role: DeskQuickStartRole) {
   const entry = quickStartEntries.find((candidate) => candidate.role === role)
   if (!entry) throw new Error(`DESK_QUICK_START_ROLE_MISSING:${role}`)
@@ -115,11 +117,12 @@ const openConnectOrganizerPath = localizedCadPathFor(
       </header>
 
       <figure class="grid gap-3">
-        <img
+        <ModelPreviewPicture
           class="w-full rounded-xl border border-border bg-muted"
           src={deskDiagramPathFor('desk-system-flow')}
-          width="1400"
-          height="820"
+          darkSrc={deskDiagramDarkPathFor('desk-system-flow')}
+          width={1400}
+          height={820}
           loading="eager"
           alt={t('docs.deskQuickStart.visual.flow.alt')}
         />
@@ -194,11 +197,12 @@ const openConnectOrganizerPath = localizedCadPathFor(
       </section>
 
       <figure class="grid gap-3">
-        <img
+        <ModelPreviewPicture
           class="w-full rounded-xl border border-border bg-muted"
           src={deskDiagramPathFor('desk-system-board-snap')}
-          width="1000"
-          height="560"
+          darkSrc={deskDiagramDarkPathFor('desk-system-board-snap')}
+          width={1000}
+          height={560}
           loading="lazy"
           alt={t('docs.deskQuickStart.visual.placement.alt')}
         />
@@ -239,11 +243,12 @@ const openConnectOrganizerPath = localizedCadPathFor(
       </section>
 
       <figure class="grid gap-3">
-        <img
+        <ModelPreviewPicture
           class="w-full rounded-xl border border-border bg-muted"
           src={deskDiagramPathFor('desk-system-locating-options')}
-          width="1100"
-          height="560"
+          darkSrc={deskDiagramDarkPathFor('desk-system-locating-options')}
+          width={1100}
+          height={560}
           loading="lazy"
           alt={t('docs.deskQuickStart.visual.locating.alt')}
         />
