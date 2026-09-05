@@ -222,7 +222,7 @@ test('home, model selection, and docs are static Astro pages', async ({
   await expect(page).toHaveURL(/\/zh-Hant\/$/)
   await expect(
     page.getByRole('heading', {
-      name: /把 3D 列印收納模型，\s*集中在同一個地方/,
+      name: /把 3D 列印收納模型\s*集中在同一個地方/,
     }),
   ).toBeVisible()
   await expect(page.getByTestId('home-hero')).toBeVisible()
@@ -482,7 +482,7 @@ test('Traditional Chinese homepage uses the Desk System entry flow', async ({
   )
   await expect(
     page.getByRole('heading', {
-      name: /把 3D 列印收納模型，\s*集中在同一個地方/,
+      name: /把 3D 列印收納模型\s*集中在同一個地方/,
     }),
   ).toBeVisible()
   await expect(
@@ -533,7 +533,7 @@ test('English homepage uses localized promotional content and routes', async ({
   )
   await expect(
     page.getByRole('heading', {
-      name: /Parametric 3D-printing storage models,\s*in one browser tab/,
+      name: /Parametric 3D-printing storage models\s*in one browser tab/,
     }),
   ).toBeVisible()
   await expect(

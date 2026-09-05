@@ -44,12 +44,10 @@ const homeTitleHtml = (() => {
     /(3D 列印收納模型|3D-printing storage models)/,
     '<span class="text-primary-strong dark:text-cyber-cyan">$1</span>',
   )
-  const parts = highlighted.match(
-    /^(.*?)<span[^>]*>([^<]*)<\/span>(，|,)?(.*)$/,
-  )
+  const parts = highlighted.match(/^(.*?)<span[^>]*>([^<]*)<\/span>\s*(.*)$/)
   if (!parts) return highlighted
-  const [, before, phrase, comma, after] = parts
-  return `${before}<br /><span class="text-primary-strong dark:text-cyber-cyan">${phrase}</span>${comma ?? ''}<br />${after}`
+  const [, before, phrase, after] = parts
+  return `${before}<br /><span class="text-primary-strong dark:text-cyber-cyan">${phrase}</span><br />${after}`
 })()
 ---
 

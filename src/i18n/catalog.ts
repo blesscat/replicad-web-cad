@@ -31,7 +31,7 @@ export const zhHantMessages = {
   'home.metaTitle': 'OpenGrid 客製化產生器｜Shape Shortcut 瀏覽器 CAD',
   'home.metaDescription':
     '在瀏覽器調整 OpenGrid 桌面與牆面收納模型：即時 3D 預覽、匯出 STEP 與 STL，模型下載永久免費、運算全程在本機完成。',
-  'home.title': '把 3D 列印收納模型，集中在同一個地方',
+  'home.title': '把 3D 列印收納模型集中在同一個地方',
   'home.description':
     'Shape Shortcut 是免安裝的瀏覽器 CAD 工具：調整 3D 列印收納模型、即時預覽、直接下載——運算全程在你的瀏覽器完成，模型下載永久免費。',
   'home.primaryCta': '開始客製化',
@@ -817,7 +817,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'home.metaTitle': 'OpenGrid customizer | Shape Shortcut browser CAD',
   'home.metaDescription':
     'Customize OpenGrid desk and wall storage models in your browser: live 3D preview, STEP and STL export, free downloads, all computed locally.',
-  'home.title': 'Parametric 3D-printing storage models, in one browser tab',
+  'home.title': 'Parametric 3D-printing storage models in one browser tab',
   'home.description':
     'Shape Shortcut is a no-install browser CAD tool: adjust 3D-printing storage models, preview live, and download the file—all computation runs in your browser, and model downloads are free forever.',
   'home.primaryCta': 'Start customizing',

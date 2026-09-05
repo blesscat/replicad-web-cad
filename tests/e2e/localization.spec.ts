@@ -243,7 +243,7 @@ test('localized public pages and CAD controls expose both locales', async ({
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant')
   await expect(
     page.getByRole('heading', {
-      name: /把 3D 列印收納模型，\s*集中在同一個地方/,
+      name: /把 3D 列印收納模型\s*集中在同一個地方/,
     }),
   ).toBeVisible()
 
