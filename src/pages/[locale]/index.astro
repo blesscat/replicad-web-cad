@@ -47,7 +47,7 @@ const homeTitleHtml = (() => {
   const parts = highlighted.match(/^(.*?)<span[^>]*>([^<]*)<\/span>\s*(.*)$/)
   if (!parts) return highlighted
   const [, before, phrase, after] = parts
-  return `${before}<br /><span class="text-primary-strong dark:text-cyber-cyan">${phrase}</span><br />${after}`
+  return `${before}<span class="text-primary-strong dark:text-cyber-cyan">${phrase}</span><br />${after}`
 })()
 ---
 
