@@ -18,8 +18,8 @@ test('CAD workspace exposes the independent HSW honeycomb component and exports 
     .click()
   await waitForCadReady(page)
 
-  await expect(page).toHaveURL('/cad/hsw-cell')
-  await expect(page.getByText(/平頂六角單元/)).toBeVisible()
+  await expect(page).toHaveURL('/zh-Hant/cad/hsw-cell')
+  await expect(page.getByText(/平頂六角單元約 27\.25/)).toBeVisible()
   await expect(page.getByText(/不套用額外圓角/)).toBeVisible()
   const rows = page.getByRole('slider', { name: 'Y' })
   const columns = page.getByRole('slider', { name: 'X' })

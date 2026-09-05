@@ -28,14 +28,16 @@ export const zhHantMessages = {
   'navigation.github': 'GitHub',
   'navigation.email': 'Email',
   'home.eyebrow': 'Shape Shortcut · 瀏覽器 CAD 工具',
-  'home.metaTitle': 'Shape Shortcut｜在瀏覽器裡設計、預覽並匯出 CAD',
-  'home.title': '把你想做的 CAD 元件，集中在一個地方',
+  'home.metaTitle': 'OpenGrid 客製化產生器｜Shape Shortcut 瀏覽器 CAD',
+  'home.metaDescription':
+    '在瀏覽器調整 OpenGrid 桌面與牆面收納模型：即時 3D 預覽、匯出 STEP 與 STL，模型下載永久免費、運算全程在本機完成。',
+  'home.title': '把 3D 列印收納模型集中在同一個地方',
   'home.description':
-    'Shape Shortcut 是一個免安裝的瀏覽器 CAD 工具：調整 OpenGrid、HSW 與其他模型，查看即時 3D 預覽，再下載可列印或繼續編輯的檔案。',
-  'home.primaryCta': '開始設計',
+    'Shape Shortcut 是免安裝的瀏覽器 CAD 工具：調整 3D 列印收納模型、即時預覽、直接下載——運算全程在你的瀏覽器完成，模型下載永久免費。',
+  'home.primaryCta': '開始客製化',
   'home.secondaryCta': '從 Desk System 開始',
   'home.docsCta': '閱讀文件 →',
-  'home.heroNote': '目前仍在 prototype 階段，會持續整理更多好用的模型與工具。',
+  'home.heroNote': 'OpenGrid 系列持續擴充中。',
   'home.heroVisual.boardAlt': 'OpenGrid Desk System Board 底板預覽',
   'home.heroVisual.boxAlt': 'OpenGrid Desk System Grid Box 方盒預覽',
   'home.heroVisual.roundBoxAlt': 'OpenGrid Desk System Round Box 圓盒預覽',
@@ -46,15 +48,15 @@ export const zhHantMessages = {
   'home.feature.browser.title': '瀏覽器內建模',
   'home.feature.browser.description':
     '不需安裝桌面 CAD 軟體，就能開始調整與預覽。',
-  'home.feature.parameters.title': '元件專屬參數',
+  'home.feature.parameters.title': '模型專屬參數',
   'home.feature.parameters.description':
-    '每個元件都有自己的尺寸、模式與即時驗證。',
+    '每個模型都有自己的尺寸、模式與即時驗證。',
   'home.feature.preview.title': '即時 3D 預覽',
   'home.feature.preview.description':
     '調整設定後直接檢查形狀，再決定是否下載。',
-  'home.feature.export.title': 'STEP／STL 匯出',
+  'home.feature.export.title': 'STEP 與 STL 匯出',
   'home.feature.export.description':
-    '從精確 B-Rep 產生可供後續製作或加工的檔案。',
+    '不只 STL——匯出可回 CAD 軟體繼續編輯的 STEP，不是近似網格。',
   'home.desk.eyebrow': '主要使用情境',
   'home.desk.title': '從一塊 Board 開始，組出自己的 Desk System',
   'home.desk.description':
@@ -64,8 +66,7 @@ export const zhHantMessages = {
   'home.desk.flowCaption':
     'Board → Snap → 選擇一種定位方式 → Grid Box／Round Box。',
   'home.desk.step.board.title': 'Board',
-  'home.desk.step.board.description':
-    '列印並放在桌面上，螺絲固定不是必要條件。',
+  'home.desk.step.board.description': '列印後放上桌面即可，不鎖螺絲也沒問題。',
   'home.desk.step.snap.title': 'Snap',
   'home.desk.step.snap.description':
     '每個要放盒子的格位，都先準備一個對應的 Snap。',
@@ -84,21 +85,16 @@ export const zhHantMessages = {
   'home.explore.desk.alt': 'OpenGrid Desk System Board 與收納盒預覽',
   'home.explore.wall.title': 'OpenGrid Wall',
   'home.explore.wall.description':
-    '從 Board 與 Snap 開始，設計牆面相關的 OpenGrid 配置。',
-  'home.explore.wall.cta': '探索 Wall Related →',
+    '從 Board 與 Snap 開始配置牆面；Wall Cover 支援雙色 3MF，可直接多色列印。',
+  'home.explore.wall.cta': '探索牆面系統 →',
   'home.explore.wall.alt': 'OpenGrid Wall Board 底板預覽',
-  'home.explore.hsw.title': 'HSW 六角蜂巢',
-  'home.explore.hsw.description':
-    '調整 rows 與 columns，快速產生適合 HSW 系統的六角蜂巢。',
-  'home.explore.hsw.cta': '建立六角蜂巢 →',
-  'home.explore.hsw.alt': 'HSW 六角蜂巢預覽',
-  'home.final.title': '準備好把想法變成模型了嗎？',
-  'home.final.description': '從模型系列開始，找到目前已整理好的工具與元件。',
+  'home.final.title': '走一條捷徑，把想法變成可列印的模型',
+  'home.final.description': '挑一個模型、調好參數，直接下載列印。',
   'home.final.cta': '開始選擇模型 →',
   'home.maker.eyebrow': '關於 Shape Shortcut',
   'home.maker.title': '把好用的 3D 列印工具，整理在同一個地方',
   'home.maker.body':
-    '我是 Blesscat，一名獨立開發者與 3D 列印愛好者。MakerWorld Customizer 很適合快速做小型客製化，但較大型的產生器不容易放進同一套流程；同一個模型的不同變種，也常常需要到不同地方尋找。Shape Shortcut 想把我認為好用的模型與工具集中起來。',
+    '我是 Blesscat，一名獨立開發者與 3D 列印愛好者。MakerWorld Customizer 很適合快速做小型客製化，但參數一多、流程一複雜，就放不進去了；同一個模型的不同變種，也常常需要到不同地方尋找。Shape Shortcut 想把我認為好用的模型與工具集中起來。',
   'home.maker.status': '目前狀態：Prototype',
   'home.maker.portraitAlt': 'Blesscat 的插畫肖像',
   'home.maker.aboutCta': '閱讀完整自我介紹 →',
@@ -144,7 +140,6 @@ export const zhHantMessages = {
   'models.previewUnavailable': '預覽圖片暫時無法載入',
   'models.edit': '編輯 →',
   'models.editAria': '編輯 {name}',
-  'models.family.hsw': 'HSW 系列',
   'models.family.opengrid': 'OpenGrid 系列',
   'models.family.other': '其他模型',
   'models.context.desk': 'Desk System',
@@ -352,7 +347,7 @@ export const zhHantMessages = {
   'docs.modelReference.cta': '前往模型選擇 →',
   'docs.referenceHeading': '共通參考',
   'docs.referenceBody':
-    '其他模型的用途與可調參數，請前往模型選擇頁查看 HSW、OpenGrid 與其他模型分類；本頁以下整理共通的參數、單位、匯出格式與瀏覽器需求。',
+    '其他模型的用途與可調參數，請前往模型選擇頁查看 OpenGrid 與其他模型分類；本頁以下整理共通的參數、單位、匯出格式與瀏覽器需求。',
   'docs.parametersHeading': '參數與限制',
   'docs.parametersBody':
     '每個模型都有獨立的參數 schema；模型選擇頁會列出可調欄位、有效範圍與單位，互動工作區則會即時驗證輸入。',
@@ -410,7 +405,6 @@ export const zhHantMessages = {
   'cad.selectModel.title': '請先選擇 CAD 模型',
   'cad.selectModel.description': 'CAD workspace 需要指定模型後才能開啟。',
   'cad.selectModel.link': '返回模型選擇 →',
-  'models.family.hswDescription': '適合 HSW 六角蜂巢系統的模型。',
   'models.family.opengridDescription':
     '包含官方 OpenGrid 網格模型與自製相容配件。',
   'models.family.otherDescription': '其他獨立的 CAD component。',
@@ -820,16 +814,16 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'navigation.github': 'GitHub',
   'navigation.email': 'Email',
   'home.eyebrow': 'Shape Shortcut · Browser CAD tools',
-  'home.metaTitle':
-    'Shape Shortcut | Design, preview, and export CAD in your browser',
-  'home.title': 'Keep the CAD parts you want to make in one place',
+  'home.metaTitle': 'OpenGrid customizer | Shape Shortcut browser CAD',
+  'home.metaDescription':
+    'Customize OpenGrid desk and wall storage models in your browser: live 3D preview, STEP and STL export, free downloads, all computed locally.',
+  'home.title': 'Parametric 3D-printing storage models in one browser tab',
   'home.description':
-    'Shape Shortcut is a no-install browser CAD tool for adjusting OpenGrid, HSW, and other models, checking a live 3D preview, and downloading printable or editable files.',
-  'home.primaryCta': 'Start designing',
+    'Shape Shortcut is a no-install browser CAD tool: adjust 3D-printing storage models, preview live, and download the file—all computation runs in your browser, and model downloads are free forever.',
+  'home.primaryCta': 'Start customizing',
   'home.secondaryCta': 'Start with Desk System',
   'home.docsCta': 'Read the docs →',
-  'home.heroNote':
-    'This is still a prototype, and more useful models and tools are being organized.',
+  'home.heroNote': 'The OpenGrid series keeps growing.',
   'home.heroVisual.boardAlt': 'OpenGrid Desk System Board preview',
   'home.heroVisual.boxAlt': 'OpenGrid Desk System Grid Box preview',
   'home.heroVisual.roundBoxAlt': 'OpenGrid Desk System Round Box preview',
@@ -840,15 +834,15 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'home.feature.browser.title': 'Browser-based modeling',
   'home.feature.browser.description':
     'Start adjusting and previewing without installing desktop CAD software.',
-  'home.feature.parameters.title': 'Component-specific parameters',
+  'home.feature.parameters.title': 'Model-specific parameters',
   'home.feature.parameters.description':
-    'Each component has its own dimensions, modes, and live validation.',
+    'Each model has its own dimensions, modes, and live validation.',
   'home.feature.preview.title': 'Live 3D preview',
   'home.feature.preview.description':
     'Inspect the shape as you adjust it before deciding to download.',
-  'home.feature.export.title': 'STEP/STL export',
+  'home.feature.export.title': 'STEP and STL export',
   'home.feature.export.description':
-    'Generate files from precise B-Rep geometry for fabrication or further editing.',
+    'Not just STL—export STEP geometry you can keep editing in CAD, not an approximated mesh.',
   'home.desk.eyebrow': 'Featured workflow',
   'home.desk.title': 'Start with a Board and build your Desk System',
   'home.desk.description':
@@ -859,7 +853,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
     'Board → Snap → choose one locating method → Grid Box/Round Box.',
   'home.desk.step.board.title': 'Board',
   'home.desk.step.board.description':
-    'Print and place it on the desk; screw fastening is optional.',
+    'Print it and set it on your desk—no screws required.',
   'home.desk.step.snap.title': 'Snap',
   'home.desk.step.snap.description':
     'Prepare one matching Snap for every box position.',
@@ -879,22 +873,17 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'home.explore.desk.alt': 'OpenGrid Desk System Board and container preview',
   'home.explore.wall.title': 'OpenGrid Wall',
   'home.explore.wall.description':
-    'Start with a Board and Snap to design a wall-related OpenGrid layout.',
-  'home.explore.wall.cta': 'Explore Wall Related →',
+    'Start from a Board and Snap; Wall Cover exports a dual-color 3MF for multicolor printing.',
+  'home.explore.wall.cta': 'Explore the wall system →',
   'home.explore.wall.alt': 'OpenGrid Wall Board preview',
-  'home.explore.hsw.title': 'HSW Hexagonal Honeycomb',
-  'home.explore.hsw.description':
-    'Adjust rows and columns to generate a honeycomb component for HSW systems.',
-  'home.explore.hsw.cta': 'Build a honeycomb →',
-  'home.explore.hsw.alt': 'HSW hexagonal honeycomb preview',
-  'home.final.title': 'Ready to turn an idea into a model?',
+  'home.final.title': 'Take a shortcut from idea to printable model',
   'home.final.description':
-    'Start with a model series and explore the tools and components organized so far.',
+    'Pick a model, tune the parameters, download and print.',
   'home.final.cta': 'Start choosing a model →',
   'home.maker.eyebrow': 'About Shape Shortcut',
   'home.maker.title': 'Useful 3D-printing tools, gathered in one place',
   'home.maker.body':
-    'I am Blesscat, an independent developer and 3D-printing enthusiast. MakerWorld Customizer is great for quick small customizations, but larger generators do not always fit that format; variants of one model can also be scattered across different places. Shape Shortcut is where I am gathering the models and tools I find useful.',
+    'I am Blesscat, an independent developer and 3D-printing enthusiast. MakerWorld Customizer is great for quick small customizations, but once a generator grows in parameters and flow, it no longer fits that format; variants of one model can also be scattered across different places. Shape Shortcut is where I am gathering the models and tools I find useful.',
   'home.maker.status': 'Current status: Prototype',
   'home.maker.portraitAlt': 'Illustrated portrait of Blesscat',
   'home.maker.aboutCta': 'Read the full maker story →',
@@ -943,7 +932,6 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'models.previewUnavailable': 'Preview image is temporarily unavailable',
   'models.edit': 'Edit →',
   'models.editAria': 'Edit {name}',
-  'models.family.hsw': 'HSW series',
   'models.family.opengrid': 'OpenGrid series',
   'models.family.other': 'Other models',
   'models.context.desk': 'Desk System',
@@ -1155,7 +1143,7 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'docs.modelReference.cta': 'Go to model selection →',
   'docs.referenceHeading': 'Shared reference',
   'docs.referenceBody':
-    'For other model purposes and adjustable parameters, use the model chooser to browse the HSW, OpenGrid, and other model families. The sections below summarize shared parameter, unit, export, and browser requirements.',
+    'For other model purposes and adjustable parameters, use the model chooser to browse the OpenGrid and other model families. The sections below summarize shared parameter, unit, export, and browser requirements.',
   'docs.parametersHeading': 'Parameters and constraints',
   'docs.parametersBody':
     'Each model has its own parameter schema. The model chooser lists adjustable fields, valid ranges, and units, while the interactive workspace validates inputs live.',
@@ -1215,8 +1203,6 @@ export const enMessages: { [Key in keyof typeof zhHantMessages]: string } = {
   'cad.selectModel.description':
     'The CAD workspace requires a model before it can open.',
   'cad.selectModel.link': 'Back to model selection →',
-  'models.family.hswDescription':
-    'Models for the HSW hexagonal honeycomb system.',
   'models.family.opengridDescription':
     'Official OpenGrid grid models and compatible custom accessories.',
   'models.family.otherDescription': 'Other independent CAD components.',

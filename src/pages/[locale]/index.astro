@@ -36,26 +36,25 @@ const deskFlowDarkPath = `/docs/desk-system/desk-system-flow.${locale}-dark.svg`
 const inlineLinkClass =
   'font-semibold text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground focus-visible:ring-3 focus-visible:ring-outline/50'
 
-/* Presentational-only title treatment: highlight the CAD phrase and stack the
-   headline on two lines. The translated wording itself is unchanged. */
+/* Presentational-only title treatment: highlight the model-category phrase
+   and stack the headline on two lines. The translated wording itself is
+   unchanged. */
 const homeTitleHtml = (() => {
   const highlighted = t('home.title').replace(
-    /(CAD 元件|CAD parts)/,
+    /(3D 列印收納模型|3D-printing storage models)/,
     '<span class="text-primary-strong dark:text-cyber-cyan">$1</span>',
   )
-  const parts = highlighted.match(
-    /^(.*?)<span[^>]*>([^<]*)<\/span>(，|,)?(.*)$/,
-  )
+  const parts = highlighted.match(/^(.*?)<span[^>]*>([^<]*)<\/span>\s*(.*)$/)
   if (!parts) return highlighted
-  const [, before, phrase, comma, after] = parts
-  return `${before}<br /><span class="text-primary-strong dark:text-cyber-cyan">${phrase}</span>${comma ?? ''}<br />${after}`
+  const [, before, phrase, after] = parts
+  return `${before}<span class="text-primary-strong dark:text-cyber-cyan">${phrase}</span><br />${after}`
 })()
 ---
 
 <SiteLayout
   {locale}
   title={t('home.metaTitle')}
-  description={t('home.description')}
+  description={t('home.metaDescription')}
 >
   <div class="grid gap-24 lg:gap-32">
     <section

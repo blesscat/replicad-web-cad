@@ -128,16 +128,14 @@ export const modelDefinitions: ReadonlyArray<
   opengridOpenConnectOrganizerDefinition,
 ]
 
-export const modelFamilyOrder: ReadonlyArray<ModelFamily> = ['opengrid', 'hsw']
+export const modelFamilyOrder: ReadonlyArray<ModelFamily> = [
+  'opengrid',
+  'other',
+]
 
 export const modelFamilyMetadata: Readonly<
   Record<ModelFamily, ModelFamilyMetadata>
 > = {
-  hsw: {
-    key: 'hsw',
-    label: 'models.family.hsw',
-    description: 'models.family.hswDescription',
-  },
   opengrid: {
     key: 'opengrid',
     label: 'models.family.opengrid',
@@ -229,7 +227,8 @@ export function groupModelDefinitions(
     return {
       ...modelFamilyMetadata[family],
       definitions: definitions.filter(
-        (definition) => definition.family === family,
+        (definition) =>
+          definition.family === family && !definition.chooserHidden,
       ),
     }
   })

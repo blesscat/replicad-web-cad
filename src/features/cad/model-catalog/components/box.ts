@@ -72,6 +72,7 @@ export const boxDefinition: ModelDefinition = {
   id: 'box',
   buildKey: 'box',
   family: 'other',
+  chooserHidden: true,
   displayName: 'models.model.box.name',
   selectionDescription: 'models.model.box.description',
   parameterSchema: BOX_PARAMETER_SCHEMA,

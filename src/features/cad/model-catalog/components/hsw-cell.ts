@@ -65,7 +65,7 @@ function boundsForHswCellDefinition(parameters: ModelParameterValues) {
 export const hswCellDefinition: ModelDefinition = {
   id: 'hsw-cell',
   buildKey: 'hsw-cell',
-  family: 'hsw',
+  family: 'other',
   displayName: 'models.model.hsw-cell.name',
   selectionLabel: 'models.model.hsw-cell.selection',
   selectionDescription: 'models.model.hsw-cell.description',

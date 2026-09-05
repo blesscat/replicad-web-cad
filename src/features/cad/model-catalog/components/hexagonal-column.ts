@@ -82,6 +82,7 @@ export const hexagonalColumnDefinition: ModelDefinition = {
   id: 'hexagonal-column',
   buildKey: 'hexagonal-column',
   family: 'other',
+  chooserHidden: true,
   displayName: 'models.model.hexagonal-column.name',
   selectionDescription: 'models.model.hexagonal-column.description',
   parameterSchema: HEXAGONAL_COLUMN_PARAMETER_SCHEMA,

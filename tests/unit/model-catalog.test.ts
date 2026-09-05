@@ -92,10 +92,10 @@ describe('CAD component catalog', () => {
   it('orders visible model families and omits other models from chooser groups', () => {
     const groups = groupModelDefinitions()
 
-    expect(groups.map((group) => group.key)).toEqual(['opengrid', 'hsw'])
+    expect(groups.map((group) => group.key)).toEqual(['opengrid', 'other'])
     expect(groups.map((group) => group.label)).toEqual([
       'models.family.opengrid',
-      'models.family.hsw',
+      'models.family.other',
     ])
 
     expect(groups[0]?.definitions.map((definition) => definition.id)).toEqual([

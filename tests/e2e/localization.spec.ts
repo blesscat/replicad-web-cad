@@ -6,11 +6,11 @@ test('localized pages expose branded titles and a shared favicon', async ({
   const pages = [
     {
       path: '/zh-Hant/',
-      title: 'Shape Shortcut｜瀏覽器 CAD 與 3D 列印',
+      title: 'OpenGrid 客製化產生器｜Shape Shortcut 瀏覽器 CAD',
     },
     {
       path: '/en/',
-      title: 'Shape Shortcut | Browser CAD & 3D Printing',
+      title: 'OpenGrid customizer | Shape Shortcut browser CAD',
     },
     {
       path: '/en/models',
@@ -22,11 +22,11 @@ test('localized pages expose branded titles and a shared favicon', async ({
     },
     {
       path: '/en/docs/',
-      title: 'Prototype documentation | Shape Shortcut',
+      title: 'Shape Shortcut documentation | Shape Shortcut',
     },
     {
       path: '/zh-Hant/docs/',
-      title: 'Prototype 文件 | Shape Shortcut',
+      title: 'Shape Shortcut 文件 | Shape Shortcut',
     },
     {
       path: '/en/cad/box?system=desk',
@@ -243,7 +243,7 @@ test('localized public pages and CAD controls expose both locales', async ({
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant')
   await expect(
     page.getByRole('heading', {
-      name: /把你想做的 CAD 元件，\s*集中在一個地方/,
+      name: /把 3D 列印收納模型\s*集中在同一個地方/,
     }),
   ).toBeVisible()
 
