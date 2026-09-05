@@ -298,7 +298,7 @@ test('localized public pages and CAD controls expose both locales', async ({
 
   const width = page.getByRole('textbox', { name: /Width/ })
   await width.fill('25.5')
-  await expect(page.getByRole('alert')).toContainText('Width is invalid')
+  await expect(page.locator('#width-error')).toContainText('Width is invalid')
   await expect(page.getByRole('link', { name: 'Language' })).toHaveAttribute(
     'href',
     '/zh-Hant/cad/box?system=desk&view=search',
