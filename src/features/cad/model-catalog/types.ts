@@ -7,7 +7,7 @@ import type {
 } from '../../../cad-contract/units'
 import type { OpenGridSystemContext } from '../system-entry-context'
 
-export type ModelFamily = 'hsw' | 'opengrid' | 'other'
+export type ModelFamily = 'opengrid' | 'other'
 
 export type ModelFamilyMetadata = {
   key: ModelFamily
@@ -84,6 +84,8 @@ export type ModelDefinition<
   id: ModelId
   buildKey: ModelId
   family: ModelFamily
+  /** Excludes a registered model from the chooser; it stays routable at `/cad/<id>`. */
+  chooserHidden?: boolean
   /** Stable translation key; never render this value directly. */
   displayName: string
   selectionLabel?: string

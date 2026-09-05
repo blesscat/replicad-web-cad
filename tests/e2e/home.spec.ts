@@ -222,7 +222,7 @@ test('home, model selection, and docs are static Astro pages', async ({
   await expect(page).toHaveURL(/\/zh-Hant\/$/)
   await expect(
     page.getByRole('heading', {
-      name: /把你想做的 CAD 元件，\s*集中在一個地方/,
+      name: /把 3D 列印收納模型，\s*集中在同一個地方/,
     }),
   ).toBeVisible()
   await expect(page.getByTestId('home-hero')).toBeVisible()
@@ -235,7 +235,9 @@ test('home, model selection, and docs are static Astro pages', async ({
     'MakerWorld Customizer',
   )
   await expect(page.getByText('即時 3D 預覽', { exact: true })).toBeVisible()
-  await expect(page.getByText('STEP／STL 匯出', { exact: true })).toBeVisible()
+  await expect(
+    page.getByText('STEP 與 STL 匯出', { exact: true }),
+  ).toBeVisible()
   await expect(
     page.getByRole('link', { name: 'Shape Shortcut' }),
   ).toHaveAttribute('aria-current', 'page')
@@ -244,7 +246,7 @@ test('home, model selection, and docs are static Astro pages', async ({
       .getByRole('navigation', { name: '主要導覽' })
       .getByRole('link', { name: '選擇模型', exact: true }),
   ).not.toHaveAttribute('aria-current', 'page')
-  const primaryCta = page.getByRole('link', { name: '開始設計' })
+  const primaryCta = page.getByRole('link', { name: '開始客製化' })
   await expect(primaryCta).toHaveAttribute('href', '/zh-Hant/models')
   const deskCta = page.getByRole('link', { name: '從 Desk System 開始' })
   await expect(deskCta).toHaveAttribute(
@@ -299,8 +301,8 @@ test('home, model selection, and docs are static Astro pages', async ({
   await expect(
     page.getByRole('heading', { name: 'OpenGrid 系列' }),
   ).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'HSW 系列' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: '其他模型' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: '其他模型' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'HSW 系列' })).toHaveCount(0)
   await expect(page.getByText('系統入口', { exact: true })).toHaveCount(0)
   await expect(
     page.getByTestId('model-family-opengrid').getByText('OpenGrid', {
@@ -315,7 +317,7 @@ test('home, model selection, and docs are static Astro pages', async ({
   )
   await expect(familySections.nth(1)).toHaveAttribute(
     'data-testid',
-    'model-family-hsw',
+    'model-family-other',
   )
   const openGridFamily = page.getByTestId('model-family-opengrid')
   const openGridSubgroups = page.getByTestId('model-subgroups-opengrid')
@@ -341,14 +343,14 @@ test('home, model selection, and docs are static Astro pages', async ({
 
   const deskSystem = page.getByTestId('model-subgroup-desk')
   const wallRelated = page.getByTestId('model-subgroup-wall')
-  const hswSeries = page.getByTestId('model-subgroup-hsw')
+  const otherModels = page.getByTestId('model-subgroup-other')
   await expect(
     deskSystem.getByRole('heading', { name: 'Desk System' }),
   ).toBeVisible()
   await expect(
     wallRelated.getByRole('heading', { name: 'Wall Related' }),
   ).toBeVisible()
-  await expect(editLinkFor(hswSeries, '六角蜂巢')).toHaveAttribute(
+  await expect(editLinkFor(otherModels, '六角蜂巢')).toHaveAttribute(
     'href',
     '/zh-Hant/cad/hsw-cell',
   )
@@ -472,21 +474,31 @@ test('Traditional Chinese homepage uses the Desk System entry flow', async ({
   await page.goto('/zh-Hant/')
 
   await expect(page).toHaveTitle(
-    'Shape Shortcut｜在瀏覽器裡設計、預覽並匯出 CAD',
+    'OpenGrid 客製化產生器｜Shape Shortcut 瀏覽器 CAD',
   )
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     'content',
-    /Shape Shortcut.*瀏覽器 CAD.*檔案/,
+    '在瀏覽器調整 OpenGrid 桌面與牆面收納模型：即時 3D 預覽、匯出 STEP 與 STL，模型下載永久免費、運算全程在本機完成。',
   )
   await expect(
     page.getByRole('heading', {
-      name: /把你想做的 CAD 元件，\s*集中在一個地方/,
+      name: /把 3D 列印收納模型，\s*集中在同一個地方/,
     }),
   ).toBeVisible()
+  await expect(
+    page.getByText('運算全程在你的瀏覽器完成，模型下載永久免費'),
+  ).toBeVisible()
+  await expect(page.getByText(/不是近似網格/)).toBeVisible()
+  await expect(page.getByText('HSW')).toHaveCount(0)
+  await expect(page.locator('meta[name="description"]')).not.toHaveAttribute(
+    'content',
+    /HSW/,
+  )
+  await expect(page.getByTestId('home-maker')).toContainText('Prototype')
   await expect(page.getByTestId('home-hero')).toBeVisible()
   await expect(page.getByTestId('home-desk-system')).toBeVisible()
   await expectHomepageExploreCards(page)
-  await expect(page.getByRole('link', { name: '開始設計' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: '開始客製化' })).toHaveAttribute(
     'href',
     '/zh-Hant/models',
   )
@@ -498,7 +510,7 @@ test('Traditional Chinese homepage uses the Desk System entry flow', async ({
     '/zh-Hant/docs/',
   )
   await expect(
-    page.getByRole('link', { name: '探索 Wall Related →' }),
+    page.getByRole('link', { name: '探索牆面系統 →' }),
   ).toHaveAttribute('href', '/zh-Hant/cad/opengrid?system=wall')
   await expect(
     page.getByAltText('OpenGrid Desk System Board 底板預覽'),
@@ -513,20 +525,27 @@ test('English homepage uses localized promotional content and routes', async ({
   await page.goto('/en/')
 
   await expect(page).toHaveTitle(
-    'Shape Shortcut | Design, preview, and export CAD in your browser',
+    'OpenGrid customizer | Shape Shortcut browser CAD',
   )
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     'content',
-    /Shape Shortcut.*browser CAD.*files/,
+    'Customize OpenGrid desk and wall storage models in your browser: live 3D preview, STEP and STL export, free downloads, all computed locally.',
   )
   await expect(
     page.getByRole('heading', {
-      name: /Keep the CAD parts\s*you want to make in one place/,
+      name: /Parametric 3D-printing storage models,\s*in one browser tab/,
     }),
   ).toBeVisible()
+  await expect(
+    page.getByText(
+      /all computation runs in your browser, and model downloads are free forever/,
+    ),
+  ).toBeVisible()
+  await expect(page.getByText(/not an approximated mesh/)).toBeVisible()
+  await expect(page.getByText('HSW')).toHaveCount(0)
   await expectHomepageExploreCards(page)
   await expect(
-    page.getByRole('link', { name: 'Start designing' }),
+    page.getByRole('link', { name: 'Start customizing' }),
   ).toHaveAttribute('href', '/en/models')
   await expect(
     page.getByRole('link', { name: 'Start with Desk System' }),
@@ -535,7 +554,7 @@ test('English homepage uses localized promotional content and routes', async ({
     page.getByRole('link', { name: 'Read the docs →' }),
   ).toHaveAttribute('href', '/en/docs/')
   await expect(
-    page.getByRole('link', { name: 'Explore Wall Related →' }),
+    page.getByRole('link', { name: 'Explore the wall system →' }),
   ).toHaveAttribute('href', '/en/cad/opengrid?system=wall')
   await expect(
     page.getByAltText('OpenGrid Desk System Board preview'),

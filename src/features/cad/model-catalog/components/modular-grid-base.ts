@@ -66,6 +66,7 @@ export const modularGridBaseDefinition: ModelDefinition = {
   id: 'modular-grid-base',
   buildKey: 'modular-grid-base',
   family: 'other',
+  chooserHidden: true,
   displayName: 'models.model.modular-grid-base.name',
   selectionDescription: 'models.model.modular-grid-base.description',
   parameterSchema: GRID_PARAMETER_SCHEMA,
