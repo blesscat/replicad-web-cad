@@ -1,4 +1,26 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Locator } from '@playwright/test'
+
+// The shared nav collapses when the page scrolls, animating its height for
+// ~200ms. Tests that compare document coordinates across an interaction
+// must let that transition settle first, so they keep guarding what they
+// actually guard: the interaction itself never shifts content.
+async function expectNavGeometrySettled(navigation: Locator) {
+  await expect
+    .poll(() =>
+      navigation.evaluate(
+        (element) =>
+          new Promise((resolve) => {
+            const first = element.getBoundingClientRect().height
+            requestAnimationFrame(() =>
+              resolve(
+                Math.abs(element.getBoundingClientRect().height - first) < 0.5,
+              ),
+            )
+          }),
+      ),
+    )
+    .toBe(true)
+}
 
 test('localized pages expose branded titles and a shared favicon', async ({
   page,
@@ -124,6 +146,20 @@ test('model chooser keeps compact cards and stable modal details', async ({
     name: 'View full details',
     exact: true,
   })
+  // Force the page into its scrolled state before the baseline: opening
+  // the dialog itself scrolls the page (dialog focus), which collapses
+  // the nav once. Holding the nav state constant across the baseline lets
+  // this test keep guarding what it guards: the dialog must not shift
+  // cards on its own.
+  await page.evaluate(() => window.scrollTo(0, 400))
+  await expectNavGeometrySettled(
+    page.getByRole('navigation', { name: 'Primary navigation' }),
+  )
+  await opener.scrollIntoViewIfNeeded()
+  await expectNavGeometrySettled(
+    page.getByRole('navigation', { name: 'Primary navigation' }),
+  )
+
   const boundsBefore = await cards.evaluateAll((cardElements) =>
     cardElements.map((card) => {
       const bounds = card.getBoundingClientRect()

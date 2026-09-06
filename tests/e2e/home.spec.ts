@@ -458,6 +458,7 @@ test('primary navigation stays at the top while scrolling', async ({
 
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
 
+  // While scrolled the capsule is compact but still pinned at the edge.
   await expect
     .poll(() =>
       navigation.evaluate((element) =>
@@ -465,6 +466,135 @@ test('primary navigation stays at the top while scrolling', async ({
       ),
     )
     .toBe(0)
+})
+
+test('primary navigation collapses to a compact capsule while scrolled', async ({
+  page,
+}) => {
+  await page.goto('/en/')
+
+  const navigation = page.getByRole('navigation', {
+    name: 'Primary navigation',
+  })
+  const themeToggle = page.locator('[data-theme-toggle]')
+  const navLinks = [
+    navigation.getByRole('link', { name: 'Docs', exact: true }),
+    navigation.getByRole('link', { name: 'Models', exact: true }),
+    navigation.getByRole('link', { name: 'About', exact: true }),
+  ]
+
+  const navEdge = (edge: 'top' | 'bottom') =>
+    navigation.evaluate(
+      (element, edge) => Math.round(element.getBoundingClientRect()[edge]),
+      edge,
+    )
+  const navHeight = () =>
+    navigation.evaluate((element) =>
+      Math.round(element.getBoundingClientRect().height),
+    )
+
+  // At the top of the page the capsule rests in flow, 24px below the edge,
+  // with every navigation link exposed.
+  await expect.poll(() => navEdge('top')).toBe(24)
+  const expandedHeight = await navHeight()
+  const expandedToggleHeight = await themeToggle.evaluate(
+    (element) => element.getBoundingClientRect().height,
+  )
+  await expect(navigation).not.toHaveAttribute('data-compact', '')
+  for (const link of navLinks) await expect(link).toBeVisible()
+
+  await page.evaluate(() => window.scrollTo(0, 400))
+  await expect(navigation).toHaveAttribute('data-compact', '')
+  await expect.poll(() => navEdge('top')).toBe(0)
+  // py-4 -> py-1.5 shrinks the capsule by exactly 20px (16 -> 6 per side).
+  await expect.poll(navHeight).toBe(expandedHeight - 20)
+  // Secondary links fold away; controls keep their expanded sizes.
+  for (const link of navLinks) await expect(link).toBeHidden()
+  expect(
+    await themeToggle.evaluate(
+      (element) => element.getBoundingClientRect().height,
+    ),
+  ).toBe(expandedToggleHeight)
+
+  // On a narrow viewport the folded links unwrap the capsule into a
+  // single ~50px row instead of the wrapped two-row layout.
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.evaluate(() => window.scrollTo(0, 400))
+  await expect(navigation).toHaveAttribute('data-compact', '')
+  await expect.poll(navHeight).toBeLessThan(60)
+
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await expect(navigation).not.toHaveAttribute('data-compact', '')
+  await expect.poll(() => navEdge('top')).toBe(24)
+  for (const link of navLinks) await expect(link).toBeVisible()
+})
+
+test('primary navigation starts compact when a page loads mid-scroll', async ({
+  page,
+}) => {
+  await page.goto('/en/')
+  await page.evaluate(() => window.scrollTo(0, 400))
+  await page.reload()
+
+  const navigation = page.getByRole('navigation', {
+    name: 'Primary navigation',
+  })
+  await expect(navigation).toHaveAttribute('data-compact', '')
+})
+
+test('primary navigation collapses identically in dark mode', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await page.goto('/en/')
+
+  const navigation = page.getByRole('navigation', {
+    name: 'Primary navigation',
+  })
+
+  const expandedHeight = await navigation.evaluate((element) =>
+    Math.round(element.getBoundingClientRect().height),
+  )
+
+  await page.evaluate(() => window.scrollTo(0, 400))
+  await expect(navigation).toHaveAttribute('data-compact', '')
+  // The compact capsule floats 8px (top-2) instead of 24px (top-6) below
+  // the top edge in dark mode, keeping its full neon border visible.
+  await expect
+    .poll(() =>
+      navigation.evaluate((element) =>
+        Math.round(element.getBoundingClientRect().top),
+      ),
+    )
+    .toBe(8)
+  // The capsule shrinks by the same 20px as in light mode.
+  await expect
+    .poll(() =>
+      navigation.evaluate((element) =>
+        Math.round(element.getBoundingClientRect().height),
+      ),
+    )
+    .toBe(expandedHeight - 20)
+})
+
+test('primary navigation switches states without animation under reduced motion', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/en/')
+
+  const navigation = page.getByRole('navigation', {
+    name: 'Primary navigation',
+  })
+
+  const transitionProperty = await navigation.evaluate(
+    (element) => getComputedStyle(element).transitionProperty,
+  )
+  expect(transitionProperty).toBe('none')
+
+  await page.evaluate(() => window.scrollTo(0, 400))
+  await expect(navigation).toHaveAttribute('data-compact', '')
 })
 
 test('Traditional Chinese homepage uses the Desk System entry flow', async ({
