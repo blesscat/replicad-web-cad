@@ -34,7 +34,7 @@ function defaultInputForModel(modelId: ModelId): ModelParameterValues {
     return { height: 8, count: 1, gap: 1, orientation: 'lying' }
   }
   if (modelId === 'opengrid-pillar') {
-    return { mode: 'detachable-corner-seat' }
+    return { mode: 'detachable-corner-seat', length: 3.8, offset: 0 }
   }
   if (modelId === 'opengrid') {
     return opengridParameters()
@@ -348,7 +348,7 @@ describe('CAD model generation debounce', () => {
     )
   })
 
-  it('clears positioning fields when switching back to the locking corner seat', () => {
+  it('resets numeric fields to seat defaults when switching back to the locking corner seat', () => {
     const { client, send, context } = createRuntimeContext('opengrid-pillar', {
       mode: 'positioning',
       length: 25,
@@ -361,11 +361,17 @@ describe('CAD model generation debounce', () => {
 
     expect(context.setRawParameters).toHaveBeenCalledWith({
       mode: 'detachable-corner-seat',
+      length: '3.8',
+      offset: '0',
     })
     expect(send).toHaveBeenLastCalledWith(
       expect.objectContaining({
         kind: 'model.generate',
-        parameters: { mode: 'detachable-corner-seat' },
+        parameters: {
+          mode: 'detachable-corner-seat',
+          length: 3.8,
+          offset: 0,
+        },
       }),
     )
     expect(client.send).toHaveBeenCalledWith(

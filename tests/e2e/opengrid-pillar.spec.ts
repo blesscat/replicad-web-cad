@@ -37,7 +37,6 @@ test('OpenGrid pillar is listed in its family and exposes locking and positionin
       '搭配各元件的鎖定角座插槽使用，壓入後旋轉即可完成定位與鎖定。',
     ),
   ).toBeVisible()
-  await expect(page.getByRole('slider', { name: /XY 直徑增量/ })).toHaveCount(0)
   await expect(
     page.getByRole('slider', { name: 'X 偏移', exact: true }),
   ).toHaveCount(0)
@@ -50,6 +49,13 @@ test('OpenGrid pillar is listed in its family and exposes locking and positionin
   await expect(page.getByRole('checkbox', { name: '連接底版用' })).toHaveCount(
     0,
   )
+  await expect(
+    page.getByRole('textbox', { name: /角座定位段長度/ }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('textbox', { name: /角座定位段長度/ }),
+  ).toHaveValue('3.8')
+  await expect(page.getByRole('slider', { name: /XY 直徑增量/ })).toBeVisible()
 
   await positioning.check()
   await expect(positioning).toBeChecked()
@@ -57,14 +63,20 @@ test('OpenGrid pillar is listed in its family and exposes locking and positionin
   await expect(page.getByRole('slider', { name: /總長度/ })).toBeVisible()
   await expect(page.getByRole('textbox', { name: /總長度/ })).toHaveValue('10')
   await expect(page.getByRole('slider', { name: /XY 直徑增量/ })).toBeVisible()
+  await expect(
+    page.getByRole('textbox', { name: /角座定位段長度/ }),
+  ).toHaveCount(0)
   await detachable.check()
   await expect(detachable).toBeChecked()
   await expect(page.getByRole('textbox', { name: /總長度/ })).toHaveCount(0)
   await expect(page.getByRole('slider', { name: /總長度/ })).toHaveCount(0)
-  await expect(page.getByRole('textbox', { name: /XY 直徑增量/ })).toHaveCount(
-    0,
-  )
-  await expect(page.getByRole('slider', { name: /XY 直徑增量/ })).toHaveCount(0)
+  await expect(
+    page.getByRole('textbox', { name: /角座定位段長度/ }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('textbox', { name: /角座定位段長度/ }),
+  ).toHaveValue('3.8')
+  await expect(page.getByRole('slider', { name: /XY 直徑增量/ })).toBeVisible()
 })
 
 test('OpenGrid pillar exports deterministic files for both pillar modes', async ({
@@ -118,5 +130,28 @@ test('OpenGrid pillar exports deterministic files for both pillar modes', async 
   const detachableStepAgain = await detachableStepAgainPromise
   expect(detachableStepAgain.suggestedFilename()).toBe(
     'pillar-5.3-detachable-corner-seat.step',
+  )
+
+  await page.getByRole('textbox', { name: /角座定位段長度/ }).fill('5')
+  await page.getByRole('textbox', { name: /XY 直徑增量/ }).fill('0.1')
+  await waitForCadReady(page)
+  const parameterizedStepPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '下載 STEP' }).click()
+  const parameterizedStep = await parameterizedStepPromise
+  expect(parameterizedStep.suggestedFilename()).toBe(
+    'pillar-6.5-detachable-corner-seat-z5-xy0.1.step',
+  )
+
+  await positioning.check()
+  await expect(page.getByRole('textbox', { name: /總長度/ })).toHaveValue('10')
+  await expect(page.getByRole('textbox', { name: /XY 直徑增量/ })).toHaveValue(
+    '0',
+  )
+  await detachable.check()
+  await expect(
+    page.getByRole('textbox', { name: /角座定位段長度/ }),
+  ).toHaveValue('3.8')
+  await expect(page.getByRole('textbox', { name: /XY 直徑增量/ })).toHaveValue(
+    '0',
   )
 })

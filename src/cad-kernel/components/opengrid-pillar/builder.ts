@@ -3,21 +3,24 @@ import {
   isShape3D,
   makeCylinder,
   measureVolume,
+  Sketcher,
   Solid,
   type Shape3D,
 } from 'replicad'
 import type { TopAbs_ShapeEnum } from 'replicad-opencascadejs'
 import {
   boundsForPillar,
+  OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   pillarBodyDiameterForParameters,
   PILLAR_CONFIGURATION,
   validatePillarParameters,
+  type PillarDetachableCornerSeatParameters,
   type PillarParameters,
 } from '../../../cad-contract/units'
 import type { BooleanOperationReporter } from '../../boolean-progress'
-import { buildOpenGridDetachableCornerSeatFromReference } from '../opengrid-locating-assembly/reference'
 
 const GEOMETRY_TOLERANCE = 0.02
+const SLOT_CUTTER_OVERLAP = 0.01
 
 export type PillarBuildContext = {
   detachableCornerSeatReference?: Shape3D
@@ -195,6 +198,164 @@ function buildPositioningPillar(
   )
 }
 
+function buildSeatIndicatorSlotCutter(): Shape3D {
+  // The v13 male carries a 3 mm by 0.5 mm straight slot recessed 0.4 mm into
+  // its Z=0 face, centered on the origin along the local X datum.
+  const indicator = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male.indicator
+  const sketcher = new Sketcher('XY', [0, 0, -SLOT_CUTTER_OVERLAP])
+  let sketch: ReturnType<Sketcher['close']> | null = null
+  let cutter: Shape3D | null = null
+  try {
+    const halfWidth = indicator.width / 2
+    const halfLength = indicator.radialLength / 2
+    sketcher.movePointerTo([-halfLength, -halfWidth])
+    sketcher.lineTo([halfLength, -halfWidth])
+    sketcher.lineTo([halfLength, halfWidth])
+    sketcher.lineTo([-halfLength, halfWidth])
+    sketch = sketcher.close()
+    cutter = sketch.extrude(indicator.depth + SLOT_CUTTER_OVERLAP, {
+      extrusionDirection: [0, 0, 1],
+    })
+    const result = cutter
+    cutter = null
+    return result
+  } catch (error) {
+    deleteShape(cutter)
+    if (error instanceof Error && error.message.startsWith('PILLAR_')) {
+      throw error
+    }
+    throw new Error('PILLAR_SEAT_INDICATOR_CUTTER_FAILED', { cause: error })
+  } finally {
+    deleteShape(sketch)
+    sketcher.delete()
+  }
+}
+
+function cutSeatHeadFromReference(reference: Shape3D): Shape3D {
+  const male = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male
+  const cutterRadius =
+    Math.max(
+      Math.abs(male.bounds.min[0]),
+      Math.abs(male.bounds.max[0]),
+      Math.abs(male.bounds.min[1]),
+      Math.abs(male.bounds.max[1]),
+    ) + 1
+  let cutter: Shape3D | null = null
+  let cut: Shape3D | null = null
+  let head: Shape3D | null = null
+  try {
+    cutter = makeCylinder(cutterRadius, male.bodyHeight, [0, 0, 0])
+    cut = reference.clone().cut(cutter)
+    const boundingBox = cut.boundingBox
+    let headMinZ: number
+    try {
+      headMinZ = boundingBox.bounds[0]?.[2] ?? Number.NaN
+    } finally {
+      boundingBox.delete()
+    }
+    if (
+      !Number.isFinite(headMinZ) ||
+      Math.abs(headMinZ - male.bodyHeight) > GEOMETRY_TOLERANCE
+    ) {
+      throw new Error('PILLAR_SEAT_HEAD_CUT_INVALID')
+    }
+    head = cut
+    cut = null
+    return head
+  } catch (error) {
+    deleteShape(head)
+    deleteShape(cut)
+    if (error instanceof Error && error.message.startsWith('PILLAR_')) {
+      throw error
+    }
+    throw new Error('PILLAR_SEAT_HEAD_CUT_FAILED', { cause: error })
+  } finally {
+    deleteShape(cutter)
+  }
+}
+
+function buildSeatBody(
+  parameters: PillarDetachableCornerSeatParameters,
+): Shape3D {
+  const bodyRadius = pillarBodyDiameterForParameters(parameters) / 2
+  let cylinder: Shape3D | null = null
+  let chamfered: Shape3D | null = null
+  let slotted: Shape3D | null = null
+  let cutter: Shape3D | null = null
+  try {
+    cylinder = makeCylinder(bodyRadius, parameters.length, [0, 0, 0])
+    chamfered = chamferAtStations(
+      cylinder,
+      [0],
+      PILLAR_CONFIGURATION.positioningLowerChamfer,
+    )
+    cylinder = null
+    cutter = buildSeatIndicatorSlotCutter()
+    slotted = chamfered.cut(cutter)
+    deleteShape(chamfered)
+    chamfered = null
+    return slotted
+  } catch (error) {
+    deleteShape(slotted)
+    deleteShape(chamfered)
+    deleteShape(cylinder)
+    if (error instanceof Error && error.message.startsWith('PILLAR_')) {
+      throw error
+    }
+    throw new Error('PILLAR_SEAT_BODY_FAILED', { cause: error })
+  } finally {
+    deleteShape(cutter)
+  }
+}
+
+function buildDetachableCornerSeatPillar(
+  reference: Shape3D,
+  parameters: PillarDetachableCornerSeatParameters,
+): Shape3D {
+  const male = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male
+  let head: Shape3D | null = null
+  let placedHead: Shape3D | null = null
+  let body: Shape3D | null = null
+  let fused: Shape3D | null = null
+  try {
+    head = cutSeatHeadFromReference(reference)
+    const headVolume = measureVolume(head)
+    body = buildSeatBody(parameters)
+    const seatBodyVolume = measureVolume(body)
+    const headRise = parameters.length - male.bodyHeight
+    placedHead = headRise === 0 ? head : head.translateZ(headRise)
+    if (placedHead === head) head = null
+    fused = body.fuse(placedHead)
+    deleteShape(body)
+    body = null
+    deleteShape(placedHead)
+    placedHead = null
+    deleteShape(head)
+    head = null
+    const fusedVolume = measureVolume(fused)
+    const expectedVolume = headVolume + seatBodyVolume
+    if (
+      !Number.isFinite(fusedVolume) ||
+      Math.abs(fusedVolume - expectedVolume) >
+        OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.volumeTolerance
+    ) {
+      throw new Error('PILLAR_SEAT_FUSE_VOLUME_INVALID')
+    }
+    const result = fused
+    fused = null
+    return result
+  } catch (error) {
+    deleteShape(fused)
+    deleteShape(placedHead)
+    deleteShape(body)
+    deleteShape(head)
+    if (error instanceof Error && error.message.startsWith('PILLAR_')) {
+      throw error
+    }
+    throw new Error('PILLAR_SEAT_BUILD_FAILED', { cause: error })
+  }
+}
+
 export async function buildPillar(
   parameters: PillarParameters,
   context: PillarBuildContext = {},
@@ -212,8 +373,9 @@ export async function buildPillar(
       if (!context.detachableCornerSeatReference) {
         throw new Error('PILLAR_DETACHABLE_CORNER_SEAT_REFERENCE_MISSING')
       }
-      shape = buildOpenGridDetachableCornerSeatFromReference(
+      shape = buildDetachableCornerSeatPillar(
         context.detachableCornerSeatReference,
+        parameters,
       )
     } else if (parameters.mode === 'positioning') {
       shape = buildPositioningPillar(parameters)

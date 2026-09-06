@@ -165,9 +165,11 @@ import {
 } from './opengrid-pillar'
 import type {
   PillarBounds,
+  PillarDetachableCornerSeatParameters,
   PillarMode,
   PillarParameterKey,
   PillarParameters,
+  PillarPositioningParameters,
   PillarValidation,
   PillarValidationIssue,
 } from './opengrid-pillar'
@@ -568,9 +570,11 @@ export {
 } from './opengrid-pillar'
 export type {
   PillarBounds,
+  PillarDetachableCornerSeatParameters,
   PillarMode,
   PillarParameterKey,
   PillarParameters,
+  PillarPositioningParameters,
   PillarValidation,
   PillarValidationIssue,
 } from './opengrid-pillar'

@@ -315,6 +315,13 @@ function modelParameterFieldFromDiagnostic(
   return field as ModelParameterKey
 }
 
+function parsePillarDecimalInput(raw: string): number | null {
+  const trimmed = raw.trim()
+  if (!/^-?(?:\d+\.?\d*|\.\d+)$/.test(trimmed)) return null
+  const parsed = Number(trimmed)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
 function parsePillarRawParameters(raw: RawParameters):
   | { valid: true; value: ModelParameterValues }
   | {
@@ -332,26 +339,6 @@ function parsePillarRawParameters(raw: RawParameters):
     }
   }
 
-  if (mode === 'detachable-corner-seat') {
-    const extraField = Object.keys(raw).find((field) => field !== 'mode')
-    if (extraField) {
-      return {
-        valid: false,
-        messageId: 'validation.invalid',
-        field: pillarModelParameterField(extraField),
-      }
-    }
-    const validation = validatePillarParameters({ mode })
-    if (!validation.valid) {
-      return {
-        valid: false,
-        messageId: validation.issues[0]?.messageId ?? 'validation.invalid',
-        field: 'mode',
-      }
-    }
-    return { valid: true, value: validation.value }
-  }
-
   const rawOffset = (field: 'offset'): number | null => {
     const value = raw[field] ?? '0'
     const trimmed = value.trim()
@@ -367,6 +354,43 @@ function parsePillarRawParameters(raw: RawParameters):
       messageId: 'validation.invalid',
       field: 'offset',
     }
+  }
+
+  if (mode === 'detachable-corner-seat') {
+    const extraField = Object.keys(raw).find(
+      (field) => field !== 'mode' && field !== 'length' && field !== 'offset',
+    )
+    if (extraField) {
+      return {
+        valid: false,
+        messageId: 'validation.invalid',
+        field: pillarModelParameterField(extraField),
+      }
+    }
+    const rawSeatLength =
+      raw.length ?? String(PILLAR_CONFIGURATION.seatDefaultLength)
+    const seatLength = parsePillarDecimalInput(rawSeatLength)
+    if (seatLength === null) {
+      return {
+        valid: false,
+        messageId: 'validation.invalid',
+        field: 'length',
+      }
+    }
+    const seatValidation = validatePillarParameters({
+      mode,
+      length: seatLength,
+      offset,
+    })
+    if (!seatValidation.valid) {
+      const issue = seatValidation.issues[0]
+      return {
+        valid: false,
+        messageId: issue?.messageId ?? 'validation.invalid',
+        field: pillarModelParameterField(issue?.field),
+      }
+    }
+    return { valid: true, value: seatValidation.value }
   }
 
   const rawLength =
@@ -701,10 +725,11 @@ export function rawFromParameters(
   }
 
   if ('mode' in parameters) {
-    if (parameters.mode === 'detachable-corner-seat') {
-      return { mode: parameters.mode }
-    }
-    if (parameters.mode === 'positioning' && 'length' in parameters) {
+    if (
+      (parameters.mode === 'detachable-corner-seat' ||
+        parameters.mode === 'positioning') &&
+      'length' in parameters
+    ) {
       return {
         mode: parameters.mode,
         length: String(parameters.length),

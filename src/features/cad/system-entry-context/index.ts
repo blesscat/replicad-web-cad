@@ -4,6 +4,7 @@ import {
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
   OPENGRID_WALL_COVER_CONFIGURATION,
+  PILLAR_CONFIGURATION,
   type ModelId,
   type ModelParameterValues,
   type OpenGridParameters,
@@ -115,7 +116,7 @@ export function getSystemPreset(
     return { ...OPENGRID_WALL_COVER_CONFIGURATION.defaultParameters }
   }
   if (modelId === 'opengrid-pillar' && context === 'desk') {
-    return { mode: 'detachable-corner-seat' }
+    return { ...PILLAR_CONFIGURATION.defaultParameters }
   }
   if (modelId === 'opengrid') {
     const boardParameters: OpenGridParameters = {

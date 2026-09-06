@@ -845,19 +845,28 @@ describe('CAD component catalog', () => {
     expect(definition?.parameterSchema.map((field) => field.key)).toEqual([
       'length',
       'offset',
+      'length',
     ])
     expect(definition?.defaultParameters).toEqual({
       mode: 'detachable-corner-seat',
+      length: 3.8,
+      offset: 0,
     })
     expect(
       definition?.validateParameters({
         mode: 'detachable-corner-seat',
+        length: 4.2,
+        offset: 0.15,
       }),
     ).toEqual({
       valid: true,
       value: {
         modelId: 'opengrid-pillar',
-        parameters: { mode: 'detachable-corner-seat' },
+        parameters: {
+          mode: 'detachable-corner-seat',
+          length: 4.2,
+          offset: 0.15,
+        },
       },
     })
     expect(
@@ -871,10 +880,24 @@ describe('CAD component catalog', () => {
       max: [2.625, 2.625, 25],
     })
     expect(
-      definition?.boundsForParameters({ mode: 'detachable-corner-seat' }),
+      definition?.boundsForParameters({
+        mode: 'detachable-corner-seat',
+        length: 3.8,
+        offset: 0,
+      }),
     ).toEqual({
       min: [-3.321716, -2.5, 0],
       max: [3.321716, 2.5, 5.3],
+    })
+    expect(
+      definition?.boundsForParameters({
+        mode: 'detachable-corner-seat',
+        length: 5,
+        offset: 0.3,
+      }),
+    ).toEqual({
+      min: [-3.321716, -2.65, 0],
+      max: [3.321716, 2.65, 6.5],
     })
     expect(
       definition?.exportFileName({
@@ -890,9 +913,20 @@ describe('CAD component catalog', () => {
         offset: 0.25,
       }),
     ).toBe('pillar-25-positioning-xy0.25.stl')
-    expect(definition?.exportFileName({ mode: 'detachable-corner-seat' })).toBe(
-      'pillar-5.3-detachable-corner-seat.step',
-    )
+    expect(
+      definition?.exportFileName({
+        mode: 'detachable-corner-seat',
+        length: 3.8,
+        offset: 0,
+      }),
+    ).toBe('pillar-5.3-detachable-corner-seat.step')
+    expect(
+      definition?.stlFileName({
+        mode: 'detachable-corner-seat',
+        length: 5,
+        offset: 0.1,
+      }),
+    ).toBe('pillar-6.5-detachable-corner-seat-z5-xy0.1.stl')
     expect(cadPathForModel('opengrid-pillar')).toBe('/cad/opengrid-pillar')
     expect(modelIdForCadPath('/cad/opengrid-pillar/')).toBe('opengrid-pillar')
   })

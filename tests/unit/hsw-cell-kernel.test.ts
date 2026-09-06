@@ -304,7 +304,11 @@ describe('HSW kernel model registration', () => {
   })
 
   it('loads the shared male reference only for the detachable pillar mode', async () => {
-    const parameters = { mode: 'detachable-corner-seat' } as const
+    const parameters = {
+      mode: 'detachable-corner-seat',
+      length: 3.8,
+      offset: 0,
+    } as const
     const shape = await buildModelBRep('opengrid-pillar', parameters, context)
 
     expect(shape).toMatchObject({ model: 'opengrid-pillar' })

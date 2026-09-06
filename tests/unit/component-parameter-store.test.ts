@@ -666,6 +666,8 @@ describe('component parameter store', () => {
     })
     expect(store.get('opengrid-pillar')).toEqual({
       mode: 'detachable-corner-seat',
+      length: 3.8,
+      offset: 0,
     })
     expect(store.get('opengrid-snap')).toEqual({
       variant: 'Lite',
@@ -1223,22 +1225,47 @@ describe('component parameter store', () => {
     store.dispose()
   })
 
-  it('persists the exact detachable corner-seat mode without numeric fields', () => {
+  it('persists the detachable corner-seat with scoped numeric fields', () => {
     const storage = createMemoryStorage()
     const store = createComponentParameterStore({ storage })
 
     expect(
-      store.set('opengrid-pillar', { mode: 'detachable-corner-seat' }),
+      store.set('opengrid-pillar', {
+        mode: 'detachable-corner-seat',
+        length: 4.2,
+        offset: 0.15,
+      }),
     ).toBe(true)
     expect(store.get('opengrid-pillar')).toEqual({
       mode: 'detachable-corner-seat',
+      length: 4.2,
+      offset: 0.15,
     })
 
     const restored = createComponentParameterStore({ storage })
     expect(restored.get('opengrid-pillar')).toEqual({
       mode: 'detachable-corner-seat',
+      length: 4.2,
+      offset: 0.15,
     })
     restored.dispose()
+    store.dispose()
+  })
+
+  it('hydrates a legacy mode-only detachable corner-seat snapshot to the new default', () => {
+    const storage = createMemoryStorage(
+      createPayload({
+        'opengrid-pillar': { mode: 'detachable-corner-seat' },
+      }),
+    )
+    const store = createComponentParameterStore({ storage })
+
+    expect(store.get('opengrid-pillar')).toEqual({
+      mode: 'detachable-corner-seat',
+      length: 3.8,
+      offset: 0,
+    })
+
     store.dispose()
   })
 

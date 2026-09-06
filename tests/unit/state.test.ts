@@ -151,7 +151,11 @@ describe('CAD state machine', () => {
     const state = initialCadState('opengrid-pillar')
 
     expect(state.modelId).toBe('opengrid-pillar')
-    expect(state.input).toEqual({ mode: 'detachable-corner-seat' })
+    expect(state.input).toEqual({
+      mode: 'detachable-corner-seat',
+      length: 3.8,
+      offset: 0,
+    })
   })
 
   it('initializes the independent OpenGrid stackable-cylinder defaults', () => {

@@ -205,16 +205,32 @@ function hasFaceSpanningZ(
 
 function inspectDetachableCornerSeatProfiles(
   shape: Shape3D,
+  parameters: Extract<PillarParameters, { mode: 'detachable-corner-seat' }>,
   failures: string[],
 ): void {
   const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male
-  expectMaterial(shape, failures, 'lead-in-bottom-inside', 2.2, 0.05, true)
-  expectMaterial(shape, failures, 'lead-in-bottom-outside', 2.45, 0.05, false)
+  const radiusShift = parameters.offset / 2
+  expectMaterial(
+    shape,
+    failures,
+    'lead-in-bottom-inside',
+    2.2 + radiusShift,
+    0.05,
+    true,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'lead-in-bottom-outside',
+    2.45 + radiusShift,
+    0.05,
+    false,
+  )
   expectMaterial(
     shape,
     failures,
     'lead-in-upper-inside',
-    2.4,
+    2.4 + radiusShift,
     configuration.leadInHeight + 0.05,
     true,
   )
@@ -222,30 +238,32 @@ function inspectDetachableCornerSeatProfiles(
     shape,
     failures,
     'body-upper-inside',
-    2.4,
-    configuration.bodyHeight - 0.05,
+    2.4 + radiusShift,
+    parameters.length - 0.05,
     true,
   )
   expectMaterial(
     shape,
     failures,
     'body-upper-outside',
-    2.6,
-    configuration.bodyHeight - 0.05,
+    2.6 + radiusShift,
+    parameters.length - 0.05,
     false,
   )
   // Leaf retaining head: flares along X toward the wear cap while holding the
-  // 1.96 mm key thickness in Y and staying inside the Ø7 mm envelope.
+  // 1.96 mm key thickness in Y and staying inside the Ø7 mm envelope. The head
+  // geometry is fixed and rides on the parametric locating section at Z=length.
+  const headBaseZ = parameters.length
   const headMidZ =
-    configuration.bodyHeight +
-    (configuration.taperTopZ - configuration.bodyHeight) / 2
-  const headTopZ = configuration.taperTopZ + 0.05
+    headBaseZ + (configuration.taperTopZ - configuration.bodyHeight) / 2
+  const headTopZ =
+    headBaseZ + (configuration.taperTopZ - configuration.bodyHeight) + 0.05
   expectMaterial(
     shape,
     failures,
     'head-start-inside',
     configuration.headStartLength / 2 - 0.15,
-    configuration.bodyHeight + 0.1,
+    headBaseZ + 0.1,
     true,
   )
   expectMaterial(
@@ -253,7 +271,7 @@ function inspectDetachableCornerSeatProfiles(
     failures,
     'head-start-outside',
     configuration.headStartLength / 2 + 0.1,
-    configuration.bodyHeight + 0.1,
+    headBaseZ + 0.1,
     false,
   )
   expectMaterial(shape, failures, 'head-mid-inside', 2.55, headMidZ, true)
@@ -277,9 +295,11 @@ function inspectDetachableCornerSeatProfiles(
     false,
     1.15,
   )
-  if (
-    !hasFaceSpanningZ(shape, configuration.taperTopZ, configuration.totalHeight)
-  ) {
+  const wearCapMinZ =
+    headBaseZ + (configuration.taperTopZ - configuration.bodyHeight)
+  const wearCapMaxZ =
+    headBaseZ + (configuration.totalHeight - configuration.bodyHeight)
+  if (!hasFaceSpanningZ(shape, wearCapMinZ, wearCapMaxZ)) {
     failures.push('profile:wear-cap')
   }
 }
@@ -290,7 +310,7 @@ function inspectEndProfiles(
   failures: string[],
 ): void {
   if (parameters.mode === 'detachable-corner-seat') {
-    inspectDetachableCornerSeatProfiles(shape, failures)
+    inspectDetachableCornerSeatProfiles(shape, parameters, failures)
     return
   }
   if (parameters.mode === 'positioning') {
@@ -327,6 +347,9 @@ export function inspectPillarShapeQuality(
     }
     if (
       parameters.mode === 'detachable-corner-seat' &&
+      Math.abs(parameters.length - PILLAR_CONFIGURATION.seatDefaultLength) <=
+        1e-9 &&
+      parameters.offset === 0 &&
       Math.abs(
         volume -
           OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male

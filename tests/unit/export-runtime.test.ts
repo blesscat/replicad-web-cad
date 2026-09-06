@@ -77,12 +77,12 @@ function createContext(
     const pillarParameters =
       pillarMode === 'positioning'
         ? { mode: 'positioning' as const, length: 10, offset: 0 }
-        : { mode: 'detachable-corner-seat' as const }
+        : { mode: 'detachable-corner-seat' as const, length: 3.8, offset: 0 }
     parameters = pillarParameters
     rawParameters =
       pillarMode === 'positioning'
         ? { mode: pillarMode, length: '10', offset: '0' }
-        : { mode: pillarMode }
+        : { mode: pillarMode, length: '3.8', offset: '0' }
     bounds = boundsForPillar(pillarParameters)
   } else {
     parameters = { width: 20, depth: 30, height: 40 }
