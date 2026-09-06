@@ -43,17 +43,17 @@ test('localized pages expose branded titles and a shared favicon', async ({
     await expect(page).toHaveTitle(entry.title)
     await expect(page.locator('head link[rel="icon"]')).toHaveAttribute(
       'href',
-      '/favicon.svg',
+      '/favicon.png',
     )
     await expect(page.locator('head link[rel="icon"]')).toHaveAttribute(
       'type',
-      'image/svg+xml',
+      'image/png',
     )
   }
 
-  const faviconResponse = await page.request.get('/favicon.svg')
+  const faviconResponse = await page.request.get('/favicon.png')
   expect(faviconResponse.ok()).toBe(true)
-  expect(faviconResponse.headers()['content-type']).toContain('image/svg+xml')
+  expect(faviconResponse.headers()['content-type']).toContain('image/png')
   expect((await faviconResponse.body()).byteLength).toBeGreaterThan(0)
 })
 
@@ -298,7 +298,7 @@ test('localized public pages and CAD controls expose both locales', async ({
 
   const width = page.getByRole('textbox', { name: /Width/ })
   await width.fill('25.5')
-  await expect(page.getByRole('alert')).toContainText('Width is invalid')
+  await expect(page.locator('#width-error')).toContainText('Width is invalid')
   await expect(page.getByRole('link', { name: 'Language' })).toHaveAttribute(
     'href',
     '/zh-Hant/cad/box?system=desk&view=search',
