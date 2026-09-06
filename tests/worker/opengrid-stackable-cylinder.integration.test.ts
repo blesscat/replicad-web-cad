@@ -42,11 +42,11 @@ const initialiseOpenCascade = require('replicad-opencascadejs')
 const WASM_PATH =
   require.resolve('replicad-opencascadejs/src/replicad_single.wasm')
 const DETACHABLE_MALE_REFERENCE_PATH = new URL(
-  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-3.8.step',
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-v13.step',
   import.meta.url,
 )
 const DETACHABLE_HOLDER_REFERENCE_PATH = new URL(
-  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-holder.step',
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-holder-11.step',
   import.meta.url,
 )
 let detachableCornerSeatReference: Shape3D
@@ -283,7 +283,6 @@ describe('OpenGrid stackable-cylinder B-Rep', () => {
         )
         expect(record).toMatchObject({
           socketVoidResidualVolume: expect.closeTo(0, 6),
-          indicatorResidualVolume: expect.closeTo(0, 6),
           maleCollisionVolume: expect.closeTo(0, 6),
         })
         expect(record?.roofVolume).toBeGreaterThan(0.001)

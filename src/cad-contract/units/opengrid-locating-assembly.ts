@@ -8,47 +8,30 @@ const INTEGRATED_SEAT_HEIGHT = 3.8
 const INTEGRATED_SEAT_BOTTOM_CHAMFER = 0.2
 const BOTTOM_EDGE_FILLET_RADIUS = 0.5
 const DETACHABLE_SEAT_BODY_DIAMETER = 5
-const DETACHABLE_SEAT_SOURCE_BODY_HEIGHT = 3
 const DETACHABLE_SEAT_BODY_HEIGHT = 3.8
 const DETACHABLE_SEAT_LEAD_IN_HEIGHT = 0.2
 const DETACHABLE_SEAT_WEAR_HEIGHT = 0.15
-const DETACHABLE_SEAT_SOURCE_TOTAL_HEIGHT = 4.5
 const DETACHABLE_SEAT_TOTAL_HEIGHT = 5.3
 const DETACHABLE_SEAT_TAPER_TOP_Z = 5.15
-const DETACHABLE_SEAT_SOURCE_NOMINAL_VOLUME = 66.7032674
-const DETACHABLE_SEAT_NOMINAL_VOLUME = 83.1443982424
+const DETACHABLE_SEAT_NOMINAL_VOLUME = 89.3026235581
 const DETACHABLE_SEAT_KEY_WIDTH = 1.96
-const DETACHABLE_LOCK_INDICATOR_WIDTH = 0.5
-const DETACHABLE_LOCK_INDICATOR_RADIAL_LENGTH = 3
-const DETACHABLE_LOCK_INDICATOR_DEPTH = 0.4
-const DETACHABLE_LOCK_INDICATOR_CUTTER_OVERLAP = 0.01
-const DETACHABLE_LOCK_INDICATOR_SOCKET_CLEARANCE = 0.15
-const DETACHABLE_LOCK_INDICATOR_LOCK_ROTATION_DEGREES = 90
-const DETACHABLE_LOCK_INDICATOR_NOMINAL_REMOVED_VOLUME =
-  DETACHABLE_LOCK_INDICATOR_WIDTH *
-  DETACHABLE_LOCK_INDICATOR_RADIAL_LENGTH *
-  DETACHABLE_LOCK_INDICATOR_DEPTH
-const DETACHABLE_LOCK_INDICATOR = {
-  width: DETACHABLE_LOCK_INDICATOR_WIDTH,
-  radialLength: DETACHABLE_LOCK_INDICATOR_RADIAL_LENGTH,
-  depth: DETACHABLE_LOCK_INDICATOR_DEPTH,
-  cutterOverlap: DETACHABLE_LOCK_INDICATOR_CUTTER_OVERLAP,
-  socketBoundaryClearance: DETACHABLE_LOCK_INDICATOR_SOCKET_CLEARANCE,
-  lockRotationDegrees: DETACHABLE_LOCK_INDICATOR_LOCK_ROTATION_DEGREES,
-  nominalRemovedVolume: DETACHABLE_LOCK_INDICATOR_NOMINAL_REMOVED_VOLUME,
+const DETACHABLE_SEAT_HEAD_START_LENGTH = 4.24
+const DETACHABLE_SEAT_HEAD_MAX_LENGTH = 6.64
+const DETACHABLE_SEAT_HEAD_BOUND_XY = 3.321716
+const DETACHABLE_SEAT_INDICATOR_WIDTH = 0.5
+const DETACHABLE_SEAT_INDICATOR_RADIAL_LENGTH = 3
+const DETACHABLE_SEAT_INDICATOR_DEPTH = 0.4
+const DETACHABLE_SEAT_INDICATOR = {
+  width: DETACHABLE_SEAT_INDICATOR_WIDTH,
+  radialLength: DETACHABLE_SEAT_INDICATOR_RADIAL_LENGTH,
+  depth: DETACHABLE_SEAT_INDICATOR_DEPTH,
 } as const
-const DETACHABLE_HOLDER_SOURCE_DEPTH = 1.5
-const DETACHABLE_HOLDER_DEPTH = 1.75
-const DETACHABLE_HOLDER_SOURCE_MIN_Z = 3
-const DETACHABLE_HOLDER_SOURCE_MAX_Z = 4.5
-const DETACHABLE_HOLDER_MAX_Z = 4.75
-const DETACHABLE_HOLDER_SOURCE_NOMINAL_VOLUME = 38.4253392
-const DETACHABLE_HOLDER_TOP_AREA = 20.94049749435318
-const DETACHABLE_HOLDER_PASSAGE_WIDTH = 2
-const DETACHABLE_HOLDER_KEY_SIDE_CLEARANCE =
-  (DETACHABLE_HOLDER_PASSAGE_WIDTH - DETACHABLE_SEAT_KEY_WIDTH) / 2
-const DETACHABLE_HOLDER_EXTENSION_HEIGHT =
-  DETACHABLE_HOLDER_DEPTH - DETACHABLE_HOLDER_SOURCE_DEPTH
+const DETACHABLE_HOLDER_OUTER_DIAMETER = 11
+const DETACHABLE_HOLDER_DEPTH = 1.5
+const DETACHABLE_HOLDER_SOURCE_MIN_Z = 3.8
+const DETACHABLE_HOLDER_SOURCE_MAX_Z = 5.3
+const DETACHABLE_HOLDER_SOURCE_NOMINAL_VOLUME = 106.453536642
+const DETACHABLE_HOLDER_POCKET_SIDE_CLEARANCE = 0.02
 const DETACHABLE_HOLDER_HOST_OVERLAP = 0.01
 
 export const OPENGRID_LOCATING_SEAT_MODES = [
@@ -64,10 +47,6 @@ export type OpenGridLocatingSeatMode =
 
 export type OpenGridDetachableCornerSeatRotation = 0 | 90 | 180 | 270
 export type OpenGridDetachableCornerSeatPoint2D = [number, number]
-export type OpenGridDetachableCornerSeatIndicatorPlacement = {
-  center: OpenGridDetachableCornerSeatPoint2D
-  rotationDegrees: OpenGridDetachableCornerSeatRotation
-}
 
 export function normalizeOpenGridLocatingSeatMode(
   value: unknown,
@@ -114,15 +93,17 @@ export const OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION = {
     leadInHeight: DETACHABLE_SEAT_LEAD_IN_HEIGHT,
     leadInTipDiameter: 4.6,
     keyWidth: DETACHABLE_SEAT_KEY_WIDTH,
+    headStartLength: DETACHABLE_SEAT_HEAD_START_LENGTH,
+    headMaxLength: DETACHABLE_SEAT_HEAD_MAX_LENGTH,
     taperTopZ: DETACHABLE_SEAT_TAPER_TOP_Z,
     wearHeight: DETACHABLE_SEAT_WEAR_HEIGHT,
     totalHeight: DETACHABLE_SEAT_TOTAL_HEIGHT,
     nominalVolume: DETACHABLE_SEAT_NOMINAL_VOLUME,
     markedNominalVolume: DETACHABLE_SEAT_NOMINAL_VOLUME,
-    indicator: DETACHABLE_LOCK_INDICATOR,
+    indicator: DETACHABLE_SEAT_INDICATOR,
     bounds: {
-      min: [-2.5, -2.5, 0],
-      max: [2.5, 2.5, DETACHABLE_SEAT_TOTAL_HEIGHT],
+      min: [-DETACHABLE_SEAT_HEAD_BOUND_XY, -2.5, 0],
+      max: [DETACHABLE_SEAT_HEAD_BOUND_XY, 2.5, DETACHABLE_SEAT_TOTAL_HEIGHT],
     },
   },
   maleReference: {
@@ -130,73 +111,50 @@ export const OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION = {
     totalHeight: DETACHABLE_SEAT_TOTAL_HEIGHT,
     nominalVolume: DETACHABLE_SEAT_NOMINAL_VOLUME,
     bounds: {
-      min: [-2.5, -2.5, 0],
-      max: [2.5, 2.5, DETACHABLE_SEAT_TOTAL_HEIGHT],
-    },
-  },
-  maleSource: {
-    bodyHeight: DETACHABLE_SEAT_SOURCE_BODY_HEIGHT,
-    totalHeight: DETACHABLE_SEAT_SOURCE_TOTAL_HEIGHT,
-    nominalVolume: DETACHABLE_SEAT_SOURCE_NOMINAL_VOLUME,
-    bounds: {
-      min: [-2.5, -2.5, 0],
-      max: [2.5, 2.5, DETACHABLE_SEAT_SOURCE_TOTAL_HEIGHT],
+      min: [-DETACHABLE_SEAT_HEAD_BOUND_XY, -2.5, 0],
+      max: [DETACHABLE_SEAT_HEAD_BOUND_XY, 2.5, DETACHABLE_SEAT_TOTAL_HEIGHT],
     },
   },
   female: {
-    outerDiameter: 7,
+    outerDiameter: DETACHABLE_HOLDER_OUTER_DIAMETER,
     depth: DETACHABLE_HOLDER_DEPTH,
     hostOverlap: DETACHABLE_HOLDER_HOST_OVERLAP,
-    passageWidth: DETACHABLE_HOLDER_PASSAGE_WIDTH,
-    keySideClearance: DETACHABLE_HOLDER_KEY_SIDE_CLEARANCE,
-    sourceMinZ: DETACHABLE_HOLDER_SOURCE_MIN_Z,
-    sourceMaxZ: DETACHABLE_HOLDER_MAX_Z,
-    nominalVolume:
-      DETACHABLE_HOLDER_SOURCE_NOMINAL_VOLUME +
-      DETACHABLE_HOLDER_TOP_AREA * DETACHABLE_HOLDER_EXTENSION_HEIGHT,
-    bounds: {
-      min: [-3.5, -3.5, DETACHABLE_HOLDER_SOURCE_MIN_Z],
-      max: [3.5, 3.5, DETACHABLE_HOLDER_MAX_Z],
-    },
-  },
-  femaleReference: {
-    depth: DETACHABLE_HOLDER_SOURCE_DEPTH,
+    pocketSideClearance: DETACHABLE_HOLDER_POCKET_SIDE_CLEARANCE,
     sourceMinZ: DETACHABLE_HOLDER_SOURCE_MIN_Z,
     sourceMaxZ: DETACHABLE_HOLDER_SOURCE_MAX_Z,
     nominalVolume: DETACHABLE_HOLDER_SOURCE_NOMINAL_VOLUME,
     bounds: {
-      min: [-3.5, -3.5, DETACHABLE_HOLDER_SOURCE_MIN_Z],
-      max: [3.5, 3.5, DETACHABLE_HOLDER_SOURCE_MAX_Z],
+      min: [
+        -DETACHABLE_HOLDER_OUTER_DIAMETER / 2,
+        -DETACHABLE_HOLDER_OUTER_DIAMETER / 2,
+        DETACHABLE_HOLDER_SOURCE_MIN_Z,
+      ],
+      max: [
+        DETACHABLE_HOLDER_OUTER_DIAMETER / 2,
+        DETACHABLE_HOLDER_OUTER_DIAMETER / 2,
+        DETACHABLE_HOLDER_SOURCE_MAX_Z,
+      ],
     },
   },
-  indicator: DETACHABLE_LOCK_INDICATOR,
+  femaleReference: {
+    depth: DETACHABLE_HOLDER_DEPTH,
+    sourceMinZ: DETACHABLE_HOLDER_SOURCE_MIN_Z,
+    sourceMaxZ: DETACHABLE_HOLDER_SOURCE_MAX_Z,
+    nominalVolume: DETACHABLE_HOLDER_SOURCE_NOMINAL_VOLUME,
+    bounds: {
+      min: [
+        -DETACHABLE_HOLDER_OUTER_DIAMETER / 2,
+        -DETACHABLE_HOLDER_OUTER_DIAMETER / 2,
+        DETACHABLE_HOLDER_SOURCE_MIN_Z,
+      ],
+      max: [
+        DETACHABLE_HOLDER_OUTER_DIAMETER / 2,
+        DETACHABLE_HOLDER_OUTER_DIAMETER / 2,
+        DETACHABLE_HOLDER_SOURCE_MAX_Z,
+      ],
+    },
+  },
 } as const
-
-function detachableCornerSeatApexDirectionFor(
-  rotationDegrees: OpenGridDetachableCornerSeatRotation,
-): OpenGridDetachableCornerSeatPoint2D {
-  if (rotationDegrees === 0) return [1, 0]
-  if (rotationDegrees === 90) return [0, 1]
-  if (rotationDegrees === 180) return [-1, 0]
-  return [0, -1]
-}
-
-function detachableCornerSeatIndicatorRotationFor(
-  socketRotation: OpenGridDetachableCornerSeatRotation,
-  directionOffset: 0 | 180,
-): OpenGridDetachableCornerSeatRotation {
-  const indicatorRotation =
-    (socketRotation +
-      OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator
-        .lockRotationDegrees +
-      directionOffset) %
-    360
-  if (indicatorRotation === 0) return 0
-  if (indicatorRotation === 90) return 90
-  if (indicatorRotation === 180) return 180
-  if (indicatorRotation === 270) return 270
-  throw new Error('OPENGRID_DETACHABLE_CORNER_SEAT_ROTATION_INVALID')
-}
 
 export function openGridDetachableCornerSeatSocketRotationFor(
   center: OpenGridDetachableCornerSeatPoint2D,
@@ -207,43 +165,4 @@ export function openGridDetachableCornerSeatSocketRotationFor(
   if (x >= 0 && y < 0) return 180
   if (x < 0 && y <= 0) return 270
   return 0
-}
-
-export function openGridDetachableCornerSeatIndicatorPlacementFor(
-  center: OpenGridDetachableCornerSeatPoint2D,
-  socketRotation: OpenGridDetachableCornerSeatRotation,
-): OpenGridDetachableCornerSeatIndicatorPlacement {
-  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
-  const offsetFromSocket =
-    configuration.female.outerDiameter / 2 +
-    configuration.indicator.socketBoundaryClearance +
-    configuration.indicator.radialLength / 2
-  const lockRotation = ((socketRotation +
-    configuration.indicator.lockRotationDegrees) %
-    360) as OpenGridDetachableCornerSeatRotation
-  const apexDirection = detachableCornerSeatApexDirectionFor(lockRotation)
-  const isCenterSeat = center[0] === 0 && center[1] === 0
-  if (isCenterSeat) {
-    return {
-      center: [
-        center[0] - apexDirection[0] * offsetFromSocket,
-        center[1] - apexDirection[1] * offsetFromSocket,
-      ],
-      rotationDegrees: lockRotation,
-    }
-  }
-
-  const referenceArrowSign =
-    socketRotation === 0 || socketRotation === 180 ? -1 : 1
-  const directionOffset = referenceArrowSign === -1 ? 0 : 180
-  return {
-    center: [
-      center[0] + referenceArrowSign * apexDirection[0] * offsetFromSocket,
-      center[1] + referenceArrowSign * apexDirection[1] * offsetFromSocket,
-    ],
-    rotationDegrees: detachableCornerSeatIndicatorRotationFor(
-      socketRotation,
-      directionOffset,
-    ),
-  }
 }

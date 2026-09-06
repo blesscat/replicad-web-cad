@@ -6,7 +6,6 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { makeBox, measureVolume, setOC, type Shape3D } from 'replicad'
 import {
   boundsForOpenGridOrganizerBox,
-  openGridOrganizerBoxDetachableIndicatorPlacementFor,
   openGridOrganizerBoxDetachableSocketPosesFor,
   openGridStackableBoxSocketCentersFor,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
@@ -45,11 +44,11 @@ const initialiseOpenCascade = require('replicad-opencascadejs')
 const WASM_PATH =
   require.resolve('replicad-opencascadejs/src/replicad_single.wasm')
 const DETACHABLE_CORNER_SEAT_ASSET_URL = new URL(
-  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-3.8.step',
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-v13.step',
   import.meta.url,
 )
 const DETACHABLE_CORNER_SEAT_HOLDER_ASSET_URL = new URL(
-  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-holder.step',
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-holder-11.step',
   import.meta.url,
 )
 
@@ -161,7 +160,7 @@ function markerSlotFootprintAt(
   shape: Shape3D,
   center: [number, number],
 ): MarkerSlotFootprint | null {
-  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+  const indicator = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male.indicator
   for (const face of shape.faces) {
     const boundingBox = face.boundingBox
     try {
@@ -172,14 +171,14 @@ function markerSlotFootprintAt(
       const horizontalSpan = maximum[0] - minimum[0]
       const verticalSpan = maximum[1] - minimum[1]
       const hasMarkerFootprint =
-        (horizontalSpan <= configuration.indicator.radialLength + 0.2 &&
-          verticalSpan <= configuration.indicator.width + 0.2) ||
-        (horizontalSpan <= configuration.indicator.width + 0.2 &&
-          verticalSpan <= configuration.indicator.radialLength + 0.2)
+        (horizontalSpan <= indicator.radialLength + 0.2 &&
+          verticalSpan <= indicator.width + 0.2) ||
+        (horizontalSpan <= indicator.width + 0.2 &&
+          verticalSpan <= indicator.radialLength + 0.2)
       const isMarkerFloor =
         face.surface.surfaceType === 'PLANE' &&
-        Math.abs(minimum[2] - configuration.indicator.depth) <= 0.02 &&
-        Math.abs(maximum[2] - configuration.indicator.depth) <= 0.02 &&
+        Math.abs(minimum[2] - indicator.depth) <= 0.02 &&
+        Math.abs(maximum[2] - indicator.depth) <= 0.02 &&
         hasMarkerFootprint &&
         minimum[0] <= center[0] &&
         maximum[0] >= center[0] &&
@@ -197,38 +196,6 @@ function markerSlotFootprintAt(
     }
   }
   return null
-}
-
-function markerSlotFloorCount(shape: Shape3D): number {
-  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
-  let count = 0
-  for (const face of shape.faces) {
-    const boundingBox = face.boundingBox
-    try {
-      const [minimum, maximum] = boundingBox.bounds as [
-        [number, number, number],
-        [number, number, number],
-      ]
-      const horizontalSpan = maximum[0] - minimum[0]
-      const verticalSpan = maximum[1] - minimum[1]
-      const hasMarkerFootprint =
-        (horizontalSpan <= configuration.indicator.radialLength + 0.2 &&
-          verticalSpan <= configuration.indicator.width + 0.2) ||
-        (horizontalSpan <= configuration.indicator.width + 0.2 &&
-          verticalSpan <= configuration.indicator.radialLength + 0.2)
-      const isMarkerFloor =
-        face.surface.surfaceType === 'PLANE' &&
-        Math.abs(minimum[2] - configuration.indicator.depth) <= 0.02 &&
-        Math.abs(maximum[2] - configuration.indicator.depth) <= 0.02 &&
-        hasMarkerFootprint
-      if (!isMarkerFloor) continue
-      count += 1
-    } finally {
-      boundingBox.delete()
-      face.delete()
-    }
-  }
-  return count
 }
 
 describe('OpenGrid organizer-box B-Rep', () => {
@@ -316,87 +283,35 @@ describe('OpenGrid organizer-box B-Rep', () => {
     }
   }, 180_000)
 
-  it('places each female marker on its locked reference-arrow side', async () => {
-    const input = parameters({
-      holeCountX: 1,
-      holeCountY: 1,
-      cornerSeatMode: 'detachable-corner-seat',
-    })
-    const [maleReference, holderReference] = await Promise.all([
-      importOpenGridDetachableCornerSeatReference(
-        new Blob([await readFile(DETACHABLE_CORNER_SEAT_ASSET_URL)], {
-          type: 'model/step',
-        }),
-      ),
-      importOpenGridDetachableCornerSeatHolderReference(
-        new Blob([await readFile(DETACHABLE_CORNER_SEAT_HOLDER_ASSET_URL)], {
-          type: 'model/step',
-        }),
-      ),
-    ])
+  it('carries the male bottom indicator recess on the reference solid', async () => {
+    const maleReference = await importOpenGridDetachableCornerSeatReference(
+      new Blob([await readFile(DETACHABLE_CORNER_SEAT_ASSET_URL)], {
+        type: 'model/step',
+      }),
+    )
     const markedMale =
       buildOpenGridDetachableCornerSeatFromReference(maleReference)
-    const box = buildOpenGridOrganizerBox(input, {
-      detachableCornerSeatReference: maleReference,
-      detachableCornerSeatHolderReference: holderReference,
-    })
     try {
+      const indicator =
+        OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male.indicator
       const maleFootprint = markerSlotFootprintAt(markedMale, [0, 0])
       expect(maleFootprint).not.toBeNull()
       if (!maleFootprint) return
       expect(maleFootprint.maximum[0] - maleFootprint.minimum[0]).toBeCloseTo(
-        OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.radialLength,
+        indicator.radialLength,
         3,
       )
       expect(maleFootprint.maximum[1] - maleFootprint.minimum[1]).toBeCloseTo(
-        OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.width,
+        indicator.width,
         3,
       )
-
-      for (const pose of openGridOrganizerBoxDetachableSocketPosesFor(input)) {
-        const placement =
-          openGridOrganizerBoxDetachableIndicatorPlacementFor(pose)
-        const femaleFootprint = markerSlotFootprintAt(box, placement.center)
-        expect(femaleFootprint, pose.corner).not.toBeNull()
-        if (!femaleFootprint) continue
-
-        expect(
-          (femaleFootprint.minimum[0] + femaleFootprint.maximum[0]) / 2,
-          pose.corner,
-        ).toBeCloseTo(placement.center[0], 3)
-        expect(
-          (femaleFootprint.minimum[1] + femaleFootprint.maximum[1]) / 2,
-          pose.corner,
-        ).toBeCloseTo(placement.center[1], 3)
-        const horizontalSpan =
-          femaleFootprint.maximum[0] - femaleFootprint.minimum[0]
-        const verticalSpan =
-          femaleFootprint.maximum[1] - femaleFootprint.minimum[1]
-        const rotated = placement.rotationDegrees % 180 !== 0
-        expect(horizontalSpan, pose.corner).toBeCloseTo(
-          rotated
-            ? OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.width
-            : OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator
-                .radialLength,
-          3,
-        )
-        expect(verticalSpan, pose.corner).toBeCloseTo(
-          rotated
-            ? OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator
-                .radialLength
-            : OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.width,
-          3,
-        )
-      }
     } finally {
-      deleteShape(box)
       deleteShape(markedMale)
       deleteShape(maleReference)
-      deleteShape(holderReference)
     }
   }, 180_000)
 
-  it('grows a half-grid candidate to keep stacking seams and lock indicators intact', async () => {
+  it('grows a half-grid candidate to keep stacking seams and sockets intact', async () => {
     const input = parameters({
       holeCountX: 1,
       holeCountY: 1,
@@ -416,8 +331,6 @@ describe('OpenGrid organizer-box B-Rep', () => {
         }),
       ),
     ])
-    const markedMale =
-      buildOpenGridDetachableCornerSeatFromReference(maleReference)
     const box = buildOpenGridOrganizerBox(input, {
       detachableCornerSeatReference: maleReference,
       detachableCornerSeatHolderReference: holderReference,
@@ -426,19 +339,6 @@ describe('OpenGrid organizer-box B-Rep', () => {
       const layout = openGridOrganizerBoxLayoutFor(input)
       expect(layout.gridCountX).toBe(2)
       expect(layout.gridCountY).toBe(2)
-      expect(markerSlotFloorCount(box)).toBe(4)
-
-      const maleFootprint = markerSlotFootprintAt(markedMale, [0, 0])
-      expect(maleFootprint).not.toBeNull()
-      if (!maleFootprint) return
-      expect(maleFootprint.maximum[0] - maleFootprint.minimum[0]).toBeCloseTo(
-        OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.radialLength,
-        3,
-      )
-      expect(maleFootprint.maximum[1] - maleFootprint.minimum[1]).toBeCloseTo(
-        OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.width,
-        3,
-      )
 
       const [width, depth] = layout.footprint
       const seamX = -width / 2 + OPENGRID_STACKABLE_BOX_CONFIGURATION.gridPitch
@@ -457,7 +357,6 @@ describe('OpenGrid organizer-box B-Rep', () => {
       ).toBe(0)
     } finally {
       deleteShape(box)
-      deleteShape(markedMale)
       deleteShape(maleReference)
       deleteShape(holderReference)
     }
@@ -503,44 +402,6 @@ describe('OpenGrid organizer-box B-Rep', () => {
       expect(poses.map((pose) => pose.rotationDegrees)).toEqual([
         0, 90, 180, 270,
       ])
-      expect(markerSlotFloorCount(shape)).toBe(4)
-
-      for (const pose of poses) {
-        const indicator =
-          openGridOrganizerBoxDetachableIndicatorPlacementFor(pose)
-        const recessProbe = probeVolume(shape, [
-          [indicator.center[0] - 0.08, indicator.center[1] - 0.08, 0.05],
-          [indicator.center[0] + 0.08, indicator.center[1] + 0.08, 0.13],
-        ])
-        const materialProbe = probeVolume(shape, [
-          [
-            indicator.center[0] - 0.08,
-            indicator.center[1] - 0.08,
-            OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.depth -
-              0.03,
-          ],
-          [
-            indicator.center[0] + 0.08,
-            indicator.center[1] + 0.08,
-            OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.depth +
-              0.05,
-          ],
-        ])
-        expect(recessProbe, pose.corner).toBeLessThanOrEqual(
-          OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.intersectionVolumeTolerance,
-        )
-        expect(materialProbe, pose.corner).toBeGreaterThan(0)
-        expect(
-          horizontalFaceZValuesAt(shape, indicator.center).some(
-            (z) =>
-              Math.abs(
-                z -
-                  OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.indicator.depth,
-              ) <= 0.02,
-          ),
-          pose.corner,
-        ).toBe(true)
-      }
 
       const layout = openGridOrganizerBoxLayoutFor(input)
       const cavityCenter = layout.cavityCenters[0]
@@ -585,24 +446,30 @@ describe('OpenGrid organizer-box B-Rep', () => {
         }
       }
 
-      const fixedWorldSpaceTabProbes = [
-        { corner: 'upper-left', material: [-15, 15], void: [-13, 15] },
-        { corner: 'upper-right', material: [13, 13], void: [13, 15] },
-        { corner: 'lower-right', material: [15, -15], void: [13, -15] },
-        { corner: 'lower-left', material: [-13, -13], void: [-13, -15] },
-      ] as const
-      for (const probe of fixedWorldSpaceTabProbes) {
+      const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+      const probeRadius =
+        (configuration.female.outerDiameter +
+          configuration.male.headMaxLength) /
+        4
+      for (const pose of poses) {
+        const [x, y] = pose.center
+        const rotation = (pose.rotationDegrees * Math.PI) / 180
+        const [ux, uy] = [Math.cos(rotation), Math.sin(rotation)]
+        const materialX = x + ux * probeRadius
+        const materialY = y + uy * probeRadius
+        const pocketX = x + ux * (configuration.male.headMaxLength / 4)
+        const pocketY = y + uy * (configuration.male.headMaxLength / 4)
         const materialVolume = probeVolume(shape, [
-          [probe.material[0] - 0.08, probe.material[1] - 0.08, 0.71],
-          [probe.material[0] + 0.08, probe.material[1] + 0.08, 0.79],
+          [materialX - 0.08, materialY - 0.08, 0.71],
+          [materialX + 0.08, materialY + 0.08, 0.79],
         ])
         const voidVolume = probeVolume(shape, [
-          [probe.void[0] - 0.08, probe.void[1] - 0.08, 0.71],
-          [probe.void[0] + 0.08, probe.void[1] + 0.08, 0.79],
+          [pocketX - 0.08, pocketY - 0.08, 0.71],
+          [pocketX + 0.08, pocketY + 0.08, 0.79],
         ])
-        expect(materialVolume, probe.corner).toBeGreaterThan(0.0001)
-        expect(voidVolume, probe.corner).toBeLessThanOrEqual(
-          OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.intersectionVolumeTolerance,
+        expect(materialVolume, pose.corner).toBeGreaterThan(0.0001)
+        expect(voidVolume, pose.corner).toBeLessThanOrEqual(
+          configuration.intersectionVolumeTolerance,
         )
       }
 
@@ -638,8 +505,15 @@ describe('OpenGrid organizer-box B-Rep', () => {
   }, 180_000)
 
   it.each(['none', 'integrated'] as const)(
-    'does not add detachable marker floors in %s seat mode',
+    'keeps the floor solid at socket corners in %s seat mode',
     (cornerSeatMode) => {
+      const detachablePoses = openGridOrganizerBoxDetachableSocketPosesFor(
+        parameters({
+          holeCountX: 1,
+          holeCountY: 1,
+          cornerSeatMode: 'detachable-corner-seat',
+        }),
+      )
       const input = parameters({
         holeCountX: 1,
         holeCountY: 1,
@@ -647,7 +521,16 @@ describe('OpenGrid organizer-box B-Rep', () => {
       })
       const shape = buildOpenGridOrganizerBox(input)
       try {
-        expect(markerSlotFloorCount(shape)).toBe(0)
+        for (const pose of detachablePoses) {
+          const [x, y] = pose.center
+          expect(
+            probeVolume(shape, [
+              [x - 0.1, y - 0.1, 0.6],
+              [x + 0.1, y + 0.1, 0.9],
+            ]),
+            pose.corner,
+          ).toBeGreaterThan(0)
+        }
       } finally {
         deleteShape(shape)
       }
@@ -705,9 +588,22 @@ describe('OpenGrid organizer-box B-Rep', () => {
           actual.delete()
         }
         expect(measureVolume(shape)).toBeGreaterThan(0)
-        expect(markerSlotFloorCount(shape)).toBe(
-          cornerSeatMode === 'detachable-corner-seat' ? 4 : 0,
-        )
+        if (cornerSeatMode === 'detachable-corner-seat') {
+          for (const pose of openGridOrganizerBoxDetachableSocketPosesFor(
+            input,
+          )) {
+            const [x, y] = pose.center
+            expect(
+              probeVolume(shape, [
+                [x - 0.1, y - 0.1, 0.6],
+                [x + 0.1, y + 0.1, 0.9],
+              ]),
+              pose.corner,
+            ).toBeLessThanOrEqual(
+              OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.intersectionVolumeTolerance,
+            )
+          }
+        }
 
         const halfWidth = layout.footprint[0] / 2
         const bottomEdgeVolume = probeVolume(shape, [

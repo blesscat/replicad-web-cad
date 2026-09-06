@@ -10,15 +10,11 @@ import {
   OPENGRID_LOCATING_SEAT_MODES,
   OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
   OPENGRID_STACKABLE_CYLINDER_DEFAULT_PARAMETERS,
-  openGridOrganizerBoxDetachableIndicatorPlacementFor,
   openGridOrganizerBoxDetachableSocketPosesFor,
   openGridStackableCylinderHoleCentersFor,
 } from '../../src/cad-contract/units'
 import { openGridSnapProfileFor } from '../../src/cad-kernel/components/opengrid-snap/profile'
-import {
-  openGridDetachableCornerSeatConsumerPlacementsFor,
-  openGridDetachableCornerSeatIndicatorPlacementFor,
-} from '../../src/cad-kernel/components/opengrid-locating-assembly/consumer'
+import { openGridDetachableCornerSeatConsumerPlacementsFor } from '../../src/cad-kernel/components/opengrid-locating-assembly/consumer'
 import { placeOpenGridDetachableCornerSeatSocketShape } from '../../src/cad-kernel/components/opengrid-locating-assembly/reference'
 
 describe('OpenGrid locating and assembly interface contract', () => {
@@ -75,7 +71,7 @@ describe('OpenGrid locating and assembly interface contract', () => {
     )
     expect(
       OPENGRID_STACKABLE_BOX_CONFIGURATION.socketDeduplicationDistance,
-    ).toBe(configuration.nominalDiameter)
+    ).toBe(OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.outerDiameter)
   })
 
   it('routes assembly consumers through the shared openings', () => {
@@ -115,13 +111,15 @@ describe('OpenGrid locating and assembly interface contract', () => {
       leadInHeight: 0.2,
       leadInTipDiameter: 4.6,
       keyWidth: 1.96,
+      headStartLength: 4.24,
+      headMaxLength: 6.64,
       taperTopZ: 5.15,
       wearHeight: 0.15,
       totalHeight: 5.3,
-      nominalVolume: 83.1443982424,
+      nominalVolume: 89.3026235581,
       bounds: {
-        min: [-2.5, -2.5, 0],
-        max: [2.5, 2.5, 5.3],
+        min: [-3.321716, -2.5, 0],
+        max: [3.321716, 2.5, 5.3],
       },
     })
     expect(configuration.male.totalHeight).toBeCloseTo(
@@ -133,44 +131,39 @@ describe('OpenGrid locating and assembly interface contract', () => {
       8,
     )
     expect(configuration.female).toMatchObject({
-      outerDiameter: 7,
-      depth: 1.75,
-      passageWidth: 2,
-      sourceMinZ: 3,
-      sourceMaxZ: 4.75,
+      outerDiameter: 11,
+      depth: 1.5,
+      pocketSideClearance: 0.02,
+      sourceMinZ: 3.8,
+      sourceMaxZ: 5.3,
+      nominalVolume: 106.453536642,
       bounds: {
-        min: [-3.5, -3.5, 3],
-        max: [3.5, 3.5, 4.75],
+        min: [-5.5, -5.5, 3.8],
+        max: [5.5, 5.5, 5.3],
       },
     })
-    expect(configuration.female.keySideClearance).toBeCloseTo(0.02, 8)
     expect(configuration.female.depth).toBeCloseTo(
-      configuration.femaleReference.depth + 0.25,
+      configuration.femaleReference.depth,
       8,
     )
     expect(configuration.minimumSocketRoof).toBe(0.5)
-    expect(
-      configuration.female.passageWidth - configuration.male.keyWidth,
-    ).toBeCloseTo(configuration.female.keySideClearance * 2, 8)
   })
 
-  it('publishes the visual lock-indicator contract', () => {
+  it('publishes the male-only lock-indicator profile', () => {
     const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
 
-    expect(configuration.indicator).toMatchObject({
+    expect(configuration.male.indicator).toMatchObject({
       width: 0.5,
       radialLength: 3,
       depth: 0.4,
-      lockRotationDegrees: 90,
     })
-    expect(configuration.male.indicator).toBe(configuration.indicator)
     expect(configuration.male.markedNominalVolume).toBeCloseTo(
       configuration.male.nominalVolume,
       8,
     )
   })
 
-  it('matches Organizer Box corner directions and lock indicators', () => {
+  it('matches Organizer Box corner socket directions', () => {
     const organizerParameters = {
       ...OPENGRID_ORGANIZER_BOX_DEFAULT_PARAMETERS,
       holeCountX: 1,
@@ -190,11 +183,6 @@ describe('OpenGrid locating and assembly interface contract', () => {
         rotationDegrees,
       })),
     )
-    expect(
-      consumerPlacements.map(openGridDetachableCornerSeatIndicatorPlacementFor),
-    ).toEqual(
-      organizerPoses.map(openGridOrganizerBoxDetachableIndicatorPlacementFor),
-    )
   })
 
   it('matches Organizer Box orientation for circular cardinal seats', () => {
@@ -206,28 +194,9 @@ describe('OpenGrid locating and assembly interface contract', () => {
     const centers = openGridStackableCylinderHoleCentersFor(cylinderParameters)
     const placements =
       openGridDetachableCornerSeatConsumerPlacementsFor(centers)
-    const indicators = placements.map(
-      openGridDetachableCornerSeatIndicatorPlacementFor,
-    )
-    const pitch = OPENGRID_STACKABLE_CYLINDER_CONFIGURATION.holeGridPitch
-    const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
-    const offset =
-      configuration.female.outerDiameter / 2 +
-      configuration.indicator.socketBoundaryClearance +
-      configuration.indicator.radialLength / 2
 
     expect(placements.map(({ rotationDegrees }) => rotationDegrees)).toEqual([
       0, 90, 270, 0, 180,
-    ])
-    expect(indicators.map(({ rotationDegrees }) => rotationDegrees)).toEqual([
-      90, 0, 180, 90, 270,
-    ])
-    expect(indicators.map(({ center }) => center)).toEqual([
-      [0, -offset],
-      [pitch - offset, 0],
-      [-pitch + offset, 0],
-      [0, pitch - offset],
-      [0, -pitch + offset],
     ])
   })
 

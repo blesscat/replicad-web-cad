@@ -1,5 +1,6 @@
 import { OPENGRID_GRID_CONFIGURATION } from './opengrid-grid'
 import {
+  OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   normalizeOpenGridLocatingSeatMode,
   type OpenGridLocatingSeatMode,
@@ -195,7 +196,7 @@ export const OPENGRID_STACKABLE_BOX_CONFIGURATION = {
     OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.testShaftExposure,
   snapReferenceShaftExposure: 3,
   socketDeduplicationDistance:
-    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter,
+    OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.outerDiameter,
   openingDepthMin: 0,
   openingDepthMax: 500,
   openingBottomLengthMin: 1,

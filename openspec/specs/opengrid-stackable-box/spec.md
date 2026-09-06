@@ -170,21 +170,20 @@ The box MUST retain its existing fixed bottom profiles: the 5 mm normal bottom
 assembly, the clipped 3 mm base-plate body, and the 2 mm thin-shell floor. For
 `cornerSeatMode='none'`, it MUST generate no special corner locating geometry.
 For `cornerSeatMode='detachable-corner-seat'`, it MUST form the shared female
-retaining-tab socket and bottom lock indicator at every existing de-duplicated
-corner position. The socket MUST use the shared 7 mm outer envelope and 1.75
-mm depth, and MUST be compatible with the separately printable shared
-detachable male seat. For `cornerSeatMode='integrated'`, it MUST fuse one solid
-round seat at each of those same positions; every seat MUST be Ø5 mm in
-diameter, exactly 3.8 mm high, and span Z=-3.8 mm through Z=0 so that it grows
-outward from the existing box bottom, with a 0.2 mm chamfer on its bottom
-perimeter. An integrated seat MUST NOT be a stepped hole or a captive-flange
-opening.
+retaining socket at every existing de-duplicated corner position. The socket
+MUST use the shared 11 mm outer envelope and 1.5 mm depth, and MUST be
+compatible with the separately printable shared detachable male seat. For
+`cornerSeatMode='integrated'`, it MUST fuse one solid round seat at each of
+those same positions; every seat MUST be Ø5 mm in diameter, exactly 3.8 mm
+high, and span Z=-3.8 mm through Z=0 so that it grows outward from the
+existing box bottom, with a 0.2 mm chamfer on its bottom perimeter. An
+integrated seat MUST NOT be a stepped hole or a captive-flange opening.
 
 The normal, base-plate, and thin-shell profiles MUST preserve their existing
-floor and stacking geometry while the detachable socket and indicator are cut
-from the bottom interface. The four nominal corner positions MUST continue to
-be geometrically de-duplicated when a half-cell footprint would overlap them.
-The runtime MUST derive positions from the declared OpenGrid contract and MUST
+floor and stacking geometry while the detachable socket is cut from the bottom
+interface. The four nominal corner positions MUST continue to be
+geometrically de-duplicated when a half-cell footprint would overlap them. The
+runtime MUST derive positions from the declared OpenGrid contract and MUST
 load the shared detachable references only when the locking-seat mode needs
 them.
 
@@ -197,8 +196,8 @@ grid MAY use every nominal grid position.
 #### Scenario: No locating seat
 
 - **WHEN** a valid box uses `cornerSeatMode='none'`
-- **THEN** no special corner socket, indicator, hole, or external round seat
-  MUST be generated
+- **THEN** no special corner socket, hole, or external round seat MUST be
+  generated
 - **AND** the ordinary full-bottom-hole grid MUST remain available when enabled
 
 #### Scenario: Locking corner seats
@@ -206,7 +205,7 @@ grid MAY use every nominal grid position.
 - **WHEN** a valid normal, base-plate, or thin-shell box uses
   `cornerSeatMode='detachable-corner-seat'`
 - **THEN** every existing de-duplicated special corner position MUST contain
-  one shared female retaining-tab socket and its visual lock indicator
+  one shared female retaining socket
 - **AND** the socket MUST accept the shared detachable male seat in the
   insertion and locked poses without positive-volume collision
 - **AND** the locking socket MUST not add a male seat to the container solid
@@ -217,7 +216,7 @@ grid MAY use every nominal grid position.
 - **THEN** validation MUST normalize it to
   `cornerSeatMode='detachable-corner-seat'`
 - **AND** every active special position MUST contain the shared female locking
-  socket and visual indicator rather than the retired stepped-hole geometry
+  socket rather than the retired stepped-hole geometry
 
 #### Scenario: Integrated locating seats
 
@@ -246,7 +245,6 @@ grid MAY use every nominal grid position.
   close to coexist
 - **THEN** the positions MUST be emitted as one valid special socket or seat
 - **AND** the footprint MUST remain unchanged
-
 ### Requirement: Optional nominal OpenGrid bottom hole grid
 
 The stackable-box model MUST expose `fullBottomHoleGrid` independently from
@@ -254,19 +252,17 @@ The stackable-box model MUST expose `fullBottomHoleGrid` independently from
 Ø5.05 mm through-hole at every centered 14 mm OpenGrid grid intersection based
 on the un-cleared nominal footprint. Ordinary holes MUST pass through the
 active bottom thickness and MUST NOT contain the detachable socket,
-detachable lock indicator, Ø7.05 mm retaining seat, flange capture, or
-integrated-seat geometry. Active special positions MUST be removed from the
-ordinary-hole set when `cornerSeatMode` is `detachable-corner-seat` or
-`integrated`; when the seat mode is `none`, all nominal positions remain
-ordinary holes.
+Ø7.05 mm retaining seat, flange capture, or integrated-seat geometry. Active
+special positions MUST be removed from the ordinary-hole set when
+`cornerSeatMode` is `detachable-corner-seat` or `integrated`; when the seat mode
+is `none`, all nominal positions remain ordinary holes.
 
 #### Scenario: Full grid with no special seat
 
 - **WHEN** `fullBottomHoleGrid=true` and `cornerSeatMode='none'`
 - **THEN** every nominal centered 14 mm position MUST contain one ordinary
   Ø5.05 mm through-hole
-- **AND** no special retaining socket, lock indicator, or integrated seat MUST
-  be generated
+- **AND** no special retaining socket or integrated seat MUST be generated
 
 #### Scenario: Full grid with locking seats
 
@@ -274,7 +270,6 @@ ordinary holes.
   `cornerSeatMode='detachable-corner-seat'`
 - **THEN** ordinary holes MUST be present at all non-special grid positions
 - **AND** special positions MUST retain their complete female locking sockets
-  and indicators
 - **AND** adjacent ordinary grid centers MUST remain 14 mm apart
 
 #### Scenario: Full grid with locating holes
@@ -284,7 +279,7 @@ ordinary holes.
 - **THEN** the alias MUST normalize to
   `cornerSeatMode='detachable-corner-seat'`
 - **AND** ordinary holes MUST remain at all non-special grid positions while
-  special positions retain their female locking sockets and indicators
+  special positions retain their female locking sockets
 
 #### Scenario: Full grid with integrated seats
 
@@ -299,24 +294,23 @@ ordinary holes.
 - **WHEN** a full-grid box applies the existing 0.15 mm exterior clearance
 - **THEN** grid centers MUST remain based on the nominal un-cleared footprint
 - **AND** the 14 mm spacing and half-cell layout MUST remain unchanged
-
 ### Requirement: Full-hole geometry quality and exports
 
 The stackable-box builder MUST validate the selected `cornerSeatMode` and
 `fullBottomHoleGrid` as part of the accepted snapshot. A valid result MUST be
 watertight, a single solid, previewable, and exportable in every supported
-profile. In `detachable-corner-seat` mode it MUST validate every female socket,
-lock indicator, and male/female fit probe. In `none` mode it MUST contain no
-special locating geometry. In `integrated` mode it MUST validate every special
-seat as fused Ø5 mm geometry with a total 3.8 mm Z span from -3.8 to 0 and a
-0.2 mm bottom perimeter chamfer, while ordinary full-grid holes and all existing
+profile. In `detachable-corner-seat` mode it MUST validate every female socket
+and male/female fit probe. In `none` mode it MUST contain no special locating
+geometry. In `integrated` mode it MUST validate every special seat as fused
+Ø5 mm geometry with a total 3.8 mm Z span from -3.8 to 0 and a 0.2 mm bottom
+perimeter chamfer, while ordinary full-grid holes and all existing
 shell/interface checks remain valid.
 
 #### Scenario: Valid locking full-grid result
 
 - **WHEN** a locking-seat full-grid snapshot completes generation
 - **THEN** the candidate MUST contain the requested ordinary holes and every
-  active female locking socket with its indicator
+  active female locking socket
 - **AND** the shared detachable male seat MUST fit every socket in its
   insertion and locked poses without positive-volume collision
 - **AND** it MUST be a valid single solid eligible for preview, STEP export,
@@ -333,12 +327,11 @@ shell/interface checks remain valid.
 
 #### Scenario: Invalid seat geometry does not commit
 
-- **WHEN** socket cutting, indicator placement, male/female fit, seat fusion,
-  bounds, hole separation, shell integrity, or ordinary grid validation fails
+- **WHEN** socket cutting, male/female fit, seat fusion, bounds, hole
+  separation, shell integrity, or ordinary grid validation fails
 - **THEN** the candidate MUST be rejected with a diagnosable model error
 - **AND** the failed candidate MUST NOT replace the last valid revision
 - **AND** export MUST remain disabled for that revision
-
 ### Requirement: Stackable-box geometry quality and exports
 
 The stackable-box builder MUST continue to validate the existing normal,

@@ -3,7 +3,6 @@ import {
   OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   normalizeOpenGridLocatingSeatMode,
-  openGridDetachableCornerSeatIndicatorPlacementFor,
   openGridDetachableCornerSeatSocketRotationFor,
   type OpenGridLocatingSeatMode,
 } from './opengrid-locating-assembly'
@@ -27,11 +26,6 @@ export type OpenGridOrganizerBoxDetachableSocketCorner =
 
 export type OpenGridOrganizerBoxDetachableSocketPose = {
   corner: OpenGridOrganizerBoxDetachableSocketCorner
-  center: OpenGridOrganizerBoxPoint2D
-  rotationDegrees: 0 | 90 | 180 | 270
-}
-
-export type OpenGridOrganizerBoxDetachableIndicatorPlacement = {
   center: OpenGridOrganizerBoxPoint2D
   rotationDegrees: 0 | 90 | 180 | 270
 }
@@ -211,11 +205,7 @@ const VALIDATION_TOLERANCE = 1e-9
 const INTERFACE_COLLISION_TOLERANCE = 0.02
 
 type InterfaceFeatureBounds = {
-  kind:
-    | 'integrated-seat'
-    | 'detachable-socket'
-    | 'detachable-indicator'
-    | 'stacking-seam'
+  kind: 'integrated-seat' | 'detachable-socket' | 'stacking-seam'
   min: [number, number, number]
   max: [number, number, number]
 }
@@ -440,43 +430,6 @@ function detachableSocketPosesForGridCounts(
   ]
 }
 
-function detachableIndicatorBoundsFor(
-  pose: OpenGridOrganizerBoxDetachableSocketPose,
-): InterfaceFeatureBounds {
-  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
-  const placement = openGridDetachableCornerSeatIndicatorPlacementFor(
-    pose.center,
-    pose.rotationDegrees,
-  )
-  const swapsAxes =
-    placement.rotationDegrees === 90 || placement.rotationDegrees === 270
-  const halfX =
-    (swapsAxes
-      ? configuration.indicator.width
-      : configuration.indicator.radialLength) /
-      2 +
-    OPENGRID_ORGANIZER_BOX_CONFIGURATION.clearanceTotal
-  const halfY =
-    (swapsAxes
-      ? configuration.indicator.radialLength
-      : configuration.indicator.width) /
-      2 +
-    OPENGRID_ORGANIZER_BOX_CONFIGURATION.clearanceTotal
-  return {
-    kind: 'detachable-indicator',
-    min: [
-      placement.center[0] - halfX,
-      placement.center[1] - halfY,
-      -configuration.indicator.cutterOverlap - INTERFACE_COLLISION_TOLERANCE,
-    ],
-    max: [
-      placement.center[0] + halfX,
-      placement.center[1] + halfY,
-      configuration.indicator.depth + INTERFACE_COLLISION_TOLERANCE,
-    ],
-  }
-}
-
 function stackingLayoutFor(
   parameters: Pick<
     OpenGridOrganizerBoxParameters,
@@ -559,11 +512,6 @@ function interfaceFeatureBoundsFor(
                 INTERFACE_COLLISION_TOLERANCE,
             ],
           }) satisfies InterfaceFeatureBounds,
-      ),
-    )
-    features.push(
-      ...detachableSocketPosesForGridCounts(gridCountX, gridCountY).map(
-        detachableIndicatorBoundsFor,
       ),
     )
   }
@@ -829,15 +777,6 @@ export function openGridOrganizerBoxDetachableSocketPosesFor(
   return detachableSocketPosesForGridCounts(
     layout.gridCountX,
     layout.gridCountY,
-  )
-}
-
-export function openGridOrganizerBoxDetachableIndicatorPlacementFor(
-  pose: OpenGridOrganizerBoxDetachableSocketPose,
-): OpenGridOrganizerBoxDetachableIndicatorPlacement {
-  return openGridDetachableCornerSeatIndicatorPlacementFor(
-    pose.center,
-    pose.rotationDegrees,
   )
 }
 

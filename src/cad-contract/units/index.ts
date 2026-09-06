@@ -48,7 +48,6 @@ import {
   boundsForOpenGridOrganizerBox,
   isOpenGridOrganizerBoxParameters,
   normalizeOpenGridOrganizerBoxParameters,
-  openGridOrganizerBoxDetachableIndicatorPlacementFor,
   openGridOrganizerBoxFileName,
   openGridOrganizerBoxStlFileName,
   OPENGRID_ORGANIZER_BOX_CONFIGURATION,
@@ -56,7 +55,6 @@ import {
   validateOpenGridOrganizerBoxParameters,
 } from './opengrid-organizer-box'
 import type {
-  OpenGridOrganizerBoxDetachableIndicatorPlacement,
   OpenGridOrganizerBoxParameterKey,
   OpenGridOrganizerBoxParameters,
 } from './opengrid-organizer-box'
@@ -356,7 +354,6 @@ export {
   isOpenGridOrganizerBoxParameters,
   normalizeOpenGridOrganizerBoxParameters,
   openGridOrganizerBoxCavityEnvelopeFor,
-  openGridOrganizerBoxDetachableIndicatorPlacementFor,
   openGridOrganizerBoxDetachableSocketPosesFor,
   openGridOrganizerBoxFileName,
   openGridOrganizerBoxLayoutFor,
@@ -430,7 +427,6 @@ export {
   OPENGRID_LEGACY_LOCATING_SEAT_MODE,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_LOCATING_SEAT_MODES,
-  openGridDetachableCornerSeatIndicatorPlacementFor,
   openGridDetachableCornerSeatSocketRotationFor,
   normalizeOpenGridLocatingSeatMode,
 } from './opengrid-locating-assembly'
@@ -468,7 +464,6 @@ export type {
   OpenGridOrganizerBoxBoxMode,
   OpenGridOrganizerBoxCavityEnvelope,
   OpenGridOrganizerBoxCavityEnvelopeInput,
-  OpenGridOrganizerBoxDetachableIndicatorPlacement,
   OpenGridOrganizerBoxDetachableSocketCorner,
   OpenGridOrganizerBoxDetachableSocketPose,
   OpenGridOrganizerBoxLayout,
@@ -494,7 +489,6 @@ export type {
   OpenGridStackableCylinderValidationIssue,
 } from './opengrid-stackable-cylinder'
 export type {
-  OpenGridDetachableCornerSeatIndicatorPlacement,
   OpenGridDetachableCornerSeatPoint2D,
   OpenGridDetachableCornerSeatRotation,
   OpenGridLocatingSeatMode,

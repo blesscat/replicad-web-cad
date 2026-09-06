@@ -3,7 +3,7 @@ import { createRequire } from 'node:module'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { measureVolume, setOC, type Shape3D } from 'replicad'
+import { makeBox, measureVolume, setOC, type Shape3D } from 'replicad'
 import {
   OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_DEFAULT_PARAMETERS,
@@ -15,7 +15,6 @@ import { buildOpenGridStackableBox } from '../../src/cad-kernel/components/openg
 import { buildOpenGridStackableCylinder } from '../../src/cad-kernel/components/opengrid-stackable-cylinder/builder'
 import { inspectOpenGridDetachableCornerSeatConsumers } from '../../src/cad-kernel/components/opengrid-locating-assembly/consumer'
 import {
-  buildOpenGridDetachableCornerSeatIndicatorCutter,
   buildOpenGridDetachableCornerSeatHolderFromReference,
   buildOpenGridDetachableCornerSeatSocketVoid,
   importOpenGridDetachableCornerSeatHolderReference,
@@ -37,11 +36,11 @@ const WASM_PATH =
   require.resolve('replicad-opencascadejs/src/replicad_single.wasm')
 
 const MALE_ASSET_URL = new URL(
-  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-3.8.step',
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-v13.step',
   import.meta.url,
 )
 const HOLDER_ASSET_URL = new URL(
-  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-holder.step',
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-holder-11.step',
   import.meta.url,
 )
 
@@ -78,34 +77,6 @@ function expectBoundsClose(actual: number[][], expected: number[][]): void {
       )
     }
   }
-}
-
-function keyedPlanarYCoordinates(shape: Shape3D): number[] {
-  const coordinates: number[] = []
-  for (const face of shape.faces) {
-    const boundingBox = face.boundingBox
-    try {
-      const [min, max] = boundingBox.bounds as [
-        [number, number, number],
-        [number, number, number],
-      ]
-      const coordinate = (min[1] + max[1]) / 2
-      if (
-        face.surface.surfaceType === 'PLANE' &&
-        Math.abs(max[1] - min[1]) < 1e-6 &&
-        Math.abs(coordinate) >= 0.5 &&
-        Math.abs(coordinate) <= 1.5
-      ) {
-        coordinates.push(coordinate)
-      }
-    } finally {
-      boundingBox.delete()
-      face.delete()
-    }
-  }
-  return [...new Set(coordinates.map((coordinate) => coordinate.toFixed(6)))]
-    .map(Number)
-    .sort((first, second) => first - second)
 }
 
 beforeAll(async () => {
@@ -177,8 +148,6 @@ describe('OpenGrid detachable corner-seat canonical references', () => {
           (record) =>
             record.socketVoidResidualVolume <=
               OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.intersectionVolumeTolerance &&
-            record.indicatorResidualVolume <=
-              OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.intersectionVolumeTolerance &&
             record.maleCollisionVolume <=
               OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.intersectionVolumeTolerance &&
             record.roofVolume > 0.001,
@@ -241,34 +210,6 @@ describe('OpenGrid detachable corner-seat canonical references', () => {
     ).toThrow('STALE_GENERATION')
   })
 
-  it('builds the printable straight lock-indicator cutter at the requested recess depth', () => {
-    const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
-    const cutter = buildOpenGridDetachableCornerSeatIndicatorCutter()
-    try {
-      expectBoundsClose(shapeBounds(cutter), [
-        [
-          -configuration.indicator.radialLength / 2,
-          -configuration.indicator.width / 2,
-          -configuration.indicator.cutterOverlap,
-        ],
-        [
-          configuration.indicator.radialLength / 2,
-          configuration.indicator.width / 2,
-          configuration.indicator.depth,
-        ],
-      ])
-      expect(measureVolume(cutter)).toBeCloseTo(
-        configuration.indicator.nominalRemovedVolume +
-          configuration.indicator.width *
-            configuration.indicator.radialLength *
-            configuration.indicator.cutterOverlap,
-        5,
-      )
-    } finally {
-      deleteShape(cutter)
-    }
-  })
-
   it('imports the fixed male and retaining-tab holder as compatible solids', () => {
     const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
     const report = inspectOpenGridDetachableCornerSeatCompatibility(
@@ -299,49 +240,82 @@ describe('OpenGrid detachable corner-seat canonical references', () => {
     expect(report.intersectionVolume).toBeLessThanOrEqual(
       configuration.intersectionVolumeTolerance,
     )
+
+    const lockedMale = maleReference.clone().rotate(90, [0, 0, 0], [0, 0, 1])
+    const lockedIntersection = lockedMale.intersect(holderReference)
+    try {
+      expect(measureVolume(lockedIntersection)).toBeLessThanOrEqual(
+        configuration.intersectionVolumeTolerance,
+      )
+    } finally {
+      deleteShape(lockedIntersection)
+      deleteShape(lockedMale)
+    }
   })
 
-  it('extends the retaining-tab holder 0.25 mm inward from the fixed entrance datum', () => {
+  it('uses the supplied Ø11 holder exactly as supplied with no extension', () => {
     const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
-    const extended =
+    const holder =
       buildOpenGridDetachableCornerSeatHolderFromReference(holderReference)
     try {
-      const bounds = shapeBounds(extended)
-      expect(bounds[0]?.[2]).toBeCloseTo(3, 5)
-      expect(bounds[1]?.[2]).toBeCloseTo(4.75, 5)
-      expect((bounds[1]?.[2] ?? 0) - (bounds[0]?.[2] ?? 0)).toBeCloseTo(1.75, 5)
-      expect(countSolids(extended)).toBe(1)
-      expect(measureVolume(extended)).toBeCloseTo(
+      const bounds = shapeBounds(holder)
+      expect(bounds[0]?.[2]).toBeCloseTo(
+        configuration.femaleReference.sourceMinZ,
+        5,
+      )
+      expect(bounds[1]?.[2]).toBeCloseTo(
+        configuration.femaleReference.sourceMaxZ,
+        5,
+      )
+      expect((bounds[1]?.[2] ?? 0) - (bounds[0]?.[2] ?? 0)).toBeCloseTo(
+        configuration.female.depth,
+        5,
+      )
+      expect(countSolids(holder)).toBe(1)
+      expect(measureVolume(holder)).toBeCloseTo(
         configuration.female.nominalVolume,
         5,
       )
     } finally {
-      deleteShape(extended)
+      deleteShape(holder)
     }
   })
 
-  it('measures the configured key clearance on each side from the STEP solids', () => {
+  it('keeps the configured pocket side clearance around the seated leaf head', () => {
     const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
-    const maleSides = keyedPlanarYCoordinates(maleReference)
-    const femaleSides = keyedPlanarYCoordinates(holderReference)
-    const maleKeyWidth = (maleSides.at(-1) ?? 0) - (maleSides[0] ?? 0)
-    const femalePassageWidth = (femaleSides.at(-1) ?? 0) - (femaleSides[0] ?? 0)
-
-    expect(maleSides).toEqual([
-      -configuration.male.keyWidth / 2,
-      configuration.male.keyWidth / 2,
-    ])
-    expect(femaleSides).toEqual([
-      -configuration.female.passageWidth / 2,
-      configuration.female.passageWidth / 2,
-    ])
-    expect(maleKeyWidth).toBeCloseTo(configuration.male.keyWidth, 5)
-    expect(femalePassageWidth).toBeCloseTo(configuration.female.passageWidth, 5)
-    expect((femalePassageWidth - maleKeyWidth) / 2).toBeCloseTo(
-      configuration.female.keySideClearance,
-      5,
-    )
-  })
+    const socketVoid =
+      buildOpenGridDetachableCornerSeatSocketVoid(holderReference)
+    try {
+      for (const [z0, z1] of [
+        [3.85, 4.0],
+        [4.4, 4.6],
+        [5.0, 5.15],
+      ] as const) {
+        const probe = makeBox([-6, -6, z0], [6, 6, z1])
+        const voidSlab = socketVoid.intersect(probe)
+        const headSlab = maleReference.intersect(probe)
+        const voidBounds = shapeBounds(voidSlab)
+        const headBounds = shapeBounds(headSlab)
+        try {
+          // In the locked pose the head length lies along the pocket's
+          // widening axis; every band must clear it by the configured margin.
+          const pocketHalf =
+            ((voidBounds[1]?.[1] ?? 0) - (voidBounds[0]?.[1] ?? 0)) / 2
+          const headHalf =
+            ((headBounds[1]?.[0] ?? 0) - (headBounds[0]?.[0] ?? 0)) / 2
+          expect(pocketHalf - headHalf).toBeGreaterThanOrEqual(
+            configuration.female.pocketSideClearance,
+          )
+        } finally {
+          deleteShape(voidSlab)
+          deleteShape(headSlab)
+          deleteShape(probe)
+        }
+      }
+    } finally {
+      deleteShape(socketVoid)
+    }
+  }, 60_000)
 
   it('derives and places the bottom-open socket void from the holder material', () => {
     const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
@@ -359,7 +333,7 @@ describe('OpenGrid detachable corner-seat canonical references', () => {
       const placedBounds = shapeBounds(placed)
       expect(placedBounds[0]?.[2]).toBeCloseTo(0, 5)
       expect(placedBounds[1]?.[2]).toBeCloseTo(configuration.female.depth, 5)
-      expect(placedBounds[1]?.[2]).toBeCloseTo(1.75, 5)
+      expect(placedBounds[1]?.[2]).toBeCloseTo(1.5, 5)
       expect(
         (placedBounds[0]?.[0] ?? 0) + (placedBounds[1]?.[0] ?? 0),
       ).toBeCloseTo(24, 5)

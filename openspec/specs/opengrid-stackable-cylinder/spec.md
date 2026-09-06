@@ -175,21 +175,21 @@ transition. The preview MUST remain centered on X/Y and based at Z=0.
 
 When `bottomSeatMode='detachable-corner-seat'`, every valid cylinder MUST
 contain the shared female detachable corner-seat socket at `(0, 0)` with its
-tested retaining geometry and a lock indicator. The socket and indicator MUST
-respect the profile-specific floor thickness and remain compatible with the
-separately printed `opengrid-pillar` male reference. When
-`bottomSeatMode='none'`, the center and all outer bottom-seat candidates MUST
-remain solid. When `bottomSeatMode='integrated'`, the center MUST instead carry
-one fused solid Ø5 mm cylinder with a total outward span of exactly 3.8 mm from
-Z=-3.8 mm through Z=0 and a 0.2 mm bottom perimeter chamfer; there MUST be no
-detachable socket or stepped center hole at that position.
+tested retaining geometry. The socket MUST respect the profile-specific floor
+thickness and remain compatible with the separately printed `opengrid-pillar`
+male reference. When `bottomSeatMode='none'`, the center and all outer
+bottom-seat candidates MUST remain solid. When `bottomSeatMode='integrated'`,
+the center MUST instead carry one fused solid Ø5 mm cylinder with a total
+outward span of exactly 3.8 mm from Z=-3.8 mm through Z=0 and a 0.2 mm bottom
+perimeter chamfer; there MUST be no detachable socket or stepped center hole at
+that position.
 
 #### Scenario: Cylinder locking center seat
 
 - **WHEN** a valid cylinder uses `bottomSeatMode='detachable-corner-seat'`
 - **THEN** the center MUST contain one female locking socket at X=0 and Y=0
-- **AND** the socket MUST include its retaining cavity and visible lock
-  indicator without penetrating the protected shell or floor geometry
+- **AND** the socket MUST include its retaining cavity without penetrating the
+  protected shell or floor geometry
 - **AND** the socket MUST pass the shared male/female fit probe
 
 #### Scenario: Cylinder hole mode preserves the center socket
@@ -197,16 +197,16 @@ detachable socket or stepped center hole at that position.
 - **WHEN** a persisted cylinder uses the former `bottomSeatMode='hole'` alias
 - **THEN** validation MUST normalize it to
   `bottomSeatMode='detachable-corner-seat'`
-- **AND** the center MUST contain the shared female locking socket and
-  indicator rather than the retired stepped-hole sections
+- **AND** the center MUST contain the shared female locking socket rather than
+  the retired stepped-hole sections
 
 #### Scenario: Cylinder no-seat mode is solid
 
 - **WHEN** a valid cylinder uses `bottomSeatMode='none'`
 - **THEN** the bottom MUST remain solid at the center and all outer-seat
   candidates
-- **AND** no stepped-hole cylindrical faces, detachable sockets, indicators,
-  or integrated seats may be present
+- **AND** no stepped-hole cylindrical faces, detachable sockets, or integrated
+  seats may be present
 
 #### Scenario: Cylinder integrated center seat
 
@@ -216,7 +216,6 @@ detachable socket or stepped center hole at that position.
 - **AND** the lowest 0.2 mm of the seat MUST be its bottom perimeter chamfer
 - **AND** the center MUST not contain the hole-mode stepped cut
 - **AND** the result MUST remain one valid solid
-
 ### Requirement: Four outer cardinal holes from the 14 mm grid
 
 When `bottomSeatMode='detachable-corner-seat'`, the builder MUST retain the
