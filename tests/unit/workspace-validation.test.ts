@@ -576,11 +576,15 @@ describe('CAD workspace validation helpers', () => {
   it('round-trips the locking corner-seat mode radio value', () => {
     const parameters: PillarParameters = {
       mode: 'detachable-corner-seat',
+      length: 3.8,
+      offset: 0,
     }
     const raw = rawFromParameters(parameters)
 
     expect(raw).toEqual({
       mode: 'detachable-corner-seat',
+      length: '3.8',
+      offset: '0',
     })
     expect(parseRawParameters(raw, 'opengrid-pillar')).toEqual({
       valid: true,
@@ -617,17 +621,40 @@ describe('CAD workspace validation helpers', () => {
     })
   })
 
-  it('round-trips the fixed detachable corner-seat without numeric fields', () => {
+  it('round-trips the detachable corner-seat with scoped numeric fields', () => {
     const parameters: PillarParameters = {
       mode: 'detachable-corner-seat',
+      length: 4.2,
+      offset: 0.15,
     }
 
     expect(rawFromParameters(parameters)).toEqual({
       mode: 'detachable-corner-seat',
+      length: '4.2',
+      offset: '0.15',
     })
     expect(
       parseRawParameters(
-        { mode: 'detachable-corner-seat', offset: '0.5' },
+        { mode: 'detachable-corner-seat', length: '4.2', offset: '0.15' },
+        'opengrid-pillar',
+      ),
+    ).toEqual({
+      valid: true,
+      value: parameters,
+    })
+    expect(
+      parseRawParameters(
+        { mode: 'detachable-corner-seat', length: '3.85', offset: '0' },
+        'opengrid-pillar',
+      ),
+    ).toEqual({
+      valid: false,
+      messageId: 'validation.invalid',
+      field: 'length',
+    })
+    expect(
+      parseRawParameters(
+        { mode: 'detachable-corner-seat', length: '3.8', offset: '0.12' },
         'opengrid-pillar',
       ),
     ).toEqual({

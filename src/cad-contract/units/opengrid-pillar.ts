@@ -6,15 +6,20 @@ import {
 export type PillarMode = 'positioning' | 'detachable-corner-seat'
 export type PillarParameterKey = 'mode' | 'length' | 'offset'
 
+export type PillarPositioningParameters = {
+  mode: 'positioning'
+  length: number
+  offset: number
+}
+
+export type PillarDetachableCornerSeatParameters = {
+  mode: 'detachable-corner-seat'
+  length: number
+  offset: number
+}
+
 export type PillarParameters =
-  | {
-      mode: 'positioning'
-      length: number
-      offset: number
-    }
-  | {
-      mode: 'detachable-corner-seat'
-    }
+  PillarPositioningParameters | PillarDetachableCornerSeatParameters
 
 export type PillarBounds = {
   min: [number, number, number]
@@ -35,6 +40,11 @@ export const PILLAR_CONFIGURATION = {
   positioningMinLength: 3,
   positioningMaxLength: 500,
   positioningLengthSliderMax: 200,
+  seatDefaultLength: 3.8,
+  seatMinLength: 3,
+  seatMaxLength: 100,
+  seatLengthStep: 0.1,
+  seatLengthSliderMax: 30,
   offsetMin: -0.5,
   offsetMax: 0.5,
   offsetStep: 0.05,
@@ -44,6 +54,8 @@ export const PILLAR_CONFIGURATION = {
   positioningUpperChamfer: 0.2,
   defaultParameters: {
     mode: 'detachable-corner-seat',
+    length: 3.8,
+    offset: 0,
   } satisfies PillarParameters,
 } as const
 
@@ -52,7 +64,11 @@ const POSITIONING_PILLAR_PARAMETER_KEYS: readonly PillarParameterKey[] = [
   'length',
   'offset',
 ]
-const DETACHABLE_PILLAR_PARAMETER_KEYS: readonly PillarParameterKey[] = ['mode']
+const DETACHABLE_PILLAR_PARAMETER_KEYS: readonly PillarParameterKey[] = [
+  'mode',
+  'length',
+  'offset',
+]
 
 const OFFSET_STEP_TOLERANCE = 1e-9
 
@@ -99,6 +115,21 @@ function isValidOffset(value: unknown): value is number {
   )
 }
 
+function isValidSeatLength(value: unknown): value is number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return false
+  if (
+    value < PILLAR_CONFIGURATION.seatMinLength ||
+    value > PILLAR_CONFIGURATION.seatMaxLength
+  ) {
+    return false
+  }
+  const nearestStep = Math.round(value / PILLAR_CONFIGURATION.seatLengthStep)
+  return (
+    Math.abs(value - nearestStep * PILLAR_CONFIGURATION.seatLengthStep) <=
+    OFFSET_STEP_TOLERANCE
+  )
+}
+
 export function validatePillarParameters(value: unknown): PillarValidation {
   if (!isRecord(value)) {
     return {
@@ -129,7 +160,31 @@ export function validatePillarParameters(value: unknown): PillarValidation {
 
   if (isDetachableMode) {
     if (issues.length > 0) return { valid: false, issues }
-    return { valid: true, value: { mode: 'detachable-corner-seat' } }
+
+    const seatLength = value.length
+    if (!isValidSeatLength(seatLength)) {
+      return {
+        valid: false,
+        issues: [{ field: 'length', messageId: 'validation.invalid' }],
+      }
+    }
+
+    const seatOffset = value.offset
+    if (!isValidOffset(seatOffset)) {
+      return {
+        valid: false,
+        issues: [{ field: 'offset', messageId: 'validation.invalid' }],
+      }
+    }
+
+    return {
+      valid: true,
+      value: {
+        mode: 'detachable-corner-seat',
+        length: seatLength,
+        offset: seatOffset,
+      },
+    }
   }
 
   if (!isPositioningMode) return { valid: false, issues }
@@ -252,33 +307,45 @@ export function normalizePillarParameters(value: unknown): PillarParameters {
 
 export function pillarLengthForMode(mode: PillarMode): number {
   if (mode === 'detachable-corner-seat') {
-    return OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male.totalHeight
+    return PILLAR_CONFIGURATION.seatDefaultLength + seatHeadHeight()
   }
   throw new Error('PILLAR_POSITIONING_LENGTH_REQUIRES_PARAMETERS')
+}
+
+function seatHeadHeight(): number {
+  const male = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male
+  return male.totalHeight - male.bodyHeight
 }
 
 export function pillarLengthForParameters(
   parameters: PillarParameters,
 ): number {
   if (parameters.mode === 'positioning') return parameters.length
-  return pillarLengthForMode(parameters.mode)
+  return parameters.length + seatHeadHeight()
 }
 
 export function pillarBodyDiameterForParameters(
   parameters: PillarParameters,
 ): number {
   if (parameters.mode === 'detachable-corner-seat') {
-    return OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male.bodyDiameter
+    return (
+      OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male.bodyDiameter +
+      parameters.offset
+    )
   }
   return PILLAR_CONFIGURATION.positioningBodyDiameter + parameters.offset
 }
 
 export function boundsForPillar(parameters: PillarParameters): PillarBounds {
   if (parameters.mode === 'detachable-corner-seat') {
-    const bounds = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male.bounds
+    const male = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male
+    // The leaf head is wider than the body only along X; along Y the head
+    // keeps the 1.96 mm key width, so the locating body always defines the
+    // Y envelope (even when a negative offset shrinks it below Ø5).
+    const yRadius = pillarBodyDiameterForParameters(parameters) / 2
     return {
-      min: [...bounds.min],
-      max: [...bounds.max],
+      min: [male.bounds.min[0], -yRadius, 0],
+      max: [male.bounds.max[0], yRadius, pillarLengthForParameters(parameters)],
     }
   }
   const diameter = pillarBodyDiameterForParameters(parameters)
@@ -293,11 +360,26 @@ function formatPillarOffset(value: number): string {
   return Object.is(value, -0) || value === 0 ? '0' : String(value)
 }
 
+function formatSeatLength(value: number): string {
+  return String(Math.round(value * 10) / 10)
+}
+
+function isSeatDefaultLength(value: number): boolean {
+  return (
+    Math.abs(value - PILLAR_CONFIGURATION.seatDefaultLength) <=
+    OFFSET_STEP_TOLERANCE
+  )
+}
+
 function pillarExportStem(parameters: PillarParameters): string {
   if (parameters.mode === 'detachable-corner-seat') {
-    const height =
-      OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male.totalHeight
-    return `pillar-${height}-detachable-corner-seat`
+    const totalHeight = formatSeatLength(pillarLengthForParameters(parameters))
+    const stem = `pillar-${totalHeight}-detachable-corner-seat`
+    const withLength = isSeatDefaultLength(parameters.length)
+      ? stem
+      : `${stem}-z${formatSeatLength(parameters.length)}`
+    if (parameters.offset === 0) return withLength
+    return `${withLength}-xy${formatPillarOffset(parameters.offset)}`
   }
   const length = pillarLengthForParameters(parameters)
   const stem = `pillar-${length}-positioning`

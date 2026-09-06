@@ -24,7 +24,8 @@
   ] as const
 
   const POSITIONING_LENGTH_FIELD = opengridPillarDefinition.parameterSchema[0]!
-  const OFFSET_FIELDS = opengridPillarDefinition.parameterSchema.slice(1)
+  const OFFSET_FIELD = opengridPillarDefinition.parameterSchema[1]!
+  const SEAT_LENGTH_FIELD = opengridPillarDefinition.parameterSchema[2]!
 
   let {
     locale,
@@ -93,29 +94,49 @@
         onChange={(nextValue) => onInputChange('length', nextValue)}
       />
     </ParameterField>
+  {:else}
+    {@const value =
+      rawParameters.length ?? String(SEAT_LENGTH_FIELD.defaultValue)}
+    <ParameterField
+      {locale}
+      label={displayParameterLabel(SEAT_LENGTH_FIELD, locale)}
+      unit={unitLabelFor(locale, SEAT_LENGTH_FIELD.unit)}
+      changed={value !== String(SEAT_LENGTH_FIELD.defaultValue)}
+      error={fieldErrors.length}
+      errorId="pillar-seat-length-error"
+      onRestore={() =>
+        onInputChange('length', String(SEAT_LENGTH_FIELD.defaultValue))}
+    >
+      <ParameterControl
+        {locale}
+        field={SEAT_LENGTH_FIELD}
+        {value}
+        error={fieldErrors.length}
+        onChange={(nextValue) => onInputChange('length', nextValue)}
+      />
+    </ParameterField>
   {/if}
 
-  {#if rawParameters.mode === 'positioning'}
-    {#each OFFSET_FIELDS as field (field.key)}
-      {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
-      <ParameterField
+  {#if rawParameters.mode === 'positioning' || rawParameters.mode === 'detachable-corner-seat'}
+    {@const field = OFFSET_FIELD}
+    {@const value = rawParameters[field.key] ?? String(field.defaultValue)}
+    <ParameterField
+      {locale}
+      label={displayParameterLabel(field, locale)}
+      unit={unitLabelFor(locale, field.unit)}
+      changed={value !== String(field.defaultValue)}
+      error={fieldErrors[field.key]}
+      errorId={`pillar-${field.key}-error`}
+      onRestore={() => onInputChange(field.key, String(field.defaultValue))}
+    >
+      <ParameterControl
         {locale}
-        label={displayParameterLabel(field, locale)}
-        unit={unitLabelFor(locale, field.unit)}
-        changed={value !== String(field.defaultValue)}
+        {field}
+        {value}
         error={fieldErrors[field.key]}
-        errorId={`pillar-${field.key}-error`}
-        onRestore={() => onInputChange(field.key, String(field.defaultValue))}
-      >
-        <ParameterControl
-          {locale}
-          {field}
-          {value}
-          error={fieldErrors[field.key]}
-          onChange={(nextValue) => onInputChange(field.key, nextValue)}
-        />
-      </ParameterField>
-    {/each}
+        onChange={(nextValue) => onInputChange(field.key, nextValue)}
+      />
+    </ParameterField>
   {/if}
 
   {#if fieldErrors.mode}

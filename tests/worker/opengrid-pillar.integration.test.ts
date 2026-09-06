@@ -82,6 +82,8 @@ describe('OpenGrid pillar CAD kernel integration', () => {
     const referenceVolume = measureVolume(reference)
     const parameters: PillarParameters = {
       mode: 'detachable-corner-seat',
+      length: 3.8,
+      offset: 0,
     }
     const shape = await buildPillar(parameters, {
       detachableCornerSeatReference: reference,
@@ -106,6 +108,12 @@ describe('OpenGrid pillar CAD kernel integration', () => {
       expect(
         probeVolumeAt(shape, 0, configuration.male.indicator.depth + 0.02),
       ).toBeGreaterThan(0)
+      // The slot runs along local X: void inside the slot off-center on X,
+      // material beside it on Y.
+      expect(probeVolumeAt(shape, 1.2, 0.2)).toBeLessThan(1e-8)
+      expect(probeVolumeAt(shape, -1.2, 0.2)).toBeLessThan(1e-8)
+      expect(probeVolumeAt(shape, 0, 0.2, 0.05, 1.2)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, 0, 0.2, 0.05, -1.2)).toBeGreaterThan(0)
       expect(measureVolume(shape)).toBeCloseTo(
         configuration.male.nominalVolume,
         3,
@@ -123,6 +131,102 @@ describe('OpenGrid pillar CAD kernel integration', () => {
       deleteShape(reference)
     }
   }, 180_000)
+
+  it('builds the detachable corner seat with a parameterized locating body', async () => {
+    const reference = await importOpenGridDetachableCornerSeatReference(
+      new Blob([await readFile(DETACHABLE_CORNER_SEAT_ASSET_URL)], {
+        type: 'model/step',
+      }),
+    )
+    const referenceVolume = measureVolume(reference)
+    const parameters: PillarParameters = {
+      mode: 'detachable-corner-seat',
+      length: 5,
+      offset: 0.3,
+    }
+    const shape = await buildPillar(parameters, {
+      detachableCornerSeatReference: reference,
+    })
+    try {
+      const expected = boundsForPillar(parameters)
+      const actual = shapeBounds(shape)
+      expect(actual[0]?.[0]).toBeCloseTo(expected.min[0], 2)
+      expect(actual[0]?.[1]).toBeCloseTo(expected.min[1], 2)
+      expect(actual[0]?.[2]).toBeCloseTo(0, 2)
+      expect(actual[1]?.[0]).toBeCloseTo(expected.max[0], 2)
+      expect(actual[1]?.[1]).toBeCloseTo(expected.max[1], 2)
+      expect(actual[1]?.[2]).toBeCloseTo(6.5, 2)
+      // Ø5.3 locating body spans Z=0..5 with the shared lead-in and slot.
+      expect(probeVolumeAt(shape, 2.55, 4.95)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, 2.75, 4.95)).toBeLessThan(1e-8)
+      expect(probeVolumeAt(shape, 0, 0.2)).toBeLessThanOrEqual(
+        OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.intersectionVolumeTolerance,
+      )
+      expect(probeVolumeAt(shape, 0, 0.42)).toBeGreaterThan(0)
+      // The unmodified leaf head rides on top at Z=5..6.5.
+      expect(probeVolumeAt(shape, 2.55, 5.675)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, 2.95, 5.675)).toBeLessThan(1e-8)
+      expect(probeVolumeAt(shape, 2.4, 5.675, 0.05, 0.85)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, 2.4, 5.675, 0.05, 1.15)).toBeLessThan(1e-8)
+      const mesh = meshBRep(shape, {
+        tolerance: 0.05,
+        angularTolerance: 0.1,
+      })
+      expect(assertPillarShapeQuality(shape, parameters, mesh).passed).toBe(
+        true,
+      )
+    } finally {
+      deleteShape(shape)
+      expect(measureVolume(reference)).toBeCloseTo(referenceVolume, 8)
+      deleteShape(reference)
+    }
+  }, 180_000)
+
+  it('builds the detachable corner seat with a negative XY increment', async () => {
+    const reference = await importOpenGridDetachableCornerSeatReference(
+      new Blob([await readFile(DETACHABLE_CORNER_SEAT_ASSET_URL)], {
+        type: 'model/step',
+      }),
+    )
+    const parameters: PillarParameters = {
+      mode: 'detachable-corner-seat',
+      length: 3.8,
+      offset: -0.25,
+    }
+    const shape = await buildPillar(parameters, {
+      detachableCornerSeatReference: reference,
+    })
+    try {
+      const expected = boundsForPillar(parameters)
+      const actual = shapeBounds(shape)
+      expect(actual[0]?.[1]).toBeCloseTo(expected.min[1], 2)
+      expect(actual[1]?.[1]).toBeCloseTo(expected.max[1], 2)
+      expect(actual[0]?.[1]).toBeCloseTo(-2.375, 2)
+      expect(actual[1]?.[2]).toBeCloseTo(5.3, 2)
+      expect(probeVolumeAt(shape, 2.3, 2)).toBeGreaterThan(0)
+      expect(probeVolumeAt(shape, 2.45, 2)).toBeLessThan(1e-8)
+      const mesh = meshBRep(shape, {
+        tolerance: 0.05,
+        angularTolerance: 0.1,
+      })
+      expect(assertPillarShapeQuality(shape, parameters, mesh).passed).toBe(
+        true,
+      )
+    } finally {
+      deleteShape(shape)
+      deleteShape(reference)
+    }
+  }, 180_000)
+
+  it('rejects an off-step seat locating length before geometry generation', async () => {
+    await expect(
+      buildPillar({
+        mode: 'detachable-corner-seat',
+        length: 3.85,
+        offset: 0,
+      }),
+    ).rejects.toThrow('PILLAR_PARAMETERS_INVALID')
+  })
 
   it.each([
     { mode: 'positioning', length: 10, offset: 0 },

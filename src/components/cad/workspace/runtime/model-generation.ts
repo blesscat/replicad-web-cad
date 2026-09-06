@@ -3,6 +3,7 @@ import { diagnostic } from '../../../../cad-contract/diagnostics'
 import {
   OPENGRID_PREVIEW_CONFIGURATION,
   OPENGRID_OPENCONNECT_SHELF_CONFIGURATION,
+  PILLAR_CONFIGURATION,
   PROTOTYPE_CONFIGURATION,
   isOpenGridParameters,
   openGridOpenConnectShelfMaximumAngleForRows,
@@ -171,13 +172,21 @@ export function createModelGenerationHandlers(
   const handleInputChange = (key: ModelParameterKey, value: string) => {
     const modelId = context.refs.state.current.modelId
     let next = { ...context.refs.rawParameters.current, [key]: value }
-    if (
-      modelId === 'opengrid-pillar' &&
-      key === 'mode' &&
-      value === 'detachable-corner-seat'
-    ) {
-      const { length: _length, offset: _offset, ...lockingParameters } = next
-      next = lockingParameters
+    if (modelId === 'opengrid-pillar' && key === 'mode') {
+      // Both pillar modes share the length/offset keys with different
+      // semantics, so a mode switch resets them to the target mode's defaults.
+      next =
+        value === 'detachable-corner-seat'
+          ? {
+              mode: value,
+              length: String(PILLAR_CONFIGURATION.seatDefaultLength),
+              offset: '0',
+            }
+          : {
+              mode: value,
+              length: String(PILLAR_CONFIGURATION.positioningDefaultLength),
+              offset: '0',
+            }
     }
     if (
       modelId === 'opengrid-openconnect-shelf' &&

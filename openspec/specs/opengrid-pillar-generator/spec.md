@@ -8,58 +8,73 @@
 
 The system MUST expose an independent OpenGrid component with stable
 `modelId=opengrid-pillar` and `buildKey=opengrid-pillar`. Its normalized
-parameter snapshot MUST be either exactly `{ mode: 'detachable-corner-seat' }`
-or exactly `{ mode: 'positioning', length, offset }`. `length` MUST be a safe
-integer from 3 through 500 mm and MUST be accepted only by `positioning`.
+parameter snapshot MUST be either exactly
+`{ mode: 'detachable-corner-seat', length, offset }` or exactly
+`{ mode: 'positioning', length, offset }`. In `positioning` mode, `length`
+MUST be a safe integer from 3 through 500 mm. In `detachable-corner-seat`
+mode, `length` MUST be a finite numeric millimetre value from 3.0 through
+100.0 inclusive and MUST use a 0.1 mm step without automatic rounding.
 `offset` MUST be a finite numeric millimetre value from -0.5 through 0.5
 inclusive, MUST use a 0.05 mm step without automatic rounding, and MUST be
-accepted only by `positioning`. The `offset` value MUST be applied as an
-additive increment to the positioning body's XY diameter; it MUST NOT
-translate the model in world X or Y. The detachable-corner-seat profile MUST
-remain fixed to the shared reference geometry and MUST reject adjustable
-length or offset fields. The default snapshot MUST be exactly
-`{ mode: 'detachable-corner-seat' }`.
+accepted by both modes. The `offset` value MUST be applied as an additive
+increment to the selected mode's body XY diameter; it MUST NOT translate the
+model in world X or Y. In `detachable-corner-seat` mode both parameters MUST
+affect only the locating cylinder below the retaining head; the keyed leaf
+retaining head MUST NOT be resized or reshaped by any parameter. The default
+snapshot MUST be exactly
+`{ mode: 'detachable-corner-seat', length: 3.8, offset: 0 }`.
 
 The positioning mode MUST retain a nominal Ø5 mm two-end-chamfer profile and
 expose only its total length plus the shared XY diameter increment as user
-parameters. The locking corner-seat dimensions MUST remain fixed geometry and
-MUST NOT be exposed as user parameters.
+parameters. The detachable-corner-seat mode MUST expose only its locating
+body length plus the shared XY diameter increment; its retaining head and
+every shared socket-side dimension MUST remain fixed geometry.
 
 #### Scenario: Default pillar parameters
 
 - **WHEN** a user opens the pillar component without a valid saved snapshot
-- **THEN** the component MUST use `mode=detachable-corner-seat`
-- **AND** the generated model MUST use the fixed shared locking corner-seat
-  geometry centered on the world XY origin
+- **THEN** the component MUST use
+  `mode=detachable-corner-seat` with `length=3.8` and `offset=0`
+- **AND** the generated model MUST be geometrically identical to the fixed
+  shared locking corner-seat geometry centered on the world XY origin
 
 #### Scenario: Valid pillar modes
 
-- **WHEN** a pillar snapshot contains `mode=positioning` with the
-  mode-appropriate fields and a valid shared XY diameter increment, or is
-  exactly `{ mode: 'detachable-corner-seat' }`
+- **WHEN** a pillar snapshot contains `mode=positioning` or
+  `mode=detachable-corner-seat` with the mode-appropriate fields and a valid
+  shared XY diameter increment
 - **THEN** validation MUST accept the snapshot
 - **AND** the generated model MUST remain centered on the world XY origin
-- **AND** the positioning XY diameter MUST equal its nominal diameter plus
-  `offset` while the detachable corner seat remains fixed
+- **AND** each mode's body XY diameter MUST equal that mode's nominal
+  diameter plus `offset`
 
 #### Scenario: Valid detachable corner-seat mode
 
-- **WHEN** a pillar snapshot is exactly `{ mode: 'detachable-corner-seat' }`
+- **WHEN** a pillar snapshot is exactly
+  `{ mode: 'detachable-corner-seat', length: 4.2, offset: 0.15 }`
 - **THEN** validation MUST accept the snapshot
-- **AND** the generated model MUST use the fixed shared male corner-seat
-  geometry centered on the world XY origin
+- **AND** the generated model MUST use the shared male corner-seat retaining
+  head seated on a Ø5.15 mm locating cylinder of height 4.2 mm, centered on
+  the world XY origin
 
 #### Scenario: XY diameter increment validation
 
-- **WHEN** a positioning pillar snapshot contains a fractional-step,
+- **WHEN** a pillar snapshot of either mode contains a fractional-step,
   non-finite, non-numeric, or out-of-range `offset`
 - **THEN** validation MUST reject the snapshot with an `offset`-specific diagnostic
 - **AND** the invalid snapshot MUST NOT be sent as a valid model-generation request
 
+#### Scenario: Detachable mode length validation
+
+- **WHEN** a detachable-corner-seat snapshot contains a non-0.1-step,
+  non-finite, non-numeric, or out-of-range `length`
+- **THEN** validation MUST reject the snapshot with a `length`-specific diagnostic
+- **AND** it MUST NOT silently resize or reshape the shared retaining head
+
 #### Scenario: Detachable mode rejects adjustable fields
 
-- **WHEN** a detachable-corner-seat snapshot contains `offset`, `length`, or
-  another unsupported field
+- **WHEN** a detachable-corner-seat snapshot contains a field other than
+  `mode`, `length`, or `offset`
 - **THEN** validation MUST reject the snapshot with a field-specific diagnostic
 - **AND** it MUST NOT silently resize the shared fit geometry
 
@@ -87,30 +102,43 @@ MUST NOT be exposed as user parameters.
 - **WHEN** persistence contains `standard` or `thin-shell` mode data, with or
   without legacy offsets
 - **THEN** hydration MUST normalize it to
-  `{ mode: 'detachable-corner-seat' }`
-- **WHEN** persistence contains an old mode-only snapshot or another malformed
-  pillar record
+  `{ mode: 'detachable-corner-seat', length: 3.8, offset: 0 }`
+- **WHEN** persistence contains a detachable-corner-seat record that carries
+  `mode` only, or another malformed pillar record
 - **THEN** hydration MUST normalize it to
-  `{ mode: 'detachable-corner-seat' }` or a corresponding valid positioning
-  mode when a valid positioning length is available
+  `{ mode: 'detachable-corner-seat', length: 3.8, offset: 0 }` or a
+  corresponding valid positioning mode when a valid positioning length is
+  available
 - **AND** an old checkbox state MUST NOT remain as an active user parameter
+
 
 ### Requirement: Pillar geometry quality and export identity
 
 Every valid pillar generation MUST produce one connected solid with finite,
-non-empty mesh data and a centered XY envelope whose diameter is determined by
-the selected profile. The `positioning` mode MUST have X/Y envelope extents of
-±`(2.5 + offset / 2)` mm because its body is nominally Ø5 mm; the fixed
-`detachable-corner-seat` mode MUST have X/Y envelope extents of ±2.5 mm. The
+non-empty mesh data and a centered XY envelope. The `positioning` mode MUST
+have X/Y envelope extents of ±`(2.5 + offset / 2)` mm because its body is
+nominally Ø5 mm; the `detachable-corner-seat` mode MUST have X envelope
+extents of ±3.321716 mm from the shared leaf head and Y envelope extents of
+±`(2.5 + offset / 2)` mm, because the locating body — not the narrower
+1.96 mm key — always defines the seat's Y envelope. The
 positioning mode MUST have Z bounds `[0, length]`, and the
-detachable-corner-seat mode MUST have Z bounds `[0, 5.3]`.
+detachable-corner-seat mode MUST have Z bounds `[0, length + 1.5]`.
 
 The deterministic zero-offset positioning export stem MUST be
 `pillar-{length}-positioning`; a non-zero shared offset export MUST append a
-deterministic `-xy{offset}` value. The fixed locking corner-seat export stem
-MUST remain `pillar-5.3-detachable-corner-seat`. Distinct typed geometry MUST
-NOT share export metadata. `.step` and `.stl` extensions MUST remain supplied
-by the existing export contracts.
+deterministic `-xy{offset}` value. The detachable-corner-seat export stem
+MUST be `pillar-{length + 1.5}-detachable-corner-seat` and MUST append
+`-z{length}` when `length` differs from 3.8 and `-xy{offset}` when `offset`
+is non-zero, in that order; the default-parameter stem MUST remain exactly
+`pillar-5.3-detachable-corner-seat`. Distinct typed geometry MUST NOT share
+export metadata. `.step` and `.stl` extensions MUST remain supplied by the
+existing export contracts.
+
+At the default detachable parameters (`length=3.8`, `offset=0`) the pillar
+volume MUST match the shared male reference volume within the configured
+B-Rep quality tolerance; at any other detachable parameter combination the
+pillar MUST remain one valid connected solid whose volume is consistent with
+its parametric locating section fused to the shared head.
 
 #### Scenario: Standard quality gate
 
@@ -148,10 +176,11 @@ by the existing export contracts.
 - **WHEN** a valid detachable-corner-seat candidate is prepared for commit
 - **THEN** it MUST contain exactly one valid connected solid
 - **AND** its mesh MUST be finite and non-empty
-- **AND** its bounds MUST be `[-2.5, -2.5, 0]` through `[2.5, 2.5, 5.3]`
-  within the workspace tolerance
-- **AND** its volume MUST match the shared male reference volume within the
-  configured B-Rep quality tolerance
+- **AND** its bounds MUST be `[-3.321716, -(2.5 + offset / 2), 0]` through
+  `[3.321716, (2.5 + offset / 2), length + 1.5]` within the workspace
+  tolerance
+- **AND** at default parameters its volume MUST match the shared male
+  reference volume within the configured B-Rep quality tolerance
 
 #### Scenario: Mode-specific export identity
 
@@ -162,10 +191,19 @@ by the existing export contracts.
   exported
 - **THEN** its export stem MUST be
   `pillar-25-positioning-xy0.25`
-- **WHEN** a committed locking corner seat is exported
+- **WHEN** a committed locking corner seat with default parameters is exported
 - **THEN** its export stem MUST be `pillar-5.3-detachable-corner-seat`
+- **WHEN** a committed locking corner seat with `length=5` and `offset=0.1`
+  is exported
+- **THEN** its export stem MUST be
+  `pillar-6.5-detachable-corner-seat-z5-xy0.1`
+- **WHEN** a committed locking corner seat with `length=3.8` and
+  `offset=-0.25` is exported
+- **THEN** its export stem MUST be
+  `pillar-5.3-detachable-corner-seat-xy-0.25`
 - **AND** every export MUST use the committed pillar B-Rep rather than a
   viewport mesh reconstruction
+
 
 ### Requirement: Fixed mode-specific pillar geometry
 
@@ -176,14 +214,18 @@ requested total length, and the effective body diameter MUST equal the nominal
 diameter plus `offset`. The complete solid MUST remain centered on the
 local/world XY origin.
 
-The `detachable-corner-seat` mode MUST use the shared fixed male geometry. Its
-locating section MUST span Z=0 through Z=3.8 with maximum Ø5 mm, beginning with a
-0.2 mm-high lead-in chamfer from Ø4.6 mm at Z=0 to Ø5 mm at Z=0.2. Its keyed
-leaf retaining head MUST begin at Z=3.8, keep the shared 1.96 mm nominal key
-width at its taper datum, flare from a nominal 4.24 mm length at Z=3.8 to the
-maximum 6.64 mm length at Z=5.15, and finish with a 0.15 mm-high flat wear
-surface ending at Z=5.3. No locking corner-seat dimension MUST be user
-adjustable.
+The `detachable-corner-seat` mode MUST combine a parametric locating section
+with the unmodified shared male retaining head. Its locating section MUST span
+`Z=0` through `Z=length` with maximum Ø`(5 + offset)` mm, beginning with a
+0.2 mm-high lead-in chamfer from Ø`(4.6 + offset)` mm at Z=0 to
+Ø`(5 + offset)` mm at Z=0.2. The keyed leaf retaining head MUST be derived
+from the shared fixed male reference geometry rather than re-modeled, and
+MUST be seated with its base at `Z=length`: it MUST keep the shared 1.96 mm
+nominal key width at its taper datum, flare from a nominal 4.24 mm length at
+its base to the maximum 6.64 mm length 1.35 mm above its base, and finish
+with a 0.15 mm-high flat wear surface 1.5 mm above its base. The head MUST
+remain within the Ø7 mm envelope at every height, and no retaining-head
+dimension MUST respond to `length` or `offset`.
 
 #### Scenario: Standard pillar geometry
 
@@ -218,41 +260,60 @@ adjustable.
 
 #### Scenario: Detachable corner-seat geometry
 
-- **WHEN** the generator builds `{ mode: 'detachable-corner-seat' }`
+- **WHEN** the generator builds
+  `{ mode: 'detachable-corner-seat', length: 3.8, offset: 0 }`
 - **THEN** the model MUST span `Z=0` through `Z=5.3`
 - **AND** the bottom lead-in, Ø5 locating section, keyed leaf retaining head,
   and 0.15 mm wear surface MUST match the shared reference geometry
 - **AND** the head MUST remain within the Ø7 mm envelope at every height
 
+#### Scenario: Detachable corner-seat geometry with parameters
+
+- **WHEN** the generator builds
+  `{ mode: 'detachable-corner-seat', length: 5, offset: 0.3 }`
+- **THEN** the model MUST span `Z=0` through `Z=6.5`
+- **AND** the locating section MUST be a Ø5.3 mm cylinder of height 5 mm with
+  the 0.2 mm lead-in from Ø5.0 mm at Z=0
+- **AND** the retaining head MUST be the shared reference head seated at
+  Z=5 through Z=6.5 with its profile unchanged from the shared geometry
+
 #### Scenario: Fixed dimensions are not user parameters
 
-- **WHEN** a user views or edits the pillar panel
-- **THEN** selecting `鎖定角座` MUST select the complete fixed locking
-  corner-seat geometry
-- **AND** the locking corner-seat mode MUST expose neither length nor offset
-  controls
+- **WHEN** a user views or edits the pillar panel in
+  `detachable-corner-seat` mode
+- **THEN** selecting `鎖定角座` MUST expose the locating-section length and
+  one shared XY diameter increment control
+- **AND** adjusting either control MUST change only the locating cylinder
+  below the retaining head
+- **AND** the retaining head and all socket-side geometry MUST stay fixed
 - **AND** selecting `物件定位用` MUST expose only the custom total-length and
   one shared XY diameter increment control
-- **AND** the positioning mode MUST NOT expose manual chamfer controls
+- **AND** neither mode MUST expose manual chamfer controls
+
+
 ### Requirement: OpenGrid pillar workspace integration
 
 The runtime-validated component catalog MUST register `opengrid-pillar` as an
 independent OpenGrid model definition and MUST route
 `/cad/opengrid-pillar` to it. The definition MUST expose exactly one required
 radio group with `detachable-corner-seat` and `positioning` choices in that
-order, defaulting to `detachable-corner-seat`. The positioning mode MUST
-expose one shared numeric `offset` control and its custom integer `length`
-field. The detachable-corner-seat mode MUST expose no numeric geometry
-controls. The Worker MUST dispatch `modelId=opengrid-pillar` to the pillar
-builder, and the CAD workspace MUST not fall through to another component or
-expose another component's parameters.
+order, defaulting to `detachable-corner-seat`. Both modes MUST expose one
+shared numeric `offset` control. The positioning mode MUST expose its custom
+integer `length` field (3–500 mm, initial 10 mm). The detachable-corner-seat
+mode MUST expose its locating-section `length` field (3.0–100.0 mm, step
+0.1 mm, initial 3.8 mm). Switching the radio choice MUST reset the numeric
+fields to the newly selected mode's defaults. The Worker MUST dispatch
+`modelId=opengrid-pillar` to the pillar builder, and the CAD workspace MUST
+not fall through to another component or expose another component's
+parameters.
 
 #### Scenario: Pillar initial generation
 
 - **GIVEN** a user opens `/cad/opengrid-pillar` in a supported browser
 - **WHEN** the Worker emits `engine.ready`
 - **THEN** the main thread MUST send generation 1 using a valid saved pillar
-  snapshot or `{ mode: 'detachable-corner-seat' }`
+  snapshot or
+  `{ mode: 'detachable-corner-seat', length: 3.8, offset: 0 }`
 - **AND** the Worker MUST route the request to the independent pillar builder
 - **AND** the committed model MUST expose pillar bounds, mesh, and model metadata centered on the world XY origin
 
@@ -265,13 +326,15 @@ expose another component's parameters.
 - **AND** the locking corner-seat choice MUST be selected by default
 - **AND** the locking corner-seat choice MUST show the description
   `搭配各元件的鎖定角座插槽使用，壓入後旋轉即可完成定位與鎖定。`
-- **AND** positioning MUST expose one shared `offset` control with range
+- **AND** both choices MUST expose one shared `offset` control with range
   -0.5–0.5 mm and step 0.05 mm
 - **AND** selecting positioning MUST expose a custom integer total-length field
   from 3–500 mm with an initial value of 10 mm
-- **AND** selecting detachable corner seat MUST hide both `offset` and `length`
-- **AND** no fixed-mode length, diameter, flange-height, or chamfer field MUST
-  be exposed
+- **AND** selecting detachable corner seat MUST expose a locating-section
+  length field from 3.0–100.0 mm with step 0.1 mm and an initial value of
+  3.8 mm
+- **AND** no fixed-mode diameter, flange-height, or chamfer field MUST be
+  exposed
 
 #### Scenario: Mode selection updates the existing model
 
@@ -280,6 +343,9 @@ expose another component's parameters.
   choice
 - **THEN** the workspace MUST validate and generate the corresponding pillar
   mode
+- **AND** switching the radio choice MUST reset the numeric fields to the
+  newly selected mode's defaults rather than carrying the previous mode's
+  values over
 - **AND** the accepted typed mode and its mode-appropriate fields MUST be
   persisted under `opengrid-pillar`
 - **AND** the generated model MUST remain centered on the world XY origin rather than translating in X or Y
@@ -289,8 +355,9 @@ expose another component's parameters.
 - **GIVEN** a `model.generate` request carries `modelId=opengrid-pillar`
 - **WHEN** the Worker validates and builds the request
 - **THEN** it MUST accept only the pillar parameter shape for `positioning` or
-  `detachable-corner-seat`, with `length` and `offset` allowed only for
-  positioning and neither field allowed for locking corner seat
+  `detachable-corner-seat`, with `length` validated per mode (integer 3–500
+  for positioning, 0.1-step 3.0–100.0 for the locking corner seat) and the
+  shared `offset` allowed in both modes
 - **AND** it MUST reject removed `standard` and `thin-shell` shapes and other
   mismatched or unknown parameter shapes
 - **AND** it MUST NOT resolve the request through another component's builder or template cache
@@ -303,21 +370,22 @@ expose another component's parameters.
 - **AND** it MUST send `model.invalidate` rather than `model.generate` for that invalid snapshot
 - **AND** export MUST remain disabled while the input is invalid or stale
 
+
 ### Requirement: Detachable corner-seat male bottom indicator
 
-When `opengrid-pillar` generates the fixed
-`{ mode: 'detachable-corner-seat' }` profile, it MUST use the supplied v13 male
-solid directly. Its exposed Z=0 bottom face MUST contain the shared 0.5 mm by
-3 mm straight-slot indicator recessed by 0.4 mm. The indicator MUST remain
-centered on the male seat's local rotational datum, MUST not change the outer XY
-or Z bounds, MUST not change any user parameters, and MUST preserve the
-deterministic export identity. The positioning pillar MUST remain unchanged and
-MUST NOT receive this indicator.
+When `opengrid-pillar` generates the `detachable-corner-seat` profile at any
+valid `length` and `offset`, its exposed Z=0 bottom face MUST contain the
+shared 0.5 mm by 3 mm straight-slot indicator recessed by 0.4 mm. The
+indicator MUST remain centered on the male seat's local rotational datum,
+MUST keep its orientation fixed relative to the retaining head's rotational
+datum, MUST not change the outer XY or Z bounds beyond the parameterized
+locating section, and MUST preserve the deterministic export identity. The
+positioning pillar MUST remain unchanged and MUST NOT receive this indicator.
 
 #### Scenario: Detachable pillar exposes the lock indicator
 
-- **WHEN** the locking corner-seat pillar is generated and viewed from its
-  bottom
+- **WHEN** the locking corner-seat pillar is generated at any valid
+  parameters and viewed from its bottom
 - **THEN** one readable straight-slot recess MUST be present on the Z=0 face
 - **AND** the recess depth MUST be 0.4 mm within geometry tolerance
 - **AND** its footprint MUST be nominally 0.5 mm wide by 3 mm long
@@ -328,11 +396,12 @@ MUST NOT receive this indicator.
   or export
 - **THEN** it MUST remain one valid connected solid with finite non-empty mesh
   data
-- **AND** its bounds MUST remain `[-3.321716, -2.5, 0]` through
-  `[3.321716, 2.5, 5.3]` within geometry tolerance
-- **AND** its keyed leaf retaining head, 3.8 mm locating section, and hand-fit
-  interface MUST remain unchanged
-- **AND** its export stem MUST remain
+- **AND** its keyed leaf retaining head MUST remain unchanged from the shared
+  reference geometry
+- **AND** at default parameters its bounds MUST remain
+  `[-3.321716, -2.5, 0]` through `[3.321716, 2.5, 5.3]` within geometry
+  tolerance
+- **AND** its default export stem MUST remain
   `pillar-5.3-detachable-corner-seat`
 
 #### Scenario: Other pillar modes remain unmarked

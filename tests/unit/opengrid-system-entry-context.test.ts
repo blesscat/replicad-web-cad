@@ -60,6 +60,8 @@ describe('OpenGrid system entry context', () => {
     })
     expect(getSystemPreset('opengrid-pillar', 'desk')).toEqual({
       mode: 'detachable-corner-seat',
+      length: 3.8,
+      offset: 0,
     })
   })
 

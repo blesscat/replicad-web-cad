@@ -36,6 +36,19 @@ const PILLAR_PARAMETER_SCHEMA: ReadonlyArray<ParameterField> = [
     sliderMin: PILLAR_CONFIGURATION.offsetMin,
     sliderMax: PILLAR_CONFIGURATION.offsetMax,
   },
+  {
+    key: 'length',
+    label: 'parameter.seatLocatingLength',
+    axis: 'Z',
+    unit: 'mm',
+    control: 'range-text',
+    defaultValue: PILLAR_CONFIGURATION.seatDefaultLength,
+    min: PILLAR_CONFIGURATION.seatMinLength,
+    max: PILLAR_CONFIGURATION.seatMaxLength,
+    step: PILLAR_CONFIGURATION.seatLengthStep,
+    sliderMin: PILLAR_CONFIGURATION.seatMinLength,
+    sliderMax: PILLAR_CONFIGURATION.seatLengthSliderMax,
+  },
 ]
 
 function validatePillarDefinitionParameters(value: unknown) {
