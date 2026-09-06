@@ -459,7 +459,7 @@ function centerRemoverPassageBoundaryProbe(
   center: [number, number],
   bounds: ModelBounds,
 ): Probe {
-  const radius = definition.locatingHoleRadius
+  const radius = definition.centerPassageRadius
   return {
     min: [
       center[0] + radius + 0.05,
@@ -935,7 +935,7 @@ function inspectOptionalFeatureProbes(
       const passageProbeVolume = volumeInCylinderAtZ(
         central,
         center,
-        definition.locatingHoleRadius - 0.1,
+        definition.centerPassageRadius - 0.1,
         bounds.min[2] - 0.2,
         bounds.max[2] + 0.2,
       )
