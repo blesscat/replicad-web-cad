@@ -22,6 +22,7 @@ export type OpenGridSnapProfileDefinition = {
   sideHolderLayerMinZ: number
   snapLayerMinZ: number
   locatingHoleRadius: number
+  centerPassageRadius: number
   locatingHoleCenter: number
   locatingHoleSlotHalfWidth: number
   locatingHoleSlotInnerHalfSpan: number
@@ -130,6 +131,9 @@ function makeDefinition(
     snapLayerMinZ,
     locatingHoleRadius:
       OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter / 2,
+    // Press-fit experiment: the Ø4.8 center remover passage engages the
+    // nominal Ø5 positioning pillar with 0.2 mm diametral interference.
+    centerPassageRadius: 2.4,
     locatingHoleCenter,
     locatingHoleSlotHalfWidth: 1.5,
     locatingHoleSlotInnerHalfSpan: 5,

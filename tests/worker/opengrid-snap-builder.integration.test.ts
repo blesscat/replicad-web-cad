@@ -29,6 +29,7 @@ import {
   openGridSnapOpenConnectNotchSegmentsFor,
 } from '../../src/cad-kernel/components/opengrid-snap/openconnect'
 import { openGridSnapProfileFor } from '../../src/cad-kernel/components/opengrid-snap/profile'
+import { OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION } from '../../src/cad-contract/units'
 import { buildPillar } from '../../src/cad-kernel/components/opengrid-pillar/builder'
 import {
   assertOpenGridSnapOpenConnectShapeQuality,
@@ -338,18 +339,43 @@ function volumeInCylinder(
   }
 }
 
-function centerRemoverPassageVolume(
-  definition: ReturnType<typeof openGridSnapProfileFor>,
-): number {
-  const radius = definition.locatingHoleRadius
-  const halfWidth = definition.centerRemoverUpperHalfWidth
-  const stripArea =
+function circularSegmentStripArea(radius: number, halfWidth: number): number {
+  return (
     2 *
     (halfWidth * Math.sqrt(radius ** 2 - halfWidth ** 2) +
       radius ** 2 * Math.asin(halfWidth / radius))
+  )
+}
+
+function centerRemoverPassageVolume(
+  definition: ReturnType<typeof openGridSnapProfileFor>,
+): number {
+  const radius = definition.centerPassageRadius
+  const halfWidth = definition.centerRemoverUpperHalfWidth
+  const stripArea = circularSegmentStripArea(radius, halfWidth)
   const passageSegmentArea = Math.PI * radius ** 2 - stripArea
   return (
     passageSegmentArea *
+    (definition.expectedBounds.max[2] - definition.centerRemoverStepZ)
+  )
+}
+
+function pillarCenterRemoverInterferenceVolume(
+  definition: ReturnType<typeof openGridSnapProfileFor>,
+): number {
+  const pillarRadius =
+    OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter / 2
+  const passageRadius = definition.centerPassageRadius
+  const halfWidth = definition.centerRemoverUpperHalfWidth
+  // Material the Ø5 pillar displaces above the step: the annulus between the
+  // pillar and the narrower passage, minus the part of that annulus already
+  // opened by the 4 mm-wide upper remover box.
+  const interferenceArea =
+    Math.PI * (pillarRadius ** 2 - passageRadius ** 2) -
+    (circularSegmentStripArea(pillarRadius, halfWidth) -
+      circularSegmentStripArea(passageRadius, halfWidth))
+  return (
+    interferenceArea *
     (definition.expectedBounds.max[2] - definition.centerRemoverStepZ)
   )
 }
@@ -1441,6 +1467,10 @@ describe('OpenGrid Snap reference builder', () => {
         try {
           const stepZ = variant === 'Full' ? 4.8 : 1.9
           const topZ = variant === 'Full' ? 6.8 : 3.4
+          const passageChordY = Math.sqrt(
+            definition.centerPassageRadius ** 2 -
+              definition.centerRemoverUpperHalfWidth ** 2,
+          )
           expect(
             hasPlanarFaceWithBounds(centerBody, [
               [4, -4, 0],
@@ -1450,12 +1480,12 @@ describe('OpenGrid Snap reference builder', () => {
           expect(
             hasPlanarFaceWithBounds(centerBody, [
               [2, -4, stepZ],
-              [2, -1.5, topZ],
+              [2, -passageChordY, topZ],
             ]),
           ).toBe(true)
           expect(
             hasPlanarFaceWithBounds(centerBody, [
-              [2, 1.5, stepZ],
+              [2, passageChordY, stepZ],
               [2, 4, topZ],
             ]),
           ).toBe(true)
@@ -1518,7 +1548,7 @@ describe('OpenGrid Snap reference builder', () => {
     ['Directional', 'Full'],
     ['Directional', 'Lite'],
   ] as const)(
-    'passes a fixed nominal positioning pillar through the center remover for %s %s',
+    'interference-fits the nominal positioning pillar in the center remover for %s %s',
     async (profile, variant) => {
       const reference = await importOpenGridSnapReference(
         assetBlob(variant, profile),
@@ -1530,7 +1560,11 @@ describe('OpenGrid Snap reference builder', () => {
         length: 10,
         offset: 0,
       })
+      const definition = openGridSnapProfileFor(profile, variant)
+      const expectedInterference =
+        pillarCenterRemoverInterferenceVolume(definition)
       const passageVolumes: number[] = []
+      const shrinkProbeVolumes: number[] = []
       const pillarCollisionVolumes: number[] = []
       try {
         for (const offset of [0, 0.4]) {
@@ -1544,13 +1578,25 @@ describe('OpenGrid Snap reference builder', () => {
           const body = centralSolid(generated)
           try {
             const bounds = shapeBounds(body)
-            const definition = openGridSnapProfileFor(profile, variant)
             passageVolumes.push(
               volumeInCylinder(
                 body,
-                2.4,
+                definition.centerPassageRadius - 0.1,
                 bounds[0]![2]! - 0.1,
                 bounds[1]![2]! + 0.1,
+              ),
+            )
+            // Fully solid only when the passage is Ø4.8: the box spans
+            // radii 2.41–2.49, entirely void under the old Ø5.0 passage.
+            shrinkProbeVolumes.push(
+              volumeInBox(
+                body,
+                [
+                  2.41,
+                  -0.15,
+                  definition.centerRemoverStepZ + 0.05,
+                ],
+                [2.49, 0.15, bounds[1]![2]! - 0.05],
               ),
             )
             pillarCollisionVolumes.push(intersectionVolume(body, pillar))
@@ -1570,8 +1616,11 @@ describe('OpenGrid Snap reference builder', () => {
         expect(passageVolumes[0]).toBeLessThan(0.05)
         expect(passageVolumes[1]).toBeLessThan(0.05)
         expect(passageVolumes[1]).toBeCloseTo(passageVolumes[0]!, 3)
-        expect(pillarCollisionVolumes[0]).toBeLessThan(0.05)
-        expect(pillarCollisionVolumes[1]).toBeLessThan(0.05)
+        expect(shrinkProbeVolumes[0]).toBeGreaterThan(0.02)
+        expect(shrinkProbeVolumes[1]).toBeGreaterThan(0.02)
+        expect(shrinkProbeVolumes[1]).toBeCloseTo(shrinkProbeVolumes[0]!, 3)
+        expect(pillarCollisionVolumes[0]).toBeCloseTo(expectedInterference, 2)
+        expect(pillarCollisionVolumes[1]).toBeCloseTo(expectedInterference, 2)
       } finally {
         pillar.delete()
         reference.delete()
