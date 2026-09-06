@@ -183,7 +183,8 @@ const supportCopyById: Record<
     {
       /* The nav is a floating capsule in both themes; identical geometry keeps
         theme switches from shifting the page layout (CAD annotation boxes and
-        viewport anchors must stay put). */
+        viewport anchors must stay put). The scroll-collapsed compact state is
+        driven by scroll position only, so both themes collapse in lockstep. */
     }
     <div class="min-h-screen pt-6">
       <div class="hidden dark:block" aria-hidden="true">
@@ -205,8 +206,9 @@ const supportCopyById: Record<
         </div>
       </div>
       <nav
-        class="sticky top-0 z-40 mx-auto flex w-[90%] max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-2xl border border-border bg-nav px-[clamp(1rem,4vw,4rem)] py-4 text-nav-foreground shadow-sm backdrop-blur-md dark:top-6 dark:border-neon/25 dark:shadow-glow"
+        class="group sticky top-0 z-40 mx-auto flex w-[90%] max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-2xl border border-border bg-nav px-[clamp(1rem,4vw,4rem)] py-4 text-nav-foreground shadow-sm backdrop-blur-md transition-[padding-block,top] duration-200 ease-out motion-reduce:transition-none data-compact:py-1.5 dark:top-6 dark:data-compact:top-2 dark:border-neon/25 dark:shadow-glow"
         aria-label={t('navigation.primary')}
+        data-site-nav
       >
         <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
           <a
@@ -215,19 +217,19 @@ const supportCopyById: Record<
             aria-current={isHomePage ? 'page' : undefined}>Shape Shortcut</a
           >
           <a
-            class="font-mono text-sm tracking-wide no-underline"
+            class="font-mono text-sm tracking-wide no-underline group-data-compact:hidden"
             href={publicPathFor(locale, 'docs')}
             aria-current={isDocsPage ? 'page' : undefined}
             >{t('navigation.docs')}</a
           >
           <a
-            class="font-mono text-sm tracking-wide no-underline"
+            class="font-mono text-sm tracking-wide no-underline group-data-compact:hidden"
             href={publicPathFor(locale, 'models')}
             aria-current={isModelSelectionPage ? 'page' : undefined}
             >{t('navigation.models')}</a
           >
           <a
-            class="font-mono text-sm tracking-wide no-underline"
+            class="font-mono text-sm tracking-wide no-underline group-data-compact:hidden"
             href={publicPathFor(locale, 'about')}
             aria-current={isAboutPage ? 'page' : undefined}
             >{t('navigation.about')}</a
@@ -290,6 +292,27 @@ const supportCopyById: Record<
           }
         </div>
       </nav>
+      <script is:inline>
+        ;(() => {
+          const nav = document.querySelector('[data-site-nav]')
+          if (!(nav instanceof HTMLElement)) return
+
+          // Compact past 48px, relax only below 32px. The compact state
+          // shrinks the capsule's padding and folds the secondary links,
+          // so content below follows the capsule's height change.
+          const syncCompactNav = () => {
+            const isCompact = nav.hasAttribute('data-compact')
+            const nextCompact =
+              window.scrollY > 48 || (isCompact && window.scrollY >= 32)
+            if (nextCompact !== isCompact) {
+              nav.toggleAttribute('data-compact', nextCompact)
+            }
+          }
+
+          syncCompactNav()
+          window.addEventListener('scroll', syncCompactNav, { passive: true })
+        })()
+      </script>
       {
         supportProviders.length > 0 && (
           <dialog
