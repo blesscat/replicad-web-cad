@@ -873,8 +873,8 @@ describe('CAD component catalog', () => {
     expect(
       definition?.boundsForParameters({ mode: 'detachable-corner-seat' }),
     ).toEqual({
-      min: [-2.5, -2.5, 0],
-      max: [2.5, 2.5, 5.3],
+      min: [-3.321716, -2.5, 0],
+      max: [3.321716, 2.5, 5.3],
     })
     expect(
       definition?.exportFileName({

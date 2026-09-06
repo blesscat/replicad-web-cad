@@ -121,9 +121,10 @@ function expectMaterial(
   x: number,
   z: number,
   expected: boolean,
+  y = 0,
 ): void {
   try {
-    const hasMaterial = volumeAt(shape, x, 0, z) > PROBE_VOLUME_EPSILON
+    const hasMaterial = volumeAt(shape, x, y, z) > PROBE_VOLUME_EPSILON
     if (hasMaterial !== expected) {
       failures.push(`profile:${label}`)
     }
@@ -232,6 +233,49 @@ function inspectDetachableCornerSeatProfiles(
     2.6,
     configuration.bodyHeight - 0.05,
     false,
+  )
+  // Leaf retaining head: flares along X toward the wear cap while holding the
+  // 1.96 mm key thickness in Y and staying inside the Ø7 mm envelope.
+  const headMidZ =
+    configuration.bodyHeight +
+    (configuration.taperTopZ - configuration.bodyHeight) / 2
+  const headTopZ = configuration.taperTopZ + 0.05
+  expectMaterial(
+    shape,
+    failures,
+    'head-start-inside',
+    configuration.headStartLength / 2 - 0.15,
+    configuration.bodyHeight + 0.1,
+    true,
+  )
+  expectMaterial(
+    shape,
+    failures,
+    'head-start-outside',
+    configuration.headStartLength / 2 + 0.1,
+    configuration.bodyHeight + 0.1,
+    false,
+  )
+  expectMaterial(shape, failures, 'head-mid-inside', 2.55, headMidZ, true)
+  expectMaterial(shape, failures, 'head-mid-outside', 2.95, headMidZ, false)
+  expectMaterial(
+    shape,
+    failures,
+    'head-top-inside',
+    configuration.headMaxLength / 2 - 0.15,
+    headTopZ,
+    true,
+  )
+  expectMaterial(shape, failures, 'head-top-outside', 3.45, headTopZ, false)
+  expectMaterial(shape, failures, 'head-key-inside', 2.3, headMidZ, true, 0.85)
+  expectMaterial(
+    shape,
+    failures,
+    'head-key-outside',
+    2.3,
+    headMidZ,
+    false,
+    1.15,
   )
   if (
     !hasFaceSpanningZ(shape, configuration.taperTopZ, configuration.totalHeight)

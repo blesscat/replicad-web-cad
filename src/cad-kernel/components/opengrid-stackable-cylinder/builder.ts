@@ -1615,11 +1615,9 @@ function locatingSeatRadiusFor(
     return OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.integratedSeatDiameter / 2
   }
   if (parameters.bottomSeatMode === 'detachable-corner-seat') {
-    const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
     return (
-      configuration.female.outerDiameter / 2 +
-      configuration.indicator.socketBoundaryClearance +
-      configuration.indicator.radialLength
+      OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.outerDiameter / 2 +
+      0.15
     )
   }
   return largestHoleRadius

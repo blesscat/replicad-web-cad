@@ -1,27 +1,25 @@
 # Detachable corner-seat references
 
-These STEP files preserve the supplied prototype sources and the validated male
-target used by the detachable OpenGrid corner-seat fit. Keep their ASCII
-filenames stable so the Worker asset URLs remain deterministic.
+These STEP files preserve the supplied prototype sources used by the
+detachable OpenGrid corner-seat fit. Keep their ASCII filenames stable so the
+Worker asset URLs remain deterministic.
 
-- `detachable-corner-seat.step`: supplied 3 mm-body male source, SHA-256
-  `24e10a7569b97c23d02c163c164e4876103b3abc95230b448fed6c2233ea04a0`.
-- `detachable-corner-seat-3.8.step`: supplied 3.8 mm-body male target, SHA-256
-  `1a04995137bae87ed128c52d53e02dc6a3b956b4896914818aad460059696dc6`.
-- `detachable-corner-seat-holder.step`: supplied female retaining-tab holder,
-  SHA-256
-  `281de27af19b776b2baa19f062bb39911eda252fc571360ac71c44f6846b3c8f`.
+- `detachable-corner-seat-v13.step`: supplied v13 leaf-head male, SHA-256
+  `11b2da95b2b6f4607f8f9d5423dcc69869b2ecd4dc25c6b4c76c91cc4d01e82f`.
+- `detachable-corner-seat-holder-11.step`: supplied Ø11 mm flat-base female
+  holder, SHA-256
+  `0ae3412d67041e533fb054cd8af714e625407665c3cfb129fa99a26b8bfa5b36`.
 
-The supplied male target keeps the Ø4.6-to-Ø5 insertion chamfer, increases the
-locating body to 3.8 mm and total height to 5.3 mm, and uses a 1.96 mm keyed
-retaining head. Its exposed-bottom lock indicator is included in the v8 solid
-as a 0.5 mm-wide by 3 mm radial straight recess with a 0.4 mm depth. The
-Pillar generator uses this male solid directly. The female socket's matching
-indicator is drawn by the shared Worker geometry from the male indicator
-contract; it is not copied from the male STEP. The supplied female retaining
-holder remains unchanged on disk; at build time its top planar faces are
-extended by 0.25 mm, from 1.5 mm to 1.75 mm effective depth. The extension is
-fused into one holder solid. The Organizer Box derives the socket cutter from
-the extended Ø7 mm holder while preserving 0.01 mm of radial overlap with the
-host body, so the retaining tabs become a manifold part of the exported box
-rather than a coincident or separate printable part.
+The supplied v13 male keeps the Ø4.6-to-Ø5 insertion chamfer, the 3.8 mm
+locating body, the 5.3 mm total height, and the 1.96 mm key thickness, and
+replaces the retaining head with a leaf head that flares from 4.24 mm to a
+6.64 mm maximum length that stays inside the Ø7 mm circle. Its exposed-bottom
+lock indicator is included in the v13 solid as a 0.5 mm-wide by 3 mm radial
+straight recess with a 0.4 mm depth. The Pillar generator uses this male solid
+directly; hosts cut no indicator marks beside sockets. The supplied Ø11 mm
+female holder is used exactly as supplied: a Ø11 mm by 1.5 mm plate spanning
+Z=3.8 through Z=5.3 with a head-shaped twist-lock rotation pocket and a 45-degree funnel
+lead-in, with no build-time extension. Consumers derive the socket cutter from the
+Ø11 mm holder within a Ø11−0.01 mm envelope while preserving 0.01 mm of radial
+overlap with the host body, so the retained base material becomes a manifold
+part of the exported host rather than a coincident or separate printable part.

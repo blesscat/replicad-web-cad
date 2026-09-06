@@ -95,10 +95,12 @@ function rotateRetainerProbe(
 function retainerProbeCenterFor(
   pose: OpenGridOrganizerBoxDetachableSocketPose,
 ): [number, number] {
-  const halfPassage =
-    OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.passageWidth / 2
+  // Probe inside the retained plate annulus, outside the head-rotation pocket.
+  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
+  const probeRadius =
+    (configuration.female.outerDiameter + configuration.male.headMaxLength) / 4
   const [offsetX, offsetY] = rotateRetainerProbe(
-    [-halfPassage, halfPassage],
+    [probeRadius, 0],
     pose.rotationDegrees,
   )
   return [pose.center[0] + offsetX, pose.center[1] + offsetY]

@@ -70,11 +70,11 @@ const SNAP_REFERENCE_PATH = new URL(
   import.meta.url,
 )
 const DETACHABLE_MALE_REFERENCE_PATH = new URL(
-  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-3.8.step',
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-v13.step',
   import.meta.url,
 )
 const DETACHABLE_HOLDER_REFERENCE_PATH = new URL(
-  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-holder.step',
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-holder-11.step',
   import.meta.url,
 )
 let detachableCornerSeatReference: Shape3D
@@ -525,7 +525,6 @@ describe('OpenGrid stackable-box B-Rep', () => {
       expect(records).toHaveLength(1)
       expect(records[0]).toMatchObject({
         socketVoidResidualVolume: expect.closeTo(0, 6),
-        indicatorResidualVolume: expect.closeTo(0, 6),
         maleCollisionVolume: expect.closeTo(0, 6),
       })
       expect(report.ordinaryBottomHoleCount).toBe(
@@ -623,7 +622,6 @@ describe('OpenGrid stackable-box B-Rep', () => {
       )
       expect(record).toMatchObject({
         socketVoidResidualVolume: expect.closeTo(0, 6),
-        indicatorResidualVolume: expect.closeTo(0, 6),
         maleCollisionVolume: expect.closeTo(0, 6),
       })
     } finally {
@@ -1092,7 +1090,6 @@ describe('OpenGrid stackable-box B-Rep', () => {
         detachableRecords.every(
           (record) =>
             record.socketVoidResidualVolume <= 1e-6 &&
-            record.indicatorResidualVolume <= 1e-6 &&
             record.maleCollisionVolume <= 1e-6 &&
             record.roofVolume > 0.001,
         ),

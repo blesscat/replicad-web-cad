@@ -179,8 +179,9 @@ local/world XY origin.
 The `detachable-corner-seat` mode MUST use the shared fixed male geometry. Its
 locating section MUST span Z=0 through Z=3.8 with maximum Ø5 mm, beginning with a
 0.2 mm-high lead-in chamfer from Ø4.6 mm at Z=0 to Ø5 mm at Z=0.2. Its keyed
-45-degree retaining head MUST begin at Z=3.8 and retain the shared 1.96 mm key
-width. The head taper MUST end at Z=5.15, followed by a 0.15 mm-high flat wear
+leaf retaining head MUST begin at Z=3.8, keep the shared 1.96 mm nominal key
+width at its taper datum, flare from a nominal 4.24 mm length at Z=3.8 to the
+maximum 6.64 mm length at Z=5.15, and finish with a 0.15 mm-high flat wear
 surface ending at Z=5.3. No locking corner-seat dimension MUST be user
 adjustable.
 
@@ -219,8 +220,9 @@ adjustable.
 
 - **WHEN** the generator builds `{ mode: 'detachable-corner-seat' }`
 - **THEN** the model MUST span `Z=0` through `Z=5.3`
-- **AND** the bottom lead-in, Ø5 locating section, keyed retaining head, and
-  0.15 mm wear surface MUST match the shared reference geometry
+- **AND** the bottom lead-in, Ø5 locating section, keyed leaf retaining head,
+  and 0.15 mm wear surface MUST match the shared reference geometry
+- **AND** the head MUST remain within the Ø7 mm envelope at every height
 
 #### Scenario: Fixed dimensions are not user parameters
 
@@ -232,7 +234,6 @@ adjustable.
 - **AND** selecting `物件定位用` MUST expose only the custom total-length and
   one shared XY diameter increment control
 - **AND** the positioning mode MUST NOT expose manual chamfer controls
-
 ### Requirement: OpenGrid pillar workspace integration
 
 The runtime-validated component catalog MUST register `opengrid-pillar` as an
@@ -305,7 +306,7 @@ expose another component's parameters.
 ### Requirement: Detachable corner-seat male bottom indicator
 
 When `opengrid-pillar` generates the fixed
-`{ mode: 'detachable-corner-seat' }` profile, it MUST use the supplied v8 male
+`{ mode: 'detachable-corner-seat' }` profile, it MUST use the supplied v13 male
 solid directly. Its exposed Z=0 bottom face MUST contain the shared 0.5 mm by
 3 mm straight-slot indicator recessed by 0.4 mm. The indicator MUST remain
 centered on the male seat's local rotational datum, MUST not change the outer XY
@@ -327,9 +328,9 @@ MUST NOT receive this indicator.
   or export
 - **THEN** it MUST remain one valid connected solid with finite non-empty mesh
   data
-- **AND** its bounds MUST remain `[-2.5, -2.5, 0]` through
-  `[2.5, 2.5, 5.3]` within geometry tolerance
-- **AND** its keyed retaining head, 3.8 mm locating section, and hand-fit
+- **AND** its bounds MUST remain `[-3.321716, -2.5, 0]` through
+  `[3.321716, 2.5, 5.3]` within geometry tolerance
+- **AND** its keyed leaf retaining head, 3.8 mm locating section, and hand-fit
   interface MUST remain unchanged
 - **AND** its export stem MUST remain
   `pillar-5.3-detachable-corner-seat`

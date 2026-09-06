@@ -1,18 +1,4 @@
-import {
-  basicFaceExtrusion,
-  cast,
-  getOC,
-  importSTEP,
-  isShape3D,
-  makeCylinder,
-  measureVolume,
-  Sketcher,
-  Solid,
-  Vector,
-  type Face,
-  type Shape3D,
-} from 'replicad'
-import type { BOPAlgo_GlueEnum, TopAbs_ShapeEnum } from 'replicad-opencascadejs'
+import { importSTEP, makeCylinder, measureVolume, type Shape3D } from 'replicad'
 import { OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION } from '../../../cad-contract/units'
 import {
   countSolids,
@@ -20,12 +6,12 @@ import {
 } from '../opengrid-stackable-box/quality-metrics'
 
 export const OPEN_GRID_DETACHABLE_CORNER_SEAT_REFERENCE_URL = new URL(
-  './assets/detachable-corner-seat-3.8.step',
+  './assets/detachable-corner-seat-v13.step',
   import.meta.url,
 )
 
 export const OPEN_GRID_DETACHABLE_CORNER_SEAT_HOLDER_REFERENCE_URL = new URL(
-  './assets/detachable-corner-seat-holder.step',
+  './assets/detachable-corner-seat-holder-11.step',
   import.meta.url,
 )
 
@@ -49,49 +35,11 @@ export type OpenGridDetachableCornerSeatSocketPlacement = {
   rotationDegrees: 0 | 90 | 180 | 270
 }
 
-export type OpenGridDetachableCornerSeatIndicatorPlacement = {
-  center: [number, number]
-  rotationDegrees: number
-}
-
 function deleteShape(shape: { delete(): void } | null | undefined): void {
   try {
     shape?.delete()
   } catch {
     // Cleanup must not replace the primary geometry diagnostic.
-  }
-}
-
-function runGeometryStage<T>(code: string, operation: () => T): T {
-  try {
-    return operation()
-  } catch (cause) {
-    throw new Error(code, { cause })
-  }
-}
-
-function fuseWithoutSimplifying(first: Shape3D, second: Shape3D): Shape3D {
-  const oc = getOC()
-  const progress = new oc.Message_ProgressRange_1()
-  const operation = new oc.BRepAlgoAPI_Fuse_3(
-    first.wrapped,
-    second.wrapped,
-    progress,
-  )
-  try {
-    operation.SetGlue(
-      oc.BOPAlgo_GlueEnum.BOPAlgo_GlueShift as unknown as BOPAlgo_GlueEnum,
-    )
-    operation.Build(progress)
-    const result = cast(operation.Shape())
-    if (!isShape3D(result)) {
-      deleteShape(result)
-      throw new Error('OPENGRID_DETACHABLE_CORNER_SEAT_HOLDER_FUSE_NOT_3D')
-    }
-    return result
-  } finally {
-    operation.delete()
-    progress.delete()
   }
 }
 
@@ -111,30 +59,6 @@ function inspectReference(shape: Shape3D): ReferenceInspection {
     solidCount: countSolids(shape),
     valid: isBRepValid(shape),
   }
-}
-
-function copySingleSolid(shape: Shape3D): Solid {
-  const oc = getOC()
-  const solidType = oc.TopAbs_ShapeEnum
-    .TopAbs_SOLID as unknown as TopAbs_ShapeEnum
-  const shapeType = oc.TopAbs_ShapeEnum
-    .TopAbs_SHAPE as unknown as TopAbs_ShapeEnum
-  const explorer = new oc.TopExp_Explorer_2(shape.wrapped, solidType, shapeType)
-  const solids: Solid[] = []
-  try {
-    while (explorer.More()) {
-      solids.push(new Solid(oc.TopoDS.Solid_1(explorer.Current())))
-      explorer.Next()
-    }
-  } finally {
-    explorer.delete()
-  }
-
-  if (solids.length !== 1) {
-    solids.forEach(deleteShape)
-    throw new Error('OPENGRID_DETACHABLE_CORNER_SEAT_NOT_SINGLE_SOLID')
-  }
-  return solids[0]
 }
 
 function expectedReference(kind: ReferenceKind) {
@@ -191,64 +115,6 @@ export function assertOpenGridDetachableCornerSeatHolderReference(
   assertReference(shape, 'female')
 }
 
-export function buildOpenGridDetachableCornerSeatIndicatorCutter(): Shape3D {
-  // The female box marker is drawn from the dimensions carried by the
-  // supplied male pillar contract; the pillar itself already contains it.
-  const configuration =
-    OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.male.indicator
-  const sketcher = new Sketcher('XY', [0, 0, -configuration.cutterOverlap])
-  let sketch: ReturnType<Sketcher['close']> | null = null
-  let cutter: Shape3D | null = null
-  try {
-    const halfWidth = configuration.width / 2
-    const halfRadialLength = configuration.radialLength / 2
-    // The shared local radial datum runs along the printable straight slot
-    // from negative X to positive X.
-    sketcher.movePointerTo([-halfRadialLength, -halfWidth])
-    sketcher.lineTo([halfRadialLength, -halfWidth])
-    sketcher.lineTo([halfRadialLength, halfWidth])
-    sketcher.lineTo([-halfRadialLength, halfWidth])
-    sketch = sketcher.close()
-    cutter = sketch.extrude(configuration.depth + configuration.cutterOverlap, {
-      extrusionDirection: [0, 0, 1],
-    })
-    const result = cutter
-    cutter = null
-    return result
-  } finally {
-    deleteShape(cutter)
-    deleteShape(sketch)
-    sketcher.delete()
-  }
-}
-
-export function placeOpenGridDetachableCornerSeatIndicatorShape(
-  source: Shape3D,
-  placement: OpenGridDetachableCornerSeatIndicatorPlacement,
-): Shape3D {
-  let placed: Shape3D | null = null
-  try {
-    placed = source.clone()
-    // Positive Z rotation is clockwise when the bottom of the assembly is viewed.
-    if (placement.rotationDegrees % 360 !== 0) {
-      placed = replaceOwnedShape(
-        placed,
-        placed.rotate(placement.rotationDegrees, [0, 0, 0], [0, 0, 1]),
-      )
-    }
-    placed = replaceOwnedShape(
-      placed,
-      placed.translate(placement.center[0], placement.center[1], 0),
-    )
-    const result = placed
-    placed = null
-    return result
-  } catch (error) {
-    deleteShape(placed)
-    throw error
-  }
-}
-
 function assertGeneratedFemale(shape: Shape3D): void {
   const inspection = inspectReference(shape)
   const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
@@ -272,7 +138,7 @@ export function buildOpenGridDetachableCornerSeatFromReference(
   reference: Shape3D,
 ): Shape3D {
   assertReference(reference, 'male')
-  // The supplied v6 pillar already contains its own bottom indicator.
+  // The supplied v13 pillar already contains its own bottom indicator.
   return reference.clone()
 }
 
@@ -280,69 +146,16 @@ export function buildOpenGridDetachableCornerSeatHolderFromReference(
   reference: Shape3D,
 ): Shape3D {
   assertReference(reference, 'female')
-  const configuration = OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION
-  const extensionHeight =
-    configuration.female.depth - configuration.femaleReference.depth
-  const topFaces: Face[] = []
-  for (const face of reference.faces) {
-    const boundingBox = face.boundingBox
-    try {
-      const [minimum, maximum] = boundingBox.bounds as [
-        [number, number, number],
-        [number, number, number],
-      ]
-      const isTopFace =
-        face.surface.surfaceType === 'PLANE' &&
-        Math.abs(minimum[2] - configuration.femaleReference.sourceMaxZ) <=
-          configuration.geometryTolerance &&
-        Math.abs(maximum[2] - configuration.femaleReference.sourceMaxZ) <=
-          configuration.geometryTolerance
-      if (isTopFace) {
-        topFaces.push(face)
-      } else {
-        deleteShape(face)
-      }
-    } finally {
-      boundingBox.delete()
-    }
-  }
-  if (topFaces.length === 0) {
-    throw new Error('OPENGRID_DETACHABLE_CORNER_SEAT_HOLDER_TOP_FACE_MISSING')
-  }
-
-  const fusionOverlap = configuration.geometryTolerance / 2
-  const extrusionVector = new Vector([0, 0, extensionHeight + fusionOverlap])
-  let holder: Shape3D | null = copySingleSolid(reference)
+  // The supplied Ø11 flat base is used exactly as designed; no build-time
+  // extension is applied.
+  const holder = reference.clone()
   try {
-    for (const face of topFaces) {
-      let extrusionFace: Face | null = null
-      let extension: Shape3D | null = null
-      try {
-        extrusionFace = face.translateZ(-fusionOverlap)
-        extension = runGeometryStage(
-          'OPENGRID_DETACHABLE_CORNER_SEAT_HOLDER_EXTRUSION_FAILED',
-          () => basicFaceExtrusion(extrusionFace!, extrusionVector),
-        )
-        holder = replaceOwnedShape(
-          holder,
-          runGeometryStage(
-            'OPENGRID_DETACHABLE_CORNER_SEAT_HOLDER_FUSION_FAILED',
-            () => fuseWithoutSimplifying(holder!, extension!),
-          ),
-        )
-      } finally {
-        deleteShape(extension)
-        deleteShape(extrusionFace)
-      }
-    }
     assertGeneratedFemale(holder)
     const generated = holder
-    holder = null
     return generated
-  } finally {
+  } catch (error) {
     deleteShape(holder)
-    topFaces.forEach(deleteShape)
-    extrusionVector.delete()
+    throw error
   }
 }
 

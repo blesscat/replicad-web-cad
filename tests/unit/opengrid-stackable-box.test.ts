@@ -18,6 +18,7 @@ import {
   openGridStackableBoxSocketCentersFor,
   openGridStackableBoxUpperInnerRimZFor,
   openGridStackableBoxStlFileName,
+  OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
   OPENGRID_GRID_CONFIGURATION,
   OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION,
   OPENGRID_STACKABLE_BOX_CONFIGURATION,
@@ -558,14 +559,14 @@ describe('OpenGrid stackable-box contract', () => {
       expect(validation.issues[0]?.field).toBe('thinShellMode')
   })
 
-  it('keeps nominal de-duplication separate from the flange envelope', () => {
+  it('keeps socket de-duplication tied to the seat envelope, not the flange envelope', () => {
     const configuration = OPENGRID_STACKABLE_BOX_CONFIGURATION
     expect(configuration.socketDeduplicationDistance).toBe(
-      OPENGRID_LOCATING_ASSEMBLY_CONFIGURATION.nominalDiameter,
+      OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.female.outerDiameter,
     )
     expect(
       configuration.baseFlangeDiameter + configuration.baseHoleClearance,
-    ).toBeGreaterThan(configuration.socketDeduplicationDistance)
+    ).not.toBe(configuration.socketDeduplicationDistance)
     expect(
       openGridStackableBoxSocketCentersFor(parameters({ x: 0.5, y: 1 })),
     ).toHaveLength(2)

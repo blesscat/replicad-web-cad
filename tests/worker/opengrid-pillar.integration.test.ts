@@ -26,7 +26,7 @@ const initialiseOpenCascade = require('replicad-opencascadejs')
 const WASM_PATH =
   require.resolve('replicad-opencascadejs/src/replicad_single.wasm')
 const DETACHABLE_CORNER_SEAT_ASSET_URL = new URL(
-  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-3.8.step',
+  '../../src/cad-kernel/components/opengrid-locating-assembly/assets/detachable-corner-seat-v13.step',
   import.meta.url,
 )
 
@@ -99,12 +99,12 @@ describe('OpenGrid pillar CAD kernel integration', () => {
       expect(probeVolumeAt(shape, 2.4, 3.75)).toBeGreaterThan(0)
       expect(probeVolumeAt(shape, 2.6, 3.75)).toBeLessThan(1e-8)
       expect(
-        probeVolumeAt(shape, 0, configuration.indicator.depth / 2),
+        probeVolumeAt(shape, 0, configuration.male.indicator.depth / 2),
       ).toBeLessThanOrEqual(
         OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION.intersectionVolumeTolerance,
       )
       expect(
-        probeVolumeAt(shape, 0, configuration.indicator.depth + 0.02),
+        probeVolumeAt(shape, 0, configuration.male.indicator.depth + 0.02),
       ).toBeGreaterThan(0)
       expect(measureVolume(shape)).toBeCloseTo(
         configuration.male.nominalVolume,

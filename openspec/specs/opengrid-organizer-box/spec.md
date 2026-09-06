@@ -206,14 +206,14 @@ axes. Orientation MUST NOT be independently configurable per cavity or per axis.
 When `cornerSeatMode=detachable-corner-seat`, the Organizer Box MUST form four
 keyed female corner-seat sockets directly in the box body at the existing
 four-corner locating positions, regardless of body mode. Each socket MUST use
-the shared detachable-seat female geometry with a nominal Ø7 mm by 1.75 mm
-material envelope and its two retaining tabs. The socket holder MUST remain
-part of the one exported box solid and MUST NOT be emitted as a separate
-printable part.
+the shared detachable-seat female geometry with a nominal Ø11 mm by 1.5 mm
+material envelope at the shared Z=3.8 mm through Z=5.3 mm source band. The
+socket holder MUST remain part of the one exported box solid and MUST NOT be
+emitted as a separate printable part.
 
 Viewed from the box bottom, the sockets MUST use the deterministic corner
 rotations upper-left 0°, upper-right 90°, lower-right 180°, and lower-left 270°.
-The mode MUST preserve at least 0.5 mm of solid roof between each 1.75 mm-deep
+The mode MUST preserve at least 0.5 mm of solid roof between each 1.5 mm-deep
 socket and the nearest storage cavity and MUST NOT generate built-in downward
 feet. A stackable body MUST retain its box-to-box bottom and top stacking
 interfaces in addition to these sockets.
@@ -239,7 +239,7 @@ interfaces in addition to these sockets.
 #### Scenario: Detachable socket roof is too thin
 
 - **WHEN** the selected body mode, requested bottom thickness, and cavity layout
-  would leave less than 0.5 mm of material above a 1.75 mm-deep detachable
+  would leave less than 0.5 mm of material above a 1.5 mm-deep detachable
   socket
 - **THEN** Organizer Box validation MUST return a diagnosable corner-seat or
   bottom-thickness error
@@ -262,7 +262,6 @@ interfaces in addition to these sockets.
 - **THEN** the generated underside MUST contain neither the four existing
   downward built-in feet nor the box-to-box stacking profile
 - **AND** the box lower Z bound MUST remain at its body bottom datum
-
 ### Requirement: Preview, persistence, and exports
 
 Every valid organizer-box snapshot MUST generate a non-empty watertight single
@@ -292,66 +291,6 @@ MUST fall back to organizer-box defaults without affecting other components.
 - **WHEN** a valid organizer-box parameter update is accepted
 - **THEN** only the `opengrid-organizer-box` persistence entry MUST change
 - **AND** navigating to another model MUST NOT inherit organizer-box values
-
-### Requirement: Detachable socket bottom lock indicators
-
-When `cornerSeatMode=detachable-corner-seat`, the Organizer Box MUST draw one
-shared 0.5 mm by 3 mm straight-slot recess beside each of its four female
-socket openings according to the male pillar contract, regardless of body mode.
-Each recess MUST be 0.4 mm deep,
-remain on the exposed box-bottom surface outside the nominal Ø7 mm socket
-envelope, and remain clear of the keyed passage, retaining tabs, storage
-cavities, active stacking features, and outer boundary.
-
-The four socket poses MUST retain the existing bottom-view orientations:
-upper-left 0°, upper-right 90°, lower-right 180°, and lower-left 270°. For each
-pose, the indicator center MUST remain on the deterministic locked centerline
-outside the socket envelope. The upper-left and lower-right canonical
-indicators MUST remain on the opposite side of their sockets specified by the
-reference arrows, while retaining the same 0.15 mm boundary clearance. The
-upper-right and lower-left indicators MUST remain on their existing sides. All
-four female slot centerlines MUST point toward their socket openings. With the
-shared slot's local centerline aligned to +X, these placements MUST remain
-deterministic in the same corner order.
-
-#### Scenario: Locking corner-seat mode shows four indicators
-
-- **WHEN** a valid Organizer Box snapshot selects `鎖定角座`, normalized as
-  `cornerSeatMode=detachable-corner-seat`
-- **THEN** the generated single box solid MUST contain four readable straight-slot
-  recesses on its bottom surface
-- **AND** every recess MUST be nominally 0.5 mm by 3 mm and 0.4 mm deep within
-  geometry tolerance
-- **AND** all four recesses MUST remain outside their socket openings and
-  preserve the existing socket passage and retaining tabs
-
-#### Scenario: Corner indicators follow deterministic locked directions
-
-- **WHEN** the detachable socket layout is inspected from the box bottom
-- **THEN** the indicator rotations MUST be 90°, 0°, 270°, and 180° in
-  upper-left, upper-right, lower-right, and lower-left order
-- **AND** each indicator center MUST lie on the corresponding locked centerline
-  outside the socket envelope, with the upper-left and lower-right centers on
-  the opposite side specified by the reference arrows
-- **AND** each socket MUST accept the same unmirrored male seat in its existing
-  insertion orientation
-- **AND** turning that male clockwise 90° MUST make the two visible slots
-  point to one another
-
-#### Scenario: Indicators do not change Organizer Box interfaces
-
-- **WHEN** a marked detachable Organizer Box is validated, meshed, or exported
-- **THEN** it MUST remain one valid connected watertight solid
-- **AND** its socket roof thickness, cavity floors, bounds, active stacking
-  interfaces, and export identity MUST remain valid and deterministic
-- **AND** built-in downward feet MUST remain absent
-
-#### Scenario: Other bottom-interface modes remain unmarked
-
-- **WHEN** the Organizer Box uses `cornerSeatMode=none` or
-  `cornerSeatMode=integrated`
-- **THEN** no detachable socket indicator recess MUST be generated
-- **AND** the selected body-mode geometry MUST remain unchanged
 
 ### Requirement: Independent corner-seat and body modes
 

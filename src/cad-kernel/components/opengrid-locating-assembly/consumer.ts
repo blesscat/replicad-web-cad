@@ -1,7 +1,6 @@
 import { makeBox, makeCompound, measureVolume, type Shape3D } from 'replicad'
 import {
   OPENGRID_DETACHABLE_CORNER_SEAT_CONFIGURATION,
-  openGridDetachableCornerSeatIndicatorPlacementFor as canonicalIndicatorPlacementFor,
   openGridDetachableCornerSeatSocketRotationFor,
   type OpenGridStackableBoxPoint2D,
 } from '../../../cad-contract/units'
@@ -11,12 +10,9 @@ import {
 } from '../../boolean-progress'
 import {
   assertOpenGridDetachableCornerSeatReference,
-  buildOpenGridDetachableCornerSeatIndicatorCutter,
   buildOpenGridDetachableCornerSeatSocketVoid,
   placeOpenGridDetachableCornerSeatMaleShape,
-  placeOpenGridDetachableCornerSeatIndicatorShape,
   placeOpenGridDetachableCornerSeatSocketShape,
-  type OpenGridDetachableCornerSeatIndicatorPlacement,
   type OpenGridDetachableCornerSeatSocketPlacement,
 } from './reference'
 
@@ -33,7 +29,6 @@ export type OpenGridDetachableCornerSeatConsumerPlacement =
 export type OpenGridDetachableCornerSeatConsumerQualityRecord = {
   center: OpenGridStackableBoxPoint2D
   socketVoidResidualVolume: number
-  indicatorResidualVolume: number
   maleCollisionVolume: number
   roofVolume: number
 }
@@ -69,25 +64,6 @@ export function openGridDetachableCornerSeatConsumerPlacementsFor(
   }))
 }
 
-export function openGridDetachableCornerSeatIndicatorPlacementFor(
-  placement: OpenGridDetachableCornerSeatConsumerPlacement,
-): OpenGridDetachableCornerSeatIndicatorPlacement {
-  return canonicalIndicatorPlacementFor(
-    placement.center,
-    placement.rotationDegrees,
-  )
-}
-
-function placedIndicatorFor(
-  source: Shape3D,
-  placement: OpenGridDetachableCornerSeatConsumerPlacement,
-): Shape3D {
-  return placeOpenGridDetachableCornerSeatIndicatorShape(
-    source,
-    openGridDetachableCornerSeatIndicatorPlacementFor(placement),
-  )
-}
-
 export function cutOpenGridDetachableCornerSeatConsumers(
   shape: Shape3D,
   centers: ReadonlyArray<OpenGridStackableBoxPoint2D>,
@@ -109,17 +85,14 @@ export function cutOpenGridDetachableCornerSeatConsumers(
   const placements = openGridDetachableCornerSeatConsumerPlacementsFor(centers)
   const sourceVoid =
     buildOpenGridDetachableCornerSeatSocketVoid(holderReference)
-  let sourceIndicator: Shape3D | null = null
   let compound: Shape3D | null = null
   const cutters: Shape3D[] = []
   try {
-    sourceIndicator = buildOpenGridDetachableCornerSeatIndicatorCutter()
     for (const placement of placements) {
       assertGenerationCurrent(context)
       cutters.push(
         placeOpenGridDetachableCornerSeatSocketShape(sourceVoid, placement),
       )
-      cutters.push(placedIndicatorFor(sourceIndicator, placement))
     }
     compound = makeCompound(cutters).asShape3D()
     if (!compound) throw new Error(`${errorCode}:CUTTER_EMPTY`)
@@ -142,7 +115,6 @@ export function cutOpenGridDetachableCornerSeatConsumers(
   } finally {
     deleteShape(compound)
     cutters.forEach(deleteShape)
-    deleteShape(sourceIndicator)
     deleteShape(sourceVoid)
   }
 }
@@ -186,9 +158,7 @@ export function inspectOpenGridDetachableCornerSeatConsumers(
   assertOpenGridDetachableCornerSeatReference(maleReference)
   const sourceVoid =
     buildOpenGridDetachableCornerSeatSocketVoid(holderReference)
-  let sourceIndicator: Shape3D | null = null
   try {
-    sourceIndicator = buildOpenGridDetachableCornerSeatIndicatorCutter()
     const placements =
       openGridDetachableCornerSeatConsumerPlacementsFor(centers)
     return placements.map((placement) => {
@@ -197,7 +167,6 @@ export function inspectOpenGridDetachableCornerSeatConsumers(
         sourceVoid,
         placement,
       )
-      const placedIndicator = placedIndicatorFor(sourceIndicator!, placement)
       const placedMale = placeOpenGridDetachableCornerSeatMaleShape(
         maleReference,
         placement,
@@ -213,7 +182,6 @@ export function inspectOpenGridDetachableCornerSeatConsumers(
         return {
           center: placement.center,
           socketVoidResidualVolume: intersectionVolume(shape, placedVoid),
-          indicatorResidualVolume: intersectionVolume(shape, placedIndicator),
           maleCollisionVolume: intersectionVolume(shape, placedMale),
           roofVolume: volumeInBox(
             shape,
@@ -231,12 +199,10 @@ export function inspectOpenGridDetachableCornerSeatConsumers(
         }
       } finally {
         deleteShape(placedVoid)
-        deleteShape(placedIndicator)
         deleteShape(placedMale)
       }
     })
   } finally {
-    deleteShape(sourceIndicator)
     deleteShape(sourceVoid)
   }
 }
@@ -257,9 +223,6 @@ export function assertOpenGridDetachableCornerSeatConsumers(
   for (const record of records) {
     if (record.socketVoidResidualVolume > tolerance) {
       throw new Error(`${errorCode}:SOCKET_VOID:${record.center.join(',')}`)
-    }
-    if (record.indicatorResidualVolume > tolerance) {
-      throw new Error(`${errorCode}:INDICATOR:${record.center.join(',')}`)
     }
     if (record.maleCollisionVolume > tolerance) {
       throw new Error(`${errorCode}:MALE_COLLISION:${record.center.join(',')}`)
